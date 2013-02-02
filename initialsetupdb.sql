@@ -1,0 +1,2 @@
+-- Initial setup file for Gochan
+-- Deleted after setup is finished
