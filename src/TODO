@@ -1,11 +1,13 @@
-X Make sure error codes and caching work correctly
+- Clean up library dependencies
 - Set up daemonization
-+ Clean up config file template
-+ Clean up server.go
+- Set up load balancing
+- Clean up config file template
+- Set up HTTPS for management
+- gzip-encoding for html, css, and javascript
+- Set up backend mode, compatibility with nginx and Apache
 - Set up templating
+- Set up timezone adjusting
 - Set up new mod menu style, integrated with board pages
-- Set up fallback mod menu (like Kusaba)
-	- Give administrator server control options (restart/shutdown daemon, etc)
+- Give administrator server control options (restart/shutdown daemon, etc)
 - Set up basic posting/board interaction
-- Set up thumbnailing/image uploading
 - find out what changes were made in Kusaba 0.9.3 to fix XSS vulnerability

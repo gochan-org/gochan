@@ -4,7 +4,7 @@ body {
 	background: #EEF2FF;
 	color: #000;
 	margin: 0;
-	width: 90%;
+	/*width: 90%;*/
 }
 #topmenu li {
 	display: block;
@@ -38,6 +38,8 @@ div#loginbox {
 	top:50%;
 	margin-left: -100px;
 	margin-top: -35px;
+	padding-top:5px;
+	padding-bottom:5px;
 	text-align: center;
 	border: solid 1px;
 }

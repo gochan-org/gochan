@@ -1,0 +1,107 @@
+package main 
+
+import (
+	"os"
+	"fmt"
+	"strconv"
+	"path"
+	"net"
+	"net/url"
+	"net/http"
+	//"html/template"
+)
+
+var (
+	form url.Values
+	header http.Header
+	cookies []*http.Cookie
+)
+
+func initServer() {
+	if port == 0 {
+		port = 80
+	}
+	getStyleLinks("manage")
+	listener,err := net.Listen("tcp", domain+":"+strconv.Itoa(port))
+	if(err != nil) {
+		error_log.Write(err.Error())
+		fmt.Printf("Failed listening on "+domain+":%d, see log for details",port)
+		os.Exit(2)
+	}
+	http.Handle("/", makeHandler(fileHandle))
+	http.Handle("/manage",makeHandler(callManageFunction))
+	http.Handle("/post",makeHandler(makePost))
+	http.Serve(listener, nil)
+}
+
+func fileHandle(writer http.ResponseWriter, request *http.Request) {
+	cookies = request.Cookies()
+	request.ParseForm()
+	form = request.Form
+	request_url := request.URL.Path
+
+	filepath := path.Join(document_root, request_url)
+	results,err := os.Stat(filepath)
+
+	if err == nil {
+		//the file exists, or there is a folder here
+		if results.IsDir() {
+			found_index := false
+			newpath := ""
+
+			//check to see if one of the specified index pages exists
+			for i := 0; i < len(first_page); i++ {
+				newpath = path.Join(filepath,first_page[i])
+				_,err := os.Stat(newpath)
+				if err == nil {
+					serveFile(writer,request,newpath)
+					found_index = true
+					break
+				}
+			}
+
+			if !found_index {
+				error404(&writer,request)
+			}
+		} else {
+			//the file exists, and is not a folder
+			writer.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", 500))
+			serveFile(writer,request,filepath)
+		}
+	} else {
+		//there is nothing at the requested address
+		error404(&writer, request)
+	}
+}
+
+func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
+	return func(writer http.ResponseWriter, request *http.Request) {
+		defer serverError(writer,request)
+		fn(writer, request)
+	}
+}
+
+func exitWithErrorPage(error string) {
+
+}
+
+func error404(writer *http.ResponseWriter, request *http.Request) {
+	//w := *writer
+	//w.WriteHeader(404)
+	http.ServeFile(*writer, request, path.Join(document_root, "404.html"))
+	error_log.Write("Error: 404 Not Found from " + request.RemoteAddr + " @ " + request.RequestURI)
+}
+
+func serverError(writer http.ResponseWriter, request *http.Request) {
+	if _, ok := recover().(error); ok {
+		//something went wrong, now we need to throw a 500
+		http.ServeFile(writer,request, path.Join(document_root, "/error/500.html"))
+		error_log.Write("Error: 500 Internal Server error from " + request.RemoteAddr + " @ " + request.RequestURI)	
+		return
+	}
+}
+
+func serveFile(writer http.ResponseWriter, request *http.Request, filepath string) {
+	http.ServeFile(writer, request, filepath)
+	access_log.Write("Success: 200 from " + request.RemoteAddr + " @ " + request.RequestURI)
+}

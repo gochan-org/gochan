@@ -2,10 +2,6 @@
 	font-size:12px;
 }
 
-#site-title {
-	color: #e1b400;
-}
-
 #current-tab {
 	background-color: #404040;
 }
@@ -49,19 +45,16 @@
 
 }
 
+.loginbox {
+
+}
+.loginbox input {
+	height:20%;
+}
+
 .menu {
 	margin-top:1em;
 	text-align:center;
-}
-
-a.permalink {
-	background: inherit;
-	color: #f90;
-}
-
-a.permalink:hover {
-	background: inherit;
-	color: #ffd43f;
 }
 
 .plus {

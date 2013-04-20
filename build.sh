@@ -1,2 +1,2 @@
 #!/bin/bash
-go build -o gochan ./src
+go build -v -o gochan ./src

@@ -1,13 +1,34 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"crypto/md5"
-	"fmt"
+	"crypto/sha1"
+	"code.google.com/p/go.crypto/bcrypt"
 	"io"
-	"os"
+	"math/rand"
+	"net/http"
+	"fmt"
+	"unsafe"
 )
+// #cgo LDFLAGS: -lcrypt
+// #define _GNU_SOURCE
+// #include <crypt.h>
+// #include <stdlib.h>
+import "C"
+
+var crypt_data = C.struct_crypt_data{}
+
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+{}[]-=:\"\\/?.>,<;:'"
+
+
+func crypt(key, salt string) string {
+	ckey := C.CString(key)
+	csalt := C.CString(salt)
+	out := C.GoString(C.crypt_r(ckey,csalt,&crypt_data))
+	C.free(unsafe.Pointer(ckey))
+	C.free(unsafe.Pointer(csalt))
+	return out
+}
 
 func md5_sum(str string) string {
 	hash := md5.New()
@@ -16,34 +37,51 @@ func md5_sum(str string) string {
 	return digest
 }
 
-func readFileToString(path string) (str string, err error) {
-	var (
-		file *os.File
-		part []byte
-		prefix bool
-	)
+func sha1_sum(str string) string {
+	hash := sha1.New()
+	io.WriteString(hash,str)
+	digest := fmt.Sprintf("%x",hash.Sum(nil))
+	return digest
+}
 
-	if file,err = os.Open(path); err != nil {
-		return
+func bcrypt_sum(str string) string {
+	hash := ""
+	digest,err := bcrypt.GenerateFromPassword([]byte(str), 10)
+	if err == nil {
+		hash = fmt.Sprintf("%x",digest)	
 	}
-	defer file.Close()
+	return hash
+}
 
-	reader := bufio.NewReader(file)
-	buffer := bytes.NewBuffer(make([]byte,0))
-	for {
-		if part,prefix,err = reader.ReadLine(); err != nil {
-			break
-		}
-		buffer.Write(part)
-		if !prefix {
-			str = str + buffer.String() + "\n"
-			buffer.Reset()
+func getCookie(name string) *http.Cookie {
+	num_cookies := len(cookies)
+	for c := 0; c < num_cookies; c += 1 {
+		if cookies[c].Name == name {
+			return cookies[c]
 		}
 	}
-	if err == io.EOF {
-		err = nil
+	return nil
+}
+
+func generateSalt() string {
+	salt := make([]byte, 3)
+	salt[0] = chars[rand.Intn(86)]
+	salt[1] = chars[rand.Intn(86)]
+	salt[2] = chars[rand.Intn(86)]
+	return string(salt)
+}
+
+func getFormattedFilesize(size float32) string {
+	if(size < 1000) {
+		return fmt.Sprintf("%fB", size)
+	} else if(size <= 100000) {
+		//size = size * 0.2
+		return fmt.Sprintf("%fKB", size/1024)
+	} else if(size <= 100000000) {
+		//size = size * 0.2
+		return fmt.Sprintf("%fMB", size/1024/1024)
 	}
-	return
+	return fmt.Sprintf("%0.2fGB", size/1024/1024/1024)
 }
 
 func searchStrings(item string,arr []string,permissive bool) int {
@@ -57,6 +95,7 @@ func searchStrings(item string,arr []string,permissive bool) int {
 }
 
 func Btoi(b bool) int {
-	if b { return 1 }
+	if b == true { return 1 }
 	return 0
 }
+

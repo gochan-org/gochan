@@ -1,0 +1,27 @@
+.loginbox {
+	width:300px;
+	height: 120px;
+	position: absolute;
+	left:50%;
+	top:50%;
+	margin-left: -150px;
+	margin-top: -60px;
+	padding-top:5px;
+	padding-bottom:5px;
+	text-align: center;
+	border: solid 1px;
+}
+
+.loginbox input {
+	width:175px;
+	height: 30%;
+}
+
+#footer {
+	clear:both;
+	position:absolute;
+	width: 100%;
+	left: 0px;
+	bottom: 0%;
+	text-align: center;
+}

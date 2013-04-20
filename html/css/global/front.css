@@ -1,0 +1,127 @@
+#footer {
+	clear:both;
+	position:absolute;
+	width: 100%;
+	left: 0px;
+	bottom: 0%;
+	text-align: center;
+}
+
+#main {
+	position:absolute;
+	top:124px;
+	left:16%;
+	height: 100%;
+	right:21%;
+	width:auto;
+}
+
+#menu {
+	position:absolute;
+
+}
+
+#side-pane {
+	position:absolute;
+	top: 106px;
+	width:15%;
+	margin-right: 16px;
+}
+
+#site-title {
+	font-size:50px;
+	text-align: center;
+}
+
+#tab-bar {
+	margin-left: 16px;
+	clear:both;
+}
+
+#topmenu {
+	position:absolute;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	display: block;
+	z-index:10;}
+
+.topmenu-item {
+	display: block;
+	float: left;
+	text-align: center;
+}
+
+.plus {
+	width: 12px;
+	text-align: center;
+	float:right;
+	padding: 0px 4px 0px 4px;
+}
+
+.tab {
+	padding-right: 5px;
+	padding-left: 5px;
+	display: block;
+	float: left;
+}
+
+.section-body {
+	overflow: hidden;
+	margin-right: 0px;
+	margin-bottom:8px;
+	right:0px;
+	min-height: 48px;
+}
+
+.section-block {
+	padding-bottom: 8px;
+}
+
+#top-pane {
+	left:0;
+	position:absolute;
+	text-align:center;
+	top:32px;
+	width:100%;
+	z-index: 1;
+}
+
+#content {
+	clear:left;
+	margin-left:0!important;
+	padding-left:0!important;
+	text-align:justify;
+}
+
+#recent-posts {
+	float:right;
+	margin-top: 98px;
+	overflow: hidden;
+	right: 8px;
+	width:20%;
+}
+
+#recent-posts img {
+	float: left;
+	padding-right: 8px;
+}
+
+#recent-posts .section-body {
+	padding-top: 8px;
+}
+
+.section-title-block {
+	display:block;
+}
+
+a.permalink {
+	float: right;
+}
+
+ul.boardmenu {
+	list-style:none;
+	margin:0;
+	padding-left:0;
+}
+
