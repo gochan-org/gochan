@@ -7,10 +7,70 @@
 	text-align: center;
 }
 
+.lightbox-bg {
+	position:fixed;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	background-attachment: fixed;
+	background-color: #333333;
+	opacity: 0.5;
+	z-index: 9000;
+}
+
+.lightbox-title {
+	font-size:42px;
+	font-weight: bold;
+	text-align: center;
+}
+
+.lightbox-footer {
+	clear:both;
+	position:absolute;
+	right:16px;
+	left: 16px;
+	bottom: 5%;
+	text-align: center;
+}
+
+.lightbox-x {
+	float:right;
+	color: #000000;
+	z-index: 90002;
+}
+
+.lightbox-x:hover {
+	color: #000000;
+}
+
+.lightbox {
+	z-index:9001;
+	position: fixed;
+	left:20%;
+	right:20%;
+	top:5%;
+	bottom:5%;
+	padding: 16px;
+	background-color: #CDCDCD;
+	border: 1px solid #000000;
+	color: #000000;
+}
+
+.setting-name {
+	width:50%;
+}
+
+.setting-value {
+	text-align: right;
+	width:50%;
+}
+
 #main {
 	position:absolute;
+	padding-left: 8px;
 	top:124px;
-	left:16%;
+	left:0%;
 	height: 100%;
 	right:21%;
 	width:auto;
@@ -38,18 +98,46 @@
 	clear:both;
 }
 
-#topmenu {
-	position:absolute;
+#topbar {
+	position:fixed;
 	top: 0px;
 	left: 0px;
 	width: 100%;
 	display: block;
-	z-index:10;}
+	z-index:2;
+}
 
-.topmenu-item {
-	display: block;
-	float: left;
-	text-align: center;
+#topbar ul {
+	position: relative;
+	display: inline;
+	margin-top: 0px;
+	padding-left:0px;
+	padding-right: 4px;
+	list-style-type: none;
+}
+
+.dropdown-button {
+	text-decoration: none;
+	list-style:none;
+	margin-right:0px;
+	float: right;
+	margin-right: 8px;
+}
+
+.dropdown-menu {
+	position: fixed;
+	min-width: 300px;
+	min-height: 200px;
+	top: 24px;
+	right: 0px;
+	z-index:9000;
+	padding-left: 8px;
+	padding-right: 8px;
+	padding-top: 4px;
+}
+
+.topbar-item {
+	float:left;
 }
 
 .plus {
@@ -89,8 +177,8 @@
 
 #content {
 	clear:left;
-	margin-left:0!important;
-	padding-left:0!important;
+	margin-left:0px;
+	padding-left:0px;
 	text-align:justify;
 }
 

@@ -1,0 +1,196 @@
+#footer {
+	clear:both;
+	position:absolute;
+	width: 100%;
+	left: 0px;
+	bottom: 0%;
+	text-align: center;
+}
+
+.lightbox-bg {
+	position:fixed;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	background-attachment: fixed;
+	background-color: #333333;
+	opacity: 0.5;
+	z-index: 9000;
+}
+
+.lightbox-title {
+	font-size:42px;
+	font-weight: bold;
+	text-align: center;
+}
+
+.lightbox-footer {
+	clear:both;
+	position:absolute;
+	right:16px;
+	left: 16px;
+	bottom: 5%;
+	text-align: center;
+}
+
+.lightbox-x {
+	float:right;
+	color: #000000;
+	z-index: 90002;
+}
+
+.lightbox-x:hover {
+	color: #000000;
+}
+
+.lightbox {
+	z-index:9001;
+	position: fixed;
+	left:20%;
+	right:20%;
+	top:5%;
+	bottom:5%;
+	padding: 16px;
+	background-color: #CDCDCD;
+	border: 1px solid #000000;
+	color: #000000;
+}
+
+
+
+.setting-name {
+	width:50%;
+}
+
+.setting-value {
+	text-align: right;
+	width:50%;
+}
+
+#main {
+	position:absolute;
+	padding-left: 8px;
+	top:124px;
+	left:0%;
+	height: 100%;
+	right:21%;
+	width:auto;
+}
+
+#menu {
+	position:absolute;
+
+}
+
+#side-pane {
+	position:absolute;
+	top: 106px;
+	width:15%;
+	margin-right: 16px;
+}
+
+#site-title {
+	font-size:50px;
+	text-align: center;
+}
+
+#tab-bar {
+	margin-left: 16px;
+	clear:both;
+}
+
+#topbar {
+	position:fixed;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	display: block;
+	z-index:2;
+}
+
+#topbar ul {
+	position: relative;
+	display: inline;
+	margin-top: 0px;
+	padding-left:0px;
+	padding-right: 4px;
+	list-style-type: none;
+}
+
+.dropdown-button {
+	text-decoration: none;
+	list-style:none;
+	margin-right:0px;
+	float: right;
+	margin-right: 8px;
+}
+
+.dropdown-menu {
+	position:absolute;
+	top:0px;
+	right: 0px;
+	min-width: 300px;
+	min-height: 200px;
+}
+
+.topbar-item {
+	float:left;
+}
+
+.plus {
+	width: 12px;
+	text-align: center;
+	float:right;
+	padding: 0px 4px 0px 4px;
+}
+
+.tab {
+	padding-right: 5px;
+	padding-left: 5px;
+	display: block;
+	float: left;
+}
+
+.section-body {
+	overflow: hidden;
+	margin-right: 0px;
+	margin-bottom:8px;
+	right:0px;
+	min-height: 48px;
+}
+
+.section-block {
+	padding-bottom: 8px;
+}
+
+#top-pane {
+	left:0;
+	position:absolute;
+	text-align:center;
+	top:32px;
+	width:100%;
+	z-index: 1;
+}
+
+#content {
+	clear:left;
+	margin-left:0px;
+	padding-left:0px;
+	text-align:justify;
+}
+
+.section-title-block {
+	display:block;
+}
+
+a.permalink {
+	float: right;
+}
+
+ul.boardmenu {
+	list-style:none;
+	margin:0;
+	padding-left:0;
+}
+

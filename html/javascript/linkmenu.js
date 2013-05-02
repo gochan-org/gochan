@@ -5,33 +5,27 @@ var up_arrow_symbol = "&#9650;";
 
 var $jq = jQuery.noConflict();
 
-var LinkMenu = function(title) {
-	this.linkURLs = [];
-	this.linkTitles = [];
+var DropDownMenu = function(title,html) {
+	this.html = html;
 	this.buttonTitle = title;
-	$jq("div#verytopbar").append("<a href=\"#\" style=\"float:right;\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\">"+title+"</a>");
+	$jq("div#topmenu").append("<a href=\"#\" style=\"float:right;\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\">"+title+"</a>");
+	this.button = $jq("div#topmenu a#"+title.toLowerCase());
+
 	this.button_jq = $jq("a#"+title.);
 	this.button_jq.click(function(){
 		$jq(document.body).append("<div id="+title.toLowerCase())
 	})
 }
 
-LinkMenu.prototype.open = function() {
+DropDownMenu.prototype.open = function() {
 
 }
 
-LinkMenu.prototype.close = function() {
+DropDownMenu.prototype.close = function() {
 
 }
 
-LinkMenu.prototype.isOpen = function() {
+DropDownMenu.prototype.isOpen = function() {
 
 }
 
-LinkMenu.prototype.addLink = function() {
-
-}
-
-LinkMenu.prototype.buildHTML = function() {
-
-}

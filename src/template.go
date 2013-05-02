@@ -17,11 +17,46 @@ type FooterData struct {
 }
 
 var funcMap = template.FuncMap{
+	"gt": func(a int, b int) bool {
+		return a > b
+	},
+	"lt": func(a int, b int) bool {
+		return a < b
+	},
 	"isStyleDefault_img": func(style string) bool {
 		return style == config.DefaultStyle_img
 	},
 	"isStyleNotDefault_img": func(style string) bool {
 		return style != config.DefaultStyle_img
+	},
+	"getBoardList": func() map[int]string {
+		list := make(map[int]string)
+		i := 0
+		db.Start("USE `"+config.DBname+"`;")
+	  	results,err := db.Start("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
+		if err != nil {
+			error_log.Write(err.Error())
+			return list
+		}
+
+		for {
+		    row, err := results.GetRow()
+	        if err != nil {
+	        	error_log.Write(err.Error())
+	        }
+
+	        if row == nil {
+	            break
+	        }
+
+		    for col_num, col := range row {
+				if col_num == 0 {
+					list[i] = string(col.([]byte))
+					i++
+				}
+		    }
+		}
+		return list
 	},
 }
 
@@ -38,8 +73,12 @@ var (
 	
 	manage_header_tmpl_str string
 	manage_header_tmpl *template.Template
+
+	front_page_tmpl_str string
+	front_page_tmpl *template.Template
 	
 	template_buffer bytes.Buffer
+	starting_time int
 )
 
 func initTemplates() {
@@ -73,17 +112,32 @@ func initTemplates() {
 		os.Exit(2)
 	}
 	img_header_tmpl_str = string(img_header_tmpl_bytes)
-	img_header_tmpl,_ = template.New("img_header_tmpl").Funcs(funcMap).Parse(string(img_header_tmpl_str))
+	img_header_tmpl,tmpl_err = template.New("img_header_tmpl").Funcs(funcMap).Parse(string(img_header_tmpl_str))
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_header.html\"")
 		os.Exit(2)
 	}
 
-	manage_header_tmpl_bytes,_ := ioutil.ReadFile(config.TemplateDir+"/manage_header.html")
+	manage_header_tmpl_bytes,err := ioutil.ReadFile(config.TemplateDir+"/manage_header.html")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	manage_header_tmpl_str = string(manage_header_tmpl_bytes)
-	manage_header_tmpl,_ = template.New("manage_header_tmpl").Funcs(funcMap).Parse(manage_header_tmpl_str)
+	manage_header_tmpl,tmpl_err = template.New("manage_header_tmpl").Funcs(funcMap).Parse(manage_header_tmpl_str)
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/manage_header.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/manage_header.html\": "+tmpl_err.Error())
+		os.Exit(2)
+	}
+
+	front_page_tmpl_bytes,err := ioutil.ReadFile(config.TemplateDir+"/front.html")
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(2)
+	}
+	front_page_tmpl_str = string(front_page_tmpl_bytes)
+	front_page_tmpl,tmpl_err = template.New("front_page_tmpl").Funcs(funcMap).Parse(front_page_tmpl_str)
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/front.html\": "+tmpl_err.Error())
 		os.Exit(2)
 	}
 }

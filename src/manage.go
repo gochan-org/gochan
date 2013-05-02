@@ -15,20 +15,14 @@ type ManageFunction struct {
 }
 
 func callManageFunction(w http.ResponseWriter, r *http.Request) {
-	// check if we have sufficient permissions to run this function
-	//return values: 0 if successful, 1 if insufficient privelages
 	request = *r
 	writer = w
 	cookies = r.Cookies()
 	request.ParseForm()
-	form := r.Form
-	action := form.Get("action")
+	action := request.FormValue("action")
 	staff_rank := getStaffRank()
-	//writer.Header().Set("CContent-Type", "text/html")
 
 	manage_page_html := ""
-	//manage_page_html = strings.Replace(manage_page_html,"{link css}",getStyleLinks(w,"manage"),-1)
-	//getStyleLinks(w,"manage")
 
 	if action == ""  {
 		action = "announcements"
@@ -64,16 +58,11 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 		manage_page_html = manage_page_html + action + " is undefined."
 		fmt.Fprintf(writer,manage_page_html)
 	}
-
-	global_footer,err := getTemplateAsString(*global_footer_tmpl)
-	if err != nil {
-		fmt.Fprintf(writer,err.Error())
-	} else {
-		fmt.Fprintf(writer,global_footer)
-	}
+	fmt.Fprintf(writer,"\n</body>\n</html>")
 }
 
 func getStaffRank() int {
+	return 3
 	var key string
 	var staffname string
 
@@ -161,7 +150,7 @@ func createSession(key string,username string, password string) bool {
 			return false
 		}
 	}
-	fmt.Println("wtf")
+	fmt.Println("dafuq?")
 	return false
 }
 
@@ -246,6 +235,47 @@ var manage_functions = map[string]ManageFunction{
 
 			return
 	}},
+	"getstaffjquery": {
+		Permissions:0,
+		Callback: func() (html string) {
+			html = "Luna;3;test1,test2"
+			return
+	}},
+	"staffmenu": {
+		Permissions:1,
+		Callback: func() (html string) {
+			rank := getStaffRank()
+
+			html = "<a href=\""+config.SiteWebfolder+"manage?action=logout\">Log out</a><br />\n" +
+				   "<a href=\""+config.SiteWebfolder+"manage?action=announcements\">Announcements</a><br />\n" +
+				   "<a href=\""+config.SiteWebfolder+"manage?action=announcements\">Announcements</a><br />\n"
+			if rank == 3 {
+			  	html += "<a href=\""+config.SiteWebfolder+"manage?action=staff\">Manage staff</a><br />\n" +
+					  	"<a href=\""+config.SiteWebfolder+"manage?action=manageboards\">Add/edit/delete boards</a><br />\n"
+			}
+
+			if rank > 0 {
+				html += "<a href=\""+config.SiteWebfolder+"manage?action=recentimages\">Recently uploaded images</a><br />\n" +
+						"<a href=\""+config.SiteWebfolder+"manage?action=recentposts\">Recent posts</a><br />\n" +
+						"<a href=\""+config.SiteWebfolder+"manage?action=searchip\">Search posts by IP</a><br />\n"
+			}
+
+			return
+	}},
+	"rebuildfront": {
+		Permissions: 3,
+		Callback: func() (html string) {
+			f,err := os.OpenFile("html/index.html",os.O_RDWR|os.O_CREATE,0777)
+			if err != nil {
+				return err.Error()
+			} else {
+				err = front_page_tmpl.Execute(f,config)
+				if err != nil {
+					return err.Error()
+				}
+			}
+			return "Front page rebuilt successfully.<br />"
+	}},
 	"rebuildall": {
 		Permissions:3,
 		Callback: func() (html string) {
@@ -264,5 +294,52 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			os.Exit(0)
 			return
+	}},
+	"staff": {
+		Permissions:3,
+		Callback: func() (html string) {
+			//do := request.FormValue("do")
+			html = "<h1>Staff</h1><br />\n" +
+					"<table border=\"1\"><tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
+			db.Start("USE `"+config.DBname+"`;")
+		 	results,err := db.Start("SELECT `username`,`rank`,`boards`,`added_on` FROM `"+config.DBprefix+"staff`;")
+			if err != nil {
+				html += "<tr><td>"+err.Error()+"</td></tr></table>"
+				return
+			}
+
+			row_num := 0
+			for {
+			    row, err := results.GetRow()
+		        if err != nil {
+					html += "<tr><td>"+err.Error()+"</td></tr></table>"
+					return
+		        }
+
+		        if row == nil {
+		            break
+		        }
+		        html  += "<tr>"
+			    for col_num, col := range row {
+			    	if col_num == 1 {
+			    		rank := string(col.([]byte))
+			    		if rank == "3" {
+			    			rank = "admin"
+			    		} else if rank == "2" {
+			    			rank = "mod"
+			    		} else if rank == "1" {
+			    			rank = "janitor"
+			    		}
+			    		html += "<td>"+rank+"</td>"	
+			    	} else {
+			    		html += "<td>"+string(col.([]byte))+"</td>"
+			    	}
+				}
+				
+				html += "<td><a href=\"action=staff&do=del&index="+strconv.Itoa(row_num)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+			    
+			}
+			html += "</table>"
+			return html
 	}},
 }

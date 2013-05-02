@@ -3,8 +3,11 @@ var $jq = jQuery.noConflict();
 var down_arrow_symbol = "&#9660;";
 var up_arrow_symbol = "&#9650;";
 var topbar;
-var setings_menu;
+var settings_menu;
+var staff_btn;
+var watched_threads_btn;
 var settings_arr = [];
+var current_staff;
 
 var SettingsMenuOption = {
 	"name":"",
@@ -13,27 +16,40 @@ var SettingsMenuOption = {
 	"cookieType":"",
 }
 
-var DropDownMenu = function(title,callback) {
+var Staff = function(name,rank,boards) {
+	this.name = name;
+	this.rank = rank;
+	this.boards = boards;
+}
+
+var TopBarButton = function(title,callback) {
+	this.title = title;
 	this.callback = callback;
 	this.buttonTitle = title;
 	$jq("div#topbar").append("<ul><a href=\"#\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\"><li>"+title+down_arrow_symbol+"</li></a></ul>");
 	this.button_jq = $jq("div#topbar a#"+title.toLowerCase());
-	this.button_jq.click(function(){
-		//$jq(document.body).append("<div id="+title.toLowerCase())
-		callback();
-	})
+	this.button_jq.click(this.callback);
 }
 
-DropDownMenu.prototype.open = function() {
+var DropDownMenu = function(title,menu_html) {
+	this.title = title;
+	this.open = false;
+	this.menuHTML = menu_html;
 
-}
-
-DropDownMenu.prototype.close = function() {
-
-}
-
-DropDownMenu.prototype.isOpen = function() {
-
+	this.button = new TopBarButton(title,function() {
+		if(this.open) {
+			$jq("a#"+title.toLowerCase()).children(0).html(title+down_arrow_symbol);
+			$jq("div#"+title.toLowerCase()).remove();
+			this.open = false;
+		} else {
+			$jq("a#"+title.toLowerCase()).children(0).html(title+up_arrow_symbol);
+			topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>")
+			$jq("div#"+title.toLowerCase()).css({
+				top:topbar.height()
+			})
+			this.open = true;
+		}
+	});
 }
 
 function showLightBox(title,innerHTML) {
@@ -134,9 +150,62 @@ function getHashVal() {
 	}
 }
 
+function getManagePage() {
+	
+}
+
+function getStaff() {
+	var s;
+	$jq.ajax({
+		method: 'GET',
+		url: webroot+"manage",
+		data: {
+			action: 'getstaffjquery',
+		},
+		dataType:"xml",
+		cache: true,
+		async:false,
+		success: function(result) {
+			var return_data = $jq(result).find("body").html().split(";");
+			s = new Staff(return_data[0],return_data[1],return_data[2].split(","));
+		},
+		error: function() {
+			s = null;
+		}
+	});
+	return s;
+}
+
+function getStaffMenuHTML() {
+	var s = "<ul class=\"boardmenu\">";
+	$jq.ajax({
+		method: 'GET',
+		url: webroot+"manage",
+		data: {
+			action: 'staffmenu',
+		},
+		dataType:"xml",
+		cache: true,
+		async:false,
+		success: function(result) {
+			var lines = $jq(result).find("body").html().split("\n");
+			var num_lines = lines.length;
+			for(var l = 0; l < num_lines; l++) {
+				if(lines[l] != "") {
+					s += "<li>"+lines[l]+"</li>\n"
+				}
+			}
+		},
+		error: function() {
+			s = "Something went wrong :/";
+		}
+	});
+	return s+"</ul>";
+}
+
 function isFrontPage() {
 	var page = window.location.pathname;
-	return page == "/" || page == "/index.html";
+	return page == "/" || page == "/index.html" || page == "/template.html";
 }
 
 function isBoardPage() {
@@ -148,6 +217,8 @@ function isThreadPage() {
 }
 
 $jq(document).ready(function() {
+	current_staff = getStaff()
+
 	topbar = $jq("div#topbar");
 	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup><tr><td><b>Style:</b></td><td><select name=\"style\" style=\"min-width:50%\">"
 	for(var i = 0; i < styles.length; i++) {
@@ -155,10 +226,15 @@ $jq(document).ready(function() {
 	}
 	settings_html+="</select></td><tr><tr><td><b>Pin top bar:</b></td><td><input type=\"checkbox\" /></td></tr></table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>"
 
- 	setings_menu = new DropDownMenu("Settings",function(){
+ 	settings_menu = new TopBarButton("Settings",function(){
  		showLightBox("Settings",settings_html)
  	});
- 	b = new DropDownMenu("WT",function() {});
+ 	watched_threads_btn = new TopBarButton("WT",function() {});
+
+ 	if(current_staff.rank > 0) {
+ 		staff_btn = new DropDownMenu("Staff",getStaffMenuHTML())
+ 	}
+
 	if(isFrontPage()) {
 		changeFrontPage(getHashVal());
 	}
