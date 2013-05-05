@@ -192,7 +192,7 @@ function getStaffMenuHTML() {
 			var num_lines = lines.length;
 			for(var l = 0; l < num_lines; l++) {
 				if(lines[l] != "") {
-					s += "<li>"+lines[l]+"</li>\n"
+					s += lines[l].substr(0,lines[l].indexOf("\">")+2)+"<li>"+$jq(lines[l]).text()+"</li></a>";
 				}
 			}
 		},
@@ -216,6 +216,30 @@ function isThreadPage() {
 
 }
 
+function openStaffLightBox(action_url) {
+	$jq.ajax({
+		method: 'GET',
+		url: webroot+"manage",
+		data: {
+			action: action_url,
+		},
+		dataType:"xml",
+		async:false,
+
+		success: function(result) {
+			var result_body = $jq(result).find("body");
+			var header = $jq(result).find("h1");
+			var header_text = header.text();
+			header.remove()
+			if(header_text == "") header_text = "Manage";
+			showLightBox(header_text,result_body.html());
+		},
+		error: function(result) {
+			showLightBox("Manage","Something went wrong :(");
+		}
+	});
+}
+
 $jq(document).ready(function() {
 	current_staff = getStaff()
 
@@ -233,6 +257,12 @@ $jq(document).ready(function() {
 
  	if(current_staff.rank > 0) {
  		staff_btn = new DropDownMenu("Staff",getStaffMenuHTML())
+ 		$jq("a#staff.dropdown-button").click(function() {
+ 			$jq("a.staffmenu-item").click(function() {
+	 			var url = $jq(this).attr("id");
+				openStaffLightBox(url)
+	 		});
+ 		})
  	}
 
 	if(isFrontPage()) {

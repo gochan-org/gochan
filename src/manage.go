@@ -207,7 +207,7 @@ var manage_functions = map[string]ManageFunction{
 	"announcements": {
 		Permissions: 1,
 		Callback: func() (html string) {
-			html = "<h2>Announcements</h2><br />" +
+			html = "<h1>Announcements</h1><br />" +
 				"Announcements will eventually go here."
 
 		  	/*results,err := db.Query("SELECT * FROM `"+db_prefix+"announcements")
@@ -246,18 +246,18 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			rank := getStaffRank()
 
-			html = "<a href=\""+config.SiteWebfolder+"manage?action=logout\">Log out</a><br />\n" +
-				   "<a href=\""+config.SiteWebfolder+"manage?action=announcements\">Announcements</a><br />\n" +
-				   "<a href=\""+config.SiteWebfolder+"manage?action=announcements\">Announcements</a><br />\n"
+			html = "<a href=\"javascript:void(0)\" id=\"logout\" class=\"staffmenu-item\">Log out</a><br />\n" +
+				   "<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
-			  	html += "<a href=\""+config.SiteWebfolder+"manage?action=staff\">Manage staff</a><br />\n" +
-					  	"<a href=\""+config.SiteWebfolder+"manage?action=manageboards\">Add/edit/delete boards</a><br />\n"
+			  	html += "<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
+					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
+					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
 
 			if rank > 0 {
-				html += "<a href=\""+config.SiteWebfolder+"manage?action=recentimages\">Recently uploaded images</a><br />\n" +
-						"<a href=\""+config.SiteWebfolder+"manage?action=recentposts\">Recent posts</a><br />\n" +
-						"<a href=\""+config.SiteWebfolder+"manage?action=searchip\">Search posts by IP</a><br />\n"
+				html += "<a href=\"javascript:void(0)\" id=\"recentimages\" class=\"staffmenu-item\">Recently uploaded images</a><br />\n" +
+						"<a href=\"javascript:void(0)\" id=\"recentposts\" class=\"staffmenu-item\">Recent posts</a><br />\n" +
+						"<a href=\"javascript:void(0)\" id=\"searchip\" class=\"staffmenu-item\">Search posts by IP</a><br />\n"
 			}
 
 			return
@@ -336,10 +336,10 @@ var manage_functions = map[string]ManageFunction{
 			    	}
 				}
 				
-				html += "<td><a href=\"action=staff&do=del&index="+strconv.Itoa(row_num)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+				html += "<td><a href=\"action=staff%26do=del%26index="+strconv.Itoa(row_num)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    
 			}
 			html += "</table>"
-			return html
+			return
 	}},
 }
