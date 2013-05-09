@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"fmt"
+	"time"
 	"unsafe"
 )
 // #cgo LDFLAGS: -lcrypt
@@ -46,9 +47,10 @@ func sha1_sum(str string) string {
 
 func bcrypt_sum(str string) string {
 	hash := ""
-	digest,err := bcrypt.GenerateFromPassword([]byte(str), 10)
+	digest,err := bcrypt.GenerateFromPassword([]byte(str), 4)
 	if err == nil {
-		hash = fmt.Sprintf("%x",digest)	
+		//hash = fmt.Sprintf("%x",digest)
+		hash = string(digest)
 	}
 	return hash
 }
@@ -82,6 +84,15 @@ func getFormattedFilesize(size float32) string {
 		return fmt.Sprintf("%fMB", size/1024/1024)
 	}
 	return fmt.Sprintf("%0.2fGB", size/1024/1024/1024)
+}
+
+func getSQLDateTime() string {
+	now := time.Now()
+	return now.Format("2006-01-02 15:04:05")
+}
+
+func getSpecificSQLDateTime(t time.Time) string {
+	return t.Format("2006-01-02 15:04:05")
 }
 
 func searchStrings(item string,arr []string,permissive bool) int {

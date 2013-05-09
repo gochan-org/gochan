@@ -1,12 +1,13 @@
 package main
 
 import (
-	"net/http"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strconv"
-	_ "code.google.com/p/go.crypto/bcrypt"
+	"time"
+	"code.google.com/p/go.crypto/bcrypt"
 )
 
 type ManageFunction struct {
@@ -62,7 +63,6 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 }
 
 func getStaffRank() int {
-	return 3
 	var key string
 	var staffname string
 
@@ -128,30 +128,62 @@ func getStaffRank() int {
 	return 0
 }
 
-func createSession(key string,username string, password string) bool {
-	//sum := bcrypt_sum(password)
-  	rows,_,err := db.Query("SELECT `password_checksum` FROM `"+config.DBprefix+"staff`")
+func createSession(key string,username string, password string, request *http.Request, writer *http.ResponseWriter) int {
+	//returs 0 for successful, 1 for password mismatch, and 2 for other
+	db.Start("USE `"+config.DBname+"`;")
+  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+username+"';")
 
 	if err != nil {
 		error_log.Write(err.Error())
-		fmt.Println("nope 1")
-		return false
+		return 2
 	} else {
-
-
+		rows, err := results.GetRows()
+	    if err != nil {
+			error_log.Write(err.Error())
+			return 1
+	    }
 		if len(rows) > 0 {
-			_,err := db.Start(" INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '2023-17-04 16:21:01');")
-			if err != nil {
-				fmt.Println("Initial setup failed.")
-				error_log.Write(err.Error())
+			for _, row := range rows {
+		        if row == nil {
+		        	break
+		        }
+			    for col_num, col := range row {
+			    	if col_num == 2 {
+			    		success := bcrypt.CompareHashAndPassword(col.([]byte), []byte(password))
+			    		if success == nil {
+			    			// successful login
+			    			// todo: create cookie poiting to session
+							cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
+			    			http.SetCookie(*writer, &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, Expires: time.Now().Add(time.Duration(time.Hour*2))})
+			    			fmt.Fprintf(*writer,cookie.String())
+							_,err := db.Start("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
+							if err != nil {
+								error_log.Write(err.Error())
+								return 2
+							}
+							_,err = db.Start("UPDATE `"+config.DBprefix+"staff` SET `last_active` ='"+getSQLDateTime()+"' WHERE `username` = '"+username+"';")
+							if err != nil {
+								error_log.Write(err.Error())
+							}
+
+							return 0
+			    		} else if success == bcrypt.ErrMismatchedHashAndPassword {
+			    			// password mismatch
+			    			_,err := db.Start("INSERT `"+config.DBprefix+"loginattempts` (`ip`,`timestamp`) VALUES('"+request.RemoteAddr+"','"+getSQLDateTime()+"');")
+			    			if err != nil {
+			    				error_log.Write(err.Error())
+			    			}
+			    			return 1
+			    		}
+			    	}
+				}
 			}
 		} else {
-			fmt.Println("nope 2")
-			return false
+			//username doesn't exist
+			return 1
 		}
 	}
-	fmt.Println("dafuq?")
-	return false
+	return 1
 }
 
 var manage_functions = map[string]ManageFunction{
@@ -183,7 +215,8 @@ var manage_functions = map[string]ManageFunction{
 					"\t</form>"
 			} else {
 				key := md5_sum(request.RemoteAddr+username+password+config.RandomSeed+generateSalt())
-				createSession(key,username,password)
+				session_success := createSession(key,username,password,&request,&writer)
+				fmt.Println(session_success)
 				//check db for valid login
 			  	/*
 			  	password_bcrypt = bcrypt_encode(password)
@@ -239,6 +272,34 @@ var manage_functions = map[string]ManageFunction{
 		Permissions:0,
 		Callback: func() (html string) {
 			html = "Luna;3;test1,test2"
+			return
+	}},
+	"manageboards": {
+		Permissions:3,
+		Callback: func() (html string) {
+			html = "<h1>Manage boards</h1>\n<select name=\"boardselect\">\n<option>Select board...</option>\n"
+			db.Start("USE `"+config.DBname+"`;")
+		 	results,err := db.Start("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
+			if err != nil {
+				html += err.Error()
+				return
+			}
+
+			for {
+			    row, err := results.GetRow()
+		        if err != nil {
+					html += err.Error()
+					return
+		        }
+
+		        if row == nil {
+		            break
+		        }
+			    for _, col := range row {
+		    		html += "<option>"+string(col.([]byte))+"</option>\n"
+				}
+			}
+			html += "</select>"
 			return
 	}},
 	"staffmenu": {
