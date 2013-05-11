@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"time"
 	"code.google.com/p/go.crypto/bcrypt"
@@ -22,44 +23,81 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 	request.ParseForm()
 	action := request.FormValue("action")
 	staff_rank := getStaffRank()
-
 	manage_page_html := ""
 
 	if action == ""  {
 		action = "announcements"
 	}
-	if staff_rank == 0 {
-		action = "login"
-	}
 
 	global_header,err := getTemplateAsString(*global_header_tmpl)
 	if err != nil {
-		fmt.Fprintf(writer,err.Error())
+		fmt.Fprintf(writer,manage_page_html + err.Error() + "\n</body>\n</html>")
+		return
 	} else {
-		fmt.Fprintf(writer,global_header)
+		manage_page_html += global_header
 	}
 
 	manage_header,err := getTemplateAsString(*manage_header_tmpl)
 	if err != nil {
-		fmt.Fprintf(writer,err.Error())
+		fmt.Fprintf(writer,manage_page_html + err.Error() + "\n</body>\n</html>")
+		return
 	} else {
-		fmt.Fprintf(writer,manage_header)
+		manage_page_html += manage_header
 	}
 
 	if _,ok := manage_functions[action]; ok {
 		if staff_rank >= manage_functions[action].Permissions {
 			manage_page_html += manage_functions[action].Callback()
-			fmt.Fprintf(writer,manage_page_html)
-
+		} else if staff_rank == 0 && manage_functions[action].Permissions == 0 {
+			manage_page_html += manage_functions[action].Callback()
+		} else if staff_rank == 0 {
+			manage_page_html += manage_functions["login"].Callback()
 		} else {
-			manage_page_html = manage_page_html + action + " is undefined."
-			fmt.Fprintf(writer,manage_page_html)
+			manage_page_html += action + " is undefined."
 		}
 	} else {
-		manage_page_html = manage_page_html + action + " is undefined."
-		fmt.Fprintf(writer,manage_page_html)
+		manage_page_html += action + " is undefined."
 	}
-	fmt.Fprintf(writer,"\n</body>\n</html>")
+	fmt.Fprintf(writer,manage_page_html+"\n</body>\n</html>")
+}
+
+func getCurrentStaff() string {
+	session_cookie := getCookie("sessiondata")
+	var key string
+	if session_cookie == nil {
+		return ""
+	} else {
+		key = session_cookie.Value
+	}
+
+	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"sessions` WHERE `key` = '"+key+"';")
+	if err != nil {
+		error_log.Write(err.Error())
+		return ""
+	}
+
+	rows, err := results.GetRows()
+    if err != nil {
+		error_log.Write(err.Error())
+		return ""
+    }
+	if len(rows) > 0 {
+		for  _, row := range rows {
+	        if row == nil {
+	            break
+	        }
+
+		    for col_num, col := range row {
+				if col_num == 2 {
+					return string(col.([]byte))
+				}
+		    }
+		}
+	} else {
+		//session key doesn't exist in db
+		return ""
+	}
+	return ""
 }
 
 func getStaffRank() int {
@@ -80,21 +118,26 @@ func getStaffRank() int {
 		return 0
 	}
 
-	for {
-	    row, err := results.GetRow()
-        if err != nil {
-        	error_log.Write(err.Error())
-        }
+	rows, err := results.GetRows()
+    if err != nil {
+		error_log.Write(err.Error())
+		return 1
+    }
+	if len(rows) > 0 {
+		for  _, row := range rows {
+	        if row == nil {
+	            break
+	        }
 
-        if row == nil {
-            break
-        }
-
-	    for col_num, col := range row {
-			if col_num == 2 {
-				staffname = string(col.([]byte))
-			}
-	    }
+		    for col_num, col := range row {
+				if col_num == 2 {
+					staffname = string(col.([]byte))
+				}
+		    }
+		}
+	} else {
+		//session key doesn't exist in db
+		return 0
 	}
 
   	results,err = db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+staffname+"';")
@@ -103,34 +146,35 @@ func getStaffRank() int {
 		return 0
 	}
 
-	for {
-	    row, err := results.GetRow()
-        if err != nil {
-        	error_log.Write(err.Error())
-        	return 0
-        }
+	rows, err = results.GetRows()
+    if err != nil {
+		error_log.Write(err.Error())
+		return 1
+    }
+	if len(rows) > 0 {
+		for  _, row := range rows {
+	        if row == nil {
+	            break
+	        }
 
-        if row == nil {
-            break
-        }
-
-	    for col_num, col := range row {
-			if col_num == 4 {
-				rank,rerr := strconv.Atoi(string(col.([]byte)))
-				if rerr == nil {
-					return rank
-				} else {
-					return 0
+		    for col_num, col := range row {
+				if col_num == 4 {
+					rank,rerr := strconv.Atoi(string(col.([]byte)))
+					if rerr == nil {
+						return rank
+					} else {
+						return 0
+					}
 				}
-			}
-	    }
+		    }
+		}
 	}
 	return 0
 }
 
 func createSession(key string,username string, password string, request *http.Request, writer *http.ResponseWriter) int {
 	//returs 0 for successful, 1 for password mismatch, and 2 for other
-	db.Start("USE `"+config.DBname+"`;")
+	//db.Start("USE `"+config.DBname+"`;")
   	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+username+"';")
 
 	if err != nil {
@@ -152,10 +196,8 @@ func createSession(key string,username string, password string, request *http.Re
 			    		success := bcrypt.CompareHashAndPassword(col.([]byte), []byte(password))
 			    		if success == nil {
 			    			// successful login
-			    			// todo: create cookie poiting to session
 							cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
-			    			http.SetCookie(*writer, &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, Expires: time.Now().Add(time.Duration(time.Hour*2))})
-			    			fmt.Fprintf(*writer,cookie.String())
+			    			http.SetCookie(*writer, cookie)
 							_,err := db.Start("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
 							if err != nil {
 								error_log.Write(err.Error())
@@ -214,26 +256,10 @@ var manage_functions = map[string]ManageFunction{
 					"\t\t<input type=\"submit\" value=\"Login\" />\n" +
 					"\t</form>"
 			} else {
-				key := md5_sum(request.RemoteAddr+username+password+config.RandomSeed+generateSalt())
-				session_success := createSession(key,username,password,&request,&writer)
-				fmt.Println(session_success)
-				//check db for valid login
-			  	/*
-			  	password_bcrypt = bcrypt_encode(password)
-			  	results,err := db.Query("SELECT `username`,`password`, FROM `"+config.DBprefix+"staff")
-				if err != nil {
-					error_log.Write(err.Error())
-				}
-				var entry StaffTable
-				for results.Next() {
-					err = results.Scan(&entry.username,&entry.password)
-					if entry.username == username && entry.password == password_bcrypt {
-						//authenticated
+				key := md5_sum(request.RemoteAddr+username+password+config.RandomSeed+generateSalt())[0:10]
+				createSession(key,username,password,&request,&writer)
+				redirect(path.Join(config.SiteWebfolder,"/manage?action=announcements"))
 
-					}
-					if err !=  nil { error_log.write(err.Error()) }
-				}
-				*/
 			}
 			return
 	}},
@@ -242,16 +268,33 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			html = "<h1>Announcements</h1><br />" +
 				"Announcements will eventually go here."
+			  	/*results,err := db.Start("SELECT * FROM `"+config.DBprefix+"announcements`;")
+				if err != nil {
+					error_log.Write(err.Error())
+					html += err.Error()
+					return
+				}
 
-		  	/*results,err := db.Query("SELECT * FROM `"+db_prefix+"announcements")
-			if err != nil {
-				error_log.Write(err.Error())
-			}
-			var entry ModPageAnnouncementsTable
-			for results.Next() {
-				err = results.Scan(&entry.id,&entry.parentid,&entry.subject,&entry.postedat,&entry.postedby,&entry.message)
-				//if err !=  nil { panic(err) }
-			}*/
+				rows, err := results.GetRows()
+			    if err != nil {
+					error_log.Write(err.Error())
+					return 1
+			    }
+				if len(rows) > 0 {
+					for  _, row := range rows {
+				        if row == nil {
+				            break
+				        }
+
+					    for col_num, col := range row {
+							if col_num == 2 {
+								staffname = string(col.([]byte))
+							}
+					    }
+					}
+				} else {
+					//no announcements
+				}*/
 			return
 	}},
 	"manageserver": {
@@ -271,7 +314,42 @@ var manage_functions = map[string]ManageFunction{
 	"getstaffjquery": {
 		Permissions:0,
 		Callback: func() (html string) {
-			html = "Luna;3;test1,test2"
+			current_staff := getCurrentStaff()
+			staff_rank := getStaffRank()
+			if staff_rank == 0 {
+				html = "nobody;0;"
+				return
+			}
+			staff_boards := ""
+		  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff`;")
+			if err != nil {
+				error_log.Write(err.Error())
+				html += err.Error()
+				return
+			}
+
+			rows, err := results.GetRows()
+		    if err != nil {
+				error_log.Write(err.Error())
+				html += err.Error()
+				return
+		    }
+			if len(rows) > 0 {
+				for  _, row := range rows {
+			        if row == nil {
+			            break
+			        }
+
+				    for col_num, col := range row {
+						if col_num == 5 {
+							staff_boards = string(col.([]byte))
+						}
+				    }
+				}
+			} else {
+				// fuck you, I'm Spiderman.
+			}
+			html = current_staff+";"+strconv.Itoa(staff_rank)+";"+staff_boards
 			return
 	}},
 	"manageboards": {
@@ -310,7 +388,7 @@ var manage_functions = map[string]ManageFunction{
 			html = "<a href=\"javascript:void(0)\" id=\"logout\" class=\"staffmenu-item\">Log out</a><br />\n" +
 				   "<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
-			  	html += "<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
+			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}

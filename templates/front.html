@@ -1,14 +1,158 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>{SITE_NAME}</title>
+	<title>{{.SiteName}}</title>
 	<script type="text/javascript" src="/javascript/jquery/jquery-1.7.2.min.js"></script>
+	<script type="text/javascript" src="/javascript/msgpack.js"></script>
+	<script type="text/javascript">
+		var styles = [{{range $i, $style := .Styles_img}}{{if gt $i  0}}, {{end}}"{{$style}}"{{end}}];
+		var webroot = "{{.SiteWebfolder}}"
+	</script>
 	<script type="text/javascript" src="/javascript/gochan.js"></script>
-	{link css}
+
+	<link rel="stylesheet" href="/css/global/front.css" />
+{{range $i, $style := .Styles_img}}
+	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
 </head>
 <body>
-	<center>
-		<h1>{SITE_NAME}</h1>
-		<h2>{SITE_SLOGAN}</h2>
+	<div id="topbar">
+		<ul class="topbar-section">
+			{{range $i, $board := getBoardList}}
+			<a href="/{{$board}}/"><li class="topbar-item">/{{$board}}/</li></a>{{end}}
+		</ul>
+
+		<ul class="topbar-section">
+			<a href="/test1/"><li class="topbar-item">/test1/</li></a>
+			<a href="/test2/"><li class="topbar-item">/test2/</li></a>
+		</ul>
+	</div>
+	<div id="top-pane">
+		<span id="site-title">{{.SiteName}}</span><br />
+		<span id="site-slogan">{{.SiteSlogan}}</span>
+	</div>
+	
+	<div id="main">
+		<div id="tab-bar">
+			<div id="current-tab" class="tab">
+				<a href="#">Home</a>
+			</div>
+			<div class="tab">
+				<a href="#boards">Boards</a>
+			</div>
+			<div class="tab">
+				<a href="#rules">Rules</a>
+			</div>
+			<div class="tab">
+				<a href="#faq">FAQ</a>
+			</div>
+		</div>
+		<div id="content">
+			<div id="first-page" class="page">
+				<div class="section-block">
+					<div class="section-title-block" id="first-page0">
+						<b>A news message thingy</b> by <a href="mailto:admin@lunachan.net" >Luna</a><a href="/#first-page0" class="permalink">#</a>
+					</div>
+					<div class="section-body">
+						Some funky news stuff would go here
+					</div>
+				</div>
+
+				<div class="section-block">
+					<div class="section-title-block">
+						<b>A news message thingy</b> by <a href="mailto:admin@lunachan.net" class="section-poster">Luna</a>
+					</div>
+					<div class="section-body">
+						Some funky news stuff would go here
+					</div>
+				</div>
+			</div>
+
+			<div id="boards-page" class="page">
+				<div class="section-block">
+					<div class="section-title-block">
+						<b>Boards</b> by <a href="mailto:admin@lunachan.net" class="section-poster">Luna</a>
+					</div>
+					<div class="section-body">
+						<ul>
+							<li><b>/test/</b> description of board</li> 
+							<li><b>/test/</b> description of board</li> 
+							<li><b>/test/</b> description of board</li> 
+						</ul>
+					</div>
+				</div>
+			</div>
+
+			<div id="rules-page" class="page">
+				<div class="section-block">
+					<div class="section-title-block">
+						<b>Rules</b> by <a href="mailto:admin@lunachan.net" class="section-poster">Luna</a>
+					</div>
+					<div class="section-body">
+						Don't talk about Gochan.<br />
+						Do NOT talk about Gochan.<br />
+						Purple pone is best pone, no exceptions.<br />
+						No Comic Sans, breakers of this rule will be permabanned without warning<br />
+					</div>
+				</div>
+			</div>
+
+			<div id="faq-page" class="page">
+				<div class="section-block">
+					<div class="section-title-block">
+						<b>A FAQ message thingy</b> by <a href="mailto:admin@lunachan.net" class="section-poster">Luna</a>
+					</div>
+					<div class="section-body">
+						Some funky FAQ stuff would go here
+					</div>
+				</div>
+
+				<div class="section-block">
+					<div class="section-title-block">
+						<b>A FAQ message thingy</b> by <a href="mailto:admin@lunachan.net" class="section-poster">Luna</a>
+					</div>
+					<div class="section-body">
+						Some funky FAQ stuff would go here
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div id="recent-posts">
+		<h2>Recent Posts</h2>
+		<div class="section-block">
+			<div class="section-title-block">
+				<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
+			</div>
+			<div class="section-body">
+				<img src="135693079632s.png" />
+				TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT...<br /><i>(Comment truncated, click <a href="/test/">here</a> to continue reading)</i>
+			</div>
+		</div>
+
+		<div class="section-block">
+			<div class="section-title-block">
+				<span class="section-title"><a href="/test/">/test/</a></span> - <b>Anonymous</b>
+			</div>
+			<div class="section-body">
+				OP is a pony.
+			</div>
+		</div>
+
+		<div class="section-block">
+			<div class="section-title-block">
+				<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
+			</div>
+			<div class="section-body">
+				<img src="135683008384s.png" />
+				<a href="#">&gt;&gt;22222</a><br />
+				HERP DERP FROSTED BUTTS
+			</div>
+		</div>
+	</div>
+	<div id="footer">
+		<a href="/">Home</a> | <a href="http://127.0.0.1:8080/#boards">Boards</a> | <a href="http://127.0.0.1:8080/#rules">Rules</a> | <a href="http://127.0.0.1:8080/#faq">FAQ</a><br />
+		Powered by Gochan {{.Version}}<br />
+		Generated in over 9000 hours
+	</div>
 </body>
 </html>
