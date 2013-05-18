@@ -1,3 +1,0 @@
-goconf: http://code.google.com/p/goconf/
-go-mysql-driver: http://code.google.com/p/go-mysql-driver/
-go-logfile: http://github.com/Eggbertx/go-logfile
