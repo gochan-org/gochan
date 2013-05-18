@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Test</title>
+	<script type="text/javascript" src="/javascript/jquery/jquery-1.7.2.min.js"></script>
+	<script type="text/javascript" src="/javascript/msgpack.js"></script>
+	<script type="text/javascript">
+		var styles = ["pipes", "burichan", "futaba", "braeburn", "leetchan"];
+		var webroot = "/"
+	</script>
+	<script type="text/javascript" src="/javascript/gochan.js"></script>
+
+	<link rel="stylesheet" href="/css/global/img.css" />
+
+	<link rel="stylesheet" href="/css/pipes/img.css" />
+	<link rel="alternate stylesheet" href="/css/burichan/img.css" />
+	<link rel="alternate stylesheet" href="/css/futaba/img.css" />
+	<link rel="alternate stylesheet" href="/css/braeburn/img.css" />
+	<link rel="alternate stylesheet" href="/css/leetchan/img.css" />
+</head>
+<body>
+	<div id="topbar">
+		<ul class="topbar-section">
+			<a href="/test/"><li class="topbar-item">/test/</li></a>
+			<a href="/test2/"><li class="topbar-item">/test2/</li></a>
+		</ul>
+	</div>
+	<div id="top-pane">
+		<span id="board-title">Test</span><br />
+		<span id="board-subtitle">Testing subtitle</span>
+	</div>
+	<hr />
+	<div id="threadlinks-top">
+		<a href="board.html">Return</a><br />
+		<a href="thread-100.html">First 100 posts</a><br />
+		<a href="thread+50.html">Last 50 posts</a><br />
+	</div>
+	<a href="catalog.html" id="catalog-link">Board catalog</a>
+	<div id="postbox-area">
+		<center>
+		<table id="postbox-static">
+			<form action="/post" method="POST">
+				<tr><td class="postblock">Name</td><td><input type="text" maxlength="75" size="28"/><br /></tr>
+				<tr><td class="postblock">Email</td><td><input type="text" maxlength="75" size="28" /></tr>
+				<tr><td class="postblock">Subject</td><td><input type="text" maxlength="75" size="35" /><input type="submit" value="Post"/></tr>
+				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48"></textarea></tr>
+				<tr><td class="postblock">File</td><td><input name="imagefile" size="35" type="file">
+			</form>
+		</table>
+		</center>
+	</div>
+	<hr />
+	<div id="footer">
+		<a href="/">Home</a> | <a href="/#boards">Boards</a> | <a href="/#rules">Rules</a> | <a href="/#faq">FAQ</a><br />
+		Powered by Gochan 0.2<br />
+	</div>
+</body>
+</html>

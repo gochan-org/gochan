@@ -2,7 +2,7 @@
 	font-size:12px;
 }
 
-#site-title {
+#board-title {
 	color: #e1b400;
 }
 
@@ -111,3 +111,9 @@ ul.boardmenu li:hover {
 	background:#404040;
 }
 
+.postblock {
+	background:#404040;
+	
+	border: 1px solid #202020;
+	font-weight: bold;
+}

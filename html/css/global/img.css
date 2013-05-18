@@ -90,7 +90,7 @@
 	margin-right: 16px;
 }
 
-#site-title {
+#board-title {
 	font-size:50px;
 	text-align: center;
 }
@@ -165,10 +165,8 @@
 }
 
 #top-pane {
-	left:0;
-	position:absolute;
 	text-align:center;
-	top:32px;
+	margin-top:32px;
 	width:100%;
 	z-index: 1;
 }
@@ -194,3 +192,24 @@ ul.boardmenu {
 	padding-left:0;
 }
 
+#postbox-area {
+	width: 100%;
+	left: 0px;
+	text-align: center;
+	
+}
+#threadlinks-top {
+	float: left;
+	position: absolute;
+}
+
+#catalog-link {
+	float: right;
+}
+
+.postblock {
+	
+	margin-left: 8px;
+	margin-right: 8px;
+	width: 100px;
+}

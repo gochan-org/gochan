@@ -1,6 +1,6 @@
 #footer {
 	clear:both;
-	position:absolute;
+	position:static;
 	width: 100%;
 	left: 0px;
 	bottom: 0%;
@@ -127,13 +127,11 @@
 .dropdown-menu {
 	position: fixed;
 	min-width: 300px;
-	min-height: 200px;
+	min-height: 100px;
 	top: 24px;
 	right: 0px;
-	z-index:9000;
-	padding-left: 8px;
-	padding-right: 8px;
-	padding-top: 4px;
+	z-index:8999;
+	padding: 4px 8px 4px 8px;
 }
 
 .topbar-item {
@@ -167,10 +165,8 @@
 }
 
 #top-pane {
-	left:0;
-	position:absolute;
 	text-align:center;
-	top:32px;
+	margin-top:32px;
 	width:100%;
 	z-index: 1;
 }
@@ -184,7 +180,7 @@
 
 #recent-posts {
 	float:right;
-	margin-top: 98px;
+	
 	overflow: hidden;
 	right: 8px;
 	width:20%;
