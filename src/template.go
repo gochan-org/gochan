@@ -16,6 +16,8 @@ type FooterData struct {
 	GeneratedTime float32
 }
 
+
+
 var funcMap = template.FuncMap{
 	"gt": func(a int, b int) bool {
 		return a > b
@@ -23,40 +25,20 @@ var funcMap = template.FuncMap{
 	"lt": func(a int, b int) bool {
 		return a < b
 	},
+	"stringEq": func(a, b string) bool {
+		return a == b
+	},
+	"intEq": func(a, b int) bool {
+		return a == b
+	},
 	"isStyleDefault_img": func(style string) bool {
 		return style == config.DefaultStyle_img
 	},
 	"isStyleNotDefault_img": func(style string) bool {
 		return style != config.DefaultStyle_img
 	},
-	"getBoardList": func() map[int]string {
-		list := make(map[int]string)
-		i := 0
-		db.Start("USE `"+config.DBname+"`;")
-	  	results,err := db.Start("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
-		if err != nil {
-			error_log.Write(err.Error())
-			return list
-		}
-
-		for {
-		    row, err := results.GetRow()
-	        if err != nil {
-	        	error_log.Write(err.Error())
-	        }
-
-	        if row == nil {
-	            break
-	        }
-
-		    for col_num, col := range row {
-				if col_num == 0 {
-					list[i] = string(col.([]byte))
-					i++
-				}
-		    }
-		}
-		return list
+	"getInterface":func(in []interface{}, index int) interface{} {
+		return in[index]
 	},
 }
 
@@ -76,7 +58,7 @@ var (
 
 	front_page_tmpl_str string
 	front_page_tmpl *template.Template
-	
+
 	template_buffer bytes.Buffer
 	starting_time int
 )
