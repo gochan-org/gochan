@@ -20,238 +20,249 @@ var (
 // SQL Table structs
 
 type AnnouncementsTable struct {
-	id uint
-	subject string
-	message string
-	poster string
-	timestamp string
+	ID uint
+	Subject string
+	Message string
+	Poster string
+	Timestamp string
 }
 
 type BanlistTable struct {
-	id uint
-	expired bool
-	allow_read bool
-	ip string
-	silent_ban uint8
-	boards string
-	banned_by string
-	timestamp string
-	expires string
-	reason string
-	staff_note string
-	appeal string
-	appeal_at string
+	ID uint
+	Expired bool
+	AllowRead bool
+	IP string
+	SilentBan uint8
+	Boards string
+	BannedBy string
+	Timestamp string
+	Expires string
+	Reason string
+	StaffNote string
+	Appeal string
+	AppealAt string
 }
 
 type BannedHashesTable struct {
-	id uint
-	checksum string
-	description string
+	ID uint
+	Checksum string
+	Description string
 }
 
 type BannedTripcodesTable struct {
-	id uint
-	name string
-	tripcode string
+	ID uint
+	Name string
+	Tripcode string
 }
 
 type BoardsTable struct {
-	id uint8
-	order uint8
-	dir string
+	IName string
+	ID uint8
+	Order uint8
+	Dir string
 	Type uint8
-	first_post uint
-	upload_type uint8
-	title string
-	subtitle string
-	section string
-	max_image_size int
-	max_pages uint8
-	locale string
-	default_style string
-	locked bool
-	created_on string
-	anonymous string
-	forced_anon string
-	max_age uint
-	mark_page uint8
-	autosage_after uint
-	no_images_after uint
-	max_message_length uint
-	embeds_allowed string
-	redirect_to_thread bool
-	show_id bool
-	compact_list bool
-	enable_nofile bool
-	enable_catalog bool
+	FirstPost uint
+	UploadType uint8
+	Title string
+	Subtitle string
+	Description string
+	Section int
+	MaxImageSize int
+	MaxPages uint8
+	Locale string
+	DefaultStyle string
+	Locked bool
+	CreatedOn string
+	Anonymous string
+	ForcedAnon string
+	MaxAge uint
+	MarkPage uint8
+	AutosageAfter uint
+	NoImagesAfter uint
+	MaxMessageLength uint
+	EmbedsAllowed string
+	RedirectToThread bool
+	ShowId bool
+	CompactList bool
+	EnableNofile bool
+	EnableCatalog bool
 }
 
 type BoardSectionsTable struct {
-	id uint8
-	order uint8
-	hidden bool
-	name string
-	abbreviation string
+	IName string
+	ID int
+	Order int
+	Hidden bool
+	Name string
+	Abbreviation string
 }
 
 type EmbedsTable struct {
-	id uint8
-	filetype string
-	name string
-	video_url string
-	width uint16
-	height uint16
-	embed_code string
+	ID uint8
+	Filetype string
+	Name string
+	URL string
+	Width uint16
+	Height uint16
+	EmbedCode string
 }
 
 type FiletypesTable struct {
-	id uint8
-	filetype string
-	mime string
-	thumb_image string
-	image_w uint
-	image_h uint
+	ID uint8
+	Filetype string
+	Mime string
+	ThumbImage string
+	ImageW uint
+	ImageH uint
 }
 
 type FrontTable struct {
-	id uint16
-	page uint8
-	order uint8
-	subject string
-	message string
-	timestamp string
-	poster string
-	email string
+	IName string
+	ID int
+	Page int
+	Order int
+	Subject string
+	Message string
+	Timestamp string
+	Poster string
+	Email string
 }
 
 type FrontLinksTable struct {
-	id uint8
-	title string
-	url string
+	ID uint8
+	Title string
+	URL string
 }
 
 type LoginAttemptsTable struct {
-	id uint
-	ip string
-	timestamp string
+	ID uint
+	IP string
+	Timestamp string
 }
 
 type ModLogTable struct {
-	id uint
-	entry string
-	user string
-	category uint8
-	timestamp string
+	IP uint
+	Entry string
+	User string
+	Category uint8
+	Timestamp string
 }
 
 type PollResultsTable struct {
-	id uint
-	ip string
-	selection string
-	timestamp string
+	ID uint
+	IP string
+	Selection string
+	Timestamp string
 }
 
 type PostTable struct {
-	id uint
-	boarid uint8
-	parentid uint
-	name string
-	tripcode string
-	email string
-	subject string
-	message string
-	password string
-	filename string
-	filename_original string
-	file_checksum string
-	filesize string
-	image_w uint16
-	image_h uint16
-	thumb_w uint16
-	thumb_h uint16
-	ip string
-	tag string
-	timestamp string
-	autosage uint8
-	poster_authority uint8
-	deleted_timestamp string
-	bumped string
-	stickied bool
-	locked bool
-	reviewed bool
-	sillytag bool
+	IName string
+	ID uint
+	BoarID uint8
+	ParentID uint
+	Name string
+	Tripcode string
+	Email string
+	Subject string
+	Message string
+	Password string
+	Filename string
+	FilenameOriginal string
+	FileChecksum string
+	Filesize string
+	ImageW uint16
+	ImageH uint16
+	ThumbW uint16
+	ThumbH uint16
+	IP string
+	Tag string
+	Timestamp string
+	Autosage uint8
+	PosterAuthority uint8
+	DeletedTimestamp string
+	Bumped string
+	Stickied bool
+	Locked bool
+	Reviewed bool
+	Sillytag bool
 }
 
 type TempPostTable struct {
-	id uint
-	boarid uint8
-	parentid uint
-	name string
-	tripcode string
-	email string
-	subject string
-	message string
-	password string
-	filename string
-	filename_original string
-	file_checksum string
-	filesize string
-	image_w uint16
-	image_h uint16
-	thumb_w uint16
-	thumb_h uint16
-	ip string
-	tag string
-	timestamp string
-	autosage uint8
-	poster_authority uint8
-	deleted_timestamp string
-	bumped string
-	stickied bool
-	locked bool
-	reviewed bool
-	sillytag bool
+	ID uint
+	Boarid uint8
+	Parentid uint
+	Name string
+	Tripcode string
+	Email string
+	Subject string
+	Message string
+	Password string
+	Filename string
+	FilenameOriginal string
+	FileChecksum string
+	Filesize string
+	ImageW uint16
+	ImageH uint16
+	ThumbW uint16
+	ThumbH uint16
+	IP string
+	Tag string
+	Timestamp string
+	Autosage uint8
+	PosterAuthority uint8
+	DeletedTimestamp string
+	Bumped string
+	Stickied bool
+	Locked bool
+	Reviewed bool
+	Sillytag bool
 }
 
 type ReportsTable struct {
-	id uint
-	board string
-	postid uint
-	timestamp string
-	ip string
-	reason string
-	cleared bool
-	istemp bool
+	ID uint
+	Board string
+	PostID uint
+	Timestamp string
+	IP string
+	Reason string
+	Cleared bool
+	IsTemp bool
 }
 
 type SessionsTable struct {
-	id uint
-	data string
-	expires string
+	ID uint
+	Data string
+	Expires string
 }
 
 type StaffTable struct {
-	id uint16
-	username string
-	password_checksum string
-	salt string
-	rank uint8
-	boards string
-	addedon string
-	last_active string
+	ID uint16
+	Username string
+	PasswordChecksum string
+	Salt string
+	Rank uint8
+	Boards string
+	AddedOn string
+	LastActive string
 }
 
 type WordFiltersTable struct {
-	id uint16
-	from string
-	to string
-	boards string
-	regex bool
+	ID uint16
+	From string
+	To string
+	Boards string
+	RegEx bool
+}
+
+type Wrapper struct {
+	IName string
+	Data []interface{}
 }
 
 // Global variables, most initialized by config.cfg
 
 type GochanConfig struct {
+	IName string //used by our template parser
 	Domain string
 	Port int
 	FirstPage []string
@@ -336,7 +347,12 @@ func initConfig() {
 		fmt.Println(err)
 		os.Exit(2)
 	}
+	config.IName = "GochanConfig"
 	config.Domain,err = c.GetString("server", "domain")
+	if err != nil {
+		fmt.Println("server.domain not set in config.cfg, halting.")
+	}
+
 	config.Port,err = c.GetInt("server", "port")
 	if err != nil {
 		config.Port = 80
