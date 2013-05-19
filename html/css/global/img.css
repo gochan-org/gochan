@@ -1,9 +1,9 @@
 #footer {
 	clear:both;
-	position:absolute;
+	position:static;
 	width: 100%;
 	left: 0px;
-	bottom: 0%;
+	bottom: 0px;
 	text-align: center;
 }
 
@@ -172,10 +172,8 @@
 }
 
 #content {
-	clear:left;
 	margin-left:0px;
 	padding-left:0px;
-	text-align:justify;
 }
 
 .section-title-block {
@@ -192,24 +190,83 @@ ul.boardmenu {
 	padding-left:0;
 }
 
+#boardmenu-bottom {
+	margin-top: 16px;
+}
+
+#left-bottom-content {
+	float: left;
+	left: 0px;
+}
+
+#right-bottom-content {
+	float: right;
+	right: 0px
+}
+
+#pages {
+	margin-top:4px;
+	margin-bottom: 8px;
+}
+
 #postbox-area {
 	width: 100%;
 	left: 0px;
-	text-align: center;
-	
 }
+
+#report-delbox {
+	float:right;
+	clear: both;
+	text-align: right;
+	margin-top: 8px;
+	line-height: 32px;
+}
+
 #threadlinks-top {
 	float: left;
 	position: absolute;
 }
 
-#catalog-link {
+#threadlinks-bottom {
+	float:right;
+	clear: both;
+}
+
+#right-sidelinks {
 	float: right;
 }
 
 .postblock {
-	
 	margin-left: 8px;
 	margin-right: 8px;
 	width: 100px;
+}
+
+img.thumbnail {
+	margin: 4px 8px 4px 8px;
+	float: left;
+}
+
+.thread {
+	vertical-align: top;
+}
+
+.post {
+	overflow: hidden;
+	margin: 4px;
+	padding: 4px;
+}
+
+.subject {
+	font-weight: bold;
+}
+
+.posttext {
+	margin-top: 12px;
+	margin-left: 12px;
+	margin-right: 12px;
+}
+
+hr {
+	clear: both;
 }

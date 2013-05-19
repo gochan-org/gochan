@@ -314,6 +314,7 @@ type GochanConfig struct {
 
 	ThreadsPerPage_img int
 	ThreadsPerPage_txt int
+	PostsPerThreadpage int
 	RepliesOnBoardpage int
 	GenLast50 bool
 	GenFirst100 bool
@@ -572,6 +573,11 @@ func initConfig() {
 	config.ThreadsPerPage_txt,err = c.GetInt("threads", "txt_threads_per_page")
 	if err != nil {
 		config.ThreadsPerPage_txt = 15
+	}
+
+	config.PostsPerThreadpage,err = c.GetInt("threads", "posts_per_threadpage")
+	if err != nil {
+		config.PostsPerThreadpage = 50
 	}
 
 	config.RepliesOnBoardpage,err = c.GetInt("threads", "replies_on_boardpage")

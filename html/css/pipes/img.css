@@ -112,8 +112,12 @@ ul.boardmenu li:hover {
 }
 
 .postblock {
-	background:#404040;
-	
+	background-color:#404040;
 	border: 1px solid #202020;
 	font-weight: bold;
+}
+
+.post {
+	background-color:#404040;
+	border: 1px solid #202020;
 }
