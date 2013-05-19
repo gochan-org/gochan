@@ -125,6 +125,10 @@ function changeFrontPage(page_name) {
 	});
 }
 
+function deletePost(id) {
+	var password = prompt("Password")
+}
+
 function getArg(name) {
 	var href = window.location.href;
 	var args = href.substr(href.indexOf("?")+1, href.length);
@@ -212,6 +216,15 @@ function getStaffMenuHTML() {
 	return s+"</ul>";
 }
 
+function hidePost(id) {
+	var posttext = $jq("div#"+id+".post .posttext");
+	if(posttext.length > 0) posttext.remove();
+	var fileinfo = $jq("div#"+id+".post .file-info")
+	if(fileinfo.length > 0) fileinfo.remove();
+	var postimg = $jq("div#"+id+".post img")
+	if(postimg.length > 0) postimg.remove();
+}
+
 function isFrontPage() {
 	var page = window.location.pathname;
 	return page == "/" || page == "/index.html" || page == "/template.html";
@@ -283,6 +296,10 @@ function preparePostPreviews(is_inline) {
 	}
 }
 
+function reportPost(id) {
+	var reason = prompt("Reason");
+}
+
 $jq(document).ready(function() {
 	current_staff = getStaff()
 
@@ -291,7 +308,7 @@ $jq(document).ready(function() {
 	for(var i = 0; i < styles.length; i++) {
 		settings_html += "<option value=\""+styles[i]+"\">"+styles[i][0].toUpperCase()+styles[i].substring(1,styles[i].length);
 	}
-	settings_html+="</select></td><tr><tr><td><b>Pin top bar:</b></td><td><input type=\"checkbox\" /></td></tr></table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>"
+	settings_html+="</select></td><tr><tr><td><b>Pin top bar:</b></td><td><input type=\"checkbox\" /></td></tr><tr><td><b>Enable post previews on hover</b></td><td><input type=\"checkbox\" /></td></tr></table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>"
 
  	settings_menu = new TopBarButton("Settings",function(){
  		showLightBox("Settings",settings_html)
@@ -321,6 +338,24 @@ $jq(document).ready(function() {
 			block.hide();
 			$jq(this).html("+");
 		}
+	});
 
+	$jq(".thread-ddown a").click(function(e) {
+		var post_id = $jq(this).parent().parent().parent().attr("id")
+		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread"
+		
+		if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {
+			$jq("div.thread-ddown-menu").remove();
+
+			menu_html = "<div class=\"thread-ddown-menu\" id=\""+post_id+"\">";
+			if(!is_op) menu_html += "<a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Hide post</a><br />";
+			menu_html +="<a href=\"javascript:deletePost("+post_id+");\" class=\"delete-post\">Delete post</a><br />" +
+				"<a href=\"javascript:reportPost("+post_id+");\" class=\"report-post\">Report Post</a>" +
+				"</div>";
+
+			$jq(this).parent().append(menu_html);
+		} else {
+			$jq("div.thread-ddown-menu").remove();
+		}
 	});
 });

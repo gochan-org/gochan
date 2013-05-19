@@ -44,37 +44,38 @@
 		<a href="#">Open Quick Reply box</a>
 		<table id="postbox-static">
 			<form name="postform" action="/post" method="POST">
-				<tr><td class="postblock">Name</td><td><input type="text" maxlength="75" size="28" value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') { this.value = 'Name' }"/><br /></tr>
-				<tr><td class="postblock">Email</td><td><input type="text" maxlength="75" size="28" /></tr>
-				<tr><td class="postblock">Subject</td><td><input type="text" maxlength="75" size="35" /><input type="submit" value="Post"/></tr>
-				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48"></textarea></tr>
+				<tr><td class="postblock">Name</td><td><input type="text" name="postname" maxlength="75" size="28" value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') { this.value = 'Name' }"/></td></tr>
+				<tr><td class="postblock">Email</td><td><input type="text" name="postemail" maxlength="75" size="28" /></td></tr>
+				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
+				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
 				<tr><td class="postblock">File</td><td><input name="imagefile" size="31" type="file"><input type="checkbox" id="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
+				<tr><td class="postblock">Password</td><td><input type="text" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</form>
 		</table>
 		</center>
 	</div>
 	<hr />
 	<div id="content">
-		<div class="thread">
+		<div class="thread" id="74769">
 			<span class="file-info">File: <a href="135710945820.jpg">135710945820.jpg</a> - (142.91KB , 756x888 , Chibi_Series___Flower_Forte_by_kubus_sama.jpg )</span><br />
 			<img src="135710945820s.jpg" width="170" height="200" class="thumbnail"/>
-			<label class="post-info"><input type="checkbox" id="74769" /> <span class="subject">Sup</span> <span class="postername">Zeke Roa</span><span class="tripcode">!ska.Jj.P5I</span> Tue, January 01, 2013 10:50 PM <a href="74769">No.</a> <a href="74769">74769</a></label> <span class="op-links">[<a href="reply" >Reply</a>]</span><br />
+			<label class="post-info"><input type="checkbox" id="74769" /> <span class="subject">Sup</span> <span class="postername"><a href="mailto:admin@lunachan.net">Zeke Roa</a></span><span class="tripcode">!ska.Jj.P5I</span> Tue, January 01, 2013 10:50 PM <a href="74769">No.</a> <a href="74769">74769</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 			<div class="posttext">
 				Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 			</div>
-			<div class="post">
-				<label class="post-info"><input type="checkbox" id="135693079632" /> <span class="postername">Anonymous</span> Tue, January 02, 2013 1:55:PM <a href="135693079632">No.</a> <a href="74770i">74770</a></label> <span class="op-links">[<a href="reply">Reply</a>]</span><br />
+			<div class="post" id="74770">
+				<label class="post-info"><input type="checkbox" id="135693079632" /> <span class="postername">Anonymous</span> Tue, January 02, 2013 1:55:PM <a href="135693079632">No.</a> <a href="74770i">74770</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 				<span class="file-info">File: <a href="135693079632s.png">135693079632s.png</a> - (100.01KB , 200,200, 135693079632s.png )</span><br />
 				<img src="135693079632s.png" width="94" height="125" class="thumbnail" />
 
 				<div class="posttext">
 					Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.<br/><br/>
-					Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.<br/>
+					<span class="spoiler">Lorem ipsum</span> dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.<br/>
 				</div>
 			</div>
 
-			<div class="post">
-				<label class="post-info"><input type="checkbox" id="135693079632" /> <span class="postername">Anonymous</span> Tue, January 02, 2013 1:55:PM <a href="135693079632">No.</a> <a href="74770i">74770</a></label> <span class="op-links">[<a href="reply">Reply</a>]</span><br />
+			<div class="post" id="74770">
+				<label class="post-info"><input type="checkbox" id="135693079632" /> <span class="postername">Anonymous</span> Tue, January 02, 2013 1:55:PM <a href="135693079632">No.</a> <a href="74770i">74770</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 				<div class="posttext">
 					Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 				</div>
