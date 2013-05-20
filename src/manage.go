@@ -250,32 +250,48 @@ var manage_functions = map[string]ManageFunction{
 	"announcements": {
 		Permissions: 1,
 		Callback: func() (html string) {
-			html = "<h1>Announcements</h1><br />" +
-				"Announcements will eventually go here."
-			  	/*results,err := db.Start("SELECT * FROM `"+config.DBprefix+"announcements`;")
-				if err != nil {
-					error_log.Write(err.Error())
-					html += err.Error()
-					return
-				}
+			html = "<h1>Announcements</h1><br />"
+			var subject string
+			var message string
+			var poster string
+			var timestamp string
 
-				rows, err := results.GetRows()
-			    if err != nil {
-					error_log.Write(err.Error())
-					return 1
-			    }
-				if len(rows) > 0 {
-					for  _, row := range rows {
-					    for col_num, col := range row {
-							if col_num == 2 {
-								staffname = string(col.([]byte))
-							}
-					    }
-					}
-				} else {
-					//no announcements
-				}*/
-			return
+		  	results,err := db.Start("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements`;")
+			if err != nil {
+				error_log.Write(err.Error())
+				html += err.Error()
+				return
+			}
+
+			rows, err := results.GetRows()
+		    if err != nil {
+				error_log.Write(err.Error())
+				html += err.Error()
+				return
+		    }
+			if len(rows) > 0 {
+				for  _, row := range rows {
+				    for col_num, col := range row {
+						switch {
+							case col_num == 0:
+								subject = string(col.([]byte))
+							case col_num == 1:
+								message = string(col.([]byte))
+							case col_num == 2:
+								poster = string(col.([]byte))
+							case col_num == 3:
+								timestamp = string(col.([]byte))
+						}
+				    }
+				    html += "<div class=\"section-block\">"+subject+"</div>\n"
+				    html += "<div class=\"section-block\">"+message+"</div>\n"
+				    html += "<div class=\"section-block\">"+poster+"</div>\n"
+				    html += "<div class=\"section-block\">"+timestamp+"</div>\n"
+				}
+			} else {
+				html += "No announcements"
+			}
+		return
 	}},
 	"manageserver": {
 		Permissions: 3,
@@ -371,7 +387,7 @@ var manage_functions = map[string]ManageFunction{
 					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
 			if rank >= 2 {
-				html += "<b>Mod stuff</b>\n"
+				html += "<b>Mod stuff</b><br />\n"
 			}
 
 			if rank >= 1 {

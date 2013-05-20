@@ -1,52 +1,28 @@
+#board-title {
+	color:#e1b400;
+}
+
+#current-tab,#topbar li:hover {
+	background-color:#404040;
+}
+
 #footer {
 	font-size:12px;
 }
 
-#board-title {
-	color: #e1b400;
-}
-
-#current-tab {
-	background-color: #404040;
-}
-
-.tab {
-	background-color: #202020;
-	border: 1px solid #424242;
-	text-align:center;
-}
-
-.section-body {
-	background-color:#606060;
-	padding-left:8px;
-	padding-right: 8px;
-	padding-bottom: 8px;
-}
-
-.section-title-block {
-	height:19px;
-	background-color:#202020;
-	border-radius: 4px 4px 0px 0px;
-	padding-left:8px;
-	padding-right: 8px;
-}
-
 #topbar {
-	box-shadow: 0 2px 2px 3px #101010;
-	background-color: #202020;
-	height: 26px;
+	background-color:#202020;
+	box-shadow:0px 2px 2px 3px #101010;
+	height:26px;
 }
 
 #topbar li {
-	padding: 4px;
+	padding:4px;
 }
 
-#topbar li:hover {
-	background-color: #404040;
-}
-
-#topbar a {
-
+.dropdown-menu {
+	background-color:#202020;
+	box-shadow:0 6px 2px 2px #101010;
 }
 
 .menu {
@@ -54,21 +30,11 @@
 	text-align:center;
 }
 
-a.permalink {
-	background: inherit;
-	color: #f90;
-}
-
-a.permalink:hover {
-	background: inherit;
-	color: #ffd43f;
-}
-
 .plus {
 	background:#404040;
 	color:#000;
-	height:inherit;
 	font-weight:400;
+	height:inherit;
 }
 
 .plus:hover {
@@ -76,82 +42,105 @@ a.permalink:hover {
 	cursor:pointer;
 }
 
-a {
-	color: #f90;
-	font-family: sans-serif;
-	text-decoration: none;
-}
-
-a:hover {
-	background: inherit;
-	color: #ffd43f;
-	font-family: sans-serif;
-}
-
-body {
-	background: #EEF2FF;
-	background-attachment: fixed;
-	background-image: url(images/pipes_bg.png);
-	color: #d8d0b9;
-	font-family:sans-serif;
-	font-size: 12pt;
-}
-h2 {
-	background-color: #202020;
-	-moz-box-shadow: 2px 2px 3px 4px #101010;
-	-webkit-box-shadow: 2px 2px 3px 4px #101010;
-	box-shadow: 0 2px 2px 3px #101010;
-	border-radius: 8px;
-	padding-left: 4px;
-	padding-right: 4px;
-}
-
-ul.boardmenu li:hover {
-	background:#404040;
+.post {
+	background-color:#25272D;
+	border:1px solid #8C94AB;
 }
 
 .postblock {
 	background-color:#25272D;
-	font-weight: bold;
-}
-
-.post {
-	border: 1px solid #8C94AB;
-	background-color:#25272D;
-	
-}
-
-.subject {
-	color: #FF9900;
-}
-
-.postername a {
-	text-decoration: underline;
-	color: #FFCC00!important;
+	font-weight:700;
 }
 
 .postername {
-	color: #FFCC00;
-	font-weight: bold;	
+	color:#FC0;
+	font-weight:700;
 }
 
-.tripcode {
-	color: #FFCC00;
+.postername a {
+	color:#FC0!important;
+	text-decoration:underline;
 }
 
-input,textarea,button {
-	border: 1px solid #8C94AB;
-	background-color:#25272D;
-	color: #FFFFFF;
+.section-body {
+	background-color:#606060;
+	padding-bottom:8px;
+	padding-left:8px;
+	padding-right:8px;
+}
+
+.section-title-block {
+	background-color:#202020;
+	border-radius:4px 4px 0px 0px;
+	height:19px;
+	padding-left:8px;
+	padding-right:8px;
+}
+
+.subject {
+	color:#F90;
+}
+
+.tab {
+	background-color:#202020;
+	border:1px solid #424242;
+	text-align:center;
 }
 
 .thread-ddown a {
-	font-size: 75%;
-	vertical-align: middle;
+	font-size:75%;
+	vertical-align:middle;
 }
 
-.thread-ddown-menu {
-	border: 1px solid #8C94AB;
+.tripcode {
+	color:#FC0;
+}
+
+a {
+	color:#f90;
+	font-family:sans-serif;
+	text-decoration:none;
+}
+
+a.permalink {
+	background:inherit;
+	color:#f90;
+}
+
+a.permalink:hover {
+	background:inherit;
+	color:#ffd43f;
+}
+
+a:hover {
+	background:inherit;
+	color:#ffd43f;
+	font-family:sans-serif;
+}
+
+body {
+	background:#EEF2FF;
+	background-attachment:fixed;
+	background-image:url(images/pipes_bg.png);
+	color:#d8d0b9;
+	font-family:sans-serif;
+	font-size:12pt;
+}
+
+h2 {
+	background-color:#202020;
+	border-radius:8px;
+	box-shadow:0 2px 2px 3px #101010;
+	padding-left:4px;
+	padding-right:4px;
+}
+
+input[type=text],input[type=file],textarea,.thread-ddown-menu {
 	background-color:#25272D;
-	color: #FFFFFF;
+	border:1px solid #8C94AB;
+	color:#FFF;
+}
+
+ul.boardmenu li:hover {
+	background:#404040;
 }

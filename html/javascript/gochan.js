@@ -26,7 +26,7 @@ var TopBarButton = function(title,callback) {
 	this.title = title;
 	this.callback = callback;
 	this.buttonTitle = title;
-	$jq("div#topbar").append("<ul><a href=\"#\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\"><li>"+title+down_arrow_symbol+"</li></a></ul>");
+	$jq("div#topbar").append("<ul><a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\"><li>"+title+down_arrow_symbol+"</li></a></ul>");
 	this.button_jq = $jq("div#topbar a#"+title.toLowerCase());
 	this.button_jq.click(this.callback);
 }
@@ -175,11 +175,13 @@ function getStaff() {
 		cache: true,
 		async:false,
 		success: function(result) {
-			var return_data = $jq(result).find("body").html().split(";");
+			var return_jq = $jq(result);
+			var text = $jq($jq(return_jq.children()[0]).children()[1]).text();
+			var return_data = text.trim().split(";");
 			s = new Staff(return_data[0],return_data[1],return_data[2].split(","));
 		},
 		error: function() {
-			s = null;
+			s = new Staff("nobody","0","");
 		}
 	});
 	return s;
@@ -193,11 +195,11 @@ function getStaffMenuHTML() {
 		data: {
 			action: 'staffmenu',
 		},
-		dataType:"xml",
+		dataType:"text",
 		cache: true,
 		async:false,
 		success: function(result) {
-			var lines = $jq(result).find("body").html().split("\n");
+			var lines = result.substring(result.indexOf("body>")+5,result.indexOf("</body")).trim().split("\n")
 			var num_lines = lines.length;
 			for(var l = 0; l < num_lines; l++) {
 				if(lines[l] != "") {
@@ -302,7 +304,7 @@ function reportPost(id) {
 
 $jq(document).ready(function() {
 	current_staff = getStaff()
-
+	
 	topbar = $jq("div#topbar");
 	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup><tr><td><b>Style:</b></td><td><select name=\"style\" style=\"min-width:50%\">"
 	for(var i = 0; i < styles.length; i++) {
@@ -348,7 +350,7 @@ $jq(document).ready(function() {
 			$jq("div.thread-ddown-menu").remove();
 
 			menu_html = "<div class=\"thread-ddown-menu\" id=\""+post_id+"\">";
-			if(!is_op) menu_html += "<a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Hide post</a><br />";
+			if(!is_op) menu_html += "<a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Show/Hide post</a><br />";
 			menu_html +="<a href=\"javascript:deletePost("+post_id+");\" class=\"delete-post\">Delete post</a><br />" +
 				"<a href=\"javascript:reportPost("+post_id+");\" class=\"report-post\">Report Post</a>" +
 				"</div>";
