@@ -225,6 +225,22 @@ var manage_functions = map[string]ManageFunction{
 			exitWithErrorPage("lel, internet")
 			return
 	}},
+	"executesql": {
+		Permissions: 3,
+		Callback: func() (html string) {
+			statement := request.FormValue("sql")
+			html = "<h1>Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">"+statement+"</textarea>\n<input type=\"submit\" />\n</form>"
+		  	if statement != "" {
+		  		html += "<hr />"
+			  	_,sqlerr := db.Start(statement)
+				if sqlerr != nil {
+					html += sqlerr.Error()
+				} else {
+					html += "Statement esecuted successfully."
+				}
+			}
+			return
+	}},
 	"login":{
 		Permissions: 0,
 		Callback: func() (html string) {
@@ -234,7 +250,6 @@ var manage_functions = map[string]ManageFunction{
 			if username == "" || password == "" {
 				//assume that they haven't logged in
 				html = "\t<form method=\"POST\" action=\"/manage?action=login\" class=\"loginbox\">\n" +
-					//"\t\t<input type=\"hidden\" name=\"action\" value=\"login\" />\n" +
 					"\t\t<input type=\"text\" name=\"username\" class=\"logindata\" /><br />\n" +
 					"\t\t<input type=\"password\" name=\"password\" class=\"logindata\" /> <br />\n" +
 					"\t\t<input type=\"submit\" value=\"Login\" />\n" +
@@ -247,6 +262,12 @@ var manage_functions = map[string]ManageFunction{
 			}
 			return
 	}},
+	"logout": {
+		Permissions: 1,
+		Callback: func() (html string) {
+
+			return
+	}},
 	"announcements": {
 		Permissions: 1,
 		Callback: func() (html string) {
@@ -256,7 +277,7 @@ var manage_functions = map[string]ManageFunction{
 			var poster string
 			var timestamp string
 
-		  	results,err := db.Start("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements`;")
+		  	results,err := db.Start("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements` ORDER BY `id` DESC;")
 			if err != nil {
 				error_log.Write(err.Error())
 				html += err.Error()
@@ -283,10 +304,7 @@ var manage_functions = map[string]ManageFunction{
 								timestamp = string(col.([]byte))
 						}
 				    }
-				    html += "<div class=\"section-block\">"+subject+"</div>\n"
-				    html += "<div class=\"section-block\">"+message+"</div>\n"
-				    html += "<div class=\"section-block\">"+poster+"</div>\n"
-				    html += "<div class=\"section-block\">"+timestamp+"</div>\n"
+				    html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+subject+"</b> by "+poster+" at "+timestamp+"</div>\n<div class=\"section-body\">"+message+"\n</div></div>\n"
 				}
 			} else {
 				html += "No announcements"
@@ -348,14 +366,131 @@ var manage_functions = map[string]ManageFunction{
 	"manageboards": {
 		Permissions:3,
 		Callback: func() (html string) {
-			html = "<h1>Manage boards</h1>\n<select name=\"boardselect\">\n<option>Select board...</option>\n"
+			do := request.FormValue("do")
+			var dir string
+			var order int
+			var title string
+			var subtitle string
+			var description string
+			var section int
+			var maximagesize int
+			var firstpost int
+			var maxpages int
+			var defaultstyle string
+			var locked bool
+			var forcedanon bool
+			var anonymous string
+			var maxage int
+			var markpage int
+			var autosageafter int
+			var noimagesafter int
+			var maxmessagelength int
+			var embedsallowed bool
+			var redirecttothread bool
+			var showid bool
+			var compactlist bool
+			var enablenofile bool
+			var enablecatalog bool
+			var err error
+
+			if do != "" {
+				dir = db.Escape(request.FormValue("dir"))
+				order_str := db.Escape(request.FormValue("order"))
+				order,err = strconv.Atoi(order_str)
+				if err != nil {
+					order = 0
+				}
+				title = db.Escape(request.FormValue("title"))
+				subtitle = db.Escape(request.FormValue("subtitle"))
+				description = db.Escape(request.FormValue("description"))
+				section_str := db.Escape(request.FormValue("section"))
+				section,err = strconv.Atoi(section_str)
+				if err != nil {
+					section = 0
+				}
+				maximagesize_str := db.Escape(request.FormValue("maximagesize"))
+				maximagesize,err = strconv.Atoi(maximagesize_str)
+				if err != nil {
+					maximagesize = 1024*4
+				}
+				firstpost_str := db.Escape(request.FormValue("firstpost"))
+				firstpost,err = strconv.Atoi(firstpost_str)
+				if err != nil {
+					firstpost = 1
+				}
+
+				maxpages_str := db.Escape(request.FormValue("maxpages"))
+				maxpages,err = strconv.Atoi(maxpages_str)
+				if err != nil {
+					maxpages = 11
+				}
+				defaultstyle = db.Escape(request.FormValue("defaultstyle"))
+				locked = (request.FormValue("locked") == "on")
+
+				forcedanon = (request.FormValue("forcedanon") == "on")
+
+				anonymous = db.Escape(request.FormValue("anonymous"))
+				maxage_str := db.Escape(request.FormValue("maxage"))
+				maxage,err = strconv.Atoi(maxage_str)
+				if err != nil {
+					maxage = 0
+				}
+				markpage_str := db.Escape(request.FormValue("markpage"))
+				markpage,err = strconv.Atoi(markpage_str)
+				if err != nil {
+					markpage = 9
+				}
+				autosageafter_str := db.Escape(request.FormValue("autosageafter"))
+				autosageafter,err = strconv.Atoi(autosageafter_str)
+				if err != nil {
+					autosageafter = 200
+				}
+				noimagesafter_str := db.Escape(request.FormValue("noimagesafter"))
+				noimagesafter,err = strconv.Atoi(noimagesafter_str)
+				if err != nil {
+					noimagesafter = 0
+				}
+				maxmessagelength_str := db.Escape(request.FormValue("maxmessagelength"))
+				maxmessagelength,err = strconv.Atoi(maxmessagelength_str)
+				if err != nil {
+					maxmessagelength = 1024*8
+				}
+				
+				embedsallowed = (request.FormValue("embedsallowed") == "on")
+				redirecttothread = (request.FormValue("redirecttothread") == "on")
+				showid = (request.FormValue("showid") == "on")
+				compactlist = (request.FormValue("compactlist") == "on")
+				enablenofile = (request.FormValue("enablenofile") == "on")
+				enablecatalog = (request.FormValue("enablecatalog") == "on")
+
+				//actually start generating stuff
+				err = os.Mkdir(path.Join(config.DocumentRoot,dir),0777)
+				if err != nil {
+					return err.Error()
+				}
+				
+				err = os.Mkdir(path.Join(config.DocumentRoot,dir,"res"),0777)
+				if err != nil {
+					return err.Error()
+				}
+				
+				err = os.Mkdir(path.Join(config.DocumentRoot,dir,"src"),0777)
+				if err != nil {
+					return err.Error()
+				}
+				_,err := db.Start("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`,`embeds_allowed`) VALUES('"+dir+"','"+title+"','"+subtitle+"','"+description+"',"+section_str+",'"+defaultstyle+"',"+noimagesafter_str+",0);")
+				if err != nil {
+					return err.Error();
+				}
+			}
+
+			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 			db.Start("USE `"+config.DBname+"`;")
 		 	results,err := db.Start("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 			if err != nil {
 				html += err.Error()
 				return
 			}
-
 
 			rows, err := results.GetRows()
 		    if err != nil {
@@ -368,10 +503,98 @@ var manage_functions = map[string]ManageFunction{
 			    	for _, col := range row {
 		    			html += "<option>"+string(col.([]byte))+"</option>\n"
 					}
-			
 				}
 			}
-			html += "</select><hr />"
+			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
+
+			html += "<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%%\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\""+dir+"\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\""+strconv.Itoa(order)+"\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\""+strconv.Itoa(firstpost)+"\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\""+title+"\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\""+subtitle+"\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\""+description+"\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\""+strconv.Itoa(section)+"\">\n<option value=\"none\">Select section...</option>\n"
+		 	results,err = db.Start("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
+			if err != nil {
+				html += err.Error()
+				return
+			}
+
+			rows, err = results.GetRows()
+		    if err != nil {
+				error_log.Write(err.Error())
+				html += err.Error()
+				return
+		    }
+			if len(rows) > 0 {
+				for row_num, row := range rows {
+			    	for col_num, col := range row {
+			    		if col_num == 0 {
+			    			html += "<option value=\""+strconv.Itoa(row_num)+"\">"+string(col.([]byte))+"</option>\n"
+			    		}
+					}
+				}
+			}
+			html += "</select></td></tr><tr><td>Max image size</td><td><input type=\"text\" name=\"maximagesize\" value=\""+strconv.Itoa(maximagesize)+"\" /></td></tr><tr><td>Max pages</td><td><input type=\"text\" name=\"maxpages\" value=\""+strconv.Itoa(maxpages)+"\" /></td></tr><tr><td>Default style</td><td><select name=\"defaultstyle\" selected=\""+defaultstyle+"\">"
+			for _, style := range config.Styles_img {
+				html += "<option value=\""+style+"\">"+style+"</option>"
+			}
+			html += "</select></td></tr><tr><td>Locked</td><td>"
+			if locked {
+				html += "<input type=\"checkbox\" name=\"locked\" checked/>"
+			} else {
+				html += "<input type=\"checkbox\" name=\"locked\" />"
+			}
+
+			html += "</td></tr><tr><td>Forced anonymity</td><td>"
+
+			if forcedanon {
+				html += "<input type=\"checkbox\" name=\"forcedanon\" checked/>"
+			} else {
+				html += "<input type=\"checkbox\" name=\"forcedanon\" />"
+			}
+
+			html += "</td></tr><tr><td>Anonymous</td><td><input type=\"text\" name=\"anonymous\" value=\""+anonymous+"\" /></td></tr><tr><td>Max age</td><td><input type=\"text\" name=\"maxage\" value=\""+strconv.Itoa(maxage)+"\"/></td></tr><tr><td>Mark page</td><td><input type=\"text\" name=\"markpage\" value=\""+strconv.Itoa(markpage)+"\"/></td></tr><tr><td>Autosage after</td><td><input type=\"text\" name=\"autosageafter\" value=\""+strconv.Itoa(autosageafter)+"\"/></td></tr><tr><td>No images after</td><td><input type=\"text\" name=\"noimagesafter\" value=\""+strconv.Itoa(noimagesafter)+"\"/></td></tr><tr><td>Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\""+strconv.Itoa(maxmessagelength)+"\"/></td></tr><tr><td>Embeds allowed</td><td>"
+
+			if embedsallowed {
+				html += "<input type=\"checkbox\" name=\"embedsallowed\" checked/>"
+			} else {
+				html += "<input type=\"checkbox\" name=\"embedsallowed\" />"
+			}
+
+			html += "</td></tr><tr><td>Redirect to thread</td><td>"
+			if redirecttothread {
+				html += "<input type=\"text\" name=\"redirecttothread\" checked/>"
+			} else {
+				html += "<input type=\"text\" name=\"redirecttothread\" />"
+			}
+
+			html += "</td></tr><tr><td>Show ID</td><td>"
+
+			if showid {
+				html += "<input type=\"checkbox\" name=\"showid\" checked/>"
+			} else {
+				html += "<input type=\"checkbox\" name=\"showid\" />"
+			}
+				html += "</td></tr><tr><td>Compact list</td><td>"
+			
+			if compactlist {
+				html += "<input type=\"checkbox\" name=\"compactlist\" checked/>"
+			} else {
+				html += "<input type=\"checkbox\" name=\"compactlist\" />"
+			}
+
+			html += "</td></tr><tr><td>Enable &quot;No file&quot; checkbox</td><td>"
+
+			if enablenofile {
+				html += "<input type=\"checkbox\" name=\"enablenofile\" checked/>"
+			} else {
+				html += "<input type=\"checkbox\" name=\"enablenofile\" />"
+			}
+
+			html += "</td></tr><tr><td>Enable catalog</td><td>"				
+			
+			if enablecatalog {
+				html += "<input type=\"checkbox\" name=\"enablecatalog\" checked />"
+			} else {
+				html += "<input type=\"checkbox\" name=\"enablecatalog\" />"
+			}
+
+			html += "</td></tr></table><input type=\"submit\" /></form>"
 			return
 	}},
 	"staffmenu": {
@@ -383,6 +606,7 @@ var manage_functions = map[string]ManageFunction{
 				   "<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
 			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
+					  	"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
