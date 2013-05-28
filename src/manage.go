@@ -82,11 +82,7 @@ func getCurrentStaff() string {
     }
 	if len(rows) > 0 {
 		for  _, row := range rows {
-		    for col_num, col := range row {
-				if col_num == 2 {
-					return string(col.([]byte))
-				}
-		    }
+			return string(row[2].([]byte))
 		}
 	} else {
 		//session key doesn't exist in db
@@ -120,11 +116,8 @@ func getStaffRank() int {
     }
 	if len(rows) > 0 {
 		for  _, row := range rows {
-		    for col_num, col := range row {
-				if col_num == 2 {
-					staffname = string(col.([]byte))
-				}
-		    }
+			staffname = string(row[2].([]byte))
+			break
 		}
 	} else {
 		//session key doesn't exist in db
@@ -144,16 +137,12 @@ func getStaffRank() int {
     }
 	if len(rows) > 0 {
 		for  _, row := range rows {
-		    for col_num, col := range row {
-				if col_num == 4 {
-					rank,rerr := strconv.Atoi(string(col.([]byte)))
-					if rerr == nil {
-						return rank
-					} else {
-						return 0
-					}
-				}
-		    }
+			rank,rerr := strconv.Atoi(string(row[4].([]byte)))
+			if rerr == nil {
+				return rank
+			} else {
+				return 0
+			}
 		}
 	}
 	return 0
@@ -175,34 +164,30 @@ func createSession(key string,username string, password string, request *http.Re
 	    }
 		if len(rows) > 0 {
 			for _, row := range rows {
-			    for col_num, col := range row {
-			    	if col_num == 2 {
-			    		success := bcrypt.CompareHashAndPassword(col.([]byte), []byte(password))
-			    		if success == nil {
-			    			// successful login
-							cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
-			    			http.SetCookie(*writer, cookie)
-							_,err := db.Start("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
-							if err != nil {
-								error_log.Write(err.Error())
-								return 2
-							}
-							_,err = db.Start("UPDATE `"+config.DBprefix+"staff` SET `last_active` ='"+getSQLDateTime()+"' WHERE `username` = '"+username+"';")
-							if err != nil {
-								error_log.Write(err.Error())
-							}
+	    		success := bcrypt.CompareHashAndPassword(row[2].([]byte), []byte(password))
+	    		if success == nil {
+	    			// successful login
+					cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
+	    			http.SetCookie(*writer, cookie)
+					_,err := db.Start("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
+					if err != nil {
+						error_log.Write(err.Error())
+						return 2
+					}
+					_,err = db.Start("UPDATE `"+config.DBprefix+"staff` SET `last_active` ='"+getSQLDateTime()+"' WHERE `username` = '"+username+"';")
+					if err != nil {
+						error_log.Write(err.Error())
+					}
 
-							return 0
-			    		} else if success == bcrypt.ErrMismatchedHashAndPassword {
-			    			// password mismatch
-			    			_,err := db.Start("INSERT `"+config.DBprefix+"loginattempts` (`ip`,`timestamp`) VALUES('"+request.RemoteAddr+"','"+getSQLDateTime()+"');")
-			    			if err != nil {
-			    				error_log.Write(err.Error())
-			    			}
-			    			return 1
-			    		}
-			    	}
-				}
+					return 0
+	    		} else if success == bcrypt.ErrMismatchedHashAndPassword {
+	    			// password mismatch
+	    			_,err := db.Start("INSERT `"+config.DBprefix+"loginattempts` (`ip`,`timestamp`) VALUES('"+request.RemoteAddr+"','"+getSQLDateTime()+"');")
+	    			if err != nil {
+	    				error_log.Write(err.Error())
+	    			}
+	    			return 1
+	    		}
 			}
 		} else {
 			//username doesn't exist
@@ -258,7 +243,6 @@ var manage_functions = map[string]ManageFunction{
 				key := md5_sum(request.RemoteAddr+username+password+config.RandomSeed+generateSalt())[0:10]
 				createSession(key,username,password,&request,&writer)
 				redirect(path.Join(config.SiteWebfolder,"/manage?action=announcements"))
-
 			}
 			return
 	}},
@@ -272,10 +256,6 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 1,
 		Callback: func() (html string) {
 			html = "<h1>Announcements</h1><br />"
-			var subject string
-			var message string
-			var poster string
-			var timestamp string
 
 		  	results,err := db.Start("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements` ORDER BY `id` DESC;")
 			if err != nil {
@@ -292,19 +272,7 @@ var manage_functions = map[string]ManageFunction{
 		    }
 			if len(rows) > 0 {
 				for  _, row := range rows {
-				    for col_num, col := range row {
-						switch {
-							case col_num == 0:
-								subject = string(col.([]byte))
-							case col_num == 1:
-								message = string(col.([]byte))
-							case col_num == 2:
-								poster = string(col.([]byte))
-							case col_num == 3:
-								timestamp = string(col.([]byte))
-						}
-				    }
-				    html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+subject+"</b> by "+poster+" at "+timestamp+"</div>\n<div class=\"section-body\">"+message+"\n</div></div>\n"
+					html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+string(row[0].([]byte))+"</b> by "+string(row[2].([]byte))+" at "+string(row[3].([]byte))+"</div>\n<div class=\"section-body\">"+string(row[1].([]byte))+"\n</div></div>\n"
 				}
 			} else {
 				html += "No announcements"
@@ -350,12 +318,7 @@ var manage_functions = map[string]ManageFunction{
 		    }
 			if len(rows) > 0 {
 				for  _, row := range rows {
-
-				    for col_num, col := range row {
-						if col_num == 5 {
-							staff_boards = string(col.([]byte))
-						}
-				    }
+					staff_boards = string(row[5].([]byte))
 				}
 			} else {
 				// fuck you, I'm Spiderman.
@@ -500,9 +463,7 @@ var manage_functions = map[string]ManageFunction{
 		    }
 			if len(rows) > 0 {
 				for  _, row := range rows {
-			    	for _, col := range row {
-		    			html += "<option>"+string(col.([]byte))+"</option>\n"
-					}
+    				html += "<option>"+string(row[0].([]byte))+"</option>\n"
 				}
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
@@ -522,11 +483,7 @@ var manage_functions = map[string]ManageFunction{
 		    }
 			if len(rows) > 0 {
 				for row_num, row := range rows {
-			    	for col_num, col := range row {
-			    		if col_num == 0 {
-			    			html += "<option value=\""+strconv.Itoa(row_num)+"\">"+string(col.([]byte))+"</option>\n"
-			    		}
-					}
+					html += "<option value=\""+strconv.Itoa(row_num)+"\">"+string(row[0].([]byte))+"</option>\n"
 				}
 			}
 			html += "</select></td></tr><tr><td>Max image size</td><td><input type=\"text\" name=\"maximagesize\" value=\""+strconv.Itoa(maximagesize)+"\" /></td></tr><tr><td>Max pages</td><td><input type=\"text\" name=\"maxpages\" value=\""+strconv.Itoa(maxpages)+"\" /></td></tr><tr><td>Default style</td><td><select name=\"defaultstyle\" selected=\""+defaultstyle+"\">"
@@ -672,22 +629,11 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			for _,row := range rows {
-			    for col_num, col := range row {
-					switch {
-						case col_num == 0:
-							board_dir = string(col.([]byte))
-						case col_num == 1:
-							board_title = string(col.([]byte))
-						case col_num == 2:
-							board_subtitle = string(col.([]byte))
-						case col_num == 3:
-							board_description = string(col.([]byte))
-						case col_num == 4:
-							board_section,_ = strconv.Atoi(string(col.([]byte)))
-
-					}
-			    }
-
+				board_dir = string(row[0].([]byte))
+				board_title = string(row[1].([]byte))
+				board_subtitle = string(row[2].([]byte))
+				board_description = string(row[3].([]byte))
+				board_section,_ = strconv.Atoi(string(row[4].([]byte)))
 			    board_arr = append(board_arr,BoardsTable{IName:"board", Dir:board_dir, Title:board_title, Subtitle:board_subtitle, Description:board_description, Section:board_section})
 			}
 
@@ -704,21 +650,14 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			for _,row := range rows {
-			    for col_num, col := range row {
-					switch {
-						case col_num == 0:
-							section_id,_ = strconv.Atoi(string(col.([]byte)))
-						case col_num == 1:
-							section_order,_ = strconv.Atoi(string(col.([]byte)))
-						case col_num == 2:
-							b,_ := strconv.Atoi(string(col.([]byte)))
-							if b == 1 {
-								section_hidden = true
-							} else {
-								section_hidden = false
-							}
-					}
-			    }
+				section_id,_ = strconv.Atoi(string(row[0].([]byte)))
+				section_order,_ = strconv.Atoi(string(row[1].([]byte)))
+				b := string(row[2].([]byte))
+				if b == "1" {
+					section_hidden = true
+				} else {
+					section_hidden = false
+				}
 			    section_arr = append(section_arr, BoardSectionsTable{IName: "section", ID: section_id, Order: section_order, Hidden: section_hidden})
 			}
 
@@ -736,24 +675,13 @@ var manage_functions = map[string]ManageFunction{
 		    }
 			if len(rows) > 0 {
 				for row_num, row := range rows {
-				    for col_num, col := range row {
-				    	switch {
-				    		case col_num == 1:
-				    			front_page,_ = strconv.Atoi(string(col.([]byte)))
-				    		case col_num == 2:
-				    			front_order,_ = strconv.Atoi(string(col.([]byte)))
-				    		case col_num == 3:
-				    			front_subject = string(col.([]byte))
-				    		case col_num == 4:
-				    			front_message = string(col.([]byte))
-				    		case col_num == 5:
-				    			front_timestamp = string(col.([]byte))
-				    		case col_num == 6:
-				    			front_poster = string(col.([]byte))
-				    		case col_num == 7:
-				    			front_email = string(col.([]byte))
-				    	}
-				    }
+	    			front_page,_ = strconv.Atoi(string(row[1].([]byte)))
+	    			front_order,_ = strconv.Atoi(string(row[2].([]byte)))
+	    			front_subject = string(row[3].([]byte))
+	    			front_message = string(row[4].([]byte))
+	    			front_timestamp = string(row[5].([]byte))
+	    			front_poster = string(row[6].([]byte))
+	    			front_email = string(row[7].([]byte))
 					front_arr = append(front_arr,FrontTable{IName:"front page", ID:row_num, Page: front_page, Order: front_order, Subject: front_subject, Message: front_message, Timestamp: front_timestamp, Poster: front_poster, Email: front_email})
 				}
 			} else {
@@ -784,7 +712,38 @@ var manage_functions = map[string]ManageFunction{
 	"rebuildall": {
 		Permissions:3,
 		Callback: func() (html string) {
+			//html += manage_functions["rebuildfront"].Callback()+"\n<br />\n"
+			return
+	}},
+	"rebuildposts": {
+		Permissions:3,
+		Callback: func() (html string) {
 			initTemplates()
+			// variables for sections table
+			var posts []interface{}
+			
+			results,err := db.Start("SELECT * FROM `"+config.DBprefix+"posts`;")
+			if err != nil {
+				error_log.Write(err.Error())
+				return err.Error()
+			}
+
+			rows, err := results.GetRows()
+		    if err != nil {
+				error_log.Write(err.Error())
+				return err.Error()
+		    }
+			if len(rows) > 0 {
+				for row_num, row := range rows {
+					var post PostTable
+					post.IName = "post"
+					fmt.Printf("%d: ",row_num)
+					fmt.Println(string(row[4].([]byte)))
+					posts = append(posts, post)
+				}
+			} else {
+				// no front pages
+			}
 			return
 	}},
 	"recentposts": {
@@ -813,36 +772,21 @@ var manage_functions = map[string]ManageFunction{
 				return
 			}
 
-			row_num := 0
-			for {
-			    row, err := results.GetRow()
-		        if err != nil {
-					html += "<tr><td>"+err.Error()+"</td></tr></table>"
-					return
-		        }
-
-		        if row == nil {
-		            break
-		        }
-		        html  += "<tr>"
-			    for col_num, col := range row {
-			    	if col_num == 1 {
-			    		rank := string(col.([]byte))
-			    		if rank == "3" {
-			    			rank = "admin"
-			    		} else if rank == "2" {
-			    			rank = "mod"
-			    		} else if rank == "1" {
-			    			rank = "janitor"
-			    		}
-			    		html += "<td>"+rank+"</td>"	
-			    	} else {
-			    		html += "<td>"+string(col.([]byte))+"</td>"
-			    	}
-				}
-				
-				html += "<td><a href=\"action=staff%26do=del%26index="+strconv.Itoa(row_num)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
-			    
+			rows, err := results.GetRows()
+	        if err != nil {
+				html += "<tr><td>"+err.Error()+"</td></tr></table>"
+				return
+	        }
+			for row_num, row := range rows {
+	    		rank := string(row[1].([]byte))
+	    		if rank == "3" {
+	    			rank = "admin"
+	    		} else if rank == "2" {
+	    			rank = "mod"
+	    		} else if rank == "1" {
+	    			rank = "janitor"
+	    		}
+			    html  += "<tr><td>"+string(row[0].([]byte))+"</td><td>"+rank+"</td><td>"+string(row[2].([]byte))+"</td><td>"+string(row[3].([]byte))+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(row_num)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			}
 			html += "</table>"
 			return
