@@ -57,29 +57,29 @@ type BannedTripcodesTable struct {
 
 type BoardsTable struct {
 	IName string
-	ID uint8
-	Order uint8
+	ID int
+	Order int
 	Dir string
-	Type uint8
-	FirstPost uint
-	UploadType uint8
+	Type int
+	FirstPost int
+	UploadType int
 	Title string
 	Subtitle string
 	Description string
 	Section int
 	MaxImageSize int
-	MaxPages uint8
+	MaxPages int
 	Locale string
 	DefaultStyle string
 	Locked bool
 	CreatedOn string
 	Anonymous string
 	ForcedAnon string
-	MaxAge uint
-	MarkPage uint8
-	AutosageAfter uint
-	NoImagesAfter uint
-	MaxMessageLength uint
+	MaxAge int
+	MarkPage int
+	AutosageAfter int
+	NoImagesAfter int
+	MaxMessageLength int
 	EmbedsAllowed string
 	RedirectToThread bool
 	ShowId bool
@@ -157,9 +157,9 @@ type PollResultsTable struct {
 
 type PostTable struct {
 	IName string
-	ID uint
-	BoarID uint8
-	ParentID uint
+	ID int
+	BoardID int
+	ParentID int
 	Name string
 	Tripcode string
 	Email string
@@ -170,15 +170,15 @@ type PostTable struct {
 	FilenameOriginal string
 	FileChecksum string
 	Filesize string
-	ImageW uint16
-	ImageH uint16
-	ThumbW uint16
-	ThumbH uint16
+	ImageW int
+	ImageH int
+	ThumbW int
+	ThumbH int
 	IP string
 	Tag string
 	Timestamp string
-	Autosage uint8
-	PosterAuthority uint8
+	Autosage int
+	PosterAuthority int
 	DeletedTimestamp string
 	Bumped string
 	Stickied bool

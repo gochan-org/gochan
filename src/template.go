@@ -29,6 +29,9 @@ var funcMap = template.FuncMap{
 	"stringEq": func(a, b string) bool {
 		return a == b
 	},
+	"stringNeq": func(a, b string) bool {
+		return a != b
+	},
 	"intEq": func(a, b int) bool {
 		return a == b
 	},

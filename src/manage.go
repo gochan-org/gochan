@@ -565,6 +565,7 @@ var manage_functions = map[string]ManageFunction{
 			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
+					  	"<a href=\"javascript:void(0)\" id=\"rebuildthreads\" class=\"staffmenu-item\">Rebuild threads</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
 			if rank >= 2 {
@@ -715,76 +716,38 @@ var manage_functions = map[string]ManageFunction{
 			//html += manage_functions["rebuildfront"].Callback()+"\n<br />\n"
 			return
 	}},
-	"rebuildposts": {
+	"rebuildthreads": {
 		Permissions:3,
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			var posts []interface{}
-			
-			results,err := db.Start("SELECT * FROM `"+config.DBprefix+"posts` WHERE `deleted_timestamp` IS NULL;")
-			if err != nil {
-				error_log.Write(err.Error())
-				return err.Error()
-			}
+			op_posts := getPostArr("`deleted_timestamp` IS NULL AND `parentid` = 0")
+			board_arr := getBoardArr("")
+			sections_arr := getSectionArr("")
 
-			rows, err := results.GetRows()
-		    if err != nil {
-				error_log.Write(err.Error())
-				return err.Error()
-		    }
-
-			if len(rows) > 0 {
-				for _, row := range rows {
-					var post PostTable
-					post.IName = "post"
-					post.ID,_ = strconv.Atoi(string(row[0].([]byte)))
-					post.BoardID,_ = strconv.Atoi(string(row[1].([]byte)))
-					post.ParentID,_ = strconv.Atoi(string(row[2].([]byte)))
-					post.Name = string(row[3].([]byte))
-					post.Tripcode = string(row[4].([]byte))
-					post.Email = string(row[5].([]byte))
-					post.Subject = string(row[6].([]byte))
-					post.Message = string(row[7].([]byte))
-					post.Password = string(row[8].([]byte))
-					post.Filename = string(row[9].([]byte))
-					post.FilenameOriginal = string(row[10].([]byte))
-					post.FileChecksum = string(row[11].([]byte))
-					post.Filesize = string(row[12].([]byte))
-					post.ImageW,_ = strconv.Atoi(string(row[13].([]byte)))
-					post.ImageH,_ = strconv.Atoi(string(row[14].([]byte)))
-					post.ThumbW,_ = strconv.Atoi(string(row[15].([]byte)))
-					post.ThumbH,_ = strconv.Atoi(string(row[16].([]byte)))
-					post.IP = string(row[17].([]byte))
-					post.Tag = string(row[18].([]byte))
-					post.Timestamp = string(row[19].([]byte))
-					post.Autosage,_ = strconv.Atoi(string(row[20].([]byte)))
-					post.PosterAuthority,_ = strconv.Atoi(string(row[21].([]byte)))
-					if row[23] == nil {
-						post.Bumped = ""
-					} else {
-						post.Bumped = string(row[23].([]byte))
+			for _,post := range op_posts {
+				op_post := post.(PostTable)
+				op_id := strconv.Itoa(op_post.ID)
+				var board_dir string
+				for _,board_i := range board_arr {
+					board := board_i.(BoardsTable)
+					if board.ID == op_post.BoardID {
+						board_dir = board.Dir
+						break
 					}
-					post.Stickied = (string(row[24].([]byte)) == "1")
-					post.Locked = (string(row[25].([]byte)) == "1")
-					post.Reviewed = (string(row[26].([]byte)) == "1")
-					if row[27] == nil {
-						post.Sillytag = false
-					} else {
-						post.Sillytag = (string(row[27].([]byte)) == "1")
-					}
-					posts = append(posts, post)
 				}
+
+				thread_posts := getPostArr("(`parentid` = "+op_id+" OR `id` = "+op_id+")")
 
 			    var interfaces []interface{}
 			    interfaces = append(interfaces, config)
-			    interfaces = append(interfaces, posts)
-			    interfaces = append(interfaces, &Wrapper{IName:"boards", Data: getBoardArr()})
-			    interfaces = append(interfaces, &Wrapper{IName:"sections", Data: getSectionArr()})
+			    interfaces = append(interfaces, thread_posts)
+			    interfaces = append(interfaces, &Wrapper{IName:"boards", Data: board_arr})
+			    interfaces = append(interfaces, &Wrapper{IName:"sections", Data: sections_arr})
 
 				wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
-				os.Remove("html/threaded.html")
-				thread_file,err := os.OpenFile("html/threaded.html",os.O_CREATE|os.O_RDWR,0777)
+				os.Remove("html/"+board_dir+"/res/"+op_id+".html")
+				thread_file,err := os.OpenFile("html/"+board_dir+"/res/"+op_id+".html",os.O_CREATE|os.O_RDWR,0777)
 				err = img_thread_tmpl.Execute(thread_file,wrapped)
 				if err == nil {
 					if err != nil {
@@ -793,8 +756,6 @@ var manage_functions = map[string]ManageFunction{
 						return "Posts rebuilt successfully.<br />"
 					}
 				}
-			} else {
-				// no posts
 			}
 			return
 	}},

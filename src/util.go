@@ -56,8 +56,11 @@ func bcrypt_sum(str string) string {
 	return hash
 }
 
-func getBoardArr() (boards []interface{}) {
-  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"boards` ORDER BY `order`;")
+func getBoardArr(where string) (boards []interface{}) {
+	if where == "" {
+		where = "1"
+	}
+  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"boards` WHERE "+where+" ORDER BY `order`;")
 	if err != nil {
 		error_log.Write(err.Error())
 		return 
@@ -67,7 +70,6 @@ func getBoardArr() (boards []interface{}) {
 		error_log.Write(err.Error())
 		return
 	}
-
 	for _,row := range rows {
 		var board BoardsTable
 		board.IName = "board"
@@ -105,8 +107,70 @@ func getBoardArr() (boards []interface{}) {
 	return
 }
 
-func getSectionArr() (sections []interface{}) {
-	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"sections` ORDER BY `order`;")
+func getPostArr(where string) (posts []interface{}) {
+	if where == "" {
+		where = "1"
+	}
+	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"posts` WHERE "+where+";")
+	if err != nil {
+		error_log.Write(err.Error())
+		return
+	}
+
+	rows, err := results.GetRows()
+    if err != nil {
+		error_log.Write(err.Error())
+		return
+    }
+
+	for _, row := range rows {
+		var post PostTable
+		post.IName = "post"
+		post.ID,_ = strconv.Atoi(string(row[0].([]byte)))
+		post.BoardID,_ = strconv.Atoi(string(row[1].([]byte)))
+		post.ParentID,_ = strconv.Atoi(string(row[2].([]byte)))
+		post.Name = string(row[3].([]byte))
+		post.Tripcode = string(row[4].([]byte))
+		post.Email = string(row[5].([]byte))
+		post.Subject = string(row[6].([]byte))
+		post.Message = string(row[7].([]byte))
+		post.Password = string(row[8].([]byte))
+		post.Filename = string(row[9].([]byte))
+		post.FilenameOriginal = string(row[10].([]byte))
+		post.FileChecksum = string(row[11].([]byte))
+		post.Filesize = string(row[12].([]byte))
+		post.ImageW,_ = strconv.Atoi(string(row[13].([]byte)))
+		post.ImageH,_ = strconv.Atoi(string(row[14].([]byte)))
+		post.ThumbW,_ = strconv.Atoi(string(row[15].([]byte)))
+		post.ThumbH,_ = strconv.Atoi(string(row[16].([]byte)))
+		post.IP = string(row[17].([]byte))
+		post.Tag = string(row[18].([]byte))
+		post.Timestamp = string(row[19].([]byte))
+		post.Autosage,_ = strconv.Atoi(string(row[20].([]byte)))
+		post.PosterAuthority,_ = strconv.Atoi(string(row[21].([]byte)))
+		if row[23] == nil {
+			post.Bumped = ""
+		} else {
+			post.Bumped = string(row[23].([]byte))
+		}
+		post.Stickied = (string(row[24].([]byte)) == "1")
+		post.Locked = (string(row[25].([]byte)) == "1")
+		post.Reviewed = (string(row[26].([]byte)) == "1")
+		if row[27] == nil {
+			post.Sillytag = false
+		} else {
+			post.Sillytag = (string(row[27].([]byte)) == "1")
+		}
+		posts = append(posts, post)
+	}
+	return
+}
+
+func getSectionArr(where string) (sections []interface{}) {
+	if where == "" {
+		where = "1"
+	}
+	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"sections` WHERE "+where+" ORDER BY `order`;")
 	if err != nil {
 		error_log.Write(err.Error())
 		return
@@ -116,7 +180,6 @@ func getSectionArr() (sections []interface{}) {
 		error_log.Write(err.Error())
 		return
 	}
-
 	for _,row := range rows {
 		var section BoardSectionsTable
 		section.IName = "section"
