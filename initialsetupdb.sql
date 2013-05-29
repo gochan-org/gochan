@@ -52,7 +52,8 @@ CREATE  TABLE `DBPREFIXboards` (
   `first_post` INT UNSIGNED NOT NULL DEFAULT 1,
   `upload_type` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
   `title` VARCHAR(45) NOT NULL,
-  `subtitle` VARCHAR(64) NOT NULL,
+  `subtitle` VARCHAR(64) NOT NULL DEFAULT '',
+  `description` VARCHAR(64) NOT NULL DEFAULT '',
   `section` VARCHAR(45) NOT NULL,
   `max_image_size` INT UNSIGNED NOT NULL DEFAULT 4718592,
   `max_pages` TINYINT UNSIGNED NOT NULL DEFAULT 11,
@@ -159,14 +160,14 @@ CREATE TABLE `DBPREFIXposts` (
   `subject` VARCHAR(64) NOT NULL,
   `message` TEXT NOT NULL,
   `password` VARCHAR(45) NOT NULL,
-  `filename` VARCHAR(45) NOT NULL,
-  `filename_original` VARCHAR(45) NOT NULL,
-  `file_checksum` VARCHAR(45) NOT NULL,
-  `filesize` INT(20) UNSIGNED NOT NULL DEFAULT '0',
-  `image_w` SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0',
-  `image_h` SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0',
-  `thumb_w` SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0',
-  `thumb_h` SMALLINT(5) UNSIGNED NOT NULL DEFAULT '0',
+  `filename` VARCHAR(45),
+  `filename_original` VARCHAR(45),
+  `file_checksum` VARCHAR(45),
+  `filesize` INT(20) UNSIGNED,
+  `image_w` SMALLINT(5) UNSIGNED,
+  `image_h` SMALLINT(5) UNSIGNED,
+  `thumb_w` SMALLINT(5) UNSIGNED,
+  `thumb_h` SMALLINT(5) UNSIGNED,
   `ip` CHAR(10) NOT NULL,
   `tag` VARCHAR(5) NOT NULL,
   `timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -261,6 +262,3 @@ CREATE  TABLE `DBPREFIXwordfilters` (
   `regex` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- Create admin account so we can log in
--- INSERT INTO `DBPREFIXstaff` (`username`,`password_checksum`,`salt`,`rank`) VALUES ('admin','24326124313024434b7a4f6267504a6631716b464e2f41353457785465766c484f4f766a387843415778696c507a6358504d574a3357794574395975','abc',3);

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"text/template"
 )
 
@@ -50,8 +51,8 @@ var (
 	global_header_tmpl_str string
 	global_header_tmpl *template.Template
 	
-	img_header_tmpl_str string
-	img_header_tmpl *template.Template
+	img_thread_tmpl_str string
+	img_thread_tmpl *template.Template
 	
 	manage_header_tmpl_str string
 	manage_header_tmpl *template.Template
@@ -88,15 +89,15 @@ func initTemplates() {
 		os.Exit(2)
 	}
 
-	img_header_tmpl_bytes,_ := ioutil.ReadFile(config.TemplateDir+"/img_header.html")
+	img_thread_tmpl_bytes,_ := ioutil.ReadFile(path.Join(config.TemplateDir,"img_thread.html"))
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_header.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\"")
 		os.Exit(2)
 	}
-	img_header_tmpl_str = string(img_header_tmpl_bytes)
-	img_header_tmpl,tmpl_err = template.New("img_header_tmpl").Funcs(funcMap).Parse(string(img_header_tmpl_str))
+	img_thread_tmpl_str = string(img_thread_tmpl_bytes)
+	img_thread_tmpl,tmpl_err = template.New("img_thread_tmpl").Funcs(funcMap).Parse(img_thread_tmpl_str)
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_header.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\"")
 		os.Exit(2)
 	}
 
