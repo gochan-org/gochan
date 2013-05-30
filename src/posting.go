@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"os"
 	"./lib/resize"
+	"strconv"
 	"syscall"
 )
 
@@ -18,7 +19,50 @@ func generateTripCode(input string) string {
 	return crypt(input,input[1:3])[3:]
 }
 
-func createThumbnail(input string, output string) bool {
+func buildBoardPages(boardid int) {
+	
+}
+
+func buildThread(op_post PostTable) (err error) {
+	threadid_str := strconv.Itoa(op_post.ID)
+	thread_posts := getPostArr("`deleted_timestamp` IS NULL AND (`parentid` = "+threadid_str+" OR `id` = "+threadid_str+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+	board_arr := getBoardArr("")
+	sections_arr := getSectionArr("")
+
+	
+	op_id := strconv.Itoa(op_post.ID)
+	var board_dir string
+	for _,board_i := range board_arr {
+		board := board_i.(BoardsTable)
+		if board.ID == op_post.BoardID {
+			board_dir = board.Dir
+			break
+		}
+	}
+
+    var interfaces []interface{}
+    interfaces = append(interfaces, config)
+    interfaces = append(interfaces, thread_posts)
+    interfaces = append(interfaces, &Wrapper{IName:"boards", Data: board_arr})
+    interfaces = append(interfaces, &Wrapper{IName:"sections", Data: sections_arr})
+
+	wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
+	os.Remove("html/"+board_dir+"/res/"+op_id+".html")
+	
+	thread_file,err := os.OpenFile("html/"+board_dir+"/res/"+op_id+".html",os.O_CREATE|os.O_RDWR,0777)
+	err = img_thread_tmpl.Execute(thread_file,wrapped)
+	if err == nil {
+		if err != nil {
+			return err
+		} else {
+			return nil
+		}
+	}
+	return
+}
+
+
+func createThumbnail(w http.ResponseWriter, input string, output string) bool {
 	var image_obj image.Image
 	failed := false
 	handle,err := os.Open(input)
@@ -45,14 +89,14 @@ func createThumbnail(input string, output string) bool {
 	} else if filetype == "png" {
 		image_obj,_ = png.Decode(handle)
 	} else {
-		exitWithErrorPage("Upload file type not supported")
+		exitWithErrorPage(w, "Upload file type not supported")
 	}
 
 	old_rect := image_obj.Bounds()
 	defer func() {
 		if _, ok := recover().(error); ok {
 			//serverError()
-			exitWithErrorPage("lel, internet")
+			exitWithErrorPage(w, "lel, internet")
 		}
 	}()
 	if config.ThumbWidth >= old_rect.Max.X && config.ThumbHeight >= old_rect.Max.Y {
@@ -102,6 +146,10 @@ func getThumbnailSize(w int, h int) (new_w int, new_h int) {
 	return
 }
 
+func insertPost(post PostTable) {
+
+}
+
 func shortenPostForBoardPage(post *string) {
 
 }
@@ -110,7 +158,13 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	request = *r
 	writer = w
 	file,handler,err := request.FormFile("file")
-	
+	/*threadid := db.Escape(request.FormValue("threadid"))
+	boardid := db.Escape(request.FormValue("boardid"))
+	postname := db.Escape(request.FormValue("postname"))
+	postemail := db.Escape(request.FormValue("postemail"))
+	postmsg := db.Escape(request.FormValue("postmsg"))
+	imagefile := db.Escape(request.FormValue("imagefile"))*/
+
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
 	if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
 		access_log.Write("Rejected post from possible spambot @ : "+request.RemoteAddr)
@@ -123,13 +177,13 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data,err := ioutil.ReadAll(file)
 		if err != nil {
-			fmt.Println("Couldn't read file")
+			exitWithErrorPage(w,"Couldn't read file")
 		} else {
 			access_log.Write("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
 			err = ioutil.WriteFile(handler.Filename, data, 0777)
-			createThumbnail(handler.Filename,"output")
+			createThumbnail(w, handler.Filename,"output")
 			if err != nil {
-				fmt.Println("Couldn't write file")
+				exitWithErrorPage(w,"Couldn't write file")
 			}
 		}
 	}

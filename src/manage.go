@@ -207,7 +207,7 @@ var manage_functions = map[string]ManageFunction{
 	"error": {
 		Permissions: 0,
 		Callback: func() (html string) {
-			exitWithErrorPage("lel, internet")
+			exitWithErrorPage(writer, "lel, internet")
 			return
 	}},
 	"executesql": {
@@ -722,40 +722,17 @@ var manage_functions = map[string]ManageFunction{
 			initTemplates()
 			// variables for sections table
 			op_posts := getPostArr("`deleted_timestamp` IS NULL AND `parentid` = 0")
-			board_arr := getBoardArr("")
-			sections_arr := getSectionArr("")
-
+			success := true
 			for _,post := range op_posts {
 				op_post := post.(PostTable)
-				op_id := strconv.Itoa(op_post.ID)
-				var board_dir string
-				for _,board_i := range board_arr {
-					board := board_i.(BoardsTable)
-					if board.ID == op_post.BoardID {
-						board_dir = board.Dir
-						break
-					}
+				if buildThread(op_post) != nil {
+					success = false
 				}
-
-				thread_posts := getPostArr("(`parentid` = "+op_id+" OR `id` = "+op_id+")")
-
-			    var interfaces []interface{}
-			    interfaces = append(interfaces, config)
-			    interfaces = append(interfaces, thread_posts)
-			    interfaces = append(interfaces, &Wrapper{IName:"boards", Data: board_arr})
-			    interfaces = append(interfaces, &Wrapper{IName:"sections", Data: sections_arr})
-
-				wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
-				os.Remove("html/"+board_dir+"/res/"+op_id+".html")
-				thread_file,err := os.OpenFile("html/"+board_dir+"/res/"+op_id+".html",os.O_CREATE|os.O_RDWR,0777)
-				err = img_thread_tmpl.Execute(thread_file,wrapped)
-				if err == nil {
-					if err != nil {
-						return err.Error()
-					} else {
-						return "Posts rebuilt successfully.<br />"
-					}
-				}
+			}
+			if success {
+				html = "Threads rebuilt successfully."
+			} else {
+				html = "Thread rebuilding failed somewhere (eventually we'll print out all the rebuilt threads."
 			}
 			return
 	}},
