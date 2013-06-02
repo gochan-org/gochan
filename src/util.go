@@ -138,7 +138,7 @@ func getPostArr(where string) (posts []interface{}) {
 		post.Filename = string(row[9].([]byte))
 		post.FilenameOriginal = string(row[10].([]byte))
 		post.FileChecksum = string(row[11].([]byte))
-		post.Filesize = string(row[12].([]byte))
+		post.Filesize,_ = strconv.Atoi(string(row[12].([]byte)))
 		post.ImageW,_ = strconv.Atoi(string(row[13].([]byte)))
 		post.ImageH,_ = strconv.Atoi(string(row[14].([]byte)))
 		post.ThumbW,_ = strconv.Atoi(string(row[15].([]byte)))

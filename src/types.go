@@ -169,7 +169,7 @@ type PostTable struct {
 	Filename string
 	FilenameOriginal string
 	FileChecksum string
-	Filesize string
+	Filesize int
 	ImageW int
 	ImageH int
 	ThumbW int
@@ -188,9 +188,9 @@ type PostTable struct {
 }
 
 type TempPostTable struct {
-	ID uint
-	Boarid uint8
-	Parentid uint
+	ID int
+	Boarid int
+	Parentid int
 	Name string
 	Tripcode string
 	Email string
@@ -200,16 +200,16 @@ type TempPostTable struct {
 	Filename string
 	FilenameOriginal string
 	FileChecksum string
-	Filesize string
-	ImageW uint16
-	ImageH uint16
-	ThumbW uint16
-	ThumbH uint16
+	Filesize int
+	ImageW int
+	ImageH int
+	ThumbW int
+	ThumbH int
 	IP string
 	Tag string
 	Timestamp string
-	Autosage uint8
-	PosterAuthority uint8
+	Autosage int
+	PosterAuthority int
 	DeletedTimestamp string
 	Bumped string
 	Stickied bool

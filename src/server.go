@@ -49,10 +49,6 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 	filepath := path.Join(config.DocumentRoot, request_url)
 	results,err := os.Stat(filepath)
 
-	if !strings.Contains(request.Header.Get("Accept-Encoding"), "gzip") {
-
-	}
-
 	if err == nil {
 		//the file exists, or there is a folder here
 		if results.IsDir() {
@@ -96,16 +92,16 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	}
 }
 
-func exitWithErrorPage(err string) {
+func exitWithErrorPage(w http.ResponseWriter, err string) {
 	error_page_bytes,_ := ioutil.ReadFile("templates/error.html")
 	error_page := string(error_page_bytes)
 	error_page = strings.Replace(error_page,"{ERRORTEXT}", err,-1)
-	fmt.Fprintf(writer,error_page)
+	fmt.Fprintf(w,error_page)
 	exit_error = true
 }
 
 func redirect(location string) {
-	//http.Redirect(writer,&request,location,http.StatusMovedTemporarily)
+	http.Redirect(writer,&request,location,http.StatusFound)
 }
 
 func error404() {

@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+
 type ManageFunction struct {
 	Permissions int // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
 	Callback func() string //return string of html output
@@ -231,10 +232,15 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			username := request.FormValue("username")
 			password := request.FormValue("password")
-
+			redirect_action := request.FormValue("action")
+			if redirect_action == ""  {
+				redirect_action = "announcements"
+			}
+			fmt.Println(redirect_action)
 			if username == "" || password == "" {
 				//assume that they haven't logged in
 				html = "\t<form method=\"POST\" action=\"/manage?action=login\" class=\"loginbox\">\n" +
+					"\t\t<input type=\"hidden\" name=\"redirect\" value=\""+redirect_action+"\" />\n" +
 					"\t\t<input type=\"text\" name=\"username\" class=\"logindata\" /><br />\n" +
 					"\t\t<input type=\"password\" name=\"password\" class=\"logindata\" /> <br />\n" +
 					"\t\t<input type=\"submit\" value=\"Login\" />\n" +
@@ -242,7 +248,7 @@ var manage_functions = map[string]ManageFunction{
 			} else {
 				key := md5_sum(request.RemoteAddr+username+password+config.RandomSeed+generateSalt())[0:10]
 				createSession(key,username,password,&request,&writer)
-				redirect(path.Join(config.SiteWebfolder,"/manage?action=announcements"))
+				redirect(path.Join(config.SiteWebfolder,"/manage?action="+request.FormValue("redirect")))
 			}
 			return
 	}},
@@ -433,6 +439,11 @@ var manage_functions = map[string]ManageFunction{
 				}
 				
 				err = os.Mkdir(path.Join(config.DocumentRoot,dir,"res"),0777)
+				if err != nil {
+					return err.Error()
+				}
+
+				err = os.Mkdir(path.Join(config.DocumentRoot,dir,"thumb"),0777)
 				if err != nil {
 					return err.Error()
 				}

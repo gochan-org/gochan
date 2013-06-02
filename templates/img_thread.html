@@ -44,7 +44,7 @@
 	<div id="postbox-area">
 		<center>
 		<a href="#">Open Quick Reply box</a>
-		<form name="postform" action="/post" method="POST">
+		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			<table id="postbox-static">
 				<input type="hidden" name="threadid" value="{{$op.ID}}" />
 				<input type="hidden" name="boardid" value="{{$op.BoardID}}" />
