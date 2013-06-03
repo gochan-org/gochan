@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"go-logfile/logfile"
 	"goconf/conf"
@@ -390,6 +391,14 @@ func initConfig() {
 		fmt.Println("directories.document_root not set in config.cfg, halting.")
 		os.Exit(2)
 	}
+	wd,wderr := os.Getwd()
+	if wderr == nil {
+		_,staterr := os.Stat(path.Join(wd,config.DocumentRoot,"css"))
+		if staterr == nil {
+			config.DocumentRoot = path.Join(wd,config.DocumentRoot)
+		}
+	}
+
 
 	config.TemplateDir,err = c.GetString("directories", "template_dir")
 	if err != nil {
