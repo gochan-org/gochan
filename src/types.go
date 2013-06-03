@@ -539,7 +539,7 @@ func initConfig() {
 		config.ThumbWidth = 200
 	}
 
-	config.ThumbWidth,err = c.GetInt("thumbnails", "thumb_height")
+	config.ThumbHeight,err = c.GetInt("thumbnails", "thumb_height")
 	if err != nil {
 		config.ThumbHeight = 200
 	}
@@ -549,17 +549,17 @@ func initConfig() {
 		config.ThumbWidth_reply = 125
 	}
 
-	config.ThumbWidth,err = c.GetInt("thumbnails", "reply_thumb_width")
+	config.ThumbHeight_reply,err = c.GetInt("thumbnails", "reply_thumb_height")
 	if err != nil {
 		config.ThumbHeight_reply = 125
 	}
 
-	config.ThumbWidth,err = c.GetInt("thumbnails", "catalog_thumb_width")
+	config.ThumbWidth_catalog,err = c.GetInt("thumbnails", "catalog_thumb_width")
 	if err != nil {
 		config.ThumbWidth_catalog = 50
 	}
 
-	config.ThumbWidth,err = c.GetInt("thumbnails", "catalog_thumb_width")
+	config.ThumbHeight_catalog,err = c.GetInt("thumbnails", "catalog_thumb_height")
 	if err != nil {
 		config.ThumbHeight_catalog = 50
 	}

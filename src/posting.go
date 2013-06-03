@@ -136,12 +136,14 @@ func createThumbnail(image_obj image.Image, size string) image.Image {
 			thumb_width = config.ThumbWidth_catalog
 			thumb_height = config.ThumbHeight_catalog
 	}
+	fmt.Println(thumb_width)
+	fmt.Println(thumb_height)
 	old_rect := image_obj.Bounds()
 	if thumb_width >= old_rect.Max.X && thumb_height >= old_rect.Max.Y {
 		return image_obj
 	}
 	
-	thumb_w,thumb_h := getThumbnailSize(old_rect.Max.X,old_rect.Max.Y)
+	thumb_w,thumb_h := getThumbnailSize(old_rect.Max.X,old_rect.Max.Y,size)
 	image_obj = resize.Resize(image_obj, image.Rect(0,0,old_rect.Max.X,old_rect.Max.Y), thumb_w,thumb_h)
 	return image_obj
 }
@@ -167,16 +169,30 @@ func getNewFilename() string {
 }
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
-func getThumbnailSize(w int, h int) (new_w int, new_h int) {
+func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
+	var thumb_width int
+	var thumb_height int
+
+	switch {
+		case size == "op":
+			thumb_width = config.ThumbWidth
+			thumb_height = config.ThumbHeight
+		case size == "reply":
+			thumb_width = config.ThumbWidth_reply
+			thumb_height = config.ThumbHeight_reply
+		case size == "catalog":
+			thumb_width = config.ThumbWidth_catalog
+			thumb_height = config.ThumbHeight_catalog
+	}
 	if w == h {
-		new_w = config.ThumbWidth
-		new_h = config.ThumbWidth
+		new_w = thumb_width
+		new_h = thumb_height
 	} else {
 		var percent float32
 		if (w > h) {
-			percent = float32(config.ThumbWidth) / float32(w)
+			percent = float32(thumb_width) / float32(w)
 		} else {
-			percent = float32(config.ThumbWidth) / float32(h)
+			percent = float32(thumb_height) / float32(h)
 		}
 		new_w = int(float32(w) * percent)
 		new_h = int(float32(h) * percent)
@@ -258,12 +274,18 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			exitWithErrorPage(w,"Couldn't read file")
 		} else {
 			post.FilenameOriginal = handler.Filename
-			filetype := post.FilenameOriginal[len(post.FilenameOriginal)-3:len(post.FilenameOriginal)]
-			
+			filetype := getFiletype(post.FilenameOriginal)
+			thumb_filetype := filetype
+			if thumb_filetype == "gif" {
+				thumb_filetype = "jpg"
+			}
+
+
+
 			post.Filename = getNewFilename()+"."+getFiletype(post.FilenameOriginal)
 			
 			file_path := path.Join(config.DocumentRoot,"/"+getBoardArr("`id` = "+request.FormValue("boardid"))[0].(BoardsTable).Dir+"/src/",post.Filename)
-			thumb_path := path.Join(config.DocumentRoot,"/"+getBoardArr("`id` = "+request.FormValue("boardid"))[0].(BoardsTable).Dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"t."+filetype,-1))
+			thumb_path := path.Join(config.DocumentRoot,"/"+getBoardArr("`id` = "+request.FormValue("boardid"))[0].(BoardsTable).Dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"t."+thumb_filetype,-1))
 
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
@@ -286,7 +308,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				} else {
 					post.Filesize = int(stat.Size())
 				}
-				post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH)
+				post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH,"op")
 
 				access_log.Write("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
 				
