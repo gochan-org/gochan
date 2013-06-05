@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	version float32 = 0.2
+	version float32 = 0.3
 )
 
 
@@ -25,7 +25,6 @@ func main() {
 		needs_initial_setup = true
 		runInitialSetup()
 	}
-
 	fmt.Println("Loading and parsing templates...")
 	initTemplates()
 	fmt.Println("Initializing server...")
