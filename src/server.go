@@ -92,7 +92,11 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
 	}
 }
 
+<<<<<<< HEAD
 func exitWithErrorPage(w http.ResponseWriter, err string) {
+=======
+func exitWithErrorPage(writer http.ResponseWriter, err string) {
+>>>>>>> 0b6e2bc132fad7f323348b27857431ea8674c382
 	error_page_bytes,_ := ioutil.ReadFile("templates/error.html")
 	error_page := string(error_page_bytes)
 	error_page = strings.Replace(error_page,"{ERRORTEXT}", err,-1)
