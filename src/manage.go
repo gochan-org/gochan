@@ -236,7 +236,6 @@ var manage_functions = map[string]ManageFunction{
 			if redirect_action == ""  {
 				redirect_action = "announcements"
 			}
-			fmt.Println(redirect_action)
 			if username == "" || password == "" {
 				//assume that they haven't logged in
 				html = "\t<form method=\"POST\" action=\"/manage?action=login\" class=\"loginbox\">\n" +

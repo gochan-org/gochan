@@ -1,3 +1,5 @@
+// functions for handling posting, uploading, and post/thread/board page building
+
 package main
 
 import (
@@ -103,24 +105,6 @@ func loadImage(file *os.File) (image.Image,error) {
 	return image_obj,err
 }
 
-func saveImage(path string, image_obj *image.Image) error {
-	outwriter,err := os.OpenFile(path, os.O_RDWR|os.O_CREATE,0777)
-	if err == nil {
-		filetype := path[len(path)-4:len(path)]
-		if filetype == ".gif" {
-			//because Go doesn't come with a GIF writer :c
-			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})
-		} else if filetype == ".jpg" || filetype == "jpeg" {
-			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})
-		} else if filetype == ".png" {
-			png.Encode(outwriter, *image_obj)
-		} else {
-			return UnsupportedFiletypeError
-		}
-	}
-	return err
-}
-
 func createThumbnail(image_obj image.Image, size string) image.Image {
 	var thumb_width int
 	var thumb_height int
@@ -136,8 +120,6 @@ func createThumbnail(image_obj image.Image, size string) image.Image {
 			thumb_width = config.ThumbWidth_catalog
 			thumb_height = config.ThumbHeight_catalog
 	}
-	fmt.Println(thumb_width)
-	fmt.Println(thumb_height)
 	old_rect := image_obj.Bounds()
 	if thumb_width >= old_rect.Max.X && thumb_height >= old_rect.Max.Y {
 		return image_obj
@@ -201,8 +183,7 @@ func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
 }
 
 // inserts prepared post object into the SQL table so that it can be rendered
-func insertPost(post PostTable) {
-	post = sanitizePost(post)
+func insertPost(writer *http.ResponseWriter, post *PostTable) error {
 	post_sql_str := "INSERT INTO `"+config.DBprefix+"posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
 	if post.Filename != "" {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
@@ -223,18 +204,13 @@ func insertPost(post PostTable) {
 	} else {
 		post_sql_str += "0);"
 	}
-	fmt.Println(post_sql_str)
-	//_,err := db.Start(post_sql_str)
+	_,err := db.Start(post_sql_str)
+	if err != nil {
+		exitWithErrorPage(*writer,err.Error())
+	}
+	return nil
 }
 
-// calls db.Escape() on relevant post members to prevent SQL injection
-func sanitizePost(post PostTable) PostTable {
-	return post
-}
-
-func shortenPostForBoardPage(post *string) {
-
-}
 
 func makePost(w http.ResponseWriter, r *http.Request) {
 	request = *r
@@ -249,7 +225,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.Subject = db.Escape(request.FormValue("postsubject"))
 	post.Message = db.Escape(request.FormValue("postmsg"))
 	// TODO: change this to a checksum
-	post.Password = db.Escape(request.FormValue("postpassword"))
+	post.Password = md5_sum(request.FormValue("postpassword"))
 	post.IP = request.RemoteAddr
 	post.Timestamp = getSQLDateTime()
 	post.PosterAuthority = getStaffRank()
@@ -268,6 +244,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(uploaderr.Error())
 		post.Filename = ""
 		access_log.Write("Receiving post from "+request.RemoteAddr+", referred from: "+request.Referer())
+
 	} else {
 		data,err := ioutil.ReadAll(file)
 		if err != nil {
@@ -279,8 +256,6 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			if thumb_filetype == "gif" {
 				thumb_filetype = "jpg"
 			}
-
-
 
 			post.Filename = getNewFilename()+"."+getFiletype(post.FilenameOriginal)
 			
@@ -311,9 +286,18 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH,"op")
 
 				access_log.Write("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
-				
 
-				if config.ThumbWidth >= img.Bounds().Max.X && config.ThumbHeight >= img.Bounds().Max.Y {
+				if(request.FormValue("spoiler") == "on") {
+					_,err := os.Stat(path.Join(config.DocumentRoot,"spoiler.png"))
+					if err != nil {
+						exitWithErrorPage(w,"missing /spoiler.png")
+					} else {
+						err = syscall.Symlink(path.Join(config.DocumentRoot,"spoiler.png"),thumb_path)
+						if err != nil {
+							exitWithErrorPage(w,err.Error())
+						}
+					}
+				} else 	if config.ThumbWidth >= img.Bounds().Max.X && config.ThumbHeight >= img.Bounds().Max.Y {
 					err := syscall.Symlink(file_path,thumb_path)
 					if err != nil {
 						exitWithErrorPage(w,err.Error())
@@ -324,10 +308,41 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						exitWithErrorPage(w,err.Error())
 					} else {
-						http.Redirect(writer,&request,"/test/res/1.html",http.StatusFound)
+						
 					}
 				}
 			}
 		}
 	}
+
+	if post.Message == "" && post.Filename == "" {
+		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
+	}
+
+	insertPost(&w, &post)
+	http.Redirect(writer,&request,"/test/res/1.html",http.StatusFound)
+}
+
+
+func shortenPostForBoardPage(post *string) {
+
+}
+
+
+func saveImage(path string, image_obj *image.Image) error {
+	outwriter,err := os.OpenFile(path, os.O_RDWR|os.O_CREATE,0777)
+	if err == nil {
+		filetype := path[len(path)-4:len(path)]
+		if filetype == ".gif" {
+			//because Go doesn't come with a GIF writer :c
+			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})
+		} else if filetype == ".jpg" || filetype == "jpeg" {
+			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})
+		} else if filetype == ".png" {
+			png.Encode(outwriter, *image_obj)
+		} else {
+			return UnsupportedFiletypeError
+		}
+	}
+	return err
 }
