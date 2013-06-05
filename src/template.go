@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"text/template"
+	"time"
 )
 
 
@@ -20,6 +21,24 @@ type FooterData struct {
 
 
 var funcMap = template.FuncMap{
+	"add": func(a,b int) int {
+		return a + b
+	},
+	"subtract": func(a,b int) int {
+		return a - b
+	},
+	"len": func(arr []interface{}) int {
+		return len(arr)
+	},
+	"getSlice": func(arr []interface{}, start, end int) []interface{} {
+		slice := arr[start:end]
+		defer func() {
+			if r := recover(); r != nil {
+				slice = make([]interface{}, 1)
+			}
+		}()
+		return slice
+	},
 	"gt": func(a int, b int) bool {
 		return a > b
 	},
@@ -43,6 +62,13 @@ var funcMap = template.FuncMap{
 	},
 	"getInterface":func(in []interface{}, index int) interface{} {
 		return in[index]
+	},
+	"formatTimestamp": func(timestamp string) string {
+		parsed,err := time.Parse("2006-01-02 15:04:05", timestamp)
+		if err != nil {
+			return time.Time{}.Format("Mon, January 02, 2006 15:04 PM")
+		}
+		return parsed.Format("Mon, January 02, 2006 15:04 PM")
 	},
 }
 
@@ -70,37 +96,37 @@ var (
 func initTemplates() {
 	global_footer_tmpl_bytes,tmpl_err := ioutil.ReadFile(config.TemplateDir+"/global_footer.html")
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_footer.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_footer.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 	global_footer_tmpl_str = string(global_footer_tmpl_bytes)
 	global_footer_tmpl,tmpl_err = template.New("global_footer_tmpl").Funcs(funcMap).Parse(string(global_footer_tmpl_str))
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_footer.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_footer.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 	
 	global_header_tmpl_bytes,tmpl_err := ioutil.ReadFile(config.TemplateDir+"/global_header.html")
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_header.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_header.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 	global_header_tmpl_str = string(global_header_tmpl_bytes)
 	global_header_tmpl,tmpl_err = template.New("global_header_tmpl").Funcs(funcMap).Parse(string(global_header_tmpl_str))
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_header.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_header.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 
 	img_thread_tmpl_bytes,_ := ioutil.ReadFile(path.Join(config.TemplateDir,"img_thread.html"))
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 	img_thread_tmpl_str = string(img_thread_tmpl_bytes)
 	img_thread_tmpl,tmpl_err = template.New("img_thread_tmpl").Funcs(funcMap).Parse(img_thread_tmpl_str)
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\"")
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html: \"" + tmpl_err.Error())
 		os.Exit(2)
 	}
 

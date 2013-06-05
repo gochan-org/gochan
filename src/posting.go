@@ -58,18 +58,14 @@ func buildThread(op_post PostTable) (err error) {
     interfaces = append(interfaces, &Wrapper{IName:"sections", Data: sections_arr})
 
 	wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
-	os.Remove("html/"+board_dir+"/res/"+op_id+".html")
+	os.Remove(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"))
 	
-	thread_file,err := os.OpenFile("html/"+board_dir+"/res/"+op_id+".html",os.O_CREATE|os.O_RDWR,0777)
-	err = img_thread_tmpl.Execute(thread_file,wrapped)
+	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"),os.O_CREATE|os.O_RDWR,0777)
 	if err == nil {
-		if err != nil {
-			return err
-		} else {
-			return nil
-		}
+		return img_thread_tmpl.Execute(thread_file,wrapped)
 	}
-	return
+	fmt.Println(thread_file)
+	return err
 }
 
 // checks to see if the poster's tripcode/name is banned, if the IP is banned, or if the file checksum is banned
@@ -183,7 +179,7 @@ func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
 }
 
 // inserts prepared post object into the SQL table so that it can be rendered
-func insertPost(writer *http.ResponseWriter, post *PostTable) error {
+func insertPost(writer *http.ResponseWriter, post PostTable) error {
 	post_sql_str := "INSERT INTO `"+config.DBprefix+"posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
 	if post.Filename != "" {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
@@ -204,6 +200,7 @@ func insertPost(writer *http.ResponseWriter, post *PostTable) error {
 	} else {
 		post_sql_str += "0);"
 	}
+	//fmt.Println(post_sql_str)
 	_,err := db.Start(post_sql_str)
 	if err != nil {
 		exitWithErrorPage(*writer,err.Error())
@@ -215,7 +212,7 @@ func insertPost(writer *http.ResponseWriter, post *PostTable) error {
 func makePost(w http.ResponseWriter, r *http.Request) {
 	request = *r
 	writer = w
-	request.ParseForm()
+	
 	var post PostTable
 	post.IName = "post"
 	post.ParentID,_ = strconv.Atoi(request.FormValue("threadid"))
@@ -224,7 +221,6 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.Email = db.Escape(request.FormValue("postemail"))
 	post.Subject = db.Escape(request.FormValue("postsubject"))
 	post.Message = db.Escape(request.FormValue("postmsg"))
-	// TODO: change this to a checksum
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	post.IP = request.RemoteAddr
 	post.Timestamp = getSQLDateTime()
@@ -318,8 +314,8 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	if post.Message == "" && post.Filename == "" {
 		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
 	}
-
-	insertPost(&w, &post)
+	fmt.Println("name: "+post.Name)
+	insertPost(&w, post)
 	http.Redirect(writer,&request,"/test/res/1.html",http.StatusFound)
 }
 

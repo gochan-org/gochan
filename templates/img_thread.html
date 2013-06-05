@@ -1,10 +1,8 @@
 {{$config := getInterface .Data 0}}{{$post_arr := getInterface .Data 1}}{{$board_arr := getInterface .Data 2}}{{$section_arr := getInterface .Data 3}}
 <!DOCTYPE html>
-
 {{$op := getInterface $post_arr 0}}
-{{$boardid := $op.BoardID}}
-{{$board := getInterface $board_arr.Data $op.BoardID}}
-
+{{$boardid := subtract $op.BoardID 1}}
+{{$board := getInterface $board_arr.Data $boardid}}
 <html>
 <head>
 	<title>{{$board.Title}}</title>
@@ -33,12 +31,12 @@
 	</div>
 	<hr />
 	<div id="threadlinks-top">
-		<a href="board.html" >Return</a><br />
+		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/board.html" >Return</a><br />
 		<a href="{{$op.ID}}-100.html">First 100 posts</a><br />
 		<a href="{{$op.ID}}+50.html">Last 50 posts</a><br />
 	</div>
 	<div id="right-sidelinks">
-		<a href="catalog.html">Board catalog</a><br />
+		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/catalog.html">Board catalog</a><br />
 	</div>
 
 	<div id="postbox-area">
@@ -52,7 +50,7 @@
 				<tr><td class="postblock">Email</td><td><input type="text" name="postemail" maxlength="75" size="28" /></td></tr>
 				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
 				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
-				<tr><td class="postblock">File</td><td><input name="imagefile" size="31" type="file"><input type="checkbox" id="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
+				<tr><td class="postblock">File</td><td><input name="imagefile" size="31" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
 				<tr><td class="postblock">Password</td><td><input type="text" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</table>
 		</form>
@@ -60,30 +58,22 @@
 	</div>
 	<hr />
 	<div id="content">
-		<div class="thread" id="{{$op.ID}}">
-			{{if stringNeq $op.Filename ""}}<span class="file-info">File: <a href="135710945820.jpg">135710945820.jpg</a> - (142.91KB , 756x888 , Chibi_Series___Flower_Forte_by_kubus_sama.jpg )</span><br />
-			<img src="135710945820s.jpg" width="170" height="200" class="thumbnail"/>{{end}}
-			<label class="post-info"><input type="checkbox" id="{{$op.ID}}" /> <span class="subject">{{$op.Subject}}</span> <span class="postername"><a href="mailto:{{$op.Email}}">{{$op.Name}}</a></span><span class="tripcode">!{{$op.Tripcode}}</span> Tue, January 01, 2013 10:50 PM <a href="/test/res/{{$op.ID}}.html#{{$op.ID}}">No.</a> <a href="/test/res/{{$op.ID}}.html#i{{$op.ID}}">{{$op.ID}}</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+		<div class="thread" id="{{$op.ID}}">{{range $post_num,$post := $post_arr}}{{if intEq $post_num 0}}
+			{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="135710945820.jpg">135710945820.jpg</a> - (142.91KB , 756x888 , Chibi_Series___Flower_Forte_by_kubus_sama.jpg )</span><br />
+			<img src="135710945820s.jpg" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail"/>{{end}}
+			<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="subject">{{$post.Subject}}</span> <span class="postername"><a href="mailto:{{$post.Email}}">{{$post.Name}}</a></span><span class="tripcode">!{{$post.Tripcode}}</span> {{formatTimestamp $post.Timestamp}} <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#{{$post.ID}}">No.</a> <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#i{{$post.ID}}">{{$post.ID}}</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 			<div class="posttext">
-				{{$op.Message}}
-			</div>
-			<div class="post" id="74770">
-				<label class="post-info"><input type="checkbox" id="135693079632" /> <span class="postername">Anonymous</span> Tue, January 02, 2013 1:55:PM <a href="135693079632">No.</a> <a href="74770i">74770</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
-				<span class="file-info">File: <a href="135693079632s.png">135693079632s.png</a> - (100.01KB , 200,200, 135693079632s.png )</span><br />
-				<img src="135693079632s.png" width="94" height="125" class="thumbnail" />
+				{{$post.Message}}
+			</div>{{else}}
+			<div class="post" id="{{$post.ID}}">
+				<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="postername">{{$post.Name}}</span> {{formatTimestamp $post.Timestamp}} <a href="135693079632">No.</a> <a href="{{$post.ID}}i">{{$post.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+				{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - (100.01KB , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
+				<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_top"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>{{end}}
 
 				<div class="posttext">
-					Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.<br/><br/>
-					<span class="spoiler">Lorem ipsum</span> dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.<br/>
+					{{$post.Message}}
 				</div>
-			</div>
-
-			<div class="post" id="74770">
-				<label class="post-info"><input type="checkbox" id="135693079632" /> <span class="postername">Anonymous</span> Tue, January 02, 2013 1:55:PM <a href="135693079632">No.</a> <a href="74770i">74770</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
-				<div class="posttext">
-					Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-				</div>
-			</div>
+			</div>{{end}}{{end}}
 		</div>
 		<hr />
 		<div id="left-bottom-content">
@@ -92,13 +82,13 @@
 			</table>
 			
 			<span id="boardmenu-bottom">
-				[ <a href="/test/">test</a> / <a href="/test2/">test2</a> ]
+				[{{range $i, $board := $board_arr.Data}}  {{if gt $i 0}}/{{end}} <a href="/{{$board.Dir}}/">{{$board.Dir}}</a> {{end}}]
 			</span>
 		</div>
 
 		<div id="right-bottom-content">
 			<span id="threadlinks-bottom">
-				[<a href="board.html">Return</a>] [<a href="{{$op.ID}}-100.html">First 100 posts</a>] [<a href="{{$op.ID}}+50.html">Last 50 posts</a>]
+				[<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/board.html">Return</a>] [<a href="{{$op.ID}}-100.html">First 100 posts</a>] [<a href="{{$op.ID}}+50.html">Last 50 posts</a>]
 			</span>
 			
 			<div id="report-delbox">

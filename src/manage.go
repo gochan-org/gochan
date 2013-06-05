@@ -735,14 +735,18 @@ var manage_functions = map[string]ManageFunction{
 			success := true
 			for _,post := range op_posts {
 				op_post := post.(PostTable)
-				if buildThread(op_post) != nil {
+				err := buildThread(op_post)
+				if err != nil {
 					success = false
+					html += err.Error()+"<br />"
+				} else {
+					html += strconv.Itoa(op_post.ID)+" built successfully<br />"
 				}
 			}
 			if success {
-				html = "Threads rebuilt successfully."
+				html += "Threads rebuilt successfully."
 			} else {
-				html = "Thread rebuilding failed somewhere (eventually we'll print out all the rebuilt threads."
+				html += "Thread rebuilding failed."
 			}
 			return
 	}},
