@@ -55,8 +55,8 @@
 	<hr />
 	<div id="content">
 		<div class="thread" id="{{$op.ID}}">{{range $post_num,$post := $post_arr}}{{if intEq $post_num 0}}
-			{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="135710945820.jpg">135710945820.jpg</a> - (142.91KB , 756x888 , Chibi_Series___Flower_Forte_by_kubus_sama.jpg )</span><br />
-			<img src="135710945820s.jpg" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail"/>{{end}}
+			{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
+				<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>{{end}}
 			<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="subject">{{$post.Subject}}</span> <span class="postername"><a href="mailto:{{$post.Email}}">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</a></span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#{{$post.ID}}">No.</a> <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#i{{$post.ID}}">{{$post.ID}}</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 			<div class="posttext">
 				{{$post.Message}}
@@ -96,8 +96,8 @@
 		</div>
 	</div>
 	<div id="footer">
-		<a href="/">Home</a> | <a href="/#boards">Boards</a> | <a href="/#rules">Rules</a> | <a href="/#faq">FAQ</a><br />
-		Powered by Gochan 0.2<br />
+		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />
+		Powered by Gochan {{$config.Version}}<br />
 	</div>
 </body>
 </html>
