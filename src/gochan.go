@@ -7,13 +7,11 @@ import (
 )
 
 var (
-	version float32 = 0.3
+	version float32 = 0.31
 )
 
 
 func main() {
-	//modlogentries := []ModLogEntry
-	//posts := []Post
 	initConfig()
 	fmt.Println("Config file loaded. Connecting to database...")
 	_,err := os.Stat("initialsetupdb.sql")

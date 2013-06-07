@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"os"
 	"path"
+	"regexp"
 	"./lib/resize"
 	"strconv"
 	"strings"
@@ -27,21 +28,29 @@ var (
 )
 
 func generateTripCode(input string) string {
+	re := regexp.MustCompile("/[^.-z]/")
+	input = string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
 	input += "   " //padding
-	return crypt(input,input[1:3])[3:]
+	salt := byteByByteReplace(input[1:3],":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
+	return crypt(input,salt)[3:]
 }
 
 func buildBoardPages(boardid int) {
 	
 }
 
-func buildThread(op_post PostTable) (err error) {
-	threadid_str := strconv.Itoa(op_post.ID)
-	thread_posts := getPostArr("`deleted_timestamp` IS NULL AND (`parentid` = "+threadid_str+" OR `id` = "+threadid_str+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+func buildThread(op_post PostTable, is_reply bool) (err error) {
+	var op_id string
+	if is_reply {
+		op_id = strconv.Itoa(op_post.ParentID)
+	} else {
+		op_id = strconv.Itoa(op_post.ID)
+	}
+
+	thread_posts := getPostArr("`deleted_timestamp` IS NULL AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
 	board_arr := getBoardArr("")
 	sections_arr := getSectionArr("")
 
-	op_id := strconv.Itoa(op_post.ID)
 	var board_dir string
 	for _,board_i := range board_arr {
 		board := board_i.(BoardsTable)
@@ -64,7 +73,7 @@ func buildThread(op_post PostTable) (err error) {
 	if err == nil {
 		return img_thread_tmpl.Execute(thread_file,wrapped)
 	}
-	fmt.Println(thread_file)
+
 	return err
 }
 
@@ -84,7 +93,7 @@ type ThumbnailPre struct {
 }
 
 func loadImage(file *os.File) (image.Image,error) {
-	filetype := file.Name()[len(file.Name())-3:len(file.Name())]
+	filetype := file.Name()[len(file.Name())-3:]
 	var image_obj image.Image
 	var err error
 
@@ -128,7 +137,7 @@ func createThumbnail(image_obj image.Image, size string) image.Image {
 
 
 func getFiletype(name string) string {
-	filetype := strings.ToLower(name[len(name)-4:len(name)])
+	filetype := strings.ToLower(name[len(name)-4:])
 	if filetype == ".gif" {
 		return "gif"
 	} else if filetype == ".jpg" || filetype == "jpeg" {
@@ -136,7 +145,7 @@ func getFiletype(name string) string {
 	} else if filetype == ".png" {
 		return "png"
 	} else {
-		return name[len(name)-3:len(name)]
+		return name[len(name)-3:]
 	}
 }
 
@@ -179,7 +188,7 @@ func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
 }
 
 // inserts prepared post object into the SQL table so that it can be rendered
-func insertPost(writer *http.ResponseWriter, post PostTable) error {
+func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 	post_sql_str := "INSERT INTO `"+config.DBprefix+"posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
 	if post.Filename != "" {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
@@ -217,8 +226,30 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.IName = "post"
 	post.ParentID,_ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID,_ = strconv.Atoi(request.FormValue("boardid"))
-	post.Name = db.Escape(request.FormValue("postname"))
-	post.Email = db.Escape(request.FormValue("postemail"))
+	
+	post_name := db.Escape(request.FormValue("postname"))
+	if strings.Index(post_name, "#") == -1 {
+		post.Name = post_name
+	} else if strings.Index(post_name, "#") == 0 {
+		post.Tripcode = generateTripCode(post_name[1:])
+	} else if strings.Index(post_name, "#") > 0 {
+		post_name_arr := strings.SplitN(post_name,"#",2)
+		post.Name = post_name_arr[0]
+		post.Tripcode = generateTripCode(post_name_arr[1])
+	}
+	
+	email_command := ""
+	post_email := db.Escape(request.FormValue("postemail"))
+	if strings.Index(post_email, "#") == -1 {
+		post.Email = post_email
+	} else if strings.Index(post_email, "#") == 0 {
+		email_command = post_email[1:]
+	} else if strings.Index(post_email, "#") > 0 {
+		post_email_arr := strings.SplitN(post_email,"#",2)
+		post.Email = post_email_arr[0]
+		email_command = post_email_arr[1]
+	}
+
 	post.Subject = db.Escape(request.FormValue("postsubject"))
 	post.Message = db.Escape(request.FormValue("postmsg"))
 	post.Password = md5_sum(request.FormValue("postpassword"))
@@ -279,6 +310,8 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				} else {
 					post.Filesize = int(stat.Size())
 				}
+				post.ImageW = img.Bounds().Max.X
+				post.ImageH = img.Bounds().Max.Y
 				post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH,"op")
 
 				access_log.Write("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
@@ -293,7 +326,9 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 							exitWithErrorPage(w,err.Error())
 						}
 					}
-				} else 	if config.ThumbWidth >= img.Bounds().Max.X && config.ThumbHeight >= img.Bounds().Max.Y {
+				} else 	if config.ThumbWidth >= post.ImageW && config.ThumbHeight >= post.ImageH {
+					post.ThumbW = img.Bounds().Max.X
+					post.ThumbH = img.Bounds().Max.Y
 					err := syscall.Symlink(file_path,thumb_path)
 					if err != nil {
 						exitWithErrorPage(w,err.Error())
@@ -314,9 +349,17 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	if post.Message == "" && post.Filename == "" {
 		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
 	}
-	fmt.Println("name: "+post.Name)
-	insertPost(&w, post)
-	http.Redirect(writer,&request,"/test/res/1.html",http.StatusFound)
+	insertPost(&w, post,email_command != "sage")
+	if post.ParentID > 0 {
+		buildThread(getPostArr("`deleted_timestamp` IS NULL AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))[0].(PostTable),true)
+	} else {
+		buildThread(post,false)
+	}
+	if email_command == "noko" {
+		http.Redirect(writer,&request,"/test/res/1.html",http.StatusFound)
+	} else {
+		http.Redirect(writer,&request,"/test/",http.StatusFound)
+	}
 }
 
 
@@ -328,7 +371,7 @@ func shortenPostForBoardPage(post *string) {
 func saveImage(path string, image_obj *image.Image) error {
 	outwriter,err := os.OpenFile(path, os.O_RDWR|os.O_CREATE,0777)
 	if err == nil {
-		filetype := path[len(path)-4:len(path)]
+		filetype := path[len(path)-4:]
 		if filetype == ".gif" {
 			//because Go doesn't come with a GIF writer :c
 			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})

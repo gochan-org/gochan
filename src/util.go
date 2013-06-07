@@ -4,11 +4,12 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"code.google.com/p/go.crypto/bcrypt"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
-	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"unsafe"
 )
@@ -18,9 +19,11 @@ import (
 // #include <stdlib.h>
 import "C"
 
-var crypt_data = C.struct_crypt_data{}
+var (
+	crypt_data = C.struct_crypt_data{}
+)
 
-const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+{}[]-=:\"\\/?.>,<;:'"
+const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
 
 
 func crypt(key, salt string) string {
@@ -35,8 +38,7 @@ func crypt(key, salt string) string {
 func md5_sum(str string) string {
 	hash := md5.New()
 	io.WriteString(hash, str)
-	digest := fmt.Sprintf("%x",hash.Sum(nil))
-	return digest
+	return string(hash.Sum(nil))
 }
 
 func sha1_sum(str string) string {
@@ -54,6 +56,16 @@ func bcrypt_sum(str string) string {
 		hash = string(digest)
 	}
 	return hash
+}
+
+func byteByByteReplace(input,from, to string) string {
+	if len(from) != len(to) {
+		return ""
+	}
+	for i := 0; i < len(from); i += 1 {
+		input = strings.Replace(input, from[i:i+1], to[i:i+1], -1)
+	}
+	return input
 }
 
 func getBoardArr(where string) (boards []interface{}) {
