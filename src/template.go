@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 	"time"
 )
@@ -70,6 +71,11 @@ var funcMap = template.FuncMap{
 		}
 		return parsed.Format("Mon, January 02, 2006 15:04 PM")
 	},
+	"imageToThumbnailPath": func(img string) string {
+		index := strings.LastIndex(img, ".")
+		return img[0:index]+"t"+img[index:len(img)]
+
+	},
 }
 
 var (
@@ -123,7 +129,7 @@ func initTemplates() {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
-	img_thread_tmpl_str = string(img_thread_tmpl_bytes)
+	img_thread_tmpl_str = "{{$config := getInterface .Data 0}}{{$post_arr := getInterface .Data 1}}{{$board_arr := getInterface .Data 2}}{{$section_arr := getInterface .Data 3}}{{$op := getInterface $post_arr 0}}{{$boardid := subtract $op.BoardID 1}}{{$board := getInterface $board_arr.Data $boardid}}" + string(img_thread_tmpl_bytes)
 	img_thread_tmpl,tmpl_err = template.New("img_thread_tmpl").Funcs(funcMap).Parse(img_thread_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html: \"" + tmpl_err.Error())
@@ -146,7 +152,7 @@ func initTemplates() {
 		fmt.Println(err.Error())
 		os.Exit(2)
 	}
-	front_page_tmpl_str = string(front_page_tmpl_bytes)
+	front_page_tmpl_str = "{{$config := getInterface .Data 0}}{{$page_arr := getInterface .Data 1}}{{$board_arr := getInterface .Data 2}}{{$section_arr := getInterface .Data 3}}" + string(front_page_tmpl_bytes)
 	front_page_tmpl,tmpl_err = template.New("front_page_tmpl").Funcs(funcMap).Parse(front_page_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/front.html\": "+tmpl_err.Error())

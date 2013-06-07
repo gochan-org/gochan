@@ -1,8 +1,4 @@
-{{$config := getInterface .Data 0}}{{$post_arr := getInterface .Data 1}}{{$board_arr := getInterface .Data 2}}{{$section_arr := getInterface .Data 3}}
 <!DOCTYPE html>
-{{$op := getInterface $post_arr 0}}
-{{$boardid := subtract $op.BoardID 1}}
-{{$board := getInterface $board_arr.Data $boardid}}
 <html>
 <head>
 	<title>{{$board.Title}}</title>
