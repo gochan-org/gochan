@@ -63,7 +63,7 @@
 			</div>{{else}}
 			<div class="post" id="{{$post.ID}}">
 				<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="postername">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="135693079632">No.</a> <a href="{{$post.ID}}i">{{$post.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
-				{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - (100.01KB , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
+				{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
 				<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>{{end}}
 
 				<div class="posttext">

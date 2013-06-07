@@ -312,7 +312,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				}
 				post.ImageW = img.Bounds().Max.X
 				post.ImageH = img.Bounds().Max.Y
-				post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH,"op")
+				if post.ParentID == 0 {
+					post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH,"op")	
+				} else {
+					post.ThumbW,post.ThumbH = getThumbnailSize(post.ImageW,post.ImageH,"reply")	
+				}
+				
 
 				access_log.Write("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
 
@@ -334,7 +339,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 						exitWithErrorPage(w,err.Error())
 					}
 				} else {
-					thumbnail := createThumbnail(img,"op")
+					var thumbnail image.Image
+					if post.ParentID == 0 {
+						thumbnail = createThumbnail(img,"op")
+					} else {
+						thumbnail = createThumbnail(img,"reply")
+					}
 					err = saveImage(thumb_path, &thumbnail)
 					if err != nil {
 						exitWithErrorPage(w,err.Error())

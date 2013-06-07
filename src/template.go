@@ -71,6 +71,19 @@ var funcMap = template.FuncMap{
 		}
 		return parsed.Format("Mon, January 02, 2006 15:04 PM")
 	},
+	"formatFilesize": func(size_int int) string {
+		size := float32(size_int)
+		if(size < 1000) {
+			return fmt.Sprintf("%fB", size)
+		} else if(size <= 100000) {
+			//size = size * 0.2
+			return fmt.Sprintf("%0.1f KB", size/1024)
+		} else if(size <= 100000000) {
+			//size = size * 0.2
+			return fmt.Sprintf("%0.2f MB", size/1024/1024)
+		}
+		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
+	},
 	"imageToThumbnailPath": func(img string) string {
 		index := strings.LastIndex(img, ".")
 		return img[0:index]+"t"+img[index:len(img)]
