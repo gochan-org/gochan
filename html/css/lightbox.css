@@ -57,3 +57,12 @@
 	background-color: #FFFFFF;
 	color: #000000;
 }
+
+.lightbox div.section-body {
+	background-color: #A0A0A0;
+}
+
+.lightbox div.section-title-block {
+	border-radius: 0px;
+	background-color: #777777;
+}
