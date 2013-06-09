@@ -98,6 +98,9 @@ var (
 	
 	global_header_tmpl_str string
 	global_header_tmpl *template.Template
+
+	img_boardpage_tmpl_str string
+	img_boardpage_tmpl *template.Template
 	
 	img_thread_tmpl_str string
 	img_thread_tmpl *template.Template
@@ -134,6 +137,18 @@ func initTemplates() {
 	global_header_tmpl,tmpl_err = template.New("global_header_tmpl").Funcs(funcMap).Parse(string(global_header_tmpl_str))
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_header.html\": " + tmpl_err.Error())
+		os.Exit(2)
+	}
+
+	img_boardpage_tmpl_bytes,_ := ioutil.ReadFile(path.Join(config.TemplateDir,"img_boardpage.html"))
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_boardpage.html\": " + tmpl_err.Error())
+		os.Exit(2)
+	}
+	img_boardpage_tmpl_str = "{{$config := getInterface .Data 0}}{{$thread_arr := getInterface .Data 1}}{{$post_arr := getInterface .Data 2}}{{$board_arr := getInterface .Data 3}}{{$section_arr := getInterface .Data 4}}{{$op := getInterface $post_arr 0}}{{$boardid := subtract $op.BoardID 1}}{{$board := getInterface $board_arr.Data $boardid}}" + string(img_boardpage_tmpl_bytes)
+	img_boardpage_tmpl,tmpl_err = template.New("img_boardpage_tmpl").Funcs(funcMap).Parse(img_boardpage_tmpl_str)
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_boardpage.html: \"" + tmpl_err.Error())
 		os.Exit(2)
 	}
 

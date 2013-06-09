@@ -16,6 +16,7 @@ var (
 	config GochanConfig
 	access_log logfile.Log
 	error_log logfile.Log
+	read_banned_ips []string
 )
 
 // SQL Table structs
