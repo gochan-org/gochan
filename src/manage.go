@@ -152,6 +152,7 @@ func getStaffRank() int {
 func createSession(key string,username string, password string, request *http.Request, writer *http.ResponseWriter) int {
 	//returs 0 for successful, 1 for password mismatch, and 2 for other
 	//db.Start("USE `"+config.DBname+"`;")
+	db.Start("USE "+config.DBname+";")
   	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+username+"';")
 
 	if err != nil {
@@ -179,7 +180,6 @@ func createSession(key string,username string, password string, request *http.Re
 					if err != nil {
 						error_log.Write(err.Error())
 					}
-
 					return 0
 	    		} else if success == bcrypt.ErrMismatchedHashAndPassword {
 	    			// password mismatch
@@ -247,7 +247,7 @@ var manage_functions = map[string]ManageFunction{
 			} else {
 				key := md5_sum(request.RemoteAddr+username+password+config.RandomSeed+generateSalt())[0:10]
 				createSession(key,username,password,&request,&writer)
-				redirect(path.Join(config.SiteWebfolder,"/manage?action="+request.FormValue("redirect")))
+				http.Redirect(writer,&request,path.Join(config.SiteWebfolder,"/manage?action="+request.FormValue("redirect")),http.StatusFound)
 			}
 			return
 	}},

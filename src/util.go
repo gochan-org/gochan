@@ -38,14 +38,13 @@ func crypt(key, salt string) string {
 func md5_sum(str string) string {
 	hash := md5.New()
 	io.WriteString(hash, str)
-	return string(hash.Sum(nil))
+	return fmt.Sprintf("%x",hash.Sum(nil))
 }
 
 func sha1_sum(str string) string {
 	hash := sha1.New()
 	io.WriteString(hash,str)
-	digest := fmt.Sprintf("%x",hash.Sum(nil))
-	return digest
+	return fmt.Sprintf("%x",hash.Sum(nil))
 }
 
 func bcrypt_sum(str string) string {
