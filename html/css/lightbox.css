@@ -63,6 +63,7 @@
 }
 
 .lightbox div.section-title-block {
+	border: 1px solid #000000;
 	border-radius: 0px;
 	background-color: #777777;
 }
