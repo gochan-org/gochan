@@ -753,8 +753,30 @@ var manage_functions = map[string]ManageFunction{
 	"recentposts": {
 		Permissions:1,
 		Callback: func() (html string) {
-			html = "<h1>Recent posts</h1>\n<table style=\"border:2px solid;\">\n<tr><td>bleh</td><td>bleh bleh</td></tr>" +
-			"</table>"
+
+			html = "<h1>Recent posts</h1>\n<table width=\"100%%\" border=\"1\">\n<tr><td></td><td><b>Message</b></td><td><b>Time</b></td></tr>"
+			db.Start("USE `"+config.DBname+"`;")
+		 	results,err := db.Start("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \"0000-00-00 00:00:00\"  ORDER BY `timestamp` DESC LIMIT 100;")
+			if err != nil {
+				html += "<tr><td>"+err.Error()+"</td></tr></table>"
+				return
+			}
+
+			rows, err := results.GetRows()
+	        if err != nil {
+				html += "<tr><td>"+err.Error()+"</td></tr></table>"
+				return
+	        }
+			for _, row := range rows {
+				boardname := string(row[0].([]byte))
+				boardid := string(row[1].([]byte))
+				id := string(row[2].([]byte))
+				parentid := string(row[3].([]byte))
+				message := string(row[4].([]byte))
+				ip := string(row[5].([]byte))
+				html += "<tr><td><b>Post:</b> <a href=\""+path.Join(config.SiteWebfolder,boardname,"/res/",parentid+".html#"+id)+"\">"+boardname+"/"+id+"</a><br /><b>IP:</b> "+ip+"</td><td>"+message+"</td><td>"+boardid+"</td></tr>"
+			}
+			html += "</table>"
 			return
 	}},
 	"killserver": {
