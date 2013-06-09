@@ -48,6 +48,7 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 
 	filepath := path.Join(config.DocumentRoot, request_url)
 	results,err := os.Stat(filepath)
+	restricted := false // if true, user doesn't have permission to view the file, because read-banned, etc
 
 	if err == nil {
 		//the file exists, or there is a folder here
@@ -72,7 +73,16 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 		} else {
 			//the file exists, and is not a folder
 			//writer.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", 500))
-			serveFile(w, filepath)
+			if request_url == path.Join(config.SiteWebfolder+"javascript/manage.js") {
+				if getStaffRank() == 0 {
+					// we aren't logged in and tried to access manage.js
+					restricted = true
+				}
+			}
+
+			if !restricted {
+				serveFile(w, filepath)
+			}
 		}
 	} else {
 		//there is nothing at the requested address
