@@ -261,7 +261,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.Locked = request.FormValue("modlocked") == "on"
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
-	if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
+	if !validReferrer(request) {
 		access_log.Write("Rejected post from possible spambot @ : "+request.RemoteAddr)
 		//TODO: insert post into temporary post table and add to report list
 	}

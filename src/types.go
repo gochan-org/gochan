@@ -16,6 +16,7 @@ var (
 	config GochanConfig
 	access_log logfile.Log
 	error_log logfile.Log
+	mod_log logfile.Log
 	read_banned_ips []string
 )
 
@@ -421,6 +422,11 @@ func initConfig() {
 	error_log,err = logfile.OpenLogFile(config.LogDir+"/error.log",false)
 	if err != nil {
 		fmt.Println("Couldn't open error log. Returned error: "+err.Error())
+	}
+
+	mod_log,err = logfile.OpenLogFile(config.LogDir+"/mod.log",false)
+	if err != nil {
+		fmt.Println("Couldn't open mod log. Returned error: "+err.Error())
 	}
 
 	config.DBtype,err = c.GetString("database", "type")

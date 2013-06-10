@@ -151,7 +151,12 @@ func getStaffRank() int {
 
 func createSession(key string,username string, password string, request *http.Request, writer *http.ResponseWriter) int {
 	//returs 0 for successful, 1 for password mismatch, and 2 for other
-	//db.Start("USE `"+config.DBname+"`;")
+
+	
+	if !validReferrer(*request) {
+		mod_log.Write("Rejected login from possible spambot @ : "+request.RemoteAddr)
+		return 2
+	}
 	db.Start("USE "+config.DBname+";")
   	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+username+"';")
 
@@ -753,10 +758,13 @@ var manage_functions = map[string]ManageFunction{
 	"recentposts": {
 		Permissions:1,
 		Callback: func() (html string) {
-
-			html = "<h1>Recent posts</h1>\n<table width=\"100%%\" border=\"1\">\n<tr><td></td><td><b>Message</b></td><td><b>Time</b></td></tr>"
+			limit := request.FormValue("limit")
+			if limit == "" {
+				limit = "50"
+			}
+			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%\" border=\"1\">\n<tr><td></td><td><b>Message</b></td><td><b>Time</b></td></tr>"
 			db.Start("USE `"+config.DBname+"`;")
-		 	results,err := db.Start("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \"0000-00-00 00:00:00\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT 100;")
+		 	results,err := db.Start("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \"0000-00-00 00:00:00\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return

@@ -119,6 +119,15 @@ func error404() {
 	error_log.Write("Error: 404 Not Found from " + request.RemoteAddr + " @ " + request.RequestURI)
 }
 
+func validReferrer(request http.Request) (valid bool) {
+	if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
+		valid = false
+	} else {
+		valid = true
+	}
+	return
+}
+
 func serverError() {
 	if _, ok := recover().(error); ok {
 		//something went wrong, now we need to throw a 500
