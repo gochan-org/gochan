@@ -76,11 +76,12 @@ func getCurrentStaff() (string,error) {
 		key = session_cookie.Value
 	}
 
-	row := db.QueryRow("SELECT * FROM `"+config.DBprefix+"sessions` WHERE `key` = '"+key+"';")
+	row := db.QueryRow("SELECT `data` FROM `"+config.DBprefix+"sessions` WHERE `key` = '"+key+"';")
 	current_session := new(SessionsTable)
 
 	err := row.Scan(&current_session.Data)
 	if err != nil {
+		fmt.Println(err.Error())
 		return "",err
 	}
 	return current_session.Data,nil
