@@ -1,12 +1,13 @@
 package main 
 
 import (
+	"code.google.com/p/goconf/conf"
 	"fmt"
+	"github.com/Eggbertx/go-logfile"
 	"os"
 	"path"
 	"strings"
-	"go-logfile/logfile"
-	"goconf/conf"
+	"time"
 )
 
 
@@ -20,6 +21,15 @@ var (
 	read_banned_ips []string
 )
 
+type RecentPost struct {
+	BoardName string
+	BoardID int
+	PostID int
+	ParentID int
+	Message string
+	IP string
+}
+
 // SQL Table structs
 
 type AnnouncementsTable struct {
@@ -27,7 +37,7 @@ type AnnouncementsTable struct {
 	Subject string
 	Message string
 	Poster string
-	Timestamp string
+	Timestamp time.Time
 }
 
 type BanlistTable struct {
@@ -38,12 +48,12 @@ type BanlistTable struct {
 	SilentBan uint8
 	Boards string
 	BannedBy string
-	Timestamp string
-	Expires string
+	Timestamp time.Time
+	Expires time.Time
 	Reason string
 	StaffNote string
 	Appeal string
-	AppealAt string
+	AppealAt time.Time
 }
 
 type BannedHashesTable struct {
@@ -126,7 +136,7 @@ type FrontTable struct {
 	Order int
 	Subject string
 	Message string
-	Timestamp string
+	Timestamp time.Time
 	Poster string
 	Email string
 }
@@ -140,7 +150,7 @@ type FrontLinksTable struct {
 type LoginAttemptsTable struct {
 	ID uint
 	IP string
-	Timestamp string
+	Timestamp time.Time
 }
 
 type ModLogTable struct {
@@ -148,14 +158,14 @@ type ModLogTable struct {
 	Entry string
 	User string
 	Category uint8
-	Timestamp string
+	Timestamp time.Time
 }
 
 type PollResultsTable struct {
 	ID uint
 	IP string
 	Selection string
-	Timestamp string
+	Timestamp time.Time
 }
 
 type PostTable struct {
@@ -179,11 +189,11 @@ type PostTable struct {
 	ThumbH int
 	IP string
 	Tag string
-	Timestamp string
+	Timestamp time.Time
 	Autosage int
 	PosterAuthority int
-	DeletedTimestamp string
-	Bumped string
+	DeletedTimestamp time.Time
+	Bumped time.Time
 	Stickied bool
 	Locked bool
 	Reviewed bool
@@ -210,11 +220,11 @@ type TempPostTable struct {
 	ThumbH int
 	IP string
 	Tag string
-	Timestamp string
+	Timestamp time.Time
 	Autosage int
 	PosterAuthority int
-	DeletedTimestamp string
-	Bumped string
+	DeletedTimestamp time.Time
+	Bumped time.Time
 	Stickied bool
 	Locked bool
 	Reviewed bool
@@ -225,7 +235,7 @@ type ReportsTable struct {
 	ID uint
 	Board string
 	PostID uint
-	Timestamp string
+	Timestamp time.Time
 	IP string
 	Reason string
 	Cleared bool
@@ -239,18 +249,18 @@ type SessionsTable struct {
 }
 
 type StaffTable struct {
-	ID uint16
+	ID int
 	Username string
 	PasswordChecksum string
 	Salt string
-	Rank uint8
+	Rank int
 	Boards string
-	AddedOn string
-	LastActive string
+	AddedOn time.Time
+	LastActive time.Time
 }
 
 type WordFiltersTable struct {
-	ID uint16
+	ID int
 	From string
 	To string
 	Boards string

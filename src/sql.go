@@ -1,33 +1,88 @@
 package main
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"fmt"
-	"github.com/ziutek/mymysql/mysql"
-	_ "github.com/ziutek/mymysql/native" // Native engine
+	"database/sql"
+	_ "github.com/ziutek/mymysql/godrv"
+	//"github.com/ziutek/mymysql/mysql"
+	//_ "github.com/ziutek/mymysql/native" // Native engine
 	//_ "github.com/ziutek/mymysql/thrsafe" // Thread safe engine
 )
 
+const (
+	nil_timestamp = "0000-00-00 00:00:00"
+)
+
 var (
-	db mysql.Conn
+	//db mysql.Conn
+	db *sql.DB
 	db_connected = false
 )
 
+// escapeString and escapeQuotes copied from github.com/ziutek/mymysql/native/codecs.go
+func escapeString(txt string) string {
+	var (
+		esc string
+		buf bytes.Buffer
+	)
+	last := 0
+	for ii, bb := range txt {
+		switch bb {
+		case 0:
+			esc = `\0`
+		case '\n':
+			esc = `\n`
+		case '\r':
+			esc = `\r`
+		case '\\':
+			esc = `\\`
+		case '\'':
+			esc = `\'`
+		case '"':
+			esc = `\"`
+		case '\032':
+			esc = `\Z`
+		default:
+			continue
+		}
+		io.WriteString(&buf, txt[last:ii])
+		io.WriteString(&buf, esc)
+		last = ii + 1
+	}
+	io.WriteString(&buf, txt[last:])
+	return buf.String()
+}
+
+func escapeQuotes(txt string) string {
+	var buf bytes.Buffer
+	last := 0
+	for ii, bb := range txt {
+		if bb == '\'' {
+			io.WriteString(&buf, txt[last:ii])
+			io.WriteString(&buf, `''`)
+			last = ii + 1
+		}
+	}
+	io.WriteString(&buf, txt[last:])
+	return buf.String()
+}
+
+
+
 func connectToSQLServer(usedb bool) {
-	//db, err = sql.Open("mysql",config.DBusername+":"+config.DBpassword+"@"+db_host+"/?charset=utf8")
-	db = mysql.New("tcp", "", "127.0.0.1:3306", config.DBusername, config.DBpassword)
-	err := db.Connect()
+	var err error
+	if usedb {
+		db, err = sql.Open("mymysql", config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
+	} else {
+		db, err = sql.Open("mymysql", "mysql/"+config.DBusername+"/"+config.DBpassword)
+	}
 	if err != nil {
 		error_log.Write(err.Error())
 		fmt.Println("Failed to connect to the database, see log for details.")
 		os.Exit(2)
-	}
-	if usedb {
-		_,err = db.Start("USE `"+config.DBname+"`;")
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(2)
-		}
 	}
 	db_connected = true
 }

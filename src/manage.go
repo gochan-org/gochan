@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"code.google.com/p/go.crypto/bcrypt"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -17,6 +18,11 @@ type ManageFunction struct {
 	Permissions int // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
 	Callback func() string //return string of html output
 }
+
+var (
+	StaffNotFoundErr = errors.New("Username doesn't exist")
+	PasswordMismatchErr = errors.New("Incorrect password")
+)
 
 func callManageFunction(w http.ResponseWriter, r *http.Request) {
 	request = *r
@@ -61,146 +67,85 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(writer,manage_page_buffer.String())
 }
 
-func getCurrentStaff() string {
+func getCurrentStaff() (string,error) {
 	session_cookie := getCookie("sessiondata")
 	var key string
 	if session_cookie == nil {
-		return ""
+		return "",nil
 	} else {
 		key = session_cookie.Value
 	}
 
-	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"sessions` WHERE `key` = '"+key+"';")
-	if err != nil {
-		error_log.Write(err.Error())
-		return ""
-	}
+	row := db.QueryRow("SELECT * FROM `"+config.DBprefix+"sessions` WHERE `key` = '"+key+"';")
+	current_session := new(SessionsTable)
 
-	rows, err := results.GetRows()
-    if err != nil {
-		error_log.Write(err.Error())
-		return ""
-    }
-	if len(rows) > 0 {
-		for  _, row := range rows {
-			return string(row[2].([]byte))
-		}
-	} else {
-		//session key doesn't exist in db
-		return ""
+	err := row.Scan(&current_session.Data)
+	if err != nil {
+		return "",err
 	}
-	return ""
+	return current_session.Data,nil
+}
+
+func getStaff(name string) (*StaffTable, error) {
+	row := db.QueryRow("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+name+"';")
+	staff_obj := new(StaffTable)
+	err := row.Scan(&staff_obj.ID, &staff_obj.Username, &staff_obj.PasswordChecksum, &staff_obj.Salt, &staff_obj.Rank, &staff_obj.Boards, &staff_obj.AddedOn, &staff_obj.LastActive)
+	return staff_obj,err
 }
 
 func getStaffRank() int {
-	var key string
-	var staffname string
-
-	db.Start("USE `"+config.DBname+"`")
-	session_cookie := getCookie("sessiondata")
-	if session_cookie == nil {
+	staffname,err := getCurrentStaff()
+	if staffname == "" {
 		return 0
-	} else {
-		key = session_cookie.Value
 	}
-
-  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"sessions` WHERE `key` = '"+key+"';")
 	if err != nil {
-		error_log.Write(err.Error())
 		return 0
 	}
 
-	rows, err := results.GetRows()
-    if err != nil {
-		error_log.Write(err.Error())
-		return 1
-    }
-	if len(rows) > 0 {
-		for  _, row := range rows {
-			staffname = string(row[2].([]byte))
-			break
-		}
-	} else {
-		//session key doesn't exist in db
-		return 0
-	}
-
-  	results,err = db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+staffname+"';")
-	if err != nil {
-		error_log.Write(err.Error())
-		return 0
-	}
-
-	rows, err = results.GetRows()
-    if err != nil {
-		error_log.Write(err.Error())
-		return 1
-    }
-	if len(rows) > 0 {
-		for  _, row := range rows {
-			rank,rerr := strconv.Atoi(string(row[4].([]byte)))
-			if rerr == nil {
-				return rank
-			} else {
-				return 0
-			}
-		}
-	}
-	return 0
+  	staff,err := getStaff(staffname)
+  	if err != nil {
+  		error_log.Write(err.Error())
+  		return 0
+  	}
+  	return staff.Rank
 }
 
 func createSession(key string,username string, password string, request *http.Request, writer *http.ResponseWriter) int {
 	//returs 0 for successful, 1 for password mismatch, and 2 for other
 
-	
 	if !validReferrer(*request) {
 		mod_log.Write("Rejected login from possible spambot @ : "+request.RemoteAddr)
 		return 2
 	}
-	db.Start("USE "+config.DBname+";")
-  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = '"+username+"';")
-
-	if err != nil {
-		error_log.Write(err.Error())
-		return 2
-	} else {
-		rows, err := results.GetRows()
-	    if err != nil {
-			error_log.Write(err.Error())
+	//db.Start("USE "+config.DBname+";")
+  	staff,err := getStaff(username)
+  	if err != nil {
+  		fmt.Println(err.Error())
+  		error_log.Write(err.Error())
+  		return 1
+  	} else {
+  		success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
+		if success == bcrypt.ErrMismatchedHashAndPassword {
+			// password mismatch
+			mod_log.Write("Failed login (password mismatch) from "+request.RemoteAddr+" at "+getSQLDateTime())
 			return 1
-	    }
-		if len(rows) > 0 {
-			for _, row := range rows {
-	    		success := bcrypt.CompareHashAndPassword(row[2].([]byte), []byte(password))
-	    		if success == nil {
-	    			// successful login
-					cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
-	    			http.SetCookie(*writer, cookie)
-					_,err := db.Start("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
-					if err != nil {
-						error_log.Write(err.Error())
-						return 2
-					}
-					_,err = db.Start("UPDATE `"+config.DBprefix+"staff` SET `last_active` ='"+getSQLDateTime()+"' WHERE `username` = '"+username+"';")
-					if err != nil {
-						error_log.Write(err.Error())
-					}
-					return 0
-	    		} else if success == bcrypt.ErrMismatchedHashAndPassword {
-	    			// password mismatch
-	    			_,err := db.Start("INSERT `"+config.DBprefix+"loginattempts` (`ip`,`timestamp`) VALUES('"+request.RemoteAddr+"','"+getSQLDateTime()+"');")
-	    			if err != nil {
-	    				error_log.Write(err.Error())
-	    			}
-	    			return 1
-	    		}
+  		} else {
+			// successful login
+			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain:config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
+			http.SetCookie(*writer, cookie)
+			_,err := db.Exec("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
+			if err != nil {
+				error_log.Write(err.Error())
+				return 2
 			}
-		} else {
-			//username doesn't exist
-			return 1
-		}
-	}
-	return 1
+			_,err = db.Exec("UPDATE `"+config.DBprefix+"staff` SET `last_active` ='"+getSQLDateTime()+"' WHERE `username` = '"+username+"';")
+			if err != nil {
+				error_log.Write(err.Error())
+			}
+			return 0
+  		}
+  	}
+  	return 2
 }
 
 var manage_functions = map[string]ManageFunction{
@@ -223,7 +168,7 @@ var manage_functions = map[string]ManageFunction{
 			html = "<h1>Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">"+statement+"</textarea>\n<input type=\"submit\" />\n</form>"
 		  	if statement != "" {
 		  		html += "<hr />"
-			  	_,sqlerr := db.Start(statement)
+			  	_,sqlerr := db.Exec(statement)
 				if sqlerr != nil {
 					html += sqlerr.Error()
 				} else {
@@ -267,24 +212,25 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			html = "<h1>Announcements</h1><br />"
 
-		  	results,err := db.Start("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements` ORDER BY `id` DESC;")
+		  	rows,err := db.Query("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements` ORDER BY `id` DESC;")
 			if err != nil {
 				error_log.Write(err.Error())
 				html += err.Error()
 				return
 			}
-
-			rows, err := results.GetRows()
-		    if err != nil {
-				error_log.Write(err.Error())
-				html += err.Error()
-				return
-		    }
-			if len(rows) > 0 {
-				for  _, row := range rows {
-					html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+string(row[0].([]byte))+"</b> by "+string(row[2].([]byte))+" at "+string(row[3].([]byte))+"</div>\n<div class=\"section-body\">"+string(row[1].([]byte))+"\n</div></div>\n"
+			iterations := 0
+			for rows.Next() {
+				announcement := new(AnnouncementsTable)
+				err = rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
+				if err != nil {
+					html += err.Error()
+				} else {
+					html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+announcement.Subject+"</b> by "+announcement.Poster+" at "+announcement.Timestamp.String()+"</div>\n<div class=\"section-body\">"+announcement.Message+"\n</div></div>\n"
 				}
-			} else {
+				iterations += 1
+			}
+
+			if iterations == 0 {
 				html += "No announcements"
 			}
 		return
@@ -306,34 +252,25 @@ var manage_functions = map[string]ManageFunction{
 	"getstaffjquery": {
 		Permissions:0,
 		Callback: func() (html string) {
-			current_staff := getCurrentStaff()
+			current_staff,err := getCurrentStaff()
+			if err != nil {
+				html = "nobody;0;"
+				return
+			}
 			staff_rank := getStaffRank()
 			if staff_rank == 0 {
 				html = "nobody;0;"
 				return
 			}
-			staff_boards := ""
-		  	results,err := db.Start("SELECT * FROM `"+config.DBprefix+"staff`;")
+		  	row := db.QueryRow("SELECT `rank`,`boards` FROM `"+config.DBprefix+"staff` WHERE `username` = '"+current_staff+";")
+			staff := new(StaffTable)
+			err = row.Scan(&staff.Rank,&staff.Boards)
 			if err != nil {
 				error_log.Write(err.Error())
 				html += err.Error()
 				return
 			}
-
-			rows, err := results.GetRows()
-		    if err != nil {
-				error_log.Write(err.Error())
-				html += err.Error()
-				return
-		    }
-			if len(rows) > 0 {
-				for  _, row := range rows {
-					staff_boards = string(row[5].([]byte))
-				}
-			} else {
-				// fuck you, I'm Spiderman.
-			}
-			html = current_staff+";"+strconv.Itoa(staff_rank)+";"+staff_boards
+			html = current_staff+";"+strconv.Itoa(staff.Rank)+";"+staff.Boards
 			return
 	}},
 	"manageboards": {
@@ -367,63 +304,63 @@ var manage_functions = map[string]ManageFunction{
 			var err error
 
 			if do != "" {
-				dir = db.Escape(request.FormValue("dir"))
-				order_str := db.Escape(request.FormValue("order"))
+				dir = escapeString(request.FormValue("dir"))
+				order_str := escapeString(request.FormValue("order"))
 				order,err = strconv.Atoi(order_str)
 				if err != nil {
 					order = 0
 				}
-				title = db.Escape(request.FormValue("title"))
-				subtitle = db.Escape(request.FormValue("subtitle"))
-				description = db.Escape(request.FormValue("description"))
-				section_str := db.Escape(request.FormValue("section"))
+				title = escapeString(request.FormValue("title"))
+				subtitle = escapeString(request.FormValue("subtitle"))
+				description = escapeString(request.FormValue("description"))
+				section_str := escapeString(request.FormValue("section"))
 				section,err = strconv.Atoi(section_str)
 				if err != nil {
 					section = 0
 				}
-				maximagesize_str := db.Escape(request.FormValue("maximagesize"))
+				maximagesize_str := escapeString(request.FormValue("maximagesize"))
 				maximagesize,err = strconv.Atoi(maximagesize_str)
 				if err != nil {
 					maximagesize = 1024*4
 				}
-				firstpost_str := db.Escape(request.FormValue("firstpost"))
+				firstpost_str := escapeString(request.FormValue("firstpost"))
 				firstpost,err = strconv.Atoi(firstpost_str)
 				if err != nil {
 					firstpost = 1
 				}
 
-				maxpages_str := db.Escape(request.FormValue("maxpages"))
+				maxpages_str := escapeString(request.FormValue("maxpages"))
 				maxpages,err = strconv.Atoi(maxpages_str)
 				if err != nil {
 					maxpages = 11
 				}
-				defaultstyle = db.Escape(request.FormValue("defaultstyle"))
+				defaultstyle = escapeString(request.FormValue("defaultstyle"))
 				locked = (request.FormValue("locked") == "on")
 
 				forcedanon = (request.FormValue("forcedanon") == "on")
 
-				anonymous = db.Escape(request.FormValue("anonymous"))
-				maxage_str := db.Escape(request.FormValue("maxage"))
+				anonymous = escapeString(request.FormValue("anonymous"))
+				maxage_str := escapeString(request.FormValue("maxage"))
 				maxage,err = strconv.Atoi(maxage_str)
 				if err != nil {
 					maxage = 0
 				}
-				markpage_str := db.Escape(request.FormValue("markpage"))
+				markpage_str := escapeString(request.FormValue("markpage"))
 				markpage,err = strconv.Atoi(markpage_str)
 				if err != nil {
 					markpage = 9
 				}
-				autosageafter_str := db.Escape(request.FormValue("autosageafter"))
+				autosageafter_str := escapeString(request.FormValue("autosageafter"))
 				autosageafter,err = strconv.Atoi(autosageafter_str)
 				if err != nil {
 					autosageafter = 200
 				}
-				noimagesafter_str := db.Escape(request.FormValue("noimagesafter"))
+				noimagesafter_str := escapeString(request.FormValue("noimagesafter"))
 				noimagesafter,err = strconv.Atoi(noimagesafter_str)
 				if err != nil {
 					noimagesafter = 0
 				}
-				maxmessagelength_str := db.Escape(request.FormValue("maxmessagelength"))
+				maxmessagelength_str := escapeString(request.FormValue("maxmessagelength"))
 				maxmessagelength,err = strconv.Atoi(maxmessagelength_str)
 				if err != nil {
 					maxmessagelength = 1024*8
@@ -456,50 +393,40 @@ var manage_functions = map[string]ManageFunction{
 				if err != nil {
 					return err.Error()
 				}
-				_,err := db.Start("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`,`embeds_allowed`) VALUES('"+dir+"','"+title+"','"+subtitle+"','"+description+"',"+section_str+",'"+defaultstyle+"',"+noimagesafter_str+",0);")
+				_,err := db.Exec("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`,`embeds_allowed`) VALUES('"+dir+"','"+title+"','"+subtitle+"','"+description+"',"+section_str+",'"+defaultstyle+"',"+noimagesafter_str+",0);")
 				if err != nil {
 					return err.Error();
 				}
 			}
 
 			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-			db.Start("USE `"+config.DBname+"`;")
-		 	results,err := db.Start("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
+			//db.Exec("USE `"+config.DBname+"`;")
+		 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 			if err != nil {
 				html += err.Error()
 				return
 			}
 
-			rows, err := results.GetRows()
-		    if err != nil {
-				error_log.Write(err.Error())
-				html += err.Error()
-				return
-		    }
-			if len(rows) > 0 {
-				for  _, row := range rows {
-    				html += "<option>"+string(row[0].([]byte))+"</option>\n"
-				}
+			for rows.Next() {
+				board := new(BoardsTable)
+				err = rows.Scan(&board.Dir)
+    			html += "<option>"+board.Dir+"</option>\n"
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 
 			html += "<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%%\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\""+dir+"\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\""+strconv.Itoa(order)+"\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\""+strconv.Itoa(firstpost)+"\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\""+title+"\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\""+subtitle+"\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\""+description+"\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\""+strconv.Itoa(section)+"\">\n<option value=\"none\">Select section...</option>\n"
-		 	results,err = db.Start("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
+		 	rows,err = db.Query("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
 			if err != nil {
 				html += err.Error()
 				return
 			}
 
-			rows, err = results.GetRows()
-		    if err != nil {
-				error_log.Write(err.Error())
-				html += err.Error()
-				return
-		    }
-			if len(rows) > 0 {
-				for row_num, row := range rows {
-					html += "<option value=\""+strconv.Itoa(row_num)+"\">"+string(row[0].([]byte))+"</option>\n"
-				}
+			iter := 0
+			for rows.Next() {
+				section := new(BoardSectionsTable)
+				err = rows.Scan(&section.Name)
+				html += "<option value=\""+strconv.Itoa(iter)+"\">"+section.Name+"</option>\n"
+				iter += 1
 			}
 			html += "</select></td></tr><tr><td>Max image size</td><td><input type=\"text\" name=\"maximagesize\" value=\""+strconv.Itoa(maximagesize)+"\" /></td></tr><tr><td>Max pages</td><td><input type=\"text\" name=\"maxpages\" value=\""+strconv.Itoa(maxpages)+"\" /></td></tr><tr><td>Default style</td><td><select name=\"defaultstyle\" selected=\""+defaultstyle+"\">"
 			for _, style := range config.Styles_img {
@@ -600,27 +527,8 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			var section_id int
-			var section_order int
-			var section_hidden bool
 			var section_arr []interface{}
-
-			// variables for board
-			var board_dir string
-			var board_title string
-			var board_subtitle string
-			var board_description string
-			var board_section int
 			var board_arr []interface{}
-
-			// variables for frontpage table
-			var front_page int
-			var front_order int
-			var front_subject string
-			var front_message string
-			var front_timestamp string
-			var front_poster string
-			var front_email string
 			var front_arr []interface{}
 
 			os.Remove("html/index.html")
@@ -633,75 +541,56 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			// get boards from db and push to variables to be put in an interface
-		  	results,err := db.Start("SELECT `dir`,`title`,`subtitle`,`description`,`section` FROM `"+config.DBprefix+"boards` ORDER BY `order`;")
-			if err != nil {
-				error_log.Write(err.Error())
-				return err.Error()
-			}
-			rows,err := results.GetRows()
+		  	rows,err := db.Query("SELECT `dir`,`title`,`subtitle`,`description`,`section` FROM `"+config.DBprefix+"boards` ORDER BY `order`;")
 			if err != nil {
 				error_log.Write(err.Error())
 				return err.Error()
 			}
 
-			for _,row := range rows {
-				board_dir = string(row[0].([]byte))
-				board_title = string(row[1].([]byte))
-				board_subtitle = string(row[2].([]byte))
-				board_description = string(row[3].([]byte))
-				board_section,_ = strconv.Atoi(string(row[4].([]byte)))
-			    board_arr = append(board_arr,BoardsTable{IName:"board", Dir:board_dir, Title:board_title, Subtitle:board_subtitle, Description:board_description, Section:board_section})
+			for rows.Next() {
+				board := new(BoardsTable)
+				board.IName = "board"
+				err = rows.Scan(&board.Dir, &board.Title, &board.Subtitle, &board.Description, &board.Section)
+				if err != nil {
+					error_log.Write(err.Error())
+					return err.Error()
+				}
+			    board_arr = append(board_arr,board)
 			}
 
 			// get sections from db and push to variables to be put in an interface
-		  	results,err = db.Start("SELECT `id`,`order`,`hidden` FROM `"+config.DBprefix+"sections` ORDER BY `order`;")
+		  	rows,err = db.Query("SELECT `id`,`order`,`hidden` FROM `"+config.DBprefix+"sections` ORDER BY `order`;")
 			if err != nil {
 				error_log.Write(err.Error())
 				return err.Error()
 			}
-			rows,err = results.GetRows()
-			if err != nil {
-				error_log.Write(err.Error())
-				return err.Error()
-			}
-
-			for _,row := range rows {
-				section_id,_ = strconv.Atoi(string(row[0].([]byte)))
-				section_order,_ = strconv.Atoi(string(row[1].([]byte)))
-				b := string(row[2].([]byte))
-				if b == "1" {
-					section_hidden = true
-				} else {
-					section_hidden = false
+			for rows.Next() {
+				section := new(BoardSectionsTable)
+				section.IName = "section"
+				err = rows.Scan(&section.ID, &section.Order, &section.Hidden)
+				if err != nil {
+					error_log.Write(err.Error())
+					return err.Error()
 				}
-			    section_arr = append(section_arr, BoardSectionsTable{IName: "section", ID: section_id, Order: section_order, Hidden: section_hidden})
+			    section_arr = append(section_arr, section)
 			}
 
 			// get front pages
-			results,err = db.Start("SELECT * FROM `"+config.DBprefix+"frontpage`;")
+			rows,err = db.Query("SELECT * FROM `"+config.DBprefix+"frontpage`;")
 			if err != nil {
 				error_log.Write(err.Error())
 				return err.Error()
 			}
 
-			rows, err = results.GetRows()
-		    if err != nil {
-				error_log.Write(err.Error())
-				return err.Error()
-		    }
-			if len(rows) > 0 {
-				for row_num, row := range rows {
-	    			front_page,_ = strconv.Atoi(string(row[1].([]byte)))
-	    			front_order,_ = strconv.Atoi(string(row[2].([]byte)))
-	    			front_subject = string(row[3].([]byte))
-	    			front_message = string(row[4].([]byte))
-	    			front_timestamp = string(row[5].([]byte))
-	    			front_poster = string(row[6].([]byte))
-	    			front_email = string(row[7].([]byte))
-					front_arr = append(front_arr,FrontTable{IName:"front page", ID:row_num, Page: front_page, Order: front_order, Subject: front_subject, Message: front_message, Timestamp: front_timestamp, Poster: front_poster, Email: front_email})
+			for rows.Next() {
+				frontpage := new(FrontTable)
+				frontpage.IName = "front page"
+				err = rows.Scan(&frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
+				if err != nil {
+					error_log.Write(err.Error())
+					return err.Error()
 				}
-			} else {
-				// no front pages
+				front_arr = append(front_arr,frontpage)
 			}
 
 		    page_data := &Wrapper{IName:"fronts", Data: front_arr}
@@ -736,7 +625,11 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			op_posts := getPostArr("`deleted_timestamp` IS NULL AND `parentid` = 0")
+			op_posts,err := getPostArr("`deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
+			if err != nil {
+				exitWithErrorPage(writer,err.Error())
+			}
+			fmt.Println(len(op_posts))
 			success := true
 			for _,post := range op_posts {
 				op_post := post.(PostTable)
@@ -763,26 +656,21 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%\" border=\"1\">\n<tr><td></td><td><b>Message</b></td><td><b>Time</b></td></tr>"
-			db.Start("USE `"+config.DBname+"`;")
-		 	results,err := db.Start("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \"0000-00-00 00:00:00\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
+			//db.Start("USE `"+config.DBname+"`;")
+		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return
 			}
 
-			rows, err := results.GetRows()
-	        if err != nil {
-				html += "<tr><td>"+err.Error()+"</td></tr></table>"
-				return
-	        }
-			for _, row := range rows {
-				boardname := string(row[0].([]byte))
-				boardid := string(row[1].([]byte))
-				id := string(row[2].([]byte))
-				parentid := string(row[3].([]byte))
-				message := string(row[4].([]byte))
-				ip := string(row[5].([]byte))
-				html += "<tr><td><b>Post:</b> <a href=\""+path.Join(config.SiteWebfolder,boardname,"/res/",parentid+".html#"+id)+"\">"+boardname+"/"+id+"</a><br /><b>IP:</b> "+ip+"</td><td>"+message+"</td><td>"+boardid+"</td></tr>"
+			for rows.Next() {
+				recentpost := new(RecentPost)
+				err = rows.Scan(&recentpost.BoardName, &recentpost.BoardID, &recentpost.PostID, &recentpost.ParentID, &recentpost.Message, &recentpost.IP)
+				if err != nil {
+					error_log.Write(err.Error())
+					return err.Error()
+				}
+				html += "<tr><td><b>Post:</b> <a href=\""+path.Join(config.SiteWebfolder,recentpost.BoardName,"/res/",strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID))+"\">"+recentpost.BoardName+"/"+strconv.Itoa(recentpost.PostID)+"</a><br /><b>IP:</b> "+recentpost.IP+"</td><td>"+recentpost.Message+"</td><td>"+strconv.Itoa(recentpost.BoardID)+"</td></tr>"
 			}
 			html += "</table>"
 			return
@@ -799,28 +687,34 @@ var manage_functions = map[string]ManageFunction{
 			//do := request.FormValue("do")
 			html = "<h1>Staff</h1><br />\n" +
 					"<table border=\"1\"><tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
-			db.Start("USE `"+config.DBname+"`;")
-		 	results,err := db.Start("SELECT `username`,`rank`,`boards`,`added_on` FROM `"+config.DBprefix+"staff`;")
+			//db.Exec("USE `"+config.DBname+"`;")
+		 	rows,err := db.Query("SELECT `username`,`rank`,`boards`,`added_on` FROM `"+config.DBprefix+"staff`;")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return
 			}
 
-			rows, err := results.GetRows()
-	        if err != nil {
-				html += "<tr><td>"+err.Error()+"</td></tr></table>"
-				return
-	        }
-			for row_num, row := range rows {
-	    		rank := string(row[1].([]byte))
-	    		if rank == "3" {
-	    			rank = "admin"
-	    		} else if rank == "2" {
-	    			rank = "mod"
-	    		} else if rank == "1" {
-	    			rank = "janitor"
+			iter := 0
+			for rows.Next() {
+				staff := new(StaffTable)
+				err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn)
+	    		if err != nil {
+	    			error_log.Write(err.Error())
+	    			return err.Error()
 	    		}
-			    html  += "<tr><td>"+string(row[0].([]byte))+"</td><td>"+rank+"</td><td>"+string(row[2].([]byte))+"</td><td>"+string(row[3].([]byte))+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(row_num)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+
+	    		var rank string
+	    		switch {
+	    			case staff.Rank == 3:
+	    				rank = "admin"
+	    			case staff.Rank == 2:
+	    				rank = "mod"
+	    			case staff.Rank == 1:
+	    				rank = "janitor"
+
+	    		} 
+			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+staff.AddedOn.String()+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(iter)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+			    iter += 1
 			}
 			html += "</table>"
 			return

@@ -12,6 +12,7 @@ var (
 
 
 func main() {
+	defer db.Close()
 	initConfig()
 	fmt.Println("Config file loaded. Connecting to database...")
 	_,err := os.Stat("initialsetupdb.sql")

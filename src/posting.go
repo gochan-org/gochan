@@ -35,8 +35,9 @@ func generateTripCode(input string) string {
 	return crypt(input,salt)[3:]
 }
 
-func buildBoardPages(boardid int) {
-	
+func buildBoardPages(board_dir string) (err error) {
+
+	return nil	
 }
 
 func buildThread(op_post PostTable, is_reply bool) (err error) {
@@ -46,8 +47,11 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	} else {
 		op_id = strconv.Itoa(op_post.ID)
 	}
-
-	thread_posts := getPostArr("`deleted_timestamp` IS NULL AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+	fmt.Println(op_post.ID)
+	thread_posts,err := getPostArr("`deleted_timestamp` IS NULL AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+	if err != nil {
+		exitWithErrorPage(writer,err.Error())
+	}
 	board_arr := getBoardArr("")
 	sections_arr := getSectionArr("")
 
@@ -198,7 +202,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 	if post.Filename != "" {
 		post_sql_str += ",'"+post.Filename+"','"+post.FilenameOriginal+"','"+post.FileChecksum+"',"+strconv.Itoa(int(post.Filesize))+","+strconv.Itoa(post.ImageW)+","+strconv.Itoa(post.ImageH)+","+strconv.Itoa(post.ThumbW)+","+strconv.Itoa(post.ThumbH)
 	}
-	post_sql_str += ",'"+post.IP+"','"+post.Timestamp+"',"+strconv.Itoa(post.PosterAuthority)+","
+	post_sql_str += ",'"+post.IP+"','"+post.Timestamp.String()+"',"+strconv.Itoa(post.PosterAuthority)+","
 	if post.Stickied {
 		post_sql_str += "1,"
 	} else {
@@ -210,7 +214,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 		post_sql_str += "0);"
 	}
 	//fmt.Println(post_sql_str)
-	_,err := db.Start(post_sql_str)
+	_,err := db.Exec(post_sql_str)
 	if err != nil {
 		exitWithErrorPage(*writer,err.Error())
 	}
@@ -227,7 +231,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.ParentID,_ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID,_ = strconv.Atoi(request.FormValue("boardid"))
 	
-	post_name := db.Escape(request.FormValue("postname"))
+	post_name := escapeString(request.FormValue("postname"))
 	if strings.Index(post_name, "#") == -1 {
 		post.Name = post_name
 	} else if strings.Index(post_name, "#") == 0 {
@@ -239,7 +243,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	email_command := ""
-	post_email := db.Escape(request.FormValue("postemail"))
+	post_email := escapeString(request.FormValue("postemail"))
 	if strings.Index(post_email, "#") == -1 {
 		post.Email = post_email
 	} else if strings.Index(post_email, "#") == 0 {
@@ -250,11 +254,11 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		email_command = post_email_arr[1]
 	}
 
-	post.Subject = db.Escape(request.FormValue("postsubject"))
-	post.Message = db.Escape(request.FormValue("postmsg"))
+	post.Subject = escapeString(request.FormValue("postsubject"))
+	post.Message = escapeString(request.FormValue("postmsg"))
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	post.IP = request.RemoteAddr
-	post.Timestamp = getSQLDateTime()
+	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()
 	post.Bumped = post.Timestamp
 	post.Stickied = request.FormValue("modstickied") == "on"
@@ -361,7 +365,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	insertPost(&w, post,email_command != "sage")
 	if post.ParentID > 0 {
-		buildThread(getPostArr("`deleted_timestamp` IS NULL AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))[0].(PostTable),true)
+		post_arr,err := getPostArr("`deleted_timestamp` IS NULL AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))
+		if err != nil {
+			exitWithErrorPage(writer,err.Error())
+		}
+
+		buildThread(post_arr[0].(PostTable),true)
 	} else {
 		buildThread(post,false)
 	}

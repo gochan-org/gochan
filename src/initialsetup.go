@@ -19,27 +19,21 @@ func runInitialSetup() {
 func loadInitialSetupFile() {
 	initial_sql_bytes,err := ioutil.ReadFile("initialsetupdb.sql")
 	initial_sql_str := string(initial_sql_bytes)
-	fmt.Println("Starting initial setup...")
+	fmt.Printf("Starting initial setup...")
 	if err == nil {
 		initial_sql_str = strings.Replace(initial_sql_str,"DBNAME",config.DBname, -1)
 		initial_sql_str = strings.Replace(initial_sql_str,"DBPREFIX",config.DBprefix, -1)
 		initial_sql_str += "\nINSERT INTO `"+config.DBname+"`.`"+config.DBprefix+"staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '"+bcrypt_sum("password")+"', 'abc', 3);"
-		_,err := db.Start(initial_sql_str)
+		_,err := db.Exec(initial_sql_str)
 
 		if err != nil {
-			fmt.Println("Initial setup failed.")
+			fmt.Println("failed.")
 			error_log.Write(err.Error())
 		} else {
-			/*_,err := db.Start("INSERT INTO `"+config.DBname+"`.`"+config.DBprefix+"_staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '"+bcrypt_sum("password")+"', 'abc', 3);")
-			if err != nil {
-				fmt.Println("Failed creating administrator account.")
-				error_log.Write(err.Error())
-			} else {*/
-				fmt.Println("Initial setup complete.")
-			
+			fmt.Println("complete.")
 		}
 	} else {
-		error_log.Write("Couldn't load initial sql file")
+		error_log.Write("failed. Couldn't load initial sql file")
 		os.Exit(2)
 	}
 }
