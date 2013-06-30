@@ -65,11 +65,11 @@ var funcMap = template.FuncMap{
 		return in[index]
 	},
 	"formatTimestamp": func(timestamp string) string {
-		parsed,err := time.Parse("2006-01-02 15:04:05", timestamp)
+		parsed,err := time.Parse(mysql_datetime_format, timestamp)
 		if err != nil {
-			return time.Time{}.Format("Mon, January 02, 2006 15:04 PM")
+			return time.Time{}.Format(config.DateTimeFormat)
 		}
-		return parsed.Format("Mon, January 02, 2006 15:04 PM")
+		return "[bad timestamp]" //parsed.Format(config.DateTimeFormat)
 	},
 	"formatFilesize": func(size_int int) string {
 		size := float32(size_int)

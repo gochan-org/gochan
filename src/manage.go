@@ -263,7 +263,7 @@ var manage_functions = map[string]ManageFunction{
 				html = "nobody;0;"
 				return
 			}
-		  	row := db.QueryRow("SELECT `rank`,`boards` FROM `"+config.DBprefix+"staff` WHERE `username` = '"+current_staff+";")
+		  	row := db.QueryRow("SELECT `rank`,`boards` FROM `"+config.DBprefix+"staff` WHERE `username` = '"+current_staff+"';")
 			staff := new(StaffTable)
 			err = row.Scan(&staff.Rank,&staff.Boards)
 			if err != nil {
@@ -586,7 +586,7 @@ var manage_functions = map[string]ManageFunction{
 			for rows.Next() {
 				frontpage := new(FrontTable)
 				frontpage.IName = "front page"
-				err = rows.Scan(&frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
+				err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
 				if err != nil {
 					error_log.Write(err.Error())
 					return err.Error()
@@ -630,10 +630,10 @@ var manage_functions = map[string]ManageFunction{
 			if err != nil {
 				exitWithErrorPage(writer,err.Error())
 			}
-			fmt.Println(len(op_posts))
 			success := true
-			for _,post := range op_posts {
-				op_post := post.(PostTable)
+			for _,op_post := range op_posts {
+				//op_post := post.(PostTable)
+
 				err := buildThread(op_post,false)
 				if err != nil {
 					success = false

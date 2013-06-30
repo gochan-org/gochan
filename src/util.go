@@ -22,7 +22,10 @@ var (
 	crypt_data = C.struct_crypt_data{}
 )
 
-const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
+const (
+	mysql_datetime_format = "2006-01-02 15:04:05"
+	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
+)
 
 
 func crypt(key, salt string) string {
@@ -81,15 +84,17 @@ func getBoardArr(where string) (boards []interface{}) {
 		err = rows.Scan(&board.ID,&board.Order,&board.Dir,&board.Type,&board.FirstPost,&board.UploadType,&board.Title,&board.Subtitle,&board.Description,&board.Section, &board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.MarkPage, &board.AutosageAfter, &board.NoImagesAfter,&board.MaxMessageLength,&board.EmbedsAllowed,&board.RedirectToThread,&board.ShowId,&board.CompactList,&board.EnableNofile,&board.EnableCatalog)
 		if err != nil {
 			error_log.Write(err.Error())
+			fmt.Println(err.Error())
 			return
 		} else {
 			boards = append(boards, board)
+			fmt.Println(board.Dir)
 		}
 	}
 	return
 }
 
-func getPostArr(where string) (posts []interface{},err error) {
+func getPostArr(where string) (posts []PostTable,err error) {
 	if where == "" {
 		where = "1"
 	}
@@ -100,8 +105,10 @@ func getPostArr(where string) (posts []interface{},err error) {
 	}
 
 	for rows.Next() {
-		post := new(PostTable)
-		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
+		//post := new(PostTable)
+		var post PostTable
+		//fmt.Println(post)
+		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
 		if err != nil {
 			error_log.Write(err.Error())
 			return
@@ -168,11 +175,15 @@ func getFormattedFilesize(size float32) string {
 
 func getSQLDateTime() string {
 	now := time.Now()
-	return now.Format("2006-01-02 15:04:05")
+	return now.Format(mysql_datetime_format)
 }
 
 func getSpecificSQLDateTime(t time.Time) string {
-	return t.Format("2006-01-02 15:04:05")
+	return t.Format(mysql_datetime_format)
+}
+
+func humanReadableTime(t time.Time) string {
+	return t.Format(config.DateTimeFormat)
 }
 
 func searchStrings(item string,arr []string,permissive bool) int {

@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"database/sql"
 	_ "github.com/ziutek/mymysql/godrv"
-	//"github.com/ziutek/mymysql/mysql"
-	//_ "github.com/ziutek/mymysql/native" // Native engine
-	//_ "github.com/ziutek/mymysql/thrsafe" // Thread safe engine
 )
 
 const (

@@ -85,9 +85,9 @@ type BoardsTable struct {
 	Locale string
 	DefaultStyle string
 	Locked bool
-	CreatedOn string
+	CreatedOn time.Time
 	Anonymous string
-	ForcedAnon string
+	ForcedAnon bool
 	MaxAge int
 	MarkPage int
 	AutosageAfter int
@@ -342,6 +342,7 @@ type GochanConfig struct {
 	NewTabOnOutlinks bool
 	EnableQuickReply bool
 
+	DateTimeFormat string
 	DefaultBanReason string
 	EnableGeoIP bool
 	GeoIPDBlocation string // set to "cf" or the path to the db
@@ -659,6 +660,11 @@ func initConfig() {
 	config.EnableQuickReply,err = c.GetBool("threads", "quick_reply")
 	if err != nil {
 		config.EnableQuickReply = true
+	}
+
+	config.DateTimeFormat,err = c.GetString("misc", "datetime_format")
+	if err != nil {
+		config.DateTimeFormat = "Mon, January 02, 2006 15:04 PM"
 	}
 
 	config.DefaultBanReason,err = c.GetString("misc","default_ban_reason")

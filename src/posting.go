@@ -58,8 +58,10 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	var board_dir string
 	for _,board_i := range board_arr {
 		board := board_i.(BoardsTable)
+		fmt.Printf("Board id: %d\n",board.ID)
 		if board.ID == op_post.BoardID {
 			board_dir = board.Dir
+
 			break
 		}
 	}
@@ -74,6 +76,7 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	os.Remove(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"))
 	
 	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"),os.O_CREATE|os.O_RDWR,0777)
+
 	if err == nil {
 		return img_thread_tmpl.Execute(thread_file,wrapped)
 	}
@@ -370,7 +373,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			exitWithErrorPage(writer,err.Error())
 		}
 
-		buildThread(post_arr[0].(PostTable),true)
+		buildThread(post_arr[0],true)
 	} else {
 		buildThread(post,false)
 	}
