@@ -101,6 +101,40 @@ type BoardsTable struct {
 	EnableCatalog bool
 }
 
+// because text/template doesn't seem to be able to take Time objects
+type TemplateFriendlyBoardsTable struct {
+	IName string
+	ID int
+	Order int
+	Dir string
+	Type int
+	FirstPost int
+	UploadType int
+	Title string
+	Subtitle string
+	Description string
+	Section int
+	MaxImageSize int
+	MaxPages int
+	Locale string
+	DefaultStyle string
+	Locked bool
+	CreatedOn string
+	Anonymous string
+	ForcedAnon bool
+	MaxAge int
+	MarkPage int
+	AutosageAfter int
+	NoImagesAfter int
+	MaxMessageLength int
+	EmbedsAllowed string
+	RedirectToThread bool
+	ShowId bool
+	CompactList bool
+	EnableNofile bool
+	EnableCatalog bool
+}
+
 type BoardSectionsTable struct {
 	IName string
 	ID int
@@ -200,10 +234,11 @@ type PostTable struct {
 	Sillytag bool
 }
 
-type TempPostTable struct {
+type TemplateFriendlyPostTable struct {
+	IName string
 	ID int
-	Boarid int
-	Parentid int
+	BoardID int
+	ParentID int
 	Name string
 	Tripcode string
 	Email string
@@ -220,10 +255,10 @@ type TempPostTable struct {
 	ThumbH int
 	IP string
 	Tag string
-	Timestamp time.Time
+	Timestamp string
 	Autosage int
 	PosterAuthority int
-	DeletedTimestamp time.Time
+	DeletedTimestamp string
 	Bumped time.Time
 	Stickied bool
 	Locked bool

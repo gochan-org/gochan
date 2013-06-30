@@ -226,7 +226,7 @@ var manage_functions = map[string]ManageFunction{
 				if err != nil {
 					html += err.Error()
 				} else {
-					html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+announcement.Subject+"</b> by "+announcement.Poster+" at "+announcement.Timestamp.String()+"</div>\n<div class=\"section-body\">"+announcement.Message+"\n</div></div>\n"
+					html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+announcement.Subject+"</b> by "+announcement.Poster+" at "+humanReadableTime(announcement.Timestamp)+"</div>\n<div class=\"section-body\">"+announcement.Message+"\n</div></div>\n"
 				}
 				iterations += 1
 			}
@@ -714,7 +714,7 @@ var manage_functions = map[string]ManageFunction{
 	    				rank = "janitor"
 
 	    		} 
-			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+staff.AddedOn.String()+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(iter)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(iter)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    iter += 1
 			}
 			html += "</table>"

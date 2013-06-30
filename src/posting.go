@@ -205,7 +205,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 	if post.Filename != "" {
 		post_sql_str += ",'"+post.Filename+"','"+post.FilenameOriginal+"','"+post.FileChecksum+"',"+strconv.Itoa(int(post.Filesize))+","+strconv.Itoa(post.ImageW)+","+strconv.Itoa(post.ImageH)+","+strconv.Itoa(post.ThumbW)+","+strconv.Itoa(post.ThumbH)
 	}
-	post_sql_str += ",'"+post.IP+"','"+post.Timestamp.String()+"',"+strconv.Itoa(post.PosterAuthority)+","
+	post_sql_str += ",'"+post.IP+"','"+getSpecificSQLDateTime(post.Timestamp)+"',"+strconv.Itoa(post.PosterAuthority)+","
 	if post.Stickied {
 		post_sql_str += "1,"
 	} else {
