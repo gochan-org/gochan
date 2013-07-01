@@ -24,7 +24,8 @@ import (
 
 var (
 	UnsupportedFiletypeError =  errors.New("Upload filetype not supported")
-	FileWriteError = errors.New("Couldn't write file.")
+	FileWriteError = errors.New("Couldn't write file")
+	TemplateExecutionError = errors.New("Failed executing template")
 )
 
 func generateTripCode(input string) string {
@@ -47,8 +48,8 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	} else {
 		op_id = strconv.Itoa(op_post.ID)
 	}
-	fmt.Println(op_post.ID)
-	thread_posts,err := getPostArr("`deleted_timestamp` IS NULL AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+	thread_posts,err := getPostArr("`deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+    fmt.Printf("board_arr_i length: %d\n",len(thread_posts))
 	if err != nil {
 		exitWithErrorPage(writer,err.Error())
 	}
@@ -57,8 +58,8 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 
 	var board_dir string
 	for _,board_i := range board_arr {
-		board := board_i.(BoardsTable)
-		fmt.Printf("Board id: %d\n",board.ID)
+		//fmt.Println(board_i.ID)
+		board := board_i
 		if board.ID == op_post.BoardID {
 			board_dir = board.Dir
 
@@ -69,7 +70,11 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
     var interfaces []interface{}
     interfaces = append(interfaces, config)
     interfaces = append(interfaces, thread_posts)
-    interfaces = append(interfaces, &Wrapper{IName:"boards", Data: board_arr})
+    var board_arr_i []interface{}
+    for _,b := range board_arr {
+    	board_arr_i = append(board_arr_i,b)
+    }
+    interfaces = append(interfaces, &Wrapper{IName:"boards", Data: board_arr_i})
     interfaces = append(interfaces, &Wrapper{IName:"sections", Data: sections_arr})
 
 	wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
@@ -77,10 +82,16 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	
 	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"),os.O_CREATE|os.O_RDWR,0777)
 
-	if err == nil {
-		return img_thread_tmpl.Execute(thread_file,wrapped)
+	if err != nil {
+		return err
 	}
 
+	defer func() {
+		if _, ok := recover().(error); ok {
+			error_log.Write(TemplateExecutionError.Error())
+		}
+	}()
+	err = img_thread_tmpl.Execute(thread_file,wrapped)
 	return err
 }
 
@@ -292,9 +303,9 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			}
 
 			post.Filename = getNewFilename()+"."+getFiletype(post.FilenameOriginal)
-			
-			file_path := path.Join(config.DocumentRoot,"/"+getBoardArr("`id` = "+request.FormValue("boardid"))[0].(BoardsTable).Dir+"/src/",post.Filename)
-			thumb_path := path.Join(config.DocumentRoot,"/"+getBoardArr("`id` = "+request.FormValue("boardid"))[0].(BoardsTable).Dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"t."+thumb_filetype,-1))
+			board_dir := getBoardArr("`id` = "+request.FormValue("boardid"))[0].Dir
+			file_path := path.Join(config.DocumentRoot,"/"+board_dir+"/src/",post.Filename)
+			thumb_path := path.Join(config.DocumentRoot,"/"+board_dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"t."+thumb_filetype,-1))
 
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
@@ -368,12 +379,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	insertPost(&w, post,email_command != "sage")
 	if post.ParentID > 0 {
-		post_arr,err := getPostArr("`deleted_timestamp` IS NULL AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))
+		post_arr,err := getPostArr("`deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
 
-		buildThread(post_arr[0],true)
+		buildThread(post_arr[0].(PostTable),true)
 	} else {
 		buildThread(post,false)
 	}

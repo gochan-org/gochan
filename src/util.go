@@ -69,7 +69,7 @@ func byteByByteReplace(input,from, to string) string {
 	return input
 }
 
-func getBoardArr(where string) (boards []interface{}) {
+func getBoardArr(where string) (boards []BoardsTable) {
 	if where == "" {
 		where = "1"
 	}
@@ -87,14 +87,13 @@ func getBoardArr(where string) (boards []interface{}) {
 			fmt.Println(err.Error())
 			return
 		} else {
-			boards = append(boards, board)
-			fmt.Println(board.Dir)
+			boards = append(boards, *board)
 		}
 	}
 	return
 }
 
-func getPostArr(where string) (posts []PostTable,err error) {
+func getPostArr(where string) (posts []interface{},err error) {
 	if where == "" {
 		where = "1"
 	}

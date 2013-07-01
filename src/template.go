@@ -64,12 +64,8 @@ var funcMap = template.FuncMap{
 	"getInterface":func(in []interface{}, index int) interface{} {
 		return in[index]
 	},
-	"formatTimestamp": func(timestamp string) string {
-		parsed,err := time.Parse(mysql_datetime_format, timestamp)
-		if err != nil {
-			return time.Time{}.Format(config.DateTimeFormat)
-		}
-		return "[bad timestamp]" //parsed.Format(config.DateTimeFormat)
+	"formatTimestamp": func(timestamp time.Time) string {
+		return humanReadableTime(timestamp)
 	},
 	"formatFilesize": func(size_int int) string {
 		size := float32(size_int)

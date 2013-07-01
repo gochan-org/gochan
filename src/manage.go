@@ -631,8 +631,10 @@ var manage_functions = map[string]ManageFunction{
 				exitWithErrorPage(writer,err.Error())
 			}
 			success := true
-			for _,op_post := range op_posts {
-				//op_post := post.(PostTable)
+			for _,post := range op_posts {
+				op_post := post.(PostTable)
+				//template_friendly_op_post := TemplateFriendlyPostTable{op_post.IName, op_post.ID,op_post.BoardID,op_post.ParentID, op_post.Name, op_post.Tripcode, op_post.Email, op_post.Subject, op_post.Message, op_post.Password, op_post.Filename, op_post.FilenameOriginal, op_post.FileChecksum, op_post.Filesize, op_post.ImageW, op_post.ImageH, op_post.ThumbW, op_post.ThumbH, op_post.IP, op_post.Tag, humanReadableTime(op_post.Timestamp), op_post.Autosage, op_post.PosterAuthority, humanReadableTime(op_post.DeletedTimestamp), humanReadableTime(op_post.Bumped), op_post.Stickied, op_post.Locked, op_post.Reviewed, op_post.Sillytag}
+
 
 				err := buildThread(op_post,false)
 				if err != nil {
