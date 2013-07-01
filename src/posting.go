@@ -229,6 +229,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 	}
 	//fmt.Println(post_sql_str)
 	_,err := db.Exec(post_sql_str)
+
 	if err != nil {
 		exitWithErrorPage(*writer,err.Error())
 	}
@@ -271,6 +272,9 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.Subject = escapeString(request.FormValue("postsubject"))
 	post.Message = escapeString(request.FormValue("postmsg"))
 	post.Password = md5_sum(request.FormValue("postpassword"))
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post.Name, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})	
 	post.IP = request.RemoteAddr
 	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()

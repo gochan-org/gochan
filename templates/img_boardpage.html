@@ -47,7 +47,7 @@
 				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
 				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
 				<tr><td class="postblock">File</td><td><input name="imagefile" size="31" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
-				<tr><td class="postblock">Password</td><td><input type="text" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
+				<tr><td class="postblock">Password</td><td><input type="password" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</table>
 		</form>
 		</center>
@@ -89,7 +89,7 @@
 			
 			<div id="report-delbox">
 				<form action="/post" method="POST">
-					<label>[<input type="checkbox" name="fileonly"/>File only] <input type="text" size="10" name="password" /> <input type="submit" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
+					<label>[<input type="checkbox" name="fileonly"/>File only] <input type="password" size="10" name="password" /> <input type="submit" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
 					Reason: <input type="text" size="10" name="reason" /> <input type="submit" value="Report" />
 				</form>
 			</div>
