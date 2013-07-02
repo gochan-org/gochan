@@ -118,7 +118,6 @@ func createSession(key string,username string, password string, request *http.Re
 		mod_log.Write("Rejected login from possible spambot @ : "+request.RemoteAddr)
 		return 2
 	}
-	//db.Start("USE "+config.DBname+";")
   	staff,err := getStaff(username)
   	if err != nil {
   		fmt.Println(err.Error())
@@ -133,7 +132,6 @@ func createSession(key string,username string, password string, request *http.Re
   		} else {
 			// successful login
 			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))),MaxAge: 7200}
-			//cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))}
 			http.SetCookie(*writer, cookie)
 			_,err := db.Exec("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
 			if err != nil {
@@ -410,7 +408,6 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-			//db.Exec("USE `"+config.DBname+"`;")
 		 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 			if err != nil {
 				html += err.Error()
@@ -635,7 +632,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			op_posts,err := getPostArr("`deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
+			op_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
 			if err != nil {
 				exitWithErrorPage(writer,err.Error())
 			}
@@ -668,7 +665,6 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%\" border=\"1\">\n<tr><td></td><td><b>Message</b></td><td><b>Time</b></td></tr>"
-			//db.Start("USE `"+config.DBname+"`;")
 		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
@@ -699,7 +695,6 @@ var manage_functions = map[string]ManageFunction{
 			//do := request.FormValue("do")
 			html = "<h1>Staff</h1><br />\n" +
 					"<table border=\"1\"><tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
-			//db.Exec("USE `"+config.DBname+"`;")
 		 	rows,err := db.Query("SELECT `username`,`rank`,`boards`,`added_on` FROM `"+config.DBprefix+"staff`;")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"

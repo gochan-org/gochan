@@ -37,8 +37,8 @@ func generateTripCode(input string) string {
 }
 
 func buildBoardPages(board_dir string) (err error) {
-
-	return nil	
+	_,err = getPostArr("LIMIT 10;")
+	return err
 }
 
 func buildThread(op_post PostTable, is_reply bool) (err error) {
@@ -48,7 +48,7 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	} else {
 		op_id = strconv.Itoa(op_post.ID)
 	}
-	thread_posts,err := getPostArr("`deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+	thread_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
     fmt.Printf("board_arr_i length: %d\n",len(thread_posts))
 	if err != nil {
 		exitWithErrorPage(writer,err.Error())
@@ -383,7 +383,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	insertPost(&w, post,email_command != "sage")
 	if post.ParentID > 0 {
-		post_arr,err := getPostArr("`deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))
+		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}

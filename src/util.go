@@ -93,7 +93,7 @@ func getBoardArr(where string) (boards []BoardsTable) {
 	return
 }
 
-func getPostArr(where string) (posts []interface{},err error) {
+func getPostArr(sql string) (posts []interface{},err error) {
 	if where == "" {
 		where = "1"
 	}
