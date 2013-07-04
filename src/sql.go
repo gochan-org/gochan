@@ -71,11 +71,7 @@ func escapeQuotes(txt string) string {
 
 func connectToSQLServer(usedb bool) {
 	var err error
-	if usedb {
-		db, err = sql.Open("mymysql", config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
-	} else {
-		db, err = sql.Open("mymysql", "mysql/"+config.DBusername+"/"+config.DBpassword)
-	}
+	db, err = sql.Open("mymysql", config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
 	if err != nil {
 		error_log.Write(err.Error())
 		fmt.Println("Failed to connect to the database, see log for details.")
