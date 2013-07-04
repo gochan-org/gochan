@@ -94,19 +94,13 @@ func getBoardArr(where string) (boards []BoardsTable) {
 }
 
 func getPostArr(sql string) (posts []interface{},err error) {
-	if where == "" {
-		where = "1"
-	}
-	rows,err := db.Query("SELECT * FROM `"+config.DBprefix+"posts` WHERE "+where+";")
+	rows,err := db.Query(sql)
 	if err != nil {
 		error_log.Write(err.Error())
 		return
 	}
-
 	for rows.Next() {
-		//post := new(PostTable)
 		var post PostTable
-		//fmt.Println(post)
 		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
 		if err != nil {
 			error_log.Write(err.Error())
