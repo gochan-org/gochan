@@ -67,6 +67,13 @@ var funcMap = template.FuncMap{
 	"formatTimestamp": func(timestamp time.Time) string {
 		return humanReadableTime(timestamp)
 	},
+	"getThumbnailFilename": func(name string) string {
+		filetype := name[len(name)-4:]
+		if filetype == ".gif" || filetype == ".GIF" {
+			return name[0:len(name)-3]+"jpg"
+		}
+		return name
+	},
 	"formatFilesize": func(size_int int) string {
 		size := float32(size_int)
 		if(size < 1000) {
@@ -81,8 +88,12 @@ var funcMap = template.FuncMap{
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
 	"imageToThumbnailPath": func(img string) string {
+		filetype := img[strings.LastIndex(img, ".")+1:]
+		if filetype == "gif" || filetype == "GIF" {
+			filetype = "jpg"
+		}
 		index := strings.LastIndex(img, ".")
-		return img[0:index]+"t"+img[index:len(img)]
+		return img[0:index]+"t."+filetype
 
 	},
 }
