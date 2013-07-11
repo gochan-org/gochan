@@ -5,7 +5,6 @@ import (
 	"code.google.com/p/go.crypto/bcrypt"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -149,12 +148,6 @@ func createSession(key string,username string, password string, request *http.Re
 }
 
 var manage_functions = map[string]ManageFunction{
-	"initialsetup": {
-		Permissions: 0,
-		Callback: func() string {
-			html,_ := ioutil.ReadFile(config.DocumentRoot+"/index.html")
-			return string(html)
-	}},
 	"error": {
 		Permissions: 0,
 		Callback: func() (html string) {
@@ -538,10 +531,12 @@ var manage_functions = map[string]ManageFunction{
 			var board_arr []interface{}
 			var front_arr []interface{}
 
-			os.Remove("html/index.html")
-			front_file,err := os.OpenFile("html/index.html",os.O_CREATE|os.O_RDWR,0777)
+			os.Remove(path.Join(config.DocumentRoot,"index.html"))
+			front_file,err := os.OpenFile(path.Join(config.DocumentRoot,"index.html"),os.O_CREATE|os.O_RDWR,0777)
 			defer func() {
-				front_file.Close()
+				if front_file != nil {
+					front_file.Close()
+				}
 			}()
 			if err != nil {
 				return err.Error()
