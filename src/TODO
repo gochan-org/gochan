@@ -1,10 +1,8 @@
-- Clean up library dependencies
+- Load error html pages into memory and use templating
 - Set up daemonization
 - Set up load balancing
 - Clean up config file template
 - Set up HTTPS for management
-- Set up templating
 - Set up timezone adjusting
 - Give administrator server control options (restart/shutdown daemon, etc)
-- Set up basic posting/board interaction
-- find out what changes were made in Kusaba 0.9.3 to fix XSS vulnerability
+- Set up thread creation
