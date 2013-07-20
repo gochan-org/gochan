@@ -152,7 +152,7 @@ func initTemplates() {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_boardpage.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
-	img_boardpage_tmpl_str = "{{$config := getInterface .Data 0}}{{$thread_arr := getInterface .Data 1}}{{$post_arr := getInterface .Data 2}}{{$board_arr := getInterface .Data 3}}{{$section_arr := getInterface .Data 4}}{{$op := getInterface $post_arr 0}}{{$boardid := subtract $op.BoardID 1}}{{$board := getInterface $board_arr.Data $boardid}}" + string(img_boardpage_tmpl_bytes)
+	img_boardpage_tmpl_str = "{{$config := getInterface .Data 0}}{{$board_arr := getInterface .Data 1}}{{$section_arr := getInterface .Data 2}}{{$thread_arr := getInterface .Data 3}}{{$board_info := getInterface .Data 4}}{{$board := getInterface $board_info.Data 0}}" + string(img_boardpage_tmpl_bytes)
 	img_boardpage_tmpl,tmpl_err = template.New("img_boardpage_tmpl").Funcs(funcMap).Parse(img_boardpage_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_boardpage.html: \"" + tmpl_err.Error())

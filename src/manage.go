@@ -507,6 +507,7 @@ var manage_functions = map[string]ManageFunction{
 			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
+					  	"<a href=\"javascript:void(0)\" id=\"rebuildboards\" class=\"staffmenu-item\">Rebuild board pages</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildthreads\" class=\"staffmenu-item\">Rebuild threads</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
@@ -620,6 +621,86 @@ var manage_functions = map[string]ManageFunction{
 		Permissions:3,
 		Callback: func() (html string) {
 			//html += manage_functions["rebuildfront"].Callback()+"\n<br />\n"
+			return
+	}},
+	"rebuildboards": {
+		Permissions:3,
+		Callback: func() (html string) {
+			initTemplates()
+			boards := getBoardArr("")
+			sections := getSectionArr("")
+			if boards != nil {
+				for _,board := range boards {
+					var interfaces []interface{}
+					var threads []interface{}
+					op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
+					if err != nil {
+						html += err.Error() + "<br />"
+						op_posts = make([]interface{},0)
+					}
+
+					// yes I know there's a better way to do this, minimizing the number of sql statements made, sorting and splitting it in the code, but I'll fix that later
+					for _,op_post_i := range op_posts {
+						var thread Thread
+						var posts_in_thread []interface{}
+						op_post := op_post_i.(PostTable)
+						thread.IName = "thread"
+
+						if op_post.Stickied {
+							posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND (`id` = "+strconv.Itoa(op_post.ID)+" OR `parentid` = "+strconv.Itoa(op_post.ID)+") LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage))
+						} else {
+							posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND (`id` = "+strconv.Itoa(op_post.ID)+" OR `parentid` = "+strconv.Itoa(op_post.ID)+") LIMIT "+strconv.Itoa(config.RepliesOnBoardpage))							
+						}
+
+						if err != nil {
+							html += err.Error()+"<br />"
+							posts_in_thread = make([]interface{},0)
+						} else {
+							thread.Posts = posts_in_thread
+						}
+						threads = append(threads, thread)
+					}
+
+				    interfaces = append(interfaces, config)
+
+				    var boards_i []interface{}
+				    for _,b := range boards {
+				    	boards_i = append(boards_i,b)
+				    }
+				    var boardinfo_i []interface{}
+				    boardinfo_i = append(boardinfo_i,board)
+
+				    interfaces = append(interfaces, &Wrapper{IName: "boards", Data: boards_i})
+				    interfaces = append(interfaces, &Wrapper{IName: "sections", Data: sections})
+				    interfaces = append(interfaces, &Wrapper{IName: "threads", Data: threads})
+				    interfaces = append(interfaces, &Wrapper{IName: "boardinfo", Data: boardinfo_i})
+
+					wrapped := &Wrapper{IName: "boardpage",Data: interfaces}
+					os.Remove(path.Join(config.DocumentRoot,board.Dir,"index.html"))
+					
+					board_file,err := os.OpenFile(path.Join(config.DocumentRoot,board.Dir,"index.html"),os.O_CREATE|os.O_RDWR,0777)
+					if err != nil {
+						html += err.Error()
+					}
+
+					defer func() {
+						if uhoh, ok := recover().(error); ok {
+							error_log.Write(TemplateExecutionError.Error())
+							fmt.Println(uhoh.Error())
+						}
+					}()
+					err = img_boardpage_tmpl.Execute(board_file,wrapped)
+					if err != nil {
+						html += "Failed building /"+board.Dir+"/: "+err.Error()
+						error_log.Write(err.Error())
+					} else {
+						html += "/"+board.Dir+"/ built successfully.<br />"
+					}
+
+				}
+			} else {
+				html = "Failed building board pages."
+			}
 			return
 	}},
 	"rebuildthreads": {

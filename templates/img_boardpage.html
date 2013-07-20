@@ -1,3 +1,7 @@
+{{len $board_info.Data}}
+{{range $i,$b := $board_info.Data}}
+{{$b.Dir}}
+{{end}}
 <!DOCTYPE html>
 <html>
 <head>
@@ -26,11 +30,6 @@
 		<span id="board-subtitle">{{$board.Subtitle}}</span>
 	</div>
 	<hr />
-	<div id="threadlinks-top">
-		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/board.html" >Return</a><br />
-		<a href="{{$op.ID}}-100.html">First 100 posts</a><br />
-		<a href="{{$op.ID}}+50.html">Last 50 posts</a><br />
-	</div>
 	<div id="right-sidelinks">
 		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/catalog.html">Board catalog</a><br />
 	</div>
@@ -40,8 +39,8 @@
 		<a href="#">Open Quick Reply box</a>
 		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			<table id="postbox-static">
-				<input type="hidden" name="threadid" value="{{$op.ID}}" />
-				<input type="hidden" name="boardid" value="{{$op.BoardID}}" />
+				<input type="hidden" name="threadid" value="0" />
+				<input type="hidden" name="boardid" value="{{$board.ID}}" />
 				<tr><td class="postblock">Name</td><td><input type="text" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
 				<tr><td class="postblock">Email</td><td><input type="text" name="postemail" maxlength="75" size="28" /></td></tr>
 				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
@@ -54,7 +53,7 @@
 	</div>
 	<hr />
 	<div id="content">
-		{{range $t, $thread := $thread_arr.Data}}<div class="thread" id="{{$op.ID}}">{{range $post_num,$post := $post_arr}}{{if intEq $post_num 0}}
+		{{range $t, $thread := $thread_arr.Data}}{{$post := getInterface $thread.Posts $t}}{{$op := getInterface $thread.Posts 0}}<div class="thread" id="{{$op.ID}}">{{range $post_num,$post := $thread.Posts}}{{if intEq $post_num 0}}
 			{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
 				<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>{{end}}
 			<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="subject">{{$post.Subject}}</span> <span class="postername"><a href="mailto:{{$post.Email}}">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</a></span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#{{$post.ID}}">No.</a> <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#i{{$post.ID}}">{{$post.ID}}</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
@@ -73,9 +72,7 @@
 		</div>{{end}}
 		<hr />
 		<div id="left-bottom-content">
-			<table id="pages" border="1">
-				<tr><td>Previous</td><td>[0] [<a href="{{$op.ID}}p1.html">1</a>]</td><td><input type="button" value="Next" onclick="window.location.href = '{{$op.ID}}p1.html'" /></td></tr>
-			</table>
+			
 			
 			<span id="boardmenu-bottom">
 				[{{range $i, $board := $board_arr.Data}}  {{if gt $i 0}}/{{end}} <a href="/{{$board.Dir}}/">{{$board.Dir}}</a> {{end}}]
@@ -83,10 +80,6 @@
 		</div>
 
 		<div id="right-bottom-content">
-			<span id="threadlinks-bottom">
-				[<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/board.html">Return</a>] [<a href="{{$op.ID}}-100.html">First 100 posts</a>] [<a href="{{$op.ID}}+50.html">Last 50 posts</a>]
-			</span>
-			
 			<div id="report-delbox">
 				<form action="/post" method="POST">
 					<label>[<input type="checkbox" name="fileonly"/>File only] <input type="password" size="10" name="password" /> <input type="submit" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />

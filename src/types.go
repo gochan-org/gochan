@@ -30,6 +30,11 @@ type RecentPost struct {
 	IP string
 }
 
+type Thread struct {
+	IName string
+	Posts []interface{}
+}
+
 // SQL Table structs
 
 type AnnouncementsTable struct {
@@ -86,40 +91,6 @@ type BoardsTable struct {
 	DefaultStyle string
 	Locked bool
 	CreatedOn time.Time
-	Anonymous string
-	ForcedAnon bool
-	MaxAge int
-	MarkPage int
-	AutosageAfter int
-	NoImagesAfter int
-	MaxMessageLength int
-	EmbedsAllowed string
-	RedirectToThread bool
-	ShowId bool
-	CompactList bool
-	EnableNofile bool
-	EnableCatalog bool
-}
-
-// because text/template doesn't seem to be able to take Time objects
-type TemplateFriendlyBoardsTable struct {
-	IName string
-	ID int
-	Order int
-	Dir string
-	Type int
-	FirstPost int
-	UploadType int
-	Title string
-	Subtitle string
-	Description string
-	Section int
-	MaxImageSize int
-	MaxPages int
-	Locale string
-	DefaultStyle string
-	Locked bool
-	CreatedOn string
 	Anonymous string
 	ForcedAnon bool
 	MaxAge int
@@ -227,38 +198,6 @@ type PostTable struct {
 	Autosage int
 	PosterAuthority int
 	DeletedTimestamp time.Time
-	Bumped time.Time
-	Stickied bool
-	Locked bool
-	Reviewed bool
-	Sillytag bool
-}
-
-type TemplateFriendlyPostTable struct {
-	IName string
-	ID int
-	BoardID int
-	ParentID int
-	Name string
-	Tripcode string
-	Email string
-	Subject string
-	Message string
-	Password string
-	Filename string
-	FilenameOriginal string
-	FileChecksum string
-	Filesize int
-	ImageW int
-	ImageH int
-	ThumbW int
-	ThumbH int
-	IP string
-	Tag string
-	Timestamp string
-	Autosage int
-	PosterAuthority int
-	DeletedTimestamp string
 	Bumped time.Time
 	Stickied bool
 	Locked bool
