@@ -16,6 +16,7 @@ import (
 	"path"
 	"regexp"
 	"./lib/resize"
+	"database/sql"
 	"strconv"
 	"strings"
 	"syscall"
@@ -26,6 +27,7 @@ var (
 	UnsupportedFiletypeError =  errors.New("Upload filetype not supported")
 	FileWriteError = errors.New("Couldn't write file")
 	TemplateExecutionError = errors.New("Failed executing template")
+	last_post PostTable
 )
 
 func generateTripCode(input string) string {
@@ -36,9 +38,80 @@ func generateTripCode(input string) string {
 	return crypt(input,salt)[3:]
 }
 
-func buildBoardPages(board_dir string) (err error) {
+func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) (html string) {
+	var board BoardsTable
+	for b,_ := range boards {
+		if boards[b].ID == boardid {
+			board = boards[b]
+		}
+	}
+
+	var interfaces []interface{}
+	var threads []interface{}
+	op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 ORDER BY `bumped` ASC LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
+	if err != nil {
+		html += err.Error() + "<br />"
+		op_posts = make([]interface{},0)
+	}
+
+	// yes I know there's a better way to do this, minimizing the number of sql statements made, sorting and splitting it in the code, but I'll fix that later
+	for _,op_post_i := range op_posts {
+		var thread Thread
+		var posts_in_thread []interface{}
+		op_post := op_post_i.(PostTable)
+		thread.IName = "thread"
+
+		if op_post.Stickied {
+			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND (`id` = "+strconv.Itoa(op_post.ID)+" OR `parentid` = "+strconv.Itoa(op_post.ID)+") LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage))
+		} else {
+			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND (`id` = "+strconv.Itoa(op_post.ID)+" OR `parentid` = "+strconv.Itoa(op_post.ID)+") LIMIT "+strconv.Itoa(config.RepliesOnBoardpage))							
+		}
+
+		if err != nil {
+			html += err.Error()+"<br />"
+			posts_in_thread = make([]interface{},0)
+		} else {
+			thread.Posts = posts_in_thread
+		}
+		threads = append(threads, thread)
+	}
+
+    interfaces = append(interfaces, config)
+
+    var boards_i []interface{}
+    for _,b := range boards {
+    	boards_i = append(boards_i,b)
+    }
+    var boardinfo_i []interface{}
+    boardinfo_i = append(boardinfo_i,board)
+
+    interfaces = append(interfaces, &Wrapper{IName: "boards", Data: boards_i})
+    interfaces = append(interfaces, &Wrapper{IName: "sections", Data: sections})
+    interfaces = append(interfaces, &Wrapper{IName: "threads", Data: threads})
+    interfaces = append(interfaces, &Wrapper{IName: "boardinfo", Data: boardinfo_i})
+
+	wrapped := &Wrapper{IName: "boardpage",Data: interfaces}
+	os.Remove(path.Join(config.DocumentRoot,board.Dir,"board.html"))
 	
-	return err
+	board_file,err := os.OpenFile(path.Join(config.DocumentRoot,board.Dir,"board.html"),os.O_CREATE|os.O_RDWR,0777)
+	if err != nil {
+		html += err.Error()
+	}
+
+	defer func() {
+		if uhoh, ok := recover().(error); ok {
+			error_log.Write(TemplateExecutionError.Error())
+			fmt.Println(uhoh.Error())
+		}
+	}()
+	err = img_boardpage_tmpl.Execute(board_file,wrapped)
+	if err != nil {
+		html += "Failed building /"+board.Dir+"/: "+err.Error()
+		error_log.Write(err.Error())
+	} else {
+		html += "/"+board.Dir+"/ built successfully.<br />"
+	}
+	return
 }
 
 func buildThread(op_post PostTable, is_reply bool) (err error) {
@@ -57,7 +130,6 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 
 	var board_dir string
 	for _,board_i := range board_arr {
-		//fmt.Println(board_i.ID)
 		board := board_i
 		if board.ID == op_post.BoardID {
 			board_dir = board.Dir
@@ -206,6 +278,7 @@ func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
 
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
+
 	post_sql_str := "INSERT INTO `"+config.DBprefix+"posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
 	if post.Filename != "" {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
@@ -226,7 +299,6 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 	} else {
 		post_sql_str += "0);"
 	}
-	//fmt.Println(post_sql_str)
 	_,err := db.Exec(post_sql_str)
 
 	if err != nil {
@@ -244,6 +316,34 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.IName = "post"
 	post.ParentID,_ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID,_ = strconv.Atoi(request.FormValue("boardid"))
+
+	var count int
+	var postid int
+	var boardid int
+
+	err := db.QueryRow("SELECT (SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(post.BoardID)+") AS `count`, `"+config.DBprefix+"posts`.`id` AS `id`, `"+config.DBprefix+"boards`.`id` AS `boardid` FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` WHERE `boardid` = "+strconv.Itoa(post.BoardID)+" ORDER BY `"+config.DBprefix+"posts`.`id` DESC LIMIT 1").Scan(&count,&postid,&boardid)
+	
+	if err != nil {
+		if err == sql.ErrNoRows {
+			count = 0
+		} else {
+			error_log.Write(err.Error())
+			exitWithErrorPage(w, err.Error())
+			return
+		}
+	}
+
+	if count == 0 {
+		var first_post int
+		err = db.QueryRow("SELECT `first_post` FROM `"+config.DBprefix+"boards` WHERE `id` = "+strconv.Itoa(post.BoardID)+" LIMIT 1").Scan(&first_post)
+		if err != nil {
+			error_log.Write(err.Error())
+			exitWithErrorPage(w, err.Error())
+		}
+		post.ID = first_post
+	} else {
+		post.ID = postid + 1
+	}
 	
 	post_name := escapeString(request.FormValue("postname"))
 	if strings.Index(post_name, "#") == -1 {
@@ -277,7 +377,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.IP = request.RemoteAddr
 	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()
-	post.Bumped = post.Timestamp
+	post.Bumped = time.Now()
 	post.Stickied = request.FormValue("modstickied") == "on"
 	post.Locked = request.FormValue("modlocked") == "on"
 
@@ -391,8 +491,15 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		buildThread(post,false)
 	}
+	boards := getBoardArr("")
+	sections := getSectionArr("")
+	buildBoardPages(post.BoardID, boards, sections)
 	if email_command == "noko" {
-		http.Redirect(writer,&request,"/test/res/1.html",http.StatusFound)
+		if post.ParentID == 0 {
+			http.Redirect(writer,&request,"/test/res/"+strconv.Itoa(post.ID)+".html",http.StatusFound)
+		} else {
+			http.Redirect(writer,&request,"/test/res/"+strconv.Itoa(post.ParentID)+".html",http.StatusFound)
+		}
 	} else {
 		http.Redirect(writer,&request,"/test/",http.StatusFound)
 	}
