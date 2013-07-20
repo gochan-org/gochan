@@ -37,7 +37,7 @@ func generateTripCode(input string) string {
 }
 
 func buildBoardPages(board_dir string) (err error) {
-	_,err = getPostArr("LIMIT 10;")
+	
 	return err
 }
 
@@ -49,7 +49,6 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 		op_id = strconv.Itoa(op_post.ID)
 	}
 	thread_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
-    fmt.Printf("board_arr_i length: %d\n",len(thread_posts))
 	if err != nil {
 		exitWithErrorPage(writer,err.Error())
 	}

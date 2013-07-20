@@ -1,7 +1,3 @@
-{{len $board_info.Data}}
-{{range $i,$b := $board_info.Data}}
-{{$b.Dir}}
-{{end}}
 <!DOCTYPE html>
 <html>
 <head>
@@ -53,27 +49,24 @@
 	</div>
 	<hr />
 	<div id="content">
-		{{range $t, $thread := $thread_arr.Data}}{{$post := getInterface $thread.Posts $t}}{{$op := getInterface $thread.Posts 0}}<div class="thread" id="{{$op.ID}}">{{range $post_num,$post := $thread.Posts}}{{if intEq $post_num 0}}
+		{{range $t, $thread := $thread_arr.Data}}{{range $post_num,$post := $thread.Posts}}{{$post := getInterface $thread.Posts $post_num}}<div class="thread" id="{{$post.ID}}">{{if intEq $post_num 0}}
 			{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
 				<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>{{end}}
-			<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="subject">{{$post.Subject}}</span> <span class="postername"><a href="mailto:{{$post.Email}}">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</a></span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#{{$post.ID}}">No.</a> <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#i{{$post.ID}}">{{$post.ID}}</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+			<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="subject">{{$post.Subject}}</span> <span class="postername"><a href="mailto:{{$post.Email}}">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</a></span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#{{$post.ID}}">No.</a> <a href="/{{$board.Dir}}/res/{{$post.ID}}.html#i{{$post.ID}}">{{$post.ID}}</a></label> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span> [<a href="/{{$board.Dir}}/res/{{$post.ID}}.html">View</a>] </span><br />
 			<div class="posttext">
 				{{$post.Message}}
-			</div>{{else}}
-			<div class="post" id="{{$post.ID}}">
+			</div>{{else}}<b>{{subtract len $thread.Posts 4}} omitted</b>
+			{{if gt $post_num 1}}<div class="post" id="{{$post.ID}}">
 				<label class="post-info"><input type="checkbox" id="{{$post.ID}}" /> <span class="postername">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="135693079632">No.</a> <a href="{{$post.ID}}i">{{$post.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 				{{if stringNeq $post.Filename ""}}<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}},{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
 				<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>{{end}}
-
 				<div class="posttext">
 					{{$post.Message}}
 				</div>
-			</div>{{end}}{{end}}
-		</div>{{end}}
-		<hr />
+			</div>{{end}}{{end}}{{end}}
+		</div><hr />{{end}}
+
 		<div id="left-bottom-content">
-			
-			
 			<span id="boardmenu-bottom">
 				[{{range $i, $board := $board_arr.Data}}  {{if gt $i 0}}/{{end}} <a href="/{{$board.Dir}}/">{{$board.Dir}}</a> {{end}}]
 			</span>

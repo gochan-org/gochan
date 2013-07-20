@@ -698,7 +698,9 @@ var manage_functions = map[string]ManageFunction{
 					}
 
 				}
-			} else {
+			} else if len(boards) == 0 {
+				html = "No boards to build. Create a board first."
+			} else if boards == nil{
 				html = "Failed building board pages."
 			}
 			return
