@@ -630,9 +630,9 @@ var manage_functions = map[string]ManageFunction{
 	"rebuildall": {
 		Permissions:3,
 		Callback: func() (html string) {
-			html += rebuildfront()+"<hr />"
-			html += rebuildboards()+"<hr />"
-			html += rebuildthreads()+"<hr />"
+			html += rebuildfront()+"<hr />\n"
+			html += rebuildboards()+"<hr />\n"
+			html += rebuildthreads()+"\n"
 			return
 	}},
 	"rebuildboards": {
@@ -725,14 +725,14 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			//do := request.FormValue("do")
 			html = "<h1>Staff</h1><br />\n" +
-					"<table border=\"1\"><tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
+					"<table id=\"stafftable\" border=\"1\"><tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
 		 	rows,err := db.Query("SELECT `username`,`rank`,`boards`,`added_on` FROM `"+config.DBprefix+"staff`;")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return
 			}
 
-			iter := 0
+			iter := 1
 			for rows.Next() {
 				staff := new(StaffTable)
 				err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn)
@@ -740,6 +740,21 @@ var manage_functions = map[string]ManageFunction{
 	    			error_log.Write(err.Error())
 	    			return err.Error()
 	    		}
+
+				if request.FormValue("do") == "add" {
+					new_username := request.FormValue("username")
+					new_password := request.FormValue("password")
+					new_rank := request.FormValue("rank")
+					_,err := db.Exec("INSERT INTO `"+config.DBprefix+"staff` (`username`, `password_checksum`, `rank`) VALUES('"+new_username+"','"+bcrypt_sum(new_password)+"', '"+new_rank+"');")
+					if err != nil {
+						exitWithErrorPage(writer,err.Error())
+					}
+				} else if request.FormValue("do") == "del" && request.FormValue("username") != "" {
+					_,err := db.Exec("DELETE FROM `"+config.DBprefix+"staff` WHERE `username` = '"+request.FormValue("username")+"'")
+					if err != nil {
+						exitWithErrorPage(writer,err.Error())
+					}
+				}
 
 	    		var rank string
 	    		switch {
@@ -750,10 +765,10 @@ var manage_functions = map[string]ManageFunction{
 	    			case staff.Rank == 1:
 	    				rank = "janitor"
 	    		} 
-			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(iter)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"/manage?action=staff&do=del&username="+staff.Username+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    iter += 1
 			}
-			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\nUsername: <input id=\"username\" type=\"text\" /><br />\nPassword: <input id=\"password\" type=\"password\" /><br />\n<select id=\"rank\"><option value=\"3\">Admin</option>\n<option value=\"2\">Moderator</option>\n<option value=\"1\">Janitor</option>\n</select><br />\n<button id=\"submitnewstaff\">Add</button>"
+			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n<form action=\"manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\"><input type=\"hidden\" name=\"do\" value=\"add\" />Username: <input id=\"username\" name=\"username\" type=\"text\" /><br />\nPassword: <input id=\"password\" name=\"password\" type=\"password\" /><br />\nRank: <select id=\"rank\" name=\"rank\"><option value=\"3\">Admin</option>\n<option value=\"2\">Moderator</option>\n<option value=\"1\">Janitor</option>\n</select><br />\n<input id=\"submitnewstaff\" type=\"submit\" value=\"Add\" /></form>"
 
 			return
 	}},

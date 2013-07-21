@@ -8,6 +8,49 @@ function getManagePage() {
 	
 }
 
+function makeNewStaff() {
+	var on_manage_page = false; // true to submit, false for ajax;
+	if(window.location.pathname == "/manage") {
+		on_manage_page = true;
+	} else {
+		var username_txt = $jq("input#username").val();
+		var password_txt = $jq("input#password").val();
+		var rank_sel = $jq("select#rank").val();
+		$jq.ajax({
+			method: 'POST',
+			url: webroot+"manage?action=staff",
+			data: {
+				"do":"add",
+				username: username_txt,
+				password: password_txt,
+				rank: rank_sel,
+				boards: "all"
+			},
+			cache: false,
+			async:true,
+			success: function(result) {
+				var rank_str;
+				switch(rank_sel) {
+					case "3":
+						rank_str = "admin";
+						break;
+					case "2":
+						rank_str = "mod";
+						break;
+					case "1":
+						rank_str = "janitor";
+						break;
+				}
+				$jq("table#stafftable tr:last").after("<tr><td>"+username_txt+"</td><td>"+rank_str+"</td><td>all</td><td>now</td><td></td></tr>")
+			},
+			error: function() {
+				alert("Something went wrong...")
+			}
+		});
+	}
+	return on_manage_page;	
+}
+
 function getStaff() {
 	var s;
 	$jq.ajax({
