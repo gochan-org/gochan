@@ -9,7 +9,9 @@
 		var webroot = "{{$config.SiteWebfolder}}"
 	</script>
 	<script type="text/javascript" src="/javascript/gochan.js"></script>
+	<script type="text/javascript" src="/javascript/manage.js"></script>
 
+	
 	<link rel="stylesheet" href="/css/global/front.css" />
 {{range $i, $style := $config.Styles_img}}
 	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}

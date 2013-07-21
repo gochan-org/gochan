@@ -21,6 +21,9 @@ type ManageFunction struct {
 var (
 	StaffNotFoundErr = errors.New("Username doesn't exist")
 	PasswordMismatchErr = errors.New("Incorrect password")
+	rebuildfront func() string
+	rebuildboards func() string
+	rebuildthreads func() string
 )
 
 func callManageFunction(w http.ResponseWriter, r *http.Request) {
@@ -49,8 +52,14 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	if _,ok := manage_functions[action]; ok {
 		if staff_rank >= manage_functions[action].Permissions {
+			if action == "rebuildall" {
+				rebuildfront = manage_functions["rebuildfront"].Callback
+				rebuildboards = manage_functions["rebuildboards"].Callback
+				rebuildthreads = manage_functions["rebuildthreads"].Callback
+			}
 			manage_page_buffer.Write([]byte(manage_functions[action].Callback()))
 		} else if staff_rank == 0 && manage_functions[action].Permissions == 0 {
 			manage_page_buffer.Write([]byte(manage_functions[action].Callback()))
@@ -506,6 +515,7 @@ var manage_functions = map[string]ManageFunction{
 			if rank == 3 {
 			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
+					  	"<a href=\"javascript:void(0)\" id=\"rebuildall\" class=\"staffmenu-item\">Rebuild all</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildboards\" class=\"staffmenu-item\">Rebuild board pages</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildthreads\" class=\"staffmenu-item\">Rebuild threads</a><br />\n" +
@@ -620,7 +630,9 @@ var manage_functions = map[string]ManageFunction{
 	"rebuildall": {
 		Permissions:3,
 		Callback: func() (html string) {
-			//html += manage_functions["rebuildfront"].Callback()+"\n<br />\n"
+			html += rebuildfront()+"<hr />"
+			html += rebuildboards()+"<hr />"
+			html += rebuildthreads()+"<hr />"
 			return
 	}},
 	"rebuildboards": {
@@ -635,8 +647,11 @@ var manage_functions = map[string]ManageFunction{
 					return
 				}
 
-				for _,board := range boards {
-					html += buildBoardPages(board.ID,boards,sections) + "<br />"
+				for b,board := range boards {
+					html += buildBoardPages(board.ID,boards,sections)
+					if b < len(boards) -1 {
+						html += "<br />"
+					}
 				}
 			} else {
 				html = "Failed building board pages."
@@ -734,12 +749,12 @@ var manage_functions = map[string]ManageFunction{
 	    				rank = "mod"
 	    			case staff.Rank == 1:
 	    				rank = "janitor"
-
 	    		} 
 			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"action=staff%%26do=del%%26index="+strconv.Itoa(iter)+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    iter += 1
 			}
-			html += "</table>"
+			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\nUsername: <input id=\"username\" type=\"text\" /><br />\nPassword: <input id=\"password\" type=\"password\" /><br />\n<select id=\"rank\"><option value=\"3\">Admin</option>\n<option value=\"2\">Moderator</option>\n<option value=\"1\">Janitor</option>\n</select><br />\n<button id=\"submitnewstaff\">Add</button>"
+
 			return
 	}},
 }
