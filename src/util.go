@@ -23,7 +23,6 @@ var (
 )
 
 const (
-	mysql_datetime_format = "2006-01-02 15:04:05"
 	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
 )
 
@@ -75,7 +74,7 @@ func getBoardArr(where string) (boards []BoardsTable) {
 	}
 	rows,err := db.Query("SELECT * FROM `"+config.DBprefix+"boards` WHERE "+where+" ORDER BY `order`;")
 	if err != nil {
-		error_log.Write(err.Error())
+		error_log.Print(err.Error())
 		return
 	}
 	for rows.Next() {
@@ -83,7 +82,7 @@ func getBoardArr(where string) (boards []BoardsTable) {
 		board.IName = "board"
 		err = rows.Scan(&board.ID,&board.Order,&board.Dir,&board.Type,&board.FirstPost,&board.UploadType,&board.Title,&board.Subtitle,&board.Description,&board.Section, &board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.MarkPage, &board.AutosageAfter, &board.NoImagesAfter,&board.MaxMessageLength,&board.EmbedsAllowed,&board.RedirectToThread,&board.ShowId,&board.CompactList,&board.EnableNofile,&board.EnableCatalog)
 		if err != nil {
-			error_log.Write(err.Error())
+			error_log.Print(err.Error())
 			fmt.Println(err.Error())
 			return
 		} else {
@@ -96,14 +95,14 @@ func getBoardArr(where string) (boards []BoardsTable) {
 func getPostArr(sql string) (posts []interface{},err error) {
 	rows,err := db.Query(sql)
 	if err != nil {
-		error_log.Write(err.Error())
+		error_log.Print(err.Error())
 		return
 	}
 	for rows.Next() {
 		var post PostTable
 		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
 		if err != nil {
-			error_log.Write(err.Error())
+			error_log.Print(err.Error())
 			return
 		}
 		posts = append(posts, post)
@@ -117,7 +116,7 @@ func getSectionArr(where string) (sections []interface{}) {
 	}
 	rows,err := db.Query("SELECT * FROM `"+config.DBprefix+"sections` WHERE "+where+" ORDER BY `order`;")
 	if err != nil {
-		error_log.Write(err.Error())
+		error_log.Print(err.Error())
 		return
 	}
 
@@ -127,7 +126,7 @@ func getSectionArr(where string) (sections []interface{}) {
 
 		err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation)
 		if err != nil {
-			error_log.Write(err.Error())
+			error_log.Print(err.Error())
 			return
 		}
 		sections = append(sections, section)

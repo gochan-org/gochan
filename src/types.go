@@ -3,7 +3,7 @@ package main
 import (
 	"code.google.com/p/goconf/conf"
 	"fmt"
-	"github.com/Eggbertx/go-logfile"
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -15,9 +15,9 @@ var (
 	c *conf.ConfigFile
 	needs_initial_setup = true
 	config GochanConfig
-	access_log logfile.Log
-	error_log logfile.Log
-	mod_log logfile.Log
+	access_log *log.Logger
+	error_log *log.Logger
+	mod_log *log.Logger
 	read_banned_ips []string
 )
 
@@ -399,19 +399,28 @@ func initConfig() {
 		fmt.Println("directories.log_dir not set in config.cfg, defaulting to "+config.LogDir)
 	}
 
-	access_log,err = logfile.OpenLogFile(config.LogDir+"/access.log",false)
+	access_log_f,err := os.OpenFile(path.Join(config.LogDir,"access.log"), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		fmt.Println("Couldn't open access log. Returned error: "+err.Error())
+		os.Exit(1)
+	} else {
+		access_log = log.New(access_log_f,"",log.Ltime|log.Ldate)
+
 	}
 
-	error_log,err = logfile.OpenLogFile(config.LogDir+"/error.log",false)
+	error_log_f,err := os.OpenFile(path.Join(config.LogDir,"error.log"), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		fmt.Println("Couldn't open error log. Returned error: "+err.Error())
+		os.Exit(1)
+	} else {
+		error_log = log.New(error_log_f,"",log.Ltime|log.Ldate)
 	}
 
-	mod_log,err = logfile.OpenLogFile(config.LogDir+"/mod.log",false)
+	mod_log_f,err := os.OpenFile(path.Join(config.LogDir,"mod.log"), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		fmt.Println("Couldn't open mod log. Returned error: "+err.Error())
+	} else {
+		mod_log = log.New(mod_log_f,"",log.Ltime|log.Ldate)
 	}
 
 	config.DBtype,err = c.GetString("database", "type")

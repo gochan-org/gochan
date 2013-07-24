@@ -113,7 +113,7 @@ func getStaffRank() int {
 
   	staff,err := getStaff(staffname)
   	if err != nil {
-  		error_log.Write(err.Error())
+  		error_log.Print(err.Error())
   		return 0
   	}
   	return staff.Rank
@@ -123,19 +123,19 @@ func createSession(key string,username string, password string, request *http.Re
 	//returs 0 for successful, 1 for password mismatch, and 2 for other
 
 	if !validReferrer(*request) {
-		mod_log.Write("Rejected login from possible spambot @ : "+request.RemoteAddr)
+		mod_log.Print("Rejected login from possible spambot @ : "+request.RemoteAddr)
 		return 2
 	}
   	staff,err := getStaff(username)
   	if err != nil {
   		fmt.Println(err.Error())
-  		error_log.Write(err.Error())
+  		error_log.Print(err.Error())
   		return 1
   	} else {
   		success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 		if success == bcrypt.ErrMismatchedHashAndPassword {
 			// password mismatch
-			mod_log.Write("Failed login (password mismatch) from "+request.RemoteAddr+" at "+getSQLDateTime())
+			mod_log.Print("Failed login (password mismatch) from "+request.RemoteAddr+" at "+getSQLDateTime())
 			return 1
   		} else {
 			// successful login
@@ -143,12 +143,12 @@ func createSession(key string,username string, password string, request *http.Re
 			http.SetCookie(*writer, cookie)
 			_,err := db.Exec("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 				return 2
 			}
 			_,err = db.Exec("UPDATE `"+config.DBprefix+"staff` SET `last_active` ='"+getSQLDateTime()+"' WHERE `username` = '"+username+"';")
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 			}
 			return 0
   		}
@@ -224,7 +224,7 @@ var manage_functions = map[string]ManageFunction{
 
 		  	rows,err := db.Query("SELECT `subject`,`message`,`poster`,`timestamp` FROM `"+config.DBprefix+"announcements` ORDER BY `id` DESC;")
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 				html += err.Error()
 				return
 			}
@@ -276,7 +276,7 @@ var manage_functions = map[string]ManageFunction{
 			staff := new(StaffTable)
 			err = row.Scan(&staff.Rank,&staff.Boards)
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 				html += err.Error()
 				return
 			}
@@ -556,7 +556,7 @@ var manage_functions = map[string]ManageFunction{
 			// get boards from db and push to variables to be put in an interface
 		  	rows,err := db.Query("SELECT `dir`,`title`,`subtitle`,`description`,`section` FROM `"+config.DBprefix+"boards` ORDER BY `order`;")
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 				return err.Error()
 			}
 
@@ -565,7 +565,7 @@ var manage_functions = map[string]ManageFunction{
 				board.IName = "board"
 				err = rows.Scan(&board.Dir, &board.Title, &board.Subtitle, &board.Description, &board.Section)
 				if err != nil {
-					error_log.Write(err.Error())
+					error_log.Print(err.Error())
 					return err.Error()
 				}
 			    board_arr = append(board_arr,board)
@@ -574,7 +574,7 @@ var manage_functions = map[string]ManageFunction{
 			// get sections from db and push to variables to be put in an interface
 		  	rows,err = db.Query("SELECT `id`,`order`,`hidden` FROM `"+config.DBprefix+"sections` ORDER BY `order`;")
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 				return err.Error()
 			}
 			for rows.Next() {
@@ -582,7 +582,7 @@ var manage_functions = map[string]ManageFunction{
 				section.IName = "section"
 				err = rows.Scan(&section.ID, &section.Order, &section.Hidden)
 				if err != nil {
-					error_log.Write(err.Error())
+					error_log.Print(err.Error())
 					return err.Error()
 				}
 			    section_arr = append(section_arr, section)
@@ -591,7 +591,7 @@ var manage_functions = map[string]ManageFunction{
 			// get front pages
 			rows,err = db.Query("SELECT * FROM `"+config.DBprefix+"frontpage`;")
 			if err != nil {
-				error_log.Write(err.Error())
+				error_log.Print(err.Error())
 				return err.Error()
 			}
 
@@ -600,7 +600,7 @@ var manage_functions = map[string]ManageFunction{
 				frontpage.IName = "front page"
 				err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
 				if err != nil {
-					error_log.Write(err.Error())
+					error_log.Print(err.Error())
 					return err.Error()
 				}
 				front_arr = append(front_arr,frontpage)
@@ -706,7 +706,7 @@ var manage_functions = map[string]ManageFunction{
 				recentpost := new(RecentPost)
 				err = rows.Scan(&recentpost.BoardName, &recentpost.BoardID, &recentpost.PostID, &recentpost.ParentID, &recentpost.Message, &recentpost.IP)
 				if err != nil {
-					error_log.Write(err.Error())
+					error_log.Print(err.Error())
 					return err.Error()
 				}
 				html += "<tr><td><b>Post:</b> <a href=\""+path.Join(config.SiteWebfolder,recentpost.BoardName,"/res/",strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID))+"\">"+recentpost.BoardName+"/"+strconv.Itoa(recentpost.PostID)+"</a><br /><b>IP:</b> "+recentpost.IP+"</td><td>"+recentpost.Message+"</td><td>"+strconv.Itoa(recentpost.BoardID)+"</td></tr>"
@@ -737,7 +737,7 @@ var manage_functions = map[string]ManageFunction{
 				staff := new(StaffTable)
 				err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn)
 	    		if err != nil {
-	    			error_log.Write(err.Error())
+	    			error_log.Print(err.Error())
 	    			return err.Error()
 	    		}
 

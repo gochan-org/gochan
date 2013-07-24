@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"io"
-	"os"
 	"fmt"
 	"database/sql"
 	_ "github.com/ziutek/mymysql/godrv"
@@ -11,10 +10,10 @@ import (
 
 const (
 	nil_timestamp = "0000-00-00 00:00:00"
+	mysql_datetime_format = "2006-01-02 15:04:05"
 )
 
 var (
-	//db mysql.Conn
 	db *sql.DB
 	db_connected = false
 )
@@ -69,13 +68,12 @@ func escapeQuotes(txt string) string {
 
 
 
-func connectToSQLServer(usedb bool) {
+func connectToSQLServer() {
 	var err error
 	db, err = sql.Open("mymysql", config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
 	if err != nil {
-		error_log.Write(err.Error())
 		fmt.Println("Failed to connect to the database, see log for details.")
-		os.Exit(2)
+		error_log.Fatal(err.Error())
 	}
 	db_connected = true
 }

@@ -27,9 +27,8 @@ func initServer() {
 	}
 	listener,err := net.Listen("tcp", config.Domain+":"+strconv.Itoa(config.Port))
 	if(err != nil) {
-		error_log.Write(err.Error())
 		fmt.Printf("Failed listening on "+config.Domain+":%d, see log for details",config.Port)
-		os.Exit(2)
+		error_log.Fatal(err.Error())
 	}
 	http.Handle("/", makeHandler(fileHandle))
 	http.Handle("/manage",makeHandler(callManageFunction))
@@ -48,7 +47,6 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 
 	filepath := path.Join(config.DocumentRoot, request_url)
 	results,err := os.Stat(filepath)
-	restricted := false // if true, user doesn't have permission to view the file, because read-banned, etc
 
 	if err == nil {
 		//the file exists, or there is a folder here
@@ -73,16 +71,7 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 		} else {
 			//the file exists, and is not a folder
 			//writer.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", 500))
-			if request_url == path.Join(config.SiteWebfolder+"javascript/manage.js") {
-				if getStaffRank() == 0 {
-					// we aren't logged in and tried to access manage.js
-					restricted = true
-				}
-			}
-
-			if !restricted {
-				serveFile(w, filepath)
-			}
+			serveFile(w, filepath)
 		}
 	} else {
 		//there is nothing at the requested address
@@ -116,7 +105,7 @@ func redirect(location string) {
 
 func error404() {
 	http.ServeFile(writer, &request, path.Join(config.DocumentRoot, "/error/404.html"))
-	error_log.Write("Error: 404 Not Found from " + request.RemoteAddr + " @ " + request.RequestURI)
+	error_log.Print("Error: 404 Not Found from " + request.RemoteAddr + " @ " + request.RequestURI)
 }
 
 func validReferrer(request http.Request) (valid bool) {
@@ -132,12 +121,12 @@ func serverError() {
 	if _, ok := recover().(error); ok {
 		//something went wrong, now we need to throw a 500
 		http.ServeFile(writer,&request, path.Join(config.DocumentRoot, "/error/500.html"))
-		error_log.Write("Error: 500 Internal Server error from " + request.RemoteAddr + " @ " + request.RequestURI)	
+		error_log.Print("Error: 500 Internal Server error from " + request.RemoteAddr + " @ " + request.RequestURI)	
 		return
 	}
 }
 
 func serveFile(w http.ResponseWriter, filepath string) {
 	http.ServeFile(w, &request, filepath)
-	access_log.Write("Success: 200 from " + request.RemoteAddr + " @ " + request.RequestURI)
+	access_log.Print("Success: 200 from " + request.RemoteAddr + " @ " + request.RequestURI)
 }

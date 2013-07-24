@@ -5,17 +5,16 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 )
 
 func runInitialSetup() {
 	if !db_connected {
-		connectToSQLServer(false)
+		connectToSQLServer()
 	}
 	loadInitialSetupFile()
 	db.Close()
-	connectToSQLServer(true)
+	connectToSQLServer()
 }
 
 func loadInitialSetupFile() {
@@ -33,7 +32,7 @@ func loadInitialSetupFile() {
 				if err != nil {
 					fmt.Println("failed.")
 					db.Exec("USE `"+config.DBname+"`;")
-					error_log.Write(err.Error())
+					error_log.Fatal(err.Error())
 					return
 				} 
 			}
@@ -42,7 +41,6 @@ func loadInitialSetupFile() {
 		fmt.Println("complete.")
 		db.Exec("USE `"+config.DBname+"`;")
 	} else {
-		error_log.Write("failed. Couldn't load initial sql file")
-		os.Exit(2)
+		error_log.Fatal("failed. Couldn't load initial sql file")
 	}
 }

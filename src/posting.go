@@ -100,14 +100,14 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 
 	defer func() {
 		if uhoh, ok := recover().(error); ok {
-			error_log.Write(TemplateExecutionError.Error())
+			error_log.Print(TemplateExecutionError.Error())
 			fmt.Println(uhoh.Error())
 		}
 	}()
 	err = img_boardpage_tmpl.Execute(board_file,wrapped)
 	if err != nil {
 		html += "Failed building /"+board.Dir+"/: "+err.Error()
-		error_log.Write(err.Error())
+		error_log.Print(err.Error())
 	} else {
 		html += "/"+board.Dir+"/ built successfully.<br />"
 	}
@@ -159,7 +159,7 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 
 	defer func() {
 		if _, ok := recover().(error); ok {
-			error_log.Write(TemplateExecutionError.Error())
+			error_log.Print(TemplateExecutionError.Error())
 		}
 	}()
 	err = img_thread_tmpl.Execute(thread_file,wrapped)
@@ -327,7 +327,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		if err == sql.ErrNoRows {
 			count = 0
 		} else {
-			error_log.Write(err.Error())
+			error_log.Print(err.Error())
 			exitWithErrorPage(w, err.Error())
 			return
 		}
@@ -337,7 +337,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		var first_post int
 		err = db.QueryRow("SELECT `first_post` FROM `"+config.DBprefix+"boards` WHERE `id` = "+strconv.Itoa(post.BoardID)+" LIMIT 1").Scan(&first_post)
 		if err != nil {
-			error_log.Write(err.Error())
+			error_log.Print(err.Error())
 			exitWithErrorPage(w, err.Error())
 		}
 		post.ID = first_post
@@ -383,7 +383,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
 	if !validReferrer(request) {
-		access_log.Write("Rejected post from possible spambot @ : "+request.RemoteAddr)
+		access_log.Print("Rejected post from possible spambot @ : "+request.RemoteAddr)
 		//TODO: insert post into temporary post table and add to report list
 	}
 	file,handler,uploaderr := request.FormFile("imagefile")
@@ -391,7 +391,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		// no file was uploaded
 		fmt.Println(uploaderr.Error())
 		post.Filename = ""
-		access_log.Write("Receiving post from "+request.RemoteAddr+", referred from: "+request.Referer())
+		access_log.Print("Receiving post from "+request.RemoteAddr+", referred from: "+request.Referer())
 
 	} else {
 		data,err := ioutil.ReadAll(file)
@@ -440,7 +440,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				}
 				
 
-				access_log.Write("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
+				access_log.Print("Receiving post with image: "+handler.Filename+" from "+request.RemoteAddr+", referrer: "+request.Referer())
 
 				if(request.FormValue("spoiler") == "on") {
 					_,err := os.Stat(path.Join(config.DocumentRoot,"spoiler.png"))

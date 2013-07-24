@@ -19,7 +19,7 @@ func main() {
 	//check if initialsetup file exists
 	if err != nil {
 		needs_initial_setup = false
-		connectToSQLServer(true)
+		connectToSQLServer()
 	} else {
 		needs_initial_setup = true
 		runInitialSetup()
@@ -27,6 +27,9 @@ func main() {
 	fmt.Println("Loading and parsing templates...")
 	initTemplates()
 	fmt.Println("Initializing server...")
+	if db != nil {
+		db.Exec("USE `"+config.DBname+"`;")
+	}
 	go initServer()
 	select {}
 }
