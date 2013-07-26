@@ -182,6 +182,9 @@ var manage_functions = map[string]ManageFunction{
 	"login":{
 		Permissions: 0,
 		Callback: func() (html string) {
+			if getStaffRank() > 0 {
+				http.Redirect(writer,&request,path.Join(config.SiteWebfolder,"manage"),http.StatusFound)
+			}
 			username := request.FormValue("username")
 			password := request.FormValue("password")
 			redirect_action := request.FormValue("action")
