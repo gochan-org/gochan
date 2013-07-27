@@ -127,56 +127,6 @@
 	z-index:8999;
 }
 
-.lightbox {
-	background-color:#CDCDCD;
-	border:1px solid #000;
-	bottom:5%;
-	color:#000;
-	left:20%;
-	padding:16px;
-	position:fixed;
-	right:20%;
-	top:5%;
-	z-index:9001;
-}
-
-.lightbox-bg {
-	background-attachment:fixed;
-	background-color:#333;
-	height:100%;
-	left:0px;
-	opacity:0.5;
-	position:fixed;
-	top:0px;
-	width:100%;
-	z-index:9000;
-}
-
-.lightbox-footer {
-	bottom:5%;
-	clear:both;
-	left:16px;
-	position:absolute;
-	right:16px;
-	text-align:center;
-}
-
-.lightbox-title {
-	font-size:42px;
-	font-weight:700;
-	text-align:center;
-}
-
-.lightbox-x {
-	color:#000;
-	float:right;
-	z-index:90002;
-}
-
-.lightbox-x:hover {
-	color:#000;
-}
-
 .plus {
 	float:right;
 	padding:0px 4px;
@@ -281,4 +231,16 @@ ul.boardmenu {
 	list-style:none;
 	margin:0px;
 	padding-left:0;
+}
+
+div.file-deleted-box {
+	width: 120px;
+	height: 120px;
+	border-style: dashed;
+	vertical-align: middle;
+	text-align: center;
+	line-height: 120px;
+	float: left;
+	margin:4px 8px;
+	border-width: 2px;
 }

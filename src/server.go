@@ -33,7 +33,7 @@ func initServer() {
 	http.Handle("/", makeHandler(fileHandle))
 	http.Handle("/manage",makeHandler(callManageFunction))
 	http.Handle("/post",makeHandler(makePost))
-	//http.Handle("/util",makeHandler(utilHandler))
+	http.Handle("/util",makeHandler(utilHandler))
 	http.Serve(listener, nil)
 }
 
@@ -76,6 +76,74 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 	} else {
 		//there is nothing at the requested address
 		error404()
+	}
+}
+
+func utilHandler(writer http.ResponseWriter, request *http.Request) {
+	action := request.FormValue("action")
+	board := request.PostFormValue("board")
+	if action == "" && request.PostFormValue("delete_btn") != "Delete" && request.PostFormValue("report_btn") != "Report" {
+		http.Redirect(writer,request,path.Join(config.SiteWebfolder,"/"),http.StatusFound)
+		return
+	}
+	var posts_arr []string
+	for key,value := range request.PostForm {
+		if strings.Index(key,"check") == 0 {
+			posts_arr = append(posts_arr,key[5:])
+		}
+		fmt.Printf("%s: %s\n",key,value)
+	}
+	if request.PostFormValue("delete_btn") == "Delete" {
+		file_only := request.FormValue("fileonly") == "on"
+		for _,post := range posts_arr {
+			var parent_id int
+			var filename string
+			var filetype string
+			err := db.QueryRow("SELECT `parentid`,`filename` FROM `"+config.DBprefix+"posts` WHERE `id` = "+post+";").Scan(&parent_id,&filename)
+			if err != nil {
+				fmt.Fprintf(writer,err.Error())
+				return
+			}
+			
+			if file_only {
+				if filename != "" {
+					filetype = filename[strings.Index(filename,".")+1:]
+					filename = filename[:strings.Index(filename,".")]
+					err := os.Remove(path.Join(config.DocumentRoot,board,"/src/"+filename+"."+filetype))
+					if err != nil {
+						fmt.Fprintf(writer,err.Error())
+						return
+					}
+					err = os.Remove(path.Join(config.DocumentRoot,board,"/thumb/"+filename+"t."+filetype))
+					if err != nil {
+						fmt.Fprintf(writer,err.Error())
+						fmt.Println("1")
+						return
+					}
+					_,err = db.Exec("UPDATE `"+config.DBprefix+"posts` SET `filename` = 'deleted' WHERE `id` = "+post+";")
+					if err != nil {
+						fmt.Fprintf(writer,err.Error())
+						fmt.Println("2")
+						return
+					}
+				}
+				fmt.Println("file only")				
+			} else {
+					fmt.Println("not file only")
+				if parent_id > 0 {
+					var board_id int
+					err := db.QueryRow("SELECT `id` FROM `"+config.DBprefix+"boards` WHERE `dir` = "+board).Scan(&board_id)
+					if err != nil {
+						fmt.Fprintf(writer,err.Error())
+						return
+					}
+					os.Remove(path.Join(config.DocumentRoot,board,"/res/index.html"))
+					post_int,err := strconv.Atoi(post)
+					buildThread(post_int, board_id)
+				}
+				_,err = db.Exec("DELETE FROM `"+config.DBprefix+"posts` WHERE `id` = "+post)
+			}
+		}
 	}
 }
 

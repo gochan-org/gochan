@@ -114,14 +114,8 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 	return
 }
 
-func buildThread(op_post PostTable, is_reply bool) (err error) {
-	var op_id string
-	if is_reply {
-		op_id = strconv.Itoa(op_post.ParentID)
-	} else {
-		op_id = strconv.Itoa(op_post.ID)
-	}
-	thread_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+op_id+" OR `id` = "+op_id+") AND `boardid` = "+strconv.Itoa(op_post.BoardID))
+func buildThread(op_id int, board_id int) (err error) {
+	thread_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
 	if err != nil {
 		exitWithErrorPage(writer,err.Error())
 	}
@@ -131,7 +125,7 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
 	var board_dir string
 	for _,board_i := range board_arr {
 		board := board_i
-		if board.ID == op_post.BoardID {
+		if board.ID == op_id {
 			board_dir = board.Dir
 
 			break
@@ -149,9 +143,9 @@ func buildThread(op_post PostTable, is_reply bool) (err error) {
     interfaces = append(interfaces, &Wrapper{IName:"sections", Data: sections_arr})
 
 	wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
-	os.Remove(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"))
+	os.Remove(path.Join(config.DocumentRoot,board_dir+"/res/"+strconv.Itoa(op_id)+".html"))
 	
-	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+op_id+".html"),os.O_CREATE|os.O_RDWR,0777)
+	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+strconv.Itoa(op_id)+".html"),os.O_CREATE|os.O_RDWR,0777)
 
 	if err != nil {
 		return err
@@ -482,14 +476,18 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	insertPost(&w, post,email_command != "sage")
 	if post.ParentID > 0 {
-		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID))
+		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
 
-		buildThread(post_arr[0].(PostTable),true)
+		buildThread(post_arr[0].(PostTable).ParentID,post_arr[0].(PostTable).BoardID)
 	} else {
-		buildThread(post,false)
+		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
+		if err != nil {
+			exitWithErrorPage(writer,err.Error())
+		}
+		buildThread(post_arr[0].(PostTable).ID,post_arr[0].(PostTable).BoardID)
 	}
 	boards := getBoardArr("")
 	sections := getSectionArr("")

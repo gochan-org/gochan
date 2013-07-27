@@ -170,7 +170,9 @@ var manage_functions = map[string]ManageFunction{
 			html = "<h1>Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">"+statement+"</textarea>\n<input type=\"submit\" />\n</form>"
 		  	if statement != "" {
 		  		html += "<hr />"
-			  	_,sqlerr := db.Exec(statement)
+				result,sqlerr := db.Exec(statement)
+				fmt.Println(result)
+
 				if sqlerr != nil {
 					html += sqlerr.Error()
 				} else {
@@ -676,7 +678,7 @@ var manage_functions = map[string]ManageFunction{
 				//template_friendly_op_post := TemplateFriendlyPostTable{op_post.IName, op_post.ID,op_post.BoardID,op_post.ParentID, op_post.Name, op_post.Tripcode, op_post.Email, op_post.Subject, op_post.Message, op_post.Password, op_post.Filename, op_post.FilenameOriginal, op_post.FileChecksum, op_post.Filesize, op_post.ImageW, op_post.ImageH, op_post.ThumbW, op_post.ThumbH, op_post.IP, op_post.Tag, humanReadableTime(op_post.Timestamp), op_post.Autosage, op_post.PosterAuthority, humanReadableTime(op_post.DeletedTimestamp), humanReadableTime(op_post.Bumped), op_post.Stickied, op_post.Locked, op_post.Reviewed, op_post.Sillytag}
 
 
-				err := buildThread(op_post,false)
+				err := buildThread(op_post.ID,op_post.BoardID)
 				if err != nil {
 					success = false
 					html += err.Error()+"<br />"
