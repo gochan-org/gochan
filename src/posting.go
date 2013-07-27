@@ -125,7 +125,7 @@ func buildThread(op_id int, board_id int) (err error) {
 	var board_dir string
 	for _,board_i := range board_arr {
 		board := board_i
-		if board.ID == op_id {
+		if board.ID == board_id {
 			board_dir = board.Dir
 
 			break
@@ -144,7 +144,6 @@ func buildThread(op_id int, board_id int) (err error) {
 
 	wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
 	os.Remove(path.Join(config.DocumentRoot,board_dir+"/res/"+strconv.Itoa(op_id)+".html"))
-	
 	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+strconv.Itoa(op_id)+".html"),os.O_CREATE|os.O_RDWR,0777)
 
 	if err != nil {
