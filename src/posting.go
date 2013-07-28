@@ -48,7 +48,7 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 
 	var interfaces []interface{}
 	var threads []interface{}
-	op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 ORDER BY `bumped` ASC LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
+	op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 ORDER BY `bumped` DESC LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
 	if err != nil {
 		html += err.Error() + "<br />"
 		op_posts = make([]interface{},0)
@@ -277,11 +277,18 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
 	}
 	post_sql_str += ",`ip`"
-	post_sql_str += ",`timestamp`,`poster_authority`,`stickied`,`locked`) VALUES("+strconv.Itoa(post.BoardID)+","+strconv.Itoa(post.ParentID)+",'"+post.Name+"','"+post.Tripcode+"','"+post.Email+"','"+post.Subject+"','"+post.Message+"','"+post.Password+"'"
+	post_sql_str += ",`timestamp`,`poster_authority`,"
+	if post.ParentID == 0 {
+		post_sql_str += "`bumped`,"
+	}
+	post_sql_str += "`stickied`,`locked`) VALUES("+strconv.Itoa(post.BoardID)+","+strconv.Itoa(post.ParentID)+",'"+post.Name+"','"+post.Tripcode+"','"+post.Email+"','"+post.Subject+"','"+post.Message+"','"+post.Password+"'"
 	if post.Filename != "" {
 		post_sql_str += ",'"+post.Filename+"','"+post.FilenameOriginal+"','"+post.FileChecksum+"',"+strconv.Itoa(int(post.Filesize))+","+strconv.Itoa(post.ImageW)+","+strconv.Itoa(post.ImageH)+","+strconv.Itoa(post.ThumbW)+","+strconv.Itoa(post.ThumbH)
 	}
 	post_sql_str += ",'"+post.IP+"','"+getSpecificSQLDateTime(post.Timestamp)+"',"+strconv.Itoa(post.PosterAuthority)+","
+	if post.ParentID == 0 {
+		post_sql_str += "'"+getSpecificSQLDateTime(post.Bumped)+"',"
+	}
 	if post.Stickied {
 		post_sql_str += "1,"
 	} else {
@@ -293,9 +300,14 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 		post_sql_str += "0);"
 	}
 	_,err := db.Exec(post_sql_str)
-
 	if err != nil {
 		exitWithErrorPage(*writer,err.Error())
+	}
+	if post.ParentID != 0 {
+		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `bumped` = '" + getSpecificSQLDateTime(post.Bumped) + "' WHERE `id` = " + strconv.Itoa(post.ParentID))
+		if err != nil {
+			exitWithErrorPage(*writer, err.Error())
+		}
 	}
 	return nil
 }
