@@ -58,20 +58,33 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 	for _,op_post_i := range op_posts {
 		var thread Thread
 		var posts_in_thread []interface{}
+		var limit int
+
 		op_post := op_post_i.(PostTable)
 		thread.IName = "thread"
 
 		if op_post.Stickied {
-			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND (`id` = "+strconv.Itoa(op_post.ID)+" OR `parentid` = "+strconv.Itoa(op_post.ID)+") LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage))
+			limit = config.StickyRepliesOnBoardPage
 		} else {
-			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND (`id` = "+strconv.Itoa(op_post.ID)+" OR `parentid` = "+strconv.Itoa(op_post.ID)+") LIMIT "+strconv.Itoa(config.RepliesOnBoardpage))							
+			limit = config.RepliesOnBoardpage
 		}
 
+		/*err = db.QueryRow("SELECT * FROM (SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `id` = "+strconv.Itoa(op_post.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" ORDER BY `id` DESC LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage)+" ORDER BY `id` ASC").Scan(&thread.OP)
 		if err != nil {
 			html += err.Error()+"<br />"
-			posts_in_thread = make([]interface{},0)
-		} else {
-			thread.Posts = posts_in_thread
+		}*/
+		
+		posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" LIMIT "+strconv.Itoa(limit))
+		if err != nil {
+			html += err.Error()+"<br />"
+		}
+		err = db.QueryRow("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+		if err != nil {
+			html += err.Error()+"<br />"
+		}
+		thread.OP = op_post_i
+		if len(posts_in_thread) > 0 {
+			thread.BoardReplies = posts_in_thread
 		}
 		threads = append(threads, thread)
 	}
