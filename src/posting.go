@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"errors"
 	"fmt"
+	"html"
 	"image"
 	"image/jpeg"
 	"image/gif"
@@ -54,7 +55,6 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 		op_posts = make([]interface{},0)
 	}
 
-	// yes I know there's a better way to do this, minimizing the number of sql statements made, sorting and splitting it in the code, but I'll fix that later
 	for _,op_post_i := range op_posts {
 		var thread Thread
 		var posts_in_thread []interface{}
@@ -68,11 +68,6 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 		} else {
 			limit = config.RepliesOnBoardpage
 		}
-
-		/*err = db.QueryRow("SELECT * FROM (SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `id` = "+strconv.Itoa(op_post.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" ORDER BY `id` DESC LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage)+" ORDER BY `id` ASC").Scan(&thread.OP)
-		if err != nil {
-			html += err.Error()+"<br />"
-		}*/
 		
 		posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" LIMIT "+strconv.Itoa(limit))
 		if err != nil {
@@ -387,7 +382,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	post.Subject = escapeString(request.FormValue("postsubject"))
-	post.Message = escapeString(request.FormValue("postmsg"))
+	post.Message = html.EscapeString(escapeString(request.FormValue("postmsg")))
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post.Name, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 	http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
@@ -422,7 +417,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			if thumb_filetype == "gif" {
 				thumb_filetype = "jpg"
 			}
-
+			post.FilenameOriginal = escapeString(post.FilenameOriginal)
 			post.Filename = getNewFilename()+"."+getFiletype(post.FilenameOriginal)
 			board_dir := getBoardArr("`id` = "+request.FormValue("boardid"))[0].Dir
 			file_path := path.Join(config.DocumentRoot,"/"+board_dir+"/src/",post.Filename)

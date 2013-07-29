@@ -51,43 +51,41 @@
 	<div id="content">
 		<form action="/util" method="POST" id="main-form">
 			{{range $t, $thread := $thread_arr.Data}}
-				
-					{{$post := $thread.OP}}
-					<div class="thread" id="{{$post.ID}}">
-						{{if stringNeq $post.Filename ""}}
-							{{if stringNeq $post.Filename "deleted"}}
-								<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}}x{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
-							{{end}}
-							{{if stringEq $post.Filename "deleted"}}
-								<div class="file-deleted-box">
-									<center>File removed</center>
-								</div>
-							{{else}}
-								<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>
-							{{end}}
+				{{$post := $thread.OP}}
+				<div class="thread" id="{{$post.ID}}">
+					{{if stringNeq $post.Filename ""}}
+						{{if stringNeq $post.Filename "deleted"}}
+							<span class="file-info">File: <a href="src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}}x{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
 						{{end}}
-						<label class="post-info"><input type="checkbox" id="{{$post.ID}}" name="check{{$post.ID}}" /> <span class="postername">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="135693079632">No.</a> <a href="{{$post.ID}}i">{{$post.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
-						<div class="posttext">
-							{{$post.Message}}<br />
-							{{if gt $thread.NumReplies 3}}
-								<b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b>
-							{{end}}
-						</div>
-						{{range $r, $reply := $thread.BoardReplies}}
-							<div class="post" id="{{$reply.ID}}">
-								<label class="post-info"><input type="checkbox" id="{{$reply.ID}}" name="check{{$reply.ID}}" /> <span class="postername">{{if stringEq $reply.Name ""}}{{$board.Anonymous}}{{else}}{{$reply.Name}}{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} <a href="135693079632">No.</a> <a href="{{$reply.ID}}i">{{$reply.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
-								{{if stringNeq $reply.Filename ""}}
-									<span class="file-info">File: <a href="{{$board.Dir}}/src/{{$reply.Filename}}">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}},{{$reply.ImageH}}, {{$reply.FilenameOriginal}} )</span><br />
-									<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$reply.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="thumbnail" /></a>
-								{{end}}
-								<div class="posttext">
-									{{$reply.Message}}
-								</div>
+						{{if stringEq $post.Filename "deleted"}}
+							<div class="file-deleted-box">
+								<center>File removed</center>
 							</div>
+						{{else}}
+							<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>
 						{{end}}
+					{{end}}
+					<label class="post-info"><input type="checkbox" id="{{$post.ID}}" name="check{{$post.ID}}" /> <span class="postername">{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}</span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} <a href="res/{{getThreadID $post}}.html">No.</a> <a href="res/{{getThreadID $post}}.html#{{$post.ID}}i">{{$post.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span> [<a href="res/{{$post.ID}}.html">View</a>]</span><br />
+					<div class="posttext">
+						{{$post.Message}}<br />
+						{{if gt $thread.NumReplies 3}}
+							<b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b>
+						{{end}}
+					</div>
+					{{range $r, $reply := $thread.BoardReplies}}
+						<div class="post" id="{{$reply.ID}}">
+							<label class="post-info"><input type="checkbox" id="{{$reply.ID}}" name="check{{$reply.ID}}" /> <span class="postername">{{if stringEq $reply.Name ""}}{{$board.Anonymous}}{{else}}{{$reply.Name}}{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} <a href="res/{{getThreadID $post}}.html">No.</a> <a href="res/{{getThreadID $reply}}.html#{{$reply.ID}}i">{{$reply.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+							{{if stringNeq $reply.Filename ""}}
+								<span class="file-info">File: <a href="src/{{$reply.Filename}}">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}},{{$reply.ImageH}}, {{$reply.FilenameOriginal}} )</span><br />
+								<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$reply.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="thumbnail" /></a>
+							{{end}}
+							<div class="posttext">
+								{{$reply.Message}}
+							</div>
 						</div>
-						<hr />
-				
+					{{end}}
+				</div>
+				<hr />
 			{{end}}
 
 			<div id="left-bottom-content">

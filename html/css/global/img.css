@@ -244,3 +244,7 @@ div.file-deleted-box {
 	margin:4px 8px;
 	border-width: 2px;
 }
+
+input[type=file] {
+	max-width: 275px;
+}

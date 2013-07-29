@@ -88,11 +88,10 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	var posts_arr []string
-	for key,value := range request.PostForm {
+	for key,_ := range request.PostForm {
 		if strings.Index(key,"check") == 0 {
 			posts_arr = append(posts_arr,key[5:])
 		}
-		fmt.Printf("%s: %s\n",key,value)
 	}
 	if request.PostFormValue("delete_btn") == "Delete" {
 		file_only := request.FormValue("fileonly") == "on"

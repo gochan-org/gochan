@@ -67,6 +67,15 @@ var funcMap = template.FuncMap{
 	"formatTimestamp": func(timestamp time.Time) string {
 		return humanReadableTime(timestamp)
 	},
+	"getThreadID": func(post_i interface{}) (thread int) {
+		post := post_i.(PostTable)
+		if post.ParentID == 0 {
+			thread = post.ID
+		} else {
+			thread = post.ParentID
+		}
+		return
+	},
 	"getThumbnailFilename": func(name string) string {
 		filetype := name[len(name)-4:]
 		if filetype == ".gif" || filetype == ".GIF" {
