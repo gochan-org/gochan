@@ -72,7 +72,10 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 		manage_page_buffer.Write([]byte(action + " is undefined."))
 	}
 	manage_page_buffer.Write([]byte("\n</body>\n</html>"))
-	writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+	extension := getFileExtension(request.URL.Path)
+	if extension  == "" {
+		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+	}
 	fmt.Fprintf(writer,manage_page_buffer.String())
 }
 
