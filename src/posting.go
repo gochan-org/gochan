@@ -58,30 +58,50 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 	for _,op_post_i := range op_posts {
 		var thread Thread
 		var posts_in_thread []interface{}
-		var limit int
 
 		op_post := op_post_i.(PostTable)
-		thread.IName = "thread"
 
 		if op_post.Stickied {
-			limit = config.StickyRepliesOnBoardPage
-		} else {
-			limit = config.RepliesOnBoardpage
+			thread.IName = "thread"
+
+			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" ORDER BY `id` DESC LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage))
+			if err != nil {
+				html += err.Error()+"<br />"
+			}
+			err = db.QueryRow("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+			if err != nil {
+				html += err.Error()+"<br />"
+			}
+			thread.OP = op_post_i
+			if len(posts_in_thread) > 0 {
+				thread.BoardReplies = posts_in_thread
+			}
+			threads = append(threads, thread)
 		}
-		
-		posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" LIMIT "+strconv.Itoa(limit))
-		if err != nil {
-			html += err.Error()+"<br />"
+	}
+
+	for _,op_post_i := range op_posts {
+		var thread Thread
+		var posts_in_thread []interface{}
+
+		op_post := op_post_i.(PostTable)
+		if !op_post.Stickied {
+			thread.IName = "thread"
+
+			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" LIMIT "+strconv.Itoa(config.RepliesOnBoardpage))
+			if err != nil {
+				html += err.Error()+"<br />"
+			}
+			err = db.QueryRow("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+			if err != nil {
+				html += err.Error()+"<br />"
+			}
+			thread.OP = op_post_i
+			if len(posts_in_thread) > 0 {
+				thread.BoardReplies = posts_in_thread
+			}
+			threads = append(threads, thread)
 		}
-		err = db.QueryRow("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
-		if err != nil {
-			html += err.Error()+"<br />"
-		}
-		thread.OP = op_post_i
-		if len(posts_in_thread) > 0 {
-			thread.BoardReplies = posts_in_thread
-		}
-		threads = append(threads, thread)
 	}
 
     interfaces = append(interfaces, config)
@@ -372,16 +392,16 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	email_command := ""
 	post_email := escapeString(request.FormValue("postemail"))
 	if strings.Index(post_email, "#") == -1 {
-		post.Email = post_email
+		post.Email = html.EscapeString(escapeString(post_email))
 	} else if strings.Index(post_email, "#") == 0 {
 		email_command = post_email[1:]
 	} else if strings.Index(post_email, "#") > 0 {
 		post_email_arr := strings.SplitN(post_email,"#",2)
-		post.Email = post_email_arr[0]
+		post.Email = html.EscapeString(escapeString(post_email_arr[0]))
 		email_command = post_email_arr[1]
 	}
 
-	post.Subject = escapeString(request.FormValue("postsubject"))
+	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = html.EscapeString(escapeString(request.FormValue("postmsg")))
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post.Name, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
