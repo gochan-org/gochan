@@ -72,6 +72,7 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 		manage_page_buffer.Write([]byte(action + " is undefined."))
 	}
 	manage_page_buffer.Write([]byte("\n</body>\n</html>"))
+	writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	fmt.Fprintf(writer,manage_page_buffer.String())
 }
 
@@ -428,7 +429,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 
-			html += "<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%%\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\""+dir+"\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\""+strconv.Itoa(order)+"\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\""+strconv.Itoa(firstpost)+"\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\""+title+"\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\""+subtitle+"\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\""+description+"\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\""+strconv.Itoa(section)+"\">\n<option value=\"none\">Select section...</option>\n"
+			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%%\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\"%d\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n",dir,order,firstpost,title,subtitle,description,section)
 		 	rows,err = db.Query("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
 			if err != nil {
 				html += err.Error()

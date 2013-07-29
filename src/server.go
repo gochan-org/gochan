@@ -30,14 +30,14 @@ func initServer() {
 		fmt.Printf("Failed listening on "+config.Domain+":%d, see log for details",config.Port)
 		error_log.Fatal(err.Error())
 	}
-	http.Handle("/", makeHandler(fileHandle))
+	http.Handle("/", makeHandler(mainHandle))
 	http.Handle("/manage",makeHandler(callManageFunction))
 	http.Handle("/post",makeHandler(makePost))
 	http.Handle("/util",makeHandler(utilHandler))
 	http.Serve(listener, nil)
 }
 
-func fileHandle(w http.ResponseWriter, r *http.Request) {
+func mainHandle(w http.ResponseWriter, r *http.Request) {
 	request = *r
 	writer = w
 	cookies = request.Cookies()
@@ -59,6 +59,7 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 				newpath = path.Join(filepath,config.FirstPage[i])
 				_,err := os.Stat(newpath)
 				if err == nil {
+					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 					serveFile(w, newpath)
 					found_index = true
 					break
@@ -70,7 +71,10 @@ func fileHandle(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			//the file exists, and is not a folder
-			//writer.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d, public, must-revalidate, proxy-revalidate", 500))
+			extension := getFileExtension(request_url)
+			if extension  == "html" || extension == "htm" {
+				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+			}
 			serveFile(w, filepath)
 		}
 	} else {
