@@ -1,8 +1,0 @@
-- Load error html pages into memory and use templating
-- Set up daemonization
-- Set up load balancing
-- Clean up config file template
-- Set up HTTPS for management
-- Set up timezone adjusting
-- Give administrator server control options (restart/shutdown daemon, etc)
-- Set up thread creation
