@@ -4,6 +4,11 @@ var Staff = function(name,rank,boards) {
 	this.boards = boards;
 }
 
+function addStaffButtons() {
+	$jq("input#delete-password").remove();
+	$jq("div#report-delbox").append("<input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"alert('Bans not yet implemented'); return false;\"  />")
+}
+
 function getManagePage() {
 	
 }
@@ -129,4 +134,3 @@ function openStaffLightBox(action_url) {
 		}
 	});
 }
-

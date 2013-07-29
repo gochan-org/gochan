@@ -2,6 +2,7 @@ var $jq = jQuery.noConflict();
 
 var down_arrow_symbol = "&#9660;";
 var up_arrow_symbol = "&#9650;";
+var board;
 var topbar;
 var settings_menu;
 var staff_btn;
@@ -64,10 +65,6 @@ function showLightBox(title,innerHTML) {
 
 }
 
-function generateSettingsList() {
-
-}
-
 function changeFrontPage(page_name) {
 	var tabs = $jq(".tab");
 	var pages = $jq(".page");
@@ -126,6 +123,17 @@ function changeFrontPage(page_name) {
 
 function deletePost(id) {
 	var password = prompt("Password")
+	
+	window.location = webroot + "/util?action=delete&posts="+id+"&board="+board+"&password"
+}
+
+function deleteCheckedPosts() {
+	if(confirm('Are you sure you want to delete these posts?') == true) {
+		form = $jq("form#main-form");
+		form.append("<input type=\"hidden\" name=\"action\" value=\"delete\" ");
+		form.get(0).submit();
+		return true;
+	}
 }
 
 function getArg(name) {
@@ -172,14 +180,6 @@ function isFrontPage() {
 	return page == "/" || page == "/index.html" || page == "/template.html";
 }
 
-function isBoardPage() {
-
-}
-
-function isThreadPage() {
-
-}
-
 function preparePostPreviews(is_inline) {
 	var m_type = "mousemove";
 	if(!movable_postpreviews) m_type = "mouseover";
@@ -219,6 +219,7 @@ function reportPost(id) {
 }
 
 $jq(document).ready(function() {
+	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
 	
 	topbar = $jq("div#topbar");
@@ -240,7 +241,8 @@ $jq(document).ready(function() {
 	 			var url = $jq(this).attr("id");
 				openStaffLightBox(url)
 	 		});
- 		})
+ 		});
+ 		addStaffButtons();
  	}
 
 	if(isFrontPage()) {

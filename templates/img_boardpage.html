@@ -6,7 +6,8 @@
 	<script type="text/javascript" src="/javascript/msgpack.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
-		var webroot = "{{$config.SiteWebfolder}}"
+		var webroot = "{{$config.SiteWebfolder}}";
+		var thread_type = "board";
 	</script>
 	<script type="text/javascript" src="/javascript/gochan.js"></script>
 	<script type="text/javascript" src="/javascript/manage.js"></script>
@@ -96,9 +97,9 @@
 
 			<div id="right-bottom-content">
 				<div id="report-delbox">
-					<input type="hidden" name="board" value="{{$board.Dir}}" />
-					<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?');" /><br />
-					Reason: <input type="text" size="10" name="reason" /> <input type="submit" name="report_btn" value="Report" />
+						<input type="hidden" name="board" value="{{$board.Dir}}" />
+						<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
+						Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" value="Report" />
 				</div>
 			</div>
 		</form>
