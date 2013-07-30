@@ -657,7 +657,7 @@ var manage_functions = map[string]ManageFunction{
 				}
 
 				for b,board := range boards {
-					html += buildBoardPages(board.ID,boards,sections)
+					html += buildBoardPage(board.ID,boards,sections)
 					if b < len(boards) -1 {
 						html += "<br />"
 					}

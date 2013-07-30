@@ -39,7 +39,7 @@ func generateTripCode(input string) string {
 	return crypt(input,salt)[3:]
 }
 
-func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) (html string) {
+func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (html string) {
 	var board BoardsTable
 	for b,_ := range boards {
 		if boards[b].ID == boardid {
@@ -88,7 +88,7 @@ func buildBoardPages(boardid int, boards []BoardsTable, sections []interface{}) 
 		if !op_post.Stickied {
 			thread.IName = "thread"
 
-			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" LIMIT "+strconv.Itoa(config.RepliesOnBoardpage))
+			posts_in_thread,err = getPostArr("SELECT * FROM (SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" order by `id` DESC  LIMIT "+strconv.Itoa(config.RepliesOnBoardpage)+") t ORDER BY `id` ASC")
 			if err != nil {
 				html += err.Error()+"<br />"
 			}
@@ -203,6 +203,7 @@ type ThumbnailPre struct {
 }
 
 func loadImage(file *os.File) (image.Image,error) {
+	
 	filetype := file.Name()[len(file.Name())-3:]
 	var image_obj image.Image
 	var err error
@@ -530,7 +531,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	boards := getBoardArr("")
 	sections := getSectionArr("")
-	buildBoardPages(post.BoardID, boards, sections)
+	buildBoardPage(post.BoardID, boards, sections)
 	if email_command == "noko" {
 		if post.ParentID == 0 {
 			http.Redirect(writer,&request,"/test/res/"+strconv.Itoa(post.ID)+".html",http.StatusFound)
