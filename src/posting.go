@@ -299,7 +299,7 @@ func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
 }
 
 // inserts prepared post object into the SQL table so that it can be rendered
-func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
+func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) sql.Result {
 
 	post_sql_str := "INSERT INTO `"+config.DBprefix+"posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
 	if post.Filename != "" {
@@ -328,7 +328,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 	} else {
 		post_sql_str += "0);"
 	}
-	_,err := db.Exec(post_sql_str)
+	result,err := db.Exec(post_sql_str)
 	if err != nil {
 		exitWithErrorPage(*writer,err.Error())
 	}
@@ -338,7 +338,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) error {
 			exitWithErrorPage(*writer, err.Error())
 		}
 	}
-	return nil
+	return result
 }
 
 
@@ -392,7 +392,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	post_email := escapeString(request.FormValue("postemail"))
-	if strings.Index(post_email, "#") == -1 {
+	if strings.Index(post_email,"noko") == -1 && strings.Index(post_email,"sage") == -1 {
 		post.Email = html.EscapeString(escapeString(post_email))
 	} else if strings.Index(post_email, "#") > 1 {
 		post_email_arr := strings.SplitN(post_email,"#",2)
@@ -402,6 +402,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		email_command = post_email
 		post.Email = ""
 	}
+	fmt.Println("email: "+post.Email)
 
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
@@ -515,20 +516,24 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	if post.Message == "" && post.Filename == "" {
 		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
 	}
-	insertPost(&w, post,email_command != "sage")
+	result := insertPost(&w, post,email_command != "sage")
+	if err != nil {
+		exitWithErrorPage(w, err.Error())
+	}
+	id,_ := result.LastInsertId()
+
 	if post.ParentID > 0 {
 		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
-
 		buildThread(post_arr[0].(PostTable).ParentID,post_arr[0].(PostTable).BoardID)
 	} else {
 		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
-		buildThread(post_arr[0].(PostTable).ID,post_arr[0].(PostTable).BoardID)
+		buildThread(int(id),post_arr[0].(PostTable).BoardID)
 	}
 	boards := getBoardArr("")
 	sections := getSectionArr("")

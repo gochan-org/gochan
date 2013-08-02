@@ -24,7 +24,6 @@ var (
 	rebuildfront func() string
 	rebuildboards func() string
 	rebuildthreads func() string
-	rebuildall func() string
 )
 
 func callManageFunction(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +59,6 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 				rebuildfront = manage_functions["rebuildfront"].Callback
 				rebuildboards = manage_functions["rebuildboards"].Callback
 				rebuildthreads = manage_functions["rebuildthreads"].Callback
-				rebuildall = manage_functions["rebuildall"].Callback
 			}
 			manage_page_buffer.Write([]byte(manage_functions[action].Callback()))
 		} else if staff_rank == 0 && manage_functions[action].Permissions == 0 {
@@ -201,11 +199,6 @@ var manage_functions = map[string]ManageFunction{
     				html += err.Error()
     				return
     			}
-    			_,err = os.Create(path.Join(config.DocumentRoot, board, "board.html"))
-    			if err != nil {
-    				html += err.Error()
-    				return
-    			}
 
     			_,err = db.Exec("truncate `" + config.DBprefix + "posts`")
     			if err != nil {
@@ -213,7 +206,7 @@ var manage_functions = map[string]ManageFunction{
     				return
     			}
     			html += "<br />Everything purged, rebuilding all<br />"
-    			html += rebuildall()
+    			html += rebuildboards()+"<hr />\n"
 
 			}
 			return
