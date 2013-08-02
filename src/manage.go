@@ -74,7 +74,7 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 	manage_page_buffer.Write([]byte("\n</body>\n</html>"))
 	extension := getFileExtension(request.URL.Path)
 	if extension  == "" {
-		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+		//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	}
 	fmt.Fprintf(writer,manage_page_buffer.String())
 }
@@ -705,7 +705,7 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%\" border=\"1\">\n<tr><td></td><td><b>Message</b></td><td><b>Time</b></td></tr>"
-		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
+		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip, `" + config.DBprefix + "posts`.`timestamp` AS timestamp  FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return
@@ -713,12 +713,12 @@ var manage_functions = map[string]ManageFunction{
 
 			for rows.Next() {
 				recentpost := new(RecentPost)
-				err = rows.Scan(&recentpost.BoardName, &recentpost.BoardID, &recentpost.PostID, &recentpost.ParentID, &recentpost.Message, &recentpost.IP)
+				err = rows.Scan(&recentpost.BoardName, &recentpost.BoardID, &recentpost.PostID, &recentpost.ParentID, &recentpost.Message, &recentpost.IP, &recentpost.Timestamp)
 				if err != nil {
 					error_log.Print(err.Error())
 					return err.Error()
 				}
-				html += "<tr><td><b>Post:</b> <a href=\""+path.Join(config.SiteWebfolder,recentpost.BoardName,"/res/",strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID))+"\">"+recentpost.BoardName+"/"+strconv.Itoa(recentpost.PostID)+"</a><br /><b>IP:</b> "+recentpost.IP+"</td><td>"+recentpost.Message+"</td><td>"+strconv.Itoa(recentpost.BoardID)+"</td></tr>"
+				html += "<tr><td><b>Post:</b> <a href=\""+path.Join(config.SiteWebfolder,recentpost.BoardName,"/res/",strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID))+"\">"+recentpost.BoardName+"/"+strconv.Itoa(recentpost.PostID)+"</a><br /><b>IP:</b> "+recentpost.IP+"</td><td>"+recentpost.Message+"</td><td>"+recentpost.Timestamp.Format("01/02/06, 15:04") + "</td></tr>"
 			}
 			html += "</table>"
 			return

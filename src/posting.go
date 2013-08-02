@@ -354,6 +354,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	var count int
 	var postid int
 	var boardid int
+	var email_command string
 
 	err := db.QueryRow("SELECT (SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(post.BoardID)+") AS `count`, `"+config.DBprefix+"posts`.`id` AS `id`, `"+config.DBprefix+"boards`.`id` AS `boardid` FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` WHERE `boardid` = "+strconv.Itoa(post.BoardID)+" ORDER BY `"+config.DBprefix+"posts`.`id` DESC LIMIT 1").Scan(&count,&postid,&boardid)
 	
@@ -390,16 +391,16 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		post.Tripcode = generateTripCode(post_name_arr[1])
 	}
 	
-	email_command := ""
 	post_email := escapeString(request.FormValue("postemail"))
 	if strings.Index(post_email, "#") == -1 {
 		post.Email = html.EscapeString(escapeString(post_email))
-	} else if strings.Index(post_email, "#") == 0 {
-		email_command = post_email[1:]
-	} else if strings.Index(post_email, "#") > 0 {
+	} else if strings.Index(post_email, "#") > 1 {
 		post_email_arr := strings.SplitN(post_email,"#",2)
 		post.Email = html.EscapeString(escapeString(post_email_arr[0]))
 		email_command = post_email_arr[1]
+	} else if post_email == "noko" || post_email == "sage" {
+		email_command = post_email
+		post.Email = ""
 	}
 
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))

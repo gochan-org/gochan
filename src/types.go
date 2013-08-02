@@ -28,11 +28,15 @@ type RecentPost struct {
 	ParentID int
 	Message string
 	IP string
+	Timestamp time.Time
 }
 
 type Thread struct {
 	IName string
-	Posts []interface{}
+	OP interface{}
+	NumReplies int
+	BoardReplies []interface{}
+	Stickied bool
 }
 
 // SQL Table structs

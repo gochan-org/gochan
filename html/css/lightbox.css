@@ -1,3 +1,8 @@
+.lightbox a {
+	color: #5A5A5A;
+	font-weight: bold;
+}
+
 .lightbox {
 	background-color:#CDCDCD;
 	border:1px solid #000;
