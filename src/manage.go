@@ -24,6 +24,7 @@ var (
 	rebuildfront func() string
 	rebuildboards func() string
 	rebuildthreads func() string
+	rebuildall func() string
 )
 
 func callManageFunction(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +60,7 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 				rebuildfront = manage_functions["rebuildfront"].Callback
 				rebuildboards = manage_functions["rebuildboards"].Callback
 				rebuildthreads = manage_functions["rebuildthreads"].Callback
+				rebuildall = manage_functions["rebuildall"].Callback
 			}
 			manage_page_buffer.Write([]byte(manage_functions[action].Callback()))
 		} else if staff_rank == 0 && manage_functions[action].Permissions == 0 {
@@ -165,6 +167,55 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 0,
 		Callback: func() (html string) {
 			exitWithErrorPage(writer, "lel, internet")
+			return
+	}},
+	"purgeeverything": {
+		Permissions: 3,
+		Callback: func() (html string) {
+			html = "Purging everything ^_^<br />"
+		 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
+			if err != nil {
+				html += err.Error()
+				return
+			}
+
+			for rows.Next() {
+				var board string
+				err = rows.Scan(&board)
+				if err != nil {
+					html += err.Error()
+					return
+				}
+    			err = deleteFolderContents(path.Join(config.DocumentRoot, board, "res"))
+    			if err != nil {
+    				html += err.Error()
+    				return
+    			}
+				err = deleteFolderContents(path.Join(config.DocumentRoot, board, "src"))
+    			if err != nil {
+    				html += err.Error()
+    				return
+    			}
+    			err = deleteFolderContents(path.Join(config.DocumentRoot, board, "thumb"))
+    			if err != nil {
+    				html += err.Error()
+    				return
+    			}
+    			_,err = os.Create(path.Join(config.DocumentRoot, board, "board.html"))
+    			if err != nil {
+    				html += err.Error()
+    				return
+    			}
+
+    			_,err = db.Exec("truncate `" + config.DBprefix + "posts`")
+    			if err != nil {
+    				html += err.Error() + "<br />"
+    				return
+    			}
+    			html += "<br />Everything purged, rebuilding all<br />"
+    			html += rebuildall()
+
+			}
 			return
 	}},
 	"executesql": {
@@ -523,6 +574,7 @@ var manage_functions = map[string]ManageFunction{
 				   "<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
 			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
+			  			"<a href=\"javascript:void(0)\" id=\"purgeeverything\" class=\"staffmenu-item\">Purge everything!</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildall\" class=\"staffmenu-item\">Rebuild all</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +

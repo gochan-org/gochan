@@ -8,6 +8,8 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 	"unsafe"
@@ -66,6 +68,22 @@ func byteByByteReplace(input,from, to string) string {
 		input = strings.Replace(input, from[i:i+1], to[i:i+1], -1)
 	}
 	return input
+}
+
+func walkfolder(path string, f os.FileInfo, err error) error {
+	if err != nil {
+		return err
+	}
+	if !f.IsDir() {
+		return os.Remove(path)
+	} else {
+		return nil
+	}
+}
+
+func deleteFolderContents(root string) error {
+	err := filepath.Walk(root, walkfolder)
+	return err
 }
 
 func getBoardArr(where string) (boards []BoardsTable) {
@@ -150,6 +168,15 @@ func generateSalt() string {
 	salt[1] = chars[rand.Intn(86)]
 	salt[2] = chars[rand.Intn(86)]
 	return string(salt)
+}
+
+func getFileExtension(filename string) string {
+	if strings.Index(filename, ".") == -1 {
+		return ""
+	} else if strings.Index(filename, "/") > -1 {
+		return filename[strings.LastIndex(filename,".")+1:]
+	}
+	return ""
 }
 
 func getFormattedFilesize(size float32) string {
