@@ -1,6 +1,7 @@
 package main 
 
 import (
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -59,7 +60,7 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 				newpath = path.Join(filepath,config.FirstPage[i])
 				_,err := os.Stat(newpath)
 				if err == nil {
-					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+					//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 					serveFile(w, newpath)
 					found_index = true
 					break
@@ -71,10 +72,10 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			//the file exists, and is not a folder
-			extension := getFileExtension(request_url)
+			/*extension := getFileExtension(request_url)
 			if extension  == "html" || extension == "htm" {
-				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-			}
+				//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+			}*/
 			serveFile(w, filepath)
 		}
 	} else {
@@ -100,12 +101,14 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	if request.PostFormValue("delete_btn") == "Delete" {
 		file_only := request.FormValue("fileonly") == "on"
 		password := md5_sum(request.FormValue("password"))
-		if password == "" {
-			fmt.Fprintf(writer, "Password required for post deletion")
+		rank := getStaffRank()
+
+		if request.FormValue("password") == ""  && rank == 0 {
+			exitWithErrorPage(writer, "Password required for post deletion")
 			return
 		}
-		for _,post := range posts_arr {
 
+		for _,post := range posts_arr {
 			var parent_id int
 			var filename string
 			var filetype string
@@ -114,20 +117,25 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			post_int,err := strconv.Atoi(post)
 
 			err = db.QueryRow("SELECT `parentid`,`filename`,`password` FROM `"+config.DBprefix+"posts` WHERE `id` = "+post).Scan(&parent_id,&filename,&password_checksum)
+			if err == sql.ErrNoRows {
+				//the post has already been deleted
+				fmt.Fprintf(writer, "%s has already been deleted\n",post)
+				continue
+			}
 			if err != nil {
-				fmt.Fprintf(writer,err.Error())
+				exitWithErrorPage(writer,err.Error())
 				return
 			}
 
 			err = db.QueryRow("SELECT `id` FROM `"+config.DBprefix+"boards` WHERE `dir` = '"+board+"'").Scan(&board_id)
 			if err != nil {
-				fmt.Fprintf(writer,err.Error())
+				exitWithErrorPage(writer,err.Error())
 				return
 			}
 
-			if password != password_checksum {
-				fmt.Fprintf(writer, "Incorrect password")
-				return
+			if password != password_checksum && rank == 0 {
+				fmt.Fprintf(writer, "Incorrect password for %s\n", post)
+				continue
 			}
 			
 			if file_only {
@@ -136,17 +144,17 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					filename = filename[:strings.Index(filename,".")]
 					err := os.Remove(path.Join(config.DocumentRoot,board,"/src/"+filename+"."+filetype))
 					if err != nil {
-						fmt.Fprintf(writer,err.Error())
+						exitWithErrorPage(writer,err.Error())
 						return
 					}
 					err = os.Remove(path.Join(config.DocumentRoot,board,"/thumb/"+filename+"t."+filetype))
 					if err != nil {
-						fmt.Fprintf(writer,err.Error())
+						exitWithErrorPage(writer,err.Error())
 						return
 					}
 					_,err = db.Exec("UPDATE `"+config.DBprefix+"posts` SET `filename` = 'deleted' WHERE `id` = "+post)
 					if err != nil {
-						fmt.Fprintf(writer,err.Error())
+						exitWithErrorPage(writer,err.Error())
 						return
 					}
 				}
@@ -164,10 +172,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 
 				if err != nil {
-					fmt.Println(err.Error())
-				}
-				if err != nil {
-					fmt.Fprintf(writer,err.Error())
+					exitWithErrorPage(writer,err.Error())
 					return
 				}
 				fmt.Fprintf(writer, "%s deleted successfully\n", post)
