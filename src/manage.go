@@ -717,7 +717,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			op_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
+			op_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
 			if err != nil {
 				exitWithErrorPage(writer,err.Error())
 			}
