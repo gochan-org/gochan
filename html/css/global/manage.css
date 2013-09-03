@@ -25,3 +25,7 @@
 	bottom: 0%;
 	text-align: center;
 }
+
+.section-body {
+	min-height: 48px;
+}
