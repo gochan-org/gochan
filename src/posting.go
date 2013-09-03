@@ -402,7 +402,6 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		email_command = post_email
 		post.Email = ""
 	}
-	fmt.Println("email: "+post.Email)
 
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
@@ -422,10 +421,10 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		access_log.Print("Rejected post from possible spambot @ : "+request.RemoteAddr)
 		//TODO: insert post into temporary post table and add to report list
 	}
+
 	file,handler,uploaderr := request.FormFile("imagefile")
 	if uploaderr != nil {
 		// no file was uploaded
-		fmt.Println(uploaderr.Error())
 		post.Filename = ""
 		access_log.Print("Receiving post from "+request.RemoteAddr+", referred from: "+request.Referer())
 
