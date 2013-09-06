@@ -102,7 +102,7 @@ type BoardsTable struct {
 	AutosageAfter int
 	NoImagesAfter int
 	MaxMessageLength int
-	EmbedsAllowed string
+	EmbedsAllowed bool
 	RedirectToThread bool
 	ShowId bool
 	CompactList bool
