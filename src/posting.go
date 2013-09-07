@@ -143,7 +143,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 }
 
 func buildThread(op_id int, board_id int) (err error) {
-	thread_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
+	thread_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
 	if err != nil {
 		exitWithErrorPage(writer,err.Error())
 	}
@@ -406,9 +406,9 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
 	post.Password = md5_sum(request.FormValue("postpassword"))
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post.Name, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-	http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})	
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post.Name, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})	
 	post.IP = request.RemoteAddr
 	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()
@@ -522,13 +522,13 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	id,_ := result.LastInsertId()
 
 	if post.ParentID > 0 {
-		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
+		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
 		buildThread(post_arr[0].(PostTable).ParentID,post_arr[0].(PostTable).BoardID)
 	} else {
-		post_arr,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
+		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}

@@ -264,7 +264,7 @@ var manage_functions = map[string]ManageFunction{
 			if cookie != nil {
 				key = cookie.Value
 				new_expire := time.Now().AddDate(0,0,-1)
-				new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.Domain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
+				new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.SiteDomain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
 				http.SetCookie(writer, new_cookie)
 				return "Logged out successfully"
 			}
@@ -723,7 +723,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			op_posts,err := getPostArr("SELECT * FROM `ponychan_bunker_posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
+			op_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
 			if err != nil {
 				exitWithErrorPage(writer,err.Error())
 			}
