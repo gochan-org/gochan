@@ -341,31 +341,6 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			do := request.FormValue("do")
 			board := new(BoardsTable)
-
-			/*var dir string
-			var order int
-			var title string
-			var subtitle string
-			var description string
-			var section int
-			var maximagesize int
-			var firstpost int
-			var maxpages int
-			var defaultstyle string
-			var locked bool
-			var forcedanon bool
-			var anonymous string
-			var maxage int
-			var markpage int
-			var autosageafter int
-			var noimagesafter int
-			var maxmessagelength int
-			var embedsallowed bool
-			var redirecttothread bool
-			var showid bool
-			var compactlist bool
-			var enablenofile bool
-			var enablecatalog bool*/
 			var err error
 
 			if do != "" {
@@ -460,15 +435,15 @@ var manage_functions = map[string]ManageFunction{
 						if err != nil {
 							return err.Error()
 						}
+						fmt.Println("inserted")
 						_,err := db.Exec("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`,`embeds_allowed`) VALUES('"+board.Dir+"','"+board.Dir+"','"+board.Subtitle+"','"+board.Description+"',"+section_str+",'"+board.DefaultStyle+"',"+noimagesafter_str+",0);")
 						if err != nil {
 							return err.Error();
 						}
-
 				}
 			}
 
-			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
+			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"GET\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 		 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 			if err != nil {
 				html += err.Error()
@@ -482,7 +457,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 
-			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\"%d\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.FirstPost,board.Title,board.Subtitle,board.Description,board.Section)
+			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"GET\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\"%d\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.FirstPost,board.Title,board.Subtitle,board.Description,board.Section)
 		 	rows,err = db.Query("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
 			if err != nil {
 				html += err.Error()
@@ -714,7 +689,7 @@ var manage_functions = map[string]ManageFunction{
 					}
 				}
 			} else {
-				html = "Failed building board pages."
+				html = "Failed building board pages.<br />"
 			}
 			return
 	}},
@@ -723,7 +698,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			// variables for sections table
-			op_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
+			op_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = \""+nil_timestamp+"\" AND `parentid` = 0")
 			if err != nil {
 				exitWithErrorPage(writer,err.Error())
 			}
@@ -785,7 +760,8 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			//do := request.FormValue("do")
 			html = "<h1>Staff</h1><br />\n" +
-					"<table id=\"stafftable\" border=\"1\"><tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
+					"<table id=\"stafftable\" border=\"1\">\n" +
+					"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
 		 	rows,err := db.Query("SELECT `username`,`rank`,`boards`,`added_on` FROM `"+config.DBprefix+"staff`;")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
@@ -828,7 +804,18 @@ var manage_functions = map[string]ManageFunction{
 			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"/manage?action=staff&do=del&username="+staff.Username+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    iter += 1
 			}
-			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n<form action=\"manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\"><input type=\"hidden\" name=\"do\" value=\"add\" />Username: <input id=\"username\" name=\"username\" type=\"text\" /><br />\nPassword: <input id=\"password\" name=\"password\" type=\"password\" /><br />\nRank: <select id=\"rank\" name=\"rank\"><option value=\"3\">Admin</option>\n<option value=\"2\">Moderator</option>\n<option value=\"1\">Janitor</option>\n</select><br />\n<input id=\"submitnewstaff\" type=\"submit\" value=\"Add\" /></form>"
+			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n" +
+					"<form action=\"manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +
+					"\t<input type=\"hidden\" name=\"do\" value=\"add\" />\n" +
+					"\tUsername: <input id=\"username\" name=\"username\" type=\"text\" /><br />\n" +
+					"\tPassword: <input id=\"password\" name=\"password\" type=\"password\" /><br />\n" +
+					"\tRank: <select id=\"rank\" name=\"rank\">\n" +
+							"\t\t<option value=\"3\">Admin\n" +
+							"\t\t<option value=\"2\">Moderator\n" +
+							"\t\t<option value=\"1\">Janitor\n" +
+							"\t\t</select><br />\n" +
+							"\t\t<input id=\"submitnewstaff\" type=\"submit\" value=\"Add\" />\n" +
+							"\t\t</form>"
 
 			return
 	}},

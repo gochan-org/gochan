@@ -120,10 +120,20 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 
 	wrapped := &Wrapper{IName: "boardpage",Data: interfaces}
 	os.Remove(path.Join(config.DocumentRoot,board.Dir,"board.html"))
-	
-	board_file,err := os.OpenFile(path.Join(config.DocumentRoot,board.Dir,"board.html"),os.O_CREATE|os.O_RDWR,0777)
+
+	results,err := os.Stat(path.Join(config.DocumentRoot, board.Dir))
 	if err != nil {
-		html += err.Error()
+		err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir),0777)
+		if err != nil {
+			html += "Failed creating /" + board.Dir + "/: " + err.Error() + "<br />\n"
+		}
+	} else if !results.IsDir() {
+		html += "Error: /" + board.Dir + "/ exists, but is not a folder. <br />\n"
+	}
+
+	board_file,err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"),os.O_CREATE|os.O_RDWR,0777)
+	if err != nil {
+		html += err.Error()+"<br />\n"
 	}
 
 	defer func() {
@@ -134,7 +144,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 	}()
 	err = img_boardpage_tmpl.Execute(board_file,wrapped)
 	if err != nil {
-		html += "Failed building /"+board.Dir+"/: "+err.Error()
+		html += "Failed building /"+board.Dir+"/: "+err.Error()+"<br />\n"
 		error_log.Print(err.Error())
 	} else {
 		html += "/"+board.Dir+"/ built successfully.<br />"
@@ -143,7 +153,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 }
 
 func buildThread(op_id int, board_id int) (err error) {
-	thread_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
+	thread_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
 	if err != nil {
 		exitWithErrorPage(writer,err.Error())
 	}
@@ -153,6 +163,7 @@ func buildThread(op_id int, board_id int) (err error) {
 	var board_dir string
 	for _,board_i := range board_arr {
 		board := board_i
+
 		if board.ID == board_id {
 			board_dir = board.Dir
 
@@ -448,13 +459,14 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
 				exitWithErrorPage(w,"Couldn't write file.")
+				return
 			}
 
 			image_file,err := os.OpenFile(file_path, os.O_RDONLY, 0)
 			if err != nil {
 				exitWithErrorPage(w,"Couldn't read saved file")
+				return
 			}
-			
 			img,err := loadImage(image_file)
 			if err != nil {
 				exitWithErrorPage(w,err.Error())
@@ -532,6 +544,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
+		fmt.Printf("Post arr length: %d", len(post_arr))
 		buildThread(int(id),post_arr[0].(PostTable).BoardID)
 	}
 	boards := getBoardArr("")
