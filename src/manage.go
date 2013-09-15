@@ -170,9 +170,8 @@ var manage_functions = map[string]ManageFunction{
 				html += err.Error()
 				return
 			}
-
+			var board string
 			for rows.Next() {
-				var board string
 				err = rows.Scan(&board)
 				if err != nil {
 					html += err.Error()
@@ -334,7 +333,6 @@ var manage_functions = map[string]ManageFunction{
 			do := request.FormValue("do")
 			board := new(BoardsTable)
 			var err error
-
 			if do != "" {
 				switch {
 					case do == "add":
@@ -348,6 +346,10 @@ var manage_functions = map[string]ManageFunction{
 						board.Subtitle = escapeString(request.FormValue("subtitle"))
 						board.Description = escapeString(request.FormValue("description"))
 						section_str := escapeString(request.FormValue("section"))
+						if section_str == "none" {
+							section_str = "0"
+						}
+
 						board.Section,err = strconv.Atoi(section_str)
 						if err != nil {
 							board.Section = 0
@@ -428,28 +430,30 @@ var manage_functions = map[string]ManageFunction{
 							return err.Error()
 						}
 						fmt.Println("inserted")
-						_,err := db.Exec("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`,`embeds_allowed`) VALUES('"+board.Dir+"','"+board.Dir+"','"+board.Subtitle+"','"+board.Description+"',"+section_str+",'"+board.DefaultStyle+"',"+noimagesafter_str+",0);")
+						_,err := db.Exec("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`) VALUES('"+board.Dir+"','"+board.Dir+"','"+board.Subtitle+"','"+board.Description+"',"+section_str+",'"+board.DefaultStyle+"',"+noimagesafter_str+")")
 						if err != nil {
+							fmt.Println(err.Error())
 							return err.Error();
 						}
+					case do == "del":
+						// 
 				}
 			}
 
-			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"GET\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
+			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 		 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 			if err != nil {
 				html += err.Error()
 				return
 			}
-
+			var board_dir string
 			for rows.Next() {
-				board := new(BoardsTable)
-				err = rows.Scan(&board.Dir)
-    			html += "<option>"+board.Dir+"</option>\n"
+				err = rows.Scan(&board_dir)
+    			html += "<option>"+board_dir+"</option>\n"
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 
-			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"GET\">\n<input type=\"hidden\" name=\"do\" value=\"new\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\"%d\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.FirstPost,board.Title,board.Subtitle,board.Description,board.Section)
+			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"add\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\"%d\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.FirstPost,board.Title,board.Subtitle,board.Description,board.Section)
 		 	rows,err = db.Query("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
 			if err != nil {
 				html += err.Error()
@@ -457,10 +461,10 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			iter := 0
+			var section_name string
 			for rows.Next() {
-				section := new(BoardSectionsTable)
-				err = rows.Scan(&section.Name)
-				html += "<option value=\""+strconv.Itoa(iter)+"\">"+section.Name+"</option>\n"
+				err = rows.Scan(&section_name)
+				html += "<option value=\""+strconv.Itoa(iter)+"\">"+section_name+"</option>\n"
 				iter += 1
 			}
 			html += "</select></td></tr><tr><td>Max image size</td><td><input type=\"text\" name=\"maximagesize\" value=\""+strconv.Itoa(board.MaxImageSize)+"\" /></td></tr><tr><td>Max pages</td><td><input type=\"text\" name=\"maxpages\" value=\""+strconv.Itoa(board.MaxPages)+"\" /></td></tr><tr><td>Default style</td><td><select name=\"defaultstyle\" selected=\""+board.DefaultStyle+"\">"
@@ -793,7 +797,7 @@ var manage_functions = map[string]ManageFunction{
 	    			case staff.Rank == 1:
 	    				rank = "janitor"
 	    		} 
-			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"/manage?action=staff&do=del&username="+staff.Username+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"/manage?action=staff&amp;o=del&amp;username="+staff.Username+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    iter += 1
 			}
 			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n" +
@@ -802,9 +806,9 @@ var manage_functions = map[string]ManageFunction{
 					"\tUsername: <input id=\"username\" name=\"username\" type=\"text\" /><br />\n" +
 					"\tPassword: <input id=\"password\" name=\"password\" type=\"password\" /><br />\n" +
 					"\tRank: <select id=\"rank\" name=\"rank\">\n" +
-							"\t\t<option value=\"3\">Admin\n" +
-							"\t\t<option value=\"2\">Moderator\n" +
-							"\t\t<option value=\"1\">Janitor\n" +
+							"\t\t<option value=\"3\">Admin</option>\n" +
+							"\t\t<option value=\"2\">Moderator</option>\n" +
+							"\t\t<option value=\"1\">Janitor</option>\n" +
 							"\t\t</select><br />\n" +
 							"\t\t<input id=\"submitnewstaff\" type=\"submit\" value=\"Add\" />\n" +
 							"\t\t</form>"
