@@ -55,7 +55,7 @@ func callManageFunction(w http.ResponseWriter, r *http.Request) {
 
 	if _,ok := manage_functions[action]; ok {
 		if staff_rank >= manage_functions[action].Permissions {
-			if action == "rebuildall" {
+			if action == "rebuildall" || action == "purgeeverything" {
 				rebuildfront = manage_functions["rebuildfront"].Callback
 				rebuildboards = manage_functions["rebuildboards"].Callback
 				rebuildthreads = manage_functions["rebuildthreads"].Callback
@@ -161,12 +161,6 @@ func createSession(key string,username string, password string, request *http.Re
 }
 
 var manage_functions = map[string]ManageFunction{
-	"error": {
-		Permissions: 0,
-		Callback: func() (html string) {
-			exitWithErrorPage(writer, "lel, internet")
-			return
-	}},
 	"purgeeverything": {
 		Permissions: 3,
 		Callback: func() (html string) {
@@ -199,16 +193,14 @@ var manage_functions = map[string]ManageFunction{
     				html += err.Error()
     				return
     			}
-
-    			_,err = db.Exec("truncate `" + config.DBprefix + "posts`")
-    			if err != nil {
-    				html += err.Error() + "<br />"
-    				return
-    			}
-    			html += "<br />Everything purged, rebuilding all<br />"
-    			html += rebuildboards()+"<hr />\n"
-
 			}
+			_,err = db.Exec("truncate `" + config.DBprefix + "posts`")
+			if err != nil {
+				html += err.Error() + "<br />"
+				return
+			}
+			html += "<br />Everything purged, rebuilding all<br />"
+			html += rebuildboards()+"<hr />\n"
 			return
 	}},
 	"executesql": {

@@ -534,17 +534,16 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	id,_ := result.LastInsertId()
 
 	if post.ParentID > 0 {
-		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
+		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
 		buildThread(post_arr[0].(PostTable).ParentID,post_arr[0].(PostTable).BoardID)
 	} else {
-		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "_posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
+		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
 		if err != nil {
 			exitWithErrorPage(writer,err.Error())
 		}
-		fmt.Printf("Post arr length: %d", len(post_arr))
 		buildThread(int(id),post_arr[0].(PostTable).BoardID)
 	}
 	boards := getBoardArr("")
