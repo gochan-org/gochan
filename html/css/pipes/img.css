@@ -127,14 +127,6 @@ body {
 	font-size:12pt;
 }
 
-h2 {
-	background-color:#202020;
-	border-radius:8px;
-	box-shadow:0 2px 2px 3px #101010;
-	padding-left:4px;
-	padding-right:4px;
-}
-
 input[type=text],input[type=password],input[type=file],textarea,.thread-ddown-menu {
 	background-color:#25272D;
 	border:1px solid #8C94AB;
