@@ -1,6 +1,7 @@
 -- Initial setup file for Gochan
 -- Deleted after setup is finished
 
+CREATE DATABASE IF NOT EXISTS `DBNAME`;
 USE `DBNAME`;
 
 CREATE TABLE `DBPREFIXannouncements` (
@@ -67,7 +68,7 @@ CREATE TABLE `DBPREFIXboards` (
 	`autosage_after` INT(5) UNSIGNED NOT NULL DEFAULT 200,
 	`no_images_after` INT(5) UNSIGNED NOT NULL,
 	`max_message_length` INT(10) UNSIGNED NOT NULL DEFAULT 8192,
-	`embeds_allowed` VARCHAR(45) NOT NULL,
+	`embeds_allowed` TINYINT(1) NOT NULL,
 	`redirect_to_thread` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 	`show_id` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 	`compact_list` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
