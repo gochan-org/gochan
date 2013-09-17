@@ -551,12 +551,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	buildBoardPage(post.BoardID, boards, sections)
 	if email_command == "noko" {
 		if post.ParentID == 0 {
-			http.Redirect(writer,&request,"/test/res/"+strconv.Itoa(post.ID)+".html",http.StatusFound)
+			http.Redirect(writer,&request,"/" + boards[post.BoardID-1].Dir + "/res/"+strconv.Itoa(post.ID)+".html",http.StatusFound)
 		} else {
-			http.Redirect(writer,&request,"/test/res/"+strconv.Itoa(post.ParentID)+".html",http.StatusFound)
+			http.Redirect(writer,&request, "/" + boards[post.BoardID-1].Dir + "/res/"+strconv.Itoa(post.ParentID)+".html",http.StatusFound)
 		}
 	} else {
-		http.Redirect(writer,&request,"/test/",http.StatusFound)
+		http.Redirect(writer,&request,"/" + boards[post.BoardID-1].Dir + "/",http.StatusFound)
 	}
 }
 
