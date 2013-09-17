@@ -95,10 +95,41 @@ func getBoardArr(where string) (boards []BoardsTable) {
 		error_log.Print(err.Error())
 		return
 	}
+
 	for rows.Next() {
 		board := new(BoardsTable)
+		err = rows.Scan(
+			&board.ID,
+			&board.Order,
+			&board.Dir,
+			&board.Type,
+			&board.FirstPost,
+			&board.UploadType,
+			&board.Title,
+			&board.Subtitle,
+			&board.Description,
+			&board.Section,
+			&board.MaxImageSize,
+			&board.MaxPages,
+			&board.Locale, 
+			&board.DefaultStyle, 
+			&board.Locked, 
+			&board.CreatedOn, 
+			&board.Anonymous, 
+			&board.ForcedAnon, 
+			&board.MaxAge, 
+			&board.MarkPage, 
+			&board.AutosageAfter, 
+			&board.NoImagesAfter,
+			&board.MaxMessageLength,
+			&board.EmbedsAllowed,
+			&board.RedirectToThread,
+			&board.ShowId,
+			&board.CompactList,
+			&board.EnableNofile,
+			&board.EnableCatalog,
+		)
 		board.IName = "board"
-		err = rows.Scan(&board.ID,&board.Order,&board.Dir,&board.Type,&board.FirstPost,&board.UploadType,&board.Title,&board.Subtitle,&board.Description,&board.Section, &board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.MarkPage, &board.AutosageAfter, &board.NoImagesAfter,&board.MaxMessageLength,&board.EmbedsAllowed,&board.RedirectToThread,&board.ShowId,&board.CompactList,&board.EnableNofile,&board.EnableCatalog)
 		if err != nil {
 			error_log.Print(err.Error())
 			fmt.Println(err.Error())
