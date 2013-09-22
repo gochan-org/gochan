@@ -247,7 +247,15 @@ func searchStrings(item string,arr []string,permissive bool) int {
 }
 
 func Btoi(b bool) int {
-	if b == true { return 1 }
+	if b == true {
+		return 1
+	}
 	return 0
 }
 
+func Btoa(b bool) string {
+	if b == true {
+		return "1"
+	}
+	return "0"
+}
