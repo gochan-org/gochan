@@ -430,7 +430,66 @@ var manage_functions = map[string]ManageFunction{
 							return err.Error()
 						}
 						fmt.Println("inserted")
-						_,err := db.Exec("INSERT INTO `"+config.DBprefix+"boards` (`dir`,`title`,`subtitle`,`description`,`section`,`default_style`,`no_images_after`) VALUES('"+board.Dir+"','"+board.Dir+"','"+board.Subtitle+"','"+board.Description+"',"+section_str+",'"+board.DefaultStyle+"',"+noimagesafter_str+")")
+
+						_,err := db.Exec(
+							"INSERT INTO `"+config.DBprefix+"boards` ("+
+								"`order`, " + 
+								"`dir`, " + 
+								"`type`, " + 
+								"`first_post`, " + 
+								"`upload_type`, " + 
+								"`title`, " + 
+								"`subtitle`, " + 
+								"`description`, " + 
+								"`section`, " + 
+								"`max_image_size`, " + 
+								"`max_pages`, " + 
+								"`locale`, " + 
+								"`default_style`, " + 
+								"`locked`, " + 
+								"`created_on`, " + 
+								"`anonymous`, " + 
+								"`forced_anon`, " + 
+								"`max_age`, " + 
+								"`mark_page`, " + 
+								"`autosage_after`, " + 
+								"`no_images_after`, " + 
+								"`max_message_length`, " + 
+								"`embeds_allowed`, " + 
+								"`redirect_to_thread`, " + 
+								"`show_id`, " + 
+								"`compact_list`, " + 
+								"`enable_nofile`, " + 
+								"`enable_catalog`" + 
+								") VALUES("+
+									strconv.Itoa(board.Order) + ", '" +
+									board.Dir + "', " +
+									strconv.Itoa(board.Type) + ", " +
+									strconv.Itoa(board.FirstPost) + ", " +
+									strconv.Itoa(board.UploadType) + ", '" +
+									board.Title + "', '" +
+									board.Subtitle + "', '" +
+									board.Description + "', " +
+									strconv.Itoa(board.Section) + ", " +
+									strconv.Itoa(board.MaxImageSize) + ", " + 
+									strconv.Itoa(board.MaxPages) + ", '" + 
+									board.Locale + "', '" + 
+									board.DefaultStyle + "', " + 
+									Btoa(board.Locked) + ", '" + 
+									getSpecificSQLDateTime(board.CreatedOn) + "', '" + 
+									board.Anonymous + "', " + 
+									Btoa(board.ForcedAnon) + ", " + 
+									strconv.Itoa(board.MaxAge) + ", " + 
+									strconv.Itoa(board.MarkPage) + ", " + 
+									strconv.Itoa(board.AutosageAfter) + ", " +
+									strconv.Itoa(board.NoImagesAfter) + ", " +
+									strconv.Itoa(board.MaxMessageLength) + ", " +
+									Btoa(board.EmbedsAllowed) + ", " +
+									Btoa(board.RedirectToThread) + ", " +
+									Btoa(board.ShowId) + ", " +
+									Btoa(board.CompactList) + ", " +
+									Btoa(board.EnableNofile) + ", " +
+									Btoa(board.EnableCatalog) + ")")
 						if err != nil {
 							fmt.Println(err.Error())
 							return err.Error();
