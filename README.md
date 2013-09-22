@@ -35,10 +35,9 @@ Staff can:
 		- make dropdowns close by clicking anywhere outside them
 		- set up board pagination
 		- make jquery stuff in manage pages more consistent (no reloading the whole page if in a lightbox)
-		- set up board creation
 	* Security
 		- Add banning functionality
-		- add mod tools (delete, search IP, permaban, etc) to the dropdown for staff
+		- add mod tools (search IP, permaban, etc) to the dropdown for staff
 		- check for user-agent on post submission/staff login	
 		
 + Bugs

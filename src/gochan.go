@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	version float32 = 0.4
+	version float32 = 0.5
 )
 
 
