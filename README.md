@@ -29,7 +29,6 @@ Staff can:
 
 + Important
 	* General
-		- Set up daemonization
 		- add delete post functionality on the inline post dropdown
 		- add similar dropdown to the postbox for staff with mod name, mod rank, raw html, sticky, and lock
 		- make dropdowns close by clicking anywhere outside them
