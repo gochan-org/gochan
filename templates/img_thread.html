@@ -40,7 +40,7 @@
 		<center>
 		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			<table id="postbox-static">
-				<input type="hidden" name="threadid" value="0" />
+				<input type="hidden" name="threadid" value="{{$op.ID}}" />
 				<input type="hidden" name="boardid" value="{{$board.ID}}" />
 				<tr><td class="postblock">Name</td><td><input type="text" id="postname" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
 				<tr><td class="postblock">Email</td><td><input type="text" id="postemail" name="postemail" maxlength="75" size="28" /></td></tr>
@@ -70,7 +70,7 @@
 				<div class="posttext">
 					{{$post.Message}}
 				</div>
-			</div>{{end}}{{end}}
+			</div><br clear="left" />{{end}}{{end}}
 		</div>
 		<hr />
 		<div id="left-bottom-content">
