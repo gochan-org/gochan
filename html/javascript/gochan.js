@@ -62,7 +62,6 @@ function showLightBox(title,innerHTML) {
 		$jq(".lightbox").remove();
 		$jq(".lightbox-bg").remove();
 	});
-
 }
 
 function changeFrontPage(page_name) {
@@ -123,8 +122,7 @@ function changeFrontPage(page_name) {
 
 function deletePost(id) {
 	var password = prompt("Password")
-	
-	window.location = webroot + "/util?action=delete&posts="+id+"&board="+board+"&password"
+	window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password"
 }
 
 function deleteCheckedPosts() {
@@ -175,9 +173,41 @@ function hidePost(id) {
 	if(postimg.length > 0) postimg.remove();
 }
 
+function initCookies() {
+	var name_field = $jq("input#postname");
+	var email_field = $jq("input#postemail");
+	var password_field = $jq("input#postpassword");
+	name_field.val(getCookie("name"));
+	email_field.val(getCookie("email"));
+	password_field.val(getCookie("password"));
+}
+
 function isFrontPage() {
 	var page = window.location.pathname;
 	return page == "/" || page == "/index.html" || page == "/template.html";
+}
+
+function setCookie(name,value) {
+	document.cookie = name + "=" + escape(value)
+}
+
+function getCookie(name) {
+	var c_value = document.cookie;
+	var c_start = c_value.indexOf(" " + name + "=");
+	if(c_start = -1) {
+		c_start = c_value.indexOf(name + "=");
+	}
+	if(c_start == -1) {
+		c_value = null;
+	} else {
+		c_start = c_value.indexOf("=", c_start) + 1;
+		var c_end = c_value.indexOf(";", c_start);
+		if(c_end == -1) {
+			c_end = c_value.length;
+		}
+		c_value = unescape(c_value.substring(c_start, c_end));
+	}
+	return c_value;
 }
 
 function preparePostPreviews(is_inline) {
@@ -278,4 +308,5 @@ $jq(document).ready(function() {
 			$jq("div.thread-ddown-menu").remove();
 		}
 	});
+	initCookies();
 });

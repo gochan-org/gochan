@@ -37,12 +37,12 @@
 			<table id="postbox-static">
 				<input type="hidden" name="threadid" value="0" />
 				<input type="hidden" name="boardid" value="{{$board.ID}}" />
-				<tr><td class="postblock">Name</td><td><input type="text" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
-				<tr><td class="postblock">Email</td><td><input type="text" name="postemail" maxlength="75" size="28" /></td></tr>
+				<tr><td class="postblock">Name</td><td><input type="text" id="postname" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
+				<tr><td class="postblock">Email</td><td><input type="text" id="postemail" name="postemail" maxlength="75" size="28" /></td></tr>
 				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
 				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
 				<tr><td class="postblock">File</td><td><input name="imagefile" size="31" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
-				<tr><td class="postblock">Password</td><td><input type="password" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
+				<tr><td class="postblock">Password</td><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</table>
 		</form>
 		</center>
