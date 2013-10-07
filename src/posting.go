@@ -32,14 +32,12 @@ var (
 )
 
 func generateTripCode(input string) string {
-	re := regexp.MustCompile("/[^.-z]/")
-	input = string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
-	input += "   " //padding
-	salt := byteByByteReplace(input[1:3],":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
-	fmt.Println("Input second: " + input)
-	fmt.Println("Salt: " + salt)
-	fmt.Println("Crypt: " + crypt(input,salt))
-	return "no"
+	re := regexp.MustCompile("[^\\.-z]") // remove every ASCII character before . and after z
+
+	input += "   " // padding
+	salt := string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
+	salt = byteByByteReplace(salt[1:3],":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
+
 	return crypt(input,salt)[3:]
 }
 
@@ -421,7 +419,9 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
 	post.Password = md5_sum(request.FormValue("postpassword"))
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post.Name, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	
 	if email_command == "" {
 		http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
 	} else {
