@@ -41,6 +41,7 @@ func generateTripCode(input string) string {
 	return crypt(input,salt)[3:]
 }
 
+
 func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (html string) {
 	var board BoardsTable
 	for b,_ := range boards {
@@ -203,16 +204,6 @@ func buildThread(op_id int, board_id int) (err error) {
 // checks to see if the poster's tripcode/name is banned, if the IP is banned, or if the file checksum is banned
 func checkBannedStatus(post PostTable) bool {
 	return false
-}
-
-type ThumbnailPre struct {
-	Filename_old string
-	Filename_new string
-	Filepath string
-	Width int
-	Height int
-	Obj image.Image
-	ThumbObj image.Image
 }
 
 func loadImage(file *os.File) (image.Image,error) {
@@ -467,6 +458,8 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			board_dir := getBoardArr("`id` = "+request.FormValue("boardid"))[0].Dir
 			file_path := path.Join(config.DocumentRoot,"/"+board_dir+"/src/",post.Filename)
 			thumb_path := path.Join(config.DocumentRoot,"/"+board_dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"t."+thumb_filetype,-1))
+			catalog_thumb_path := path.Join(config.DocumentRoot,"/"+board_dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"c."+thumb_filetype,-1))
+
 
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
@@ -520,16 +513,21 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					}
 				} else {
 					var thumbnail image.Image
+					var catalog_thumbnail image.Image
 					if post.ParentID == 0 {
 						thumbnail = createThumbnail(img,"op")
+						catalog_thumbnail = createThumbnail(img,"catalog")
 					} else {
 						thumbnail = createThumbnail(img,"reply")
 					}
 					err = saveImage(thumb_path, &thumbnail)
 					if err != nil {
-						exitWithErrorPage(w,err.Error())
-					} else {
-						
+						exitWithErrorPage(w, err.Error())
+					}
+					err = saveImage(catalog_thumb_path, &catalog_thumbnail)
+					if err != nil {
+						exitWithErrorPage(w, err.Error())
+						fmt.Println("error saving catalog thumb")
 					}
 				}
 			}

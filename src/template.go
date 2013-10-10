@@ -226,25 +226,12 @@ func getStyleLinks(w http.ResponseWriter, stylesheet string) {
 	}
 }
 
-func buildAll() error {
-	buildFrontPage()
-	/*
-  	results,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards")
-	var entry BoardTable
-	for results.Next() {
-		err = results.Scan(&entry.dir)
-		buildBoard(entry.dir)
-	}
-	*/
-	return nil
-}
-
 func buildFrontPage() error {
 	return nil
 }
 
-func buildBoard(dir string) error {
+func buildBoard(boardid int, page int, boards []BoardsTable, secions []interface{}) (string, error) {
 	//build board pages
 	//build board thread pages
-	return nil
+	return "", nil
 }
