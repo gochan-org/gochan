@@ -5,6 +5,7 @@ import (
 	"io"
 	"fmt"
 	"database/sql"
+	"database/sql/driver"
 	_ "github.com/ziutek/mymysql/godrv"
 )
 
@@ -70,10 +71,25 @@ func escapeQuotes(txt string) string {
 
 func connectToSQLServer() {
 	var err error
-	db, err = sql.Open("mymysql", config.DBhost+"*"+config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
-	if err != nil {
-		fmt.Println("Failed to connect to the database, see log for details.")
+ 	if needs_initial_setup {
+		db, err = sql.Open("mymysql", config.DBhost+"*mysql/"+config.DBusername+"/"+config.DBpassword)
+		if err != nil {
+			fmt.Println("Failed to connect to the database, see log for details.")
+			error_log.Fatal(err.Error())
+		}
+	} else {
+		db, err = sql.Open("mymysql", config.DBhost+"*"+config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
+		if err != nil {
+			fmt.Println("Failed to connect to the database, see log for details.")
+			error_log.Fatal(err.Error())
+		}
+	}
+	_, err = db.Exec("USE `mysql`")
+	if err == driver.ErrBadConn {
+		fmt.Println("Error: failed connecting to the database.")
 		error_log.Fatal(err.Error())
+	} else {
+		db.Exec("USE `" + config.DBname + "`")
 	}
 	db_connected = true
 }
