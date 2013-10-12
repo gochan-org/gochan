@@ -210,7 +210,7 @@ var manage_functions = map[string]ManageFunction{
 		  	if statement != "" {
 		  		html += "<hr />"
 				result,sqlerr := db.Exec(statement)
-				fmt.Println(result)
+				fmt.Println(&result)
 
 				if sqlerr != nil {
 					html += sqlerr.Error()
@@ -768,7 +768,10 @@ var manage_functions = map[string]ManageFunction{
 					success = false
 					html += err.Error()+"<br />"
 				} else {
-					html += strconv.Itoa(op_post.ID)+" built successfully<br />"
+					var board_name string
+					row := db.QueryRow("SELECT `dir` FROM `" + config.DBprefix + "boards` WHERE `id` = " + strconv.Itoa(op_post.BoardID))
+					err = row.Scan(&board_name)
+					html += board_name + "/" + strconv.Itoa(op_post.ID)+" built successfully<br />"
 				}
 			}
 			if success {

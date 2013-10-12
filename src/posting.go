@@ -144,13 +144,16 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 			error_log.Print(TemplateExecutionError.Error())
 			fmt.Println(uhoh.Error())
 		}
+		if board_file != nil {
+			board_file.Close()
+		}
 	}()
 	err = img_boardpage_tmpl.Execute(board_file,wrapped)
 	if err != nil {
 		html += "Failed building /"+board.Dir+"/: "+err.Error()+"<br />\n"
 		error_log.Print(err.Error())
 	} else {
-		html += "/"+board.Dir+"/ built successfully.<br />"
+		html += "/"+board.Dir+"/ built successfully.\n"
 	}
 	return
 }
@@ -187,7 +190,6 @@ func buildThread(op_id int, board_id int) (err error) {
 	wrapped := &Wrapper{IName: "threadpage",Data: interfaces}
 	os.Remove(path.Join(config.DocumentRoot,board_dir+"/res/"+strconv.Itoa(op_id)+".html"))
 	thread_file,err := os.OpenFile(path.Join(config.DocumentRoot,board_dir+"/res/"+strconv.Itoa(op_id)+".html"),os.O_CREATE|os.O_RDWR,0777)
-
 	if err != nil {
 		return err
 	}
@@ -195,6 +197,9 @@ func buildThread(op_id int, board_id int) (err error) {
 	defer func() {
 		if _, ok := recover().(error); ok {
 			error_log.Print(TemplateExecutionError.Error())
+		}
+		if thread_file != nil {
+			thread_file.Close()
 		}
 	}()
 	err = img_thread_tmpl.Execute(thread_file,wrapped)
@@ -207,10 +212,10 @@ func checkBannedStatus(post PostTable) bool {
 }
 
 func loadImage(file *os.File) (image.Image,error) {
-	
 	filetype := file.Name()[len(file.Name())-3:]
 	var image_obj image.Image
 	var err error
+	defer file.Close()
 
 	if filetype == "gif" {
 		image_obj,err = gif.Decode(file)
@@ -220,6 +225,7 @@ func loadImage(file *os.File) (image.Image,error) {
 		image_obj,err = png.Decode(file)
 	} else {
 		image_obj = nil
+		os.Remove(file.Name())
 		err = UnsupportedFiletypeError
 	}
 	return image_obj,err
@@ -527,7 +533,6 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					err = saveImage(catalog_thumb_path, &catalog_thumbnail)
 					if err != nil {
 						exitWithErrorPage(w, err.Error())
-						fmt.Println("error saving catalog thumb")
 					}
 				}
 			}
