@@ -483,7 +483,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				exitWithErrorPage(w,err.Error())
 			} else {
 				//post.FileChecksum string
-				stat,err := image_file.Stat()
+				stat,err := os.Stat(file_path)
 				if err != nil {
 					exitWithErrorPage(w,err.Error())
 				} else {
