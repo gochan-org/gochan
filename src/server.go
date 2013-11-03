@@ -60,7 +60,8 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 				newpath = path.Join(filepath,config.FirstPage[i])
 				_,err := os.Stat(newpath)
 				if err == nil {
-					//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+					// serve the index page
+					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 					serveFile(w, newpath)
 					found_index = true
 					break
@@ -72,10 +73,23 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			//the file exists, and is not a folder
-			/*extension := getFileExtension(request_url)
+
+			extension := getFileExtension(request_url)
+			switch {
+				case extension == "png":
+					writer.Header().Add("Cache-Control", "max-age=86400")
+				case extension == "gif":
+					writer.Header().Add("Cache-Control", "max-age=86400")
+				case extension == "jpg":
+					writer.Header().Add("Cache-Control", "max-age=86400")
+				case extension == "css":
+					writer.Header().Add("Cache-Control", "max-age=43200")
+
+			}
+
 			if extension  == "html" || extension == "htm" {
-				//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-			}*/
+				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+			}
 			serveFile(w, filepath)
 		}
 	} else {
