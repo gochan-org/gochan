@@ -202,22 +202,18 @@ function setCookie(name,value) {
 }
 
 function getCookie(name) {
-	var c_value = document.cookie;
-	var c_start = c_value.indexOf(" " + name + "=");
-	if(c_start = -1) {
-		c_start = c_value.indexOf(name + "=");
-	}
-	if(c_start == -1) {
-		c_value = null;
-	} else {
-		c_start = c_value.indexOf("=", c_start) + 1;
-		var c_end = c_value.indexOf(";", c_start);
-		if(c_end == -1) {
-			c_end = c_value.length;
+	var cookie_arr = document.cookie.split("; ");
+	for(var i = 0; i < cookie_arr.length; i++) {
+		pair = cookie_arr[i].split("=");
+		if(pair[0] == name) {
+			//var val = decodeURIComponent(pair[1]);
+			val = pair[1].replace("+", " ");
+			val = val.replace("%2B", "+");
+			val = decodeURIComponent(val);
+			alert(pair[1] + ", " + decodeURIComponent(pair[1]) + ", " +val)
+			return val;
 		}
-		c_value = unescape(c_value.substring(c_start, c_end));
 	}
-	return c_value;
 }
 
 function preparePostPreviews(is_inline) {

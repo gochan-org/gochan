@@ -3,21 +3,22 @@
 package main
 
 import (
-	"net/http"
-	"io/ioutil"
+	"database/sql"
 	"errors"
 	"fmt"
 	"html"
 	"image"
-	"image/jpeg"
 	"image/gif"
+	"image/jpeg"
 	"image/png"
+	"io/ioutil"
+	"./lib/resize"
 	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"regexp"
-	"./lib/resize"
-	"database/sql"
 	"strconv"
 	"strings"
 	"syscall"
@@ -412,18 +413,21 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		email_command = post_email
 		post.Email = ""
 	}
-
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
 	post.Password = md5_sum(request.FormValue("postpassword"))
-	
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-	
+	post_name_cookie := strings.Replace(url.QueryEscape(post_name),"+", "%20", -1)
+	url.QueryEscape(post_name_cookie)
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 	if email_command == "" {
 		http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
 	} else {
 		if email_command == "noko" {
-			http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email + "#noko", Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
+			if post.Email == "" {
+				http.SetCookie(writer, &http.Cookie{Name: "email", Value:"noko", Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})						
+			} else {
+				http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email + "#noko", Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
+			}
 		}
 	}
 
@@ -523,6 +527,10 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					if post.ParentID == 0 {
 						thumbnail = createThumbnail(img,"op")
 						catalog_thumbnail = createThumbnail(img,"catalog")
+						err = saveImage(catalog_thumb_path, &catalog_thumbnail)
+						if err != nil {
+							exitWithErrorPage(w, err.Error())
+						}
 					} else {
 						thumbnail = createThumbnail(img,"reply")
 					}
@@ -530,10 +538,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					if err != nil {
 						exitWithErrorPage(w, err.Error())
 					}
-					err = saveImage(catalog_thumb_path, &catalog_thumbnail)
-					if err != nil {
-						exitWithErrorPage(w, err.Error())
-					}
+
 				}
 			}
 		}
