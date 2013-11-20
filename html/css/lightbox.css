@@ -55,7 +55,12 @@
 }
 
 .lightbox td {
-	width: ;
+}
+
+.lightbox input[type=text], .lightbox input[type=password], .lightbox input[type=file], .lightbox textarea {
+	background-color:#FFFFFF;
+	border:1px solid #000000;
+	color:#000000;
 }
 
 .lightbox textarea#sql-statement {

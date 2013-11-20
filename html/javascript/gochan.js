@@ -11,40 +11,43 @@ var settings_arr = [];
 var current_staff;
 var lightbox_css_added = false;
 
-var SettingsMenuOption = {
-	"name":"",
-	"cookieName":"",
-	"cookieValue":"",
-	"cookieType":"",
-}
-
-var TopBarButton = function(title,callback) {
+var TopBarButton = function(title,callback_open, callback_close) {
 	this.title = title;
-	this.callback = callback;
-	this.buttonTitle = title;
 	$jq("div#topbar").append("<ul><a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\"><li>"+title+down_arrow_symbol+"</li></a></ul>");
-	this.button_jq = $jq("div#topbar a#"+title.toLowerCase());
-	this.button_jq.click(this.callback);
+	var button_open = false;
+
+	$jq("div#topbar a#"+title.toLowerCase()).click(function(event) {
+		if(!button_open) {
+			callback_open();
+			if(callback_close != null) {
+				$jq(document).bind("click", function() {
+					callback_close();
+				});
+				button_open = true;
+			}
+		} else {
+			if(callback_close != null) {
+				callback_close();
+			}
+			button_open	= false;
+		}
+		return false;
+	});
 }
 
 var DropDownMenu = function(title,menu_html) {
 	this.title = title;
-	this.open = false;
 	this.menuHTML = menu_html;
 
-	this.button = new TopBarButton(title,function() {
-		if(this.open) {
-			$jq("a#"+title.toLowerCase()).children(0).html(title+down_arrow_symbol);
-			$jq("div#"+title.toLowerCase()).remove();
-			this.open = false;
-		} else {
-			$jq("a#"+title.toLowerCase()).children(0).html(title+up_arrow_symbol);
-			topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>")
-			$jq("div#"+title.toLowerCase()).css({
-				top:topbar.height()
-			})
-			this.open = true;
-		}
+	this.button = new TopBarButton(title, function() {
+		topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>");
+		$jq("a#"+title.toLowerCase()).children(0).html(title+up_arrow_symbol);
+		$jq("div#"+title.toLowerCase()).css({
+			top:topbar.height()
+		});
+	}, function() {
+		$jq("div#"+title.toLowerCase() + ".dropdown-menu").remove();
+		$jq("a#"+title.toLowerCase()).children(0).html(title+down_arrow_symbol);
 	});
 }
 
@@ -63,6 +66,13 @@ function showLightBox(title,innerHTML) {
 		$jq(".lightbox-bg").remove();
 	});
 }
+
+/* function showLightBox(innerHTML) {
+	if(!lightbox_css_added) {
+		$ja(document).find("head").append("\t<link rel=\"stylesheet\" href=\"/css/lightbox.css\" />");
+		lightbox_css_added = true;
+	}
+} */
 
 function changeFrontPage(page_name) {
 	var tabs = $jq(".tab");
@@ -251,7 +261,7 @@ function reportPost(id) {
 $jq(document).ready(function() {
 	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
-	
+
 	topbar = $jq("div#topbar");
 	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup><tr><td><b>Style:</b></td><td><select name=\"style\" style=\"min-width:50%\">"
 	for(var i = 0; i < styles.length; i++) {
@@ -260,7 +270,7 @@ $jq(document).ready(function() {
 	settings_html+="</select></td><tr><tr><td><b>Pin top bar:</b></td><td><input type=\"checkbox\" /></td></tr><tr><td><b>Enable post previews on hover</b></td><td><input type=\"checkbox\" /></td></tr></table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>"
 
  	settings_menu = new TopBarButton("Settings",function(){
- 		showLightBox("Settings",settings_html)
+ 		showLightBox("Settings",settings_html,null)
  	});
  	watched_threads_btn = new TopBarButton("WT",function() {});
 
