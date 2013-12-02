@@ -210,7 +210,6 @@ function getCookie(name) {
 			val = pair[1].replace("+", " ");
 			val = val.replace("%2B", "+");
 			val = decodeURIComponent(val);
-			alert(pair[1] + ", " + decodeURIComponent(pair[1]) + ", " +val)
 			return val;
 		}
 	}
@@ -295,8 +294,9 @@ $jq(document).ready(function() {
 			$jq(this).html("+");
 		}
 	});
-
-	$jq(".thread-ddown a").click(function(e) {
+	thread_menu_open = false;
+	$jq(".thread-ddown a, body").click(function(e) {
+		e.stopPropagation();
 		var post_id = $jq(this).parent().parent().parent().attr("id")
 		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread"
 		
@@ -310,8 +310,10 @@ $jq(document).ready(function() {
 				"</div>";
 
 			$jq(this).parent().append(menu_html);
+			thread_menu_open = true;
 		} else {
 			$jq("div.thread-ddown-menu").remove();
+			thread_menu_open = false;
 		}
 	});
 	initCookies();
