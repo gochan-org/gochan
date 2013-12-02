@@ -133,6 +133,11 @@ input[type=text],input[type=password],input[type=file],textarea,.thread-ddown-me
 	color:#FFF;
 }
 
+.thread-ddown-menu li:hover {
+	background-color:#404040;
+
+}
+
 ul.boardmenu li:hover {
 	background:#404040;
 }
