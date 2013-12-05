@@ -300,20 +300,22 @@ $jq(document).ready(function() {
 		var post_id = $jq(this).parent().parent().parent().attr("id")
 		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread"
 		
-		if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {
-			$jq("div.thread-ddown-menu").remove();
+		if(post_id != undefined) {
+			if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {
+				$jq("div.thread-ddown-menu").remove();
 
-			menu_html = "<div class=\"thread-ddown-menu\" id=\""+post_id+"\">";
-			if(!is_op) menu_html += "<a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Show/Hide post</a><br />";
-			menu_html +="<a href=\"javascript:deletePost("+post_id+");\" class=\"delete-post\">Delete post</a><br />" +
-				"<a href=\"javascript:reportPost("+post_id+");\" class=\"report-post\">Report Post</a>" +
-				"</div>";
+				menu_html = "<div class=\"thread-ddown-menu\" id=\""+post_id+"\">";
+				if(!is_op) menu_html += "<ul><li><a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Show/Hide post</a></li>";
+				menu_html +="<li><a href=\"javascript:deletePost("+post_id+");\" class=\"delete-post\">Delete post</a></li>" +
+					"<li><a href=\"javascript:reportPost("+post_id+");\" class=\"report-post\">Report Post</a></li></ul>" +
+					"</div>";
 
-			$jq(this).parent().append(menu_html);
-			thread_menu_open = true;
-		} else {
-			$jq("div.thread-ddown-menu").remove();
-			thread_menu_open = false;
+				$jq(this).parent().append(menu_html);
+				thread_menu_open = true;
+			} else {
+				$jq("div.thread-ddown-menu").remove();
+				thread_menu_open = false;
+			}
 		}
 	});
 	initCookies();
