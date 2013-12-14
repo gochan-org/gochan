@@ -602,7 +602,7 @@ var manage_functions = map[string]ManageFunction{
 			html = "<a href=\"javascript:void(0)\" id=\"logout\" class=\"staffmenu-item\">Log out</a><br />\n" +
 				   "<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
-			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
+			  	html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"managestaff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 			  			"<a href=\"javascript:void(0)\" id=\"purgeeverything\" class=\"staffmenu-item\">Purge everything!</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					  	"<a href=\"javascript:void(0)\" id=\"rebuildall\" class=\"staffmenu-item\">Rebuild all</a><br />\n" +
@@ -813,7 +813,7 @@ var manage_functions = map[string]ManageFunction{
 			os.Exit(0)
 			return
 	}},
-	"staff": {
+	"managestaff": {
 		Permissions:3,
 		Callback: func() (html string) {
 			//do := request.FormValue("do")

@@ -12,6 +12,11 @@
 	overflow: auto;
 }
 
+.lightbox * {
+	box-shadow: 0px 0px 0px 0px #000000;
+	color:#000000;
+}
+
 .lightbox-bg {
 	background-attachment:fixed;
 	background-color:#333;
@@ -40,13 +45,13 @@
 }
 
 .lightbox-x {
-	color:#000!important;
+	color: #000000!important;
 	float:right;
 	z-index:90002;
 }
 
 .lightbox-x:hover {
-	color:#000;
+	color:#555555!important;
 }
 
 .lightbox a {
@@ -80,4 +85,5 @@
 	border: 1px solid #000000;
 	border-radius: 0px;
 	background-color: #777777;
+	box-shadow: 0px 0px 0px 0px #000000!important;
 }
