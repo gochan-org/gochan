@@ -289,6 +289,72 @@ var manage_functions = map[string]ManageFunction{
 			}
 		return
 	}},
+	"banuser": {
+		Permissions: 1,
+		Callback: func() (html string) {
+		// do := request.FormValue("do")
+
+		html  = "<fieldset>\n" +
+				"	<legend>Ban user(s)</legend>\n" +
+				"	<span style=\"font-weight: bold;\">Ban type: </span>\n" +
+				"	<select id=\"ban-type\">\n" +
+				"		<option>Single IP/IP range</option>\n" +
+				"		<option>Name/tripcode</option>\n" +
+				"	</select><br /><hr />\n" +
+				"	<form action=\"/manage\">\n" +
+				"		<div id=\"ip\" class=\"ban-type-div\" style=\"width:100%%; display: inline;\">\n" +
+				"			<div style=\"width: 100%%; text-align: center; font-weight: bold;\">Single IP</div>\n" +
+				"			<input type=\"hidden\" name=\"action\" value=\"ban\" />\n" +
+				"			<input type=\"hidden\" name=\"type\" value=\"single\">\n" +
+				"			<span style=\"font-weight: bold;\">IP address:</span> <input type=\"text\" name=\"ip\" /><br />\n" +
+				"			\"192.168.1.36\" will ban posts from that IP address<br />\n" +
+				"			\"192.168\" will block all IPs starting with 192.168<br /><br />\n" +
+				"			<label style=\"font-weight: bold;\">Ban image hash: <input type=\"checkbox\" /></label><br />\n" +
+				"			<span style=\"font-weight: bold;\">Image hash ban duration: </span><br />\n" +
+				"			<div class=\"duration-select\"></div>\n" +
+				"			<br />\n" +
+				"			This will disallow an image with this hash from being posted, and will ban users who try to post it for the specified amount of time.\n" +
+				"			<hr />\n" +
+				"		</div>\n" +
+				"		<div id=\"name\" class=\"ban-type-div\" style=\"width:100%%; display: none;\">\n" +
+				"			<div style=\"width: 100%%; text-align: center; font-weight: bold;\">Name/Tripcode</div>\n" +
+				"			<input type=\"hidden\" name=\"action\" value=\"ban\" />\n" +
+				"			<input type=\"hidden\" name=\"type\" value=\"single\">\n" +
+				"			<span style=\"font-weight: bold;\">Name/tripcode:</span> <input type=\"text\" name=\"ip\" /><br /><br />\n" +
+				"			<hr />\n" +
+				"		</div>\n" +
+				"		<div id=\"options\">\n" +
+				"			<span style=\"font-weight: bold;\">Boards: </span><br />\n" +
+				"			<label>All boards <input type=\"checkbox\" id=\"allboards\" /></label> overrides individual board selection<br />\n"
+			 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
+				if err != nil {
+					html += "<hr />" + err.Error()
+					return
+				}
+				var board_dir string
+				for rows.Next() {
+					err = rows.Scan(&board_dir)
+					if err != nil {
+						html += "<hr />" + err.Error()
+					}
+    				html += "			<label>/" + board_dir + "/ <input type=\"checkbox\" id=\"" + board_dir + "\" class=\"board-check\"/></label>&nbsp;&nbsp;\n"
+				}
+				html +=
+				"			<hr />\n" +
+				"			<span style=\"font-weight: bold;\">Duration: </span><br />\n" +
+				"			<label>Permanent ban (overrides duration dropdowns if checked)<input type=\"checkbox\" name=\"forever\" value=\"forever\" /></label><br /><br />\n" +
+				"			<div class=\"duration-select\"></div>\n" +
+				"			<hr />\n" +
+				"			<div id=\"reason-staffnote\" style=\"text-align: right; float:left;\">\n" +
+				"				<span style=\"font-weight: bold;\">Reason: </span><input type=\"text\" name=\"reason\" /><br />\n" +
+				"				<span style=\"font-weight: bold;\">Staff note: </span><input type=\"text\" name=\"staff-note\" />\n" +
+				"			</div>\n" +
+				"		</div>\n" +
+				"	</form>\n" +
+				"</fieldset>" +
+				"<script type=\"text/javascript\">banPage();</script>\n "
+		return
+	}},
 	"manageserver": {
 		Permissions: 3,
 		Callback: func() (html string) {
@@ -612,7 +678,8 @@ var manage_functions = map[string]ManageFunction{
 					  	"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
 			if rank >= 2 {
-				html += "<b>Mod stuff</b><br />\n"
+				html += "<b>Mod stuff</b><br />\n" +
+						"<a href=\"javascript:void(0)\" id=\"banuser\" class=\"staffmenu-item\">Ban User(s)</a><br />\n"
 			}
 
 			if rank >= 1 {

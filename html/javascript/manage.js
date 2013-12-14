@@ -9,6 +9,74 @@ function addStaffButtons() {
 	$jq("input[value=Delete]").after(" <input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"alert('Bans not yet implemented'); return false;\"  />")
 }
 
+function banPage() {
+	$jq("select#ban-type").bind("change", function (e){
+		var new_selection = this.value;
+		switch(new_selection) {
+			case "Single IP/IP range":
+				$jq("div#.ban-type-div#ip").css({"display":"inline"})
+				$jq("div#.ban-type-div#name").css({"display":"none"})
+				break;
+			case "Name/tripcode":
+				$jq("div#.ban-type-div#ip").css({"display":"none"})
+				$jq("div#.ban-type-div#name").css({"display":"inline"})
+				break;
+		}
+	});	
+	$jq("input[type=checkbox]#allboards").bind("change", function() {
+		var allboards_check = this;
+		$jq("input[type=checkbox].board-check").each(function() {
+			this.checked = allboards_check.checked;
+		});
+	});
+	$jq("div.duration-select").html(
+		"<select class=\"duration-months\">" +
+			"<option>Months...</option>" +
+		"</select>" +
+		"<select class=\"duration-days\">" +
+			"<option>Days...</option>" + 
+		"</select>" +
+		"<select class=\"duration-hours\">" +
+			"<option>Hours...</option>" +
+		"</select>" +
+		"<select class=\"duration-minutes\">" +
+			"<option>Minutes...</option>" +
+		"</select>"
+	);
+	var months_html = "";
+	var i;
+	for(i = 0; i < 49; i++) {
+		months_html += "<option>" + i + "</option>";
+	}
+
+	var days_html = "";
+	for(i = 0; i < 33; i++) {
+		days_html += "<option>" + i + "</option>";
+	}
+
+	var hours_html = "";
+	for(i = 0; i < 25; i++) {
+		hours_html += "<option>" + i + "</option>";
+	}
+
+	var minutes_html = "";
+	for(i = 0; i < 61; i++) {
+		minutes_html += "<option>" + i + "</option>";
+	}
+	$jq("select.duration-months").append(months_html);
+	$jq("select.duration-days").append(days_html);
+	$jq("select.duration-hours").append(hours_html);
+	$jq("select.duration-minutes").append(minutes_html);
+	/*if(watermark) {
+		$jq("input[type=text][name=ip]").watermark("IP address");
+		$jq("input[type=text][name=ip]").prev().remove();
+		$jq($jq("div#reason-staffnote input")[0]).prev().remove();
+		$jq($jq("div#reason-staffnote input")[0]).watermark("Reason");
+		$jq($jq("div#reason-staffnote input")[1]).watermark("Staff note");
+		$jq($jq("div#reason-staffnote input")[1]).prev().remove();
+	}*/
+}
+
 function getManagePage() {
 	
 }
@@ -130,7 +198,17 @@ function openStaffLightBox(action_url) {
 			showLightBox(header_text,result_body.html());
 		},
 		error: function(result) {
-			showLightBox("Manage","Something went wrong :(");
+			var responsetext = result.responseText
+			responsetext = responsetext.substring(responsetext.indexOf("<body>") + 6, responsetext.indexOf("</body>"));
+			showLightBox("Manage",responsetext);
 		}
 	});
 }
+
+$jq(document).ready(function() {
+	/*if(location.pathname.indexOf("/manage" == location.pathname.length -7)) {
+		if(getArg("action") == "banuser") {
+			banPage();
+		}
+	}*/
+});
