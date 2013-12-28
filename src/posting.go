@@ -6,13 +6,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/disintegration/imaging"
 	"html"
 	"image"
-	"image/gif"
-	"image/jpeg"
-	"image/png"
 	"io/ioutil"
-	"./lib/resize"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -26,7 +23,6 @@ import (
 )
 
 var (
-	UnsupportedFiletypeError =  errors.New("Upload filetype not supported")
 	FileWriteError = errors.New("Couldn't write file")
 	TemplateExecutionError = errors.New("Failed executing template")
 	last_post PostTable
@@ -212,26 +208,6 @@ func checkBannedStatus(post PostTable) bool {
 	return false
 }
 
-func loadImage(file *os.File) (image.Image,error) {
-	filetype := file.Name()[len(file.Name())-3:]
-	var image_obj image.Image
-	var err error
-	defer file.Close()
-
-	if filetype == "gif" {
-		image_obj,err = gif.Decode(file)
-	} else if filetype == "jpeg" || filetype == "jpg" {
-		image_obj,err = jpeg.Decode(file)
-	} else if filetype == "png" {
-		image_obj,err = png.Decode(file)
-	} else {
-		image_obj = nil
-		os.Remove(file.Name())
-		err = UnsupportedFiletypeError
-	}
-	return image_obj,err
-}
-
 func createThumbnail(image_obj image.Image, size string) image.Image {
 	var thumb_width int
 	var thumb_height int
@@ -253,7 +229,7 @@ func createThumbnail(image_obj image.Image, size string) image.Image {
 	}
 	
 	thumb_w,thumb_h := getThumbnailSize(old_rect.Max.X,old_rect.Max.Y,size)
-	image_obj = resize.Resize(image_obj, image.Rect(0,0,old_rect.Max.X,old_rect.Max.Y), thumb_w,thumb_h)
+	image_obj = imaging.Resize(image_obj, thumb_w, thumb_h, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
 	return image_obj
 }
 
@@ -477,14 +453,9 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			image_file,err := os.OpenFile(file_path, os.O_RDONLY, 0)
+			img,err := imaging.Open(file_path)
 			if err != nil {
-				exitWithErrorPage(w,"Couldn't read saved file")
-				return
-			}
-			img,err := loadImage(image_file)
-			if err != nil {
-				exitWithErrorPage(w,err.Error())
+				exitWithErrorPage(w, "Upload filetype not supported")
 			} else {
 				//post.FileChecksum string
 				stat,err := os.Stat(file_path)
@@ -587,19 +558,5 @@ func shortenPostForBoardPage(post *string) {
 
 
 func saveImage(path string, image_obj *image.Image) error {
-	outwriter,err := os.OpenFile(path, os.O_RDWR|os.O_CREATE,0777)
-	if err == nil {
-		filetype := path[len(path)-4:]
-		if filetype == ".gif" {
-			//because Go doesn't come with a GIF writer :c
-			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})
-		} else if filetype == ".jpg" || filetype == "jpeg" {
-			jpeg.Encode(outwriter, *image_obj, &jpeg.Options{Quality: 80})
-		} else if filetype == ".png" {
-			png.Encode(outwriter, *image_obj)
-		} else {
-			return UnsupportedFiletypeError
-		}
-	}
-	return err
+	return imaging.Save(*image_obj, path)
 }
