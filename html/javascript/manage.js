@@ -10,16 +10,31 @@ function addStaffButtons() {
 }
 
 function banPage() {
+	switch(getArg("type")) {
+		case "ip":
+			$jq("div#.ban-type-div#ip").css({"display":"inline"})
+			$jq("div#.ban-type-div#name").css({"display":"none"})
+			$jq("input[type=hidden][name=type]").attr("value", "ip")
+			break;
+		case "name-tripcode":
+			$jq("div#.ban-type-div#ip").css({"display":"none"})
+			$jq("div#.ban-type-div#name").css({"display":"inline"})
+			$jq("input[type=hidden][name=type]").attr("value", "name/tripcode")
+			break;
+	}
+
 	$jq("select#ban-type").bind("change", function (e){
 		var new_selection = this.value;
 		switch(new_selection) {
 			case "Single IP/IP range":
-				$jq("div#.ban-type-div#ip").css({"display":"inline"})
-				$jq("div#.ban-type-div#name").css({"display":"none"})
+				$jq("div#ip.ban-type-div").css({"display":"inline"})
+				$jq("div#name.ban-type-div").css({"display":"none"})
+				$jq("input[type=hidden][name=type]").attr("value", "ip")
 				break;
 			case "Name/tripcode":
-				$jq("div#.ban-type-div#ip").css({"display":"none"})
-				$jq("div#.ban-type-div#name").css({"display":"inline"})
+				$jq("div#ip.ban-type-div").css({"display":"none"})
+				$jq("div#name.ban-type-div").css({"display":"inline"});
+				$jq("input[type=hidden][name=type]").attr("value", "name-tripcode")
 				break;
 		}
 	});	
