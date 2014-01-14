@@ -38,7 +38,6 @@ var TopBarButton = function(title,callback_open, callback_close) {
 var DropDownMenu = function(title,menu_html) {
 	this.title = title;
 	this.menuHTML = menu_html;
-
 	this.button = new TopBarButton(title, function() {
 		topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>");
 		$jq("a#"+title.toLowerCase()).children(0).html(title+up_arrow_symbol);
@@ -67,13 +66,32 @@ function showLightBox(title,innerHTML) {
 	});
 }
 
-/* function showLightBox(innerHTML) {
+// opens up a lightbox for use as a message box that will look the same on all browsers
+function showMessage(msg) {
 	if(!lightbox_css_added) {
-		$ja(document).find("head").append("\t<link rel=\"stylesheet\" href=\"/css/lightbox.css\" />");
+		$jq(document).find("head").append("\t<link rel=\"stylesheet\" href=\"/css/lightbox.css\" />");
 		lightbox_css_added = true;
 	}
-} */
+	$jq(document.body).prepend("<div class=\"lightbox-bg\"></div><div class=\"lightbox-msg\">"+msg+"<br /><button class=\"lightbox-msg-ok\" style=\"float: right; margin-top:8px;\">OK</button></div>");
+	console.debug($jq(".lightbox-msg").width());
+	var centeroffset = parseInt($jq(".lightbox-msg").css("transform-origin").replace("px",""),10)+$jq(".lightbox-msg").width()/2
+	
+	$jq(".lightbox-msg").css({
+		"position": "fixed",
+		"left": $jq(document).width()/2 - centeroffset/2-16
+	});
 
+	$jq(".lightbox-msg-ok").click(function() {
+		$jq(".lightbox-msg").remove();
+		$jq(".lightbox-bg").remove();
+	});
+	$jq(".lightbox-bg").click(function() {
+		$jq(".lightbox-msg").remove();
+		$jq(".lightbox-bg").remove();
+	});
+}
+
+// organize front page into tabs
 function changeFrontPage(page_name) {
 	var tabs = $jq(".tab");
 	var pages = $jq(".page");
@@ -144,6 +162,7 @@ function deleteCheckedPosts() {
 	}
 }
 
+// returns GET argument value
 function getArg(name) {
 	var href = window.location.href;
 	var args = href.substr(href.indexOf("?")+1, href.length);
@@ -183,6 +202,7 @@ function hidePost(id) {
 	if(postimg.length > 0) postimg.remove();
 }
 
+// gets cookies ready to be used elsewhere
 function initCookies() {
 	var name_field = $jq("input#postname");
 	var email_field = $jq("input#postemail");
@@ -319,4 +339,5 @@ $jq(document).ready(function() {
 		}
 	});
 	initCookies();
+	//showMessage("This is a testarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiohuihuoqweryuio")
 });
