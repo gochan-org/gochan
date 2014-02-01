@@ -30,6 +30,5 @@ func main() {
 	if db != nil {
 		db.Exec("USE `"+config.DBname+"`;")
 	}
-	go initServer()
-	select {}
+	initServer()
 }
