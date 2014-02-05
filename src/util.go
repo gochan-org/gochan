@@ -118,15 +118,13 @@ func getBoardArr(where string) (boards []BoardsTable) {
 			&board.Anonymous, 
 			&board.ForcedAnon, 
 			&board.MaxAge, 
-			&board.MarkPage, 
 			&board.AutosageAfter, 
 			&board.NoImagesAfter,
 			&board.MaxMessageLength,
 			&board.EmbedsAllowed,
 			&board.RedirectToThread,
 			&board.ShowId,
-			&board.CompactList,
-			&board.EnableNofile,
+			&board.RequireFile,
 			&board.EnableCatalog,
 		)
 		board.IName = "board"

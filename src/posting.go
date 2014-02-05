@@ -49,6 +49,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 
 	var interfaces []interface{}
 	var threads []interface{}
+	var op_posts []interface{}
 	op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 ORDER BY `bumped` DESC LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
 	if err != nil {
 		html += err.Error() + "<br />"
@@ -441,6 +442,10 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			}
 			post.FilenameOriginal = escapeString(post.FilenameOriginal)
 			post.Filename = getNewFilename()+"."+getFiletype(post.FilenameOriginal)
+			board_arr := getBoardArr("`id` = "+request.FormValue("boardid"))
+			if len(board_arr) == 0 {
+				exitWithErrorPage(w, "No boards have been created yet")
+			}
 			board_dir := getBoardArr("`id` = "+request.FormValue("boardid"))[0].Dir
 			file_path := path.Join(config.DocumentRoot,"/"+board_dir+"/src/",post.Filename)
 			thumb_path := path.Join(config.DocumentRoot,"/"+board_dir+"/thumb/",strings.Replace(post.Filename,"."+filetype,"t."+thumb_filetype,-1))

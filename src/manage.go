@@ -447,11 +447,6 @@ var manage_functions = map[string]ManageFunction{
 						if err != nil {
 							board.MaxAge = 0
 						}
-						markpage_str := escapeString(request.FormValue("markpage"))
-						board.MarkPage,err = strconv.Atoi(markpage_str)
-						if err != nil {
-							board.MarkPage = 9
-						}
 						autosageafter_str := escapeString(request.FormValue("autosageafter"))
 						board.AutosageAfter,err = strconv.Atoi(autosageafter_str)
 						if err != nil {
@@ -471,8 +466,7 @@ var manage_functions = map[string]ManageFunction{
 						board.EmbedsAllowed = (request.FormValue("embedsallowed") == "on")
 						board.RedirectToThread = (request.FormValue("redirecttothread") == "on")
 						board.ShowId = (request.FormValue("showid") == "on")
-						board.CompactList = (request.FormValue("compactlist") == "on")
-						board.EnableNofile = (request.FormValue("enablenofile") == "on")
+						board.RequireFile = (request.FormValue("require_file") == "on")
 						board.EnableCatalog = (request.FormValue("enablecatalog") == "on")
 
 						//actually start generating stuff
@@ -517,15 +511,13 @@ var manage_functions = map[string]ManageFunction{
 								"`anonymous`, " + 
 								"`forced_anon`, " + 
 								"`max_age`, " + 
-								"`mark_page`, " + 
 								"`autosage_after`, " + 
 								"`no_images_after`, " + 
 								"`max_message_length`, " + 
 								"`embeds_allowed`, " + 
 								"`redirect_to_thread`, " + 
 								"`show_id`, " + 
-								"`compact_list`, " + 
-								"`enable_nofile`, " + 
+								"`require_file`, " + 
 								"`enable_catalog`" + 
 								") VALUES("+
 									strconv.Itoa(board.Order) + ", '" +
@@ -546,15 +538,13 @@ var manage_functions = map[string]ManageFunction{
 									board.Anonymous + "', " + 
 									Btoa(board.ForcedAnon) + ", " + 
 									strconv.Itoa(board.MaxAge) + ", " + 
-									strconv.Itoa(board.MarkPage) + ", " + 
 									strconv.Itoa(board.AutosageAfter) + ", " +
 									strconv.Itoa(board.NoImagesAfter) + ", " +
 									strconv.Itoa(board.MaxMessageLength) + ", " +
 									Btoa(board.EmbedsAllowed) + ", " +
 									Btoa(board.RedirectToThread) + ", " +
 									Btoa(board.ShowId) + ", " +
-									Btoa(board.CompactList) + ", " +
-									Btoa(board.EnableNofile) + ", " +
+									Btoa(board.RequireFile) + ", " +
 									Btoa(board.EnableCatalog) + ")")
 						if err != nil {
 							fmt.Println(err.Error())
@@ -611,7 +601,7 @@ var manage_functions = map[string]ManageFunction{
 				html += "<input type=\"checkbox\" name=\"forcedanon\" />"
 			}
 
-			html += "</td></tr><tr><td>Anonymous</td><td><input type=\"text\" name=\"anonymous\" value=\""+board.Anonymous+"\" /></td></tr><tr><td>Max age</td><td><input type=\"text\" name=\"maxage\" value=\""+strconv.Itoa(board.MaxAge)+"\"/></td></tr><tr><td>Mark page</td><td><input type=\"text\" name=\"markpage\" value=\""+strconv.Itoa(board.MarkPage)+"\"/></td></tr><tr><td>Autosage after</td><td><input type=\"text\" name=\"autosageafter\" value=\""+strconv.Itoa(board.AutosageAfter)+"\"/></td></tr><tr><td>No images after</td><td><input type=\"text\" name=\"noimagesafter\" value=\""+strconv.Itoa(board.NoImagesAfter)+"\"/></td></tr><tr><td>Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\""+strconv.Itoa(board.MaxMessageLength)+"\"/></td></tr><tr><td>Embeds allowed</td><td>"
+			html += "</td></tr><tr><td>Anonymous</td><td><input type=\"text\" name=\"anonymous\" value=\""+board.Anonymous+"\" /></td></tr><tr><td>Max age</td><td><input type=\"text\" name=\"maxage\" value=\""+strconv.Itoa(board.MaxAge)+"\"/></td></tr><tr><td>Autosage after</td><td><input type=\"text\" name=\"autosageafter\" value=\""+strconv.Itoa(board.AutosageAfter)+"\"/></td></tr><tr><td>No images after</td><td><input type=\"text\" name=\"noimagesafter\" value=\""+strconv.Itoa(board.NoImagesAfter)+"\"/></td></tr><tr><td>Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\""+strconv.Itoa(board.MaxMessageLength)+"\"/></td></tr><tr><td>Embeds allowed</td><td>"
 
 			if board.EmbedsAllowed {
 				html += "<input type=\"checkbox\" name=\"embedsallowed\" checked/>"
@@ -633,20 +623,13 @@ var manage_functions = map[string]ManageFunction{
 			} else {
 				html += "<input type=\"checkbox\" name=\"showid\" />"
 			}
-				html += "</td></tr><tr><td>Compact list</td><td>"
-			
-			if board.CompactList {
-				html += "<input type=\"checkbox\" name=\"compactlist\" checked/>"
-			} else {
-				html += "<input type=\"checkbox\" name=\"compactlist\" />"
-			}
 
-			html += "</td></tr><tr><td>Enable &quot;No file&quot; checkbox</td><td>"
+			html += "</td></tr><tr><td>Require an uploaded file</td><td>"
 
-			if board.EnableNofile {
-				html += "<input type=\"checkbox\" name=\"enablenofile\" checked/>"
+			if board.RequireFile {
+				html += "<input type=\"checkbox\" name=\"require_file\" checked/>"
 			} else {
-				html += "<input type=\"checkbox\" name=\"enablenofile\" />"
+				html += "<input type=\"checkbox\" name=\"require_file\" />"
 			}
 
 			html += "</td></tr><tr><td>Enable catalog</td><td>"				

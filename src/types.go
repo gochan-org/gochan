@@ -98,15 +98,13 @@ type BoardsTable struct {
 	Anonymous string
 	ForcedAnon bool
 	MaxAge int
-	MarkPage int
 	AutosageAfter int
 	NoImagesAfter int
 	MaxMessageLength int
 	EmbedsAllowed bool
 	RedirectToThread bool
 	ShowId bool
-	CompactList bool
-	EnableNofile bool
+	RequireFile bool
 	EnableCatalog bool
 }
 
