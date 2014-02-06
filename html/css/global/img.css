@@ -40,9 +40,14 @@
 	position:absolute;
 }
 
-#pages {
+table#pages {
 	margin-bottom:8px;
 	margin-top:4px;
+	border: 1px solid;
+}
+
+table#pages td {
+	border: 1px solid;
 }
 
 #postbox-area {
@@ -92,23 +97,18 @@
 	z-index:1;
 }
 
-#topbar {
-	display:block;
+div#topbar {
 	left:0;
 	position:fixed;
 	top:0;
 	width:100%;
 	z-index:2;
-}
-
-#topbar ul {
-	display:inline;
-	list-style-type:none;
 	margin-top:0px;
 	padding-left:8px;
 	padding-right:4px;
-	position:relative;
 }
+
+
 
 .thread-ddown-menu {
 	display:inline-block;
@@ -156,11 +156,13 @@
 	width:12px;
 }
 
-.post {
-	float: left;
-	margin:4px;
+.reply {
+	margin:8px;
 	overflow:hidden;
 	padding:4px;
+	display: table;
+	
+	clear:right;
 }
 
 .postblock {
@@ -169,10 +171,8 @@
 	width:100px;
 }
 
-.posttext {
-	margin-left:12px;
-	margin-right:12px;
-	margin-top:12px;
+.post-text {
+	padding: 8px;
 }
 
 .section-block {
@@ -222,9 +222,8 @@
 
 .thread {
 	vertical-align:top;
+	overflow: hidden;
 }
-
-
 
 .topbar-item {
 	float:left;
@@ -240,10 +239,11 @@ hr {
 
 img.thumbnail {
 	float:left;
-	margin:4px 8px;
+	margin: 5px 10px 10px 0px;
+
 }
 
-ul.boardmenu {
+ul.staffmenu {
 	list-style:none;
 	margin:0px;
 	padding-left:0;
@@ -263,4 +263,9 @@ div.file-deleted-box {
 
 input[type=file] {
 	max-width: 275px;
+	width: 275px;
+}
+
+table#postbox-static {
+	margin: 0px auto;
 }

@@ -164,7 +164,7 @@ function getStaff() {
 }
 
 function getStaffMenuHTML() {
-	var s = "<ul class=\"boardmenu\">";
+	var s = "<ul class=\"staffmenu\">";
 	$jq.ajax({
 		method: 'GET',
 		url: webroot+"manage",

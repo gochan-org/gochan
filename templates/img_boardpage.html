@@ -3,8 +3,7 @@
 <head>
 	<title>{{$board.Title}}</title>
 	<script type="text/javascript" src="/javascript/jquery/jquery-1.7.2.min.js"></script>
-	<script type="text/javascript" src="/javascript/manage.js"></script>
-
+	
 	<script type="text/javascript" src="/javascript/msgpack.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
@@ -19,10 +18,9 @@
 </head>
 <body>
 	<div id="topbar">
-		<ul class="topbar-section">
-			{{range $i, $board := $board_arr.Data}}
-			<a href="/{{$board.Dir}}/"><li class="topbar-item">/{{$board.Dir}}/</li></a>
-{{end}}		</ul>
+		{{range $i, $board := $board_arr.Data}}
+			<div class="topbar-item"><a href="/{{$board.Dir}}/" style="display: block; height:100%; width:100%">/{{$board.Dir}}/</a></div>
+{{end}}
 	</div>
 	<div id="top-pane">
 		<span id="board-title">{{$board.Title}}</span><br />
@@ -34,59 +32,56 @@
 	</div>
 
 	<div id="postbox-area">
-		<center>
+		
 		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
+			<input type="hidden" name="threadid" value="0" />
+			<input type="hidden" name="boardid" value="{{$board.ID}}" />
 			<table id="postbox-static">
-				<input type="hidden" name="threadid" value="0" />
-				<input type="hidden" name="boardid" value="{{$board.ID}}" />
 				<tr><td class="postblock">Name</td><td><input type="text" id="postname" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
 				<tr><td class="postblock">Email</td><td><input type="text" id="postemail" name="postemail" maxlength="75" size="28" /></td></tr>
 				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
 				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
-				<tr><td class="postblock">File</td><td><input name="imagefile" size="31" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
+				<tr><td class="postblock">File</td><td><input name="imagefile" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
 				<tr><td class="postblock">Password</td><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</table>
 		</form>
-		</center>
+		
 	</div>
 	<hr />
 	<div id="content">
 		<form action="/util" method="POST" id="main-form">
 			{{range $t, $thread := $thread_arr.Data}}
-				{{$post := $thread.OP}}
-				<div class="thread" id="{{$post.ID}}">
-					{{if stringNeq $post.Filename ""}}
-						{{if stringNeq $post.Filename "deleted"}}
-							<span class="file-info">File: <a href="src/{{$post.Filename}}">{{$post.Filename}}</a> - ({{formatFilesize $post.Filesize}} , {{$post.ImageW}}x{{$post.ImageH}}, {{$post.FilenameOriginal}} )</span><br />
-						{{end}}
-						{{if stringEq $post.Filename "deleted"}}
-							<div class="file-deleted-box">
-								<center>File removed</center>
-							</div>
+				{{$op := $thread.OP}}
+				<div class="op-post" id="op{{$op.ID}}">
+					<input type="checkbox" id="check{{$op.ID}}" name="check{{$op.ID}}" /><label class="post-info" for="check{{$op.ID}}"> <span class="subject">{{$op.Subject}}</span> <span class="postername">{{if stringNeq $op.Email ""}}<a href="mailto:{{$op.Email}}">{{end}}{{if stringEq $op.Name ""}}{{$board.Anonymous}}{{else}}{{$op.Name}}{{end}}{{if stringNeq $op.Email ""}}</a>{{end}}</span>{{if stringNeq $op.Tripcode ""}}<span class="tripcode">!{{$op.Tripcode}}</span>{{end}} {{formatTimestamp $op.Timestamp}} </label><a href="/{{$board.Dir}}/res/{{$op.ID}}.html#{{$op.ID}}">No.</a> <a href="/{{$board.Dir}}/res/{{$op.ID}}.html#i{{$op.ID}}">{{$op.ID}}</a> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+					{{if stringNeq $op.Filename ""}}
+						{{if stringNeq $op.Filename "deleted"}}
+							<span class="file-info">File: <a href="../src/{{$op.Filename}}">{{$op.Filename}}</a> - ({{formatFilesize $op.Filesize}} , {{$op.ImageW}}x{{$op.ImageH}}, {{$op.FilenameOriginal}} )</span><br />
+							<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$op.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $op.Filename}}" width="{{$op.ThumbW}}" height="{{$op.ThumbH}}" class="thumbnail" alt="{{imageToThumbnailPath $op.Filename}}" /></a>
 						{{else}}
-							<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$post.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $post.Filename}}" width="{{$post.ThumbW}}" height="{{$post.ThumbH}}" class="thumbnail" /></a>
+							<div class="file-deleted-box" style="text-align:center;">File removed</div>
 						{{end}}
 					{{end}}
-					<label class="post-info"><input type="checkbox" id="{{$post.ID}}" name="check{{$post.ID}}" /> <span class="postername">{{if stringNeq $post.Email ""}}<a href="mailto:{{$post.Email}}">{{end}}{{if stringEq $post.Name ""}}{{$board.Anonymous}}{{else}}{{$post.Name}}{{end}}{{if stringNeq $post.Email ""}}</a>{{end}}</span>{{if stringNeq $post.Tripcode ""}}<span class="tripcode">!{{$post.Tripcode}}</span>{{end}} {{formatTimestamp $post.Timestamp}} {{if $post.Stickied}}<img src="../css/sticky.gif"></img>{{end}} </label><a href="res/{{getThreadID $post}}.html">No.</a> <a href="res/{{getThreadID $post}}.html#{{$post.ID}}i">{{$post.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span> [<a href="res/{{$post.ID}}.html">View</a>]</span><br />
-					<div class="posttext">
-						{{$post.Message}}<br />
+					<div class="post-text">
+						{{$op.Message}}
 						{{if gt $thread.NumReplies 3}}
-							<b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b>
+							<br /><br /><b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b>
 						{{end}}
 					</div>
-					{{range $r, $reply := $thread.BoardReplies}}
-						<div class="post" id="{{$reply.ID}}">
-							<label class="post-info"><input type="checkbox" id="{{$reply.ID}}" name="check{{$reply.ID}}" /> <span class="postername">{{if stringNeq $reply.Email ""}}<a href="mailto:{{$reply.Email}}">{{end}}{{if stringEq $reply.Name ""}}{{$board.Anonymous}}{{else}}{{$reply.Name}}{{end}}{{if stringNeq $reply.Email ""}}</a>{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} <a href="res/{{getThreadID $post}}.html">No.</a> <a href="res/{{getThreadID $reply}}.html#{{$reply.ID}}i">{{$reply.ID}}</a></label> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
-							{{if stringNeq $reply.Filename ""}}
-								<span class="file-info">File: <a href="src/{{$reply.Filename}}">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}},{{$reply.ImageH}}, {{$reply.FilenameOriginal}} )</span><br />
-								<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$reply.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="thumbnail" /></a>
-							{{end}}
-							<div class="posttext">
-								{{$reply.Message}}
-							</div>
-						</div><br clear="both" />
-					{{end}}
 				</div>
+				{{range $reply_num,$reply := $thread.BoardReplies}}
+					<div class="reply" id="reply{{$reply.ID}}">
+						<input type="checkbox" id="check{{$reply.ID}}" name="check{{$reply.ID}}" /> <label class="post-info" for="check{{$reply.ID}}"><span class="postername">{{if stringNeq $reply.Email ""}}<a href="mailto:{{$reply.Email}}">{{end}}{{if stringEq $reply.Name ""}}{{$board.Anonymous}}{{else}}{{$reply.Name}}{{end}}{{if stringNeq $reply.Email ""}}</a>{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} </label><a href="135693079632">No.</a> <a href="{{$reply.ID}}i">{{$reply.ID}}</a> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+						{{if stringNeq $reply.Filename ""}}<span class="file-info">File: <a href="../src/{{$reply.Filename}}">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}}x{{$reply.ImageH}}, {{$reply.FilenameOriginal}} )</span><br />
+						<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$reply.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="thumbnail" alt="{{imageToThumbnailPath $reply.Filename}}" /></a>{{end}}
+
+						<div class="post-text">
+							{{$reply.Message}}
+						</div>
+					</div>
+					
+				{{end}}
+			</div>
 				<hr />
 			{{end}}
 

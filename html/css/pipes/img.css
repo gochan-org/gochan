@@ -16,7 +16,7 @@
 	height:26px;
 }
 
-#topbar li {
+#topbar div {
 	padding:4px;
 }
 
@@ -42,7 +42,7 @@
 	cursor:pointer;
 }
 
-.post {
+.reply {
 	background-color:#25272D;
 	border:1px solid #8C94AB;
 }
@@ -138,6 +138,6 @@ input[type=text],input[type=password],input[type=file],textarea,.thread-ddown-me
 
 }
 
-ul.boardmenu li:hover {
+.topbar-item:hover, .staffmenu li:hover {
 	background:#404040;
 }

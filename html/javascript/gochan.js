@@ -13,7 +13,7 @@ var lightbox_css_added = false;
 
 var TopBarButton = function(title,callback_open, callback_close) {
 	this.title = title;
-	$jq("div#topbar").append("<ul><a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\"><li>"+title+down_arrow_symbol+"</li></a></ul>");
+	$jq("div#topbar").append("<div class=\"topbar-dropdowns\"><a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\"><li>"+title+down_arrow_symbol+"</li></a></div>");
 	var button_open = false;
 
 	$jq("div#topbar a#"+title.toLowerCase()).click(function(event) {
