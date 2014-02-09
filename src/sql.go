@@ -92,7 +92,7 @@ func connectToSQLServer() {
 	err1 = nil
 	err2 = nil
 
-	db, err = sql.Open("mymysql", config.DBhost+"*mysql/"+config.DBusername+"/"+config.DBpassword)
+	db, err = sql.Open("mymysql", config.DBhost + "*" + config.DBname + "/"+config.DBusername+"/"+config.DBpassword)
 	if err != nil {
 		fmt.Println("Failed to connect to the database, see log for details.")
 		error_log.Fatal(err.Error())
@@ -113,7 +113,6 @@ func connectToSQLServer() {
 	initial_sql_str = ""
 
 	for _,statement := range initial_sql_arr {
-		fmt.Println(statement)
 		if statement != "" {
 			_,err := db.Exec(statement+";")
 			if err != nil {
