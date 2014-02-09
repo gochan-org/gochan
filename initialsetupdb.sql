@@ -1,9 +1,6 @@
 -- Initial setup file for Gochan
 -- Deleted after setup is finished
 
-CREATE DATABASE `DBNAME`;
-USE `DBNAME`;
-
 CREATE TABLE `DBPREFIXannouncements` (
 	`id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
 	`subject` VARCHAR(45) NOT NULL,
