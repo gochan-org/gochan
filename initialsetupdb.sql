@@ -1,7 +1,7 @@
 -- Initial setup file for Gochan
 -- Deleted after setup is finished
 
-CREATE DATABASE IF NOT EXISTS `DBNAME`;
+CREATE DATABASE `DBNAME`;
 USE `DBNAME`;
 
 CREATE TABLE `DBPREFIXannouncements` (
