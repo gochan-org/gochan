@@ -16,8 +16,12 @@
 	height:26px;
 }
 
-#topbar li {
-	padding:4px;
+.topbar-item:hover {
+	background-color: #404040;
+}
+
+.dropdown-button:hover{
+	background-color: #404040;
 }
 
 .dropdown-menu {
@@ -104,6 +108,6 @@ body {
 	padding-right:4px;
 }
 
-ul.boardmenu li:hover {
+ul.staffmenu li:hover {
 	background:#404040;
 }

@@ -25,6 +25,10 @@
 	box-shadow:0 6px 2px 2px #101010;
 }
 
+.dropdown-button:hover{
+	background-color: #404040;
+}
+
 .menu {
 	margin-top:1em;
 	text-align:center;

@@ -131,12 +131,6 @@ div#topbar {
 	padding-right: 8px;
 }
 
-.dropdown-button {
-	float:right;
-	list-style:none;
-	margin-right:8px;
-	text-decoration:none;
-}
 
 .dropdown-menu {
 	list-style: none;
@@ -226,7 +220,19 @@ div#topbar {
 }
 
 .topbar-item {
-	float:left;
+	display: inline-block;
+	padding: 4px;
+}
+
+.topbar-dropdowns{
+	overflow: hidden;
+	float: right;
+}
+
+.dropdown-button {
+	display: inline;
+	padding: 4px;
+	float: right;
 }
 
 a.permalink,#right-sidelinks {

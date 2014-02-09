@@ -18,35 +18,33 @@
 </head>
 <body>
 	<div id="topbar">
-		<ul class="topbar-section">
-			{{range $i, $board := $board_arr.Data}}
-			<a href="/{{$board.Dir}}/"><li class="topbar-item">/{{$board.Dir}}/</li></a>
-{{end}}		</ul>
+		{{range $i, $board := $board_arr.Data}}
+			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
+{{end}}
 	</div>
 	<div id="top-pane">
 		<span id="site-title">{{$config.SiteName}}</span><br />
 		<span id="site-slogan">{{$config.SiteSlogan}}</span>
 	</div>
-	
 	<div id="main">
-		<div id="tab-bar">
-			<div id="current-tab" class="tab">
-				<a href="#">Home</a>
+			<div id="tab-bar">
+				<div id="current-tab" class="tab">
+					<a href="#">Home</a>
+				</div>
+				<div class="tab">
+					<a href="#boards">Boards</a>
+				</div>
+				<div class="tab">
+					<a href="#rules">Rules</a>
+				</div>
+				<div class="tab">
+					<a href="#faq">FAQ</a>
+				</div>
 			</div>
-			<div class="tab">
-				<a href="#boards">Boards</a>
-			</div>
-			<div class="tab">
-				<a href="#rules">Rules</a>
-			</div>
-			<div class="tab">
-				<a href="#faq">FAQ</a>
-			</div>
-		</div>
 
 
-		<div id="content">
 			<div id="first-page" class="page">
+			<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
 			{{range $ii, $page := $page_arr.Data}}
 				{{if intEq $page.Page 0}}
 				<div class="section-block">
@@ -107,37 +105,36 @@
 				{{end}}
 			{{end}}
 			</div>
-		</div>
-	</div>
-	<div id="recent-posts">
-		<div class="section-title-box"><b>Recent Posts</b></div>
-		<div class="section-block">
-			<div class="section-title-block">
-				<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
+		<div id="recent-posts">
+			<div class="section-title-box"><b>Recent Posts</b></div>
+			<div class="section-block">
+				<div class="section-title-block">
+					<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
+				</div>
+				<div class="section-body">
+					<img src="135693079632s.png" />
+					TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT...<br /><i>(Post truncated, click <a href="/test/">here</a> to continue reading)</i>
+				</div>
 			</div>
-			<div class="section-body">
-				<img src="135693079632s.png" />
-				TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT...<br /><i>(Post truncated, click <a href="/test/">here</a> to continue reading)</i>
-			</div>
-		</div>
 
-		<div class="section-block">
-			<div class="section-title-block">
-				<span class="section-title"><a href="/test/">/test/</a></span> - <b>Anonymous</b>
+			<div class="section-block">
+				<div class="section-title-block">
+					<span class="section-title"><a href="/test/">/test/</a></span> - <b>Anonymous</b>
+				</div>
+				<div class="section-body">
+					OP is a pony.
+				</div>
 			</div>
-			<div class="section-body">
-				OP is a pony.
-			</div>
-		</div>
 
-		<div class="section-block">
-			<div class="section-title-block">
-				<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
-			</div>
-			<div class="section-body">
-				<img src="135683008384s.png" />
-				<a href="#">&gt;&gt;22222</a><br />
-				HERP DERP FROSTED BUTTS
+			<div class="section-block">
+				<div class="section-title-block">
+					<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
+				</div>
+				<div class="section-body">
+					<img src="135683008384s.png" />
+					<a href="#">&gt;&gt;22222</a><br />
+					HERP DERP FROSTED BUTTS
+				</div>
 			</div>
 		</div>
 	</div>

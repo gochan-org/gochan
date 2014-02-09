@@ -1,79 +1,18 @@
 #footer {
 	clear:both;
-	position:static;
+	display: block;
 	width: 100%;
-	left: 0px;
-	bottom: 0%;
 	text-align: center;
+	bottom: 0px;
+	overflow: hidden;
+
 }
 
-.lightbox-bg {
-	position:fixed;
-	left: 0px;
-	top: 0px;
-	width: 100%;
-	height: 100%;
-	background-attachment: fixed;
-	background-color: #333333;
-	opacity: 0.5;
-	z-index: 9000;
-}
-
-.lightbox-title {
-	font-size:42px;
-	font-weight: bold;
-	text-align: center;
-}
-
-.lightbox-footer {
-	clear:both;
-	position:absolute;
-	right:16px;
-	left: 16px;
-	bottom: 5%;
-	text-align: center;
-}
-
-.lightbox-x {
-	float:right;
-	color: #000000;
-	z-index: 90002;
-}
-
-.lightbox-x:hover {
-	color: #000000;
-}
-
-.lightbox {
-	z-index:9001;
-	position: fixed;
-	left:20%;
-	right:20%;
-	top:5%;
-	bottom:5%;
-	padding: 16px;
-	background-color: #CDCDCD;
-	border: 1px solid #000000;
-	color: #000000;
-}
-
-.setting-name {
-	width:50%;
-}
-
-.setting-value {
-	text-align: right;
-	width:50%;
-}
-
-#main {
-	position:absolute;
-	padding-left: 8px;
-	top:124px;
-	left:0%;
-	height: 100%;
-	right:21%;
-	width:auto;
+.page {
+	float: left;
+	width: 75%;
+	margin-left: 8px;
+	overflow-y: hidden;
 }
 
 #menu {
@@ -95,33 +34,24 @@
 
 #tab-bar {
 	margin-left: 16px;
-	clear:both;
+
 }
 
-#topbar {
+div#topbar {
+	left:0;
 	position:fixed;
-	top: 0px;
-	left: 0px;
-	width: 100%;
-	display: block;
+	top:0;
+	width:100%;
 	z-index:2;
+	margin-top:0px;
+	padding-left:8px;
+	padding-right:4px;
+	overflow-x: hidden;
 }
 
-#topbar ul {
-	position: relative;
-	display: inline;
-	margin-top: 0px;
-	padding-left:0px;
-	padding-right: 4px;
-	list-style-type: none;
-}
-
-.dropdown-button {
-	text-decoration: none;
-	list-style:none;
-	margin-right:0px;
-	float: right;
-	margin-right: 8px;
+.topbar-item {
+	display: inline-block;
+	padding: 4px;
 }
 
 .dropdown-menu {
@@ -134,8 +64,16 @@
 	padding: 4px 8px 4px 8px;
 }
 
-.topbar-item {
-	float:left;
+
+.topbar-dropdowns{
+	overflow: hidden;
+	float: right;
+}
+
+.dropdown-button {
+	display: inline;
+	padding: 4px;
+	float: right;
 }
 
 .plus {
@@ -148,20 +86,18 @@
 .tab {
 	padding-right: 5px;
 	padding-left: 5px;
-	display: block;
-	float: left;
+	display: inline;
 }
 
 .section-body {
-	overflow: hidden;
+	overflow-y: hidden;
 	margin-right: 0px;
 	margin-bottom:8px;
-	right:0px;
 	min-height: 48px;
 }
 
 .section-block {
-	padding-bottom: 8px;
+	margin-bottom: 8px;
 }
 
 #top-pane {
@@ -171,19 +107,12 @@
 	z-index: 1;
 }
 
-#content {
-	clear:left;
-	margin-left:0px;
-	padding-left:0px;
-	text-align:justify;
-}
 
 #recent-posts {
-	float:right;
-	
-	overflow: hidden;
-	right: 8px;
-	width:20%;
+	width:22%;
+	float: right;
+	margin-right: 8px;
+	display: inline-block;
 }
 
 #recent-posts img {
@@ -195,17 +124,25 @@
 	padding-top: 8px;
 }
 
+#recent-posts .section-title-block {
+
+}
+
 .section-title-block {
 	display:block;
+}
+
+#main {
+	overflow: hidden
 }
 
 a.permalink {
 	float: right;
 }
 
-ul.boardmenu {
+ul.staffmenu {
 	list-style:none;
-	margin:0;
+	margin:0px;
 	padding-left:0;
 }
 

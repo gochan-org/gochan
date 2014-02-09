@@ -17,8 +17,8 @@
 </head>
 <body>
 	<div id="topbar">
-			{{range $i, $board := $board_arr.Data}}
-			<div class="topbar-item"><a href="/{{$board.Dir}}/" style="display: block; height:100%; width:100%">/{{$board.Dir}}/</a></div>
+		{{range $i, $board := $board_arr.Data}}
+			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
 {{end}}
 	</div>
 	<div id="top-pane">
