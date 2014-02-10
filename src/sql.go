@@ -80,6 +80,11 @@ func connectToSQLServer() {
 		os.Remove("initialsetupdb.sql")
 		fmt.Println("complete.")
 		needs_initial_setup = false
+		db, err = sql.Open("mymysql", config.DBhost + "*" + config.DBname + "/"+config.DBusername+"/"+config.DBpassword)
+		if err != nil {
+			fmt.Println("Failed to connect to the database, see log for details.")
+			error_log.Fatal(err.Error())
+		}
 		return
 	} else {
 		if err1 != nil {
@@ -93,6 +98,8 @@ func connectToSQLServer() {
 	err2 = nil
 
 	db, err = sql.Open("mymysql", config.DBhost + "*" + config.DBname + "/"+config.DBusername+"/"+config.DBpassword)
+	fmt.Println("jweiofjeaioewhfeiwoaaehfaouifheuiofeagfhuoagfuogfuo")
+	fmt.Println(db)
 	if err != nil {
 		fmt.Println("Failed to connect to the database, see log for details.")
 		error_log.Fatal(err.Error())
