@@ -143,7 +143,7 @@ func createSession(key string,username string, password string, request *http.Re
 			return 1
   		} else {
 			// successful login
-			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))),MaxAge: 7200}
+			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))),MaxAge: 7200}
 			http.SetCookie(*writer, cookie)
 			_,err := db.Exec("INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES('"+key+"','"+username+"', '"+getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2)))+"');")
 			if err != nil {
@@ -255,7 +255,7 @@ var manage_functions = map[string]ManageFunction{
 			if cookie != nil {
 				key = cookie.Value
 				new_expire := time.Now().AddDate(0,0,-1)
-				new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.SiteDomain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
+				new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.Domain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
 				http.SetCookie(writer, new_cookie)
 				return "Logged out successfully"
 			}

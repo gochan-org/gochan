@@ -281,7 +281,6 @@ type GochanConfig struct {
 	SiteSlogan string
 	SiteHeaderURL string
 	SiteWebfolder string
-	SiteDomain string
 
 	Styles_img []string
 	DefaultStyle_img string

@@ -69,7 +69,7 @@
 				</div>
 			</div>
 			{{range $reply_num,$reply := $post_arr}}{{if gt $reply_num 0}}
-				<div class="reply" id="reply{{$reply.ID}}">
+				<div class="reply" id="{{$reply.ID}}">
 					<input type="checkbox" id="check{{$reply.ID}}" name="check{{$reply.ID}}" /> <label class="post-info" for="check{{$reply.ID}}"><span class="postername">{{if stringNeq $reply.Email ""}}<a href="mailto:{{$reply.Email}}">{{end}}{{if stringEq $reply.Name ""}}{{$board.Anonymous}}{{else}}{{$reply.Name}}{{end}}{{if stringNeq $reply.Email ""}}</a>{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} </label><a href="135693079632">No.</a> <a href="{{$reply.ID}}i">{{$reply.ID}}</a> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 					{{if stringNeq $reply.Filename ""}}<span class="file-info">File: <a href="../src/{{$reply.Filename}}">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}}x{{$reply.ImageH}}, {{$reply.FilenameOriginal}} )</span><br />
 					<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$reply.Filename}}" target="_blank"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="thumbnail" alt="{{imageToThumbnailPath $reply.Filename}}" /></a>{{end}}

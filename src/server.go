@@ -226,7 +226,7 @@ func error404() {
 }
 
 func validReferrer(request http.Request) (valid bool) {
-	if request.Referer() == "" || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain {
+	if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
 		valid = false
 	} else {
 		valid = true

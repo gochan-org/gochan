@@ -4,7 +4,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"github.com/disintegration/imaging"
 	"html"
@@ -23,8 +22,7 @@ import (
 )
 
 var (
-	FileWriteError = errors.New("Couldn't write file")
-	TemplateExecutionError = errors.New("Failed executing template")
+	whitespace_match = "[\000-\040]"
 	last_post PostTable
 )
 
@@ -139,7 +137,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 
 	defer func() {
 		if uhoh, ok := recover().(error); ok {
-			error_log.Print(TemplateExecutionError.Error())
+			error_log.Print("Failed executing template.")
 			fmt.Println(uhoh.Error())
 		}
 		if board_file != nil {
@@ -157,9 +155,34 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 }
 
 func buildThread(op_id int, board_id int) (err error) {
-	thread_posts,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
+	var posts []PostTable
+	var post_table_interface []interface{}
+
+	rows,err := db.Query("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
 	if err != nil {
-		exitWithErrorPage(writer,err.Error())
+		error_log.Print(err.Error())
+		return
+	}
+	for rows.Next() {
+		var post PostTable
+		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
+		if err != nil {
+			error_log.Print(err.Error())
+			return
+		}
+		posts = append(posts, post)
+	}
+
+	for _,post := range posts {
+		post_msg_before := post.Message
+		post.Message = parseBacklinks(post.Message, post.BoardID)
+		if post_msg_before != post.Message {
+			_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(post.ID))
+			if err != nil {
+				exitWithErrorPage(writer, err.Error())
+			}
+		}
+		post_table_interface = append(post_table_interface, post)
 	}
 	board_arr := getBoardArr("")
 	sections_arr := getSectionArr("")
@@ -177,7 +200,7 @@ func buildThread(op_id int, board_id int) (err error) {
 
     var interfaces []interface{}
     interfaces = append(interfaces, config)
-    interfaces = append(interfaces, thread_posts)
+    interfaces = append(interfaces, post_table_interface)
     var board_arr_i []interface{}
     for _,b := range board_arr {
     	board_arr_i = append(board_arr_i,b)
@@ -194,7 +217,7 @@ func buildThread(op_id int, board_id int) (err error) {
 
 	defer func() {
 		if _, ok := recover().(error); ok {
-			error_log.Print(TemplateExecutionError.Error())
+			error_log.Print("Failed executing template.")
 		}
 		if thread_file != nil {
 			thread_file.Close()
@@ -392,24 +415,26 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
+
+	post.Message = parseBacklinks(post.Message, post.BoardID)
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	post_name_cookie := strings.Replace(url.QueryEscape(post_name),"+", "%20", -1)
 	url.QueryEscape(post_name_cookie)
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 	if email_command == "" {
-		http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
+		http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
 	} else {
 		if email_command == "noko" {
 			if post.Email == "" {
-				http.SetCookie(writer, &http.Cookie{Name: "email", Value:"noko", Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})						
+				http.SetCookie(writer, &http.Cookie{Name: "email", Value:"noko", Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})						
 			} else {
-				http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email + "#noko", Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
+				http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email + "#noko", Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})		
 			}
 		}
 	}
 
 	
-	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})	
+	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})	
 	post.IP = request.RemoteAddr
 	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()
@@ -529,19 +554,20 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 	id,_ := result.LastInsertId()
 
-	if post.ParentID > 0 {
-		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
+	parsed_backlinks:= parseBacklinks(post.Message, post.BoardID)
+	if post.Message != parsed_backlinks {
+		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(int(id)))
 		if err != nil {
-			exitWithErrorPage(writer,err.Error())
+			exitWithErrorPage(writer, err.Error())
 		}
-		buildThread(post_arr[0].(PostTable).ParentID,post_arr[0].(PostTable).BoardID)
-	} else {
-		post_arr,err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND `parentid` = "+strconv.Itoa(post.ParentID)+" AND `boardid` = "+strconv.Itoa(post.BoardID)+" LIMIT 1;")
-		if err != nil {
-			exitWithErrorPage(writer,err.Error())
-		}
-		buildThread(int(id),post_arr[0].(PostTable).BoardID)
 	}
+
+	if post.ParentID > 0 {
+		buildThread(post.ParentID,post.BoardID)
+	} else {
+		buildThread(int(id),post.BoardID)
+	}
+	
 	boards := getBoardArr("")
 	sections := getSectionArr("")
 	buildBoardPage(post.BoardID, boards, sections)
@@ -554,6 +580,80 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(writer,&request,"/" + boards[post.BoardID-1].Dir + "/",http.StatusFound)
 	}
+}
+
+func parseBacklinks(post string, boardid int) string {
+	whitespace_regex, err := regexp.Compile(whitespace_match)
+	var post_words []string
+	if err != nil {
+		// since the whitespace_match variable is built-in, there is no way this should happen, unless you mess with the code
+		error_log.Print(err.Error())
+		return post
+	} else {
+		post = strings.Replace(post,"<br />", "\n", -1)
+		// split the post into indeividual words
+		post_words = whitespace_regex.Split(post, -1)
+	}
+
+	gt := "&gt;"
+	// go through each word and if it is a backlink, check to see if it points to a valid post
+	for _,word := range post_words {
+		var linked_post string
+		if strings.Index(word,gt + gt) == 0 {
+			if strings.Index(string(word[8:]), gt + gt) > 0 {
+				// >>345435>>234, this may work on some imageboards, but it's bad and you shouldn't do that
+				continue
+			}
+
+			linked_post = strings.Replace(word, gt + gt, "", -1)
+			if linked_post == "" {
+				// fmt.Println("empty")
+				continue
+			}
+
+			linked_post = strings.Replace(linked_post, "\\r", "", -1)
+			linked_post = strings.Replace(linked_post, "<br", "", -1)
+
+			if string(linked_post[0]) == "/" {
+				board_post_arr := strings.Split(linked_post,"/")
+				if len(board_post_arr) == 3 {
+					// >>/board/1234
+				} else {
+					// fmt.Println(">>11/11")
+					// something like >>11/111
+					continue
+				}
+			} else {
+				_, err:= strconv.Atoi(linked_post)
+				if err != nil {
+					fmt.Println(">>letters:  " + linked_post)
+					// something like >>letters
+					continue
+				}
+
+				var parent_id string
+				var board_dir string
+				//err = db.QueryRow("SELECT `parentid`, `" + config.DBprefix + "boards`.`dir` as `boarddir` FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `deleted_timestamp` = '" + nil_timestamp + "' AND `id` = " + linked_post).Scan(&parent_id,&board_dir)
+				err = db.QueryRow("SELECT `" + config.DBprefix + "boards`.`dir` AS boarddir, `" + config.DBprefix + "posts`.`parentid` AS parentid FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"  AND `boardid` = `" + config.DBprefix + "boards`.`id` AND `" + config.DBprefix + "posts`.`id` = " + linked_post).Scan(&board_dir,&parent_id)
+
+				if err == sql.ErrNoRows {
+					// fmt.Println("post doesn't exist:  " +  linked_post)
+					// post doesn't exist on this board
+					// format the backlink with a strikethrough
+					continue
+				}
+
+				if parent_id == "0" {
+					// this is a thread
+					post = strings.Replace(post,gt + gt + linked_post, "<a href=\"http://" + config.Domain + "/" + board_dir + "/res/" + linked_post + ".html#" + linked_post + "\">&gt;&gt;" + linked_post + "</a>", -1)
+				} else {
+					post = strings.Replace(post, gt + gt + linked_post, "<a href=\"http://" + config.Domain + "/" + board_dir + "/res/" + parent_id + ".html#" + linked_post + "\">&gt;&gt;" + linked_post + "</a>", -1)
+				}
+			}
+		}
+	}
+	post = strings.Replace(post,"\n", "<br />", -1)
+	return post
 }
 
 
