@@ -651,9 +651,9 @@ func parseBacklinks(post string, boardid int) string {
 
 				if parent_id == "0" {
 					// this is a thread
-					post = strings.Replace(post,gt + gt + linked_post, "<a href=\"http://" + config.SiteDomain + "/" + board_dir + "/res/" + linked_post + ".html#" + linked_post + "\">&gt;&gt;" + linked_post + "</a>", -1)
+					post = strings.Replace(post,gt + gt + linked_post, "<a href=\"/" + board_dir + "/res/" + linked_post + ".html#" + linked_post + "\">&gt;&gt;" + linked_post + "</a>", -1)
 				} else {
-					post = strings.Replace(post, gt + gt + linked_post, "<a href=\"http://" + config.SiteDomain + "/" + board_dir + "/res/" + parent_id + ".html#" + linked_post + "\">&gt;&gt;" + linked_post + "</a>", -1)
+					post = strings.Replace(post, gt + gt + linked_post, "<a href=\"/" + board_dir + "/res/" + parent_id + ".html#" + linked_post + "\">&gt;&gt;" + linked_post + "</a>", -1)
 				}
 			}
 		}
