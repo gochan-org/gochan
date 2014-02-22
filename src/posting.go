@@ -385,6 +385,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			error_log.Print(err.Error())
 			exitWithErrorPage(w, err.Error())
+			return
 		}
 		post.ID = first_post
 	} else {
@@ -452,6 +453,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	if !validReferrer(request) {
 		access_log.Print("Rejected post from possible spambot @ : "+request.RemoteAddr)
 		//TODO: insert post into temporary post table and add to report list
+		return
 	}
 
 	file,handler,uploaderr := request.FormFile("imagefile")
@@ -492,6 +494,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			img,err := imaging.Open(file_path)
 			if err != nil {
 				exitWithErrorPage(w, "Upload filetype not supported")
+				return
 			} else {
 				//post.FileChecksum string
 				stat,err := os.Stat(file_path)
@@ -515,10 +518,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					_,err := os.Stat(path.Join(config.DocumentRoot,"spoiler.png"))
 					if err != nil {
 						exitWithErrorPage(w,"missing /spoiler.png")
+						return
 					} else {
 						err = syscall.Symlink(path.Join(config.DocumentRoot,"spoiler.png"),thumb_path)
 						if err != nil {
 							exitWithErrorPage(w,err.Error())
+							return
 						}
 					}
 				} else 	if config.ThumbWidth >= post.ImageW && config.ThumbHeight >= post.ImageH {
@@ -527,6 +532,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					err := syscall.Symlink(file_path,thumb_path)
 					if err != nil {
 						exitWithErrorPage(w,err.Error())
+						return
 					}
 				} else {
 					var thumbnail image.Image
@@ -537,6 +543,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 						err = saveImage(catalog_thumb_path, &catalog_thumbnail)
 						if err != nil {
 							exitWithErrorPage(w, err.Error())
+							return
 						}
 					} else {
 						thumbnail = createThumbnail(img,"reply")
@@ -544,6 +551,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					err = saveImage(thumb_path, &thumbnail)
 					if err != nil {
 						exitWithErrorPage(w, err.Error())
+						return
 					}
 
 				}
@@ -553,10 +561,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 
 	if post.Message == "" && post.Filename == "" {
 		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
+		return
 	}
 	result := insertPost(&w, post,email_command != "sage")
 	if err != nil {
 		exitWithErrorPage(w, err.Error())
+		return
 	}
 	id,_ := result.LastInsertId()
 
@@ -565,6 +575,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(int(id)))
 		if err != nil {
 			exitWithErrorPage(writer, err.Error())
+			return
 		}
 	}
 
