@@ -214,8 +214,14 @@ function openStaffLightBox(action_url) {
 		},
 		error: function(result) {
 			var responsetext = result.responseText
-			responsetext = responsetext.substring(responsetext.indexOf("<body>") + 6, responsetext.indexOf("</body>"));
-			showLightBox("Manage",responsetext);
+			header = responsetext.substring(responsetext.indexOf("<h1>")+4,responsetext.indexOf("</h1>"))
+
+			responsetext = responsetext.substring(responsetext.indexOf("</h1>") + 5, responsetext.indexOf("</body>"));
+			if(header == "") {
+				showLightBox("Manage",responsetext);
+			} else {
+				showLightBox(header,responsetext);
+			}
 		}
 	});
 }
