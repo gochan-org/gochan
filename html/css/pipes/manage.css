@@ -90,7 +90,7 @@ body {
 	font-family:sans-serif;
 	font-size: 12pt;
 }
-h2 {
+h1, h2 {
 	background-color: #202020;
 	-moz-box-shadow: 2px 2px 3px 4px #101010;
 	-webkit-box-shadow: 2px 2px 3px 4px #101010;
