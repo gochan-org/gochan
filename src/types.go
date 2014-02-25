@@ -51,9 +51,9 @@ type AnnouncementsTable struct {
 
 type BanlistTable struct {
 	ID uint
-	Expired bool
 	AllowRead bool
 	IP string
+	Message string
 	SilentBan uint8
 	Boards string
 	BannedBy string
@@ -61,7 +61,7 @@ type BanlistTable struct {
 	Expires time.Time
 	Reason string
 	StaffNote string
-	Appeal string
+	AppealMessage string
 	AppealAt time.Time
 }
 

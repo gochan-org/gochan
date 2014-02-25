@@ -12,9 +12,9 @@ CREATE TABLE `DBPREFIXannouncements` (
 
 CREATE TABLE `DBPREFIXbanlist` (
 	`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-	`expired` TINYINT(1) DEFAULT '0',
 	`allow_read` TINYINT(1) DEFAULT '1',
 	`ip` CHAR(15) NOT NULL,
+	`message` TEXT DEFAULT '',
 	`silent_ban` TINYINT(1) DEFAULT '0',
 	`boards` VARCHAR(255) NOT NULL,
 	`banned_by` VARCHAR(50) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE `DBPREFIXbanlist` (
 	`expires` TIMESTAMP NOT NULL,
 	`reason` VARCHAR(255) NOT NULL,
 	`staff_note` VARCHAR(255) NOT NULL,
-	`appeal` VARCHAR(255) NOT NULL,
+	`appeal_message` VARCHAR(255) NOT NULL,
 	`appeal_at` TIMESTAMP NOT NULL,
 	PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;

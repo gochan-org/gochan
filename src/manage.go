@@ -162,6 +162,75 @@ func createSession(key string,username string, password string, request *http.Re
 }
 
 var manage_functions = map[string]ManageFunction{
+	/*"cleanup": {
+		Permissions: 3,
+		Callback: func() (html string) {
+			html = "<h2>Cleanup</h2><br />"
+			
+			if (request.FormValue("run") == 1) {
+				html += "<hr />Deleting non-deleted replies which belong to deleted threads.<hr />";
+			 	boards_rows,err := db.Query("SELECT `id`,`dir` FROM `" + config.DBprefix + "boards`")
+				if err != nil {
+					html += "<tr><td>"+err.Error()+"</td></tr></table>"
+					return
+				}
+				var id int
+				var dir string
+				for boards_rows.Next() {
+					err = boards_rows.Scan(&id, &dir)
+					html += "<b>Looking for orphans in /" + dir + "/</b><br />";
+
+					parentid_rows, err := db.Query("SELECT `id`,`parentid` FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(id) + " AND `parentid` != '0' AND `is_deleted` = 0")
+					if err != nil {
+						html += err.Error()
+						return
+					}
+					var id2 string
+					var parentid string
+					for parentid_rows.Next() {
+						err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + id2 + " AND `id` = '" + parentid + "' AND `IS_DELETED` = 0")
+						if err != nil {
+							deletePost()
+							$post_class = new Post($line['id'], $lineboard['name'], $lineboard['id']);
+							$post_class->Delete;
+
+							html +='Reply #%1$s\'s thread (#%2$s) does not exist! It has been deleted.'),$line['id'],$line['parentid']).'<br />';
+						}
+
+
+					}
+				}
+
+				$tpl_page .= '<hr />'. _gettext('Deleting unused images.') .'<hr />';
+				$this->delunusedimages(true);
+				$tpl_page .= '<hr />'. _gettext('Removing posts deleted more than one week ago from the database.') .'<hr />';
+				$results = $tc_db->GetAll("SELECT `name`, `type`, `id` FROM `" . KU_DBPREFIX . "boards`");
+				foreach ($results AS $line) {
+					if ($line['type'] != 1) {
+						$tc_db->Execute("DELETE FROM `" . KU_DBPREFIX . "posts` WHERE `boardid` = " . $line['id'] . " AND `IS_DELETED` = 1 AND `deleted_timestamp` < " . (time() - 604800) . "");
+					}
+				}
+				$tpl_page .= _gettext('Optimizing all tables in database.') .'<hr />';
+				if (KU_DBTYPE == 'mysql' || KU_DBTYPE == 'mysqli') {
+					$results = $tc_db->GetAll("SHOW TABLES");
+								foreach ($results AS $line) {
+										$tc_db->Execute("OPTIMIZE TABLE `" . $line[0] . "`");
+								}
+				}
+				if (KU_DBTYPE == 'postgres7' || KU_DBTYPE == 'postgres8' || KU_DBTYPE == 'postgres') {
+									$results = $tc_db->GetAll("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
+									foreach ($results AS $line) {
+											$tc_db->Execute("VACUUM ANALYZE `" . $line[0] . "`");
+									}
+				}
+				$tpl_page .= _gettext('Cleanup finished.');
+				management_addlogentry(_gettext('Ran cleanup'), 2);
+			} else {
+				$tpl_page .= '<form action="manage_page.php?action=cleanup" method="post">'. "\n" .
+							'	<input name="run" id="run" type="submit" value="'. _gettext('Run Cleanup') . '" />'. "\n" .
+							'</form>';
+			}
+	}},*/
 	"purgeeverything": {
 		Permissions: 3,
 		Callback: func() (html string) {
@@ -296,38 +365,37 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 		// do := request.FormValue("do")
 
-		html  = "<fieldset>\n" +
-				"	<legend>Ban user(s)</legend>\n" +
-				"	<span style=\"font-weight: bold;\">Ban type: </span>\n" +
-				"	<select id=\"ban-type\">\n" +
-				"		<option>Single IP/IP range</option>\n" +
-				"		<option>Name/tripcode</option>\n" +
-				"	</select><br /><hr />\n" +
-				"	<form action=\"/manage\">\n" +
-				"		<div id=\"ip\" class=\"ban-type-div\" style=\"width:100%%; display: inline;\">\n" +
-				"			<div style=\"width: 100%%; text-align: center; font-weight: bold;\">Single IP</div>\n" +
-				"			<input type=\"hidden\" name=\"action\" value=\"ban\" />\n" +
-				"			<input type=\"hidden\" name=\"type\" value=\"single\">\n" +
-				"			<span style=\"font-weight: bold;\">IP address:</span> <input type=\"text\" name=\"ip\" /><br />\n" +
-				"			\"192.168.1.36\" will ban posts from that IP address<br />\n" +
-				"			\"192.168\" will block all IPs starting with 192.168<br /><br />\n" +
-				"			<label style=\"font-weight: bold;\">Ban image hash: <input type=\"checkbox\" /></label><br />\n" +
-				"			<span style=\"font-weight: bold;\">Image hash ban duration: </span><br />\n" +
-				"			<div class=\"duration-select\"></div>\n" +
-				"			<br />\n" +
-				"			This will disallow an image with this hash from being posted, and will ban users who try to post it for the specified amount of time.\n" +
-				"			<hr />\n" +
-				"		</div>\n" +
-				"		<div id=\"name\" class=\"ban-type-div\" style=\"width:100%%; display: none;\">\n" +
-				"			<div style=\"width: 100%%; text-align: center; font-weight: bold;\">Name/Tripcode</div>\n" +
-				"			<input type=\"hidden\" name=\"action\" value=\"ban\" />\n" +
-				"			<input type=\"hidden\" name=\"type\" value=\"single\">\n" +
-				"			<span style=\"font-weight: bold;\">Name/tripcode:</span> <input type=\"text\" name=\"ip\" /><br /><br />\n" +
-				"			<hr />\n" +
-				"		</div>\n" +
-				"		<div id=\"options\">\n" +
-				"			<span style=\"font-weight: bold;\">Boards: </span><br />\n" +
-				"			<label>All boards <input type=\"checkbox\" id=\"allboards\" /></label> overrides individual board selection<br />\n"
+		html  =	"<h1>Ban user(s)</h1>\n" +
+				"<span style=\"font-weight: bold;\">Ban type: </span>\n" +
+				"<select id=\"ban-type\">\n" +
+				"	<option>Single IP/IP range</option>\n" +
+				"	<option>Name/tripcode</option>\n" +
+				"</select><br /><hr />\n" +
+				"<form action=\"/manage\">\n" +
+				"	<div id=\"ip\" class=\"ban-type-div\" style=\"width:100%%; display: inline;\">\n" +
+				"		<div style=\"width: 100%%; text-align: center; font-weight: bold;\">Single IP</div>\n" +
+				"		<input type=\"hidden\" name=\"action\" value=\"ban\" />\n" +
+				"		<input type=\"hidden\" name=\"type\" value=\"single\">\n" +
+				"		<span style=\"font-weight: bold;\">IP address:</span> <input type=\"text\" name=\"ip\" /><br />\n" +
+				"		\"192.168.1.36\" will ban posts from that IP address<br />\n" +
+				"		\"192.168\" will block all IPs starting with 192.168<br /><br />\n" +
+				"		<label style=\"font-weight: bold;\">Ban image hash: <input type=\"checkbox\" /></label><br />\n" +
+				"		<span style=\"font-weight: bold;\">Image hash ban duration: </span><br />\n" +
+				"		<div class=\"duration-select\"></div>\n" +
+				"		<br />\n" +
+				"		This will disallow an image with this hash from being posted, and will ban users who try to post it for the specified amount of time.\n" +
+				"		<hr />\n" +
+				"	</div>\n" +
+				"	<div id=\"name\" class=\"ban-type-div\" style=\"width:100%%; display: none;\">\n" +
+				"		<div style=\"width: 100%%; text-align: center; font-weight: bold;\">Name/Tripcode</div>\n" +
+				"		<input type=\"hidden\" name=\"action\" value=\"ban\" />\n" +
+				"		<input type=\"hidden\" name=\"type\" value=\"single\">\n" +
+				"		<span style=\"font-weight: bold;\">Name/tripcode:</span> <input type=\"text\" name=\"ip\" /><br /><br />\n" +
+				"		<hr />\n" +
+				"	</div>\n" +
+				"	<div id=\"options\">\n" +
+				"		<span style=\"font-weight: bold;\">Boards: </span><br />\n" +
+				"		<label>All boards <input type=\"checkbox\" id=\"allboards\" /></label> overrides individual board selection<br />\n"
 			 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 				if err != nil {
 					html += "<hr />" + err.Error()
@@ -342,18 +410,50 @@ var manage_functions = map[string]ManageFunction{
     				html += "			<label>/" + board_dir + "/ <input type=\"checkbox\" id=\"" + board_dir + "\" class=\"board-check\"/></label>&nbsp;&nbsp;\n"
 				}
 				html +=
-				"			<hr />\n" +
-				"			<span style=\"font-weight: bold;\">Duration: </span><br />\n" +
-				"			<label>Permanent ban (overrides duration dropdowns if checked)<input type=\"checkbox\" name=\"forever\" value=\"forever\" /></label><br /><br />\n" +
-				"			<div class=\"duration-select\"></div>\n" +
-				"			<hr />\n" +
-				"			<div id=\"reason-staffnote\" style=\"text-align: right; float:left;\">\n" +
-				"				<span style=\"font-weight: bold;\">Reason: </span><input type=\"text\" name=\"reason\" /><br />\n" +
-				"				<span style=\"font-weight: bold;\">Staff note: </span><input type=\"text\" name=\"staff-note\" />\n" +
-				"			</div>\n" +
+				"		<hr />\n" +
+				"		<span style=\"font-weight: bold;\">Duration: </span><br />\n" +
+				"		<label>Permanent ban (overrides duration dropdowns if checked)<input type=\"checkbox\" name=\"forever\" value=\"forever\" /></label><br /><br />\n" +
+				"		<div class=\"duration-select\"></div>\n" +
+				"		<hr />\n" +
+				"		<div id=\"reason-staffnote\" style=\"text-align: right; float:left;\">\n" +
+				"			<span style=\"font-weight: bold;\">Reason: </span><input type=\"text\" name=\"reason\" /><br />\n" +
+				"			<span style=\"font-weight: bold;\">Staff note: </span><input type=\"text\" name=\"staff-note\" />\n" +
 				"		</div>\n" +
-				"	</form>\n" +
-				"</fieldset>" +
+				"	</div>\n" +
+				"</form><br /><br />\n" +
+				"<h2>Banned IPs</h2>\n"
+
+				rows,err = db.Query("SELECT * FROM `" + config.DBprefix + "banlist`")
+				if err != nil {
+					html += "</table><br />" + err.Error()
+					error_log.Print(err.Error())
+					return
+				}
+				var ban BanlistTable
+			
+				num_rows := 0
+				for rows.Next() {
+					if num_rows == 0 {
+
+						html += "<table width=\"100%%\" border=\"1\">\n" +
+						"<tr><th>IP</th><th>Message</th><th>Date added</th><th>Added by</th><th>Reason</th><th>Expires/expired</th><th></th></tr>"
+					}
+					err = rows.Scan(&ban.ID, &ban.AllowRead, &ban.IP, &ban.Message, &ban.SilentBan, &ban.Boards, &ban.BannedBy, &ban.Timestamp, &ban.Expires, &ban.Reason, &ban.StaffNote, &ban.AppealMessage, &ban.AppealAt)
+					if err != nil {
+						html += "</table><br />" + err.Error()
+						error_log.Print(err.Error())
+						return						
+					}
+					html += "<tr><td>" + ban.IP + "</td><td>" + ban.Message + "</td><td>" + humanReadableTime(ban.Timestamp) + "</td><td>" + ban.BannedBy + "</td><td>" + ban.Reason + "</td><td>" + humanReadableTime(ban.Expires) + "</td><td>Delete</td></tr>"
+					num_rows += 1
+				}
+				if num_rows == 0 {
+					html += "No banned IPs"
+				}
+
+				// html += "<tr><td>127.0.0.1</td><td>Banned message</td><td>12/25/1991</td><td>Luna</td><td>Spam</td><td>never</td><td>Delete</td></tr>" +
+
+				html += "</table>\n<br /><br /><br />" +
 				"<script type=\"text/javascript\">banPage();</script>\n "
 		return
 	}},
