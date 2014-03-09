@@ -228,8 +228,28 @@ func buildThread(op_id int, board_id int) (err error) {
 }
 
 // checks to see if the poster's tripcode/name is banned, if the IP is banned, or if the file checksum is banned
-func checkBannedStatus(post PostTable) bool {
-	return false
+func checkBannedStatus(post *PostTable) (bool, error) {
+	/*var ip string
+	var name string
+	var tripcode string
+	var boards string
+	var expires string
+	var count int
+	var search
+
+	err := db.QueryRow("SELECT `ip`, `name`, `tripcode`, `boards`, `expires` FROM `" + config.DBprefix + "banlist`").Scan(&ip,&name,&tripcode, &boards, &expires)
+	
+	if err != nil {
+		if err == sql.ErrNoRows {
+			count = 0
+		} else {
+			error_log.Print(err.Error())
+			exitWithErrorPage(w, err.Error())
+			return
+		}
+	}*/
+	return false, nil
+
 }
 
 func createThumbnail(image_obj image.Image, size string) image.Image {
@@ -563,6 +583,19 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
 		return
 	}
+
+	isbanned, err := checkBannedStatus(&post)
+	if err != nil {
+		exitWithErrorPage(w, err.Error())
+		return
+	}
+
+	if isbanned {
+		post.IP = request.RemoteAddr
+		exitWithErrorPage(w, "ur banned")
+		return
+	}
+
 	result := insertPost(&w, post,email_command != "sage")
 	if err != nil {
 		exitWithErrorPage(w, err.Error())
