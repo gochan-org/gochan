@@ -5,14 +5,14 @@ import (
 )
 
 var (
-	version float32 = 0.5
+	version float32 = 0.6
 )
 
 
 func main() {
 	defer db.Close()
 	initConfig()
-	fmt.Println("Config file loaded. Connecting to database...")
+	fmt.Printf("Config file loaded. Connecting to database...")
 	connectToSQLServer()
 
 	fmt.Println("Loading and parsing templates...")
