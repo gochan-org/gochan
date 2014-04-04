@@ -97,7 +97,7 @@ table#pages td {
 	z-index:1;
 }
 
-div#topbar {
+#topbar {
 	left:0;
 	position:fixed;
 	top:0;
@@ -108,7 +108,9 @@ div#topbar {
 	padding-right:4px;
 }
 
-
+#topbar div {
+	padding:4px;
+}
 
 .thread-ddown-menu {
 	display:inline-block;
@@ -167,22 +169,6 @@ div#topbar {
 
 .post-text {
 	padding: 8px;
-}
-
-.section-block {
-	padding-bottom:8px;
-}
-
-.section-body {
-	margin-bottom:8px;
-	margin-right:0px;
-	min-height:48px;
-	overflow:hidden;
-	right:0px;
-}
-
-.section-title-block {
-	display:block;
 }
 
 .setting-name {

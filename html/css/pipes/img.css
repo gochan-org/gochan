@@ -16,9 +16,6 @@
 	height:26px;
 }
 
-#topbar div {
-	padding:4px;
-}
 
 .dropdown-menu {
 	background-color:#202020;
@@ -32,18 +29,6 @@
 .menu {
 	margin-top:1em;
 	text-align:center;
-}
-
-.plus {
-	background:#404040;
-	color:#000;
-	font-weight:400;
-	height:inherit;
-}
-
-.plus:hover {
-	background:#c5c9e0;
-	cursor:pointer;
 }
 
 .reply {
@@ -64,21 +49,6 @@
 .postername a {
 	color:#FC0!important;
 	text-decoration:underline;
-}
-
-.section-body {
-	background-color:#606060;
-	padding-bottom:8px;
-	padding-left:8px;
-	padding-right:8px;
-}
-
-.section-title-block {
-	background-color:#202020;
-	border-radius:4px 4px 0px 0px;
-	height:19px;
-	padding-left:8px;
-	padding-right:8px;
 }
 
 .subject {

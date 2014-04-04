@@ -28,4 +28,30 @@
 
 .section-body {
 	min-height: 48px;
+	padding-left:8px;
+	padding-right: 8px;
+	padding-bottom: 8px;
+}
+
+.section-title-block {
+	height:19px;
+	display:block;
+	padding:4px 8px 4px 8px;
+}
+
+#topmenu {
+	height: 26px;
+}
+
+.topmenu-item {
+	padding: 4px;
+}
+
+.menu {
+	margin-top:1em;
+}
+
+h1, h2 {
+	padding-left: 4px;
+	padding-right: 4px;
 }
