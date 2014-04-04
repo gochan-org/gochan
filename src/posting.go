@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"github.com/disintegration/imaging"
@@ -228,28 +229,53 @@ func buildThread(op_id int, board_id int) (err error) {
 }
 
 // checks to see if the poster's tripcode/name is banned, if the IP is banned, or if the file checksum is banned
-func checkBannedStatus(post *PostTable) (bool, error) {
-	/*var ip string
-	var name string
-	var tripcode string
-	var boards string
-	var expires string
-	var count int
-	var search
+// returns true if the user is banned
+func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interface{}, error) {
+	fmt.Println(post.IP)
 
-	err := db.QueryRow("SELECT `ip`, `name`, `tripcode`, `boards`, `expires` FROM `" + config.DBprefix + "banlist`").Scan(&ip,&name,&tripcode, &boards, &expires)
-	
+	var is_expired bool
+	var ban_entry BanlistTable
+	// var count int
+	// var search string
+
+	err := db.QueryRow("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `" + config.DBprefix + "banlist` WHERE `ip` = '" + post.IP + "'").Scan(&ban_entry.IP,&ban_entry.Name,&ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
+	var interfaces []interface{}
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			count = 0
-		} else {
-			error_log.Print(err.Error())
-			exitWithErrorPage(w, err.Error())
-			return
-		}
-	}*/
-	return false, nil
+			fmt.Println("not in the list")
+			// the user isn't banned
+			// We don't need to return err because it isn't necessary
+			return interfaces, nil
 
+		} else {
+			// something went wrong
+			fmt.Println("something's wrong")
+			return interfaces,err
+		}
+	} else {
+
+		is_expired = ban_entry.Expires.After(time.Now()) == false
+
+		if is_expired {
+			// if it is expired, send a message saying that it's expired, but still post
+			fmt.Println("expired")
+			return interfaces,nil
+
+		}
+		// the user's IP is in the banlist. Check if the ban has expired
+		if getSpecificSQLDateTime(ban_entry.Expires) == "0001-01-01 00:00:00" || ban_entry.Expires.After(time.Now()) {
+			// for some funky reason, Go's MySQL driver seems to not like getting a supposedly nil timestamp as an ACTUAL nil timestamp
+			// so we're just going to wing it and cheat. Of course if they change that, we're kind of hosed.
+			
+			var interfaces []interface{}
+			interfaces = append(interfaces, config)
+			interfaces = append(interfaces, ban_entry)
+			return interfaces,nil
+		}
+		 return interfaces,nil
+	}
+	return interfaces, nil
 }
 
 func createThumbnail(image_obj image.Image, size string) image.Image {
@@ -462,7 +488,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})	
 	//http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 
-	post.IP = request.RemoteAddr
+	post.IP = request.RemoteAddr[:strings.Index(request.RemoteAddr,":")]
 	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()
 	post.Bumped = time.Now()
@@ -584,15 +610,30 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isbanned, err := checkBannedStatus(&post)
+
+
+	isbanned, err := checkBannedStatus(&post, &w)
 	if err != nil {
 		exitWithErrorPage(w, err.Error())
 		return
 	}
 
-	if isbanned {
+	if len(isbanned) > 0 {
 		post.IP = request.RemoteAddr
-		exitWithErrorPage(w, "ur banned")
+		wrapped := &Wrapper{IName: "bans",Data: isbanned}
+
+		var banpage_buffer bytes.Buffer
+		var banpage_html string
+		banpage_buffer.Write([]byte(""))
+
+		err = banpage_tmpl.Execute(&banpage_buffer,wrapped)
+		if err != nil {
+			fmt.Println(banpage_html)
+			fmt.Fprintf(writer,banpage_html + err.Error() + "\n</body>\n</html>")
+			return
+		}
+		fmt.Fprintf(w,banpage_buffer.String())
+
 		return
 	}
 

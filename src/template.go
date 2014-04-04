@@ -62,6 +62,12 @@ var funcMap = template.FuncMap{
 		return style != config.DefaultStyle_img
 	},
 	"getInterface":func(in []interface{}, index int) interface{} {
+		var nope interface{}
+		if len(in) == 0 {
+			return nope
+		} else if len(in) < index + 1 {
+			return nope
+		}
 		return in[index]
 	},
 	"formatTimestamp": func(timestamp time.Time) string {
@@ -109,6 +115,10 @@ var funcMap = template.FuncMap{
 
 var (
 	footer_data = FooterData{version, float32(0)}
+
+	banpage_tmpl_str string
+	banpage_tmpl *template.Template
+
 	global_footer_tmpl_str string
 	global_footer_tmpl *template.Template
 	
@@ -132,6 +142,18 @@ var (
 )
 
 func initTemplates() {
+	banpage_tmpl_bytes,tmpl_err := ioutil.ReadFile(config.TemplateDir+"/banpage.html")
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/banpage.html\": " + tmpl_err.Error())
+		os.Exit(2)
+	}
+	banpage_tmpl_str = "{{$config := getInterface .Data 0}}{{$ban := getInterface .Data 1}}" + string(banpage_tmpl_bytes)
+	banpage_tmpl,tmpl_err = template.New("banpage_tmpl").Funcs(funcMap).Parse(string(banpage_tmpl_str))
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \""+config.TemplateDir+"/banpage.html\": " + tmpl_err.Error())
+		os.Exit(2)
+	}
+
 	global_footer_tmpl_bytes,tmpl_err := ioutil.ReadFile(config.TemplateDir+"/global_footer.html")
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/global_footer.html\": " + tmpl_err.Error())
@@ -228,10 +250,4 @@ func getStyleLinks(w http.ResponseWriter, stylesheet string) {
 
 func buildFrontPage() error {
 	return nil
-}
-
-func buildBoard(boardid int, page int, boards []BoardsTable, secions []interface{}) (string, error) {
-	//build board pages
-	//build board thread pages
-	return "", nil
 }

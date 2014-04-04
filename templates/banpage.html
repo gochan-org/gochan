@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Banned</title>
+	<link rel="stylesheet" href="/css/global/front.css" />
+{{range $i, $style := $config.Styles_img}}
+	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
+
+	<script type="text/javascript">
+		var styles = [{{range $i, $style := $config.Styles_img}}{{if gt $i  0}}, {{end}}"{{$style}}"{{end}}];
+		var webroot = "{{$config.SiteWebfolder}}"
+	</script>
+	<script type="text/javascript" src="/javascript/jquery/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="/javascript/gochan.js"></script>
+	<script type="text/javascript" src="/javascript/manage.js"></script>
+</head>
+<body>
+	<div id="top-pane">
+		<span id="site-title">{{$config.SiteName}}</span><br />
+		<span id="site-slogan">{{$config.SiteSlogan}}</span>
+	</div>
+	<br />
+	<br />
+	<div class="section-block" style="margin: 0px 26px 0px 24px">
+		<div class="section-title-block">
+			<span class="section-title"><b>YOU ARE BANNED :(</b></span>
+		</div>
+		<div class="section-body" style="padding-top:8px">
+			<div id="ban-info" style="float:left">
+				{{if stringEq $ban.Boards  "*"}}
+					You are banned from posting on <b>all boards</b> for the following reason:
+				{{else}}
+					You are banned from posting on <b>{{$ban.Boards}}</b> for the following reason:
+				{{end}}
+				<br /><br />
+				<b>{{$ban.Message}}</b>
+				<br /><br />
+				{{$expires_timestamp := formatTimestamp $ban.Expires}}
+				{{$appeal_timestamp := formatTimestamp $ban.AppealAt}}
+				{{if stringEq $expires_timestamp "Mon, January 01, 0001 00:00 AM"}}
+					Your ban was placed on {{formatTimestamp $ban.Timestamp}} and will not expire.<br />
+				{{else}}
+					Your ban was placed on {{formatTimestamp $ban.Timestamp}} and will expire on {{formatTimestamp $ban.Expires}}<br />
+				{{end}}
+				<br />
+				{{if stringEq $appeal_timestamp "Mon, January 01, 0001 00:00 AM"}}
+					You may not appeal this ban.
+				{{else}}
+					You may appeal this ban {{formatTimestamp $ban.AppealAt}}
+				{{end}}
+				<br /><br />
+				Your IP address is {{$ban.IP}}.
+			</div>
+			<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/>
+		</div>
+	</div>
+</body>
+</html>
