@@ -53,6 +53,8 @@ type BanlistTable struct {
 	ID uint
 	AllowRead bool
 	IP string
+	Name string
+	Tripcode string
 	Message string
 	SilentBan uint8
 	Boards string
@@ -71,11 +73,6 @@ type BannedHashesTable struct {
 	Description string
 }
 
-type BannedTripcodesTable struct {
-	ID uint
-	Name string
-	Tripcode string
-}
 
 type BoardsTable struct {
 	IName string
