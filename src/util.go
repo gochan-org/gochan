@@ -30,7 +30,6 @@ const (
 )
 
 func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time {
-	fmt.Println("now time: " + humanReadableTime(time.Now()))
 	if starting {
 		// starting benchmark test
 		fmt.Println("Starting benchmark \"" + name + "\"")
@@ -39,7 +38,6 @@ func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time 
 		// benchmark is finished, print the duration
 		// convert nanoseconds to a decimal seconds
 		duration_seconds := time.Since(given_time).Seconds()
-		fmt.Println(time.Since(given_time).Nanoseconds())
 		seconds := fmt.Sprintf("%0.02f", duration_seconds)
 		fmt.Println("benchmark \"" + name + "\" completed in " + seconds + "seconds")
 		return time.Now() // we don't really need this, but we have to return something

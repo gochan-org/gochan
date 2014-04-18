@@ -153,7 +153,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 	} else {
 		html += "/"+board.Dir+"/ built successfully.\n"
 	}
-	benchmarkTimer("buildBoard" + string(boardid), start_time, true)
+	benchmarkTimer("buildBoard" + string(boardid), start_time, false)
 	return
 }
 
@@ -228,7 +228,7 @@ func buildThread(op_id int, board_id int) (err error) {
 		}
 	}()
 	err = img_thread_tmpl.Execute(thread_file,wrapped)
-	benchmarkTimer("buildThread" + string(op_id), start_time, true)
+	benchmarkTimer("buildThread" + string(op_id), start_time, false)
 	return err
 }
 
