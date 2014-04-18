@@ -39,6 +39,7 @@ func generateTripCode(input string) string {
 
 
 func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (html string) {
+	start_time := benchmarkTimer("buildBoard" + string(boardid), time.Now(), true)
 	var board BoardsTable
 	for b,_ := range boards {
 		if boards[b].ID == boardid {
@@ -152,12 +153,14 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 	} else {
 		html += "/"+board.Dir+"/ built successfully.\n"
 	}
+	benchmarkTimer("buildBoard" + string(boardid), start_time, true)
 	return
 }
 
 func buildThread(op_id int, board_id int) (err error) {
 	var posts []PostTable
 	var post_table_interface []interface{}
+	start_time := benchmarkTimer("buildThread" + string(op_id), time.Now(), true)
 
 	rows,err := db.Query("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '"+nil_timestamp+"' AND (`parentid` = "+strconv.Itoa(op_id)+" OR `id` = "+strconv.Itoa(op_id)+") AND `boardid` = "+strconv.Itoa(board_id))
 	if err != nil {
@@ -225,14 +228,13 @@ func buildThread(op_id int, board_id int) (err error) {
 		}
 	}()
 	err = img_thread_tmpl.Execute(thread_file,wrapped)
+	benchmarkTimer("buildThread" + string(op_id), start_time, true)
 	return err
 }
 
 // checks to see if the poster's tripcode/name is banned, if the IP is banned, or if the file checksum is banned
 // returns true if the user is banned
 func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interface{}, error) {
-	fmt.Println(post.IP)
-
 	var is_expired bool
 	var ban_entry BanlistTable
 	// var count int
@@ -243,7 +245,6 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			fmt.Println("not in the list")
 			// the user isn't banned
 			// We don't need to return err because it isn't necessary
 			return interfaces, nil
@@ -357,7 +358,6 @@ func getThumbnailSize(w int, h int,size string) (new_w int, new_h int) {
 
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) sql.Result {
-
 	post_sql_str := "INSERT INTO `"+config.DBprefix+"posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
 	if post.Filename != "" {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
@@ -400,6 +400,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) sql.Resul
 
 
 func makePost(w http.ResponseWriter, r *http.Request) {
+	start_time := benchmarkTimer("makePost", time.Now(), true)
 	request = *r
 	writer = w
 	
@@ -671,6 +672,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(writer,&request,"/" + boards[post.BoardID-1].Dir + "/",http.StatusFound)
 	}
+	benchmarkTimer("makePost", start_time, false)
 }
 
 func parseBacklinks(post string, boardid int) string {

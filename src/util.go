@@ -22,11 +22,29 @@ import "C"
 
 var (
 	crypt_data = C.struct_crypt_data{}
+	null_time,_ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
 )
 
 const (
 	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
 )
+
+func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time {
+	fmt.Println("now time: " + humanReadableTime(time.Now()))
+	if starting {
+		// starting benchmark test
+		fmt.Println("Starting benchmark \"" + name + "\"")
+		return given_time
+	} else {
+		// benchmark is finished, print the duration
+		// convert nanoseconds to a decimal seconds
+		duration_seconds := time.Since(given_time).Seconds()
+		fmt.Println(time.Since(given_time).Nanoseconds())
+		seconds := fmt.Sprintf("%0.02f", duration_seconds)
+		fmt.Println("benchmark \"" + name + "\" completed in " + seconds + "seconds")
+		return time.Now() // we don't really need this, but we have to return something
+	}
+}
 
 
 func crypt(key, salt string) string {
