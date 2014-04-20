@@ -345,26 +345,22 @@ $jq(document).ready(function() {
 	for(var i = 0; i < thumbnails.length; i++) {
 		var is_thumb = true;
 		thumbnails[i].onclick = function(e) {
+			var src = this.parentNode.getAttribute("href");
 			if(this.getAttribute("width") != null) {
-				var src = this.getAttribute("src");
 				// change the width and height constraints
 				this.setAttribute("old-width",this.getAttribute("width"));
 				this.removeAttribute("width");
 				this.setAttribute("old-height",this.getAttribute("height"));
 				this.removeAttribute("height");
-
-				var new_src = src.substr(0, src.indexOf("/thumb/",1)) + "/src" + src.substring(src.lastIndexOf("/"), src.length).replace("t","");
-				this.setAttribute("src", new_src);
 			} else {
 				// this is an expanded image, shrink it
-				var src = this.getAttribute("src");
-				src = this.getAttribute("src").substr(0, src.indexOf("/src/",1)) + "/thumb" + src.substring(src.lastIndexOf("/"), src.length).replace(".","t.");
+				var src = this.parentNode.getAttribute("href");
 				this.setAttribute("width", this.getAttribute("old-width"));
 				this.removeAttribute("old-width");
 				this.setAttribute("height", this.getAttribute("old-height"));
 				this.removeAttribute("old-height");
-				this.setAttribute("src",src);
 			}
+			this.setAttribute("src", src);
 
 			//thumbnails[i].setAttribute("onclick", "function() { alert(\"hi!\"); return ")
 
