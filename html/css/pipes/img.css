@@ -94,8 +94,8 @@ a:hover {
 
 body {
 	background:#EEF2FF;
-	background-attachment:fixed;
 	background-image:url(images/pipes_bg.png);
+	background-repeat: repeat;
 	color:#d8d0b9;
 	font-family:sans-serif;
 	font-size:12pt;

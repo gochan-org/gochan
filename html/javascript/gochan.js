@@ -341,7 +341,7 @@ $jq(document).ready(function() {
 	});
 	initCookies();
 	//showMessage("This is a testarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiohuihuoqweryuio")
-	var thumbnails = document.getElementsByClassName("thumbnail")
+	var thumbnails = document.getElementsByClassName("thumbnail");
 	for(var i = 0; i < thumbnails.length; i++) {
 		var is_thumb = true;
 		thumbnails[i].onclick = function(e) {

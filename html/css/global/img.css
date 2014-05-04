@@ -153,12 +153,15 @@ table#pages td {
 }
 
 .reply {
-	margin:8px;
-	overflow:hidden;
-	padding:4px;
-	display: table;
+	margin-bottom: 4px;
 	
-	clear:right;
+	padding:4px 8px 4px 8px;
+	display:inline-block;
+	max-width: 100%;
+}
+
+.reply-container {
+	width:100%;
 }
 
 .postblock {
@@ -203,6 +206,11 @@ table#pages td {
 .thread {
 	vertical-align:top;
 	overflow: hidden;
+	width: 100%;
+}
+
+.op-post {
+	width:100%;
 }
 
 .topbar-item {
@@ -229,12 +237,11 @@ hr {
 	clear:both;
 }
 
+
 img.thumbnail {
 	float:left;
 	max-width: 100%;
-	max-height: 100%;
 	margin: 5px 10px 10px 0px;
-
 }
 
 ul.staffmenu {
