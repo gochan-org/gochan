@@ -255,6 +255,7 @@ type GochanConfig struct {
 	Error404Path string
 	Error500Path string
 	Username string
+	UseFastCGI bool
 
 	DocumentRoot string
 	TemplateDir string
@@ -370,6 +371,11 @@ func initConfig() {
 	if err != nil {
 		config.Username = "gochan"
 		fmt.Println("server.username not set in config.cfg, defaulting to "+config.Username)
+	}
+
+	config.UseFastCGI,err = c.GetBool("server", "use_fastcgi")
+	if err != nil {
+		config.UseFastCGI = false
 	}
 
 	config.DocumentRoot,err = c.GetString("directories", "document_root")

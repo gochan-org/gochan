@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/fcgi"
 	"net/url"
 	"os"
 	"path"
@@ -20,36 +21,28 @@ var (
 	writer http.ResponseWriter
 	request http.Request
 	exit_error bool
+	server *GochanServer
 )
 
-func initServer() {
-	if config.Port == 0 {
-		config.Port = 80
-	}
-	listener,err := net.Listen("tcp", config.Domain+":"+strconv.Itoa(config.Port))
-	if(err != nil) {
-		fmt.Printf("Failed listening on "+config.Domain+":%d, see log for details",config.Port)
-		error_log.Fatal(err.Error())
-	}
-	http.Handle("/", makeHandler(mainHandle))
-	http.Handle("/manage",makeHandler(callManageFunction))
-	http.Handle("/post",makeHandler(makePost))
-	http.Handle("/util",makeHandler(utilHandler))
-	http.Serve(listener, nil)
+type GochanServer struct{
+	writer http.ResponseWriter
+	request http.Request
+	namespaces map[string]func(http.ResponseWriter, *http.Request, interface{})
 }
 
-func mainHandle(w http.ResponseWriter, r *http.Request) {
-	request = *r
-	writer = w
-	cookies = request.Cookies()
-	request.ParseForm()
-	form = request.Form
-	request_url := request.URL.Path
+func (s GochanServer) AddNamespace(base_path string, namespace_function func(http.ResponseWriter, *http.Request, interface{})) {
+	s.namespaces[base_path] = namespace_function
+}
 
-	filepath := path.Join(config.DocumentRoot, request_url)
+func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byte, bool) {
+	var file_bytes []byte
+	filepath := path.Join(config.DocumentRoot, url)
 	results,err := os.Stat(filepath)
-
-	if err == nil {
+	if err != nil {
+		fmt.Println("404 at ", filepath)
+		// the requested path isn't a file or directory, 404
+		return file_bytes, false
+	} else {
 		//the file exists, or there is a folder here
 		if results.IsDir() {
 			found_index := false
@@ -62,43 +55,124 @@ func mainHandle(w http.ResponseWriter, r *http.Request) {
 				if err == nil {
 					// serve the index page
 					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-					serveFile(w, newpath)
+					fmt.Println("found index at ", newpath)
+					file_bytes,err  = ioutil.ReadFile(newpath)
+					return file_bytes, true
 					found_index = true
 					break
 				}
 			}
 
 			if !found_index {
-				error404()
+				// none of the index pages specified in config.cfg exist
+				return file_bytes, false
 			}
 		} else {
 			//the file exists, and is not a folder
-
-			extension := getFileExtension(request_url)
+			file_bytes, err = ioutil.ReadFile(filepath)
+			extension := getFileExtension(url)
 			switch {
 				case extension == "png":
+					writer.Header().Add("Content-Type", "image/png")
 					writer.Header().Add("Cache-Control", "max-age=86400")
 				case extension == "gif":
+					writer.Header().Add("Content-Type", "image/gif")
 					writer.Header().Add("Cache-Control", "max-age=86400")
 				case extension == "jpg":
 					writer.Header().Add("Cache-Control", "max-age=86400")
 				case extension == "css":
+					writer.Header().Add("Content-Type", "text/css")
 					writer.Header().Add("Cache-Control", "max-age=43200")
-
+				case extension == "js":
+					writer.Header().Add("Content-Type", "text/javascript")
+					writer.Header().Add("Cache-Control", "max-age=43200")
 			}
-
 			if extension  == "html" || extension == "htm" {
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
-			serveFile(w, filepath)
+			//http.ServeFile(writer, request, filepath)
+			access_log.Print("Success: 200 from " + request.RemoteAddr + " @ " + request.RequestURI)
+			return file_bytes, true
 		}
+	}
+	return file_bytes, false
+}
+
+func (s GochanServer) Redirect(location string) {
+	http.Redirect(writer,&request,location,http.StatusFound)
+}
+
+func (s GochanServer) serve404(writer http.ResponseWriter, request *http.Request) {
+	error_page, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
+	if err != nil {
+		writer.Write([]byte("Requested page not found, and 404 error page not found"))
 	} else {
-		//there is nothing at the requested address
-		error404()
+		writer.Write(error_page)
+	}
+	error_log.Print("Error: 404 Not Found from " + request.RemoteAddr + " @ " + request.RequestURI)
+}
+
+func (s GochanServer) ServeErrorPage(writer http.ResponseWriter, err string) {
+	error_page_bytes,_ := ioutil.ReadFile("templates/error.html")
+	error_page := string(error_page_bytes)
+	error_page = strings.Replace(error_page,"{ERRORTEXT}", err,-1)
+	writer.Write([]byte(error_page))
+	exit_error = true
+}
+
+func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	for name, namespace_function := range s.namespaces {
+		//if len(request.URL)
+		if request.URL.Path == "/" + name {
+			namespace_function(writer, request, nil)
+			return
+		}
+	}
+	fb,found := s.getFileData(writer, request.URL.Path)
+	writer.Header().Add("Cache-Control", "max-age=86400")
+	if !found {
+		s.serve404(writer, request)
+		return
+	}
+	writer.Write(fb)
+}
+
+func initServer() {
+	listener,err := net.Listen("tcp", config.Domain+":"+strconv.Itoa(config.Port))
+	if(err != nil) {
+		fmt.Printf("Failed listening on "+config.Domain+":%d, see log for details",config.Port)
+		error_log.Fatal(err.Error())
+	}
+	server = new(GochanServer)
+	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request, interface{}))
+
+	testfunc := func(writer http.ResponseWriter, response *http.Request, data interface{}) {
+		if writer != nil {
+			writer.Write([]byte("hahahaha"))
+		}
+	}
+	server.AddNamespace("example", testfunc)
+	server.AddNamespace("manage", callManageFunction)
+	server.AddNamespace("post", makePost)
+	server.AddNamespace("util", utilHandler)
+	if config.UseFastCGI {
+		fcgi.Serve(listener,server)
+	} else {
+		http.Serve(listener, server)
 	}
 }
 
-func utilHandler(writer http.ResponseWriter, request *http.Request) {
+func validReferrer(request http.Request) (valid bool) {
+	if request.Referer() == "" || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain {
+	// if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
+		valid = false
+	} else {
+		valid = true
+	}
+	return
+}
+
+func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
 	action := request.FormValue("action")
 	board := request.FormValue("board")
 
@@ -118,7 +192,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		rank := getStaffRank()
 
 		if request.FormValue("password") == ""  && rank == 0 {
-			exitWithErrorPage(writer, "Password required for post deletion")
+			server.ServeErrorPage(writer, "Password required for post deletion")
 			return
 		}
 
@@ -137,13 +211,13 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				continue
 			}
 			if err != nil {
-				exitWithErrorPage(writer,err.Error())
+				server.ServeErrorPage(writer,err.Error())
 				return
 			}
 
 			err = db.QueryRow("SELECT `id` FROM `"+config.DBprefix+"boards` WHERE `dir` = '"+board+"'").Scan(&board_id)
 			if err != nil {
-				exitWithErrorPage(writer,err.Error())
+				server.ServeErrorPage(writer,err.Error())
 				return
 			}
 
@@ -151,24 +225,24 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				fmt.Fprintf(writer, "Incorrect password for %s\n", post)
 				continue
 			}
-			
+
 			if file_only {
 				if filename != "" {
 					filetype = filename[strings.Index(filename,".")+1:]
 					filename = filename[:strings.Index(filename,".")]
 					err := os.Remove(path.Join(config.DocumentRoot,board,"/src/"+filename+"."+filetype))
 					if err != nil {
-						exitWithErrorPage(writer,err.Error())
+						server.ServeErrorPage(writer,err.Error())
 						return
 					}
 					err = os.Remove(path.Join(config.DocumentRoot,board,"/thumb/"+filename+"t."+filetype))
 					if err != nil {
-						exitWithErrorPage(writer,err.Error())
+						server.ServeErrorPage(writer,err.Error())
 						return
 					}
 					_,err = db.Exec("UPDATE `"+config.DBprefix+"posts` SET `filename` = 'deleted' WHERE `id` = "+post)
 					if err != nil {
-						exitWithErrorPage(writer,err.Error())
+						server.ServeErrorPage(writer,err.Error())
 						return
 					}
 				}
@@ -186,7 +260,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 
 				if err != nil {
-					exitWithErrorPage(writer,err.Error())
+					server.ServeErrorPage(writer,err.Error())
 					return
 				}
 				fmt.Fprintf(writer, "%s deleted successfully\n", post)
@@ -194,57 +268,4 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			}
 		}
 	}
-}
-
-func makeHandler(fn func(http.ResponseWriter, *http.Request)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		//defer serverError()
-		if !exit_error {
-			fn(w, r)
-			exit_error = false
-		} else {
-			exit_error = false
-		}
-	}
-}
-
-func exitWithErrorPage(w http.ResponseWriter, err string) {
-	error_page_bytes,_ := ioutil.ReadFile("templates/error.html")
-	error_page := string(error_page_bytes)
-	error_page = strings.Replace(error_page,"{ERRORTEXT}", err,-1)
-	fmt.Fprintf(w,error_page)
-	exit_error = true
-}
-
-func redirect(location string) {
-	http.Redirect(writer,&request,location,http.StatusFound)
-}
-
-func error404() {
-	http.ServeFile(writer, &request, path.Join(config.DocumentRoot, "/error/404.html"))
-	error_log.Print("Error: 404 Not Found from " + request.RemoteAddr + " @ " + request.RequestURI)
-}
-
-func validReferrer(request http.Request) (valid bool) {
-	if request.Referer() == "" || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain {
-	// if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
-		valid = false
-	} else {
-		valid = true
-	}
-	return
-}
-
-func serverError() {
-	if _, ok := recover().(error); ok {
-		//something went wrong, now we need to throw a 500
-		http.ServeFile(writer,&request, path.Join(config.DocumentRoot, "/error/500.html"))
-		error_log.Print("Error: 500 Internal Server error from " + request.RemoteAddr + " @ " + request.RequestURI)	
-		return
-	}
-}
-
-func serveFile(w http.ResponseWriter, filepath string) {
-	http.ServeFile(w, &request, filepath)
-	access_log.Print("Success: 200 from " + request.RemoteAddr + " @ " + request.RequestURI)
 }

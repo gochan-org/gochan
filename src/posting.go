@@ -183,7 +183,7 @@ func buildThread(op_id int, board_id int) (err error) {
 		if post_msg_before != post.Message {
 			_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(post.ID))
 			if err != nil {
-				exitWithErrorPage(writer, err.Error())
+				server.ServeErrorPage(writer, err.Error())
 			}
 		}
 		post_table_interface = append(post_table_interface, post)
@@ -387,19 +387,19 @@ func insertPost(writer *http.ResponseWriter, post PostTable,bump bool) sql.Resul
 	}
 	result,err := db.Exec(post_sql_str)
 	if err != nil {
-		exitWithErrorPage(*writer,err.Error())
+		server.ServeErrorPage(*writer,err.Error())
 	}
 	if post.ParentID != 0 {
 		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `bumped` = '" + getSpecificSQLDateTime(post.Bumped) + "' WHERE `id` = " + strconv.Itoa(post.ParentID))
 		if err != nil {
-			exitWithErrorPage(*writer, err.Error())
+			server.ServeErrorPage(*writer, err.Error())
 		}
 	}
 	return result
 }
 
 
-func makePost(w http.ResponseWriter, r *http.Request) {
+func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	start_time := benchmarkTimer("makePost", time.Now(), true)
 	request = *r
 	writer = w
@@ -421,7 +421,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			count = 0
 		} else {
 			error_log.Print(err.Error())
-			exitWithErrorPage(w, err.Error())
+			server.ServeErrorPage(w, err.Error())
 			return
 		}
 	}
@@ -431,7 +431,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 		err = db.QueryRow("SELECT `first_post` FROM `"+config.DBprefix+"boards` WHERE `id` = "+strconv.Itoa(post.BoardID)+" LIMIT 1").Scan(&first_post)
 		if err != nil {
 			error_log.Print(err.Error())
-			exitWithErrorPage(w, err.Error())
+			server.ServeErrorPage(w, err.Error())
 			return
 		}
 		post.ID = first_post
@@ -512,7 +512,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		data,err := ioutil.ReadAll(file)
 		if err != nil {
-			exitWithErrorPage(w,"Couldn't read file")
+			server.ServeErrorPage(w,"Couldn't read file")
 		} else {
 			post.FilenameOriginal = handler.Filename
 			filetype := getFiletype(post.FilenameOriginal)
@@ -524,7 +524,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 			post.Filename = getNewFilename()+"."+getFiletype(post.FilenameOriginal)
 			board_arr := getBoardArr("`id` = "+request.FormValue("boardid"))
 			if len(board_arr) == 0 {
-				exitWithErrorPage(w, "No boards have been created yet")
+				server.ServeErrorPage(w, "No boards have been created yet")
 			}
 			board_dir := getBoardArr("`id` = "+request.FormValue("boardid"))[0].Dir
 			file_path := path.Join(config.DocumentRoot,"/"+board_dir+"/src/",post.Filename)
@@ -534,19 +534,19 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
-				exitWithErrorPage(w,"Couldn't write file.")
+				server.ServeErrorPage(w,"Couldn't write file.")
 				return
 			}
 
 			img,err := imaging.Open(file_path)
 			if err != nil {
-				exitWithErrorPage(w, "Upload filetype not supported")
+				server.ServeErrorPage(w, "Upload filetype not supported")
 				return
 			} else {
 				//post.FileChecksum string
 				stat,err := os.Stat(file_path)
 				if err != nil {
-					exitWithErrorPage(w,err.Error())
+					server.ServeErrorPage(w,err.Error())
 				} else {
 					post.Filesize = int(stat.Size())
 				}
@@ -564,12 +564,12 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 				if(request.FormValue("spoiler") == "on") {
 					_,err := os.Stat(path.Join(config.DocumentRoot,"spoiler.png"))
 					if err != nil {
-						exitWithErrorPage(w,"missing /spoiler.png")
+						server.ServeErrorPage(w,"missing /spoiler.png")
 						return
 					} else {
 						err = syscall.Symlink(path.Join(config.DocumentRoot,"spoiler.png"),thumb_path)
 						if err != nil {
-							exitWithErrorPage(w,err.Error())
+							server.ServeErrorPage(w,err.Error())
 							return
 						}
 					}
@@ -578,7 +578,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					post.ThumbH = img.Bounds().Max.Y
 					err := syscall.Symlink(file_path,thumb_path)
 					if err != nil {
-						exitWithErrorPage(w,err.Error())
+						server.ServeErrorPage(w,err.Error())
 						return
 					}
 				} else {
@@ -589,7 +589,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 						catalog_thumbnail = createThumbnail(img,"catalog")
 						err = saveImage(catalog_thumb_path, &catalog_thumbnail)
 						if err != nil {
-							exitWithErrorPage(w, err.Error())
+							server.ServeErrorPage(w, err.Error())
 							return
 						}
 					} else {
@@ -597,7 +597,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 					}
 					err = saveImage(thumb_path, &thumbnail)
 					if err != nil {
-						exitWithErrorPage(w, err.Error())
+						server.ServeErrorPage(w, err.Error())
 						return
 					}
 
@@ -607,15 +607,13 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if post.Message == "" && post.Filename == "" {
-		exitWithErrorPage(w,"Post must contain a message if no image is uploaded.")
+		server.ServeErrorPage(w,"Post must contain a message if no image is uploaded.")
 		return
 	}
 
-
-
 	isbanned, err := checkBannedStatus(&post, &w)
 	if err != nil {
-		exitWithErrorPage(w, err.Error())
+		server.ServeErrorPage(w, err.Error())
 		return
 	}
 
@@ -640,7 +638,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 
 	result := insertPost(&w, post,email_command != "sage")
 	if err != nil {
-		exitWithErrorPage(w, err.Error())
+		server.ServeErrorPage(w, err.Error())
 		return
 	}
 	id,_ := result.LastInsertId()
@@ -649,7 +647,7 @@ func makePost(w http.ResponseWriter, r *http.Request) {
 	if post.Message != parsed_backlinks {
 		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(int(id)))
 		if err != nil {
-			exitWithErrorPage(writer, err.Error())
+			server.ServeErrorPage(writer, err.Error())
 			return
 		}
 	}
