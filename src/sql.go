@@ -71,79 +71,64 @@ func escapeQuotes(txt string) string {
 
 
 func connectToSQLServer() {
-	// does the original initialsetupdb.sql (as opposed to .bak.sql) exist?
 	var err error
-	_, err1 := os.Stat("initialsetupdb.sql")
-	_, err2 := os.Stat("initialsetupdb.bak.sql")
-	if err2 == nil {
-		// the .bak.sql file exists
-		os.Remove("initialsetupdb.sql")
-		fmt.Println("complete.")
-		needs_initial_setup = false
-		db, err = sql.Open("mymysql", config.DBhost + "*" + config.DBname + "/"+config.DBusername+"/"+config.DBpassword)
-		if err != nil {
-			fmt.Println("Failed to connect to the database, see log for details.")
-			error_log.Fatal(err.Error())
-		}
-		return
-	} else {
-		if err1 != nil {
-			// neither one exists
-			fmt.Println("failed...initial setup file doesn't exist, please reinstall gochan.")
-			error_log.Fatal("Initial setup file doesn't exist, exiting.")
-			return
-		}
-	}
-	err1 = nil
-	err2 = nil
 
 	db, err = sql.Open("mymysql", config.DBhost + "*" + config.DBname + "/"+config.DBusername+"/"+config.DBpassword)
 	if err != nil {
 		fmt.Println("Failed to connect to the database, see log for details.")
 		error_log.Fatal(err.Error())
 	}
-	// read the initial setup sql file into a string
-	initial_sql_bytes,err := ioutil.ReadFile("initialsetupdb.sql")
-	if err != nil {
-		fmt.Println("failed.")
-		error_log.Fatal(err.Error())
-	}
-	initial_sql_str := string(initial_sql_bytes)
-	initial_sql_bytes = nil
-	fmt.Printf("Starting initial setup...")
-	initial_sql_str = strings.Replace(initial_sql_str,"DBNAME",config.DBname, -1)
-	initial_sql_str = strings.Replace(initial_sql_str,"DBPREFIX",config.DBprefix, -1)
-	initial_sql_str += "\nINSERT INTO `"+config.DBname+"`.`"+config.DBprefix+"staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '"+bcrypt_sum("password")+"', 'abc', 3);"
-	initial_sql_arr := strings.Split(initial_sql_str, ";")
-	initial_sql_str = ""
 
-	for _,statement := range initial_sql_arr {
-		if statement != "" {
-			_,err := db.Exec(statement+";")
-			if err != nil {
-				fmt.Println("failed.")
-				error_log.Fatal(err.Error())
-				return
-			} 
+	// get the number of tables in the database. If the number > 1, we can assume that initial setup has already been run
+	var num_rows int
+	err = db.QueryRow("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '" + config.DBname + "';").Scan(&num_rows)
+	if err == sql.ErrNoRows {
+		num_rows = 0
+	} else if err != nil {
+		fmt.Println("Failed retrieving list of tables in database.")
+		error_log.Fatal(err.Error())	
+	}
+	if num_rows > 0 {
+		// the initial setup has already been run
+		needs_initial_setup = false
+		db_connected = true
+		fmt.Println("complete.")
+		return
+	} else {
+		// does the  initialsetupdb.sql exist?
+		_, err := os.Stat("initialsetupdb.sql")
+		if err != nil {
+			fmt.Println("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
+			error_log.Fatal("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
 		}
-	}
-	initial_sql_arr = nil
-	// rename initialsetupdb.sql to initialsetup.bak.sql
-	err = ioutil.WriteFile("initialsetupdb.bak.sql", initial_sql_bytes, 0777)
-	if err != nil {
-		fmt.Println("failed")
-		error_log.Fatal(err.Error())
-		return
-	}
 
-	err = os.Remove("initialsetupdb.bak.sql")
-	if err != nil {
-		fmt.Println("failed.")
-		error_log.Fatal(err.Error())
-		return
-	}
-	fmt.Println("complete.")
+		// read the initial setup sql file into a string
+		initial_sql_bytes,err := ioutil.ReadFile("initialsetupdb.sql")
+		if err != nil {
+			fmt.Println("failed, see log for details.")
+			error_log.Fatal(err.Error())
+		}
+		initial_sql_str := string(initial_sql_bytes)
+		initial_sql_bytes = nil
+		fmt.Printf("Starting initial setup...")
+		initial_sql_str = strings.Replace(initial_sql_str,"DBNAME",config.DBname, -1)
+		initial_sql_str = strings.Replace(initial_sql_str,"DBPREFIX",config.DBprefix, -1)
+		initial_sql_str += "\nINSERT INTO `"+config.DBname+"`.`"+config.DBprefix+"staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '"+bcrypt_sum("password")+"', 'abc', 3);"
+		initial_sql_arr := strings.Split(initial_sql_str, ";")
+		initial_sql_str = ""
 
-	needs_initial_setup = false
-	db_connected = true
+		for _,statement := range initial_sql_arr {
+			if statement != "" {
+				_,err := db.Exec(statement)
+				if err != nil {
+					fmt.Println("failed, see log for details.")
+					error_log.Fatal(err.Error())
+					return
+				} 
+			}
+		}
+		fmt.Println("complete.")
+		needs_initial_setup = false
+		db_connected = true
+	}
 }
