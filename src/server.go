@@ -79,6 +79,7 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 					writer.Header().Add("Content-Type", "image/gif")
 					writer.Header().Add("Cache-Control", "max-age=86400")
 				case extension == "jpg":
+					writer.Header().Add("Content-Type", "image/jpeg")
 					writer.Header().Add("Cache-Control", "max-age=86400")
 				case extension == "css":
 					writer.Header().Add("Content-Type", "text/css")
@@ -175,7 +176,6 @@ func validReferrer(request http.Request) (valid bool) {
 func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
 	action := request.FormValue("action")
 	board := request.FormValue("board")
-
 	if action == "" && request.PostFormValue("delete_btn") != "Delete" && request.PostFormValue("report_btn") != "Report" {
 		http.Redirect(writer,request,path.Join(config.SiteWebfolder,"/"),http.StatusFound)
 		return
@@ -246,8 +246,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 						return
 					}
 				}
-				fmt.Fprintf(writer, "Attached image from %s deleted successfully\n", post)
-				writer.Header().Add("refresh", "5;url="+request.Referer())
+				fmt.Fprintf(writer, "Attached image from %s deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url=http://lunachan.net/test/\">", post)
 			} else {
 				if parent_id > 0 {
 					os.Remove(path.Join(config.DocumentRoot,board,"/res/index.html"))
