@@ -109,7 +109,11 @@ var funcMap = template.FuncMap{
 		}
 		index := strings.LastIndex(img, ".")
 		return img[0:index]+"t."+filetype
-
+	},
+	"printValue": func(i interface{}) int {
+		fmt.Println("interface: ", i.(string))
+		fmt.Println("value: ", i)
+		return 0
 	},
 }
 
@@ -147,7 +151,9 @@ func initTemplates() {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/banpage.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
-	banpage_tmpl_str = "{{$config := getInterface .Data 0}}{{$ban := getInterface .Data 1}}" + string(banpage_tmpl_bytes)
+	banpage_tmpl_str = "{{$config := getInterface .Data 0}}" +
+					   "{{$ban := getInterface .Data 1}}" +
+					   string(banpage_tmpl_bytes)
 	banpage_tmpl,tmpl_err = template.New("banpage_tmpl").Funcs(funcMap).Parse(string(banpage_tmpl_str))
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/banpage.html\": " + tmpl_err.Error())
@@ -180,10 +186,16 @@ func initTemplates() {
 
 	img_boardpage_tmpl_bytes,_ := ioutil.ReadFile(path.Join(config.TemplateDir,"img_boardpage.html"))
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_boardpage.html\": " + tmpl_err.Error())
+		fmt.Println("Failed loading template \"" + config.TemplateDir+"/img_boardpage.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
-	img_boardpage_tmpl_str = "{{$config := getInterface .Data 0}}{{$board_arr := getInterface .Data 1}}{{$section_arr := getInterface .Data 2}}{{$thread_arr := getInterface .Data 3}}{{$board_info := getInterface .Data 4}}{{$board := getInterface $board_info.Data 0}}" + string(img_boardpage_tmpl_bytes)
+	img_boardpage_tmpl_str = "{{$config := getInterface .Data 0}}" +
+							 "{{$board_arr := getInterface .Data 1}}" +
+							 "{{$section_arr := getInterface .Data 2}}" +
+							 "{{$thread_arr := getInterface .Data 3}}" +
+							 "{{$board_info := getInterface .Data 4}}" +
+							 "{{$board := getInterface $board_info.Data 0}}" +
+							 string(img_boardpage_tmpl_bytes)
 	img_boardpage_tmpl,tmpl_err = template.New("img_boardpage_tmpl").Funcs(funcMap).Parse(img_boardpage_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_boardpage.html: \"" + tmpl_err.Error())
@@ -195,7 +207,14 @@ func initTemplates() {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
-	img_thread_tmpl_str = "{{$config := getInterface .Data 0}}{{$post_arr := getInterface .Data 1}}{{$board_arr := getInterface .Data 2}}{{$section_arr := getInterface .Data 3}}{{$op := getInterface $post_arr 0}}{{$boardid := subtract $op.BoardID 1}}{{$board := getInterface $board_arr.Data $boardid}}" + string(img_thread_tmpl_bytes)
+	img_thread_tmpl_str = "{{$config := getInterface .Data 0}}" +
+						  "{{$post_arr := getInterface .Data 1}}" +
+						  "{{$board_arr := getInterface .Data 2}}" +
+						  "{{$section_arr := getInterface .Data 3}}" +
+						  "{{$op := getInterface $post_arr 0}}" +
+						  "{{$boardid := subtract $op.BoardID 1}}" +
+						  "{{$board := getInterface $board_arr.Data $boardid}}" +
+						  string(img_thread_tmpl_bytes)
 	img_thread_tmpl,tmpl_err = template.New("img_thread_tmpl").Funcs(funcMap).Parse(img_thread_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/img_thread.html: \"" + tmpl_err.Error())
@@ -218,7 +237,11 @@ func initTemplates() {
 		fmt.Println(err.Error())
 		os.Exit(2)
 	}
-	front_page_tmpl_str = "{{$config := getInterface .Data 0}}{{$page_arr := getInterface .Data 1}}{{$board_arr := getInterface .Data 2}}{{$section_arr := getInterface .Data 3}}" + string(front_page_tmpl_bytes)
+	front_page_tmpl_str = "{{$config := getInterface .Data 0}}" +
+						  "{{$page_arr := getInterface .Data 1}}" +
+						  "{{$board_arr := getInterface .Data 2}}" +
+						  "{{$section_arr := getInterface .Data 3}}" +
+						  string(front_page_tmpl_bytes)
 	front_page_tmpl,tmpl_err = template.New("front_page_tmpl").Funcs(funcMap).Parse(front_page_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \""+config.TemplateDir+"/front.html\": "+tmpl_err.Error())

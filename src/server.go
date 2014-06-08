@@ -176,6 +176,7 @@ func validReferrer(request http.Request) (valid bool) {
 func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
 	action := request.FormValue("action")
 	board := request.FormValue("board")
+	var err error
 	if action == "" && request.PostFormValue("delete_btn") != "Delete" && request.PostFormValue("report_btn") != "Report" {
 		http.Redirect(writer,request,path.Join(config.SiteWebfolder,"/"),http.StatusFound)
 		return
@@ -187,6 +188,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 		}
 	}
 	if request.PostFormValue("delete_btn") == "Delete" {
+		// Delete a post or thread
 		file_only := request.FormValue("fileonly") == "on"
 		password := md5_sum(request.FormValue("password"))
 		rank := getStaffRank()
@@ -202,12 +204,13 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			var filetype string
 			var password_checksum string
 			var board_id int
-			post_int,err := strconv.Atoi(post)
+			//post_int,err := strconv.Atoi(post)
 
-			err = db.QueryRow("SELECT `parentid`,`filename`,`password` FROM `"+config.DBprefix+"posts` WHERE `id` = "+post).Scan(&parent_id,&filename,&password_checksum)
+			err = db.QueryRow("SELECT `parentid`,`filename`,`password` FROM `" + config.DBprefix + "posts` WHERE `id` = " + post + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&parent_id, &filename, &password_checksum)
 			if err == sql.ErrNoRows {
 				//the post has already been deleted
-				fmt.Fprintf(writer, "%s has already been deleted\n",post)
+				writer.Header().Add("refresh", "3;url=" + request.Referer())
+				fmt.Fprintf(writer, "%s has already been deleted or is a post in a deleted thread.\n<br />",post)
 				continue
 			}
 			if err != nil {
@@ -215,7 +218,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				return
 			}
 
-			err = db.QueryRow("SELECT `id` FROM `"+config.DBprefix+"boards` WHERE `dir` = '"+board+"'").Scan(&board_id)
+			err = db.QueryRow("SELECT `id` FROM `" + config.DBprefix + "boards` WHERE `dir` = '" + board + "'").Scan(&board_id)
 			if err != nil {
 				server.ServeErrorPage(writer,err.Error())
 				return
@@ -240,30 +243,51 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 						server.ServeErrorPage(writer,err.Error())
 						return
 					}
-					_,err = db.Exec("UPDATE `"+config.DBprefix+"posts` SET `filename` = 'deleted' WHERE `id` = "+post)
+					_,err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `filename` = 'deleted' WHERE `id` = " + post)
 					if err != nil {
-						server.ServeErrorPage(writer,err.Error())
+						server.ServeErrorPage(writer, err.Error())
 						return
 					}
 				}
-				fmt.Fprintf(writer, "Attached image from %s deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url=http://lunachan.net/test/\">", post)
+				writer.Header().Add("refresh", "3;url=" + request.Referer())
+				fmt.Fprintf(writer, "Attached image from %s deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url=" + config.DocumentRoot + "/" + board + "/\">", post)
 			} else {
-				if parent_id > 0 {
-					os.Remove(path.Join(config.DocumentRoot,board,"/res/index.html"))
-				}
-				_,err = db.Exec("DELETE FROM `"+config.DBprefix+"posts` WHERE `id` = "+post)
+
+				// delete the post
+				_,err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `id` = " + post)
 				if parent_id == 0 {
-					err = buildThread(post_int, board_id)
+					err = os.Remove(path.Join(config.DocumentRoot, board, "/res/" + post + ".html"))
 				} else {
 					err = buildThread(parent_id,board_id)
 				}
 
+				// if the deleted post is actually a thread, delete its posts
+				_,_ = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `parentid` = " + post)
 				if err != nil {
 					server.ServeErrorPage(writer,err.Error())
 					return
 				}
-				fmt.Fprintf(writer, "%s deleted successfully\n", post)
-				writer.Header().Add("refresh", "5;url="+request.Referer())
+
+				// delete the  
+				var deleted_filename string
+				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `id` = " + post + " AND `filename` != ''").Scan(&deleted_filename)
+				if err == nil {
+					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deleted_filename))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "t.",-1)))					
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "c.",-1)))					
+				}
+
+				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `parentid` = " + post + " AND `filename` != ''").Scan(&deleted_filename)
+				if err == nil {
+					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deleted_filename))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "t.",-1)))					
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "c.",-1)))					
+				}
+
+				buildBoardPage(board_id, getBoardArr(""), getSectionArr(""))
+
+				writer.Header().Add("refresh", "3;url=" + request.Referer())
+				fmt.Fprintf(writer, "%s deleted successfully\n<br />", post)
 			}
 		}
 	}

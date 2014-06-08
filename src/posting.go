@@ -50,7 +50,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 	var interfaces []interface{}
 	var threads []interface{}
 	var op_posts []interface{}
-	op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 ORDER BY `bumped` DESC LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
+	op_posts,err := getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC LIMIT "+strconv.Itoa(config.ThreadsPerPage_img))
 	if err != nil {
 		html += err.Error() + "<br />"
 		op_posts = make([]interface{},0)
@@ -65,7 +65,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 		if op_post.Stickied {
 			thread.IName = "thread"
 
-			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" ORDER BY `id` DESC LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage))
+			posts_in_thread,err = getPostArr("SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT "+strconv.Itoa(config.StickyRepliesOnBoardPage))
 			if err != nil {
 				html += err.Error()+"<br />"
 			}
@@ -89,7 +89,7 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 		if !op_post.Stickied {
 			thread.IName = "thread"
 
-			posts_in_thread,err = getPostArr("SELECT * FROM (SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" order by `id` DESC  LIMIT "+strconv.Itoa(config.RepliesOnBoardpage)+") t ORDER BY `id` ASC")
+			posts_in_thread,err = getPostArr("SELECT * FROM (SELECT * FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(board.ID)+" AND `parentid` = "+strconv.Itoa(op_post.ID)+" AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC  LIMIT "+strconv.Itoa(config.RepliesOnBoardpage)+") t ORDER BY `id` ASC")
 			if err != nil {
 				html += err.Error()+"<br />"
 			}
