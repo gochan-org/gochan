@@ -174,6 +174,7 @@ func validReferrer(request http.Request) (valid bool) {
 }
 
 func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
+	writer.Header().Add("Content-Type", "text/css")
 	action := request.FormValue("action")
 	board := request.FormValue("board")
 	var err error

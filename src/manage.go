@@ -810,6 +810,7 @@ var manage_functions = map[string]ManageFunction{
 			var section_arr []interface{}
 			var board_arr []interface{}
 			var front_arr []interface{}
+			var recent_posts_arr []interface{}
 
 			os.Remove(path.Join(config.DocumentRoot,"index.html"))
 			front_file,err := os.OpenFile(path.Join(config.DocumentRoot,"index.html"),os.O_CREATE|os.O_RDWR,0777)
@@ -875,15 +876,48 @@ var manage_functions = map[string]ManageFunction{
 				front_arr = append(front_arr,frontpage)
 			}
 
+			// get recent posts
+			rows,err = db.Query("SELECT `" + config.DBprefix + "posts`.`id`, " +
+									   "`" + config.DBprefix + "posts`.`parentid`, " + 
+									   "`" + config.DBprefix +"boards`.`dir` AS boardname, " +
+									   "`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
+									   "`name`, " +
+									   "`tripcode`, " +
+									   "`message`," +
+									   "`filename`, " +
+									   "`thumb_w`, " +
+									   "`thumb_h` " +
+									   " FROM `" + config.DBprefix + "posts`, " +
+									   "`" + config.DBprefix + "boards` " +
+									   "WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"" +
+									   "ORDER BY `timestamp` DESC " +
+									   "LIMIT " + strconv.Itoa(config.MaxRecentPosts))
+			if err != nil {
+				error_log.Print(err.Error())
+				return err.Error()
+			}
+			for rows.Next() {
+				recent_posts := new(RecentPost)
+				err = rows.Scan(&recent_posts.PostID, &recent_posts.ParentID, &recent_posts.BoardName, &recent_posts.BoardID, &recent_posts.Name, &recent_posts.Tripcode, &recent_posts.Message, &recent_posts.Filename, &recent_posts.ThumbW, &recent_posts.ThumbH)
+				if err != nil {
+					error_log.Print(err.Error())
+					return err.Error()
+				}
+				recent_posts_arr = append(recent_posts_arr, recent_posts)
+			}
+
 		    page_data := &Wrapper{IName:"fronts", Data: front_arr}
 		    board_data := &Wrapper{IName:"boards", Data: board_arr}
 		    section_data := &Wrapper{IName:"sections", Data: section_arr}
+		    recent_posts_data := &Wrapper{IName:"recent posts", Data: recent_posts_arr}
+		    
 
 		    var interfaces []interface{}
 		    interfaces = append(interfaces, config)
 		    interfaces = append(interfaces, page_data)
 		    interfaces = append(interfaces, board_data)
 		    interfaces = append(interfaces, section_data)
+		    interfaces = append(interfaces, recent_posts_data)
 
 			wrapped := &Wrapper{IName: "frontpage",Data: interfaces}
 			err = front_page_tmpl.Execute(front_file,wrapped)
@@ -968,7 +1002,22 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, `" + config.DBprefix + "posts`.`boardid` AS boardid, `" + config.DBprefix + "posts`.`id` AS id, `" + config.DBprefix + "posts`.`parentid` AS parentid, `" + config.DBprefix + "posts`.`message` AS message, `" + config.DBprefix + "posts`.`ip` AS ip, `" + config.DBprefix + "posts`.`timestamp` AS timestamp  FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `reviewed` = 0 AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` ORDER BY `timestamp` DESC LIMIT "+limit+";")
+		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, " + 
+		 											  "`" + config.DBprefix + "posts`.`boardid` AS boardid, " + 
+		 											  "`" + config.DBprefix + "posts`.`id` AS id, " +
+		 											  "`" + config.DBprefix + "posts`. " + 
+		 											  "`parentid` AS parentid, " + 
+		 											  "`" + config.DBprefix + "posts`. " +
+		 											  "`message` AS message, " + 
+		 											  "`" + config.DBprefix + "posts`. " +
+		 											  "`ip` AS ip, " +
+		 											  "`" + config.DBprefix + "posts`. " +
+		 											  "`timestamp` AS timestamp  " +
+		 											  "FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
+		 											  "WHERE `reviewed` = 0 " +
+		 											  "AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  " +
+		 											  "AND `boardid` = `"+config.DBprefix+"boards`.`id` " +
+		 											  "ORDER BY `timestamp` DESC LIMIT "+limit+";")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return

@@ -1,88 +1,86 @@
-#current-tab,#topbar li:hover {
-	background-color:#404040;
-}
+/* imported by individual sass pre-compiled css files */
+* {
+  outline: none; }
 
 #footer {
-	font-size:12px;
-}
-
-#site-title {
-	color:#e1b400;
-}
+  font-size: 12px; }
 
 #topbar {
-	background-color:#202020;
-	box-shadow:0px 2px 2px 3px #101010;
-	height:26px;
-}
+  background-color: #202020;
+  box-shadow: 2px 2px 2px 3px #101010;
+  height: 26px; }
+
+#topbar li:hover {
+  background-color: #404040; }
+
+#footer {
+  font-size: 12px; }
+
+#site-title {
+  color: #e1b400; }
+
+#topbar {
+  background-color: #202020;
+  box-shadow: 2px 2px 2px 3px #101010;
+  height: 26px; }
 
 .topbar-item:hover {
-	background-color: #404040;
-}
+  background-color: #404040; }
 
-.dropdown-button:hover{
-	background-color: #404040;
-}
+.dropdown-button:hover {
+  background-color: #404040; }
 
 .dropdown-menu {
-	background-color:#202020;
-	box-shadow:0 6px 2px 2px #101010;
-}
-
-.menu {
-	margin-top:1em;
-	text-align:center;
-}
-
-.section-body {
-	background-color:#606060;
-
-}
-
-.section-title-block {
-	box-shadow: 2px 2px 3px 4px #101010;
-	background-color:#202020;
-	border-radius:8px;
-}
-
-.tab {
-	background-color:#202020;
-	border:1px solid #424242;
-	text-align:center;
-}
+  background-color: #202020;
+  box-shadow: 2px 2px 2px 3px #101010; }
 
 a {
-	background:inherit;
-	color:#f90;
-	font-family:sans-serif;
-	text-decoration:none;
-}
+  background: inherit;
+  color: #f90;
+  font-family: sans-serif;
+  text-decoration: none; }
 
 a.permalink {
-	background:inherit;
-	color:#f90;
-}
+  background: inherit;
+  color: #f90; }
 
 a.permalink:hover {
-	background:inherit;
-	color:#ffd43f;
-}
+  background: inherit;
+  color: #ffd43f; }
 
 a:hover {
-	background:inherit;
-	color:#ffd43f;
-	font-family:sans-serif;
-}
+  background: inherit;
+  color: #ffd43f;
+  font-family: sans-serif; }
 
 body {
-	background:#EEF2FF;
-	background-attachment:fixed;
-	background-image:url(images/pipes_bg.png);
-	color:#d8d0b9;
-	font-family:sans-serif;
-	font-size:12pt;
-}
+  background-image: url(images/pipes_bg.png);
+  color: #d8d0b9;
+  font-family: sans-serif;
+  font-size: 12pt; }
 
 ul.staffmenu li:hover {
-	background:#404040;
-}
+  background: #404040; }
+
+#site-title {
+  color: #e1b400; }
+
+.section-body {
+  background-color: #606060; }
+
+.section-title-block {
+  background-color: #202020;
+  border-radius: 8px 8px 0px 0px; }
+
+.tab {
+  background-color: #404040;
+  border: 1px solid #202020;
+  text-align: center; }
+
+#current-tab {
+  background-color: #202020; }
+
+div#recent-posts-header {
+  box-shadow: 0px 2px 2px 3px #101010;
+  border-radius: 8px 8px 8px 8px;
+  margin-bottom: 8px; }

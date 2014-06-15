@@ -30,7 +30,7 @@
 	<div id="main">
 			<div id="tab-bar">
 				<div id="current-tab" class="tab">
-					<a href="#">Home</a>
+					<a href="#">News</a>
 				</div>
 				<div class="tab">
 					<a href="#boards">Boards</a>
@@ -105,38 +105,24 @@
 				{{end}}
 			{{end}}
 			</div>
-		<div id="recent-posts">
-			<div class="section-title-box"><b>Recent Posts</b></div>
-			<div class="section-block">
-				<div class="section-title-block">
-					<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
-				</div>
-				<div class="section-body">
-					<img src="135693079632s.png" alt="test img"/>
-					TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT TOOT...<br /><i>(Post truncated, click <a href="/test/">here</a> to continue reading)</i>
-				</div>
-			</div>
+		{{if gt $config.MaxRecentPosts 0}}
+			<div id="recent-posts">
+				<div id="recent-posts-header" class="section-title-block"><b>Recent Posts</b></div>
+				{{range $i, $post := $recent_posts_arr.Data}}
+				<div class="section-block">
+					<div class="section-title-block">
+						<span class="section-title"><a href="{{$post.BoardName}}/res/{{if intEq $post.ParentID 0}}{{intToString $post.PostID}}.html{{else}}{{intToString $post.ParentID}}.html#{{intToString $post.PostID}}{{end}}">/{{$post.BoardName}}/</a></span> - {{$appended := stringAppend $post.Name $post.Tripcode}}{{if stringEq  $appended ""}}<b>Anonymous</b>{{else}}<b>{{$post.Name}}</b>{{if stringNeq $post.Tripcode ""}}!{{$post.Tripcode}}{{end}}{{end}}
+					</div>
+					<div class="section-body">
+						{{if stringNeq $post.Filename ""}}<img src="{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/>{{end}}
+						{{truncateMessage $post.Message 225}}
+						
 
-			<div class="section-block">
-				<div class="section-title-block">
-					<span class="section-title"><a href="/test/">/test/</a></span> - <b>Anonymous</b>
+					</div>
 				</div>
-				<div class="section-body">
-					OP is a pony.
-				</div>
+				{{end}}
 			</div>
-
-			<div class="section-block">
-				<div class="section-title-block">
-					<span class="section-title"><a href="/test/">/test/</a></span> - <b>Poster Mc</b>!Tripcode
-				</div>
-				<div class="section-body">
-					<img src="135683008384s.png" alt="test img"/>
-					<a href="#">&gt;&gt;22222</a><br />
-					HERP DERP FROSTED BUTTS
-				</div>
-			</div>
-		</div>
+		{{end}}
 	</div>
 	<div id="footer">
 		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -40,11 +41,8 @@ var funcMap = template.FuncMap{
 		}()
 		return slice
 	},
-	"gt": func(a int, b int) bool {
-		return a > b
-	},
-	"lt": func(a int, b int) bool {
-		return a < b
+	"stringAppend": func(a, b string) string {
+		return a + b
 	},
 	"stringEq": func(a, b string) bool {
 		return a == b
@@ -52,8 +50,18 @@ var funcMap = template.FuncMap{
 	"stringNeq": func(a, b string) bool {
 		return a != b
 	},
+	"truncateMessage": func(a string, b int) string {
+		if len(a) < b {
+			return a
+		} else {
+			return a[:b] + "..."
+		}
+	},
 	"intEq": func(a, b int) bool {
 		return a == b
+	},
+	"intToString": func(a int) string {
+		return strconv.Itoa(a)
 	},
 	"isStyleDefault_img": func(style string) bool {
 		return style == config.DefaultStyle_img
@@ -83,11 +91,17 @@ var funcMap = template.FuncMap{
 		return
 	},
 	"getThumbnailFilename": func(name string) string {
-		filetype := name[len(name)-4:]
-		if filetype == ".gif" || filetype == ".GIF" {
-			return name[0:len(name)-3]+"jpg"
+		if name == "" {
+			return ""
 		}
-		return name
+		fmt.Println(name[len(name) - 3:])
+		if name[len(name) - 3:] == "gif" || name[len(name) - 3:] == "gif" {
+			name = name[:len(name) - 3] + "jpg"
+		}
+		ext_begin := strings.LastIndex(name, ".")
+		new_name := name[:ext_begin] + "t." + getFiletype(name)
+		fmt.Println(new_name)
+		return new_name
 	},
 	"formatFilesize": func(size_int int) string {
 		size := float32(size_int)
@@ -109,11 +123,6 @@ var funcMap = template.FuncMap{
 		}
 		index := strings.LastIndex(img, ".")
 		return img[0:index]+"t."+filetype
-	},
-	"printValue": func(i interface{}) int {
-		fmt.Println("interface: ", i.(string))
-		fmt.Println("value: ", i)
-		return 0
 	},
 }
 
@@ -186,7 +195,7 @@ func initTemplates() {
 
 	img_boardpage_tmpl_bytes,_ := ioutil.ReadFile(path.Join(config.TemplateDir,"img_boardpage.html"))
 	if tmpl_err != nil {
-		fmt.Println("Failed loading template \"" + config.TemplateDir+"/img_boardpage.html\": " + tmpl_err.Error())
+		fmt.Println("Failed loading template \"" + config.TemplateDir + "/img_boardpage.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 	img_boardpage_tmpl_str = "{{$config := getInterface .Data 0}}" +
@@ -241,6 +250,7 @@ func initTemplates() {
 						  "{{$page_arr := getInterface .Data 1}}" +
 						  "{{$board_arr := getInterface .Data 2}}" +
 						  "{{$section_arr := getInterface .Data 3}}" +
+						  "{{$recent_posts_arr := getInterface .Data 4}}" +
 						  string(front_page_tmpl_bytes)
 	front_page_tmpl,tmpl_err = template.New("front_page_tmpl").Funcs(funcMap).Parse(front_page_tmpl_str)
 	if tmpl_err != nil {

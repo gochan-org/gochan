@@ -26,7 +26,12 @@ type RecentPost struct {
 	BoardID int
 	PostID int
 	ParentID int
+	Name string
+	Tripcode string
 	Message string
+	Filename string
+	ThumbW int
+	ThumbH int
 	IP string
 	Timestamp time.Time
 }
