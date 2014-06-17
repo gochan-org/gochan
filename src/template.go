@@ -46,6 +46,7 @@ var funcMap = template.FuncMap{
 	},
 	"lt": func(a int, b int) bool {
 		return a < b
+	},
 	"stringAppend": func(a, b string) string {
 		return a + b
 	},
