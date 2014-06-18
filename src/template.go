@@ -286,7 +286,3 @@ func getStyleLinks(w http.ResponseWriter, stylesheet string) {
 		os.Exit(2)
 	}
 }
-
-func buildFrontPage() error {
-	return nil
-}

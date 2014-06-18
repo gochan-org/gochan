@@ -157,6 +157,101 @@ func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (
 	return
 }
 
+func buildFrontPage(boards []BoardsTable, sections []interface{}) (html string) {
+	initTemplates()
+
+	var front_arr []interface{}
+	var recent_posts_arr []interface{}
+	var boards_arr []interface{}
+	
+	for _,board := range boards {
+		boards_arr = append(boards_arr, board)
+	}
+
+
+	os.Remove(path.Join(config.DocumentRoot,"index.html"))
+	front_file,err := os.OpenFile(path.Join(config.DocumentRoot,"index.html"),os.O_CREATE|os.O_RDWR,0777)
+	/*defer func() {
+		if front_file != nil {
+			front_file.Close()
+		}
+	}()*/
+	if err != nil {
+		return err.Error()
+	}
+
+	// get front pages
+	rows,err := db.Query("SELECT * FROM `"+config.DBprefix+"frontpage`;")
+	if err != nil {
+		error_log.Print(err.Error())
+		return err.Error()
+	}
+	for rows.Next() {
+		frontpage := new(FrontTable)
+		frontpage.IName = "front page"
+		err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
+		if err != nil {
+			error_log.Print(err.Error())
+			return err.Error()
+		}
+		front_arr = append(front_arr,frontpage)
+	}
+
+	// get recent posts
+	rows,err = db.Query("SELECT `" + config.DBprefix + "posts`.`id`, " +
+							   "`" + config.DBprefix + "posts`.`parentid`, " + 
+							   "`" + config.DBprefix +"boards`.`dir` AS boardname, " +
+							   "`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
+							   "`name`, " +
+							   "`tripcode`, " +
+							   "`message`," +
+							   "`filename`, " +
+							   "`thumb_w`, " +
+							   "`thumb_h` " +
+							   " FROM `" + config.DBprefix + "posts`, " +
+							   "`" + config.DBprefix + "boards` " +
+							   "WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"" +
+							   "ORDER BY `timestamp` DESC " +
+							   "LIMIT " + strconv.Itoa(config.MaxRecentPosts))
+	if err != nil {
+		error_log.Print(err.Error())
+		return err.Error()
+	}
+	for rows.Next() {
+		recent_posts := new(RecentPost)
+		err = rows.Scan(&recent_posts.PostID, &recent_posts.ParentID, &recent_posts.BoardName, &recent_posts.BoardID, &recent_posts.Name, &recent_posts.Tripcode, &recent_posts.Message, &recent_posts.Filename, &recent_posts.ThumbW, &recent_posts.ThumbH)
+		if err != nil {
+			error_log.Print(err.Error())
+			return err.Error()
+		}
+		recent_posts_arr = append(recent_posts_arr, recent_posts)
+	}
+
+    page_data := &Wrapper{IName:"fronts", Data: front_arr}
+    board_data := &Wrapper{IName:"boards", Data: boards_arr}
+    section_data := &Wrapper{IName:"sections", Data: sections}
+    recent_posts_data := &Wrapper{IName:"recent posts", Data: recent_posts_arr}
+    
+
+    var interfaces []interface{}
+    interfaces = append(interfaces, config)
+    interfaces = append(interfaces, page_data)
+    interfaces = append(interfaces, board_data)
+    interfaces = append(interfaces, section_data)
+    interfaces = append(interfaces, recent_posts_data)
+
+	wrapped := &Wrapper{IName: "frontpage",Data: interfaces}
+	err = front_page_tmpl.Execute(front_file,wrapped)
+	if err == nil {
+		if err != nil {
+			return err.Error()
+		} else {
+			return "Front page rebuilt successfully.<br />"
+		}
+	}
+	return "Front page rebuilt successfully.<br />"	
+}
+
 func buildThread(op_id int, board_id int) (err error) {
 	var posts []PostTable
 	var post_table_interface []interface{}
@@ -652,15 +747,20 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		}
 	}
 
+	// rebuild the thread page
 	if post.ParentID > 0 {
 		buildThread(post.ParentID,post.BoardID)
 	} else {
 		buildThread(int(id),post.BoardID)
 	}
 	
+	// rebuild the board page
 	boards := getBoardArr("")
 	sections := getSectionArr("")
 	buildBoardPage(post.BoardID, boards, sections)
+
+	buildFrontPage(boards, sections)
+
 	if email_command == "noko" {
 		if post.ParentID == 0 {
 			http.Redirect(writer,&request,"/" + boards[post.BoardID-1].Dir + "/res/"+strconv.Itoa(post.ID)+".html",http.StatusFound)

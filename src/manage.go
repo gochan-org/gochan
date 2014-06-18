@@ -814,11 +814,11 @@ var manage_functions = map[string]ManageFunction{
 
 			os.Remove(path.Join(config.DocumentRoot,"index.html"))
 			front_file,err := os.OpenFile(path.Join(config.DocumentRoot,"index.html"),os.O_CREATE|os.O_RDWR,0777)
-			defer func() {
+			/*defer func() {
 				if front_file != nil {
 					front_file.Close()
 				}
-			}()
+			}()*/
 			if err != nil {
 				return err.Error()
 			}
