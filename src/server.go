@@ -55,7 +55,6 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 				if err == nil {
 					// serve the index page
 					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-					fmt.Println("found index at ", newpath)
 					file_bytes,err  = ioutil.ReadFile(newpath)
 					return file_bytes, true
 					found_index = true

@@ -100,7 +100,6 @@ var funcMap = template.FuncMap{
 		if name == "" {
 			return ""
 		}
-		fmt.Println(name[len(name) - 3:])
 		if name[len(name) - 3:] == "gif" || name[len(name) - 3:] == "gif" {
 			name = name[:len(name) - 3] + "jpg"
 		}
