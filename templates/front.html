@@ -115,7 +115,7 @@
 					</div>
 					<div class="section-body">
 						{{if stringNeq $post.Filename ""}}<img src="{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/>{{end}}
-						{{truncateMessage $post.Message 225}}
+						{{truncateMessage $post.Message 225 12}}
 						
 
 					</div>

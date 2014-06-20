@@ -56,12 +56,30 @@ var funcMap = template.FuncMap{
 	"stringNeq": func(a, b string) bool {
 		return a != b
 	},
-	"truncateMessage": func(a string, b int) string {
-		if len(a) < b {
-			return a
-		} else {
-			return a[:b] + "..."
+	"truncateMessage": func(msg string, limit int, max_lines int) string {
+		var truncated bool
+		split := strings.SplitN(msg,"<br />",-1)
+
+		if len(split) > max_lines {
+			split = split[:max_lines]
+			msg = strings.Join(split,"<br />")
+			truncated = true
 		}
+
+		if len(msg) < limit {
+			if truncated {
+				msg = msg + "..."
+			}
+			return msg
+		} else {
+			msg = msg[:limit]
+			truncated = true
+		}
+
+		if truncated {
+			msg = msg + "..."
+		}
+		return msg
 	},
 	"intEq": func(a, b int) bool {
 		return a == b
