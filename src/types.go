@@ -85,7 +85,6 @@ type BoardsTable struct {
 	Order int
 	Dir string
 	Type int
-	FirstPost int
 	UploadType int
 	Title string
 	Subtitle string

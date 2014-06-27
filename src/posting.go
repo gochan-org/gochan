@@ -201,17 +201,18 @@ func buildFrontPage(boards []BoardsTable, sections []interface{}) (html string) 
 	// get recent posts
 	rows,err = db.Query("SELECT `" + config.DBprefix + "posts`.`id`, " +
 							   "`" + config.DBprefix + "posts`.`parentid`, " + 
-							   "`" + config.DBprefix +"boards`.`dir` AS boardname, " +
+							   "`" + config.DBprefix + "boards`.`dir` AS boardname, " +
 							   "`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
 							   "`name`, " +
 							   "`tripcode`, " +
-							   "`message`," +
+							   "`message`, " +
 							   "`filename`, " +
 							   "`thumb_w`, " +
 							   "`thumb_h` " +
-							   " FROM `" + config.DBprefix + "posts`, " +
+							   "FROM `" + config.DBprefix + "posts`, " +
 							   "`" + config.DBprefix + "boards` " +
 							   "WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"" +
+							   "AND `boardid` = `"+config.DBprefix+"boards`.`id` " +
 							   "ORDER BY `timestamp` DESC " +
 							   "LIMIT " + strconv.Itoa(config.MaxRecentPosts))
 	if err != nil {
@@ -219,13 +220,13 @@ func buildFrontPage(boards []BoardsTable, sections []interface{}) (html string) 
 		return err.Error()
 	}
 	for rows.Next() {
-		recent_posts := new(RecentPost)
-		err = rows.Scan(&recent_posts.PostID, &recent_posts.ParentID, &recent_posts.BoardName, &recent_posts.BoardID, &recent_posts.Name, &recent_posts.Tripcode, &recent_posts.Message, &recent_posts.Filename, &recent_posts.ThumbW, &recent_posts.ThumbH)
+		recent_post := new(RecentPost)
+		err = rows.Scan(&recent_post.PostID, &recent_post.ParentID, &recent_post.BoardName, &recent_post.BoardID, &recent_post.Name, &recent_post.Tripcode, &recent_post.Message, &recent_post.Filename, &recent_post.ThumbW, &recent_post.ThumbH)
 		if err != nil {
 			error_log.Print(err.Error())
 			return err.Error()
 		}
-		recent_posts_arr = append(recent_posts_arr, recent_posts)
+		recent_posts_arr = append(recent_posts_arr, recent_post)
 	}
 
     page_data := &Wrapper{IName:"fronts", Data: front_arr}
@@ -321,7 +322,6 @@ func buildThread(op_id int, board_id int) (err error) {
 		error_log.Print(err.Error())
 		return
 	}*/
-	fmt.Println("num posts", num_posts)
     var interfaces []interface{}
     interfaces = append(interfaces, config)
     interfaces = append(interfaces, post_table_interface)
@@ -529,36 +529,9 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	post.ParentID,_ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID,_ = strconv.Atoi(request.FormValue("boardid"))
 
-	var count int
-	var postid int
-	var boardid int
 	var email_command string
 
-	err := db.QueryRow("SELECT (SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = "+strconv.Itoa(post.BoardID)+") AS `count`, `"+config.DBprefix+"posts`.`id` AS `id`, `"+config.DBprefix+"boards`.`id` AS `boardid` FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` WHERE `boardid` = "+strconv.Itoa(post.BoardID)+" ORDER BY `"+config.DBprefix+"posts`.`id` DESC LIMIT 1").Scan(&count,&postid,&boardid)
-	
-	if err != nil {
-		if err == sql.ErrNoRows {
-			count = 0
-		} else {
-			error_log.Print(err.Error())
-			server.ServeErrorPage(w, err.Error())
-			return
-		}
-	}
 
-	if count == 0 {
-		var first_post int
-		err = db.QueryRow("SELECT `first_post` FROM `"+config.DBprefix+"boards` WHERE `id` = "+strconv.Itoa(post.BoardID)+" LIMIT 1").Scan(&first_post)
-		if err != nil {
-			error_log.Print(err.Error())
-			server.ServeErrorPage(w, err.Error())
-			return
-		}
-		post.ID = first_post
-	} else {
-		post.ID = postid + 1
-	}
-	
 	post_name := escapeString(request.FormValue("postname"))
 	if strings.Index(post_name, "#") == -1 {
 		post.Name = post_name
@@ -761,11 +734,12 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		server.ServeErrorPage(w, err.Error())
 		return
 	}
-	id,_ := result.LastInsertId()
+	postid,_ := result.LastInsertId()
+	post.ID = int(postid)
 
 	parsed_backlinks:= parseBacklinks(post.Message, post.BoardID)
 	if post.Message != parsed_backlinks {
-		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(int(id)))
+		_,err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(int(post.ID)))
 		if err != nil {
 			server.ServeErrorPage(writer, err.Error())
 			return
@@ -776,7 +750,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	if post.ParentID > 0 {
 		buildThread(post.ParentID,post.BoardID)
 	} else {
-		buildThread(int(id),post.BoardID)
+		buildThread(post.ID,post.BoardID)
 	}
 	
 	// rebuild the board page

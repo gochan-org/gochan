@@ -119,7 +119,6 @@ func getBoardArr(where string) (boards []BoardsTable) {
 			&board.Order,
 			&board.Dir,
 			&board.Type,
-			&board.FirstPost,
 			&board.UploadType,
 			&board.Title,
 			&board.Subtitle,
@@ -139,7 +138,6 @@ func getBoardArr(where string) (boards []BoardsTable) {
 			&board.MaxMessageLength,
 			&board.EmbedsAllowed,
 			&board.RedirectToThread,
-			&board.ShowId,
 			&board.RequireFile,
 			&board.EnableCatalog,
 		)

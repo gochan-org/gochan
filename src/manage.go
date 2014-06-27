@@ -269,6 +269,7 @@ var manage_functions = map[string]ManageFunction{
 				html += err.Error() + "<br />"
 				return
 			}
+			_,_ = db.Exec("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1")
 			html += "<br />Everything purged, rebuilding all<br />"
 			html += rebuildboards()+"<hr />\n"
 			return
@@ -305,7 +306,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			if username == "" || password == "" {
 				//assume that they haven't logged in
-				html = "\t<form method=\"POST\" action=\"/manage?action=login\" class=\"loginbox\">\n" +
+				html = "\t<form method=\"POST\" action=\"/manage?action=login\" id=\"login-box\" class=\"staff-form\">\n" +
 					"\t\t<input type=\"hidden\" name=\"redirect\" value=\""+redirect_action+"\" />\n" +
 					"\t\t<input type=\"text\" name=\"username\" class=\"logindata\" /><br />\n" +
 					"\t\t<input type=\"password\" name=\"password\" class=\"logindata\" /> <br />\n" +
@@ -554,11 +555,6 @@ var manage_functions = map[string]ManageFunction{
 						if err != nil {
 							board.MaxImageSize = 1024*4
 						}
-						firstpost_str := escapeString(request.FormValue("firstpost"))
-						board.FirstPost,err = strconv.Atoi(firstpost_str)
-						if err != nil {
-							board.FirstPost = 1
-						}
 
 						maxpages_str := escapeString(request.FormValue("maxpages"))
 						board.MaxPages,err = strconv.Atoi(maxpages_str)
@@ -594,7 +590,6 @@ var manage_functions = map[string]ManageFunction{
 						
 						board.EmbedsAllowed = (request.FormValue("embedsallowed") == "on")
 						board.RedirectToThread = (request.FormValue("redirecttothread") == "on")
-						board.ShowId = (request.FormValue("showid") == "on")
 						board.RequireFile = (request.FormValue("require_file") == "on")
 						board.EnableCatalog = (request.FormValue("enablecatalog") == "on")
 
@@ -625,7 +620,6 @@ var manage_functions = map[string]ManageFunction{
 								"`order`, " + 
 								"`dir`, " + 
 								"`type`, " + 
-								"`first_post`, " + 
 								"`upload_type`, " + 
 								"`title`, " + 
 								"`subtitle`, " + 
@@ -645,14 +639,12 @@ var manage_functions = map[string]ManageFunction{
 								"`max_message_length`, " + 
 								"`embeds_allowed`, " + 
 								"`redirect_to_thread`, " + 
-								"`show_id`, " + 
 								"`require_file`, " + 
 								"`enable_catalog`" + 
 								") VALUES("+
 									strconv.Itoa(board.Order) + ", '" +
 									board.Dir + "', " +
 									strconv.Itoa(board.Type) + ", " +
-									strconv.Itoa(board.FirstPost) + ", " +
 									strconv.Itoa(board.UploadType) + ", '" +
 									board.Title + "', '" +
 									board.Subtitle + "', '" +
@@ -672,7 +664,6 @@ var manage_functions = map[string]ManageFunction{
 									strconv.Itoa(board.MaxMessageLength) + ", " +
 									Btoa(board.EmbedsAllowed) + ", " +
 									Btoa(board.RedirectToThread) + ", " +
-									Btoa(board.ShowId) + ", " +
 									Btoa(board.RequireFile) + ", " +
 									Btoa(board.EnableCatalog) + ")")
 						if err != nil {
@@ -697,7 +688,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 
-			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"add\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr><td>First post</td><td><input type=\"text\" name=\"firstpost\" value=\"%d\" /></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.FirstPost,board.Title,board.Subtitle,board.Description,board.Section)
+			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"add\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.Title,board.Subtitle,board.Description,board.Section)
 		 	rows,err = db.Query("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
 			if err != nil {
 				html += err.Error()
@@ -743,14 +734,6 @@ var manage_functions = map[string]ManageFunction{
 				html += "<input type=\"text\" name=\"redirecttothread\" checked/>"
 			} else {
 				html += "<input type=\"text\" name=\"redirecttothread\" />"
-			}
-
-			html += "</td></tr><tr><td>Show ID</td><td>"
-
-			if board.ShowId {
-				html += "<input type=\"checkbox\" name=\"showid\" checked/>"
-			} else {
-				html += "<input type=\"checkbox\" name=\"showid\" />"
 			}
 
 			html += "</td></tr><tr><td>Require an uploaded file</td><td>"
@@ -805,130 +788,9 @@ var manage_functions = map[string]ManageFunction{
 	"rebuildfront": {
 		Permissions: 3,
 		Callback: func() (html string) {
-			initTemplates()
-			// variables for sections table
-			var section_arr []interface{}
-			var board_arr []interface{}
-			var front_arr []interface{}
-			var recent_posts_arr []interface{}
-
-			os.Remove(path.Join(config.DocumentRoot,"index.html"))
-			front_file,err := os.OpenFile(path.Join(config.DocumentRoot,"index.html"),os.O_CREATE|os.O_RDWR,0777)
-			/*defer func() {
-				if front_file != nil {
-					front_file.Close()
-				}
-			}()*/
-			if err != nil {
-				return err.Error()
-			}
-
-			// get boards from db and push to variables to be put in an interface
-		  	rows,err := db.Query("SELECT `dir`,`title`,`subtitle`,`description`,`section` FROM `"+config.DBprefix+"boards` ORDER BY `order`;")
-			if err != nil {
-				error_log.Print(err.Error())
-				return err.Error()
-			}
-
-			for rows.Next() {
-				board := new(BoardsTable)
-				board.IName = "board"
-				err = rows.Scan(&board.Dir, &board.Title, &board.Subtitle, &board.Description, &board.Section)
-				if err != nil {
-					error_log.Print(err.Error())
-					return err.Error()
-				}
-			    board_arr = append(board_arr,board)
-			}
-
-			// get sections from db and push to variables to be put in an interface
-		  	rows,err = db.Query("SELECT `id`,`order`,`hidden` FROM `"+config.DBprefix+"sections` ORDER BY `order`;")
-			if err != nil {
-				error_log.Print(err.Error())
-				return err.Error()
-			}
-			for rows.Next() {
-				section := new(BoardSectionsTable)
-				section.IName = "section"
-				err = rows.Scan(&section.ID, &section.Order, &section.Hidden)
-				if err != nil {
-					error_log.Print(err.Error())
-					return err.Error()
-				}
-			    section_arr = append(section_arr, section)
-			}
-
-			// get front pages
-			rows,err = db.Query("SELECT * FROM `"+config.DBprefix+"frontpage`;")
-			if err != nil {
-				error_log.Print(err.Error())
-				return err.Error()
-			}
-
-			for rows.Next() {
-				frontpage := new(FrontTable)
-				frontpage.IName = "front page"
-				err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
-				if err != nil {
-					error_log.Print(err.Error())
-					return err.Error()
-				}
-				front_arr = append(front_arr,frontpage)
-			}
-
-			// get recent posts
-			rows,err = db.Query("SELECT `" + config.DBprefix + "posts`.`id`, " +
-									   "`" + config.DBprefix + "posts`.`parentid`, " + 
-									   "`" + config.DBprefix +"boards`.`dir` AS boardname, " +
-									   "`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
-									   "`name`, " +
-									   "`tripcode`, " +
-									   "`message`," +
-									   "`filename`, " +
-									   "`thumb_w`, " +
-									   "`thumb_h` " +
-									   " FROM `" + config.DBprefix + "posts`, " +
-									   "`" + config.DBprefix + "boards` " +
-									   "WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"" +
-									   "ORDER BY `timestamp` DESC " +
-									   "LIMIT " + strconv.Itoa(config.MaxRecentPosts))
-			if err != nil {
-				error_log.Print(err.Error())
-				return err.Error()
-			}
-			for rows.Next() {
-				recent_posts := new(RecentPost)
-				err = rows.Scan(&recent_posts.PostID, &recent_posts.ParentID, &recent_posts.BoardName, &recent_posts.BoardID, &recent_posts.Name, &recent_posts.Tripcode, &recent_posts.Message, &recent_posts.Filename, &recent_posts.ThumbW, &recent_posts.ThumbH)
-				if err != nil {
-					error_log.Print(err.Error())
-					return err.Error()
-				}
-				recent_posts_arr = append(recent_posts_arr, recent_posts)
-			}
-
-		    page_data := &Wrapper{IName:"fronts", Data: front_arr}
-		    board_data := &Wrapper{IName:"boards", Data: board_arr}
-		    section_data := &Wrapper{IName:"sections", Data: section_arr}
-		    recent_posts_data := &Wrapper{IName:"recent posts", Data: recent_posts_arr}
-		    
-
-		    var interfaces []interface{}
-		    interfaces = append(interfaces, config)
-		    interfaces = append(interfaces, page_data)
-		    interfaces = append(interfaces, board_data)
-		    interfaces = append(interfaces, section_data)
-		    interfaces = append(interfaces, recent_posts_data)
-
-			wrapped := &Wrapper{IName: "frontpage",Data: interfaces}
-			err = front_page_tmpl.Execute(front_file,wrapped)
-			if err == nil {
-				if err != nil {
-					return err.Error()
-				} else {
-					return "Front page rebuilt successfully.<br />"
-				}
-			}
-			return "Front page rebuilt successfully.<br />"
+			boards := getBoardArr("")
+			sections := getSectionArr("")
+			return buildFrontPage(boards, sections)
 	}},
 	"rebuildall": {
 		Permissions:3,
