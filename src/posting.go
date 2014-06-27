@@ -315,7 +315,6 @@ func buildThread(op_id int, board_id int) (err error) {
 		}
 	}
 
-	var num_posts int
 	//var num_pages int
 	/*err = db.QueryRow("SELECT (SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board_id) + ") AS `count` WHERE `boardid` = " + strconv.Itoa(board_id) + " ORDER BY `" + config.DBprefix + "posts`.`id` DESC LIMIT 1").Scan(&num_posts)
 	if err != nil {
