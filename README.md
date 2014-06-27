@@ -3,26 +3,16 @@
 A muti-threaded Imageboard software project in Go
 
 At the moment, regular users can:
-
 - Log in as the initial admin account (password is "password"
-
 - Create new threads
-
 - Post in a thread
-
 - Upload an image with a post
 
-
 Staff can:
-
 - View announcements (announcment editing coming soon)
-
 - create and delete users (if they are logged into an administrator account)
-
 - Log out
-
 - Use various other half implemented functions
-
 - Delete posts without needing to put in a password
 
 ## To-do list:
@@ -35,15 +25,12 @@ Staff can:
 		- set up board pagination
 		- make jquery stuff in manage pages more consistent (no reloading the whole page if in a lightbox)
 	* Security
-		- Add banning functionality
+		- improve banning functionality
 		- add mod tools (search IP, permaban, etc) to the dropdown for staff
 		- check for user-agent on post submission/staff login	
 		
 + Bugs
 	- fix execute sql page
-	- fix "multiple response.WriteHeader calls" bug
-	- fix cross-browser compatibility issues
-
 + Features
 	- Load error html pages into memory and use templating
 	- Set up load balancing
@@ -58,4 +45,3 @@ Staff can:
 	- set up client-side watched threads list
 	- set up Ponychan/4chan-X style javascript features
 	- generate robots.txt
-	- generate post rss, to be used for recent posts on the front page
