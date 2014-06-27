@@ -22,8 +22,9 @@ import (
 	"time"
 )
 
+const whitespace_match = "[\000-\040]"
+
 var (
-	whitespace_match = "[\000-\040]"
 	last_post PostTable
 )
 
@@ -292,11 +293,35 @@ func buildThread(op_id int, board_id int) (err error) {
 
 		if board.ID == board_id {
 			board_dir = board.Dir
-
 			break
 		}
 	}
+	
+	// create a file object of the board's thread directory so we can search for and delete the given thread's sub pages to be rebuilt
+	threads_dir, err := os.Open(path.Join(config.DocumentRoot, board_dir, "res"))
+	if err != nil {
+		error_log.Print(err.Error())
+		return
+	}
+	thread_files, err := threads_dir.Readdir(-1)
+	if err != nil {
+		error_log.Print(err.Error())
+		return
+	}
+	for _,thread_file := range thread_files {
+		if strings.Index(thread_file.Name(), "p") > -1 {
+			os.Remove(path.Join(config.DocumentRoot, board_dir, "res", thread_file.Name()))
+		}
+	}
 
+	var num_posts int
+	//var num_pages int
+	/*err = db.QueryRow("SELECT (SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board_id) + ") AS `count` WHERE `boardid` = " + strconv.Itoa(board_id) + " ORDER BY `" + config.DBprefix + "posts`.`id` DESC LIMIT 1").Scan(&num_posts)
+	if err != nil {
+		error_log.Print(err.Error())
+		return
+	}*/
+	fmt.Println("num posts", num_posts)
     var interfaces []interface{}
     interfaces = append(interfaces, config)
     interfaces = append(interfaces, post_table_interface)

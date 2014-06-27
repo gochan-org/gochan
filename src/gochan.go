@@ -4,9 +4,7 @@ import (
 	"fmt"
 )
 
-var (
-	version float32 = 0.7
-)
+const version float32 = 0.8
 
 
 func main() {

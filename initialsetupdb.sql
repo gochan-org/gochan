@@ -152,12 +152,12 @@ CREATE TABLE `DBPREFIXposts` (
 	`locked` TINYINT(1) NOT NULL DEFAULT 0,
 	`reviewed` TINYINT(1) NOT NULL DEFAULT 0,
 	`sillytag` TINYINT(1) NOT NULL DEFAULT 0,
-	PRIMARY KEY (`id`),
+	PRIMARY KEY  (`boardid`,`id`),
 	KEY `parentid` (`parentid`),
 	KEY `bumped` (`bumped`),
 	KEY `file_checksum` (`file_checksum`),
 	KEY `stickied` (`stickied`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
 
 CREATE TABLE `DBPREFIXreports` (
 	`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
