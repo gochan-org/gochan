@@ -52,13 +52,11 @@ div#topbar {
 	left:0;
 	position:fixed;
 	top:0;
-	height:26px;
 	width:100%;
 	z-index:2;
 	margin-top:0px;
 	padding-left:8px;
-	padding-right:4px;
-	overflow-x: hidden;
+	padding-right:80px;
 }
 
 .topbar-item {
@@ -85,6 +83,7 @@ div#topbar {
 .dropdown-button {
 	display: inline;
 	padding: 4px;
+	padding-right: 8px;
 	float: right;
 }
 

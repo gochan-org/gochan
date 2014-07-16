@@ -1,117 +1,105 @@
-#board-title {
-	color:#e1b400;
-}
-
-#current-tab,#topbar li:hover {
-	background-color:#404040;
-}
+/* imported by individual sass pre-compiled css files */
+* {
+  outline: none; }
 
 #footer {
-	font-size:12px;
-}
+  font-size: 12px; }
 
 #topbar {
-	background-color:#202020;
-	box-shadow:0px 2px 2px 3px #101010;
-	height:26px;
-}
+  background-color: #202020;
+  box-shadow: 0px 2px 2px 3px #101010;
+  z-index: 9001; }
 
+#topbar li:hover {
+  background-color: #404040; }
+
+#footer {
+  font-size: 12px; }
+
+#site-title {
+  color: #e1b400; }
+
+#topbar {
+  background-color: #202020;
+  box-shadow: 2px 2px 2px 3px #101010; }
+
+.topbar-item:hover {
+  background-color: #404040; }
+
+.dropdown-button:hover {
+  background-color: #404040; }
 
 .dropdown-menu {
-	background-color:#202020;
-	box-shadow:0 6px 2px 2px #101010;
-}
-
-.dropdown-button:hover{
-	background-color: #404040;
-}
-
-.menu {
-	margin-top:1em;
-	text-align:center;
-}
-
-.reply {
-	background-color:#25272D;
-	border:1px solid #8C94AB;
-}
-
-.postblock {
-	background-color:#25272D;
-	font-weight:700;
-}
-
-.postername {
-	color:#FC0;
-	font-weight:700;
-}
-
-.postername a {
-	color:#FC0!important;
-	text-decoration:underline;
-}
-
-.subject {
-	color:#F90;
-}
-
-.tab {
-	background-color:#202020;
-	border:1px solid #424242;
-	text-align:center;
-}
-
-.thread-ddown a {
-	font-size:75%;
-	vertical-align:middle;
-}
-
-.tripcode {
-	color:#FC0;
-}
+  background-color: #202020;
+  box-shadow: 2px 2px 2px 3px #101010;
+  z-index: 0; }
 
 a {
-	color:#f90;
-	font-family:sans-serif;
-	text-decoration:none;
-}
-
-a.permalink {
-	background:inherit;
-	color:#f90;
-}
-
-a.permalink:hover {
-	background:inherit;
-	color:#ffd43f;
-}
+  color: #f90;
+  font-family: sans-serif;
+  text-decoration: none; }
 
 a:hover {
-	background:inherit;
-	color:#ffd43f;
-	font-family:sans-serif;
-}
+  background: inherit;
+  color: #ffd43f;
+  font-family: sans-serif; }
 
 body {
-	background:#EEF2FF;
-	background-image:url(images/pipes_bg.png);
-	background-repeat: repeat;
-	color:#d8d0b9;
-	font-family:sans-serif;
-	font-size:12pt;
-}
+  background-image: url(images/pipes_bg.png);
+  color: #d8d0b9;
+  font-family: sans-serif;
+  font-size: 12pt; }
 
-input[type=text],input[type=password],input[type=file],textarea,.thread-ddown-menu {
-	background-color:#25272D;
-	border:1px solid #8C94AB;
-	color:#FFF;
-}
+ul.staffmenu li:hover {
+  background: #404040; }
+
+#board-title {
+  color: #e1b400; }
+
+img.thumbnail {
+  float: left;
+  max-width: 100%;
+  margin: 5px 10px 10px 0px; }
+
+.menu {
+  margin-top: 1em;
+  text-align: center; }
+
+.reply {
+  background-color: #25272D;
+  border: 1px solid #8C94AB; }
+
+.postblock {
+  background-color: #25272D;
+  font-weight: 700; }
+
+.postername {
+  color: #FC0;
+  font-weight: 700; }
+
+.postername a {
+  color: #ffcc00 !important;
+  text-decoration: underline; }
+
+.subject {
+  color: #F90; }
+
+.tab {
+  background-color: #202020;
+  border: 1px solid #424242;
+  text-align: center; }
+
+.thread-ddown a {
+  font-size: 75%;
+  vertical-align: middle; }
+
+.tripcode {
+  color: #FC0; }
+
+input[type=text], input[type=password], input[type=file], textarea, .thread-ddown-menu {
+  background-color: #25272D;
+  border: 1px solid #8C94AB;
+  color: #FFF; }
 
 .thread-ddown-menu li:hover {
-	background-color:#404040;
-
-}
-
-.topbar-item:hover, .staffmenu li:hover {
-	background:#404040;
-}
+  background-color: #404040; }

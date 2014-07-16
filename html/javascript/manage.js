@@ -6,7 +6,7 @@ var Staff = function(name,rank,boards) {
 
 function addStaffButtons() {
 	$jq("input#delete-password").remove();
-	$jq("input[value=Delete]").after(" <input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"alert('Bans not yet implemented'); return false;\"  />")
+	$jq("input[value=Delete]").after("<input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"alert('Bans not yet implemented'); return false;\"  />")
 }
 
 function banPage() {

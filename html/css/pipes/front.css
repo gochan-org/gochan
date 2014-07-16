@@ -7,8 +7,8 @@
 
 #topbar {
   background-color: #202020;
-  box-shadow: 2px 2px 2px 3px #101010;
-  height: 26px; }
+  box-shadow: 0px 2px 2px 3px #101010;
+  z-index: 9001; }
 
 #topbar li:hover {
   background-color: #404040; }
@@ -21,8 +21,7 @@
 
 #topbar {
   background-color: #202020;
-  box-shadow: 2px 2px 2px 3px #101010;
-  height: 26px; }
+  box-shadow: 2px 2px 2px 3px #101010; }
 
 .topbar-item:hover {
   background-color: #404040; }
@@ -32,21 +31,13 @@
 
 .dropdown-menu {
   background-color: #202020;
-  box-shadow: 2px 2px 2px 3px #101010; }
+  box-shadow: 2px 2px 2px 3px #101010;
+  z-index: 0; }
 
 a {
-  background: inherit;
   color: #f90;
   font-family: sans-serif;
   text-decoration: none; }
-
-a.permalink {
-  background: inherit;
-  color: #f90; }
-
-a.permalink:hover {
-  background: inherit;
-  color: #ffd43f; }
 
 a:hover {
   background: inherit;

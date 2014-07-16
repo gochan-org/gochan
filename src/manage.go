@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"code.google.com/p/go.crypto/bcrypt"
-	"errors"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,8 +19,6 @@ type ManageFunction struct {
 }
 
 var (
-	StaffNotFoundErr = errors.New("Username doesn't exist")
-	PasswordMismatchErr = errors.New("Incorrect password")
 	rebuildfront func() string
 	rebuildboards func() string
 	rebuildthreads func() string
@@ -52,7 +50,6 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 		fmt.Fprintf(writer,manage_page_html + err.Error() + "\n</body>\n</html>")
 		return
 	}
-
 
 	if _,ok := manage_functions[action]; ok {
 		if staff_rank >= manage_functions[action].Permissions {
@@ -326,8 +323,18 @@ var manage_functions = map[string]ManageFunction{
 			var key string
 			if cookie != nil {
 				key = cookie.Value
-				new_expire := time.Now().AddDate(0,0,-1)
-				new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.SiteDomain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
+				new_expire := time.Now().AddDate(0, 0, -1)
+				new_cookie := &http.Cookie{
+					Name: "sessiondata",
+					Value: cookie.Value,
+					Path: "/",
+					Domain: config.SiteDomain,
+					Expires: new_expire,
+					RawExpires: new_expire.Format(time.UnixDate),
+					MaxAge: -1,
+					Secure: true,
+					HttpOnly: true,
+					Raw: "sessiondata=" + key}
 				// new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.Domain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
 				http.SetCookie(writer, new_cookie)
 				return "Logged out successfully"
@@ -352,7 +359,9 @@ var manage_functions = map[string]ManageFunction{
 				if err != nil {
 					html += err.Error()
 				} else {
-					html += "<div class=\"section-block\">\n<div class=\"section-title-block\"><b>"+announcement.Subject+"</b> by "+announcement.Poster+" at "+humanReadableTime(announcement.Timestamp)+"</div>\n<div class=\"section-body\">"+announcement.Message+"\n</div></div>\n"
+					html += "<div class=\"section-block\">\n" +
+							"<div class=\"section-title-block\"><b>"+announcement.Subject+"</b> by "+announcement.Poster+" at "+humanReadableTime(announcement.Timestamp)+"</div>\n" +
+							"<div class=\"section-body\">"+announcement.Message+"\n</div></div>\n"
 				}
 				iterations += 1
 			}
@@ -485,14 +494,6 @@ var manage_functions = map[string]ManageFunction{
 					"<script type=\"text/javascript\">banPage();</script>\n "
 			return
 	}},
-	"manageserver": {
-		Permissions: 3,
-		Callback: func() (html string) {
-			html = "<script type=\"text/javascript\">\n$jq = jQuery.noConflict();\n$jq(document).ready(function() {\n\tvar killserver_btn = $jq(\"button#killserver\");\n\n\t$jq(\"button#killserver\").click(function() {\n\t\t$jq.ajax({\n\t\t\tmethod:'GET',\n\t\t\turl:\"/manage\",\n\t\t\tdata: {\n\t\t\t\taction: 'killserver'\n\t\t\t},\n\n\t\t\tsuccess: function() {\n\t\t\t\t\n\t\t\t},\n\t\t\terror:function() {\n\t\t\t\t\n\t\t\t}\n\t\t});\n\t});\n});\n</script>" +
-			"<button id=\"killserver\">Kill server</button><br />\n"
-
-			return
-	}},
 	"cleanup": {
 		Permissions:3,
 		Callback: func() (html string) {
@@ -527,18 +528,31 @@ var manage_functions = map[string]ManageFunction{
 		Permissions:3,
 		Callback: func() (html string) {
 			do := request.FormValue("do")
+			var done bool
 			board := new(BoardsTable)
+			var board_creation_status string
 			var err error
-			if do != "" {
+			var rows *sql.Rows
+			for !done {
 				switch {
 					case do == "add":
 						board.Dir = escapeString(request.FormValue("dir"))
+						if board.Dir == "" {
+							board_creation_status = "Error: \"Directory\" cannot be blank"
+							do = ""
+							continue
+						}
 						order_str := escapeString(request.FormValue("order"))
 						board.Order,err = strconv.Atoi(order_str)
 						if err != nil {
 							board.Order = 0
 						}
 						board.Title = escapeString(request.FormValue("title"))
+						if board.Title == "" {
+							board_creation_status = "Error: \"Title\" cannot be blank"
+							do = ""
+							continue
+						}
 						board.Subtitle = escapeString(request.FormValue("subtitle"))
 						board.Description = escapeString(request.FormValue("description"))
 						section_str := escapeString(request.FormValue("section"))
@@ -567,6 +581,9 @@ var manage_functions = map[string]ManageFunction{
 						board.ForcedAnon = (request.FormValue("forcedanon") == "on")
 
 						board.Anonymous = escapeString(request.FormValue("anonymous"))
+						if board.Anonymous == "" {
+							board.Anonymous = "Anonymous"
+						}
 						maxage_str := escapeString(request.FormValue("maxage"))
 						board.MaxAge,err = strconv.Atoi(maxage_str)
 						if err != nil {
@@ -596,25 +613,31 @@ var manage_functions = map[string]ManageFunction{
 						//actually start generating stuff
 						err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir),0777)
 						if err != nil {
-							return err.Error()
+							do = ""
+							board_creation_status = err.Error()
+							continue
 						}
 						
 						err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir,"res"),0777)
 						if err != nil {
-							return err.Error()
+							do = ""
+							board_creation_status = err.Error()
+							continue
 						}
 
 						err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir,"thumb"),0777)
 						if err != nil {
-							return err.Error()
+							do = ""
+							board_creation_status = err.Error()
+							continue
 						}
 						
 						err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir,"src"),0777)
 						if err != nil {
-							return err.Error()
+							do = ""
+							board_creation_status = err.Error()
+							continue
 						}
-						fmt.Println("inserted")
-
 						_,err := db.Exec(
 							"INSERT INTO `"+config.DBprefix+"boards` ("+
 								"`order`, " + 
@@ -667,16 +690,87 @@ var manage_functions = map[string]ManageFunction{
 									Btoa(board.RequireFile) + ", " +
 									Btoa(board.EnableCatalog) + ")")
 						if err != nil {
-							fmt.Println(err.Error())
-							return err.Error();
+							do = ""
+							board_creation_status = err.Error()
+							continue
+						} else {
+							board_creation_status = "Board created successfully"
+							done = true
 						}
 					case do == "del":
-						// 
+						//
+					case do == "edit":
+						//
+					default:
+						// put the default column values in the text boxes
+						rows,err = db.Query("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
+						if err != nil {
+							html += err.Error()
+							return
+						}
+						
+						for rows.Next() {
+							var column_name string
+							var column_default string
+							err = rows.Scan(&column_name, &column_default)
+							column_default_int,_ := strconv.Atoi(column_default)
+							column_default_bool := (column_default_int == 1)
+			    			switch column_name {
+			    				case "id":
+			    					board.ID = column_default_int
+			    				case "order":
+			    					board.Order = column_default_int
+			    				case "dir":
+			    					board.Dir = column_default
+			    				case "type":
+			    					board.Type = column_default_int
+			    				case "upload_type":
+			    					board.UploadType = column_default_int
+			    				case "title":
+			    					board.Title = column_default
+			    				case "subtitle":
+			    					board.Subtitle = column_default
+			    				case "description":
+			    					board.Description = column_default
+			    				case "section":
+									board.Section = column_default_int
+			    				case "max_image_size":
+									board.MaxImageSize = column_default_int
+			    				case "max_pages":
+			    					board.MaxPages = column_default_int
+			    				case "locale":
+			    					board.Locale = column_default
+			    				case "default_style":
+			    					board.DefaultStyle = column_default
+			    				case "locked":
+			    					board.Locked = column_default_bool
+			    				case "anonymous":
+			    					board.Anonymous = column_default
+			    				case "forced_anon":
+			    					board.ForcedAnon = column_default_bool
+			    				case "max_age":
+			    					board.MaxAge = column_default_int
+			    				case "autosage_after":
+			    					board.AutosageAfter = column_default_int
+			    				case "no_images_after":
+			    					board.NoImagesAfter = column_default_int
+			    				case "max_message_length":
+			    					board.MaxMessageLength = column_default_int
+			    				case "embeds_allowed":
+			    					board.EmbedsAllowed = column_default_bool
+			    				case "redirect_to_thread":
+			    					board.RedirectToThread = column_default_bool
+			    				case "require_file":
+			    					board.RequireFile = column_default_bool
+			    				case "enable_catalog":
+			    					board.EnableCatalog = column_default_bool
+			    			}
+						}
 				}
-			}
+
 
 			html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-		 	rows,err := db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
+		 	rows,err = db.Query("SELECT `dir` FROM `"+config.DBprefix+"boards`;")
 			if err != nil {
 				html += err.Error()
 				return
@@ -687,9 +781,19 @@ var manage_functions = map[string]ManageFunction{
     			html += "<option>"+board_dir+"</option>\n"
 			}
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
+			html += fmt.Sprintf("<h2>Create new board</h2>" +
+				"<span id=\"board-creation-message\">%s</span><br />" +
+				"<form action=\"manage?action=manageboards\" method=\"POST\">" + 
+				"<input type=\"hidden\" name=\"do\" value=\"add\" />" +
+				"Directory <input type=\"text\" name=\"dir\" value=\"%s\" /><br />" +
+				"Order <input type=\"text\" name=\"order\" value=\"%d\" /><br />" +
+				"Title <input type=\"text\" name=\"title\" value=\"%s\" /><br />" +
+				"Subtitle <input type=\"text\" name=\"subtitle\" value=\"%s\" /><br />" +
+				"Description <input type=\"text\" name=\"description\" value=\"%s\" /><br />" +
+				"Section <select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n",
+				board_creation_status,board.Dir, board.Order, board.Title, board.Subtitle, board.Description, board.Section)
 
-			html += fmt.Sprintf("<h2>Create new board</h2>\n<form action=\"manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"add\" />\n<table width=\"100%s\"><tr><td>Directory</td><td><input type=\"text\" name=\"dir\" value=\"%s\"/></td></tr><tr><td>Order</td><td><input type=\"text\" name=\"order\" value=\"%d\"/></td></tr><tr></td></tr><tr><td>Title</td><td><input type=\"text\" name=\"title\" value=\"%s\" /></td></tr><tr><td>Subtitle</td><td><input type=\"text\" name=\"subtitle\" value=\"%s\"/></td></tr><tr><td>Description</td><td><input type=\"text\" name=\"description\" value=\"%s\" /></td></tr><tr><td>Section</td><td><select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n","%%",board.Dir,board.Order,board.Title,board.Subtitle,board.Description,board.Section)
-		 	rows,err = db.Query("SELECT `name` FROM `"+config.DBprefix+"sections` WHERE `hidden` = 0 ORDER BY `order`;")
+		 	rows,err = db.Query("SELECT `name` FROM `" + config.DBprefix + "sections` WHERE `hidden` = 0 ORDER BY `order`;")
 			if err != nil {
 				html += err.Error()
 				return
@@ -699,21 +803,22 @@ var manage_functions = map[string]ManageFunction{
 			var section_name string
 			for rows.Next() {
 				err = rows.Scan(&section_name)
-				html += "<option value=\""+strconv.Itoa(iter)+"\">"+section_name+"</option>\n"
+				html += "<option value=\"" + strconv.Itoa(iter) + "\">" + section_name + "</option>\n"
 				iter += 1
 			}
-			html += "</select></td></tr><tr><td>Max image size</td><td><input type=\"text\" name=\"maximagesize\" value=\""+strconv.Itoa(board.MaxImageSize)+"\" /></td></tr><tr><td>Max pages</td><td><input type=\"text\" name=\"maxpages\" value=\""+strconv.Itoa(board.MaxPages)+"\" /></td></tr><tr><td>Default style</td><td><select name=\"defaultstyle\" selected=\""+board.DefaultStyle+"\">"
+			html += "</select><br />Max image size: <input type=\"text\" name=\"maximagesize\" value=\"" + strconv.Itoa(board.MaxImageSize) + "\" /><br />Max pages: <input type=\"text\" name=\"maxpages\" value=\"" + strconv.Itoa(board.MaxPages) + "\" /><br />Default style</td><td><select name=\"defaultstyle\" selected=\""+board.DefaultStyle+"\">"
 			for _, style := range config.Styles_img {
 				html += "<option value=\""+style+"\">"+style+"</option>"
 			}
-			html += "</select></td></tr><tr><td>Locked</td><td>"
+
+			html += "</select>Locked"
 			if board.Locked {
 				html += "<input type=\"checkbox\" name=\"locked\" checked/>"
 			} else {
 				html += "<input type=\"checkbox\" name=\"locked\" />"
 			}
 
-			html += "</td></tr><tr><td>Forced anonymity</td><td>"
+			html += "<br />Forced anonymity"
 
 			if board.ForcedAnon {
 				html += "<input type=\"checkbox\" name=\"forcedanon\" checked/>"
@@ -721,7 +826,12 @@ var manage_functions = map[string]ManageFunction{
 				html += "<input type=\"checkbox\" name=\"forcedanon\" />"
 			}
 
-			html += "</td></tr><tr><td>Anonymous</td><td><input type=\"text\" name=\"anonymous\" value=\""+board.Anonymous+"\" /></td></tr><tr><td>Max age</td><td><input type=\"text\" name=\"maxage\" value=\""+strconv.Itoa(board.MaxAge)+"\"/></td></tr><tr><td>Autosage after</td><td><input type=\"text\" name=\"autosageafter\" value=\""+strconv.Itoa(board.AutosageAfter)+"\"/></td></tr><tr><td>No images after</td><td><input type=\"text\" name=\"noimagesafter\" value=\""+strconv.Itoa(board.NoImagesAfter)+"\"/></td></tr><tr><td>Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\""+strconv.Itoa(board.MaxMessageLength)+"\"/></td></tr><tr><td>Embeds allowed</td><td>"
+			html += "<br />Anonymous: <input type=\"text\" name=\"anonymous\" value=\"" + board.Anonymous + "\" /><br />" +
+					"Max age: <input type=\"text\" name=\"maxage\" value=\"" + strconv.Itoa(board.MaxAge) + "\"/><br />" +
+					"Bump limit: <input type=\"text\" name=\"autosageafter\" value=\"" + strconv.Itoa(board.AutosageAfter) + "\"/><br />" + 
+					"No images after <input type=\"text\" name=\"noimagesafter\" value=\"" + strconv.Itoa(board.NoImagesAfter) + "\"/>px<br />" +
+					"Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\"" + strconv.Itoa(board.MaxMessageLength) + "\"/><br />" +
+					"Embeds allowed "
 
 			if board.EmbedsAllowed {
 				html += "<input type=\"checkbox\" name=\"embedsallowed\" checked/>"
@@ -729,14 +839,14 @@ var manage_functions = map[string]ManageFunction{
 				html += "<input type=\"checkbox\" name=\"embedsallowed\" />"
 			}
 
-			html += "</td></tr><tr><td>Redirect to thread</td><td>"
+			html += "<br />Redirect to thread</td><td>"
 			if board.RedirectToThread {
-				html += "<input type=\"text\" name=\"redirecttothread\" checked/>"
+				html += "<input type=\"checkbox\" name=\"redirecttothread\" checked/>"
 			} else {
-				html += "<input type=\"text\" name=\"redirecttothread\" />"
+				html += "<input type=\"checkbox\" name=\"redirecttothread\" />"
 			}
 
-			html += "</td></tr><tr><td>Require an uploaded file</td><td>"
+			html += "<br />Require an uploaded file"
 
 			if board.RequireFile {
 				html += "<input type=\"checkbox\" name=\"require_file\" checked/>"
@@ -744,7 +854,7 @@ var manage_functions = map[string]ManageFunction{
 				html += "<input type=\"checkbox\" name=\"require_file\" />"
 			}
 
-			html += "</td></tr><tr><td>Enable catalog</td><td>"				
+			html += "<br />Enable catalog"
 			
 			if board.EnableCatalog {
 				html += "<input type=\"checkbox\" name=\"enablecatalog\" checked />"
@@ -752,8 +862,10 @@ var manage_functions = map[string]ManageFunction{
 				html += "<input type=\"checkbox\" name=\"enablecatalog\" />"
 			}
 
-			html += "</td></tr></table><input type=\"submit\" /></form>"
+			html += "<br /><input type=\"submit\" /></form>"
 			return
+		} 
+		return
 	}},
 	"staffmenu": {
 		Permissions:1,
@@ -819,7 +931,11 @@ var manage_functions = map[string]ManageFunction{
 					}
 				}
 			} else {
-				html = "Failed building board pages.<br />"
+				if len(boards) == 0 {
+					html = "No boards to build.<br />"
+				} else {
+					html = "Failed building board pages.<br />"
+				}
 			}
 			return
 	}},
@@ -835,9 +951,37 @@ var manage_functions = map[string]ManageFunction{
 			success := true
 			for _,post := range op_posts {
 				op_post := post.(PostTable)
-				//template_friendly_op_post := TemplateFriendlyPostTable{op_post.IName, op_post.ID,op_post.BoardID,op_post.ParentID, op_post.Name, op_post.Tripcode, op_post.Email, op_post.Subject, op_post.Message, op_post.Password, op_post.Filename, op_post.FilenameOriginal, op_post.FileChecksum, op_post.Filesize, op_post.ImageW, op_post.ImageH, op_post.ThumbW, op_post.ThumbH, op_post.IP, op_post.Tag, humanReadableTime(op_post.Timestamp), op_post.Autosage, op_post.PosterAuthority, humanReadableTime(op_post.DeletedTimestamp), humanReadableTime(op_post.Bumped), op_post.Stickied, op_post.Locked, op_post.Reviewed, op_post.Sillytag}
-
-
+				/*template_friendly_op_post := TemplateFriendlyPostTable{
+					op_post.IName,
+					op_post.ID,
+					op_post.BoardID,
+					op_post.ParentID,
+					op_post.Name,
+					op_post.Tripcode,
+					op_post.Email,
+					op_post.Subject,
+					op_post.Message,
+					op_post.Password,
+					op_post.Filename,
+					op_post.FilenameOriginal,
+					op_post.FileChecksum,
+					op_post.Filesize,
+					op_post.ImageW,
+					op_post.ImageH,
+					op_post.ThumbW,
+					op_post.ThumbH,
+					op_post.IP,
+					op_post.Tag,
+					humanReadableTime(op_post.Timestamp),
+					op_post.Autosage,
+					op_post.PosterAuthority,
+					humanReadableTime(op_post.DeletedTimestamp),
+					humanReadableTime(op_post.Bumped),
+					op_post.Stickied,
+					op_post.Locked,
+					op_post.Reviewed,
+					op_post.Sillytag
+				}*/
 				err := buildThread(op_post.ID,op_post.BoardID)
 				if err != nil {
 					success = false
@@ -864,22 +1008,22 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-		 	rows,err := db.Query("SELECT HIGH_PRIORITY `" + config.DBprefix + "boards`.`dir` AS `boardname`, " + 
-		 											  "`" + config.DBprefix + "posts`.`boardid` AS boardid, " + 
-		 											  "`" + config.DBprefix + "posts`.`id` AS id, " +
-		 											  "`" + config.DBprefix + "posts`. " + 
-		 											  "`parentid` AS parentid, " + 
-		 											  "`" + config.DBprefix + "posts`. " +
-		 											  "`message` AS message, " + 
-		 											  "`" + config.DBprefix + "posts`. " +
-		 											  "`ip` AS ip, " +
-		 											  "`" + config.DBprefix + "posts`. " +
-		 											  "`timestamp` AS timestamp  " +
-		 											  "FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
-		 											  "WHERE `reviewed` = 0 " +
-		 											  "AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  " +
-		 											  "AND `boardid` = `"+config.DBprefix+"boards`.`id` " +
-		 											  "ORDER BY `timestamp` DESC LIMIT "+limit+";")
+		 	rows,err := db.Query("SELECT  `" + config.DBprefix + "boards`.`dir` AS `boardname`, " + 
+		 								  "`" + config.DBprefix + "posts`.`boardid` AS boardid, " + 
+		 								  "`" + config.DBprefix + "posts`.`id` AS id, " +
+		 								  "`" + config.DBprefix + "posts`. " + 
+		 								  "`parentid` AS parentid, " + 
+		 								  "`" + config.DBprefix + "posts`. " +
+		 								  "`message` AS message, " + 
+		 								  "`" + config.DBprefix + "posts`. " +
+		 								  "`ip` AS ip, " +
+		 								  "`" + config.DBprefix + "posts`. " +
+		 								  "`timestamp` AS timestamp  " +
+		 								  "FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
+		 								  "WHERE `reviewed` = 0 " +
+		 								  "AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  " +
+		 								  "AND `boardid` = `"+config.DBprefix+"boards`.`id` " +
+		 								  "ORDER BY `timestamp` DESC LIMIT "+limit+";")
 			if err != nil {
 				html += "<tr><td>"+err.Error()+"</td></tr></table>"
 				return
@@ -964,7 +1108,6 @@ var manage_functions = map[string]ManageFunction{
 							"\t\t</select><br />\n" +
 							"\t\t<input id=\"submitnewstaff\" type=\"submit\" value=\"Add\" />\n" +
 							"\t\t</form>"
-
 			return
 	}},
 }
