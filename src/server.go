@@ -162,6 +162,20 @@ func initServer() {
 	}
 }
 
+func getRealIP(request *http.Request) (ip string) {
+	// HTTP_CF_CONNECTING_IP > X-Forwarded-For > RemoteAddr
+	if request.Header.Get("HTTP_CF_CONNECTING_IP")  != "" {
+		ip = request.Header.Get("HTTP_CF_CONNECTING_IP")
+	} else {
+		if request.Header.Get("X-Forwarded-For") != "" {
+			ip = request.Header.Get("X-Forwarded-For")
+		} else {
+			ip = request.RemoteAddr
+		}
+	}
+	return
+}
+
 func validReferrer(request http.Request) (valid bool) {
 	if request.Referer() == "" || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain {
 	// if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {

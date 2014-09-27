@@ -14,7 +14,7 @@ import (
 	"time"
 	"unsafe"
 )
-// #cgo LDFLAGS: -lcrypt
+// #cgo LDFLAGS: -lcrypt -Wall
 // #define _GNU_SOURCE
 // #include <crypt.h>
 // #include <stdlib.h>
