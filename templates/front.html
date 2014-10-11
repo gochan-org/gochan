@@ -114,7 +114,7 @@
 						<span class="section-title"><a href="{{$post.BoardName}}/res/{{if intEq $post.ParentID 0}}{{intToString $post.PostID}}.html{{else}}{{intToString $post.ParentID}}.html#{{intToString $post.PostID}}{{end}}">/{{$post.BoardName}}/</a></span> - {{$appended := stringAppend $post.Name $post.Tripcode}}{{if stringEq  $appended ""}}<b>Anonymous</b>{{else}}<b>{{$post.Name}}</b>{{if stringNeq $post.Tripcode ""}}!{{$post.Tripcode}}{{end}}{{end}}
 					</div>
 					<div class="section-body">
-						{{if stringNeq $post.Filename ""}}<img src="{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/>{{end}}
+						{{if stringNeq $post.Filename ""}}<a href="{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" target="blank"><img src="{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/></a>{{end}}
 						{{truncateMessage $post.Message 225 12}}
 					</div>
 				</div>
