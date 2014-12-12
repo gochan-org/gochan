@@ -1,0 +1,15 @@
+data/conf/write.go.i
+data/AUTHORS.i
+data/conf/AUTHORS.i
+data/COPYRIGHT.i
+data/conf/conf.go.i
+data/conf/conf_test.go.i
+data/conf/get.go.i
+data/conf/COPYRIGHT.i
+data/read.go.i
+data/get.go.i
+data/write.go.i
+data/conf/read.go.i
+data/Makefile.i
+data/conf_test.go.i
+data/conf.go.i
