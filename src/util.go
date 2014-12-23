@@ -1,9 +1,9 @@
 package main
 
 import (
+	"code.google.com/p/go.crypto/bcrypt"
 	"crypto/md5"
 	"crypto/sha1"
-	"code.google.com/p/go.crypto/bcrypt"
 	"fmt"
 	"io"
 	"math/rand"
@@ -14,15 +14,16 @@ import (
 	"time"
 	"unsafe"
 )
+
 // #cgo LDFLAGS: -lcrypt -Wall
-// #define _GNU_SOURCE
+// #ifndef __FreeBSD__
 // #include <crypt.h>
+// #endif
 // #include <stdlib.h>
 import "C"
 
 var (
-	crypt_data = C.struct_crypt_data{}
-	null_time,_ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
+	null_time, _ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
 )
 
 const (
@@ -44,11 +45,10 @@ func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time 
 	}
 }
 
-
 func crypt(key, salt string) string {
 	ckey := C.CString(key)
 	csalt := C.CString(salt)
-	out := C.GoString(C.crypt_r(ckey,csalt,&crypt_data))
+	out := C.GoString(C.crypt(ckey, csalt))
 	C.free(unsafe.Pointer(ckey))
 	C.free(unsafe.Pointer(csalt))
 	return out
@@ -57,18 +57,18 @@ func crypt(key, salt string) string {
 func md5_sum(str string) string {
 	hash := md5.New()
 	io.WriteString(hash, str)
-	return fmt.Sprintf("%x",hash.Sum(nil))
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func sha1_sum(str string) string {
 	hash := sha1.New()
-	io.WriteString(hash,str)
-	return fmt.Sprintf("%x",hash.Sum(nil))
+	io.WriteString(hash, str)
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func bcrypt_sum(str string) string {
 	hash := ""
-	digest,err := bcrypt.GenerateFromPassword([]byte(str), 4)
+	digest, err := bcrypt.GenerateFromPassword([]byte(str), 4)
 	if err == nil {
 		//hash = fmt.Sprintf("%x",digest)
 		hash = string(digest)
@@ -76,7 +76,7 @@ func bcrypt_sum(str string) string {
 	return hash
 }
 
-func byteByByteReplace(input,from, to string) string {
+func byteByByteReplace(input, from, to string) string {
 	if len(from) != len(to) {
 		return ""
 	}
@@ -106,7 +106,7 @@ func getBoardArr(where string) (boards []BoardsTable) {
 	if where == "" {
 		where = "1"
 	}
-	rows,err := db.Query("SELECT * FROM `"+config.DBprefix+"boards` WHERE "+where+" ORDER BY `order`;")
+	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "boards` WHERE " + where + " ORDER BY `order`;")
 	if err != nil {
 		error_log.Print(err.Error())
 		return
@@ -126,14 +126,14 @@ func getBoardArr(where string) (boards []BoardsTable) {
 			&board.Section,
 			&board.MaxImageSize,
 			&board.MaxPages,
-			&board.Locale, 
-			&board.DefaultStyle, 
-			&board.Locked, 
-			&board.CreatedOn, 
-			&board.Anonymous, 
-			&board.ForcedAnon, 
-			&board.MaxAge, 
-			&board.AutosageAfter, 
+			&board.Locale,
+			&board.DefaultStyle,
+			&board.Locked,
+			&board.CreatedOn,
+			&board.Anonymous,
+			&board.ForcedAnon,
+			&board.MaxAge,
+			&board.AutosageAfter,
 			&board.NoImagesAfter,
 			&board.MaxMessageLength,
 			&board.EmbedsAllowed,
@@ -153,8 +153,8 @@ func getBoardArr(where string) (boards []BoardsTable) {
 	return
 }
 
-func getPostArr(sql string) (posts []interface{},err error) {
-	rows,err := db.Query(sql)
+func getPostArr(sql string) (posts []interface{}, err error) {
+	rows, err := db.Query(sql)
 	if err != nil {
 		error_log.Print(err.Error())
 		return
@@ -168,14 +168,14 @@ func getPostArr(sql string) (posts []interface{},err error) {
 		}
 		posts = append(posts, post)
 	}
-	return posts,err
+	return posts, err
 }
 
 func getSectionArr(where string) (sections []interface{}) {
 	if where == "" {
 		where = "1"
 	}
-	rows,err := db.Query("SELECT * FROM `"+config.DBprefix+"sections` WHERE "+where+" ORDER BY `order`;")
+	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "sections` WHERE " + where + " ORDER BY `order`;")
 	if err != nil {
 		error_log.Print(err.Error())
 		return
@@ -217,18 +217,18 @@ func getFileExtension(filename string) string {
 	if strings.Index(filename, ".") == -1 {
 		return ""
 	} else if strings.Index(filename, "/") > -1 {
-		return filename[strings.LastIndex(filename,".")+1:]
+		return filename[strings.LastIndex(filename, ".")+1:]
 	}
 	return ""
 }
 
 func getFormattedFilesize(size float32) string {
-	if(size < 1000) {
+	if size < 1000 {
 		return fmt.Sprintf("%fB", size)
-	} else if(size <= 100000) {
+	} else if size <= 100000 {
 		//size = size * 0.2
 		return fmt.Sprintf("%fKB", size/1024)
-	} else if(size <= 100000000) {
+	} else if size <= 100000000 {
 		//size = size * 0.2
 		return fmt.Sprintf("%fMB", size/1024/1024)
 	}
@@ -248,7 +248,7 @@ func humanReadableTime(t time.Time) string {
 	return t.Format(config.DateTimeFormat)
 }
 
-func searchStrings(item string,arr []string,permissive bool) int {
+func searchStrings(item string, arr []string, permissive bool) int {
 	var length = len(arr)
 	for i := 0; i < length; i++ {
 		if item == arr[i] {
