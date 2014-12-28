@@ -12,15 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"unsafe"
 )
-
-// #cgo LDFLAGS: -lcrypt -Wall
-// #ifndef __FreeBSD__
-// #include <crypt.h>
-// #endif
-// #include <stdlib.h>
-import "C"
 
 var (
 	null_time, _ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
@@ -43,15 +35,6 @@ func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time 
 		fmt.Println("benchmark \"" + name + "\" completed in " + seconds + "seconds")
 		return time.Now() // we don't really need this, but we have to return something
 	}
-}
-
-func crypt(key, salt string) string {
-	ckey := C.CString(key)
-	csalt := C.CString(salt)
-	out := C.GoString(C.crypt(ckey, csalt))
-	C.free(unsafe.Pointer(ckey))
-	C.free(unsafe.Pointer(csalt))
-	return out
 }
 
 func md5_sum(str string) string {
