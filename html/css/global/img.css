@@ -40,6 +40,13 @@
 	position:absolute;
 }
 
+a.anchor {
+	display: block;
+	position: relative;
+	top: -32px;
+	visibility: hidden;
+}
+
 table#pages {
 	margin-bottom:8px;
 	margin-top:4px;
