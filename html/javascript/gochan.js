@@ -236,7 +236,7 @@ function getCookie(name) {
 	}
 }
 
-function preparePostPreviews(is_inline) {
+/*function preparePostPreviews(is_inline) {
 	var m_type = "mousemove";
 	if(!movable_postpreviews) m_type = "mouseover";
 	if(expandable_postrefs) $("a.postref").attr("href","javascript:void(0);");
@@ -268,7 +268,7 @@ function preparePostPreviews(is_inline) {
 			}		
 		});
 	}
-}
+} */
 
 function reportPost(id) {
 	var reason = prompt("Reason");
@@ -277,6 +277,7 @@ function reportPost(id) {
 $jq(document).ready(function() {
 	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
+	initCookies();
 
 	topbar = $jq("div#topbar");
 	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup><tr><td><b>Style:</b></td><td><select name=\"style\" style=\"min-width:50%\">"
@@ -339,8 +340,8 @@ $jq(document).ready(function() {
 			}
 		}
 	});
-	initCookies();
-	//showMessage("This is a testarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiorheuiotestarjieorhaeuiohuihuoqweryuio")
+
+	// set thumbnails to expand when clicked
 	var thumbnails = document.getElementsByClassName("thumbnail");
 	for(var i = 0; i < thumbnails.length; i++) {
 		var is_thumb = true;
@@ -361,9 +362,7 @@ $jq(document).ready(function() {
 				this.removeAttribute("old-height");
 			}
 			this.setAttribute("src", src);
-
 			//thumbnails[i].setAttribute("onclick", "function() { alert(\"hi!\"); return ")
-
 			return false;
 		}
 	}
