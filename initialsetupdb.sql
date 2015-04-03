@@ -115,7 +115,7 @@ CREATE TABLE `DBPREFIXloginattempts` (
 
 CREATE TABLE `DBPREFIXpluginsettings` (
 	`module` CHAR(32) NOT NULL,
-	`key` TEXT NOT NULL DEFAULT '',
+	`key` VARCHAR(255) NOT NULL DEFAULT '',
 	`value` TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY(`module`,`key`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
