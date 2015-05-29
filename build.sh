@@ -7,7 +7,6 @@ then
 fi
 CGO_ENABLED=0
 GOARCH=amd64
-GOOS=windows
 SUFFIX=""
 if [ $GOOS == "windows" ]
 then
