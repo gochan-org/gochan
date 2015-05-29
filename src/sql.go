@@ -88,7 +88,9 @@ func connectToSQLServer() {
 		fmt.Println("Failed retrieving list of tables in database.")
 		error_log.Fatal(err.Error())	
 	}
-	if num_rows > 0 {
+	// Detect that there are at least the number of tables that we are setting up.
+	// If there are fewer than that, then we either half-way set up, or there's other tables in our database.
+	if num_rows >= 17 {
 		// the initial setup has already been run
 		needs_initial_setup = false
 		db_connected = true
