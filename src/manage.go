@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"code.google.com/p/go.crypto/bcrypt"
+	"golang.org/x/crypto/bcrypt"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -164,7 +164,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func() (html string) {
 			html = "<h2>Cleanup</h2><br />"
-			
+
 			if (request.FormValue("run") == 1) {
 				html += "<hr />Deleting non-deleted replies which belong to deleted threads.<hr />";
 			 	boards_rows,err := db.Query("SELECT `id`,`dir` FROM `" + config.DBprefix + "boards`")
@@ -460,7 +460,7 @@ var manage_functions = map[string]ManageFunction{
 						return
 					}
 					var ban BanlistTable
-				
+
 					num_rows := 0
 					for rows.Next() {
 						if num_rows == 0 {
@@ -472,13 +472,13 @@ var manage_functions = map[string]ManageFunction{
 						if err != nil {
 							html += "</table><br />" + err.Error()
 							error_log.Print(err.Error())
-							return						
+							return
 						}
 						ban_name := ""
 						if ban.Name + ban.Tripcode != "" {
 							ban_name = ban.Name + "!" + ban.Tripcode
 						}
-						
+
 						html += "<tr><td>" + ban.IP + "</td><td>" + ban_name + "</td><td>" + ban.Message + "</td><td>" + humanReadableTime(ban.Timestamp) + "</td><td>" + ban.BannedBy + "</td><td>" + ban.Reason + "</td><td>" + humanReadableTime(ban.Expires) + "</td><td>Delete</td></tr>"
 						num_rows += 1
 					}
@@ -604,7 +604,7 @@ var manage_functions = map[string]ManageFunction{
 						if err != nil {
 							board.MaxMessageLength = 1024*8
 						}
-						
+
 						board.EmbedsAllowed = (request.FormValue("embedsallowed") == "on")
 						board.RedirectToThread = (request.FormValue("redirecttothread") == "on")
 						board.RequireFile = (request.FormValue("require_file") == "on")
@@ -617,7 +617,7 @@ var manage_functions = map[string]ManageFunction{
 							board_creation_status = err.Error()
 							continue
 						}
-						
+
 						err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir,"res"),0777)
 						if err != nil {
 							do = ""
@@ -631,7 +631,7 @@ var manage_functions = map[string]ManageFunction{
 							board_creation_status = err.Error()
 							continue
 						}
-						
+
 						err = os.Mkdir(path.Join(config.DocumentRoot,board.Dir,"src"),0777)
 						if err != nil {
 							do = ""
@@ -640,30 +640,30 @@ var manage_functions = map[string]ManageFunction{
 						}
 						_,err := db.Exec(
 							"INSERT INTO `"+config.DBprefix+"boards` ("+
-								"`order`, " + 
-								"`dir`, " + 
-								"`type`, " + 
-								"`upload_type`, " + 
-								"`title`, " + 
-								"`subtitle`, " + 
-								"`description`, " + 
-								"`section`, " + 
-								"`max_image_size`, " + 
-								"`max_pages`, " + 
-								"`locale`, " + 
-								"`default_style`, " + 
-								"`locked`, " + 
-								"`created_on`, " + 
-								"`anonymous`, " + 
-								"`forced_anon`, " + 
-								"`max_age`, " + 
-								"`autosage_after`, " + 
-								"`no_images_after`, " + 
-								"`max_message_length`, " + 
-								"`embeds_allowed`, " + 
-								"`redirect_to_thread`, " + 
-								"`require_file`, " + 
-								"`enable_catalog`" + 
+								"`order`, " +
+								"`dir`, " +
+								"`type`, " +
+								"`upload_type`, " +
+								"`title`, " +
+								"`subtitle`, " +
+								"`description`, " +
+								"`section`, " +
+								"`max_image_size`, " +
+								"`max_pages`, " +
+								"`locale`, " +
+								"`default_style`, " +
+								"`locked`, " +
+								"`created_on`, " +
+								"`anonymous`, " +
+								"`forced_anon`, " +
+								"`max_age`, " +
+								"`autosage_after`, " +
+								"`no_images_after`, " +
+								"`max_message_length`, " +
+								"`embeds_allowed`, " +
+								"`redirect_to_thread`, " +
+								"`require_file`, " +
+								"`enable_catalog`" +
 								") VALUES("+
 									strconv.Itoa(board.Order) + ", '" +
 									board.Dir + "', " +
@@ -673,15 +673,15 @@ var manage_functions = map[string]ManageFunction{
 									board.Subtitle + "', '" +
 									board.Description + "', " +
 									strconv.Itoa(board.Section) + ", " +
-									strconv.Itoa(board.MaxImageSize) + ", " + 
-									strconv.Itoa(board.MaxPages) + ", '" + 
-									board.Locale + "', '" + 
-									board.DefaultStyle + "', " + 
-									Btoa(board.Locked) + ", '" + 
-									getSpecificSQLDateTime(board.CreatedOn) + "', '" + 
-									board.Anonymous + "', " + 
-									Btoa(board.ForcedAnon) + ", " + 
-									strconv.Itoa(board.MaxAge) + ", " + 
+									strconv.Itoa(board.MaxImageSize) + ", " +
+									strconv.Itoa(board.MaxPages) + ", '" +
+									board.Locale + "', '" +
+									board.DefaultStyle + "', " +
+									Btoa(board.Locked) + ", '" +
+									getSpecificSQLDateTime(board.CreatedOn) + "', '" +
+									board.Anonymous + "', " +
+									Btoa(board.ForcedAnon) + ", " +
+									strconv.Itoa(board.MaxAge) + ", " +
 									strconv.Itoa(board.AutosageAfter) + ", " +
 									strconv.Itoa(board.NoImagesAfter) + ", " +
 									strconv.Itoa(board.MaxMessageLength) + ", " +
@@ -708,7 +708,7 @@ var manage_functions = map[string]ManageFunction{
 							html += err.Error()
 							return
 						}
-						
+
 						for rows.Next() {
 							var column_name string
 							var column_default string
@@ -783,7 +783,7 @@ var manage_functions = map[string]ManageFunction{
 			html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 			html += fmt.Sprintf("<h2>Create new board</h2>" +
 				"<span id=\"board-creation-message\">%s</span><br />" +
-				"<form action=\"manage?action=manageboards\" method=\"POST\">" + 
+				"<form action=\"manage?action=manageboards\" method=\"POST\">" +
 				"<input type=\"hidden\" name=\"do\" value=\"add\" />" +
 				"Directory <input type=\"text\" name=\"dir\" value=\"%s\" /><br />" +
 				"Order <input type=\"text\" name=\"order\" value=\"%d\" /><br />" +
@@ -828,7 +828,7 @@ var manage_functions = map[string]ManageFunction{
 
 			html += "<br />Anonymous: <input type=\"text\" name=\"anonymous\" value=\"" + board.Anonymous + "\" /><br />" +
 					"Max age: <input type=\"text\" name=\"maxage\" value=\"" + strconv.Itoa(board.MaxAge) + "\"/><br />" +
-					"Bump limit: <input type=\"text\" name=\"autosageafter\" value=\"" + strconv.Itoa(board.AutosageAfter) + "\"/><br />" + 
+					"Bump limit: <input type=\"text\" name=\"autosageafter\" value=\"" + strconv.Itoa(board.AutosageAfter) + "\"/><br />" +
 					"No images after <input type=\"text\" name=\"noimagesafter\" value=\"" + strconv.Itoa(board.NoImagesAfter) + "\"/>px<br />" +
 					"Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\"" + strconv.Itoa(board.MaxMessageLength) + "\"/><br />" +
 					"Embeds allowed "
@@ -855,7 +855,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			html += "<br />Enable catalog"
-			
+
 			if board.EnableCatalog {
 				html += "<input type=\"checkbox\" name=\"enablecatalog\" checked />"
 			} else {
@@ -864,7 +864,7 @@ var manage_functions = map[string]ManageFunction{
 
 			html += "<br /><input type=\"submit\" /></form>"
 			return
-		} 
+		}
 		return
 	}},
 	"staffmenu": {
@@ -1008,13 +1008,13 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-		 	rows,err := db.Query("SELECT  `" + config.DBprefix + "boards`.`dir` AS `boardname`, " + 
-		 								  "`" + config.DBprefix + "posts`.`boardid` AS boardid, " + 
+		 	rows,err := db.Query("SELECT  `" + config.DBprefix + "boards`.`dir` AS `boardname`, " +
+		 								  "`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
 		 								  "`" + config.DBprefix + "posts`.`id` AS id, " +
-		 								  "`" + config.DBprefix + "posts`. " + 
-		 								  "`parentid` AS parentid, " + 
 		 								  "`" + config.DBprefix + "posts`. " +
-		 								  "`message` AS message, " + 
+		 								  "`parentid` AS parentid, " +
+		 								  "`" + config.DBprefix + "posts`. " +
+		 								  "`message` AS message, " +
 		 								  "`" + config.DBprefix + "posts`. " +
 		 								  "`ip` AS ip, " +
 		 								  "`" + config.DBprefix + "posts`. " +
@@ -1092,7 +1092,7 @@ var manage_functions = map[string]ManageFunction{
 	    				rank = "mod"
 	    			case staff.Rank == 1:
 	    				rank = "janitor"
-	    		} 
+	    		}
 			    html  += "<tr><td>"+staff.Username+"</td><td>"+rank+"</td><td>"+staff.Boards+"</td><td>"+humanReadableTime(staff.AddedOn)+"</td><td><a href=\"/manage?action=staff&amp;o=del&amp;username="+staff.Username+"\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 			    iter += 1
 			}
