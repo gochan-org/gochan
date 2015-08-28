@@ -2,7 +2,7 @@
 
 A muti-threaded imageboard server written in Go
 
-http://gochan.org'
+http://gochan.org
 
 
 Installation
