@@ -1,7 +1,7 @@
-package main 
+package main
 
 import (
-	"code.google.com/p/goconf/conf"
+	"github.com/postfix/goconf"
 	"fmt"
 	"log"
 	"os"
@@ -12,7 +12,7 @@ import (
 
 
 var (
-	c *conf.ConfigFile
+	c *goconf.ConfigFile
 	needs_initial_setup = true
 	config GochanConfig
 	access_log *log.Logger
@@ -264,7 +264,7 @@ type GochanConfig struct {
 	DocumentRoot string
 	TemplateDir string
 	LogDir string
-	
+
 	DBtype string
 	DBhost string
 	DBname string
@@ -335,7 +335,7 @@ type GochanConfig struct {
 
 func initConfig() {
 	var err error
-	c,err = conf.ReadConfigFile("config.cfg")
+	c,err = goconf.ReadConfigFile("config.cfg")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(2)
@@ -460,7 +460,7 @@ func initConfig() {
 		config.DBpassword = ""
 	}
 
-	config.DBprefix,err = c.GetString("database", "prefix") 
+	config.DBprefix,err = c.GetString("database", "prefix")
 	if err == nil {
 		config.DBprefix += "_"
 	} else {
@@ -480,7 +480,7 @@ func initConfig() {
 	if err != nil {
 		config.LockdownMessage = ""
 	}
-	
+
 	config.Sillytags,err = c.GetString("gochan", "sillytags")
 	if err != nil {
 		config.Sillytags = ""
