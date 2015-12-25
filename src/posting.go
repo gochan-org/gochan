@@ -562,7 +562,6 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		//TODO: insert post into temporary post table and add to report list
 		return
 	}
-
 	file, handler, uploaderr := request.FormFile("imagefile")
 	if uploaderr != nil {
 		// no file was uploaded
@@ -659,7 +658,6 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 						server.ServeErrorPage(w, err.Error())
 						return
 					}
-
 				}
 			}
 		}
@@ -686,7 +684,6 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 		err = banpage_tmpl.Execute(&banpage_buffer, wrapped)
 		if err != nil {
-			fmt.Println(banpage_html)
 			fmt.Fprintf(writer, banpage_html+err.Error()+"\n</body>\n</html>")
 			return
 		}

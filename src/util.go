@@ -1,10 +1,10 @@
 package main
 
 import (
-	"golang.org/x/crypto/bcrypt"
 	"crypto/md5"
 	"crypto/sha1"
 	"fmt"
+	"golang.org/x/crypto/bcrypt"
 	//"golang.org/x/crypto/bcrypt"
 	"io"
 	"io/ioutil"
@@ -205,10 +205,12 @@ func generateSalt() string {
 func getFileExtension(filename string) string {
 	if strings.Index(filename, ".") == -1 {
 		return ""
-	} else if strings.Index(filename, "/") > -1 {
+		//} else if strings.Index(filename, "/") > -1 {
+	} else {
 		return filename[strings.LastIndex(filename, ".")+1:]
 	}
-	return ""
+	//}
+	//return ""
 }
 
 func getFormattedFilesize(size float32) string {
@@ -259,7 +261,6 @@ func paginate(interface_length int, interf []interface{}) [][]interface{} {
 	if interfaces_remaining > 0 {
 		paginated_interfaces = append(paginated_interfaces, interf[len(interf)-interfaces_remaining:])
 	}
-	fmt.Println(len(paginated_interfaces[0]))
 	return paginated_interfaces
 }
 
