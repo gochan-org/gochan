@@ -26,7 +26,9 @@ import (
 const whitespace_match = "[\000-\040]"
 
 var (
-	last_post PostTable
+	last_post    PostTable
+	all_sections []interface{}
+	all_boards   []interface{}
 )
 
 func generateTripCode(input string) string {
@@ -38,143 +40,231 @@ func generateTripCode(input string) string {
 	return crypt.Crypt(input, salt)[3:]
 }
 
-func buildBoardPage(boardid int, boards []BoardsTable, sections []interface{}) (html string) {
-	start_time := benchmarkTimer("buildBoard"+string(boardid), time.Now(), true)
-	var board BoardsTable
-	for b, _ := range boards {
-		if boards[b].ID == boardid {
-			board = boards[b]
-		}
+func buildAll() {
+	buildFrontPage()
+	buildBoards(true, 0)
+}
+
+func buildBoards(all bool, which int) (html string) {
+	// if all is set to true, ignore which, otherwise, which = build only specified boardid
+	if !all {
+		_board, _ := getBoardArr("`id` = " + strconv.Itoa(which))
+		board := _board[0]
+		html += buildBoardPages(&board) + "<br />\n"
+		html += buildThreads(true, board.ID, 0)
+	}
+	boards, _ := getBoardArr("")
+	if len(boards) == 0 {
+		return html + "No boards to build.<br />\n"
 	}
 
+	for _, board := range boards {
+		html += buildBoardPages(&board) + "<br />\n"
+		html += buildThreads(true, board.ID, 0)
+	}
+	return
+}
+
+func buildBoardPages(board *BoardsTable) (html string) {
+	//	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
+	var boardinfo_i []interface{}
+	var current_page_file *os.File
 	var interfaces []interface{}
 	var threads []interface{}
-	var op_posts []interface{}
-	op_posts, err := getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC LIMIT " + strconv.Itoa(config.ThreadsPerPage_img))
-	if err != nil {
-		html += err.Error() + "<br />"
-		op_posts = make([]interface{}, 0)
-	}
+	var thread_pages [][]interface{}
+	var stickied_threads []interface{}
+	var nonstickied_threads []interface{}
 
-	for _, op_post_i := range op_posts {
-		var thread Thread
-		var posts_in_thread []interface{}
-
-		op_post := op_post_i.(PostTable)
-
-		if op_post.Stickied {
-			thread.IName = "thread"
-
-			posts_in_thread, err = getPostArr("SELECT * FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.StickyRepliesOnBoardPage))
-			if err != nil {
-				html += err.Error() + "<br />"
-			}
-			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
-			if err != nil {
-				html += err.Error() + "<br />"
-			}
-			thread.OP = op_post_i
-			if len(posts_in_thread) > 0 {
-				thread.BoardReplies = posts_in_thread
-			}
-			threads = append(threads, thread)
+	defer func() {
+		if uhoh, ok := recover().(error); ok {
+			error_log.Print("buildBoardPages failed: " + uhoh.Error())
+			fmt.Println("buildBoardPages failed: " + uhoh.Error())
 		}
-	}
-
-	for _, op_post_i := range op_posts {
-		var thread Thread
-		var posts_in_thread []interface{}
-
-		op_post := op_post_i.(PostTable)
-		if !op_post.Stickied {
-			thread.IName = "thread"
-
-			posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC  LIMIT " + strconv.Itoa(config.RepliesOnBoardpage) + ") t ORDER BY `id` ASC")
-			if err != nil {
-				html += err.Error() + "<br />"
-			}
-			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
-			if err != nil {
-				html += err.Error() + "<br />"
-			}
-			thread.OP = op_post_i
-			if len(posts_in_thread) > 0 {
-				thread.BoardReplies = posts_in_thread
-			}
-			threads = append(threads, thread)
-		}
-	}
-
-	interfaces = append(interfaces, config)
-
-	var boards_i []interface{}
-	for _, b := range boards {
-		boards_i = append(boards_i, b)
-	}
-	var boardinfo_i []interface{}
-	boardinfo_i = append(boardinfo_i, board)
-
-	interfaces = append(interfaces, &Wrapper{IName: "boards", Data: boards_i})
-	interfaces = append(interfaces, &Wrapper{IName: "sections", Data: sections})
-	interfaces = append(interfaces, &Wrapper{IName: "threads", Data: threads})
-	interfaces = append(interfaces, &Wrapper{IName: "boardinfo", Data: boardinfo_i})
-
-	wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
-	os.Remove(path.Join(config.DocumentRoot, board.Dir, "board.html"))
+		current_page_file.Close()
+	}()
 
 	results, err := os.Stat(path.Join(config.DocumentRoot, board.Dir))
 	if err != nil {
 		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
 		if err != nil {
 			html += "Failed creating /" + board.Dir + "/: " + err.Error() + "<br />\n"
+			error_log.Println("Failed creating /" + board.Dir + "/: " + err.Error())
 		}
 	} else if !results.IsDir() {
 		html += "Error: /" + board.Dir + "/ exists, but is not a folder. <br />\n"
+		error_log.Println("Error: /" + board.Dir + "/ exists, but is not a folder.")
 	}
 
-	board_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
+	op_posts, err := getPostArr("`boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC")
 	if err != nil {
-		html += err.Error() + "<br />\n"
+		html += err.Error() + "<br />"
+		op_posts = make([]interface{}, 0)
+		return
 	}
 
-	defer func() {
-		if uhoh, ok := recover().(error); ok {
-			error_log.Print("Failed executing template.")
-			fmt.Println(uhoh.Error())
+	for _, op_post_i := range op_posts {
+		var thread Thread
+		var posts_in_thread []interface{}
+
+		thread.IName = "thread"
+
+		op_post := op_post_i.(PostTable)
+
+		if op_post.Stickied {
+			posts_in_thread, err = getPostArr("`boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.StickyRepliesOnBoardPage))
+			if err != nil {
+				html += err.Error() + "<br />"
+			}
+			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+			if err != nil {
+				html += err.Error() + "<br />"
+			}
+			thread.OP = op_post_i
+			if len(posts_in_thread) > 0 {
+				thread.BoardReplies = posts_in_thread
+			}
+			stickied_threads = append(stickied_threads, thread)
+		} else {
+			posts_in_thread, err = getPostArr("`boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC  LIMIT " + strconv.Itoa(config.RepliesOnBoardpage))
+			if err != nil {
+				html += err.Error() + "<br />"
+			}
+			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+			if err != nil {
+				html += err.Error() + "<br />"
+			}
+			thread.OP = op_post_i
+			if len(posts_in_thread) > 0 {
+				thread.BoardReplies = posts_in_thread
+			}
+			nonstickied_threads = append(nonstickied_threads, thread)
 		}
-		if board_file != nil {
-			board_file.Close()
-		}
-	}()
-	err = img_boardpage_tmpl.Execute(board_file, wrapped)
-	if err != nil {
-		html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
-		error_log.Print(err.Error())
-	} else {
-		html += "/" + board.Dir + "/ built successfully.\n"
 	}
-	benchmarkTimer("buildBoard"+string(boardid), start_time, false)
+	threads = append(stickied_threads, nonstickied_threads...)
+	thread_pages = paginate(config.ThreadsPerPage_img, threads)
+
+	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\.html$")
+	board.NumPages = len(thread_pages) - 1
+	for page_num, page_threads := range thread_pages {
+		board.CurrentPage = page_num
+		boardinfo_i = nil
+		boardinfo_i = append(boardinfo_i, board)
+
+		interfaces = nil
+		interfaces = append(interfaces, config,
+			&Wrapper{IName: "boards", Data: all_boards},
+			&Wrapper{IName: "sections", Data: all_sections},
+			&Wrapper{IName: "threads", Data: page_threads},
+			&Wrapper{IName: "boardinfo", Data: boardinfo_i})
+		wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
+
+		if board.CurrentPage == 0 {
+			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
+		} else {
+			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html"), os.O_CREATE|os.O_RDWR, 0777)
+		}
+		if err != nil {
+			html += err.Error() + "<br />\n"
+			error_log.Println(err.Error())
+		}
+
+		err = img_boardpage_tmpl.Execute(current_page_file, wrapped)
+		if err != nil {
+			html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
+			error_log.Print(err.Error())
+			return
+		}
+	}
+	html += "/" + board.Dir + "/ built successfully.\n"
+	//benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
 	return
 }
 
-func buildFrontPage(boards []BoardsTable, sections []interface{}) (html string) {
-	initTemplates()
+func buildThreads(all bool, boardid, threadid int) (html string) {
+	// TODO: detect which page will be built and only build that one and the board page
+	// if all is set to true, ignore which, otherwise, which = build only specified boardid
+	if !all {
+		_thread, _ := getPostArr("`boardid` = " + strconv.Itoa(boardid) + " AND `id` = " + strconv.Itoa(threadid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
+		thread := _thread[0]
+		thread_struct := thread.(PostTable)
+		html += buildThreadPages(&thread_struct) + "<br />\n"
+	}
+	threads, _ := getPostArr("`boardid` = " + strconv.Itoa(boardid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
+	if len(threads) == 0 {
+		return html + "No threads to build.<br />\n"
+	}
+	for _, op := range threads {
+		op_struct := op.(PostTable)
+		html += buildThreadPages(&op_struct) + "<br />\n"
+	}
+	return
+}
 
+func buildThreadPages(op *PostTable) (html string) {
+	var board_dir string
+	var replies []interface{}
+	var current_page_file *os.File
+
+	row := db.QueryRow("SELECT `dir` FROM `" + config.DBprefix + "boards` WHERE `id` = '" + strconv.Itoa(op.BoardID) + "';")
+	err := row.Scan(&board_dir)
+	if err != nil {
+		error_log.Println(err.Error())
+		return err.Error()
+	}
+
+	replies, err = getPostArr("`boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'")
+	if err != nil {
+		return "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
+	}
+	thread_pages := paginate(config.PostsPerThreadpage, replies)
+	for i, _ := range thread_pages {
+		thread_pages[i] = append([]interface{}{op}, thread_pages[i]...)
+	}
+	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), "\\.html$")
+	op.NumPages = len(thread_pages) - 1
+	for page_num, page_posts := range thread_pages {
+		fmt.Printf("len(page_posts): %d\n", len(page_posts))
+		op.CurrentPage = page_num
+		var interfaces []interface{}
+		interfaces = append(interfaces, config,
+			&Wrapper{IName: "boards_", Data: all_boards},
+			&Wrapper{IName: "sections_w", Data: all_sections},
+			&Wrapper{IName: "posts_w", Data: page_posts})
+
+		wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
+
+		if op.CurrentPage == 0 {
+			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"), os.O_CREATE|os.O_RDWR, 0777)
+		} else {
+			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage)+".html"), os.O_CREATE|os.O_RDWR, 0777)
+		}
+		if err != nil {
+			html += err.Error() + "<br />\n"
+			error_log.Println(err.Error())
+		}
+
+		err = img_threadpage_tmpl.Execute(current_page_file, wrapped)
+		if err != nil {
+			html += "Failed building /" + board_dir + "/" + strconv.Itoa(op.ID) + ": " + err.Error() + "<br />\n"
+			error_log.Print(err.Error())
+			return
+		}
+	}
+	return
+}
+
+func buildFrontPage() (html string) {
+	initTemplates()
 	var front_arr []interface{}
 	var recent_posts_arr []interface{}
-	var boards_arr []interface{}
-
-	for _, board := range boards {
-		boards_arr = append(boards_arr, board)
-	}
 
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR, 0777)
-	/*defer func() {
+	defer func() {
 		if front_file != nil {
 			front_file.Close()
 		}
-	}()*/
+	}()
 	if err != nil {
 		return err.Error()
 	}
@@ -227,17 +317,12 @@ func buildFrontPage(boards []BoardsTable, sections []interface{}) (html string) 
 		recent_posts_arr = append(recent_posts_arr, recent_post)
 	}
 
-	page_data := &Wrapper{IName: "fronts", Data: front_arr}
-	board_data := &Wrapper{IName: "boards", Data: boards_arr}
-	section_data := &Wrapper{IName: "sections", Data: sections}
-	recent_posts_data := &Wrapper{IName: "recent posts", Data: recent_posts_arr}
-
 	var interfaces []interface{}
-	interfaces = append(interfaces, config)
-	interfaces = append(interfaces, page_data)
-	interfaces = append(interfaces, board_data)
-	interfaces = append(interfaces, section_data)
-	interfaces = append(interfaces, recent_posts_data)
+	interfaces = append(interfaces, config,
+		&Wrapper{IName: "fronts", Data: front_arr},
+		&Wrapper{IName: "boards", Data: all_boards},
+		&Wrapper{IName: "sections", Data: all_sections},
+		&Wrapper{IName: "recent posts", Data: recent_posts_arr})
 
 	wrapped := &Wrapper{IName: "frontpage", Data: interfaces}
 	err = front_page_tmpl.Execute(front_file, wrapped)
@@ -251,104 +336,7 @@ func buildFrontPage(boards []BoardsTable, sections []interface{}) (html string) 
 	return "Front page rebuilt successfully.<br />"
 }
 
-func buildThread(op_id int, board_id int) (err error) {
-	var posts []PostTable
-	var post_table_interface []interface{}
-	start_time := benchmarkTimer("buildThread"+string(op_id), time.Now(), true)
-
-	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '" + nil_timestamp + "' AND (`parentid` = " + strconv.Itoa(op_id) + " OR `id` = " + strconv.Itoa(op_id) + ") AND `boardid` = " + strconv.Itoa(board_id))
-	if err != nil {
-		error_log.Print(err.Error())
-		return
-	}
-	for rows.Next() {
-		var post PostTable
-		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
-		if err != nil {
-			error_log.Print(err.Error())
-			return
-		}
-		posts = append(posts, post)
-	}
-
-	for _, post := range posts {
-		post_msg_before := post.Message
-		post.Message = parseBacklinks(post.Message, post.BoardID)
-		if post_msg_before != post.Message {
-			_, err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(post.ID))
-			if err != nil {
-				server.ServeErrorPage(writer, err.Error())
-			}
-		}
-		post_table_interface = append(post_table_interface, post)
-	}
-	board_arr := getBoardArr("")
-	sections_arr := getSectionArr("")
-
-	var board_dir string
-	for _, board_i := range board_arr {
-		board := board_i
-
-		if board.ID == board_id {
-			board_dir = board.Dir
-			break
-		}
-	}
-
-	// create a file object of the board's thread directory so we can search for and delete the given thread's sub pages to be rebuilt
-	threads_dir, err := os.Open(path.Join(config.DocumentRoot, board_dir, "res"))
-	if err != nil {
-		error_log.Print(err.Error())
-		return
-	}
-	thread_files, err := threads_dir.Readdir(-1)
-	if err != nil {
-		error_log.Print(err.Error())
-		return
-	}
-	for _, thread_file := range thread_files {
-		if strings.Index(thread_file.Name(), "p") > -1 {
-			os.Remove(path.Join(config.DocumentRoot, board_dir, "res", thread_file.Name()))
-		}
-	}
-
-	//var num_pages int
-	/*err = db.QueryRow("SELECT (SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board_id) + ") AS `count` WHERE `boardid` = " + strconv.Itoa(board_id) + " ORDER BY `" + config.DBprefix + "posts`.`id` DESC LIMIT 1").Scan(&num_posts)
-	if err != nil {
-		error_log.Print(err.Error())
-		return
-	}*/
-	var interfaces []interface{}
-	interfaces = append(interfaces, config)
-	interfaces = append(interfaces, post_table_interface)
-	var board_arr_i []interface{}
-	for _, b := range board_arr {
-		board_arr_i = append(board_arr_i, b)
-	}
-	interfaces = append(interfaces, &Wrapper{IName: "boards", Data: board_arr_i})
-	interfaces = append(interfaces, &Wrapper{IName: "sections", Data: sections_arr})
-
-	wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
-	os.Remove(path.Join(config.DocumentRoot, board_dir+"/res/"+strconv.Itoa(op_id)+".html"))
-	thread_file, err := os.OpenFile(path.Join(config.DocumentRoot, board_dir+"/res/"+strconv.Itoa(op_id)+".html"), os.O_CREATE|os.O_RDWR, 0777)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if _, ok := recover().(error); ok {
-			error_log.Print("Failed executing template.")
-		}
-		if thread_file != nil {
-			thread_file.Close()
-		}
-	}()
-	err = img_thread_tmpl.Execute(thread_file, wrapped)
-	benchmarkTimer("buildThread"+string(op_id), start_time, false)
-	return err
-}
-
-// checks to see if the poster's tripcode/name is banned, if the IP is banned, or if the file checksum is banned
+// Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
 // returns true if the user is banned
 func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interface{}, error) {
 	var is_expired bool
@@ -371,9 +359,7 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 			return interfaces, err
 		}
 	} else {
-
 		is_expired = ban_entry.Expires.After(time.Now()) == false
-
 		if is_expired {
 			// if it is expired, send a message saying that it's expired, but still post
 			fmt.Println("expired")
@@ -418,19 +404,6 @@ func createThumbnail(image_obj image.Image, size string) image.Image {
 	thumb_w, thumb_h := getThumbnailSize(old_rect.Max.X, old_rect.Max.Y, size)
 	image_obj = imaging.Resize(image_obj, thumb_w, thumb_h, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
 	return image_obj
-}
-
-func getFiletype(name string) string {
-	filetype := strings.ToLower(name[len(name)-4:])
-	if filetype == ".gif" {
-		return "gif"
-	} else if filetype == ".jpg" || filetype == "jpeg" {
-		return "jpg"
-	} else if filetype == ".png" {
-		return "png"
-	} else {
-		return name[len(name)-3:]
-	}
 }
 
 func getNewFilename() string {
@@ -525,7 +498,8 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	var email_command string
 
-	post_name := escapeString(request.FormValue("postname"))
+	post_name := html.EscapeString(escapeString(request.FormValue("postname")))
+
 	if strings.Index(post_name, "#") == -1 {
 		post.Name = post_name
 	} else if strings.Index(post_name, "#") == 0 {
@@ -601,18 +575,19 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			server.ServeErrorPage(w, "Couldn't read file")
 		} else {
 			post.FilenameOriginal = handler.Filename
-			filetype := getFiletype(post.FilenameOriginal)
+			filetype := getFileExtension(post.FilenameOriginal)
 			thumb_filetype := filetype
 			if thumb_filetype == "gif" {
 				thumb_filetype = "jpg"
 			}
 			post.FilenameOriginal = escapeString(post.FilenameOriginal)
-			post.Filename = getNewFilename() + "." + getFiletype(post.FilenameOriginal)
-			board_arr := getBoardArr("`id` = " + request.FormValue("boardid"))
+			post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
+			board_arr, _ := getBoardArr("`id` = " + request.FormValue("boardid"))
 			if len(board_arr) == 0 {
 				server.ServeErrorPage(w, "No boards have been created yet")
 			}
-			board_dir := getBoardArr("`id` = " + request.FormValue("boardid"))[0].Dir
+			_board_dir, _ := getBoardArr("`id` = " + request.FormValue("boardid"))
+			board_dir := _board_dir[0].Dir
 			file_path := path.Join(config.DocumentRoot, "/"+board_dir+"/src/", post.Filename)
 			thumb_path := path.Join(config.DocumentRoot, "/"+board_dir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumb_filetype, -1))
 			catalog_thumb_path := path.Join(config.DocumentRoot, "/"+board_dir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumb_filetype, -1))
@@ -737,19 +712,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		}
 	}
 
-	// rebuild the thread page
-	if post.ParentID > 0 {
-		buildThread(post.ParentID, post.BoardID)
-	} else {
-		buildThread(post.ID, post.BoardID)
-	}
-
+	boards, _ := getBoardArr("")
 	// rebuild the board page
-	boards := getBoardArr("")
-	sections := getSectionArr("")
-	buildBoardPage(post.BoardID, boards, sections)
+	buildBoards(false, post.BoardID)
 
-	buildFrontPage(boards, sections)
+	buildFrontPage()
 
 	if email_command == "noko" {
 		if post.ParentID == 0 {

@@ -8,6 +8,10 @@ fi
 CGO_ENABLED=0
 GOARCH=amd64
 SUFFIX=""
+if [[ $GOOS == "windows" ]]
+then
+	SUFFIX=".exe"
+fi
 
 go build -v  -ldflags "-w" -o gochan$SUFFIX ./src
 # the -w ldflag omits debugging stuff

@@ -3,9 +3,7 @@
 <head>
 	<meta charset="UTF-8">  
 	<title>{{$board.Title}}</title>
-	<script type="text/javascript" src="/javascript/jquery/jquery-1.10.2.min.js"></script>
-	
-	<script type="text/javascript" src="/javascript/msgpack.js"></script>
+	<script type="text/javascript" src="/javascript/jquery-1.10.2.min.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{$config.SiteWebfolder}}";
@@ -19,8 +17,8 @@
 </head>
 <body>
 	<div id="topbar">
-		{{range $i, $board := $board_arr.Data}}
-			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
+		{{range $i, $boardlink := $board_arr}}
+			<a href="/{{$boardlink.Dir}}/" class="topbar-item">/{{$boardlink.Dir}}/</a>
 {{end}}
 	</div>
 	<div id="top-pane">
@@ -37,12 +35,12 @@
 			<input type="hidden" name="threadid" value="0" />
 			<input type="hidden" name="boardid" value="{{$board.ID}}" />
 			<table id="postbox-static">
-				<tr><td class="postblock">Name</td><td><input type="text" id="postname" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
-				<tr><td class="postblock">Email</td><td><input type="text" id="postemail" name="postemail" maxlength="75" size="28" /></td></tr>
-				<tr><td class="postblock">Subject</td><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
-				<tr><td class="postblock">Message</td><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
-				<tr><td class="postblock">File</td><td><input name="imagefile" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
-				<tr><td class="postblock">Password</td><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
+				<tr><th class="postblock">Name</th><td><input type="text" id="postname" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
+				<tr><th class="postblock">Email</th><td><input type="text" id="postemail" name="postemail" maxlength="75" size="28" /></td></tr>
+				<tr><th class="postblock">Subject</th><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
+				<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="postmsg"></textarea></td></tr>
+				<tr><th class="postblock">File</th><td><input name="imagefile" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
+				<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</table>
 		</form>
 		
@@ -50,7 +48,7 @@
 	<hr />
 	<div id="content">
 		<form action="/util" method="POST" id="main-form">
-			{{range $t, $thread := $thread_arr.Data}}
+			{{range $t, $thread := $thread_arr}}
 				{{$op := $thread.OP}}
 				<div class="thread">
 					<div class="op-post" id="op{{$op.ID}}">
@@ -93,13 +91,6 @@
 				</div>
 				<hr />
 			{{end}}
-
-			<div id="left-bottom-content">
-				<span id="boardmenu-bottom">
-					[{{range $i, $board := $board_arr.Data}}  {{if gt $i 0}}/{{end}} <a href="/{{$board.Dir}}/">{{$board.Dir}}</a> {{end}}]
-				</span>
-			</div>
-
 			<div id="right-bottom-content">
 				<div id="report-delbox">
 						<input type="hidden" name="board" value="{{$board.Dir}}" />
@@ -108,10 +99,29 @@
 				</div>
 			</div>
 		</form>
+		<div id="left-bottom-content">
+			<table id="pages">
+				<tr><td>{{if gt $board.CurrentPage 1}}
+							<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/{{subtract $board.CurrentPage 1}}.html">
+								<input type="submit" value="Previous" />
+							</form>
+						{{else}}Previous{{end}}</td>
+					
+					<td>[<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/">Index</a>]{{range $i,$_ := makeLoop $board.NumPages}} [{{if eq $i $board.CurrentPage}}<b>{{end}}<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/{{add $i 1}}.html">{{add $i 1}}</a>{{if eq $i $board.CurrentPage}}</b>{{end}}]{{end}}</td>
+					<td>{{if lt $board.CurrentPage $board.NumPages}}
+							<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/{{add $board.CurrentPage 1}}.html">
+								<input type="submit" value="Next" />
+							</form>
+						{{else}}Next{{end}}</td></tr>
+			</table>
+			<span id="boardmenu-bottom">
+				[{{range $i, $boardlink := $board_arr}}  {{if gt $i 0}}/{{end}} <a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a> {{end}}]
+			</span>
+		</div>
 	</div>
 	<div id="footer">
 		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />
-		Powered by Gochan {{$config.Version}}<br />
+		Powered by <a href="http://github.com/eggbertx/gochan/">Gochan {{$config.Version}}</a><br />
 	</div>
 </body>
 </html>

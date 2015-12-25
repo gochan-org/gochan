@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">  
 	<title>{{$config.SiteName}}</title>
-	<script type="text/javascript" src="/javascript/jquery/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="/javascript/jquery-1.10.2.min.js"></script>
 	<script type="text/javascript" src="/javascript/msgpack.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
@@ -124,7 +124,7 @@
 	</div>
 	<div id="footer">
 		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />
-		Powered by Gochan {{$config.Version}}<br />
+		Powered by <a href="http://github.com/eggbertx/gochan">Gochan {{$config.Version}}</a><br />
 	</div>
 </body>
 </html>

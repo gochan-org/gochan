@@ -5,11 +5,14 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"fmt"
+	//"golang.org/x/crypto/bcrypt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -69,23 +72,23 @@ func byteByByteReplace(input, from, to string) string {
 	return input
 }
 
-func walkfolder(path string, f os.FileInfo, err error) error {
+func deleteMatchingFiles(root, match string) (int, error) {
+	files_deleted := 0
+	files, err := ioutil.ReadDir(root)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if !f.IsDir() {
-		return os.Remove(path)
-	} else {
-		return nil
+	for _, f := range files {
+		match, _ := regexp.MatchString(match, f.Name())
+		if match {
+			os.Remove(filepath.Join(root, f.Name()))
+			files_deleted++
+		}
 	}
+	return files_deleted, err
 }
 
-func deleteFolderContents(root string) error {
-	err := filepath.Walk(root, walkfolder)
-	return err
-}
-
-func getBoardArr(where string) (boards []BoardsTable) {
+func getBoardArr(where string) (boards []BoardsTable, err error) {
 	if where == "" {
 		where = "1"
 	}
@@ -136,8 +139,11 @@ func getBoardArr(where string) (boards []BoardsTable) {
 	return
 }
 
-func getPostArr(sql string) (posts []interface{}, err error) {
-	rows, err := db.Query(sql)
+func getPostArr(where string) (posts []interface{}, err error) {
+	if where == "" {
+		where = "1"
+	}
+	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "posts` WHERE " + where)
 	if err != nil {
 		error_log.Print(err.Error())
 		return
@@ -151,10 +157,10 @@ func getPostArr(sql string) (posts []interface{}, err error) {
 		}
 		posts = append(posts, post)
 	}
-	return posts, err
+	return
 }
 
-func getSectionArr(where string) (sections []interface{}) {
+func getSectionArr(where string) (sections []interface{}, err error) {
 	if where == "" {
 		where = "1"
 	}
@@ -229,6 +235,47 @@ func getSpecificSQLDateTime(t time.Time) string {
 
 func humanReadableTime(t time.Time) string {
 	return t.Format(config.DateTimeFormat)
+}
+
+func paginate(interface_length int, interf []interface{}) [][]interface{} {
+	// interface_length = the max number of interfaces per super-interface
+	// 		(for example, threads per page)
+	// interf = the raw interface to be split up
+	// paginated_interfaces = the finished interface array
+	// num_arrays = the current number of arrays (before remainder overflow)
+	// interfaces_remaining = if greater than 0, these are the remaining interfaces
+	// 		that will be added to the super-interface
+
+	var paginated_interfaces [][]interface{}
+	num_arrays := len(interf) / interface_length
+	interfaces_remaining := len(interf) % interface_length
+	paginated_interfaces = append(paginated_interfaces, interf)
+	current_interface := 0
+	for l := 0; l < num_arrays; l++ {
+		paginated_interfaces = append(paginated_interfaces,
+			interf[current_interface:current_interface+interface_length])
+		current_interface += interface_length
+	}
+	if interfaces_remaining > 0 {
+		paginated_interfaces = append(paginated_interfaces, interf[len(interf)-interfaces_remaining:])
+	}
+	fmt.Println(len(paginated_interfaces[0]))
+	return paginated_interfaces
+}
+
+func resetBoardSectionArrays() {
+	// run when the board list needs to be changed (board/section is added, deleted, etc)
+	all_boards = nil
+	all_sections = nil
+
+	all_boards_a, _ := getBoardArr("")
+	for _, b := range all_boards_a {
+		all_boards = append(all_boards, b)
+	}
+	all_sections_a, _ := getSectionArr("")
+	for _, b := range all_sections_a {
+		all_boards = append(all_sections, b)
+	}
 }
 
 func searchStrings(item string, arr []string, permissive bool) int {

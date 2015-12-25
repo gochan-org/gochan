@@ -4,8 +4,7 @@ import (
 	"fmt"
 )
 
-const version float32 = 0.8
-
+const version float32 = 0.9
 
 func main() {
 	defer db.Close()
@@ -17,7 +16,7 @@ func main() {
 	initTemplates()
 	fmt.Println("Initializing server...")
 	if db != nil {
-		db.Exec("USE `"+config.DBname+"`;")
+		db.Exec("USE `" + config.DBname + "`;")
 	}
 	initServer()
 }
