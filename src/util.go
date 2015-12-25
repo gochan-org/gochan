@@ -139,11 +139,8 @@ func getBoardArr(where string) (boards []BoardsTable, err error) {
 	return
 }
 
-func getPostArr(where string) (posts []interface{}, err error) {
-	if where == "" {
-		where = "1"
-	}
-	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "posts` WHERE " + where)
+func getPostArr(sql string) (posts []interface{}, err error) {
+	rows, err := db.Query(sql)
 	if err != nil {
 		error_log.Print(err.Error())
 		return
