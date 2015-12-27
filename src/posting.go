@@ -45,6 +45,9 @@ func buildAll() {
 	buildBoards(true, 0)
 }
 
+// buildBoards builds one or all boards. If all == true, all boards will have their pages built.
+// If all == false, the board with the id equal to the value specified as which.
+// The return value is a string of HTML with debug information produced by the build process.
 func buildBoards(all bool, which int) (html string) {
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
 	if !all {
@@ -52,6 +55,7 @@ func buildBoards(all bool, which int) (html string) {
 		board := _board[0]
 		html += buildBoardPages(&board) + "<br />\n"
 		html += buildThreads(true, board.ID, 0)
+		return
 	}
 	boards, _ := getBoardArr("")
 	if len(boards) == 0 {
@@ -65,6 +69,8 @@ func buildBoards(all bool, which int) (html string) {
 	return
 }
 
+// buildBoardPages builds the pages for the board archive. board is a BoardsTable object representing the board to
+// 	build archive pages for. The return value is a string of HTML with debug information from the build process.
 func buildBoardPages(board *BoardsTable) (html string) {
 	//	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
 	var boardinfo_i []interface{}

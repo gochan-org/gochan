@@ -88,6 +88,8 @@ func deleteMatchingFiles(root, match string) (int, error) {
 	return files_deleted, err
 }
 
+// getBoardArr performs a query against the database, and returns an array of BoardsTables along with an error value.
+// If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
 func getBoardArr(where string) (boards []BoardsTable, err error) {
 	if where == "" {
 		where = "1"
@@ -98,6 +100,8 @@ func getBoardArr(where string) (boards []BoardsTable, err error) {
 		return
 	}
 
+	// For each row in the results from the database, populate a new BoardsTable instance,
+	// 	then append it to the boards array we are going to return
 	for rows.Next() {
 		board := new(BoardsTable)
 		err = rows.Scan(
@@ -138,6 +142,7 @@ func getBoardArr(where string) (boards []BoardsTable, err error) {
 	}
 	return
 }
+
 
 func getPostArr(sql string) (posts []interface{}, err error) {
 	rows, err := db.Query(sql)
