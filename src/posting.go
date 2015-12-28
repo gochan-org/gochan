@@ -161,16 +161,11 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		}
 	}
 
+	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\d.html$")
 	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickied_threads, nonstickied_threads...)
-	// Create the archive pages.
-	thread_pages = paginate(config.ThreadsPerPage_img, threads)
-
-	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\.html$")
-	board.NumPages = len(thread_pages) - 1
-	for page_num, page_threads := range thread_pages {
-		// Package up board info for the template to use.
-		board.CurrentPage = page_num
+	if len(threads) == 0 {
+		board.CurrentPage = 0
 		boardinfo_i = nil
 		boardinfo_i = append(boardinfo_i, board)
 
@@ -179,30 +174,73 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		interfaces = append(interfaces, config,
 			&Wrapper{IName: "boards", Data: all_boards},
 			&Wrapper{IName: "sections", Data: all_sections},
-			&Wrapper{IName: "threads", Data: page_threads},
+			&Wrapper{IName: "threads", Data: threads},
 			&Wrapper{IName: "boardinfo", Data: boardinfo_i})
 		wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
 
 		// Write to board.html for the first page.
-		if board.CurrentPage == 0 {
-			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
-		} else {
-			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html"), os.O_CREATE|os.O_RDWR, 0777)
-		}
+		fmt.Println(board.CurrentPage)
+		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
 		if err != nil {
 			html += err.Error() + "<br />\n"
 			error_log.Println(err.Error())
 		}
 
 		// Run the template, pointing it to the file, and passing in the data required.
-		err = img_boardpage_tmpl.Execute(current_page_file, wrapped)
+		err = img_boardpage_tmpl.Execute(board_page_file, wrapped)
 		if err != nil {
 			html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
 			error_log.Print(err.Error())
 			return
 		}
+		html += "/" + board.Dir + "/ built successfully, no threads to build.\n"
+		//benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
+		return
+	} else {
+		// Create the archive pages.
+		thread_pages = paginate(config.ThreadsPerPage_img, threads)
+
+		board.NumPages = len(thread_pages) - 1
+		for page_num, page_threads := range thread_pages {
+			// Package up board info for the template to use.
+			board.CurrentPage = page_num
+			boardinfo_i = nil
+			boardinfo_i = append(boardinfo_i, board)
+
+			// Package up boards, sections, threads, the boardinfo for the template to use.
+			interfaces = nil
+			interfaces = append(interfaces, config,
+				&Wrapper{IName: "boards", Data: all_boards},
+				&Wrapper{IName: "sections", Data: all_sections},
+				&Wrapper{IName: "threads", Data: page_threads},
+				&Wrapper{IName: "boardinfo", Data: boardinfo_i})
+			wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
+
+			// Write to board.html for the first page.
+			fmt.Println(board.CurrentPage)
+			if board.CurrentPage == 0 {
+				current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
+				fmt.Println(board.Dir + "/board.html")
+			} else {
+				current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html"), os.O_CREATE|os.O_RDWR, 0777)
+			}
+			if err != nil {
+				html += err.Error() + "<br />\n"
+				error_log.Println(err.Error())
+			}
+
+			// Run the template, pointing it to the file, and passing in the data required.
+			err = img_boardpage_tmpl.Execute(current_page_file, wrapped)
+			if err != nil {
+				html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
+				error_log.Print(err.Error())
+				return
+			}
+		}
+		html += "/" + board.Dir + "/ built successfully.\n"
+
 	}
-	html += "/" + board.Dir + "/ built successfully.\n"
+
 	//benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
 	return
 }
@@ -251,7 +289,8 @@ func buildThreadPages(op *PostTable) (html string) {
 	for i, _ := range thread_pages {
 		thread_pages[i] = append([]interface{}{op}, thread_pages[i]...)
 	}
-	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), strconv.Itoa(op.ID)+"p%*\\.html")
+	os.Remove(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"))
+	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), "^"+strconv.Itoa(op.ID)+"p")
 	op.NumPages = len(thread_pages) - 1
 	for page_num, page_posts := range thread_pages {
 		fmt.Printf("len(page_posts): %d\n", len(page_posts))
