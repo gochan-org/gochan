@@ -169,10 +169,12 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\.html$")
 	board.NumPages = len(thread_pages) - 1
 	for page_num, page_threads := range thread_pages {
+		// Package up board info for the template to use.
 		board.CurrentPage = page_num
 		boardinfo_i = nil
 		boardinfo_i = append(boardinfo_i, board)
 
+		// Package up boards, sections, threads, the boardinfo for the template to use.
 		interfaces = nil
 		interfaces = append(interfaces, config,
 			&Wrapper{IName: "boards", Data: all_boards},
@@ -181,6 +183,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			&Wrapper{IName: "boardinfo", Data: boardinfo_i})
 		wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
 
+		// Write to board.html for the first page.
 		if board.CurrentPage == 0 {
 			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
 		} else {
@@ -191,6 +194,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			error_log.Println(err.Error())
 		}
 
+		// Run the template, pointing it to the file, and passing in the data required.
 		err = img_boardpage_tmpl.Execute(current_page_file, wrapped)
 		if err != nil {
 			html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
@@ -203,6 +207,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	return
 }
 
+// buildThreads builds thread(s) given a boardid, or if all = false, also given a threadid.
 func buildThreads(all bool, boardid, threadid int) (html string) {
 	// TODO: detect which page will be built and only build that one and the board page
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
@@ -224,6 +229,7 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 	return
 }
 
+// buildThreadPages builds the pages for a thread given by a PostTable object.
 func buildThreadPages(op *PostTable) (html string) {
 	fmt.Printf("OP: %d\n", op.ID)
 	var board_dir string

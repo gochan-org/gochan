@@ -72,8 +72,9 @@ func byteByByteReplace(input, from, to string) string {
 	return input
 }
 
-func deleteMatchingFiles(root, match string) (int, error) {
-	files_deleted := 0
+// Deletes files in a folder (root) that match a given regular expression.
+// Returns the number of files that were deleted, and any error encountered.
+func deleteMatchingFiles(root, match string) (files_deleted int, err error) {
 	files, err := ioutil.ReadDir(root)
 	if err != nil {
 		return 0, err
@@ -259,7 +260,7 @@ func paginate(interface_length int, interf []interface{}) [][]interface{} {
 	var paginated_interfaces [][]interface{}
 	num_arrays := len(interf) / interface_length
 	interfaces_remaining := len(interf) % interface_length
-	paginated_interfaces = append(paginated_interfaces, interf)
+	//paginated_interfaces = append(paginated_interfaces, interf)
 	current_interface := 0
 	for l := 0; l < num_arrays; l++ {
 		paginated_interfaces = append(paginated_interfaces,

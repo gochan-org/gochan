@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="UTF-8">  
+	<meta charset="UTF-8">
 	<title>{{$board.Title}}</title>
 	<script type="text/javascript" src="/javascript/jquery-1.10.2.min.js"></script>
 	<script type="text/javascript">
@@ -43,7 +43,7 @@
 				<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			</table>
 		</form>
-		
+
 	</div>
 	<hr />
 	<div id="content">
@@ -86,7 +86,7 @@
 								{{end}}
 							</div>
 						</div>
-						
+
 					{{end}}
 				</div>
 				<hr />
@@ -105,8 +105,12 @@
 							<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/{{subtract $board.CurrentPage 1}}.html">
 								<input type="submit" value="Previous" />
 							</form>
+						{{else if intEq $board.CurrentPage 1}}
+							<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/">
+								<input type="submit" value="Previous" />
+							</form>
 						{{else}}Previous{{end}}</td>
-					
+
 					<td>[<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/">Index</a>]{{range $i,$_ := makeLoop $board.NumPages}} [{{if eq $i $board.CurrentPage}}<b>{{end}}<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/{{add $i 1}}.html">{{add $i 1}}</a>{{if eq $i $board.CurrentPage}}</b>{{end}}]{{end}}</td>
 					<td>{{if lt $board.CurrentPage $board.NumPages}}
 							<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/{{add $board.CurrentPage 1}}.html">

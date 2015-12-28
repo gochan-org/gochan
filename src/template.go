@@ -40,8 +40,14 @@ var funcMap = template.FuncMap{
 	"gt": func(a int, b int) bool {
 		return a > b
 	},
+	"gte": func(a int, b int) bool {
+		return a >= b
+	},
 	"lt": func(a int, b int) bool {
 		return a < b
+	},
+	"lte": func(a int, b int) bool {
+		return a <= b
 	},
 	"makeLoop": func(n int) []struct{} {
 		return make([]struct{}, n)
