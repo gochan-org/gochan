@@ -82,6 +82,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	var nonstickied_threads []interface{}
 
 	defer func() {
+		// This function cleans up after we return. If there was an error, it prints on the log and the console.
 		if uhoh, ok := recover().(error); ok {
 			error_log.Print("buildBoardPages failed: " + uhoh.Error())
 			fmt.Println("buildBoardPages failed: " + uhoh.Error())
@@ -89,38 +90,49 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		current_page_file.Close()
 	}()
 
+	// Check that the board's configured directory is indeed a directory
 	results, err := os.Stat(path.Join(config.DocumentRoot, board.Dir))
 	if err != nil {
+		// Try creating the board's configured directory if it doesn't exist
 		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
 		if err != nil {
 			html += "Failed creating /" + board.Dir + "/: " + err.Error() + "<br />\n"
 			error_log.Println("Failed creating /" + board.Dir + "/: " + err.Error())
 		}
 	} else if !results.IsDir() {
+		// If the file exists, but is not a folder, notify the user and blow up.
 		html += "Error: /" + board.Dir + "/ exists, but is not a folder. <br />\n"
 		error_log.Println("Error: /" + board.Dir + "/ exists, but is not a folder.")
+		panic(err)
 	}
 
-	op_posts, err := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC")
+	// Get all top level posts for the board.
+	op_posts, err := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " +
+		strconv.Itoa(board.ID) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC")
 	if err != nil {
 		html += err.Error() + "<br />"
 		op_posts = make([]interface{}, 0)
 		return
 	}
 
+	// For each top level post, start building a Thread struct
 	for _, op_post_i := range op_posts {
 		var thread Thread
 		var posts_in_thread []interface{}
 
 		thread.IName = "thread"
 
+		// Store the OP post for this thread
 		op_post := op_post_i.(PostTable)
 
 		if op_post.Stickied {
-			posts_in_thread, err = getPostArr("(SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.StickyRepliesOnBoardPage) + ") ORDER BY ID ASC")
+			// If the thread is stickied, limit replies on the archive page to the
+			// 	configured value for stickied threads.
+			posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.StickyRepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
+			// Get the number of replies to this thread.
 			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
 			if err != nil {
 				html += err.Error() + "<br />"
@@ -131,10 +143,12 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			}
 			stickied_threads = append(stickied_threads, thread)
 		} else {
-			posts_in_thread, err = getPostArr("(SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC  LIMIT " + strconv.Itoa(config.RepliesOnBoardpage) + ") ORDER BY ID ASC")
+			// Otherwise, limit the replies to the configured value for normal threads.
+			posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.RepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
+			// Get the number of replies to this thread.
 			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
 			if err != nil {
 				html += err.Error() + "<br />"
@@ -146,7 +160,10 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			nonstickied_threads = append(nonstickied_threads, thread)
 		}
 	}
+
+	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickied_threads, nonstickied_threads...)
+	// Create the archive pages.
 	thread_pages = paginate(config.ThreadsPerPage_img, threads)
 
 	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\.html$")
@@ -224,7 +241,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	if err != nil {
 		return "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
 	}
-	thread_pages := paginate(config.PostsPerThreadpage, replies)
+	thread_pages := paginate(config.PostsPerThreadPage, replies)
 	for i, _ := range thread_pages {
 		thread_pages[i] = append([]interface{}{op}, thread_pages[i]...)
 	}

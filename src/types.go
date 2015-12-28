@@ -312,8 +312,8 @@ type GochanConfig struct {
 
 	ThreadsPerPage_img       int
 	ThreadsPerPage_txt       int
-	PostsPerThreadpage       int
-	RepliesOnBoardpage       int
+	PostsPerThreadPage       int
+	RepliesOnBoardPage       int
 	StickyRepliesOnBoardPage int
 	BanColors                string //eventually this will be map[string] string
 	BanMsg                   string
@@ -596,14 +596,14 @@ func initConfig() {
 		config.ThreadsPerPage_txt = 15
 	}
 
-	config.PostsPerThreadpage, err = c.GetInt("threads", "posts_per_threadpage")
+	config.PostsPerThreadPage, err = c.GetInt("threads", "posts_per_threadpage")
 	if err != nil {
-		config.PostsPerThreadpage = 50
+		config.PostsPerThreadPage = 50
 	}
 
-	config.RepliesOnBoardpage, err = c.GetInt("threads", "replies_on_boardpage")
+	config.RepliesOnBoardPage, err = c.GetInt("threads", "replies_on_boardpage")
 	if err != nil {
-		config.RepliesOnBoardpage = 3
+		config.RepliesOnBoardPage = 3
 	}
 
 	config.StickyRepliesOnBoardPage, err = c.GetInt("threads", "sticky_replies_on_boardpage")

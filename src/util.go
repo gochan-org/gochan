@@ -152,9 +152,14 @@ func getPostArr(sql string) (posts []interface{}, err error) {
 	}
 	for rows.Next() {
 		var post PostTable
-		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename, &post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp, &post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
+		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
+			&post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename,
+			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW,
+			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp,
+			&post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped,
+			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
 		if err != nil {
-			error_log.Print(err.Error())
+			error_log.Print("util.go:getPostArr() ERROR: " + err.Error())
 			return
 		}
 		posts = append(posts, post)
@@ -241,10 +246,11 @@ func humanReadableTime(t time.Time) string {
 	return t.Format(config.DateTimeFormat)
 }
 
+// paginate returns a 2d array of a specified interface from a 1d array passed in,
+//	with a specified number of values per array in the 2d array.
+// interface_length is the number of interfaces per array in the 2d array (e.g, threads per page)
+// interf is the array of interfaces to be split up.
 func paginate(interface_length int, interf []interface{}) [][]interface{} {
-	// interface_length = the max number of interfaces per super-interface
-	// 		(for example, threads per page)
-	// interf = the raw interface to be split up
 	// paginated_interfaces = the finished interface array
 	// num_arrays = the current number of arrays (before remainder overflow)
 	// interfaces_remaining = if greater than 0, these are the remaining interfaces
