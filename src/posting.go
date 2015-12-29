@@ -643,7 +643,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		if err != nil {
 			server.ServeErrorPage(w, "Couldn't read file")
 		} else {
-			post.FilenameOriginal = handler.Filename
+			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
 			thumb_filetype := filetype
 			if thumb_filetype == "gif" {

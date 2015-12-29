@@ -778,7 +778,7 @@ var manage_functions = map[string]ManageFunction{
 				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 				html += fmt.Sprintf("<h2>Create new board</h2>"+
 					"<span id=\"board-creation-message\">%s</span><br />"+
-					"<form action=\"manage?action=manageboards\" method=\"POST\">"+
+					"<form action=\"/manage?action=manageboards\" method=\"POST\">"+
 					"<input type=\"hidden\" name=\"do\" value=\"add\" />"+
 					"Directory <input type=\"text\" name=\"dir\" value=\"%s\" /><br />"+
 					"Order <input type=\"text\" name=\"order\" value=\"%d\" /><br />"+
