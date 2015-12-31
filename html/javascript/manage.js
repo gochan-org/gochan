@@ -37,7 +37,7 @@ function banPage() {
 				$jq("input[type=hidden][name=type]").attr("value", "name-tripcode")
 				break;
 		}
-	});	
+	});
 	$jq("input[type=checkbox]#allboards").bind("change", function() {
 		var allboards_check = this;
 		$jq("input[type=checkbox].board-check").each(function() {
@@ -49,7 +49,7 @@ function banPage() {
 			"<option>Months...</option>" +
 		"</select>" +
 		"<select class=\"duration-days\">" +
-			"<option>Days...</option>" + 
+			"<option>Days...</option>" +
 		"</select>" +
 		"<select class=\"duration-hours\">" +
 			"<option>Hours...</option>" +
@@ -93,7 +93,7 @@ function banPage() {
 }
 
 function getManagePage() {
-	
+
 }
 
 function makeNewStaff() {
@@ -106,7 +106,7 @@ function makeNewStaff() {
 		var rank_sel = $jq("select#rank").val();
 		$jq.ajax({
 			method: 'POST',
-			url: webroot+"manage?action=staff",
+			url: webroot+"manage?action=managestaff",
 			data: {
 				"do":"add",
 				username: username_txt,
@@ -136,7 +136,7 @@ function makeNewStaff() {
 			}
 		});
 	}
-	return on_manage_page;	
+	return on_manage_page;
 }
 
 function getStaff() {

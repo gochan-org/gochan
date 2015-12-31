@@ -1003,11 +1003,11 @@ var manage_functions = map[string]ManageFunction{
 				case staff.Rank == 1:
 					rank = "janitor"
 				}
-				html += "<tr><td>" + staff.Username + "</td><td>" + rank + "</td><td>" + staff.Boards + "</td><td>" + humanReadableTime(staff.AddedOn) + "</td><td><a href=\"/manage?action=staff&amp;o=del&amp;username=" + staff.Username + "\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+				html += "<tr><td>" + staff.Username + "</td><td>" + rank + "</td><td>" + staff.Boards + "</td><td>" + humanReadableTime(staff.AddedOn) + "</td><td><a href=\"/manage?action=managestaff&amp;do=del&amp;username=" + staff.Username + "\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 				iter += 1
 			}
 			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n" +
-				"<form action=\"manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +
+				"<form action=\"/manage?action=managestaff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +
 				"\t<input type=\"hidden\" name=\"do\" value=\"add\" />\n" +
 				"\tUsername: <input id=\"username\" name=\"username\" type=\"text\" /><br />\n" +
 				"\tPassword: <input id=\"password\" name=\"password\" type=\"password\" /><br />\n" +
