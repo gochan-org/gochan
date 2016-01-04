@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/postfix/goconf"
 	"log"
 	"os"
@@ -335,32 +334,33 @@ type GochanConfig struct {
 	EnableAppeals    bool
 	MaxModlogDays    int
 	RandomSeed       string
-	Version          float32
+	Version          string
+	Verbosity        int
 }
 
 func initConfig() {
 	var err error
 	c, err = goconf.ReadConfigFile("config.cfg")
 	if err != nil {
-		fmt.Println(err)
+		println(0, err.Error())
 		os.Exit(2)
 	}
 	config.IName = "GochanConfig"
 	config.Domain, err = c.GetString("server", "domain")
 	if err != nil {
-		fmt.Println("server.domain not set in config.cfg, halting.")
+		println(0, "server.domain not set in config.cfg, halting.")
 	}
 
 	config.Port, err = c.GetInt("server", "port")
 	if err != nil {
 		config.Port = 80
-		fmt.Println("server.port not set in config.cfg, defaulting to 80")
+		println(0, "server.port not set in config.cfg, defaulting to 80")
 	}
 
 	first_page_str, err_ := c.GetString("server", "first_page")
 	if err_ != nil {
 		first_page_str = "board.html,index.html"
-		fmt.Println("server.first_page not set in config.cfg, defaulting to " + first_page_str)
+		println(0, "server.first_page not set in config.cfg, defaulting to "+first_page_str)
 	}
 
 	config.FirstPage = strings.Split(first_page_str, ",")
@@ -368,18 +368,18 @@ func initConfig() {
 	config.Error404Path, err = c.GetString("server", "error_404_path")
 	if err != nil {
 		config.Error404Path = "/error/404.html"
-		fmt.Println("server.error_404_path not set in config.cfg, defaulting to " + config.Error404Path)
+		println(0, "server.error_404_path not set in config.cfg, defaulting to "+config.Error404Path)
 	}
 	config.Error500Path, err = c.GetString("server", "error_500_path")
 	if err != nil {
 		config.Error500Path = "/error/500.html"
-		fmt.Println("server.error_500_path not set in config.cfg, defaulting to " + config.Error500Path)
+		println(0, "server.error_500_path not set in config.cfg, defaulting to "+config.Error500Path)
 	}
 
 	config.Username, err = c.GetString("server", "username")
 	if err != nil {
 		config.Username = "gochan"
-		fmt.Println("server.username not set in config.cfg, defaulting to " + config.Username)
+		println(0, "server.username not set in config.cfg, defaulting to "+config.Username)
 	}
 
 	config.UseFastCGI, err = c.GetBool("server", "use_fastcgi")
@@ -389,7 +389,7 @@ func initConfig() {
 
 	config.DocumentRoot, err = c.GetString("directories", "document_root")
 	if err != nil {
-		fmt.Println("directories.document_root not set in config.cfg, halting.")
+		println(0, "directories.document_root not set in config.cfg, halting.")
 		os.Exit(2)
 	}
 	wd, wderr := os.Getwd()
@@ -403,18 +403,18 @@ func initConfig() {
 	config.TemplateDir, err = c.GetString("directories", "template_dir")
 	if err != nil {
 		config.TemplateDir = "templates"
-		fmt.Println("directories.template_dir not set in config.cfg, defaulting to " + config.TemplateDir)
+		println(0, "directories.template_dir not set in config.cfg, defaulting to "+config.TemplateDir)
 	}
 
 	config.LogDir, err = c.GetString("directories", "log_dir")
 	if err != nil {
 		config.LogDir = "log"
-		fmt.Println("directories.log_dir not set in config.cfg, defaulting to " + config.LogDir)
+		println(0, "directories.log_dir not set in config.cfg, defaulting to "+config.LogDir)
 	}
 
 	access_log_f, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
-		fmt.Println("Couldn't open access log. Returned error: " + err.Error())
+		println(0, "Couldn't open access log. Returned error: "+err.Error())
 		os.Exit(1)
 	} else {
 		access_log = log.New(access_log_f, "", log.Ltime|log.Ldate)
@@ -423,7 +423,7 @@ func initConfig() {
 
 	error_log_f, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
-		fmt.Println("Couldn't open error log. Returned error: " + err.Error())
+		println(0, "Couldn't open error log. Returned error: "+err.Error())
 		os.Exit(1)
 	} else {
 		error_log = log.New(error_log_f, "", log.Ltime|log.Ldate)
@@ -431,7 +431,7 @@ func initConfig() {
 
 	mod_log_f, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
-		fmt.Println("Couldn't open mod log. Returned error: " + err.Error())
+		println(0, "Couldn't open mod log. Returned error: "+err.Error())
 	} else {
 		mod_log = log.New(mod_log_f, "", log.Ltime|log.Ldate)
 	}
@@ -439,24 +439,24 @@ func initConfig() {
 	config.DBtype, err = c.GetString("database", "type")
 	if err != nil {
 		config.DBtype = "mysql"
-		fmt.Println("database.db_type not set in config.cfg, defaulting to " + config.DBtype)
+		println(0, "database.db_type not set in config.cfg, defaulting to "+config.DBtype)
 	}
 
 	config.DBhost, err = c.GetString("database", "host")
 	if err != nil {
 		config.DBhost = "unix(/var/run/mysqld/mysqld.sock)"
-		fmt.Println("database.db_host not set in config.cfg, defaulting to " + config.DBhost)
+		println(0, "database.db_host not set in config.cfg, defaulting to "+config.DBhost)
 	}
 
 	config.DBname, err = c.GetString("database", "name")
 	if err != nil {
-		fmt.Println("database.db_name not set in config.cfg, halting.")
+		println(0, "database.db_name not set in config.cfg, halting.")
 		os.Exit(2)
 	}
 
 	config.DBusername, err = c.GetString("database", "username")
 	if err != nil {
-		fmt.Println("database.db_username not set in config.cfg, halting.")
+		println(0, "database.db_username not set in config.cfg, halting.")
 		os.Exit(2)
 	}
 	config.DBpassword, err = c.GetString("database", "password")
@@ -511,7 +511,7 @@ func initConfig() {
 
 	config.SiteWebfolder, err = c.GetString("site", "webfolder")
 	if err != nil {
-		fmt.Println("site.webfolder not set in config.cfg, halting.")
+		println(0, "site.webfolder not set in config.cfg, halting.")
 		os.Exit(2)
 	}
 
@@ -661,12 +661,10 @@ func initConfig() {
 		config.EnableGeoIP = false
 	}
 
-	config.GeoIPDBlocation, err = c.GetString("misc", "geoip_location") // cf for cloudflare or a local path
-	if err != nil {
-		if config.EnableGeoIP {
-			fmt.Println("Error: GeoIP enabled but no database provided. Set misc.geoip_location in config.cfg to \"cf\" to use CloudFlare's GeoIP headers, or to a local filepath")
-		} else {
-			config.GeoIPDBlocation = ""
+	if config.EnableGeoIP {
+		config.GeoIPDBlocation, err = c.GetString("misc", "geoip_location") // cf for cloudflare or a local path
+		if err != nil {
+			println(0, "Error: GeoIP enabled but no database provided. Set misc.geoip_location in config.cfg to \"cf\" to use CloudFlare's GeoIP headers, or to a local filepath")
 		}
 	}
 

@@ -28,14 +28,12 @@ const (
 func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time {
 	if starting {
 		// starting benchmark test
-		fmt.Println("Starting benchmark \"" + name + "\"")
+		println(2, "Starting benchmark \""+name+"\"")
 		return given_time
 	} else {
 		// benchmark is finished, print the duration
 		// convert nanoseconds to a decimal seconds
-		duration_seconds := time.Since(given_time).Seconds()
-		seconds := fmt.Sprintf("%0.02f", duration_seconds)
-		fmt.Println("benchmark \"" + name + "\" completed in " + seconds + "seconds")
+		printf(2, "benchmark %s completed in %d seconds", name, time.Since(given_time).Seconds())
 		return time.Now() // we don't really need this, but we have to return something
 	}
 }
@@ -56,7 +54,6 @@ func bcrypt_sum(str string) string {
 	hash := ""
 	digest, err := bcrypt.GenerateFromPassword([]byte(str), 4)
 	if err == nil {
-		//hash = fmt.Sprintf("%x",digest)
 		hash = string(digest)
 	}
 	return hash
@@ -144,7 +141,6 @@ func getBoardArr(where string) (boards []BoardsTable, err error) {
 	return
 }
 
-
 func getPostArr(sql string) (posts []interface{}, err error) {
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -217,18 +213,14 @@ func getFileExtension(filename string) string {
 	} else {
 		return filename[strings.LastIndex(filename, ".")+1:]
 	}
-	//}
-	//return ""
 }
 
 func getFormattedFilesize(size float32) string {
 	if size < 1000 {
 		return fmt.Sprintf("%fB", size)
 	} else if size <= 100000 {
-		//size = size * 0.2
 		return fmt.Sprintf("%fKB", size/1024)
 	} else if size <= 100000000 {
-		//size = size * 0.2
 		return fmt.Sprintf("%fMB", size/1024/1024)
 	}
 	return fmt.Sprintf("%0.2fGB", size/1024/1024/1024)
@@ -271,6 +263,18 @@ func paginate(interface_length int, interf []interface{}) [][]interface{} {
 		paginated_interfaces = append(paginated_interfaces, interf[len(interf)-interfaces_remaining:])
 	}
 	return paginated_interfaces
+}
+
+func printf(v int, format string, a ...interface{}) {
+	if config.Verbosity >= v {
+		fmt.Printf(format, a...)
+	}
+}
+
+func println(v int, s string) {
+	if config.Verbosity >= v {
+		fmt.Println(s)
+	}
 }
 
 func resetBoardSectionArrays() {
