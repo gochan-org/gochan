@@ -80,14 +80,17 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	var thread_pages [][]interface{}
 	var stickied_threads []interface{}
 	var nonstickied_threads []interface{}
+	var errortext string
 
 	defer func() {
 		// This function cleans up after we return. If there was an error, it prints on the log and the console.
 		if uhoh, ok := recover().(error); ok {
 			error_log.Print("buildBoardPages failed: " + uhoh.Error())
-			fmt.Println("buildBoardPages failed: " + uhoh.Error())
+			println(0, "buildBoardPages failed: "+uhoh.Error())
 		}
-		current_page_file.Close()
+		if current_page_file != nil {
+			current_page_file.Close()
+		}
 	}()
 
 	// Check that the board's configured directory is indeed a directory
@@ -96,14 +99,17 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		// Try creating the board's configured directory if it doesn't exist
 		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
 		if err != nil {
-			html += "Failed creating /" + board.Dir + "/: " + err.Error() + "<br />\n"
-			error_log.Println("Failed creating /" + board.Dir + "/: " + err.Error())
+			errortext = "Failed creating /" + board.Dir + "/: " + err.Error()
+			html += errortext + "<br />\n"
+			error_log.Println(errortext)
+			println(1, errortext)
 		}
 	} else if !results.IsDir() {
-		// If the file exists, but is not a folder, notify the user and blow up.
-		html += "Error: /" + board.Dir + "/ exists, but is not a folder. <br />\n"
-		error_log.Println("Error: /" + board.Dir + "/ exists, but is not a folder.")
-		panic(err)
+		// If the file exists, but is not a folder, notify the user
+		errortext = "Error: /" + board.Dir + "/ exists, but is not a folder."
+		html += errortext + "<br />\n"
+		error_log.Println(errortext)
+		println(1, errortext)
 	}
 
 	// Get all top level posts for the board.
@@ -161,7 +167,8 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		}
 	}
 
-	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\d.html$")
+	num, _ := deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\d.html$")
+	printf(1, "Number of files deleted: %d\n", num)
 	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickied_threads, nonstickied_threads...)
 	if len(threads) == 0 {
@@ -179,18 +186,23 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
 
 		// Write to board.html for the first page.
-		fmt.Println(board.CurrentPage)
+		printf(1, "Current page: %s/%d\n", board.Dir, board.CurrentPage)
 		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
 		if err != nil {
-			html += err.Error() + "<br />\n"
-			error_log.Println(err.Error())
+			errortext = "Failed opening /" + board.Dir + "/board.html: " + err.Error()
+			html += errortext + "<br />\n"
+			error_log.Println(errortext)
+			println(1, errortext)
+			return
 		}
 
 		// Run the template, pointing it to the file, and passing in the data required.
 		err = img_boardpage_tmpl.Execute(board_page_file, wrapped)
 		if err != nil {
-			html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
-			error_log.Print(err.Error())
+			errortext = "Failed building /" + board.Dir + "/: " + err.Error()
+			html += errortext + "<br />\n"
+			error_log.Print(errortext)
+			println(1, errortext)
 			return
 		}
 		html += "/" + board.Dir + "/ built successfully, no threads to build.\n"
@@ -217,23 +229,29 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
 
 			// Write to board.html for the first page.
-			fmt.Println(board.CurrentPage)
+			printf(1, "Current board page: %s/%d\n", board.Dir, board.CurrentPage)
+			var current_page_filepath string
 			if board.CurrentPage == 0 {
-				current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
-				fmt.Println(board.Dir + "/board.html")
+				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, "board.html")
 			} else {
-				current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html"), os.O_CREATE|os.O_RDWR, 0777)
+				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num+1)+".html")
 			}
+			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR, 0777)
 			if err != nil {
-				html += err.Error() + "<br />\n"
-				error_log.Println(err.Error())
+				errortext = "Failed opening board page: " + err.Error()
+				html += errortext + "<br />\n"
+				error_log.Println(errortext)
+				println(1, errortext)
+				continue
 			}
 
 			// Run the template, pointing it to the file, and passing in the data required.
 			err = img_boardpage_tmpl.Execute(current_page_file, wrapped)
 			if err != nil {
-				html += "Failed building /" + board.Dir + "/: " + err.Error() + "<br />\n"
-				error_log.Print(err.Error())
+				errortext = "Failed building /" + board.Dir + "/: " + err.Error()
+				html += errortext + "<br />\n"
+				error_log.Print(errortext)
+				println(1, errortext)
 				return
 			}
 		}
@@ -258,7 +276,7 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 	}
 	threads, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
 	if len(threads) == 0 {
-		return html + "No threads to build.<br />\n"
+		return
 	}
 	for _, op := range threads {
 		op_struct := op.(PostTable)
@@ -269,33 +287,77 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 
 // buildThreadPages builds the pages for a thread given by a PostTable object.
 func buildThreadPages(op *PostTable) (html string) {
-	fmt.Printf("OP: %d\n", op.ID)
+	printf(1, "OP: %d\n", op.ID)
 	var board_dir string
 	var replies []interface{}
+	var interfaces []interface{}
+	var page []interface{}
 	var current_page_file *os.File
+	var errortext string
 
-	row := db.QueryRow("SELECT `dir` FROM `" + config.DBprefix + "boards` WHERE `id` = '" + strconv.Itoa(op.BoardID) + "';")
-	err := row.Scan(&board_dir)
+	err := db.QueryRow("SELECT `dir` FROM `" + config.DBprefix + "boards` WHERE `id` = '" + strconv.Itoa(op.BoardID) + "';").Scan(&board_dir)
 	if err != nil {
-		error_log.Println(err.Error())
-		return err.Error()
+		errortext = "Failed getting board directory from post: " + err.Error()
+		html += errortext + "<br />\n"
+		error_log.Println(errortext)
+		println(1, errortext)
+		return
 	}
 
 	replies, err = getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'")
 	if err != nil {
-		return "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
+		errortext = "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
+		html += errortext
+		error_log.Println(errortext)
+		println(1, errortext)
+		return
 	}
+	printf(1, "Number of replies for /%s/%d: %d\n", board_dir, op.BoardID, len(replies))
+
+	printf(1, "Building main page for /%s/%d\n", board_dir, op.BoardID)
+	os.Remove(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"))
+
 	thread_pages := paginate(config.PostsPerThreadPage, replies)
 	for i, _ := range thread_pages {
 		thread_pages[i] = append([]interface{}{op}, thread_pages[i]...)
 	}
-	os.Remove(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"))
 	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), "^"+strconv.Itoa(op.ID)+"p")
-	op.NumPages = len(thread_pages) - 1
+
+	op.NumPages = len(thread_pages)
+	printf(1, "Number of pages to build for /%s/%d: %d\n", board_dir, op.ID, op.NumPages)
+
+	// build main page
+	page = append([]interface{}{op}, replies...)
+	interfaces = append(interfaces, config,
+		&Wrapper{IName: "boards_", Data: all_boards},
+		&Wrapper{IName: "sections_w", Data: all_sections},
+		&Wrapper{IName: "posts_w", Data: page})
+	wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
+
+	current_page_filepath := path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html")
+	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR, 0777)
+	if err != nil {
+		errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
+		html += errortext + "<br />\n"
+		println(1, errortext)
+		error_log.Println(errortext)
+		return
+	}
+	err = img_threadpage_tmpl.Execute(current_page_file, wrapped)
+	if err != nil {
+		errortext = "Failed building /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".html: " + err.Error()
+		html += errortext + "<br />\n"
+		println(1, errortext)
+		error_log.Print(errortext)
+		return
+	}
+	html += "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully<br />\n"
+	println(1, "Built /"+board_dir+"/"+strconv.Itoa(op.ID)+" successfully")
+
 	for page_num, page_posts := range thread_pages {
-		fmt.Printf("len(page_posts): %d\n", len(page_posts))
+		printf(1, "Number of threads on page %d of /%s/%d: %d\n", page_num, board_dir, op.BoardID, len(page_posts))
 		op.CurrentPage = page_num
-		var interfaces []interface{}
+		interfaces = nil
 		interfaces = append(interfaces, config,
 			&Wrapper{IName: "boards_", Data: all_boards},
 			&Wrapper{IName: "sections_w", Data: all_sections},
@@ -303,22 +365,30 @@ func buildThreadPages(op *PostTable) (html string) {
 
 		wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
 
-		if op.CurrentPage == 0 {
-			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"), os.O_CREATE|os.O_RDWR, 0777)
-		} else {
-			current_page_file, err = os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage)+".html"), os.O_CREATE|os.O_RDWR, 0777)
-		}
+		var current_page_filepath string
+		current_page_filepath = path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
+
+		printf(1, "Current threadpage file path: %s\n", current_page_filepath)
+		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR, 0777)
 		if err != nil {
-			html += err.Error() + "<br />\n"
-			error_log.Println(err.Error())
+			errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
+			html += errortext + "<br />\n"
+			println(1, errortext)
+			error_log.Println(errortext)
+			return
 		}
 
 		err = img_threadpage_tmpl.Execute(current_page_file, wrapped)
 		if err != nil {
-			html += "Failed building /" + board_dir + "/" + strconv.Itoa(op.ID) + ": " + err.Error() + "<br />\n"
-			error_log.Print(err.Error())
+			errortext = "Failed building /" + board_dir + "/" + strconv.Itoa(op.ID) + ": " + err.Error()
+			html += errortext + "<br />\n"
+			println(1, errortext)
+			error_log.Print(errortext)
 			return
 		}
+		success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + "p" + strconv.Itoa(op.CurrentPage+1) + " successfully"
+		html += success_text + "<br />\n"
+		println(1, success_text)
 	}
 	return
 }
@@ -327,7 +397,7 @@ func buildFrontPage() (html string) {
 	initTemplates()
 	var front_arr []interface{}
 	var recent_posts_arr []interface{}
-
+	var errortext string
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR, 0777)
 	defer func() {
@@ -336,14 +406,17 @@ func buildFrontPage() (html string) {
 		}
 	}()
 	if err != nil {
-		return err.Error()
+		errortext = "Failed opening front page for writing: " + err.Error()
+		error_log.Println(errortext)
+		return errortext + "<br />\n"
 	}
 
 	// get front pages
 	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "frontpage`;")
 	if err != nil {
-		error_log.Print(err.Error())
-		return err.Error()
+		errortext = "Failed getting front page rows: " + err.Error()
+		error_log.Print(errortext)
+		return errortext + "<br />"
 	}
 	for rows.Next() {
 		frontpage := new(FrontTable)
@@ -351,6 +424,7 @@ func buildFrontPage() (html string) {
 		err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject, &frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email)
 		if err != nil {
 			error_log.Print(err.Error())
+			println(1, err.Error())
 			return err.Error()
 		}
 		front_arr = append(front_arr, frontpage)
@@ -374,15 +448,19 @@ func buildFrontPage() (html string) {
 		"ORDER BY `timestamp` DESC " +
 		"LIMIT " + strconv.Itoa(config.MaxRecentPosts))
 	if err != nil {
-		error_log.Print(err.Error())
-		return err.Error()
+		errortext = "Failed getting list of recent posts for front page: " + err.Error()
+		error_log.Print(errortext)
+		println(1, errortext)
+		return errortext + "<br />\n"
 	}
 	for rows.Next() {
 		recent_post := new(RecentPost)
 		err = rows.Scan(&recent_post.PostID, &recent_post.ParentID, &recent_post.BoardName, &recent_post.BoardID, &recent_post.Name, &recent_post.Tripcode, &recent_post.Message, &recent_post.Filename, &recent_post.ThumbW, &recent_post.ThumbH)
 		if err != nil {
-			error_log.Print(err.Error())
-			return err.Error()
+			errortext = "Failed getting list of recent posts for front page: " + err.Error()
+			error_log.Print(errortext)
+			println(1, errortext)
+			return errortext + "<br />\n"
 		}
 		recent_posts_arr = append(recent_posts_arr, recent_post)
 	}
@@ -396,12 +474,11 @@ func buildFrontPage() (html string) {
 
 	wrapped := &Wrapper{IName: "frontpage", Data: interfaces}
 	err = front_page_tmpl.Execute(front_file, wrapped)
-	if err == nil {
-		if err != nil {
-			return err.Error()
-		} else {
-			return "Front page rebuilt successfully.<br />"
-		}
+	if err != nil {
+		errortext = "Failed executing front page template: " + err.Error()
+		error_log.Println(errortext)
+		println(1, errortext)
+		return errortext + "<br />\n"
 	}
 	return "Front page rebuilt successfully.<br />"
 }
@@ -425,14 +502,13 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 
 		} else {
 			// something went wrong
-			fmt.Println("something's wrong")
 			return interfaces, err
 		}
 	} else {
 		is_expired = ban_entry.Expires.After(time.Now()) == false
 		if is_expired {
 			// if it is expired, send a message saying that it's expired, but still post
-			fmt.Println("expired")
+			println(1, "expired")
 			return interfaces, nil
 
 		}
@@ -560,6 +636,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	start_time := benchmarkTimer("makePost", time.Now(), true)
 	request = *r
 	writer = w
+	var errortext string
 
 	var post PostTable
 	post.IName = "post"
@@ -641,7 +718,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			server.ServeErrorPage(w, "Couldn't read file")
+			server.ServeErrorPage(w, "Couldn't read file: "+err.Error())
 		} else {
 			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
@@ -663,18 +740,27 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
-				server.ServeErrorPage(w, "Couldn't write file.")
+				errortext = "Couldn't write file \"" + post.Filename + "\"" + err.Error()
+				println(1, errortext)
+				error_log.Println(errortext)
+				server.ServeErrorPage(w, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
 			}
 
 			img, err := imaging.Open(file_path)
 			if err != nil {
+				errortext = "Couldn't open uploaded file \"" + post.Filename + "\"" + err.Error()
+				error_log.Println(errortext)
+				println(1, errortext)
 				server.ServeErrorPage(w, "Upload filetype not supported")
+
 				return
 			} else {
 				//post.FileChecksum string
 				stat, err := os.Stat(file_path)
 				if err != nil {
+					error_log.Println(err.Error())
+					println(1, err.Error())
 					server.ServeErrorPage(w, err.Error())
 				} else {
 					post.Filesize = int(stat.Size())
@@ -725,6 +811,8 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					}
 					err = saveImage(thumb_path, &thumbnail)
 					if err != nil {
+						println(1, err.Error())
+						error_log.Println(err.Error())
 						server.ServeErrorPage(w, err.Error())
 						return
 					}
@@ -740,12 +828,14 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	isbanned, err := checkBannedStatus(&post, &w)
 	if err != nil {
+		errortext = "Error in checkBannedStatus: " + err.Error()
 		server.ServeErrorPage(w, err.Error())
+		error_log.Println(errortext)
+		println(1, errortext)
 		return
 	}
 
 	if len(isbanned) > 0 {
-
 		wrapped := &Wrapper{IName: "bans", Data: isbanned}
 
 		var banpage_buffer bytes.Buffer
@@ -755,10 +845,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		err = banpage_tmpl.Execute(&banpage_buffer, wrapped)
 		if err != nil {
 			fmt.Fprintf(writer, banpage_html+err.Error()+"\n</body>\n</html>")
+			println(1, err.Error())
+			error_log.Println(err.Error())
 			return
 		}
 		fmt.Fprintf(w, banpage_buffer.String())
-
 		return
 	}
 

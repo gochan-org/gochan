@@ -14,7 +14,7 @@ import (
 )
 
 type FooterData struct {
-	Version       float32
+	Version       string
 	GeneratedTime float32
 }
 
@@ -131,7 +131,6 @@ var funcMap = template.FuncMap{
 		}
 		ext_begin := strings.LastIndex(name, ".")
 		new_name := name[:ext_begin] + "t." + getFileExtension(name)
-		fmt.Println(new_name)
 		return new_name
 	},
 	"formatFilesize": func(size_int int) string {

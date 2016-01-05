@@ -2,22 +2,21 @@ package main
 
 import (
 	"bytes"
-	"io"
-	"fmt"
 	"database/sql"
 	_ "github.com/ziutek/mymysql/godrv"
+	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 )
 
 const (
-	nil_timestamp = "0000-00-00 00:00:00"
+	nil_timestamp         = "0000-00-00 00:00:00"
 	mysql_datetime_format = "2006-01-02 15:04:05"
 )
 
 var (
-	db *sql.DB
+	db           *sql.DB
 	db_connected = false
 )
 
@@ -69,13 +68,12 @@ func escapeQuotes(txt string) string {
 	return buf.String()
 }
 
-
 func connectToSQLServer() {
 	var err error
 
-	db, err = sql.Open("mymysql", config.DBhost + "*" + config.DBname + "/"+config.DBusername+"/"+config.DBpassword)
+	db, err = sql.Open("mymysql", config.DBhost+"*"+config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
 	if err != nil {
-		fmt.Println("Failed to connect to the database, see log for details.")
+		println(0, "Failed to connect to the database, see log for details.")
 		error_log.Fatal(err.Error())
 	}
 
@@ -85,8 +83,8 @@ func connectToSQLServer() {
 	if err == sql.ErrNoRows {
 		num_rows = 0
 	} else if err != nil {
-		fmt.Println("Failed retrieving list of tables in database.")
-		error_log.Fatal(err.Error())	
+		println(0, "Failed retrieving list of tables in database.")
+		error_log.Fatal(err.Error())
 	}
 	// Detect that there are at least the number of tables that we are setting up.
 	// If there are fewer than that, then we either half-way set up, or there's other tables in our database.
@@ -94,42 +92,42 @@ func connectToSQLServer() {
 		// the initial setup has already been run
 		needs_initial_setup = false
 		db_connected = true
-		fmt.Println("complete.")
+		println(0, "complete.")
 		return
 	} else {
 		// does the  initialsetupdb.sql exist?
 		_, err := os.Stat("initialsetupdb.sql")
 		if err != nil {
-			fmt.Println("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
+			println(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
 			error_log.Fatal("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
 		}
 
 		// read the initial setup sql file into a string
-		initial_sql_bytes,err := ioutil.ReadFile("initialsetupdb.sql")
+		initial_sql_bytes, err := ioutil.ReadFile("initialsetupdb.sql")
 		if err != nil {
-			fmt.Println("failed, see log for details.")
+			println(0, "failed, see log for details.")
 			error_log.Fatal(err.Error())
 		}
 		initial_sql_str := string(initial_sql_bytes)
 		initial_sql_bytes = nil
-		fmt.Printf("Starting initial setup...")
-		initial_sql_str = strings.Replace(initial_sql_str,"DBNAME",config.DBname, -1)
-		initial_sql_str = strings.Replace(initial_sql_str,"DBPREFIX",config.DBprefix, -1)
-		initial_sql_str += "\nINSERT INTO `"+config.DBname+"`.`"+config.DBprefix+"staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '"+bcrypt_sum("password")+"', 'abc', 3);"
+		printf(0, "Starting initial setup...")
+		initial_sql_str = strings.Replace(initial_sql_str, "DBNAME", config.DBname, -1)
+		initial_sql_str = strings.Replace(initial_sql_str, "DBPREFIX", config.DBprefix, -1)
+		initial_sql_str += "\nINSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcrypt_sum("password") + "', 'abc', 3);"
 		initial_sql_arr := strings.Split(initial_sql_str, ";")
 		initial_sql_str = ""
 
-		for _,statement := range initial_sql_arr {
+		for _, statement := range initial_sql_arr {
 			if statement != "" {
-				_,err := db.Exec(statement)
+				_, err := db.Exec(statement)
 				if err != nil {
-					fmt.Println("failed, see log for details.")
+					println(0, "failed, see log for details.")
 					error_log.Fatal(err.Error())
 					return
-				} 
+				}
 			}
 		}
-		fmt.Println("complete.")
+		println(0, "complete.")
 		needs_initial_setup = false
 		db_connected = true
 	}

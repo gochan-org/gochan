@@ -242,17 +242,22 @@ var manage_functions = map[string]ManageFunction{
 					html += err.Error()
 					return
 				}
-				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), "")
+				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board), ".html")
 				if err != nil {
 					html += err.Error()
 					return
 				}
-				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), "")
+				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), ".*")
 				if err != nil {
 					html += err.Error()
 					return
 				}
-				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), "")
+				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), ".*")
+				if err != nil {
+					html += err.Error()
+					return
+				}
+				_, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), ".*")
 				if err != nil {
 					html += err.Error()
 					return

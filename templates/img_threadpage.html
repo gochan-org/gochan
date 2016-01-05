@@ -100,30 +100,33 @@
 		<hr />
 		<div id="right-bottom-content">
 			<div id="report-delbox">
-					<input type="hidden" name="board" value="{{$board.Dir}}" />
-					<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
-					Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" value="Report" />
+				<input type="hidden" name="board" value="{{$board.Dir}}" />
+				<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
+				Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" value="Report" />
 			</div>
 		</div>
 	</form>
 	<div id="left-bottom-content">
 		<table id="pages">
-			<tr><td>{{if gt $op.CurrentPage 1}}
+			<tr>
+				<td><a href="{{$config.SiteWebfolder}}{{$board.Dir}}/">Return</a></td>
+				<td>{{if gt $op.CurrentPage 1}}
 						<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}p{{subtract $op.CurrentPage 1}}.html">
 							<input type="submit" value="Previous" />
 						</form>
-					{{else}}Previous{{end}}</td>
-			<td>[<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}.html">Index</a>]{{range $i,$_ := makeLoop $op.NumPages}} [{{if eq $i (subtract $op.CurrentPage 1)}}<b>{{end}}<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}p{{add $i 1}}.html">{{add $i 1}}</a>{{if eq $i (subtract $op.CurrentPage 1)}}</b>{{end}}]{{end}}</td>
+					{{else}}Previous{{end}}
+				</td>
+			<td>[<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}.html">All</a>]{{range $i,$_ := makeLoop $op.NumPages}} [{{if eq $i (subtract $op.CurrentPage 1)}}<b>{{end}}<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}p{{add $i 1}}.html">{{add $i 1}}</a>{{if eq $i (subtract $op.CurrentPage 1)}}</b>{{end}}]{{end}}</td>
 			<td>{{if lt $op.CurrentPage $op.NumPages}}
-				<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}p{{add $op.CurrentPage 1}}.html">
-						<input type="submit" value="Next" />
-					</form>
-					{{else}}Next{{end}}</td></tr>
-			</table>
-			<span id="boardmenu-bottom">
+			<form method="GET" action="{{$config.SiteWebfolder}}{{$board.Dir}}/res/{{$op.ID}}p{{add $op.CurrentPage 1}}.html">
+				<input type="submit" value="Next" />
+			</form>
+			{{else}}Next{{end}}</td></tr>
+		</table>
+		<span id="boardmenu-bottom">
 				[{{range $i, $boardlink := $board_arr}}  {{if gt $i 0}}/{{end}} <a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a> {{end}}]
-			</span>
-		</div>
+		</span>
+	</div>
 	</div>
 	<div id="footer">
 		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />
