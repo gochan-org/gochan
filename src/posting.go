@@ -187,7 +187,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 
 		// Write to board.html for the first page.
 		printf(1, "Current page: %s/%d\n", board.Dir, board.CurrentPage)
-		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR, 0777)
+		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			errortext = "Failed opening /" + board.Dir + "/board.html: " + err.Error()
 			html += errortext + "<br />\n"
@@ -234,9 +234,9 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			if board.CurrentPage == 0 {
 				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, "board.html")
 			} else {
-				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num+1)+".html")
+				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html")
 			}
-			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR, 0777)
+			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 			if err != nil {
 				errortext = "Failed opening board page: " + err.Error()
 				html += errortext + "<br />\n"
@@ -335,7 +335,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
 
 	current_page_filepath := path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html")
-	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR, 0777)
+	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
 		html += errortext + "<br />\n"
@@ -369,7 +369,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		current_page_filepath = path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
 
 		printf(1, "Current threadpage file path: %s\n", current_page_filepath)
-		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR, 0777)
+		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
 			html += errortext + "<br />\n"
@@ -399,7 +399,7 @@ func buildFrontPage() (html string) {
 	var recent_posts_arr []interface{}
 	var errortext string
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
-	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR, 0777)
+	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	defer func() {
 		if front_file != nil {
 			front_file.Close()
