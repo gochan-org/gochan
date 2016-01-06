@@ -123,7 +123,7 @@ var funcMap = template.FuncMap{
 		return
 	},
 	"getThumbnailFilename": func(name string) string {
-		if name == "" {
+		if name == "" || name == "deleted" {
 			return ""
 		}
 		if name[len(name)-3:] == "gif" || name[len(name)-3:] == "gif" {
@@ -152,6 +152,9 @@ var funcMap = template.FuncMap{
 			filetype = "jpg"
 		}
 		index := strings.LastIndex(img, ".")
+		if index < 0 || index > len(img) {
+			return ""
+		}
 		return img[0:index] + "t." + filetype
 	},
 }
