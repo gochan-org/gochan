@@ -244,7 +244,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			}
 
 			if file_only {
-				if filename != "" {
+                
+				if filename != "" && filename != "deleted" {
 					filetype = filename[strings.Index(filename, ".")+1:]
 					filename = filename[:strings.Index(filename, ".")]
 					err := os.Remove(path.Join(config.DocumentRoot, board, "/src/"+filename+"."+filetype))
