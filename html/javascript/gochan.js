@@ -11,6 +11,7 @@ var settings_arr = [];
 var current_staff;
 var lightbox_css_added = false;
 var dropdown_div_created = false;
+var qr_enabled = false;
 
 var TopBarButton = function(title,callback_open, callback_close) {
 	this.title = title;
@@ -149,14 +150,32 @@ function changeFrontPage(page_name) {
 	});
 }
 
+
+// heavily based on 4chan's quote() function, with a few tweaks
+function quote(e) {
+    var msgbox_id = "postmsg";
+    if(qr_enabled) msgbox_id = "postmsg-qr";
+    
+    if (document.selection) {
+        document.getElementById(msgbox_id).focus();
+        var t = document.getselection.createRange();
+        t.text = ">>" + e + "\n"
+    } else if (document.getElementById(msgbox_id).selectionStart || "0" == document.getElementById(msgbox_id).selectionStart) {
+        var n = document.getElementById(msgbox_id).selectionStart,
+        o = document.getElementById(msgbox_id).selectionEnd;
+        document.getElementById(msgbox_id).value = document.getElementById(msgbox_id).value.substring(0, n) + ">>" + e + "\n" + document.getElementById(msgbox_id).value.substring(o, document.getElementById(msgbox_id).value.length)
+    } else document.getElementById(msgbox_id).value += ">>" + e + "\n"
+    window.scroll(0,document.getElementById(msgbox_id).offsetTop-48);
+}
+
 function deletePost(id) {
-	var password = prompt("Password")
-	window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password"
+	var password = prompt("Password");
+	window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password";
 }
 
 function deleteCheckedPosts() {
 	if(confirm('Are you sure you want to delete these posts?') == true) {
-		form = $jq("form#main-form");
+		var form = $jq("form#main-form");
 		form.append("<input type=\"hidden\" name=\"action\" value=\"delete\" ");
 		form.get(0).submit();
 		return true;
@@ -341,7 +360,7 @@ $jq(document).ready(function() {
 		}
 	});
 
-	// set thumbnails to expand when clicked
+    // set thumbnails to expand when clicked
 	var thumbnails = document.getElementsByClassName("thumbnail");
 	for(var i = 0; i < thumbnails.length; i++) {
 		var is_thumb = true;
