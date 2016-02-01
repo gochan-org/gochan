@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+    "html"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -86,6 +87,20 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
+    "truncateString": func(msg string, limit int, ellipsis bool) string {
+        if len(msg) > limit {
+            if ellipsis {
+                return msg[:limit] + "..."
+            } else {
+                return msg[:limit]
+            }
+        } else {
+            return msg
+        }
+    },
+    "unescapeString": func(a string) string {
+        return html.UnescapeString(a)
+    },
 	"intEq": func(a, b int) bool {
 		return a == b
 	},

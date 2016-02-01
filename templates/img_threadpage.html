@@ -2,7 +2,12 @@
 <html>
 <head>
 	<meta charset="UTF-8">
-	<title>{{$board.Title}}</title>
+    {{if stringNeq $op.Subject ""}}
+        <title>/{{$board.Dir}}/ - {{$unescaped_subject := unescapeString $op.Subject}}{{truncateString $unescaped_subject 20 true}}</title>
+    {{else}}{{if stringNeq $op.Message ""}}
+        <title>/{{$board.Dir}}/ - {{$unescaped_subject := unescapeString $op.Message}}{{truncateString $unescaped_subject 20 true}}</title>
+    {{end}}{{end}}
+	<title>/{{$board.Dir}} - {{$board.Title}}</title>
 	<script type="text/javascript" src="/javascript/jquery-1.10.2.min.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
@@ -50,9 +55,9 @@
 			<input type="hidden" name="threadid" value="{{$op.ID}}" />
 			<input type="hidden" name="boardid" value="{{$op.BoardID}}" />
 			<table id="postbox-static">
-				<tr><th class="postblock">Name</th><td><input type="text" id="postname" name="postname" maxlength="75" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
-				<tr><th class="postblock">Email</th><td><input type="text" id="postemail" name="postemail" maxlength="75" size="28" /></td></tr>
-				<tr><th class="postblock">Subject</th><td><input type="text" name="postsubject" maxlength="75" size="35" /><input type="submit" value="Post"/></td></tr>
+				<tr><th class="postblock">Name</th><td><input type="text" id="postname" name="postname" maxlength="50" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
+				<tr><th class="postblock">Email</th><td><input type="text" id="postemail" name="postemail" maxlength="50" size="28" /></td></tr>
+				<tr><th class="postblock">Subject</th><td><input type="text" name="postsubject" maxlength="100" size="35" /><input type="submit" value="Post"/></td></tr>
 				<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="postmsg" id="postmsg"></textarea></td></tr>
 				<tr><th class="postblock">File</th><td><input name="imagefile" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
 				<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
