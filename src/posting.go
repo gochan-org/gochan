@@ -287,7 +287,6 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 
 // buildThreadPages builds the pages for a thread given by a PostTable object.
 func buildThreadPages(op *PostTable) (html string) {
-	printf(1, "OP: %d\n", op.ID)
 	var board_dir string
 	var replies []interface{}
 	var interfaces []interface{}
@@ -312,9 +311,6 @@ func buildThreadPages(op *PostTable) (html string) {
 		println(1, errortext)
 		return
 	}
-	printf(1, "Number of replies for /%s/%d: %d\n", board_dir, op.BoardID, len(replies))
-
-	printf(1, "Building main page for /%s/%d\n", board_dir, op.BoardID)
 	os.Remove(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"))
 
 	thread_pages := paginate(config.PostsPerThreadPage, replies)
@@ -324,8 +320,6 @@ func buildThreadPages(op *PostTable) (html string) {
 	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), "^"+strconv.Itoa(op.ID)+"p")
 
 	op.NumPages = len(thread_pages)
-	printf(1, "Number of pages to build for /%s/%d: %d\n", board_dir, op.ID, op.NumPages)
-
 	// build main page
 	page = append([]interface{}{op}, replies...)
 	interfaces = append(interfaces, config,
@@ -525,6 +519,21 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 		return interfaces, nil
 	}
 	return interfaces, nil
+}
+
+func sinceLastPost(post *PostTable) int {
+	var oldpost PostTable
+	err := db.QueryRow("SELECT `timestamp` FROM `" + config.DBprefix + "posts` WHERE `ip` = '" + post.IP + "' ORDER BY `timestamp` DESC LIMIT 1").Scan(&oldpost.Timestamp)
+
+	
+	since := time.Since(oldpost.Timestamp)
+	if err == sql.ErrNoRows {
+		// no posts by that IP.
+        return -1
+	} else {
+		return int(since.Seconds())
+	}
+	return -1
 }
 
 func createThumbnail(image_obj image.Image, size string) image.Image {
@@ -826,6 +835,15 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		return
 	}
 
+	post_delay := sinceLastPost(&post) 
+	if post.ParentID == 0 && post_delay < config.NewThreadDelay {
+		server.ServeErrorPage(w, "Please wait before making a new thread.")
+		return
+	} else if post.ParentID > 0 && post_delay < config.ReplyDelay {
+		server.ServeErrorPage(w, "Please wait before making a reply.")
+		return
+	}
+
 	isbanned, err := checkBannedStatus(&post, &w)
 	if err != nil {
 		errortext = "Error in checkBannedStatus: " + err.Error()
@@ -932,7 +950,7 @@ func parseBacklinks(post string, boardid int) string {
 			} else {
 				_, err := strconv.Atoi(linked_post)
 				if err != nil {
-					fmt.Println(">>letters:  " + linked_post)
+					println(1, ">>letters:  " + linked_post)
 					// something like >>letters
 					continue
 				}

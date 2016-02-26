@@ -271,9 +271,9 @@ func printf(v int, format string, a ...interface{}) {
 	}
 }
 
-func println(v int, s string) {
+func println(v int, a ...interface{}) {
 	if config.Verbosity >= v {
-		fmt.Println(s)
+		fmt.Println(a...)
 	}
 }
 
