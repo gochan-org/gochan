@@ -834,14 +834,15 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		server.ServeErrorPage(w, "Post must contain a message if no image is uploaded.")
 		return
 	}
-
 	post_delay := sinceLastPost(&post) 
-	if post.ParentID == 0 && post_delay < config.NewThreadDelay {
-		server.ServeErrorPage(w, "Please wait before making a new thread.")
-		return
-	} else if post.ParentID > 0 && post_delay < config.ReplyDelay {
-		server.ServeErrorPage(w, "Please wait before making a reply.")
-		return
+	if post_delay > -1 {
+		if post.ParentID == 0 && post_delay < config.NewThreadDelay {
+			server.ServeErrorPage(w, "Please wait before making a new thread.")
+			return
+		} else if post.ParentID > 0 && post_delay < config.ReplyDelay {
+			server.ServeErrorPage(w, "Please wait before making a reply.")
+			return
+		}
 	}
 
 	isbanned, err := checkBannedStatus(&post, &w)
