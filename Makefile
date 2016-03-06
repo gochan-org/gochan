@@ -1,6 +1,6 @@
 GOCHAN_VERBOSE=0
 GOCHAN_VERSION=0.9
-GOCHAN_BUILDTIME=$(shell date +%y%m%d.%H%m)
+GOCHAN_BUILDTIME=$(shell date +%y%m%d.%H%M)
 GOCHAN_EXT=""
 
 CGO_ENABLED=0
