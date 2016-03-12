@@ -178,6 +178,7 @@ table#pages td {
 }
 
 .post-text {
+	white-space: pre-wrap;
 	padding: 8px;
 }
 

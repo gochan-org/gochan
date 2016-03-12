@@ -191,7 +191,8 @@ type PostTable struct {
 	Tripcode         string
 	Email            string
 	Subject          string
-	Message          string
+	MessageText      string
+	MessageHTML      string
 	Password         string
 	Filename         string
 	FilenameOriginal string

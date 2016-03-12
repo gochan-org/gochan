@@ -150,7 +150,7 @@ func getPostArr(sql string) (posts []interface{}, err error) {
 	for rows.Next() {
 		var post PostTable
 		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
-			&post.Email, &post.Subject, &post.Message, &post.Password, &post.Filename,
+			&post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password, &post.Filename,
 			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW,
 			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp,
 			&post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped,
@@ -272,6 +272,10 @@ func printf(v int, format string, a ...interface{}) {
 }
 
 func println(v int, a ...interface{}) {
+	/*if fmt.Sprintf("%s", a) == "sql: no rows in result set" { 
+		panic(a)
+	}*/
+	
 	if config.Verbosity >= v {
 		fmt.Println(a...)
 	}

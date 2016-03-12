@@ -168,7 +168,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	}
 
 	num, _ := deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir), "\\d.html$")
-	printf(1, "Number of files deleted: %d\n", num)
+	printf(2, "Number of files deleted: %d\n", num)
 	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickied_threads, nonstickied_threads...)
 	if len(threads) == 0 {
@@ -229,7 +229,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
 
 			// Write to board.html for the first page.
-			printf(1, "Current board page: %s/%d\n", board.Dir, board.CurrentPage)
 			var current_page_filepath string
 			if board.CurrentPage == 0 {
 				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, "board.html")
@@ -349,7 +348,6 @@ func buildThreadPages(op *PostTable) (html string) {
 	println(1, "Built /"+board_dir+"/"+strconv.Itoa(op.ID)+" successfully")
 
 	for page_num, page_posts := range thread_pages {
-		printf(1, "Number of threads on page %d of /%s/%d: %d\n", page_num, board_dir, op.BoardID, len(page_posts))
 		op.CurrentPage = page_num
 		interfaces = nil
 		interfaces = append(interfaces, config,
@@ -362,7 +360,6 @@ func buildThreadPages(op *PostTable) (html string) {
 		var current_page_filepath string
 		current_page_filepath = path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
 
-		printf(1, "Current threadpage file path: %s\n", current_page_filepath)
 		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
@@ -610,7 +607,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable, bump bool) sql.Resu
 	if post.ParentID == 0 {
 		post_sql_str += "`bumped`,"
 	}
-	post_sql_str += "`stickied`,`locked`) VALUES(" + strconv.Itoa(post.BoardID) + "," + strconv.Itoa(post.ParentID) + ",'" + post.Name + "','" + post.Tripcode + "','" + post.Email + "','" + post.Subject + "','" + post.Message + "','" + post.Password + "'"
+	post_sql_str += "`stickied`,`locked`) VALUES(" + strconv.Itoa(post.BoardID) + "," + strconv.Itoa(post.ParentID) + ",'" + post.Name + "','" + post.Tripcode + "','" + post.Email + "','" + post.Subject + "','" + post.MessageHTML + "','" + post.Password + "'"
 	if post.Filename != "" {
 		post_sql_str += ",'" + post.Filename + "','" + post.FilenameOriginal + "','" + post.FileChecksum + "'," + strconv.Itoa(int(post.Filesize)) + "," + strconv.Itoa(post.ImageW) + "," + strconv.Itoa(post.ImageH) + "," + strconv.Itoa(post.ThumbW) + "," + strconv.Itoa(post.ThumbH)
 	}
@@ -645,6 +642,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	start_time := benchmarkTimer("makePost", time.Now(), true)
 	request = *r
 	writer = w
+	var max_message_length int
 	var errortext string
 
 	var post PostTable
@@ -678,9 +676,19 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		post.Email = ""
 	}
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
-	post.Message = escapeString(strings.Replace(html.EscapeString(request.FormValue("postmsg")), "\n", "<br />", -1))
+	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")),"\\r\\n")
 
-	post.Message = parseBacklinks(post.Message, post.BoardID)
+	err := db.QueryRow("SELECT `max_message_length` FROM `" + config.DBprefix + "boards` WHERE `id` = " + strconv.Itoa(post.BoardID)).Scan(&max_message_length)
+	if err != nil {
+		server.ServeErrorPage(w, "Requested board does not exist.")
+		error_log.Print("requested board does not exist. Error: " + err.Error())
+	}
+	if len(post.MessageText) > max_message_length {
+		server.ServeErrorPage(w, "Post body is too long")
+		return 
+	}
+	post.MessageHTML = formatMessage(html.EscapeString(post.MessageText),post.BoardID)
+
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	post_name_cookie := strings.Replace(url.QueryEscape(post_name), "+", "%20", -1)
 	url.QueryEscape(post_name_cookie)
@@ -810,7 +818,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					if post.ParentID == 0 {
 						thumbnail = createThumbnail(img, "op")
 						catalog_thumbnail = createThumbnail(img, "catalog")
-						err = saveImage(catalog_thumb_path, &catalog_thumbnail)
+						err = imaging.Save(catalog_thumbnail, catalog_thumb_path)
 						if err != nil {
 							server.ServeErrorPage(w, err.Error())
 							return
@@ -818,7 +826,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					} else {
 						thumbnail = createThumbnail(img, "reply")
 					}
-					err = saveImage(thumb_path, &thumbnail)
+					err = imaging.Save(thumbnail, thumb_path)
 					if err != nil {
 						println(1, err.Error())
 						error_log.Println(err.Error())
@@ -830,7 +838,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		}
 	}
 
-	if post.Message == "" && post.Filename == "" {
+	if strings.TrimSpace(post.MessageText) == "" && post.Filename == "" {
 		server.ServeErrorPage(w, "Post must contain a message if no image is uploaded.")
 		return
 	}
@@ -880,13 +888,10 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	postid, _ := result.LastInsertId()
 	post.ID = int(postid)
 
-	parsed_backlinks := parseBacklinks(post.Message, post.BoardID)
-	if post.Message != parsed_backlinks {
-		_, err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.Message + "' WHERE `id` = " + strconv.Itoa(int(post.ID)))
-		if err != nil {
-			server.ServeErrorPage(writer, err.Error())
-			return
-		}
+	_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.MessageHTML + "', `message_raw` = '" + post.MessageText + "' WHERE `id` = " + strconv.Itoa(int(post.ID)) + " AND `boardid` = " + strconv.Itoa(post.BoardID))
+	if err != nil {
+		server.ServeErrorPage(writer, err.Error())
+		return
 	}
 
 	boards, _ := getBoardArr("")
@@ -899,7 +904,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		if post.ParentID == 0 {
 			http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
-			http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ParentID)+".html", http.StatusFound)
+			http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
 		}
 	} else {
 		http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/", http.StatusFound)
@@ -908,83 +913,63 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 }
 
 func parseBacklinks(post string, boardid int) string {
-	whitespace_regex, err := regexp.Compile(whitespace_match)
-	var post_words []string
-	if err != nil {
-		// since the whitespace_match variable is built-in, there is no way this should happen, unless you mess with the code
-		error_log.Print(err.Error())
-		return post
-	} else {
-		post = strings.Replace(post, "<br />", "\n", -1)
-		// split the post into indeividual words
-		post_words = whitespace_regex.Split(post, -1)
-	}
-
-	gt := "&gt;"
+	whitespace_regex,_ := regexp.Compile(whitespace_match)
+	post_words := whitespace_regex.Split(post, -1)
+	backlink_match,_ := regexp.Compile("^[0-9]*$")
 	// go through each word and if it is a backlink, check to see if it points to a valid post
 	for _, word := range post_words {
 		var linked_post string
-		if strings.Index(word, gt+gt) == 0 {
-			if strings.Index(string(word[8:]), gt+gt) > 0 {
-				// >>345435>>234, this may work on some imageboards, but it's bad and you shouldn't do that
+		if strings.Index(word, "&gt;&gt;") == 0 {
+			linked_post = string(word[8:])
+			if !backlink_match.MatchString(linked_post) {
+				println(1, linked_post + " is not a valid backlink")
 				continue
 			}
-
-			linked_post = strings.Replace(word, gt+gt, "", -1)
-			if linked_post == "" {
-				// fmt.Println("empty")
-				continue
-			}
-
-			linked_post = strings.Replace(linked_post, "\\r", "", -1)
-			linked_post = strings.Replace(linked_post, "<br", "", -1)
-
+			/*
+			TODO: cross-board post linking
 			if string(linked_post[0]) == "/" {
 				board_post_arr := strings.Split(linked_post, "/")
 				if len(board_post_arr) == 3 {
 					// >>/board/1234
 				} else {
-					// fmt.Println(">>11/11")
 					// something like >>11/111
 					continue
 				}
+			}
+			*/
+			var parent_id string
+			var board_dir string
+			//err = db.QueryRow("SELECT `parentid`, `" + config.DBprefix + "boards`.`dir` as `boarddir` FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `deleted_timestamp` = '" + nil_timestamp + "' AND `id` = " + linked_post).Scan(&parent_id,&board_dir)
+			err := db.QueryRow("SELECT `"+config.DBprefix+"boards`.`dir` AS boarddir, `"+config.DBprefix+"posts`.`parentid` AS parentid FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` WHERE `"+config.DBprefix+"posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` AND `"+config.DBprefix+"posts`.`id` = "+linked_post).Scan(&board_dir, &parent_id)
+
+			if err == sql.ErrNoRows {
+				// post doesn't exist on this board
+				// format the backlink with a strikethrough
+				continue
+			}
+
+			if parent_id == "0" {
+				// this is a thread
+				post = strings.Replace(post, "&gt;&gt;"+linked_post, "<a href=\"/"+board_dir+"/res/"+linked_post+".html#"+linked_post+"\">&gt;&gt;"+linked_post+"</a>", -1)
 			} else {
-				_, err := strconv.Atoi(linked_post)
-				if err != nil {
-					println(1, ">>letters:  " + linked_post)
-					// something like >>letters
-					continue
-				}
-
-				var parent_id string
-				var board_dir string
-				//err = db.QueryRow("SELECT `parentid`, `" + config.DBprefix + "boards`.`dir` as `boarddir` FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `deleted_timestamp` = '" + nil_timestamp + "' AND `id` = " + linked_post).Scan(&parent_id,&board_dir)
-				err = db.QueryRow("SELECT `"+config.DBprefix+"boards`.`dir` AS boarddir, `"+config.DBprefix+"posts`.`parentid` AS parentid FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` WHERE `"+config.DBprefix+"posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` AND `"+config.DBprefix+"posts`.`id` = "+linked_post).Scan(&board_dir, &parent_id)
-
-				if err == sql.ErrNoRows {
-					// fmt.Println("post doesn't exist:  " +  linked_post)
-					// post doesn't exist on this board
-					// format the backlink with a strikethrough
-					continue
-				}
-
-				if parent_id == "0" {
-					// this is a thread
-					post = strings.Replace(post, gt+gt+linked_post, "<a href=\"/"+board_dir+"/res/"+linked_post+".html#"+linked_post+"\">&gt;&gt;"+linked_post+"</a>", -1)
-				} else {
-					post = strings.Replace(post, gt+gt+linked_post, "<a href=\"/"+board_dir+"/res/"+parent_id+".html#"+linked_post+"\">&gt;&gt;"+linked_post+"</a>", -1)
-				}
+				post = strings.Replace(post, "&gt;&gt;"+linked_post, "<a href=\"/"+board_dir+"/res/"+parent_id+".html#"+linked_post+"\">&gt;&gt;"+linked_post+"</a>", -1)
 			}
 		}
 	}
-	post = strings.Replace(post, "\n", "<br />", -1)
 	return post
 }
 
-func shortenPostForBoardPage(post *string) {
-
-}
-
-func saveImage(path string, image_obj *image.Image) error {
-	return imaging.Save(*image_obj, path)
+func formatMessage(post string, boardid int) string {
+	post_lines := strings.Split(post,"\\r\\n")
+	pre_whitespace,_ := regexp.Compile("^[\000-\040]*")
+	post_whitespace,_ := regexp.Compile("[\000-\040]*$")
+	
+	for i,line := range post_lines {
+		trimmed_line := strings.TrimSpace(line)
+		line = parseBacklinks(line,boardid)
+		if strings.Index(trimmed_line,"&gt;") == 0 && strings.Index(trimmed_line,"&gt;&gt;") != 0 {
+			post_lines[i] = pre_whitespace.FindString(line) + "<span class=\"greentext\">" + line + "</span>" + post_whitespace.FindString(line)
+		}
+	}
+	return strings.Join(post_lines,"<br />")
 }

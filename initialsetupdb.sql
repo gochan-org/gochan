@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS `DBPREFIXposts` (
 	`email` VARCHAR(50) NOT NULL,
 	`subject` VARCHAR(100) NOT NULL,
 	`message` TEXT NOT NULL,
+	`message_raw` TEXT NOT NULL,
 	`password` VARCHAR(45) NOT NULL,
 	`filename` VARCHAR(45) NOT NULL DEFAULT '',
 	`filename_original` VARCHAR(45) NOT NULL DEFAULT '',
