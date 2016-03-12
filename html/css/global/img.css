@@ -161,7 +161,7 @@ table#pages td {
 
 .reply {
 	margin-bottom: 4px;
-	
+
 	padding:4px 8px 4px 8px;
 	display:inline-block;
 	max-width: 100%;
@@ -277,4 +277,8 @@ input[type=file] {
 
 table#postbox-static {
 	margin: 0px auto;
+}
+
+.greentext {
+  color: #789922;
 }
