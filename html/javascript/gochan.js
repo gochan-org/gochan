@@ -13,6 +13,44 @@ var lightbox_css_added = false;
 var dropdown_div_created = false;
 var qr_enabled = false;
 
+var movable_postpreviews = true;
+var expandable_postrefs = true;
+
+function preparePostPreviews(is_inline) {
+	var m_type = "mousemove";
+	if(!movable_postpreviews) m_type = "mouseover";
+	if(expandable_postrefs) $("a.postref").attr("href","javascript:void(0);");
+	var hvr_str = "a.postref";
+	if(is_inline) hvr_str = "div.inlinepostprev "+hvr_str;
+	$(hvr_str).hover(function(){
+		$(document.body).append($("div#"+this.innerHTML.replace("&gt;&gt;","")).clone().attr("class","postprev"))
+		$(document).bind(m_type, function(e){
+		    $('.postprev').css({
+		       left:  e.pageX + 8,
+		       top:   e.pageY + 8
+		    });
+		})
+	},
+	function() {
+		$(".postprev").remove();
+	});
+
+	if(expandable_postrefs) {
+		var clk_str = "a.postref";
+		if(is_inline) clk_str = "div.inlinepostprev "+clk_str;
+		$(clk_str).click(function() {
+			if($(this).next().attr("class") != "inlinepostprev") {
+				$(".postprev").remove();
+				$(this).after($("div#"+this.innerHTML.replace("&gt;&gt;","")).clone().attr({"class":"inlinepostprev","id":"i"+$(this).parent().attr("id")+"-"+($(this).parent().find("div#i"+$(this).parent().attr("id")).length+1)}));
+				console.debug("honk");
+				preparePostPreviews(true);
+			} else {
+				$(this).next().remove();
+			}		
+		});
+	}
+}
+
 var TopBarButton = function(title,callback_open, callback_close) {
 	this.title = title;
 	$jq("div#topbar").append("<a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\">"+title+down_arrow_symbol+"</a>");

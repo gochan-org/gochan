@@ -23,7 +23,10 @@ import (
 	"time"
 )
 
-const whitespace_match = "[\000-\040]"
+const (
+	whitespace_match = "[\000-\040]"
+	gt = "&gt;"
+)
 
 var (
 	last_post    PostTable
@@ -344,8 +347,9 @@ func buildThreadPages(op *PostTable) (html string) {
 		error_log.Print(errortext)
 		return
 	}
-	html += "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully<br />\n"
-	println(1, "Built /"+board_dir+"/"+strconv.Itoa(op.ID)+" successfully")
+	success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully" 
+	html += success_text + "<br />\n"
+	println(2, success_text)
 
 	for page_num, page_posts := range thread_pages {
 		op.CurrentPage = page_num
@@ -379,7 +383,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		}
 		success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + "p" + strconv.Itoa(op.CurrentPage+1) + " successfully"
 		html += success_text + "<br />\n"
-		println(1, success_text)
+		println(2, success_text)
 	}
 	return
 }
@@ -481,7 +485,6 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 	var ban_entry BanlistTable
 	// var count int
 	// var search string
-
 	err := db.QueryRow("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = '"+post.IP+"'").Scan(&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
 	var interfaces []interface{}
 
@@ -683,11 +686,13 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		server.ServeErrorPage(w, "Requested board does not exist.")
 		error_log.Print("requested board does not exist. Error: " + err.Error())
 	}
+
 	if len(post.MessageText) > max_message_length {
 		server.ServeErrorPage(w, "Post body is too long")
 		return 
 	}
-	post.MessageHTML = formatMessage(html.EscapeString(post.MessageText),post.BoardID)
+	post.MessageHTML = html.EscapeString(post.MessageText)
+	formatMessage(&post)
 
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	post_name_cookie := strings.Replace(url.QueryEscape(post_name), "+", "%20", -1)
@@ -712,7 +717,6 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 	//http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 
-	// post.IP = request.RemoteAddr
 	post.IP = getRealIP(&request)
 	post.Timestamp = time.Now()
 	post.PosterAuthority = getStaffRank()
@@ -912,64 +916,45 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	benchmarkTimer("makePost", start_time, false)
 }
 
-func parseBacklinks(post string, boardid int) string {
-	whitespace_regex,_ := regexp.Compile(whitespace_match)
-	post_words := whitespace_regex.Split(post, -1)
-	backlink_match,_ := regexp.Compile("^[0-9]*$")
-	// go through each word and if it is a backlink, check to see if it points to a valid post
-	for _, word := range post_words {
-		var linked_post string
-		if strings.Index(word, "&gt;&gt;") == 0 {
-			linked_post = string(word[8:])
-			if !backlink_match.MatchString(linked_post) {
-				println(1, linked_post + " is not a valid backlink")
-				continue
-			}
-			/*
-			TODO: cross-board post linking
-			if string(linked_post[0]) == "/" {
-				board_post_arr := strings.Split(linked_post, "/")
-				if len(board_post_arr) == 3 {
-					// >>/board/1234
-				} else {
-					// something like >>11/111
-					continue
-				}
-			}
-			*/
-			var parent_id string
-			var board_dir string
-			//err = db.QueryRow("SELECT `parentid`, `" + config.DBprefix + "boards`.`dir` as `boarddir` FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` WHERE `deleted_timestamp` = '" + nil_timestamp + "' AND `id` = " + linked_post).Scan(&parent_id,&board_dir)
-			err := db.QueryRow("SELECT `"+config.DBprefix+"boards`.`dir` AS boarddir, `"+config.DBprefix+"posts`.`parentid` AS parentid FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` WHERE `"+config.DBprefix+"posts`.`deleted_timestamp` = \""+nil_timestamp+"\"  AND `boardid` = `"+config.DBprefix+"boards`.`id` AND `"+config.DBprefix+"posts`.`id` = "+linked_post).Scan(&board_dir, &parent_id)
+func formatMessage(post *PostTable) {
+	message := post.MessageHTML
 
-			if err == sql.ErrNoRows {
-				// post doesn't exist on this board
-				// format the backlink with a strikethrough
-				continue
-			}
-
-			if parent_id == "0" {
-				// this is a thread
-				post = strings.Replace(post, "&gt;&gt;"+linked_post, "<a href=\"/"+board_dir+"/res/"+linked_post+".html#"+linked_post+"\">&gt;&gt;"+linked_post+"</a>", -1)
-			} else {
-				post = strings.Replace(post, "&gt;&gt;"+linked_post, "<a href=\"/"+board_dir+"/res/"+parent_id+".html#"+linked_post+"\">&gt;&gt;"+linked_post+"</a>", -1)
-			}
-		}
-	}
-	return post
-}
-
-func formatMessage(post string, boardid int) string {
-	post_lines := strings.Split(post,"\\r\\n")
-	pre_whitespace,_ := regexp.Compile("^[\000-\040]*")
-	post_whitespace,_ := regexp.Compile("[\000-\040]*$")
-	
-	for i,line := range post_lines {
+	// prepare each line to be formatted
+	post_lines := strings.Split(message,"\\r\\n")
+	for i, line := range post_lines {
 		trimmed_line := strings.TrimSpace(line)
-		line = parseBacklinks(line,boardid)
-		if strings.Index(trimmed_line,"&gt;") == 0 && strings.Index(trimmed_line,"&gt;&gt;") != 0 {
-			post_lines[i] = pre_whitespace.FindString(line) + "<span class=\"greentext\">" + line + "</span>" + post_whitespace.FindString(line)
+		line_words := strings.Split(trimmed_line," ")
+		is_greentext := false // if true, append </span> to end of line
+		for w,word := range line_words {
+			if strings.LastIndex(word, gt+gt) == 0 {
+				//word is a backlink
+				_,err := strconv.Atoi(word[8:])
+				if err == nil {
+					// the link is in fact, a valid int
+					var board_dir string
+					var link_parent int
+					db.QueryRow("SELECT `dir`,`parentid` FROM " + config.DBprefix + "posts," + config.DBprefix + "boards WHERE " + config.DBprefix + "posts.id = '" + word[8:] + "';").Scan(&board_dir,&link_parent)
+					// get post board dir 
+
+					if board_dir == "" {
+						line_words[w] = "<a href=\"javascript:;\"><strike>" + word + "</strike></a>"
+					} else if link_parent == 0 {
+						line_words[w] = "<a href=\"/" + board_dir + "/res/" + word[8:] + ".html\">" + word + "</a>"
+					} else {
+						line_words[w] = "<a href=\"/" + board_dir + "/res/" + strconv.Itoa(link_parent) + ".html#" + word[8:] + "\">" + word + "</a>"
+					}
+				}
+			} else if strings.Index(word, gt) == 0 && w == 0 {
+				// word is at the beginning of a line, and is greentext
+				is_greentext = true
+				line_words[w] = "<span class=\"greentext\">" + word
+			}
 		}
+		line = strings.Join(line_words," ")
+		if is_greentext {
+			line += "</span>"
+		}
+		post_lines[i] = line
 	}
-	return strings.Join(post_lines,"<br />")
+	post.MessageHTML = strings.Join(post_lines,"<br />") 
 }
