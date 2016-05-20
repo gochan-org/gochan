@@ -413,7 +413,7 @@ func initConfig() {
 		println(0, "directories.log_dir not set in config.cfg, defaulting to "+config.LogDir)
 	}
 
-	access_log_f, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE, 0777)
+	access_log_f, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		println(0, "Couldn't open access log. Returned error: "+err.Error())
 		os.Exit(1)
@@ -422,7 +422,7 @@ func initConfig() {
 
 	}
 
-	error_log_f, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE, 0777)
+	error_log_f, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		println(0, "Couldn't open error log. Returned error: "+err.Error())
 		os.Exit(1)
@@ -430,7 +430,7 @@ func initConfig() {
 		error_log = log.New(error_log_f, "", log.Ltime|log.Ldate)
 	}
 
-	mod_log_f, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE, 0777)
+	mod_log_f, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		println(0, "Couldn't open mod log. Returned error: "+err.Error())
 	} else {
