@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
-	//"golang.org/x/crypto/bcrypt"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -272,10 +271,10 @@ func printf(v int, format string, a ...interface{}) {
 }
 
 func println(v int, a ...interface{}) {
-	/*if fmt.Sprintf("%s", a) == "sql: no rows in result set" { 
+	/*if fmt.Sprintf("%s", a) == "sql: no rows in result set" {
 		panic(a)
 	}*/
-	
+
 	if config.Verbosity >= v {
 		fmt.Println(a...)
 	}
