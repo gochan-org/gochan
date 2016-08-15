@@ -347,7 +347,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		error_log.Print(errortext)
 		return
 	}
-	success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully" 
+	success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully"
 	html += success_text + "<br />\n"
 	println(2, success_text)
 
@@ -525,7 +525,7 @@ func sinceLastPost(post *PostTable) int {
 	var oldpost PostTable
 	err := db.QueryRow("SELECT `timestamp` FROM `" + config.DBprefix + "posts` WHERE `ip` = '" + post.IP + "' ORDER BY `timestamp` DESC LIMIT 1").Scan(&oldpost.Timestamp)
 
-	
+
 	since := time.Since(oldpost.Timestamp)
 	if err == sql.ErrNoRows {
 		// no posts by that IP.
@@ -689,7 +689,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	if len(post.MessageText) > max_message_length {
 		server.ServeErrorPage(w, "Post body is too long")
-		return 
+		return
 	}
 	post.MessageHTML = html.EscapeString(post.MessageText)
 	formatMessage(&post)
@@ -726,10 +726,22 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
 	if !validReferrer(request) {
-		access_log.Print("Rejected post from possible spambot @ : " + request.RemoteAddr)
+		access_log.Print("Rejected post from possible spambot @ " + post.IP)
 		//TODO: insert post into temporary post table and add to report list
 		return
 	}
+
+	switch checkPostForSpam(post.IP, request.Header["User-Agent"][0], request.Referer(),
+	post.Name, post.Email, post.MessageText) {
+		case "discard":
+			access_log.Print("Akismet recommended discarding post from: " + post.IP)
+			return
+		case "spam":
+			access_log.Print("Akismet suggested post is spam from " + post.IP)
+			return
+		default:
+	}
+
 	file, handler, uploaderr := request.FormFile("imagefile")
 	if uploaderr != nil {
 		// no file was uploaded
@@ -846,7 +858,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		server.ServeErrorPage(w, "Post must contain a message if no image is uploaded.")
 		return
 	}
-	post_delay := sinceLastPost(&post) 
+	post_delay := sinceLastPost(&post)
 	if post_delay > -1 {
 		if post.ParentID == 0 && post_delay < config.NewThreadDelay {
 			server.ServeErrorPage(w, "Please wait before making a new thread.")
@@ -934,7 +946,7 @@ func formatMessage(post *PostTable) {
 					var board_dir string
 					var link_parent int
 					db.QueryRow("SELECT `dir`,`parentid` FROM " + config.DBprefix + "posts," + config.DBprefix + "boards WHERE " + config.DBprefix + "posts.id = '" + word[8:] + "';").Scan(&board_dir,&link_parent)
-					// get post board dir 
+					// get post board dir
 
 					if board_dir == "" {
 						line_words[w] = "<a href=\"javascript:;\"><strike>" + word + "</strike></a>"
@@ -956,5 +968,5 @@ func formatMessage(post *PostTable) {
 		}
 		post_lines[i] = line
 	}
-	post.MessageHTML = strings.Join(post_lines,"<br />") 
+	post.MessageHTML = strings.Join(post_lines,"<br />")
 }

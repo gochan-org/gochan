@@ -260,7 +260,7 @@ type Wrapper struct {
 
 type GochanConfig struct {
 	IName        string //used by our template parser
-	Domain       string
+	ListenIP       string
 	Port         int
 	FirstPage    []string
 	Error404Path string
@@ -327,6 +327,7 @@ type GochanConfig struct {
 
 	DateTimeFormat   string
 	DefaultBanReason string
+	AkismetAPIKey    string
 	EnableGeoIP      bool
 	GeoIPDBlocation  string // set to "cf" or the path to the db
 	MaxRecentPosts   int
@@ -347,9 +348,9 @@ func initConfig() {
 		os.Exit(2)
 	}
 	config.IName = "GochanConfig"
-	config.Domain, err = c.GetString("server", "domain")
+	config.ListenIP, err = c.GetString("server", "listen_ip")
 	if err != nil {
-		println(0, "server.domain not set in config.cfg, halting.")
+		println(0, "server.listen_ip not set in config.cfg, halting.")
 	}
 
 	config.Port, err = c.GetInt("server", "port")
@@ -510,6 +511,11 @@ func initConfig() {
 		config.SiteSlogan = ""
 	}
 
+	config.SiteDomain, err = c.GetString("site", "domain")
+	if err != nil {
+		config.SiteDomain = "example.com"
+	}
+
 	config.SiteWebfolder, err = c.GetString("site", "webfolder")
 	if err != nil {
 		println(0, "site.webfolder not set in config.cfg, halting.")
@@ -655,6 +661,11 @@ func initConfig() {
 	config.DefaultBanReason, err = c.GetString("misc", "default_ban_reason")
 	if err != nil {
 		config.DefaultBanReason = ""
+	}
+
+	config.AkismetAPIKey, err = c.GetString("misc", "akismet_api_key")
+	if err != nil {
+		config.AkismetAPIKey = ""
 	}
 
 	config.EnableGeoIP, err = c.GetBool("misc", "enable_geoip")

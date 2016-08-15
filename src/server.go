@@ -136,13 +136,16 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 }
 
 func initServer() {
-	listener, err := net.Listen("tcp", config.Domain+":"+strconv.Itoa(config.Port))
+	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
 	if err != nil {
-		fmt.Printf("Failed listening on "+config.Domain+":%d, see log for details", config.Port)
+		fmt.Printf("Failed listening on %s:%d, see log for details", config.ListenIP, config.Port)
 		error_log.Fatal(err.Error())
 	}
 	server = new(GochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request, interface{}))
+
+	// Check if Akismet API key is usable at startup.
+	checkAkismetAPIKey()
 
 	testfunc := func(writer http.ResponseWriter, response *http.Request, data interface{}) {
 		if writer != nil {
@@ -177,7 +180,6 @@ func getRealIP(r *http.Request) (ip string) {
 
 func validReferrer(request http.Request) (valid bool) {
 	if request.Referer() == "" || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain {
-		// if request.Referer() == "" || request.Referer()[7:len(config.Domain)+7] != config.Domain {
 		valid = false
 	} else {
 		valid = true
@@ -244,7 +246,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			}
 
 			if file_only {
-                
+
 				if filename != "" && filename != "deleted" {
 					filetype = filename[strings.Index(filename, ".")+1:]
 					filename = filename[:strings.Index(filename, ".")]

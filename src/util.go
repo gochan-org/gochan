@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -317,4 +318,59 @@ func Btoa(b bool) string {
 		return "1"
 	}
 	return "0"
+}
+
+func checkAkismetAPIKey() {
+	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {config.AkismetAPIKey}, "blog": {"http://" + config.SiteDomain}})
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		error_log.Print(err.Error())
+	}
+	if string(body) == "invalid" {
+		// This should disable the Akismet checks if the API key is not valid.
+		error_log.Print("Akismet API key is invalid, Akismet spam protection will be disabled.")
+		config.AkismetAPIKey = ""
+	}
+}
+
+func checkPostForSpam(userIp string, userAgent string, referrer string,
+	author string, email string, postContent string) string {
+	if config.AkismetAPIKey != "" {
+		client := &http.Client{}
+
+		req, err := http.NewRequest("POST", "https://" + config.AkismetAPIKey + "rest.akismet.com/1.1/comment-check",
+			strings.NewReader(url.Values{"blog": {"http://" + config.SiteDomain}, "user_ip": {userIp}, "user_agent": {userAgent}, "referrer": {referrer},
+			"comment_type": {"forum-post"}, "comment_author": {author}, "comment_author_email": {email},
+			"comment_content": {postContent}}.Encode()))
+		if err != nil {
+			error_log.Print(err.Error())
+			return "other_failure"
+		}
+		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
+		resp, err := client.Do(req)
+		if err != nil {
+			error_log.Print(err.Error())
+			return "other_failure"
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			error_log.Print(err.Error())
+			return "other_failure"
+		}
+		error_log.Print("Response from Akismet: " + string(body))
+
+		if string(body) == "true" {
+			if resp.Header["X-akismet-pro-tip"][0] == "discard" {
+				return "discard"
+			}
+			return "spam"
+		} else if string(body) == "invalid" {
+			return "invalid"
+		} else if string(body) == "false" {
+			return "ham"
+		}
+	}
+	return "other_failure"
 }
