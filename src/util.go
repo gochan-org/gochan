@@ -338,16 +338,18 @@ func checkPostForSpam(userIp string, userAgent string, referrer string,
 	author string, email string, postContent string) string {
 	if config.AkismetAPIKey != "" {
 		client := &http.Client{}
+		data := url.Values{"blog": {"http://" + config.SiteDomain}, "user_ip": {userIp}, "user_agent": {userAgent}, "referrer": {referrer},
+		"comment_type": {"forum-post"}, "comment_author": {author}, "comment_author_email": {email},
+		"comment_content": {postContent}}
 
 		req, err := http.NewRequest("POST", "https://" + config.AkismetAPIKey + ".rest.akismet.com/1.1/comment-check",
-			strings.NewReader(url.Values{"blog": {"http://" + config.SiteDomain}, "user_ip": {userIp}, "user_agent": {userAgent}, "referrer": {referrer},
-			"comment_type": {"forum-post"}, "comment_author": {author}, "comment_author_email": {email},
-			"comment_content": {postContent}}.Encode()))
+			strings.NewReader(data.Encode()))
 		if err != nil {
 			error_log.Print(err.Error())
 			return "other_failure"
 		}
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
 		if err != nil {
 			error_log.Print(err.Error())
@@ -362,7 +364,7 @@ func checkPostForSpam(userIp string, userAgent string, referrer string,
 		error_log.Print("Response from Akismet: " + string(body))
 
 		if string(body) == "true" {
-			if resp.Header["X-akismet-pro-tip"][0] == "discard" {
+			if pro_tip, ok := resp.Header["X-akismet-pro-tip"]; ok && pro_tip[0] == "discard" {
 				return "discard"
 			}
 			return "spam"
