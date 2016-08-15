@@ -339,7 +339,7 @@ func checkPostForSpam(userIp string, userAgent string, referrer string,
 	if config.AkismetAPIKey != "" {
 		client := &http.Client{}
 
-		req, err := http.NewRequest("POST", "https://" + config.AkismetAPIKey + "rest.akismet.com/1.1/comment-check",
+		req, err := http.NewRequest("POST", "https://" + config.AkismetAPIKey + ".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(url.Values{"blog": {"http://" + config.SiteDomain}, "user_ip": {userIp}, "user_agent": {userAgent}, "referrer": {referrer},
 			"comment_type": {"forum-post"}, "comment_author": {author}, "comment_author_email": {email},
 			"comment_content": {postContent}}.Encode()))
