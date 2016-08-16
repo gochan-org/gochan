@@ -142,7 +142,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				html += err.Error() + "<br />"
 			}
 			// Get the number of replies to this thread.
-			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&thread.NumReplies)
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
@@ -158,7 +158,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				html += err.Error() + "<br />"
 			}
 			// Get the number of replies to this thread.
-			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID)).Scan(&thread.NumReplies)
+			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&thread.NumReplies)
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
