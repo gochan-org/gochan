@@ -230,7 +230,7 @@ var manage_functions = map[string]ManageFunction{
 	"purgeeverything": {
 		Permissions: 3,
 		Callback: func() (html string) {
-			html = "Purging everything ^_^<br />"
+			html = "<img src=\"/css/purge.jpg\" />"
 			rows, err := db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`;")
 			if err != nil {
 				html += err.Error()
