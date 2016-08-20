@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type ManageFunction struct {
@@ -373,7 +374,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			return
 		}},
-	"managebans": {
+	"bans": {
 		Permissions: 1,
 		Callback: func() (html string) {
 			var ban_which string // user, image, or both
@@ -416,7 +417,7 @@ var manage_functions = map[string]ManageFunction{
 
 			html = "<h1>Ban user(s)</h1>\n" +
 				"<form method=\"POST\" action=\"/manage\">\n" +
-				"<input type=\"hidden\" name=\"action\" value=\"managebans\" />\n" +
+				"<input type=\"hidden\" name=\"action\" value=\"bans\" />\n" +
 				"<fieldset><legend>User(s)</legend>" +
 				"	<div id=\"ip\" class=\"ban-type-div\" style=\"width:100%%; display: inline;\">\n" +
 				"		<span style=\"font-weight: bold;\">IP address:</span> <input type=\"text\" name=\"ip\" /><br />\n" +
@@ -524,7 +525,7 @@ var manage_functions = map[string]ManageFunction{
 			html = current_staff + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
 			return
 		}},
-	"manageboards": {
+	"boards": {
 		Permissions: 3,
 		Callback: func() (html string) {
 			do := request.FormValue("do")
@@ -769,7 +770,7 @@ var manage_functions = map[string]ManageFunction{
 					}
 				}
 
-				html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=manageboards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
+				html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 				rows, err = db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`;")
 				if err != nil {
 					html += err.Error()
@@ -783,7 +784,7 @@ var manage_functions = map[string]ManageFunction{
 				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
 				html += fmt.Sprintf("<h2>Create new board</h2>"+
 					"<span id=\"board-creation-message\">%s</span><br />"+
-					"<form action=\"/manage?action=manageboards\" method=\"POST\">"+
+					"<form action=\"/manage?action=boards\" method=\"POST\">"+
 					"<input type=\"hidden\" name=\"do\" value=\"add\" />"+
 					"Directory <input type=\"text\" name=\"dir\" value=\"%s\" /><br />"+
 					"Order <input type=\"text\" name=\"order\" value=\"%d\" /><br />"+
@@ -876,17 +877,17 @@ var manage_functions = map[string]ManageFunction{
 			html = "<a href=\"javascript:void(0)\" id=\"logout\" class=\"staffmenu-item\">Log out</a><br />\n" +
 				"<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
-				html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"managestaff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
+				html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"purgeeverything\" class=\"staffmenu-item\">Purge everything!</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildall\" class=\"staffmenu-item\">Rebuild all</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildboards\" class=\"staffmenu-item\">Rebuild board pages</a><br />\n" +
-					"<a href=\"javascript:void(0)\" id=\"manageboards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
+					"<a href=\"javascript:void(0)\" id=\"boards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
 			if rank >= 2 {
 				html += "<b>Mod stuff</b><br />\n" +
-					"<a href=\"javascript:void(0)\" id=\"managebans\" class=\"staffmenu-item\">Ban User(s)</a><br />\n"
+					"<a href=\"javascript:void(0)\" id=\"bans\" class=\"staffmenu-item\">Ban User(s)</a><br />\n"
 			}
 
 			if rank >= 1 {
@@ -962,7 +963,7 @@ var manage_functions = map[string]ManageFunction{
 			os.Exit(0)
 			return
 		}},
-	"managestaff": {
+	"staff": {
 		Permissions: 3,
 		Callback: func() (html string) {
 			//do := request.FormValue("do")
@@ -1008,11 +1009,11 @@ var manage_functions = map[string]ManageFunction{
 				case staff.Rank == 1:
 					rank = "janitor"
 				}
-				html += "<tr><td>" + staff.Username + "</td><td>" + rank + "</td><td>" + staff.Boards + "</td><td>" + humanReadableTime(staff.AddedOn) + "</td><td><a href=\"/manage?action=managestaff&amp;do=del&amp;username=" + staff.Username + "\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+				html += "<tr><td>" + staff.Username + "</td><td>" + rank + "</td><td>" + staff.Boards + "</td><td>" + humanReadableTime(staff.AddedOn) + "</td><td><a href=\"/manage?action=staff&amp;do=del&amp;username=" + staff.Username + "\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 				iter += 1
 			}
 			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n" +
-				"<form action=\"/manage?action=managestaff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +
+				"<form action=\"/manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +
 				"\t<input type=\"hidden\" name=\"do\" value=\"add\" />\n" +
 				"\tUsername: <input id=\"username\" name=\"username\" type=\"text\" /><br />\n" +
 				"\tPassword: <input id=\"password\" name=\"password\" type=\"password\" /><br />\n" +

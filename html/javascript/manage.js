@@ -106,7 +106,7 @@ function makeNewStaff() {
 		var rank_sel = $jq("select#rank").val();
 		$jq.ajax({
 			method: 'POST',
-			url: webroot+"manage?action=managestaff",
+			url: webroot+"manage?action=staff",
 			data: {
 				"do":"add",
 				username: username_txt,
