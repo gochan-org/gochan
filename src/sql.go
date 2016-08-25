@@ -3,11 +3,12 @@ package main
 import (
 	"bytes"
 	"database/sql"
-	_ "github.com/ziutek/mymysql/godrv"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	_ "github.com/ziutek/mymysql/godrv"
 )
 
 const (
@@ -88,7 +89,7 @@ func connectToSQLServer() {
 	}
 	// Detect that there are at least the number of tables that we are setting up.
 	// If there are fewer than that, then we either half-way set up, or there's other tables in our database.
-	if num_rows >= 17 {
+	if num_rows >= 16 {
 		// the initial setup has already been run
 		needs_initial_setup = false
 		db_connected = true
