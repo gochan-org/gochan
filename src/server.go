@@ -179,7 +179,7 @@ func getRealIP(r *http.Request) (ip string) {
 }
 
 func validReferrer(request http.Request) (valid bool) {
-	valid = request.Referer() == "" || len(request.Referer()) < len(config.SiteDomain) || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain
+	valid = !(request.Referer() == "" || len(request.Referer()) < len(config.SiteDomain) || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain)
 	return
 }
 
