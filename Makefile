@@ -19,7 +19,6 @@ debug: build
 verbose: GOCHAN_VERBOSITY=${GOCHAN_VERBOSE}
 verbose: build
 
-
 build:
 ifndef GOPATH
 	@echo "$ GOPATH not set. Please run 'export GOPATH=\$$PWD/lib' (or wherever you prefer) and run this again."
