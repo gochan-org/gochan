@@ -34,7 +34,7 @@ func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time 
 	} else {
 		// benchmark is finished, print the duration
 		// convert nanoseconds to a decimal seconds
-		printf(2, "benchmark %s completed in %d seconds", name, time.Since(given_time).Seconds())
+		printf(2, "benchmark %s completed in %f seconds", name, time.Since(given_time).Seconds())
 		return time.Now() // we don't really need this, but we have to return something
 	}
 }
