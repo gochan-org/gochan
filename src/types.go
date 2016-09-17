@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/postfix/goconf"
+	"encoding/json"
+	"io/ioutil"
 	"log"
 	"os"
 	"path"
-	"strings"
 	"time"
+
+	"github.com/postfix/goconf"
 )
 
 var (
@@ -260,7 +262,7 @@ type Wrapper struct {
 
 type GochanConfig struct {
 	IName        string //used by our template parser
-	ListenIP       string
+	ListenIP     string
 	Port         int
 	FirstPage    []string
 	Error404Path string
@@ -282,7 +284,7 @@ type GochanConfig struct {
 
 	Lockdown        bool
 	LockdownMessage string
-	Sillytags       string
+	Sillytags       []string
 	UseSillytags    bool
 	Modboard        string
 
@@ -301,7 +303,7 @@ type GochanConfig struct {
 	NewThreadDelay       int
 	ReplyDelay           int
 	MaxLineLength        int
-	ReservedTrips        string //eventually this will be map[string]string
+	ReservedTrips        []interface{}
 
 	ThumbWidth          int
 	ThumbHeight         int
@@ -315,7 +317,7 @@ type GochanConfig struct {
 	PostsPerThreadPage       int
 	RepliesOnBoardPage       int
 	StickyRepliesOnBoardPage int
-	BanColors                string //eventually this will be map[string] string
+	BanColors                []interface{}
 	BanMsg                   string
 	EmbedWidth               int
 	EmbedHeight              int
@@ -341,59 +343,51 @@ type GochanConfig struct {
 }
 
 func initConfig() {
-	var err error
-	c, err = goconf.ReadConfigFile("config.cfg")
+	jfile, err := ioutil.ReadFile("gochan.json")
 	if err != nil {
-		println(0, err.Error())
+		printf(0, "Error reading \"gochan.json\": %s\n", err.Error())
 		os.Exit(2)
 	}
+
+	err = json.Unmarshal(jfile, &config)
+	if err != nil {
+		printf(0, "Error parsing \"gochan.json\": %s\n", err.Error())
+		os.Exit(2)
+	}
+
 	config.IName = "GochanConfig"
-	config.ListenIP, err = c.GetString("server", "listen_ip")
-	if err != nil {
-		println(0, "server.listen_ip not set in config.cfg, halting.")
-	}
-
-	config.Port, err = c.GetInt("server", "port")
-	if err != nil {
-		config.Port = 80
-		println(0, "server.port not set in config.cfg, defaulting to 80")
-	}
-
-	first_page_str, err_ := c.GetString("server", "first_page")
-	if err_ != nil {
-		first_page_str = "board.html,index.html"
-		println(0, "server.first_page not set in config.cfg, defaulting to "+first_page_str)
-	}
-
-	config.FirstPage = strings.Split(first_page_str, ",")
-
-	config.Error404Path, err = c.GetString("server", "error_404_path")
-	if err != nil {
-		config.Error404Path = "/error/404.html"
-		println(0, "server.error_404_path not set in config.cfg, defaulting to "+config.Error404Path)
-	}
-	config.Error500Path, err = c.GetString("server", "error_500_path")
-	if err != nil {
-		config.Error500Path = "/error/500.html"
-		println(0, "server.error_500_path not set in config.cfg, defaulting to "+config.Error500Path)
-	}
-
-	config.Username, err = c.GetString("server", "username")
-	if err != nil {
-		config.Username = "gochan"
-		println(0, "server.username not set in config.cfg, defaulting to "+config.Username)
-	}
-
-	config.UseFastCGI, err = c.GetBool("server", "use_fastcgi")
-	if err != nil {
-		config.UseFastCGI = false
-	}
-
-	config.DocumentRoot, err = c.GetString("directories", "document_root")
-	if err != nil {
-		println(0, "directories.document_root not set in config.cfg, halting.")
+	if config.ListenIP == "" {
+		println(0, "ListenIP not set in gochan.json, halting.")
 		os.Exit(2)
 	}
+
+	if config.Port == 0 {
+		config.Port = 80
+	}
+
+	if len(config.FirstPage) == 0 {
+		config.FirstPage = []string{"index.html", "board.html"}
+	}
+
+	if config.Error404Path == "" {
+		println(0, "Error404Path not set in gochan.json, halting.")
+		os.Exit(2)
+	}
+
+	if config.Error500Path == "" {
+		println(0, "Error500Path not set in gochan.json, halting.")
+		os.Exit(2)
+	}
+
+	if config.Username == "" {
+		config.Username = "gochan"
+	}
+
+	if config.DocumentRoot == "" {
+		println(0, "DocumentRoot not set in gochan.json, halting.")
+		os.Exit(2)
+	}
+
 	wd, wderr := os.Getwd()
 	if wderr == nil {
 		_, staterr := os.Stat(path.Join(wd, config.DocumentRoot, "css"))
@@ -402,16 +396,14 @@ func initConfig() {
 		}
 	}
 
-	config.TemplateDir, err = c.GetString("directories", "template_dir")
-	if err != nil {
-		config.TemplateDir = "templates"
-		println(0, "directories.template_dir not set in config.cfg, defaulting to "+config.TemplateDir)
+	if config.TemplateDir == "" {
+		println(0, "TemplateDir not set in gochan.json, halting.")
+		os.Exit(2)
 	}
 
-	config.LogDir, err = c.GetString("directories", "log_dir")
-	if err != nil {
-		config.LogDir = "log"
-		println(0, "directories.log_dir not set in config.cfg, defaulting to "+config.LogDir)
+	if config.LogDir == "" {
+		println(0, "LogDir not set in gochan.json, halting.")
+		os.Exit(2)
 	}
 
 	access_log_f, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
@@ -438,275 +430,152 @@ func initConfig() {
 		mod_log = log.New(mod_log_f, "", log.Ltime|log.Ldate)
 	}
 
-	config.DBtype, err = c.GetString("database", "type")
-	if err != nil {
-		config.DBtype = "mysql"
-		println(0, "database.db_type not set in config.cfg, defaulting to "+config.DBtype)
-	}
-
-	config.DBhost, err = c.GetString("database", "host")
-	if err != nil {
-		config.DBhost = "unix(/var/run/mysqld/mysqld.sock)"
-		println(0, "database.db_host not set in config.cfg, defaulting to "+config.DBhost)
-	}
-
-	config.DBname, err = c.GetString("database", "name")
-	if err != nil {
-		println(0, "database.db_name not set in config.cfg, halting.")
+	if config.DBtype == "" {
+		println(0, "DBtype not set in gochan.json, halting.")
 		os.Exit(2)
 	}
 
-	config.DBusername, err = c.GetString("database", "username")
-	if err != nil {
-		println(0, "database.db_username not set in config.cfg, halting.")
+	if config.DBhost == "" {
+		println(0, "DBhost not set in gochan.json, halting.")
 		os.Exit(2)
 	}
-	config.DBpassword, err = c.GetString("database", "password")
-	if err != nil {
-		config.DBpassword = ""
+
+	if config.DBname == "" {
+		config.DBname = "gochan"
 	}
 
-	config.DBprefix, err = c.GetString("database", "prefix")
-	if err == nil {
-		config.DBprefix += "_"
+	if config.DBusername == "" {
+		config.DBusername = "gochan"
+	}
+
+	if config.DBpassword == "" {
+		println(0, "DBpassword not set in gochan.json, halting.")
+		os.Exit(2)
+	}
+
+	if config.DBprefix == "" {
+		config.DBprefix = "gc_"
 	} else {
-		config.DBprefix = ""
+		config.DBprefix += "_"
 	}
 
-	config.DBkeepalive, err = c.GetBool("database", "keepalive")
-	if err != nil {
-		config.DBkeepalive = false
+	if config.LockdownMessage == "" {
+		config.LockdownMessage = "This imageboard has temporarily disabled posting. We apologize for the inconvenience"
 	}
 
-	config.Lockdown, err = c.GetBool("gochan", "lockdown")
-	if err != nil {
-		config.Lockdown = false
-	}
-	config.LockdownMessage, err = c.GetString("gochan", "lockdown_message")
-	if err != nil {
-		config.LockdownMessage = ""
-	}
-
-	config.Sillytags, err = c.GetString("gochan", "sillytags")
-	if err != nil {
-		config.Sillytags = ""
-	}
-
-	config.UseSillytags, err = c.GetBool("gochan", "use_sillytags")
-	if err != nil {
-		config.UseSillytags = false
-	}
-	config.Modboard, err = c.GetString("gochan", "mod_board")
-	if err != nil {
+	if config.Modboard == "" {
 		config.Modboard = "staff"
 	}
 
-	config.SiteName, err = c.GetString("site", "name")
-	if err != nil {
+	if config.SiteName == "" {
 		config.SiteName = "An unnamed imageboard"
 	}
 
-	config.SiteSlogan, err = c.GetString("site", "slogan")
-	if err != nil {
-		config.SiteSlogan = ""
-	}
-
-	config.SiteDomain, err = c.GetString("site", "domain")
-	if err != nil {
-		config.SiteDomain = "example.com"
-	}
-
-	config.SiteWebfolder, err = c.GetString("site", "webfolder")
-	if err != nil {
-		println(0, "site.webfolder not set in config.cfg, halting.")
+	if config.SiteDomain == "" {
+		println(0, "SiteDomain not set in gochan.json, halting.")
 		os.Exit(2)
 	}
 
-	styles_str, err_ := c.GetString("styles", "styles")
-	if err == nil {
-		config.Styles_img = strings.Split(styles_str, ",")
+	if config.SiteWebfolder == "" {
+		println(0, "SiteWebfolder not set in gochan.json, halting.")
+		os.Exit(2)
 	}
 
-	config.DefaultStyle_img, err = c.GetString("styles", "default_style")
-	if err != nil {
-		config.DefaultStyle_img = "pipes"
+	if config.Styles_img == nil {
+		println(0, "Styles_img not set in gochan.json, halting.")
+		os.Exit(2)
 	}
 
-	styles_txt_str, err_ := c.GetString("styles", "styles_txt")
-	if err == nil {
-		config.Styles_txt = strings.Split(styles_txt_str, ",")
+	if config.DefaultStyle_img == "" {
+		config.DefaultStyle_img = config.Styles_img[0]
 	}
 
-	config.DefaultStyle_txt, err = c.GetString("styles", "default_txt_style")
-	if err != nil {
-		config.DefaultStyle_txt = "pipes"
+	if config.Styles_txt == nil {
+		println(0, "Styles_txt not set in gochan.json, halting.")
+		os.Exit(2)
 	}
 
-	config.AllowDuplicateImages, err = c.GetBool("posting", "allow_duplicate_images")
-	if err != nil {
-		config.AllowDuplicateImages = true
+	if config.DefaultStyle_txt == "" {
+		config.DefaultStyle_txt = config.Styles_txt[0]
 	}
 
-	config.NewThreadDelay, err = c.GetInt("posting", "new_thread_delay")
-	if err != nil {
-		config.NewThreadDelay = 30
-	}
-
-	config.ReplyDelay, err = c.GetInt("posting", "reply_delay")
-	if err != nil {
-		config.ReplyDelay = 7
-	}
-
-	config.MaxLineLength, err = c.GetInt("posting", "max_line_length")
-	if err != nil {
-		config.MaxLineLength = 150
-	}
 	//ReservedTrips string //eventually this will be map[string]string
 
-	config.ThumbWidth, err = c.GetInt("thumbnails", "thumb_width")
-	if err != nil {
+	if config.ThumbWidth == 0 {
 		config.ThumbWidth = 200
 	}
 
-	config.ThumbHeight, err = c.GetInt("thumbnails", "thumb_height")
-	if err != nil {
+	if config.ThumbHeight == 0 {
 		config.ThumbHeight = 200
 	}
 
-	config.ThumbWidth_reply, err = c.GetInt("thumbnails", "reply_thumb_width")
-	if err != nil {
+	if config.ThumbWidth_reply == 0 {
 		config.ThumbWidth_reply = 125
 	}
 
-	config.ThumbHeight_reply, err = c.GetInt("thumbnails", "reply_thumb_height")
-	if err != nil {
+	if config.ThumbHeight_reply == 0 {
 		config.ThumbHeight_reply = 125
 	}
 
-	config.ThumbWidth_catalog, err = c.GetInt("thumbnails", "catalog_thumb_width")
-	if err != nil {
+	if config.ThumbWidth_catalog == 0 {
 		config.ThumbWidth_catalog = 50
 	}
 
-	config.ThumbHeight_catalog, err = c.GetInt("thumbnails", "catalog_thumb_height")
-	if err != nil {
+	if config.ThumbHeight_catalog == 0 {
 		config.ThumbHeight_catalog = 50
 	}
 
-	config.ThreadsPerPage_img, err = c.GetInt("threads", "img_threads_per_page")
-	if err != nil {
+	if config.ThreadsPerPage_img == 0 {
 		config.ThreadsPerPage_img = 10
 	}
 
-	config.ThreadsPerPage_txt, err = c.GetInt("threads", "txt_threads_per_page")
-	if err != nil {
+	if config.ThreadsPerPage_txt == 0 {
 		config.ThreadsPerPage_txt = 15
 	}
 
-	config.PostsPerThreadPage, err = c.GetInt("threads", "posts_per_threadpage")
-	if err != nil {
-		config.PostsPerThreadPage = 50
+	if config.PostsPerThreadPage == 0 {
+		config.PostsPerThreadPage = 4
 	}
 
-	config.RepliesOnBoardPage, err = c.GetInt("threads", "replies_on_boardpage")
-	if err != nil {
-		config.RepliesOnBoardPage = 3
+	if config.RepliesOnBoardPage == 0 {
+		config.PostsPerThreadPage = 3
 	}
 
-	config.StickyRepliesOnBoardPage, err = c.GetInt("threads", "sticky_replies_on_boardpage")
-	if err != nil {
+	if config.StickyRepliesOnBoardPage == 0 {
 		config.StickyRepliesOnBoardPage = 1
 	}
 
-	config.BanColors, err = c.GetString("threads", "ban_colors") //eventually this will be map[string] string
+	/*config.BanColors, err = c.GetString("threads", "ban_colors") //eventually this will be map[string] string
 	if err != nil {
 		config.BanColors = "admin:#CC0000"
-	}
+	}*/
 
-	config.BanMsg, err = c.GetString("threads", "ban_msg")
-	if err != nil {
+	if config.BanMsg == "" {
 		config.BanMsg = "(USER WAS BANNED FOR THIS POST)"
 	}
 
-	config.ExpandButton, err = c.GetBool("threads", "expand_button")
-	if err != nil {
-		config.ExpandButton = true
-	}
-
-	config.ImagesOpenNewTab, err = c.GetBool("threads", "images_open_new_tab")
-	if err != nil {
-		config.ImagesOpenNewTab = true
-	}
-
-	config.MakeURLsHyperlinked, err = c.GetBool("threads", "make_urls_hyperlinked")
-	if err != nil {
-		config.MakeURLsHyperlinked = true
-	}
-
-	config.NewTabOnOutlinks, err = c.GetBool("threads", "new_tab_on_outlinks")
-	if err != nil {
-		config.NewTabOnOutlinks = true
-	}
-
-	config.EnableQuickReply, err = c.GetBool("threads", "quick_reply")
-	if err != nil {
-		config.EnableQuickReply = true
-	}
-
-	config.DateTimeFormat, err = c.GetString("misc", "datetime_format")
-	if err != nil {
+	if config.DateTimeFormat == "" {
 		config.DateTimeFormat = "Mon, January 02, 2006 15:04 PM"
 	}
 
-	config.DefaultBanReason, err = c.GetString("misc", "default_ban_reason")
-	if err != nil {
-		config.DefaultBanReason = ""
-	}
-
-	config.AkismetAPIKey, err = c.GetString("misc", "akismet_api_key")
-	if err != nil {
-		config.AkismetAPIKey = ""
-	}
-
-	config.EnableGeoIP, err = c.GetBool("misc", "enable_geoip")
-	if err != nil {
-		config.EnableGeoIP = false
-	}
-
 	if config.EnableGeoIP {
-		config.GeoIPDBlocation, err = c.GetString("misc", "geoip_location") // cf for cloudflare or a local path
-		if err != nil {
-			println(0, "Error: GeoIP enabled but no database provided. Set misc.geoip_location in config.cfg to \"cf\" to use CloudFlare's GeoIP headers, or to a local filepath")
+		if config.GeoIPDBlocation == "" {
+			println(0, "GeoIPDBlocation not set in gochan.json, disabling EnableGeoIP.")
+			config.EnableGeoIP = false
 		}
 	}
 
-	config.MaxRecentPosts, err = c.GetInt("misc", "max_recent_posts")
-	if err != nil {
+	if config.MaxRecentPosts == 0 {
 		config.MaxRecentPosts = 10
 	}
 
-	config.MakeRSS, err = c.GetBool("misc", "make_rss")
-	if err != nil {
-		config.MakeRSS = false
-	}
-
-	config.MakeSitemap, err = c.GetBool("misc", "make_sitemap")
-	if err != nil {
-		config.MakeSitemap = false
-	}
-
-	config.EnableAppeals, err = c.GetBool("misc", "enable_appeals")
-	if err != nil {
-		config.EnableAppeals = true
-	}
-
-	config.MaxModlogDays, err = c.GetInt("misc", "max_modlog_days")
-	if err != nil {
+	if config.MaxModlogDays == 0 {
 		config.MaxModlogDays = 15
 	}
 
-	config.RandomSeed, err = c.GetString("misc", "random_seed")
-	if err != nil {
+	if config.RandomSeed == "" {
+		println(0, "RandomSeed not set in gochan.json, halting.")
+		os.Exit(2)
 	}
 
 	config.Version = version

@@ -273,10 +273,6 @@ func printf(v int, format string, a ...interface{}) {
 }
 
 func println(v int, a ...interface{}) {
-	/*if fmt.Sprintf("%s", a) == "sql: no rows in result set" {
-		panic(a)
-	}*/
-
 	if config.Verbosity >= v {
 		fmt.Println(a...)
 	}

@@ -1,0 +1,96 @@
+{
+	"ListenIP": "127.0.0.1",
+	"Port": 8080,
+	"FirstPage": ["index.html","board.html"],
+	"Error404Path": "/error/404.html",
+	"Error500Path": "/error/500.html",
+	"Username": "gochan",
+	"UseFastCGI": false,
+
+	"DocumentRoot": "html",
+	"TemplateDir": "templates",
+	"LogDir": "log",
+
+	"DBtype": "mysql",
+	"DBhost": "tcp:127.0.0.1:3306",
+	"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
+	"DBtypealt": "unix:/var/run/mysqld/mysqld.sock",
+	"DBname": "gochan",
+	"DBusername": "gochan",
+	"DBpassword": "",
+	"DBprefix": "gc",
+	"DBkeepalive": false,
+
+	"Lockdown": false,
+	"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
+	"Sillytags": ["Admin","Mod","Janitor","Faget","Kick me","Derpy","Troll","worst pony"],
+	"UseSillytags": false,
+	"Modboard": "staff",
+
+	"SiteName": "Gochan",
+	"SiteSlogan": "",
+	"SiteDomain": "127.0.0.1",
+	"SiteHeaderURL": "",
+	"SiteWebfolder": "/",
+
+	"Styles_img": ["pipes","efchan"],
+	"DefaultStyle_img": "pipes",
+	"Styles_txt": ["efchan,pipes"],
+	"DefaultStyle_txt": "pipes",
+
+	"AllowDuplicateImages": true,
+	"NewThreadDelay": 30,
+	"ReplyDelay": 7,
+	"MaxLineLength": 150,
+	"ReversedTrips": [
+		{
+			"from": "##thischangesto",
+			"to": "this"
+		},
+		{
+			"from": "##andthischangesto",
+			"to": "this"
+		}
+	],
+
+	"ThumbWidth": 200,
+	"ThumbHeight": 200,
+	"ThumbWidth_reply": 125,
+	"ThumbHeight_reply": 125,
+	"ThumbWidth_catalog": 50,
+	"ThumbHeight_catalog": 50,
+
+	"ThreadsPerPage_img": 4,
+	"ThreadsPerPage_txt": 15,
+	"PostsPerThreadPage": 4,
+	"RepliesOnBoardPage": 3,
+	"StickyRepliesOnBoardPage": 1,
+	"BanColors": [
+		{
+			"Role": "admin",
+			"Color": "#0000A0"
+		}
+	],
+	"BanMsg": "<br /><span style=\"color:##BANCOLOR## \"><b>(USER WAS BANNED FOR THIS POST)</b></span>",
+	"EmbedWidth": 200,
+	"EmbedHeight": 164,
+	"ExpandButton": true,
+	"ImagesOpenNewTab": true,
+	"MakeURLsHyperlinked": true,
+	"NewTabOnOutlinks": true,
+	
+
+	"DateTimeFormat": "Mon, January 02, 2006 15:04 PM",
+	"DefaultBanReason": "",
+	"AkismetAPIKey": "",
+	"EnableGeoIP": true,
+	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
+	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
+	"MaxRecentPosts": 3,
+	"MakeRSS": true,
+	"MakeSitemap": true,
+	"EnableAppeals": true,
+	"MaxModlogDays": 14,
+	"_comment": "Set RandomSeed to a (preferrably large) string of letters and numbers",
+	"RandomSeed": ""
+}
