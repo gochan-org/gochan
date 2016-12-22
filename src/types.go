@@ -293,6 +293,7 @@ type GochanConfig struct {
 	SiteHeaderURL string
 	SiteWebfolder string
 	SiteDomain    string
+	DomainRegex   string
 
 	Styles_img       []string
 	DefaultStyle_img string
@@ -479,6 +480,10 @@ func initConfig() {
 	if config.SiteWebfolder == "" {
 		println(0, "SiteWebfolder not set in gochan.json, halting.")
 		os.Exit(2)
+	}
+
+	if config.DomainRegex == "" {
+		config.DomainRegex = "/(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)/"
 	}
 
 	if config.Styles_img == nil {

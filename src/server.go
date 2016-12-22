@@ -10,18 +10,20 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 var (
-	form       url.Values
-	header     http.Header
-	cookies    []*http.Cookie
-	writer     http.ResponseWriter
-	request    http.Request
-	exit_error bool
-	server     *GochanServer
+	form          url.Values
+	header        http.Header
+	cookies       []*http.Cookie
+	writer        http.ResponseWriter
+	request       http.Request
+	exit_error    bool
+	server        *GochanServer
+	referrerRegex *regexp.Regexp
 )
 
 type GochanServer struct {
@@ -179,7 +181,17 @@ func getRealIP(r *http.Request) (ip string) {
 }
 
 func validReferrer(request http.Request) (valid bool) {
-	valid = !(request.Referer() == "" || len(request.Referer()) < len(config.SiteDomain) || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain)
+	if referrerRegex == nil {
+		referrerRegex, err := regexp.Compile(config.DomainRegex)
+		if err != nil || referrerRegex == nil {
+			valid = false
+			return
+		}
+	}
+
+	valid = referrerRegex.MatchString(request.Referer())
+	// Old Referrer check.
+	// valid = !(request.Referer() == "" || len(request.Referer()) < len(config.SiteDomain) || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain)
 	return
 }
 
