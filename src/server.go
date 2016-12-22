@@ -149,6 +149,9 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	checkAkismetAPIKey()
 
+	// Compile regex for checking referrers.
+	referrerRegex = regexp.MustCompile(config.DomainRegex)
+
 	testfunc := func(writer http.ResponseWriter, response *http.Request, data interface{}) {
 		if writer != nil {
 			writer.Write([]byte("hahahaha"))
@@ -181,10 +184,7 @@ func getRealIP(r *http.Request) (ip string) {
 }
 
 func validReferrer(request http.Request) (valid bool) {
-	if referrerRegex == nil {
-		error_log.Print("referrer regex is nil")
-		referrerRegex = regexp.MustCompile(config.DomainRegex)
-	}
+
 	referrerCopy := request.Referer()
 	valid = referrerRegex.MatchString(referrerCopy)
 	// Old Referrer check.
