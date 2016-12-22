@@ -483,7 +483,7 @@ func initConfig() {
 	}
 
 	if config.DomainRegex == "" {
-		config.DomainRegex = "/(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)/"
+		config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
 	}
 
 	if config.Styles_img == nil {
