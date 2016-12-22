@@ -182,14 +182,11 @@ func getRealIP(r *http.Request) (ip string) {
 
 func validReferrer(request http.Request) (valid bool) {
 	if referrerRegex == nil {
-		referrerRegex, err := regexp.Compile(config.DomainRegex)
-		if err != nil || referrerRegex == nil {
-			valid = false
-			return
-		}
+		error_log.Print("referrer regex is nil")
+		referrerRegex = regexp.MustCompile(config.DomainRegex)
 	}
-
-	valid = referrerRegex.MatchString(request.Referer())
+	referrerCopy := request.Referer()
+	valid = referrerRegex.MatchString(referrerCopy)
 	// Old Referrer check.
 	// valid = !(request.Referer() == "" || len(request.Referer()) < len(config.SiteDomain) || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain)
 	return
