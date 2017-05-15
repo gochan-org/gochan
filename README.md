@@ -1,6 +1,6 @@
 # Gochan
 
-A muti-threaded imageboard server written in Go
+A multi-threaded imageboard server written in Go
 
 http://gochan.org
 
