@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -122,6 +123,9 @@ func getStaffRank() int {
 func createSession(key string, username string, password string, request *http.Request, writer *http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
+
+	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
+	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !validReferrer(*request) {
 		mod_log.Print("Rejected login from possible spambot @ : " + request.RemoteAddr)

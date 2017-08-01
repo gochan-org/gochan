@@ -177,7 +177,7 @@ func getRealIP(r *http.Request) (ip string) {
 		if r.Header.Get("X-Forwarded-For") != "" {
 			ip = r.Header.Get("X-Forwarded-For")
 		} else {
-			ip = r.Host
+			ip = r.RemoteAddr
 		}
 	}
 	return

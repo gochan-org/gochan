@@ -649,6 +649,9 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	var errortext string
 	domain := r.Host
 
+	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
+	domain = chopPortNumRegex.Split(domain, -1)[0]
+
 	var post PostTable
 	post.IName = "post"
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
