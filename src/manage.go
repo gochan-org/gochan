@@ -120,7 +120,8 @@ func getStaffRank() int {
 }
 
 func createSession(key string, username string, password string, request *http.Request, writer *http.ResponseWriter) int {
-	//returs 0 for successful, 1 for password mismatch, and 2 for other
+	//returns 0 for successful, 1 for password mismatch, and 2 for other
+	domain := request.Host
 
 	if !validReferrer(*request) {
 		mod_log.Print("Rejected login from possible spambot @ : " + request.RemoteAddr)
@@ -139,7 +140,7 @@ func createSession(key string, username string, password string, request *http.R
 			return 1
 		} else {
 			// successful login
-			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.SiteDomain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour * 2))), MaxAge: 7200}
+			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour * 2))), MaxAge: 7200}
 			// cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))),MaxAge: 7200}
 			http.SetCookie(*writer, cookie)
 			_, err := db.Exec("INSERT INTO `" + config.DBprefix + "sessions` (`key`, `data`, `expires`) VALUES('" + key + "','" + username + "', '" + getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))) + "');")
