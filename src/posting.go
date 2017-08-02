@@ -38,6 +38,13 @@ func generateTripCode(input string) string {
 	re := regexp.MustCompile("[^\\.-z]") // remove every ASCII character before . and after z
 
 	input += "   " // padding
+	input = strings.Replace(input, "&amp;", "&", -1)
+	input = strings.Replace(input, "\\&#39;", "'", -1)
+
+
+	error_log.Print("Tripcode: ") // REMOVE ME, just testing to see what needs to be borrowed
+	error_log.Println(input)
+
 	salt := string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
 	salt = byteByByteReplace(salt[1:3], ":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
 	return crypt.Crypt(input, salt)[3:]
@@ -700,6 +707,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	post.Password = md5_sum(request.FormValue("postpassword"))
 	post_name_cookie := strings.Replace(url.QueryEscape(post_name), "+", "%20", -1)
+
+	// Reverse escapes
+	post_name_cookie = strings.Replace(post_name_cookie, "&amp;", "&", -1)
+	post_name_cookie = strings.Replace(post_name_cookie, "\\&#39;", "'", -1)
+
 	url.QueryEscape(post_name_cookie)
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 	// http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})

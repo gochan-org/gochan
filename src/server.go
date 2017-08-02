@@ -147,7 +147,9 @@ func initServer() {
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request, interface{}))
 
 	// Check if Akismet API key is usable at startup.
-	checkAkismetAPIKey()
+	if config.AkismetAPIKey != "" {
+		checkAkismetAPIKey()
+	}	
 
 	// Compile regex for checking referrers.
 	referrerRegex = regexp.MustCompile(config.DomainRegex)
