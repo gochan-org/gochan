@@ -41,10 +41,6 @@ func generateTripCode(input string) string {
 	input = strings.Replace(input, "&amp;", "&", -1)
 	input = strings.Replace(input, "\\&#39;", "'", -1)
 
-
-	error_log.Print("Tripcode: ") // REMOVE ME, just testing to see what needs to be borrowed
-	error_log.Println(input)
-
 	salt := string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
 	salt = byteByByteReplace(salt[1:3], ":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
 	return crypt.Crypt(input, salt)[3:]
