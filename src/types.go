@@ -7,12 +7,9 @@ import (
 	"os"
 	"path"
 	"time"
-
-	"github.com/postfix/goconf"
 )
 
 var (
-	c                   *goconf.ConfigFile
 	needs_initial_setup = true
 	config              GochanConfig
 	access_log          *log.Logger
