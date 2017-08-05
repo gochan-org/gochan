@@ -686,7 +686,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		post.Email = ""
 	}
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
-	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")),"\\r\\n")
+	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")),"\r\n")
 
 	err := db.QueryRow("SELECT `max_message_length` FROM `" + config.DBprefix + "boards` WHERE `id` = " + strconv.Itoa(post.BoardID)).Scan(&max_message_length)
 	if err != nil {
