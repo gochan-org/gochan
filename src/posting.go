@@ -702,13 +702,13 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	formatMessage(&post)
 
 	post.Password = md5_sum(request.FormValue("postpassword"))
-	post_name_cookie := strings.Replace(url.QueryEscape(post_name), "+", "%20", -1)
 
 	// Reverse escapes
-	post_name_cookie = strings.Replace(post_name_cookie, "&amp;", "&", -1)
+	post_name_cookie := strings.Replace(post_name, "&amp;", "&", -1)
 	post_name_cookie = strings.Replace(post_name_cookie, "\\&#39;", "'", -1)
 
-	url.QueryEscape(post_name_cookie)
+	post_name_cookie = strings.Replace(url.QueryEscape(post_name_cookie), "+", "%20", -1)
+
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 	// http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 	if email_command == "" {
