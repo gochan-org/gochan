@@ -38,7 +38,7 @@ EOF123
 service mysql restart &
 wait
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
-cp -f /vagrant/gochan.nginx /etc/nginx/sites-available/gochan.nginx
+cp -f /vagrant/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
 ln -sf /etc/nginx/sites-available/gochan.nginx /etc/nginx/sites-enabled/
 
 # VirtualBox shared folders don't play nicely with sendfile.
