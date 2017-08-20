@@ -53,7 +53,7 @@ su ubuntu
 go get github.com/disintegration/imaging
 go get github.com/nranchev/go-libGeoIP
 go get github.com/nyarla/go-crypt
-go get github.com/ziutek/mymysql/godrv
+go get github.com/go-sql-driver/mysql
 go get golang.org/x/crypto/bcrypt
 make verbose
 
