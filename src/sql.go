@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/ziutek/mymysql/godrv"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
@@ -72,7 +72,7 @@ func escapeQuotes(txt string) string {
 func connectToSQLServer() {
 	var err error
 
-	db, err = sql.Open("mymysql", config.DBhost+"*"+config.DBname+"/"+config.DBusername+"/"+config.DBpassword)
+	db, err = sql.Open("mysql", config.DBusername+":"+config.DBpassword+"@"+config.DBhost+"/"+config.DBname+"?parseTime=true&collation=utf8mb4_unicode_ci")
 	if err != nil {
 		println(0, "Failed to connect to the database, see log for details.")
 		error_log.Fatal(err.Error())
