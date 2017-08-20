@@ -12,7 +12,7 @@
 	"LogDir": "log",
 
 	"DBtype": "mysql",
-	"DBhost": "tcp:127.0.0.1:3306",
+	"DBhost": "tcp(127.0.0.1:3306)",
 	"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
 	"DBtypealt": "unix:/var/run/mysqld/mysqld.sock",
 	"DBname": "gochan",
@@ -79,7 +79,7 @@
 	"ImagesOpenNewTab": true,
 	"MakeURLsHyperlinked": true,
 	"NewTabOnOutlinks": true,
-	
+
 
 	"DateTimeFormat": "Mon, January 02, 2006 15:04 PM",
 	"DefaultBanReason": "",
