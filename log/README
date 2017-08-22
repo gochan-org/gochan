@@ -1,0 +1,2 @@
+This file is in here to keep the log directory around, as gochan expects the log
+directory to exist before it runs.
