@@ -34,7 +34,7 @@
 		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			<input type="hidden" name="threadid" value="0" />
 			<input type="hidden" name="boardid" value="{{$board.ID}}" />
-			<input type="text" name="username" style="display:none" /> 
+			<input type="text" name="username" style="display:none" />
 			<table id="postbox-static">
 				<tr><th class="postblock">Name</th><td><input type="text" id="postname" name="postname" maxlength="50" size="28" {{/* value="Name" onFocus="if(this.value=='Name') {this,value= ''}" onBlur="if(this.value == '') {this.value = 'Name'}"*/}}/></td></tr>
 				<tr><th class="postblock">Email</th><td><input type="text" id="postemail" name="postemail" maxlength="50" size="28" /></td></tr>
@@ -70,7 +70,7 @@
 					{{range $reply_num,$reply := $thread.BoardReplies}}
 						<div class="reply-container">
 							<div class="reply" id="{{$reply.ID}}">
-									  <div><input type="checkbox" id="check{{$reply.ID}}" name="check{{$reply.ID}}" /> <label class="post-info" for="check{{$reply.ID}}"><span class="postername">{{if stringNeq $reply.Email ""}}<a href="mailto:{{$reply.Email}}">{{end}}{{if stringNeq $reply.Name ""}}{{$reply.Name}}{{else}}{{if stringEq $reply.Tripcode ""}}{{$board.Anonymous}}{{end}}{{end}}{{if stringNeq $reply.Email ""}}</a>{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} </label><a href="/{{$board.Dir}}/res/{{$op.ID}}.html#{{$reply.ID}}">No.</a> <a href="javascript:quote({{$reply.ID}})" class="backlink-clink">{{$reply.ID}}</a> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span></div>
+									  <div><input type="checkbox" id="check{{$reply.ID}}" name="check{{$reply.ID}}" /> <label class="post-info" for="check{{$reply.ID}}"> <span class="subject">{{$reply.Subject}}</span> <span class="postername">{{if stringNeq $reply.Email ""}}<a href="mailto:{{$reply.Email}}">{{end}}{{if stringNeq $reply.Name ""}}{{$reply.Name}}{{else}}{{if stringEq $reply.Tripcode ""}}{{$board.Anonymous}}{{end}}{{end}}{{if stringNeq $reply.Email ""}}</a>{{end}}</span>{{if stringNeq $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} </label><a href="/{{$board.Dir}}/res/{{$op.ID}}.html#{{$reply.ID}}">No.</a> <a href="javascript:quote({{$reply.ID}})" class="backlink-clink">{{$reply.ID}}</a> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span></div>
 								{{if stringNeq $reply.Filename ""}}<span class="file-info">File: <a href="src/{{$reply.Filename}}" target="_blank">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}}x{{$reply.ImageH}}, {{$reply.FilenameOriginal}} )</span><br />
 								<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$reply.Filename}}"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="thumbnail" alt="{{imageToThumbnailPath $reply.Filename}}" /></a>{{end}}
 
