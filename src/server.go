@@ -87,6 +87,9 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 			case extension == "js":
 				writer.Header().Add("Content-Type", "text/javascript")
 				writer.Header().Add("Cache-Control", "max-age=43200")
+			case extension == "json":
+				writer.Header().Add("Content-Type", "application/json")
+				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
 			if extension == "html" || extension == "htm" {
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
@@ -149,7 +152,7 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	if config.AkismetAPIKey != "" {
 		checkAkismetAPIKey()
-	}	
+	}
 
 	// Compile regex for checking referrers.
 	referrerRegex = regexp.MustCompile(config.DomainRegex)

@@ -289,7 +289,7 @@ func resetBoardSectionArrays() {
 	}
 	all_sections_a, _ := getSectionArr("")
 	for _, b := range all_sections_a {
-		all_boards = append(all_sections, b)
+		all_sections = append(all_sections, b)
 	}
 }
 

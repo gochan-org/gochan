@@ -5,6 +5,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"github.com/disintegration/imaging"
 	"github.com/nyarla/go-crypt"
@@ -44,11 +45,6 @@ func generateTripCode(input string) string {
 	salt := string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
 	salt = byteByByteReplace(salt[1:3], ":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
 	return crypt.Crypt(input, salt)[3:]
-}
-
-func buildAll() {
-	buildFrontPage()
-	buildBoards(true, 0)
 }
 
 // buildBoards builds one or all boards. If all == true, all boards will have their pages built.
@@ -479,6 +475,56 @@ func buildFrontPage() (html string) {
 		return errortext + "<br />\n"
 	}
 	return "Front page rebuilt successfully.<br />"
+}
+
+func buildBoardListJSON() (html string) {
+	var errortext string
+	board_list_file, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	defer func() {
+		if board_list_file != nil {
+			board_list_file.Close()
+		}
+	}()
+	if err != nil {
+		errortext = "Failed opening board.json for writing: " + err.Error()
+		error_log.Println(errortext)
+		return errortext + "<br />\n"
+	}
+
+	board_list_wrapper := new(BoardJSONWrapper)
+
+	// Our cooldowns are site-wide currently.
+	cooldowns_obj := BoardCooldowns { NewThread: config.NewThreadDelay, Reply: config.ReplyDelay, ImageReply: config.ReplyDelay}
+
+	for _, board_int := range all_boards {
+		board := board_int.(BoardsTable)
+		board_obj := BoardJSON { BoardName: board.Dir, Title: board.Title, WorkSafeBoard: 1,
+			ThreadsPerPage: config.ThreadsPerPage_img, Pages: board.MaxPages, MaxFilesize: board.MaxImageSize,
+			MaxMessageLength: board.MaxMessageLength, BumpLimit: 200, ImageLimit: board.NoImagesAfter,
+			Cooldowns: cooldowns_obj, Description: board.Description, IsArchived: 0 }
+		if(board.EnableNSFW) {
+			board_obj.WorkSafeBoard = 0
+		}
+		board_list_wrapper.Boards = append(board_list_wrapper.Boards, board_obj)
+	}
+
+	board_json, err := json.Marshal(board_list_wrapper)
+
+	if err != nil {
+		errortext = "Failed marshal to JSON: " + err.Error()
+		error_log.Println(errortext)
+		println(1, errortext)
+		return errortext + "<br />\n"
+	}
+	_, err = board_list_file.Write(board_json)
+
+	if err != nil {
+		errortext = "Failed writing boards.json file: " + err.Error()
+		error_log.Println(errortext)
+		println(1, errortext)
+		return errortext + "<br />\n"
+	}
+	return "Board list JSON rebuilt successfully.<br />"
 }
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status

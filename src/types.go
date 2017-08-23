@@ -255,6 +255,32 @@ type Wrapper struct {
 	Data  []interface{}
 }
 
+// Types for the JSON files we generate as a sort of "API"
+type BoardJSONWrapper struct {
+	Boards 				[]BoardJSON `json:"boards"`
+}
+
+type BoardJSON struct {
+	BoardName			string `json:"board"`
+	Title					string `json:"title"`
+	WorkSafeBoard 		int `json:"ws_board"`
+	ThreadsPerPage 	int `json:"per_page"`
+	Pages					int `json:"pages"`
+	MaxFilesize			int `json:"max_filesize"`
+	MaxMessageLength 	int `json:"max_comment_chars"`
+	BumpLimit 			int `json:"bump_limit"`
+	ImageLimit			int `json:"image_limit"`
+	Cooldowns			BoardCooldowns `json:"cooldowns"`
+	Description 		string `json:"meta_description"`
+	IsArchived 			int `json:"is_archived"`
+}
+
+type BoardCooldowns struct {
+	NewThread 			int `json:"threads"`
+	Reply 				int `json:"replies"`
+	ImageReply 			int `json:"images"`
+}
+
 // Global variables, most initialized by config.cfg
 
 type GochanConfig struct {

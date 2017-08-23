@@ -912,6 +912,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func() (html string) {
 			html += rebuildfront() + "<hr />\n"
+			html += buildBoardListJSON() + "<hr />\n"
 			html += rebuildboards() + "<hr />\n"
 			return
 		}},
