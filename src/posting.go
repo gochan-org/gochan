@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/md5"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -838,6 +839,13 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				return
 			}
 
+			// Calculate image checksum
+			post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
+
+			// TODO Remove me: debugging checksums
+			fmt.Printf("Uploaded image checksum: %x", md5.Sum(data))
+
+			// Attempt to load uploaded file with imaging library
 			img, err := imaging.Open(file_path)
 			if err != nil {
 				errortext = "Couldn't open uploaded file \"" + post.Filename + "\"" + err.Error()
@@ -847,7 +855,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 				return
 			} else {
-				//post.FileChecksum string
+				// Get image filesize
 				stat, err := os.Stat(file_path)
 				if err != nil {
 					error_log.Println(err.Error())
@@ -856,6 +864,8 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				} else {
 					post.Filesize = int(stat.Size())
 				}
+
+				// Get image width and height, as well as thumbnail width and height
 				post.ImageW = img.Bounds().Max.X
 				post.ImageH = img.Bounds().Max.Y
 				if post.ParentID == 0 {
@@ -867,6 +877,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				access_log.Print("Receiving post with image: " + handler.Filename + " from " + request.RemoteAddr + ", referrer: " + request.Referer())
 
 				if request.FormValue("spoiler") == "on" {
+					// If spoiler is enabled, symlink thumbnail to spoiler image
 					_, err := os.Stat(path.Join(config.DocumentRoot, "spoiler.png"))
 					if err != nil {
 						server.ServeErrorPage(w, "missing /spoiler.png")
@@ -879,6 +890,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 						}
 					}
 				} else if config.ThumbWidth >= post.ImageW && config.ThumbHeight >= post.ImageH {
+					// If image fits in thumbnail size, symlink thumbnail to original
 					post.ThumbW = img.Bounds().Max.X
 					post.ThumbH = img.Bounds().Max.Y
 					err := syscall.Symlink(file_path, thumb_path)
@@ -890,6 +902,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					var thumbnail image.Image
 					var catalog_thumbnail image.Image
 					if post.ParentID == 0 {
+						// If this is a new thread, generate thumbnail and catalog thumbnail
 						thumbnail = createThumbnail(img, "op")
 						catalog_thumbnail = createThumbnail(img, "catalog")
 						err = imaging.Save(catalog_thumbnail, catalog_thumb_path)

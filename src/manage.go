@@ -566,6 +566,8 @@ var manage_functions = map[string]ManageFunction{
 						section_str = "0"
 					}
 
+					board.CreatedOn = time.Now()
+
 					board.Section, err = strconv.Atoi(section_str)
 					if err != nil {
 						board.Section = 0
