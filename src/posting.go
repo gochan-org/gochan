@@ -347,6 +347,91 @@ func buildThreadPages(op *PostTable) (html string) {
 		error_log.Print(errortext)
 		return
 	}
+
+	// Put together the thread JSON
+	thread_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE | os.O_RDWR | os.O_TRUNC, 0777)
+	defer func()  {
+		if thread_json_file != nil {
+			thread_json_file.Close()
+		}
+	}()
+	if err != nil {
+		errortext = "Failed opening /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".json: " + err.Error()
+		html += errortext + "<br />\n"
+		println(1, errortext)
+		error_log.Print(errortext)
+		return
+	}
+	// Create the wrapper object
+	thread_json_wrapper := new(ThreadJSONWrapper)
+
+	// Handle the OP, of type *PostTable
+	var filename string
+	var fileext string
+	var orig_filename string
+
+	// Separate out the extension from the filename
+	if op.Filename != "deleted" && op.Filename != "" {
+		ext_start := strings.LastIndex(op.Filename, ".")
+		fileext = op.Filename[ext_start:]
+
+		orig_ext_start := strings.LastIndex(op.FilenameOriginal, fileext)
+		orig_filename = op.FilenameOriginal[:orig_ext_start]
+		filename = op.Filename[:ext_start]
+	}
+
+	op_post_obj := PostJSON { ID: op.ID, ParentID: op.ParentID, Subject: op.Subject, Message: op.MessageHTML,
+		Name: op.Name, Tripcode: op.Tripcode, Timestamp: op.Timestamp.Unix(), Bumped: op.Bumped.Unix(),
+		ThumbWidth: op.ThumbW, ThumbHeight: op.ThumbH, ImageWidth: op.ImageW, ImageHeight: op.ImageH,
+		FileSize: op.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: op.FileChecksum}
+
+	thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, op_post_obj)
+
+	// Iterate through each reply, which are of type PostTable
+	for _, post_int := range replies {
+		post := post_int.(PostTable)
+
+		// Separate out the extension from the filenames
+		if post.Filename != "deleted" && post.Filename != "" {
+			ext_start := strings.LastIndex(post.Filename, ".")
+			fileext = post.Filename[ext_start:]
+
+			orig_ext_start := strings.LastIndex(post.FilenameOriginal, fileext)
+			orig_filename = post.FilenameOriginal[:orig_ext_start]
+			filename = post.Filename[:ext_start]
+		} else {
+			filename = ""
+			orig_filename = ""
+			fileext = ""
+		}
+
+		post_obj := PostJSON { ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
+		 	Name: post.Name, Tripcode: post.Tripcode, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
+			ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
+			FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}
+
+		thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, post_obj)
+	}
+	thread_json, err := json.Marshal(thread_json_wrapper)
+
+	if err != nil {
+		errortext = "Failed to marshal to JSON: " + err.Error()
+		error_log.Println(errortext)
+		println(1, errortext)
+		html += errortext + "<br />\n"
+		return
+	}
+
+	_, err = thread_json_file.Write(thread_json)
+
+	if err != nil {
+		errortext = "Failed writing /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".json: " + err.Error()
+		error_log.Println(errortext)
+		println(1, errortext)
+		html += errortext + "<br />\n"
+		return
+	}
+
 	success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully"
 	html += success_text + "<br />\n"
 	println(2, success_text)

@@ -281,6 +281,30 @@ type BoardCooldowns struct {
 	ImageReply 			int `json:"images"`
 }
 
+type ThreadJSONWrapper struct {
+	Posts 				[]PostJSON `json:"posts"`
+}
+
+type PostJSON struct {
+	ID 					int `json:"no"`
+	ParentID 			int `json:"resto"`
+	Subject 				string `json:"sub"`
+	Message 				string `json:"com"`
+	Name 					string `json:"name"`
+	Tripcode 			string `json:"trip"`
+	Timestamp			int64 `json:"time"`
+	Bumped				int64 `json:"last_modified"`
+	ThumbWidth 			int `json:"tn_w"`
+	ThumbHeight 		int `json:"tn_h"`
+	ImageWidth 			int `json:"w"`
+	ImageHeight 		int `json:"h"`
+	FileSize				int `json:"fsize"`
+	OrigFilename		string `json:"filename"`
+	Extension			string `json:"ext"`
+	Filename 			string `json:"tim"`
+	FileChecksum		string `json:"md5"`
+}
+
 // Global variables, most initialized by config.cfg
 
 type GochanConfig struct {
