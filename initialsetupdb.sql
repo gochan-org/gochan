@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS `DBPREFIXposts` (
 	`message_raw` TEXT NOT NULL,
 	`password` VARCHAR(45) NOT NULL,
 	`filename` VARCHAR(45) NOT NULL DEFAULT '',
-	`filename_original` VARCHAR(45) NOT NULL DEFAULT '',
+	`filename_original` VARCHAR(255) NOT NULL DEFAULT '',
 	`file_checksum` VARCHAR(45) NOT NULL DEFAULT '',
 	`filesize` INT(20) UNSIGNED NOT NULL DEFAULT 0,
 	`image_w` SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
