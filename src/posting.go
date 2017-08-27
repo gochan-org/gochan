@@ -290,15 +290,16 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 // buildThreadPages builds the pages for a thread given by a PostTable object.
 func buildThreadPages(op *PostTable) (html string) {
 	var board_dir string
+	var anonymous string
 	var replies []interface{}
 	var interfaces []interface{}
 	var page []interface{}
 	var current_page_file *os.File
 	var errortext string
 
-	err := db.QueryRow("SELECT `dir` FROM `" + config.DBprefix + "boards` WHERE `id` = '" + strconv.Itoa(op.BoardID) + "';").Scan(&board_dir)
+	err := db.QueryRow("SELECT `dir`,`anonymous` FROM `" + config.DBprefix + "boards` WHERE `id` = '" + strconv.Itoa(op.BoardID) + "';").Scan(&board_dir, &anonymous)
 	if err != nil {
-		errortext = "Failed getting board directory from post: " + err.Error()
+		errortext = "Failed getting board directory and board's anonymous setting from post: " + err.Error()
 		html += errortext + "<br />\n"
 		error_log.Println(errortext)
 		println(1, errortext)
@@ -381,9 +382,19 @@ func buildThreadPages(op *PostTable) (html string) {
 	}
 
 	op_post_obj := PostJSON { ID: op.ID, ParentID: op.ParentID, Subject: op.Subject, Message: op.MessageHTML,
-		Name: op.Name, Tripcode: "!" + op.Tripcode, Timestamp: op.Timestamp.Unix(), Bumped: op.Bumped.Unix(),
+		Name: op.Name, Timestamp: op.Timestamp.Unix(), Bumped: op.Bumped.Unix(),
 		ThumbWidth: op.ThumbW, ThumbHeight: op.ThumbH, ImageWidth: op.ImageW, ImageHeight: op.ImageH,
 		FileSize: op.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: op.FileChecksum}
+
+	// Handle Anonymous
+	if op.Name == "" {
+		op_post_obj.Name = anonymous
+	}
+
+	// If we have a Tripcode, prepend a !
+	if op.Tripcode != "" {
+		op_post_obj.Tripcode = "!" + op.Tripcode
+	}
 
 	thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, op_post_obj)
 
@@ -406,9 +417,19 @@ func buildThreadPages(op *PostTable) (html string) {
 		}
 
 		post_obj := PostJSON { ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
-		 	Name: post.Name, Tripcode: "!" + post.Tripcode, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
+		 	Name: post.Name, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
 			ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
 			FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}
+
+		// Handle Anonymous
+		if post.Name == "" {
+			post_obj.Name = anonymous
+		}
+
+		// If we have a Tripcode, prepend a !
+		if post.Tripcode != "" {
+			post_obj.Tripcode = "!" + post.Tripcode
+		}
 
 		thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, post_obj)
 	}
