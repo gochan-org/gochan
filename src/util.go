@@ -317,6 +317,7 @@ func Btoa(b bool) string {
 	return "0"
 }
 
+// Checks the validity of the Akismet API key given in the config file.
 func checkAkismetAPIKey() {
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {config.AkismetAPIKey}, "blog": {"http://" + config.SiteDomain}})
 	defer resp.Body.Close()
@@ -331,6 +332,7 @@ func checkAkismetAPIKey() {
 	}
 }
 
+// Checks a given post for spam with Akismet. Only checks if Akismet API key is set.
 func checkPostForSpam(userIP string, userAgent string, referrer string,
 	author string, email string, postContent string) string {
 	if config.AkismetAPIKey != "" {
@@ -372,4 +374,36 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		}
 	}
 	return "other_failure"
+}
+
+func makePostJSON(post PostTable, anonymous string) (post_obj PostJSON) {
+	var filename string
+	var fileext string
+	var orig_filename string
+
+	// Separate out the extension from the filenames
+	if post.Filename != "deleted" && post.Filename != "" {
+		ext_start := strings.LastIndex(post.Filename, ".")
+		fileext = post.Filename[ext_start:]
+
+		orig_ext_start := strings.LastIndex(post.FilenameOriginal, fileext)
+		orig_filename = post.FilenameOriginal[:orig_ext_start]
+		filename = post.Filename[:ext_start]
+	}
+
+	post_obj = PostJSON { ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
+		Name: post.Name, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
+		ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
+		FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}
+
+	// Handle Anonymous
+	if post.Name == "" {
+		post_obj.Name = anonymous
+	}
+
+	// If we have a Tripcode, prepend a !
+	if post.Tripcode != "" {
+		post_obj.Tripcode = "!" + post.Tripcode
+	}
+	return
 }

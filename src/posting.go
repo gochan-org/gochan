@@ -367,34 +367,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	thread_json_wrapper := new(ThreadJSONWrapper)
 
 	// Handle the OP, of type *PostTable
-	var filename string
-	var fileext string
-	var orig_filename string
-
-	// Separate out the extension from the filename
-	if op.Filename != "deleted" && op.Filename != "" {
-		ext_start := strings.LastIndex(op.Filename, ".")
-		fileext = op.Filename[ext_start:]
-
-		orig_ext_start := strings.LastIndex(op.FilenameOriginal, fileext)
-		orig_filename = op.FilenameOriginal[:orig_ext_start]
-		filename = op.Filename[:ext_start]
-	}
-
-	op_post_obj := PostJSON { ID: op.ID, ParentID: op.ParentID, Subject: op.Subject, Message: op.MessageHTML,
-		Name: op.Name, Timestamp: op.Timestamp.Unix(), Bumped: op.Bumped.Unix(),
-		ThumbWidth: op.ThumbW, ThumbHeight: op.ThumbH, ImageWidth: op.ImageW, ImageHeight: op.ImageH,
-		FileSize: op.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: op.FileChecksum}
-
-	// Handle Anonymous
-	if op.Name == "" {
-		op_post_obj.Name = anonymous
-	}
-
-	// If we have a Tripcode, prepend a !
-	if op.Tripcode != "" {
-		op_post_obj.Tripcode = "!" + op.Tripcode
-	}
+	op_post_obj := makePostJSON(*op, anonymous)
 
 	thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, op_post_obj)
 
@@ -402,34 +375,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	for _, post_int := range replies {
 		post := post_int.(PostTable)
 
-		// Separate out the extension from the filenames
-		if post.Filename != "deleted" && post.Filename != "" {
-			ext_start := strings.LastIndex(post.Filename, ".")
-			fileext = post.Filename[ext_start:]
-
-			orig_ext_start := strings.LastIndex(post.FilenameOriginal, fileext)
-			orig_filename = post.FilenameOriginal[:orig_ext_start]
-			filename = post.Filename[:ext_start]
-		} else {
-			filename = ""
-			orig_filename = ""
-			fileext = ""
-		}
-
-		post_obj := PostJSON { ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
-		 	Name: post.Name, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
-			ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
-			FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}
-
-		// Handle Anonymous
-		if post.Name == "" {
-			post_obj.Name = anonymous
-		}
-
-		// If we have a Tripcode, prepend a !
-		if post.Tripcode != "" {
-			post_obj.Tripcode = "!" + post.Tripcode
-		}
+		post_obj := makePostJSON(post, anonymous)
 
 		thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, post_obj)
 	}
