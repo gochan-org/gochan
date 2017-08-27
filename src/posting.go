@@ -381,7 +381,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	}
 
 	op_post_obj := PostJSON { ID: op.ID, ParentID: op.ParentID, Subject: op.Subject, Message: op.MessageHTML,
-		Name: op.Name, Tripcode: op.Tripcode, Timestamp: op.Timestamp.Unix(), Bumped: op.Bumped.Unix(),
+		Name: op.Name, Tripcode: "!" + op.Tripcode, Timestamp: op.Timestamp.Unix(), Bumped: op.Bumped.Unix(),
 		ThumbWidth: op.ThumbW, ThumbHeight: op.ThumbH, ImageWidth: op.ImageW, ImageHeight: op.ImageH,
 		FileSize: op.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: op.FileChecksum}
 
@@ -406,7 +406,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		}
 
 		post_obj := PostJSON { ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
-		 	Name: post.Name, Tripcode: post.Tripcode, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
+		 	Name: post.Name, Tripcode: "!" + post.Tripcode, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
 			ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
 			FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}
 
