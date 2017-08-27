@@ -650,8 +650,8 @@ func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
 }
 
 // inserts prepared post object into the SQL table so that it can be rendered
-func insertPost(writer *http.ResponseWriter, post PostTable, bump bool) sql.Result {
-	post_sql_str := "INSERT INTO `" + config.DBprefix + "posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`password`"
+func insertPost(post PostTable, bump bool) (sql.Result, error) {
+	post_sql_str := "INSERT INTO `" + config.DBprefix + "posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`message_raw`,`password`"
 	if post.Filename != "" {
 		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
 	}
@@ -660,7 +660,7 @@ func insertPost(writer *http.ResponseWriter, post PostTable, bump bool) sql.Resu
 	if post.ParentID == 0 {
 		post_sql_str += "`bumped`,"
 	}
-	post_sql_str += "`stickied`,`locked`) VALUES(" + strconv.Itoa(post.BoardID) + "," + strconv.Itoa(post.ParentID) + ",'" + post.Name + "','" + post.Tripcode + "','" + post.Email + "','" + post.Subject + "','" + post.MessageHTML + "','" + post.Password + "'"
+	post_sql_str += "`stickied`,`locked`) VALUES(" + strconv.Itoa(post.BoardID) + "," + strconv.Itoa(post.ParentID) + ",'" + post.Name + "','" + post.Tripcode + "','" + post.Email + "','" + post.Subject + "','" + post.MessageHTML + "','" + post.MessageText + "','" + post.Password + "'"
 	if post.Filename != "" {
 		post_sql_str += ",'" + post.Filename + "','" + post.FilenameOriginal + "','" + post.FileChecksum + "'," + strconv.Itoa(int(post.Filesize)) + "," + strconv.Itoa(post.ImageW) + "," + strconv.Itoa(post.ImageH) + "," + strconv.Itoa(post.ThumbW) + "," + strconv.Itoa(post.ThumbH)
 	}
@@ -680,15 +680,15 @@ func insertPost(writer *http.ResponseWriter, post PostTable, bump bool) sql.Resu
 	}
 	result, err := db.Exec(post_sql_str)
 	if err != nil {
-		server.ServeErrorPage(*writer, err.Error())
+		return result, err
 	}
 	if post.ParentID != 0 {
 		_, err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `bumped` = '" + getSpecificSQLDateTime(post.Bumped) + "' WHERE `id` = " + strconv.Itoa(post.ParentID))
 		if err != nil {
-			server.ServeErrorPage(*writer, err.Error())
+			return result, err
 		}
 	}
-	return result
+	return result, err
 }
 
 func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
@@ -967,19 +967,13 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		return
 	}
 
-	result := insertPost(&w, post, email_command != "sage")
+	result, err := insertPost(post, email_command != "sage")
 	if err != nil {
 		server.ServeErrorPage(w, err.Error())
 		return
 	}
 	postid, _ := result.LastInsertId()
 	post.ID = int(postid)
-
-	_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `message` = '" + post.MessageHTML + "', `message_raw` = '" + post.MessageText + "' WHERE `id` = " + strconv.Itoa(int(post.ID)) + " AND `boardid` = " + strconv.Itoa(post.BoardID))
-	if err != nil {
-		server.ServeErrorPage(writer, err.Error())
-		return
-	}
 
 	boards, _ := getBoardArr("")
 	// rebuild the board page
