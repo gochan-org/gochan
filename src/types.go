@@ -305,6 +305,21 @@ type PostJSON struct {
 	FileChecksum		string `json:"md5"`
 }
 
+type BoardPageJSON struct {
+	Threads 				[]ThreadJSON `json:"threads"`
+	Page 					int `json:"page"`
+}
+
+type ThreadJSON struct {
+	*PostJSON
+	OmittedPosts 		int `json:"omitted_posts"`
+	OmittedImages 		int `json:"omitted_images"`
+	Replies 				int `json:"replies"`
+	ImagesOnArchive 	int `json:"images"`
+	Sticky 				int `json:"sticky"`
+	Locked 				int `json:"locked"`
+}
+
 // Global variables, most initialized by config.cfg
 
 type GochanConfig struct {

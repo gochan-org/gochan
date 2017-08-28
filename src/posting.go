@@ -174,6 +174,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	printf(2, "Number of files deleted: %d\n", num)
 	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickied_threads, nonstickied_threads...)
+	// If there are no posts on the board
 	if len(threads) == 0 {
 		board.CurrentPage = 0
 		boardinfo_i = nil
@@ -216,6 +217,25 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		thread_pages = paginate(config.ThreadsPerPage_img, threads)
 
 		board.NumPages = len(thread_pages) - 1
+
+		// Create array of page wrapper objects, and open the file.
+		var pages_obj []BoardPageJSON
+
+		catalog_json_file,err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE | os.O_RDWR | os.O_TRUNC, 0777)
+		defer func() {
+			if catalog_json_file != nil {
+				catalog_json_file.Close()
+			}
+		}()
+
+		if err != nil {
+			errortext = "Failed opening /" + board.Dir + "/catalog.json: " + err.Error()
+			html += errortext + "<br />\n"
+			println(1, errortext)
+			error_log.Print(errortext)
+			return
+		}
+
 		for page_num, page_threads := range thread_pages {
 			// Package up board info for the template to use.
 			board.CurrentPage = page_num
@@ -256,9 +276,64 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				println(1, errortext)
 				return
 			}
-		}
-		html += "/" + board.Dir + "/ built successfully.\n"
 
+			// Clean up page's file
+			current_page_file.Close()
+
+			// Collect up threads for this page.
+			var page_obj BoardPageJSON
+			page_obj.Page = page_num
+
+			for _, thread_int := range page_threads {
+				thread := thread_int.(Thread)
+				post_json := makePostJSON(thread.OP.(PostTable), board.Anonymous)
+				var thread_json ThreadJSON
+				thread_json.PostJSON = &post_json
+
+				thread_json.Replies = thread.NumReplies
+				if(thread.Stickied) {
+					if(thread.NumReplies > config.StickyRepliesOnBoardPage) {
+						thread_json.OmittedPosts = thread.NumReplies - config.StickyRepliesOnBoardPage
+					}
+					thread_json.Sticky = 1
+				} else {
+					if(thread.NumReplies > config.RepliesOnBoardPage) {
+						thread_json.OmittedPosts = thread.NumReplies - config.RepliesOnBoardPage
+					}
+				}
+				if thread.OP.(PostTable).Locked {
+					thread_json.Locked = 1
+				}
+
+				// TODO fill out thread_json.OmittedImages, we also aren't showing this on the board pages.
+				// TODO fill out thread_json.ImagesOnArchive, involves querying how may
+				page_obj.Threads = append(page_obj.Threads, thread_json)
+			}
+
+			pages_obj = append(pages_obj, page_obj)
+		}
+
+		catalog_json, err := json.Marshal(pages_obj)
+
+		if err != nil {
+			errortext = "Failed to marshal to JSON: " + err.Error()
+			error_log.Println(errortext)
+			println(1, errortext)
+			html += errortext + "<br />\n"
+			return
+		}
+
+		_, err = catalog_json_file.Write(catalog_json)
+
+		if err != nil {
+			errortext = "Failed writing /" + board.Dir + "/catalog.json: " + err.Error()
+			error_log.Println(errortext)
+			println(1, errortext)
+			html += errortext + "<br />\n"
+			return
+		}
+
+		html += "/" + board.Dir + "/ built successfully.\n"
 	}
 
 	//benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
