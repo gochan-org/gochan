@@ -969,9 +969,6 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			// Calculate image checksum
 			post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
-			// TODO Remove me: debugging checksums
-			fmt.Printf("Uploaded image checksum: %x", md5.Sum(data))
-
 			// Attempt to load uploaded file with imaging library
 			img, err := imaging.Open(file_path)
 			if err != nil {
