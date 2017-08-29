@@ -134,6 +134,23 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		// Store the OP post for this thread
 		op_post := op_post_i.(PostTable)
 
+		// Get the number of replies to this thread.
+		err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " +
+			strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&thread.NumReplies)
+		if err != nil {
+			html += err.Error() + "<br />\n"
+		}
+
+		// Get the number of image replies in this thread
+		err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix +"posts` WHERE `boardid` = " +
+			strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'" +
+			" AND `filesize` <> 0").Scan(&thread.NumImages)
+		if err != nil {
+			html += err.Error() + "<br />\n"
+		}
+
+		thread.OP = op_post_i
+
 		if op_post.Stickied {
 			// If the thread is stickied, limit replies on the archive page to the
 			// 	configured value for stickied threads.
@@ -141,31 +158,35 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
-			// Get the number of replies to this thread.
-			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&thread.NumReplies)
-			if err != nil {
-				html += err.Error() + "<br />"
-			}
-			thread.OP = op_post_i
-			if len(posts_in_thread) > 0 {
-				thread.BoardReplies = posts_in_thread
-			}
-			stickied_threads = append(stickied_threads, thread)
 		} else {
 			// Otherwise, limit the replies to the configured value for normal threads.
 			posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.RepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
-			// Get the number of replies to this thread.
-			err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&thread.NumReplies)
-			if err != nil {
-				html += err.Error() + "<br />"
+
+		}
+
+
+		if len(posts_in_thread) > 0 {
+			// Store the posts to show on board page
+			thread.BoardReplies = posts_in_thread
+
+			// Count number of images on board page
+			image_count := 0
+			for _, reply := range posts_in_thread {
+				if(reply.(PostTable).Filesize != 0) {
+					image_count++
+				}
 			}
-			thread.OP = op_post_i
-			if len(posts_in_thread) > 0 {
-				thread.BoardReplies = posts_in_thread
-			}
+			// Then calculate number of omitted images.
+			thread.OmittedImages = thread.NumImages - image_count
+		}
+
+		// Add thread struct to appropriate list
+		if op_post.Stickied {
+			stickied_threads = append(stickied_threads, thread)
+		} else {
 			nonstickied_threads = append(nonstickied_threads, thread)
 		}
 	}
@@ -289,8 +310,9 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				post_json := makePostJSON(thread.OP.(PostTable), board.Anonymous)
 				var thread_json ThreadJSON
 				thread_json.PostJSON = &post_json
-
 				thread_json.Replies = thread.NumReplies
+				thread_json.ImagesOnArchive = thread.NumImages
+				thread_json.OmittedImages = thread.OmittedImages
 				if(thread.Stickied) {
 					if(thread.NumReplies > config.StickyRepliesOnBoardPage) {
 						thread_json.OmittedPosts = thread.NumReplies - config.StickyRepliesOnBoardPage
@@ -304,9 +326,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				if thread.OP.(PostTable).Locked {
 					thread_json.Locked = 1
 				}
-
-				// TODO fill out thread_json.OmittedImages, we also aren't showing this on the board pages.
-				// TODO fill out thread_json.ImagesOnArchive, involves querying how may
 				page_obj.Threads = append(page_obj.Threads, thread_json)
 			}
 

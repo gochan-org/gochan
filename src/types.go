@@ -34,12 +34,14 @@ type RecentPost struct {
 }
 
 type Thread struct {
-	IName        string
-	OP           interface{}
-	NumReplies   int
-	BoardReplies []interface{}
-	Stickied     bool
-	ThreadPage   int
+	IName         string
+	OP            interface{}
+	NumReplies    int
+	NumImages     int
+	OmittedImages int
+	BoardReplies  []interface{}
+	Stickied      bool
+	ThreadPage    int
 }
 
 // SQL Table structs
