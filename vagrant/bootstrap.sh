@@ -3,6 +3,16 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+
+function changePerms {
+	chmod -R 755 $1 
+	chown -R ubuntu:ubuntu $1
+}
+
+function makeLink {
+	ln -sf /vagrant/$1 $GOCHAN_PATH/$1
+}
+
 export GOCHAN_PATH=/home/ubuntu/gochan
 apt-get update
 apt-get -y install git subversion mercurial golang nginx redis-server mariadb-server mariadb-client #gifsicle
@@ -61,18 +71,12 @@ rm -f $GOCHAN_PATH/gochan
 rm -f $GOCHAN_PATH/initialsetupdb.sql
 
 install -m 775 -o ubuntu -g ubuntu -d $GOCHAN_PATH
-install -m 775 -o ubuntu -g ubuntu -d $GOCHAN_PATH/html
-install -m 775 -o ubuntu -g ubuntu -d $GOCHAN_PATH/log
-install -m 775 -o ubuntu -g ubuntu -T /vagrant/gochan $GOCHAN_PATH/gochan
-install -m 775 -o ubuntu -g ubuntu -T /vagrant/initialsetupdb.sql $GOCHAN_PATH/initialsetupdb.sql
-ln -sf /vagrant/html/javascript $GOCHAN_PATH/html/javascript
-ln -sf /vagrant/templates $GOCHAN_PATH/templates
-ln -sf /vagrant/html/css $GOCHAN_PATH/html/css
-ln -sf /vagrant/html/css $GOCHAN_PATH/html/error
-
-if [ ! -e "$GOCHAN_PATH/html/index.html" ]; then
-	install -m 775 -o ubuntu -g ubuntu -T /vagrant/html/index.html $GOCHAN_PATH/html/index.html
-fi
+makeLink html
+makeLink log
+makeLink gochan
+makeLink templates
+makeLink initialsetupdb.sql
+changePerms $GOCHAN_PATH
 
 if [ ! -e "$GOCHAN_PATH/gochan.json" ]; then
 	install -m 775 -o ubuntu -g ubuntu -T /vagrant/gochan.example.json $GOCHAN_PATH/gochan.json

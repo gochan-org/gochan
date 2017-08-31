@@ -3,7 +3,6 @@
 
 
 Vagrant.configure("2") do |config|
-	# use 16.04 because 14.04's go version is ooooooooooooooooooooold
 	config.vm.box = "ubuntu/xenial64"
 
 	# Disable automatic box update checking. If you disable this, then
