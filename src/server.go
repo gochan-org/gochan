@@ -49,7 +49,7 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 			newpath := ""
 
 			//check to see if one of the specified index pages exists
-			for _, value := range(config.FirstPage) {
+			for _, value := range config.FirstPage {
 				newpath = path.Join(filepath, value)
 				_, err := os.Stat(newpath)
 				if err == nil {
