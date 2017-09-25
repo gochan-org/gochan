@@ -63,29 +63,30 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 			//the file exists, and is not a folder
 			file_bytes, err = ioutil.ReadFile(filepath)
 			extension := getFileExtension(url)
-			switch {
-			case extension == "png":
+			switch extension {
+			case "png":
 				writer.Header().Add("Content-Type", "image/png")
 				writer.Header().Add("Cache-Control", "max-age=86400")
-			case extension == "gif":
+			case "gif":
 				writer.Header().Add("Content-Type", "image/gif")
 				writer.Header().Add("Cache-Control", "max-age=86400")
-			case extension == "jpg":
+			case "jpg":
 				writer.Header().Add("Content-Type", "image/jpeg")
 				writer.Header().Add("Cache-Control", "max-age=86400")
-			case extension == "css":
+			case "css":
 				writer.Header().Add("Content-Type", "text/css")
 				writer.Header().Add("Cache-Control", "max-age=43200")
-			case extension == "js":
+			case "js":
 				writer.Header().Add("Content-Type", "text/javascript")
 				writer.Header().Add("Cache-Control", "max-age=43200")
-			case extension == "json":
+			case "json":
 				writer.Header().Add("Content-Type", "application/json")
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-			}
-			if extension == "html" || extension == "htm" {
+			}		
+			if strings.HasPrefix(extension, "htm") {
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
+			
 			access_log.Print("Success: 200 from " + getRealIP(&request) + " @ " + request.RequestURI)
 			return file_bytes, true
 		}
