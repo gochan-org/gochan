@@ -50,16 +50,14 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 			newpath := ""
 
 			//check to see if one of the specified index pages exists
-			for i := 0; i < len(config.FirstPage); i++ {
-				newpath = path.Join(filepath, config.FirstPage[i])
+			for _, value := range(config.FirstPage) {
+				newpath = path.Join(filepath, value)
 				_, err := os.Stat(newpath)
 				if err == nil {
 					// serve the index page
 					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 					file_bytes, err = ioutil.ReadFile(newpath)
 					return file_bytes, true
-					found_index = true
-					break
 				}
 			}
 
