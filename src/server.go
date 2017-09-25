@@ -46,7 +46,6 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 	} else {
 		//the file exists, or there is a folder here
 		if results.IsDir() {
-			found_index := false
 			newpath := ""
 
 			//check to see if one of the specified index pages exists
@@ -59,11 +58,6 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 					file_bytes, err = ioutil.ReadFile(newpath)
 					return file_bytes, true
 				}
-			}
-
-			if !found_index {
-				// none of the index pages specified in config.cfg exist
-				return file_bytes, false
 			}
 		} else {
 			//the file exists, and is not a folder
