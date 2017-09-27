@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	null_time, _ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
+	nullTime, _ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
 )
 
 const (
@@ -39,25 +39,24 @@ func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time 
 	}
 }
 
-func md5_sum(str string) string {
+func md5Sum(str string) string {
 	hash := md5.New()
 	io.WriteString(hash, str)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-func sha1_sum(str string) string {
+func sha1Sum(str string) string {
 	hash := sha1.New()
 	io.WriteString(hash, str)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-func bcrypt_sum(str string) string {
-	hash := ""
+func bcryptSum(str string) string {
 	digest, err := bcrypt.GenerateFromPassword([]byte(str), 4)
 	if err == nil {
-		hash = string(digest)
+		return string(digest)
 	}
-	return hash
+	return ""
 }
 
 func byteByByteReplace(input, from, to string) string {
@@ -70,9 +69,11 @@ func byteByByteReplace(input, from, to string) string {
 	return input
 }
 
-// Deletes files in a folder (root) that match a given regular expression.
-// Returns the number of files that were deleted, and any error encountered.
-func deleteMatchingFiles(root, match string) (files_deleted int, err error) {
+/*
+Deletes files in a folder (root) that match a given regular expression.
+Returns the number of files that were deleted, and any error encountered.
+*/
+func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 	files, err := ioutil.ReadDir(root)
 	if err != nil {
 		return 0, err
@@ -81,10 +82,10 @@ func deleteMatchingFiles(root, match string) (files_deleted int, err error) {
 		match, _ := regexp.MatchString(match, f.Name())
 		if match {
 			os.Remove(filepath.Join(root, f.Name()))
-			files_deleted++
+			filesDeleted++
 		}
 	}
-	return files_deleted, err
+	return filesDeleted, err
 }
 
 // getBoardArr performs a query against the database, and returns an array of BoardsTables along with an error value.
@@ -391,7 +392,7 @@ func makePostJSON(post PostTable, anonymous string) (post_obj PostJSON) {
 		filename = post.Filename[:ext_start]
 	}
 
-	post_obj = PostJSON { ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
+	post_obj = PostJSON{ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
 		Name: post.Name, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
 		ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
 		FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}

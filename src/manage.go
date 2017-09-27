@@ -318,7 +318,7 @@ var manage_functions = map[string]ManageFunction{
 					"\t\t<input type=\"submit\" value=\"Login\" />\n" +
 					"\t</form>"
 			} else {
-				key := md5_sum(request.RemoteAddr + username + password + config.RandomSeed + generateSalt())[0:10]
+				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + generateSalt())[0:10]
 				createSession(key, username, password, &request, &writer)
 				http.Redirect(writer, &request, path.Join(config.SiteWebfolder, "/manage?action="+request.FormValue("redirect")), http.StatusFound)
 			}
@@ -997,7 +997,7 @@ var manage_functions = map[string]ManageFunction{
 					new_username := request.FormValue("username")
 					new_password := request.FormValue("password")
 					new_rank := request.FormValue("rank")
-					_, err := db.Exec("INSERT INTO `" + config.DBprefix + "staff` (`username`, `password_checksum`, `rank`) VALUES('" + new_username + "','" + bcrypt_sum(new_password) + "', '" + new_rank + "');")
+					_, err := db.Exec("INSERT INTO `" + config.DBprefix + "staff` (`username`, `password_checksum`, `rank`) VALUES('" + new_username + "','" + bcryptSum(new_password) + "', '" + new_rank + "');")
 					if err != nil {
 						server.ServeErrorPage(writer, err.Error())
 					}

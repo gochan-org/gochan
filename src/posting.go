@@ -27,7 +27,7 @@ import (
 
 const (
 	whitespace_match = "[\000-\040]"
-	gt = "&gt;"
+	gt               = "&gt;"
 )
 
 var (
@@ -142,7 +142,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		}
 
 		// Get the number of image replies in this thread
-		err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix +"posts` WHERE `boardid` = " +
+		err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " +
 			strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'" +
 			" AND `filesize` <> 0").Scan(&thread.NumImages)
 		if err != nil {
@@ -167,7 +167,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 
 		}
 
-
 		if len(posts_in_thread) > 0 {
 			// Store the posts to show on board page
 			thread.BoardReplies = posts_in_thread
@@ -175,7 +174,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			// Count number of images on board page
 			image_count := 0
 			for _, reply := range posts_in_thread {
-				if(reply.(PostTable).Filesize != 0) {
+				if reply.(PostTable).Filesize != 0 {
 					image_count++
 				}
 			}
@@ -242,7 +241,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		// Create array of page wrapper objects, and open the file.
 		var pages_obj []BoardPageJSON
 
-		catalog_json_file,err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE | os.O_RDWR | os.O_TRUNC, 0777)
+		catalog_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		defer func() {
 			if catalog_json_file != nil {
 				catalog_json_file.Close()
@@ -313,13 +312,13 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				thread_json.Replies = thread.NumReplies
 				thread_json.ImagesOnArchive = thread.NumImages
 				thread_json.OmittedImages = thread.OmittedImages
-				if(thread.Stickied) {
-					if(thread.NumReplies > config.StickyRepliesOnBoardPage) {
+				if thread.Stickied {
+					if thread.NumReplies > config.StickyRepliesOnBoardPage {
 						thread_json.OmittedPosts = thread.NumReplies - config.StickyRepliesOnBoardPage
 					}
 					thread_json.Sticky = 1
 				} else {
-					if(thread.NumReplies > config.RepliesOnBoardPage) {
+					if thread.NumReplies > config.RepliesOnBoardPage {
 						thread_json.OmittedPosts = thread.NumReplies - config.RepliesOnBoardPage
 					}
 				}
@@ -391,7 +390,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	var current_page_file *os.File
 	var errortext string
 
-	err := db.QueryRow("SELECT `dir`,`anonymous` FROM `" + config.DBprefix + "boards` WHERE `id` = '" + strconv.Itoa(op.BoardID) + "';").Scan(&board_dir, &anonymous)
+	err := db.QueryRow("SELECT `dir`,`anonymous` FROM `"+config.DBprefix+"boards` WHERE `id` = '"+strconv.Itoa(op.BoardID)+"';").Scan(&board_dir, &anonymous)
 	if err != nil {
 		errortext = "Failed getting board directory and board's anonymous setting from post: " + err.Error()
 		html += errortext + "<br />\n"
@@ -444,8 +443,8 @@ func buildThreadPages(op *PostTable) (html string) {
 	}
 
 	// Put together the thread JSON
-	thread_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE | os.O_RDWR | os.O_TRUNC, 0777)
-	defer func()  {
+	thread_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	defer func() {
 		if thread_json_file != nil {
 			thread_json_file.Close()
 		}
@@ -641,15 +640,15 @@ func buildBoardListJSON() (html string) {
 	board_list_wrapper := new(BoardJSONWrapper)
 
 	// Our cooldowns are site-wide currently.
-	cooldowns_obj := BoardCooldowns { NewThread: config.NewThreadDelay, Reply: config.ReplyDelay, ImageReply: config.ReplyDelay}
+	cooldowns_obj := BoardCooldowns{NewThread: config.NewThreadDelay, Reply: config.ReplyDelay, ImageReply: config.ReplyDelay}
 
 	for _, board_int := range all_boards {
 		board := board_int.(BoardsTable)
-		board_obj := BoardJSON { BoardName: board.Dir, Title: board.Title, WorkSafeBoard: 1,
+		board_obj := BoardJSON{BoardName: board.Dir, Title: board.Title, WorkSafeBoard: 1,
 			ThreadsPerPage: config.ThreadsPerPage_img, Pages: board.MaxPages, MaxFilesize: board.MaxImageSize,
 			MaxMessageLength: board.MaxMessageLength, BumpLimit: 200, ImageLimit: board.NoImagesAfter,
-			Cooldowns: cooldowns_obj, Description: board.Description, IsArchived: 0 }
-		if(board.EnableNSFW) {
+			Cooldowns: cooldowns_obj, Description: board.Description, IsArchived: 0}
+		if board.EnableNSFW {
 			board_obj.WorkSafeBoard = 0
 		}
 		board_list_wrapper.Boards = append(board_list_wrapper.Boards, board_obj)
@@ -721,11 +720,10 @@ func sinceLastPost(post *PostTable) int {
 	var oldpost PostTable
 	err := db.QueryRow("SELECT `timestamp` FROM `" + config.DBprefix + "posts` WHERE `ip` = '" + post.IP + "' ORDER BY `timestamp` DESC LIMIT 1").Scan(&oldpost.Timestamp)
 
-
 	since := time.Since(oldpost.Timestamp)
 	if err == sql.ErrNoRows {
 		// no posts by that IP.
-        return -1
+		return -1
 	} else {
 		return int(since.Seconds())
 	}
@@ -838,77 +836,77 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 }
 
 func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
-	start_time := benchmarkTimer("makePost", time.Now(), true)
+	startTime := benchmarkTimer("makePost", time.Now(), true)
 	request = *r
 	writer = w
-	var max_message_length int
-	var errortext string
+	var maxMessageLength int
+	var errorText string
 	domain := r.Host
 
 	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
-	var post PostTable
+	post := PostTable{}
 	post.IName = "post"
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
 
-	var email_command string
+	var emailCommand string
 
-	post_name := html.EscapeString(escapeString(request.FormValue("postname")))
+	postName := html.EscapeString(escapeString(request.FormValue("postname")))
 
-	if strings.Index(post_name, "#") == -1 {
-		post.Name = post_name
-	} else if strings.Index(post_name, "#") == 0 {
-		post.Tripcode = generateTripCode(post_name[1:])
-	} else if strings.Index(post_name, "#") > 0 {
-		post_name_arr := strings.SplitN(post_name, "#", 2)
-		post.Name = post_name_arr[0]
-		post.Tripcode = generateTripCode(post_name_arr[1])
+	if strings.Index(postName, "#") == -1 {
+		post.Name = postName
+	} else if strings.Index(postName, "#") == 0 {
+		post.Tripcode = generateTripCode(postName[1:])
+	} else if strings.Index(postName, "#") > 0 {
+		postNameArr := strings.SplitN(postName, "#", 2)
+		post.Name = postNameArr[0]
+		post.Tripcode = generateTripCode(postNameArr[1])
 	}
 
-	post_email := escapeString(request.FormValue("postemail"))
-	if strings.Index(post_email, "noko") == -1 && strings.Index(post_email, "sage") == -1 {
-		post.Email = html.EscapeString(escapeString(post_email))
-	} else if strings.Index(post_email, "#") > 1 {
-		post_email_arr := strings.SplitN(post_email, "#", 2)
-		post.Email = html.EscapeString(escapeString(post_email_arr[0]))
-		email_command = post_email_arr[1]
-	} else if post_email == "noko" || post_email == "sage" {
-		email_command = post_email
+	postEmail := escapeString(request.FormValue("postemail"))
+	if strings.Index(postEmail, "noko") == -1 && strings.Index(postEmail, "sage") == -1 {
+		post.Email = html.EscapeString(escapeString(postEmail))
+	} else if strings.Index(postEmail, "#") > 1 {
+		postEmailArr := strings.SplitN(postEmail, "#", 2)
+		post.Email = html.EscapeString(escapeString(postEmailArr[0]))
+		emailCommand = postEmailArr[1]
+	} else if postEmail == "noko" || postEmail == "sage" {
+		emailCommand = postEmail
 		post.Email = ""
 	}
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
-	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")),"\r\n")
+	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")), "\r\n")
 
-	err := db.QueryRow("SELECT `max_message_length` FROM `" + config.DBprefix + "boards` WHERE `id` = " + strconv.Itoa(post.BoardID)).Scan(&max_message_length)
+	err := db.QueryRow("SELECT `max_message_length` FROM `" + config.DBprefix + "boards` WHERE `id` = " + strconv.Itoa(post.BoardID)).Scan(&maxMessageLength)
 	if err != nil {
-		server.ServeErrorPage(w, "Requested board does not exist.")
+		serveErrorPage(w, "Requested board does not exist.")
 		error_log.Print("requested board does not exist. Error: " + err.Error())
 	}
 
-	if len(post.MessageText) > max_message_length {
-		server.ServeErrorPage(w, "Post body is too long")
+	if len(post.MessageText) > maxMessageLength {
+		serveErrorPage(w, "Post body is too long")
 		return
 	}
 	post.MessageHTML = html.EscapeString(post.MessageText)
 	formatMessage(&post)
 
-	post.Password = md5_sum(request.FormValue("postpassword"))
+	post.Password = md5Sum(request.FormValue("postpassword"))
 
 	// Reverse escapes
-	post_name_cookie := strings.Replace(post_name, "&amp;", "&", -1)
+	post_name_cookie := strings.Replace(postName, "&amp;", "&", -1)
 	post_name_cookie = strings.Replace(post_name_cookie, "\\&#39;", "'", -1)
 
 	post_name_cookie = strings.Replace(url.QueryEscape(post_name_cookie), "+", "%20", -1)
 
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 	// http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-	if email_command == "" {
+	if emailCommand == "" {
 		http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 		// http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
 	} else {
-		if email_command == "noko" {
+		if emailCommand == "noko" {
 			if post.Email == "" {
 				http.SetCookie(writer, &http.Cookie{Name: "email", Value: "noko", Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 				// http.SetCookie(writer, &http.Cookie{Name: "email", Value:"noko", Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
@@ -937,14 +935,14 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	}
 
 	switch checkPostForSpam(post.IP, request.Header["User-Agent"][0], request.Referer(),
-	post.Name, post.Email, post.MessageText) {
-		case "discard":
-			access_log.Print("Akismet recommended discarding post from: " + post.IP)
-			return
-		case "spam":
-			access_log.Print("Akismet suggested post is spam from " + post.IP)
-			return
-		default:
+		post.Name, post.Email, post.MessageText) {
+	case "discard":
+		access_log.Print("Akismet recommended discarding post from: " + post.IP)
+		return
+	case "spam":
+		access_log.Print("Akismet suggested post is spam from " + post.IP)
+		return
+	default:
 	}
 
 	file, handler, uploaderr := request.FormFile("imagefile")
@@ -956,7 +954,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			server.ServeErrorPage(w, "Couldn't read file: "+err.Error())
+			serveErrorPage(w, "Couldn't read file: "+err.Error())
 		} else {
 			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
@@ -968,7 +966,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
 			board_arr, _ := getBoardArr("`id` = " + request.FormValue("boardid"))
 			if len(board_arr) == 0 {
-				server.ServeErrorPage(w, "No boards have been created yet")
+				serveErrorPage(w, "No boards have been created yet")
 			}
 			_board_dir, _ := getBoardArr("`id` = " + request.FormValue("boardid"))
 			board_dir := _board_dir[0].Dir
@@ -978,10 +976,10 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 			err := ioutil.WriteFile(file_path, data, 0777)
 			if err != nil {
-				errortext = "Couldn't write file \"" + post.Filename + "\"" + err.Error()
-				println(1, errortext)
-				error_log.Println(errortext)
-				server.ServeErrorPage(w, "Couldn't write file \""+post.FilenameOriginal+"\"")
+				errorText = "Couldn't write file \"" + post.Filename + "\"" + err.Error()
+				println(1, errorText)
+				error_log.Println(errorText)
+				serveErrorPage(w, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
 			}
 
@@ -991,10 +989,10 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			// Attempt to load uploaded file with imaging library
 			img, err := imaging.Open(file_path)
 			if err != nil {
-				errortext = "Couldn't open uploaded file \"" + post.Filename + "\"" + err.Error()
-				error_log.Println(errortext)
-				println(1, errortext)
-				server.ServeErrorPage(w, "Upload filetype not supported")
+				errorText = "Couldn't open uploaded file \"" + post.Filename + "\"" + err.Error()
+				error_log.Println(errorText)
+				println(1, errorText)
+				serveErrorPage(w, "Upload filetype not supported")
 
 				return
 			} else {
@@ -1003,7 +1001,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				if err != nil {
 					error_log.Println(err.Error())
 					println(1, err.Error())
-					server.ServeErrorPage(w, err.Error())
+					serveErrorPage(w, err.Error())
 				} else {
 					post.Filesize = int(stat.Size())
 				}
@@ -1023,12 +1021,12 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					// If spoiler is enabled, symlink thumbnail to spoiler image
 					_, err := os.Stat(path.Join(config.DocumentRoot, "spoiler.png"))
 					if err != nil {
-						server.ServeErrorPage(w, "missing /spoiler.png")
+						serveErrorPage(w, "missing /spoiler.png")
 						return
 					} else {
 						err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumb_path)
 						if err != nil {
-							server.ServeErrorPage(w, err.Error())
+							serveErrorPage(w, err.Error())
 							return
 						}
 					}
@@ -1038,7 +1036,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					post.ThumbH = img.Bounds().Max.Y
 					err := syscall.Symlink(file_path, thumb_path)
 					if err != nil {
-						server.ServeErrorPage(w, err.Error())
+						serveErrorPage(w, err.Error())
 						return
 					}
 				} else {
@@ -1050,7 +1048,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 						catalog_thumbnail = createThumbnail(img, "catalog")
 						err = imaging.Save(catalog_thumbnail, catalog_thumb_path)
 						if err != nil {
-							server.ServeErrorPage(w, err.Error())
+							serveErrorPage(w, err.Error())
 							return
 						}
 					} else {
@@ -1060,7 +1058,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					if err != nil {
 						println(1, err.Error())
 						error_log.Println(err.Error())
-						server.ServeErrorPage(w, err.Error())
+						serveErrorPage(w, err.Error())
 						return
 					}
 				}
@@ -1069,26 +1067,26 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	}
 
 	if strings.TrimSpace(post.MessageText) == "" && post.Filename == "" {
-		server.ServeErrorPage(w, "Post must contain a message if no image is uploaded.")
+		serveErrorPage(w, "Post must contain a message if no image is uploaded.")
 		return
 	}
 	post_delay := sinceLastPost(&post)
 	if post_delay > -1 {
 		if post.ParentID == 0 && post_delay < config.NewThreadDelay {
-			server.ServeErrorPage(w, "Please wait before making a new thread.")
+			serveErrorPage(w, "Please wait before making a new thread.")
 			return
 		} else if post.ParentID > 0 && post_delay < config.ReplyDelay {
-			server.ServeErrorPage(w, "Please wait before making a reply.")
+			serveErrorPage(w, "Please wait before making a reply.")
 			return
 		}
 	}
 
 	isbanned, err := checkBannedStatus(&post, &w)
 	if err != nil {
-		errortext = "Error in checkBannedStatus: " + err.Error()
-		server.ServeErrorPage(w, err.Error())
-		error_log.Println(errortext)
-		println(1, errortext)
+		errorText = "Error in checkBannedStatus: " + err.Error()
+		serveErrorPage(w, err.Error())
+		error_log.Println(errorText)
+		println(1, errorText)
 		return
 	}
 
@@ -1110,9 +1108,9 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		return
 	}
 
-	result, err := insertPost(post, email_command != "sage")
+	result, err := insertPost(post, emailCommand != "sage")
 	if err != nil {
-		server.ServeErrorPage(w, err.Error())
+		serveErrorPage(w, err.Error())
 		return
 	}
 	postid, _ := result.LastInsertId()
@@ -1124,7 +1122,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	buildFrontPage()
 
-	if email_command == "noko" {
+	if emailCommand == "noko" {
 		if post.ParentID == 0 {
 			http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
@@ -1133,27 +1131,27 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	} else {
 		http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/", http.StatusFound)
 	}
-	benchmarkTimer("makePost", start_time, false)
+	benchmarkTimer("makePost", startTime, false)
 }
 
 func formatMessage(post *PostTable) {
 	message := post.MessageHTML
 
 	// prepare each line to be formatted
-	post_lines := strings.Split(message,"\\r\\n")
+	post_lines := strings.Split(message, "\\r\\n")
 	for i, line := range post_lines {
 		trimmed_line := strings.TrimSpace(line)
-		line_words := strings.Split(trimmed_line," ")
+		line_words := strings.Split(trimmed_line, " ")
 		is_greentext := false // if true, append </span> to end of line
-		for w,word := range line_words {
+		for w, word := range line_words {
 			if strings.LastIndex(word, gt+gt) == 0 {
 				//word is a backlink
-				_,err := strconv.Atoi(word[8:])
+				_, err := strconv.Atoi(word[8:])
 				if err == nil {
 					// the link is in fact, a valid int
 					var board_dir string
 					var link_parent int
-					db.QueryRow("SELECT `dir`,`parentid` FROM " + config.DBprefix + "posts," + config.DBprefix + "boards WHERE " + config.DBprefix + "posts.id = '" + word[8:] + "';").Scan(&board_dir,&link_parent)
+					db.QueryRow("SELECT `dir`,`parentid` FROM "+config.DBprefix+"posts,"+config.DBprefix+"boards WHERE "+config.DBprefix+"posts.id = '"+word[8:]+"';").Scan(&board_dir, &link_parent)
 					// get post board dir
 
 					if board_dir == "" {
@@ -1170,11 +1168,11 @@ func formatMessage(post *PostTable) {
 				line_words[w] = "<span class=\"greentext\">" + word
 			}
 		}
-		line = strings.Join(line_words," ")
+		line = strings.Join(line_words, " ")
 		if is_greentext {
 			line += "</span>"
 		}
 		post_lines[i] = line
 	}
-	post.MessageHTML = strings.Join(post_lines,"<br />")
+	post.MessageHTML = strings.Join(post_lines, "<br />")
 }
