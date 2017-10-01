@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/fcgi"
-	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -16,12 +15,9 @@ import (
 )
 
 var (
-	form          url.Values
-	header        http.Header
 	cookies       []*http.Cookie
 	writer        http.ResponseWriter
 	request       http.Request
-	exit_error    bool
 	server        *GochanServer
 	referrerRegex *regexp.Regexp
 )
@@ -32,36 +28,33 @@ type GochanServer struct {
 	namespaces map[string]func(http.ResponseWriter, *http.Request, interface{})
 }
 
-func (s GochanServer) AddNamespace(base_path string, namespace_function func(http.ResponseWriter, *http.Request, interface{})) {
-	s.namespaces[base_path] = namespace_function
+func (s GochanServer) AddNamespace(basePath string, namespaceFunction func(http.ResponseWriter, *http.Request, interface{})) {
+	s.namespaces[basePath] = namespaceFunction
 }
 
-func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byte, bool) {
-	var file_bytes []byte
-	filepath := path.Join(config.DocumentRoot, url)
-	results, err := os.Stat(filepath)
+func (s GochanServer) getFileData(writer http.ResponseWriter, url string) []byte {
+	filePath := path.Join(config.DocumentRoot, url)
+	results, err := os.Stat(filePath)
 	if err != nil {
 		// the requested path isn't a file or directory, 404
-		return file_bytes, false
+		return nil
 	} else {
 		//the file exists, or there is a folder here
 		if results.IsDir() {
-			newpath := ""
-
 			//check to see if one of the specified index pages exists
 			for _, value := range config.FirstPage {
-				newpath = path.Join(filepath, value)
-				_, err := os.Stat(newpath)
+				newPath := path.Join(filePath, value)
+				_, err := os.Stat(newPath)
 				if err == nil {
 					// serve the index page
 					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-					file_bytes, err = ioutil.ReadFile(newpath)
-					return file_bytes, true
+					fileBytes, _ := ioutil.ReadFile(newPath)
+					return fileBytes
 				}
 			}
 		} else {
 			//the file exists, and is not a folder
-			file_bytes, err = ioutil.ReadFile(filepath)
+			fileBytes, _ := ioutil.ReadFile(filePath)
 			extension := getFileExtension(url)
 			switch extension {
 			case "png":
@@ -82,52 +75,45 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) ([]byt
 			case "json":
 				writer.Header().Add("Content-Type", "application/json")
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-			}		
+			}
 			if strings.HasPrefix(extension, "htm") {
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
-			
+
 			access_log.Print("Success: 200 from " + getRealIP(&request) + " @ " + request.RequestURI)
-			return file_bytes, true
+			return fileBytes
 		}
 	}
-	return file_bytes, false
+	return nil
 }
 
-func (s GochanServer) Redirect(location string) {
-	http.Redirect(writer, &request, location, http.StatusFound)
-}
-
-func (s GochanServer) serve404(writer http.ResponseWriter, request *http.Request) {
-	error_page, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
+func serveNotFound(writer http.ResponseWriter, request *http.Request) {
+	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
 	if err != nil {
 		writer.Write([]byte("Requested page not found, and 404 error page not found"))
 	} else {
-		writer.Write(error_page)
+		writer.Write(errorPage)
 	}
 	error_log.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.RequestURI)
 }
 
-func (s GochanServer) ServeErrorPage(writer http.ResponseWriter, err string) {
-	error_page_bytes, _ := ioutil.ReadFile("templates/error.html")
-	error_page := string(error_page_bytes)
-	error_page = strings.Replace(error_page, "{ERRORTEXT}", err, -1)
-	writer.Write([]byte(error_page))
-	exit_error = true
+func serveErrorPage(writer http.ResponseWriter, err string) {
+	errorPageBytes, _ := ioutil.ReadFile("templates/error.html")
+	errorPage := strings.Replace(string(errorPageBytes), "{ERRORTEXT}", err, -1)
+	writer.Write([]byte(errorPage))
 }
 
 func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	for name, namespace_function := range s.namespaces {
-		//if len(request.URL)
+	for name, namespaceFunction := range s.namespaces {
 		if request.URL.Path == "/"+name {
-			namespace_function(writer, request, nil)
+			namespaceFunction(writer, request, nil)
 			return
 		}
 	}
-	fb, found := s.getFileData(writer, request.URL.Path)
+	fb := s.getFileData(writer, request.URL.Path)
 	writer.Header().Add("Cache-Control", "max-age=86400")
-	if !found {
-		s.serve404(writer, request)
+	if fb == nil {
+		serveNotFound(writer, request)
 		return
 	}
 	writer.Write(fb)
@@ -167,65 +153,58 @@ func initServer() {
 	}
 }
 
-func getRealIP(r *http.Request) (ip string) {
+func getRealIP(r *http.Request) string {
 	// HTTP_CF_CONNECTING_IP > X-Forwarded-For > RemoteAddr
 	if r.Header.Get("HTTP_CF_CONNECTING_IP") != "" {
-		ip = r.Header.Get("HTTP_CF_CONNECTING_IP")
-	} else {
-		if r.Header.Get("X-Forwarded-For") != "" {
-			ip = r.Header.Get("X-Forwarded-For")
-		} else {
-			ip = r.RemoteAddr
-		}
+		return r.Header.Get("HTTP_CF_CONNECTING_IP")
 	}
-	return
+	if r.Header.Get("X-Forwarded-For") != "" {
+		return r.Header.Get("X-Forwarded-For")
+	}
+	return r.RemoteAddr
 }
 
-func validReferrer(request http.Request) (valid bool) {
-
-	referrerCopy := request.Referer()
-	valid = referrerRegex.MatchString(referrerCopy)
-	// Old Referrer check.
-	// valid = !(request.Referer() == "" || len(request.Referer()) < len(config.SiteDomain) || request.Referer()[7:len(config.SiteDomain)+7] != config.SiteDomain)
-	return
+func validReferrer(request http.Request) bool {
+	return referrerRegex.MatchString(request.Referer())
 }
 
 // register /util handler
 func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
 	writer.Header().Add("Content-Type", "text/css")
 	action := request.FormValue("action")
+	password := request.FormValue("password")
 	board := request.FormValue("board")
-	var err error
-	if action == "" && request.PostFormValue("delete_btn") != "Delete" && request.PostFormValue("report_btn") != "Report" {
+	fileOnly := request.FormValue("fileonly") == "on"
+	deleteBtn := request.PostFormValue("delete_btn")
+	reportBtn := request.PostFormValue("report_btn")
+	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" {
 		http.Redirect(writer, request, path.Join(config.SiteWebfolder, "/"), http.StatusFound)
 		return
 	}
-	var posts_arr []string
-	for key, _ := range request.PostForm {
+	var postsArr []string
+	for key := range request.PostForm {
 		if strings.Index(key, "check") == 0 {
-			posts_arr = append(posts_arr, key[5:])
+			postsArr = append(postsArr, key[5:])
 		}
 	}
-	if request.PostFormValue("delete_btn") == "Delete" {
+	if reportBtn == "Delete" {
 		// Delete a post or thread
-		file_only := request.FormValue("fileonly") == "on"
-		password := md5_sum(request.FormValue("password"))
+		password = md5Sum(password)
 		rank := getStaffRank()
 
-		if request.FormValue("password") == "" && rank == 0 {
-			server.ServeErrorPage(writer, "Password required for post deletion")
+		if password == "" && rank == 0 {
+			serveErrorPage(writer, "Password required for post deletion")
 			return
 		}
 
-		for _, post := range posts_arr {
-			var parent_id int
-			var filename string
-			var filetype string
-			var password_checksum string
-			var board_id int
-			//post_int,err := strconv.Atoi(post)
+		for _, post := range postsArr {
+			var parentId int
+			var fileName string
+			var fileType string
+			var passwordChecksum string
+			var boardId int
 
-			err = db.QueryRow("SELECT `parentid`,`filename`,`password` FROM `"+config.DBprefix+"posts` WHERE `id` = "+post+" AND `deleted_timestamp` = '"+nil_timestamp+"'").Scan(&parent_id, &filename, &password_checksum)
+			err := db.QueryRow(`SELECT "parentid", "filename", "password" FROM "`+config.DBprefix+`posts" WHERE "id" = `+post+` AND "deleted_timestamp" = "`+nil_timestamp+`"`).Scan(&parentId, &fileName, &passwordChecksum)
 			if err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "3;url="+request.Referer())
@@ -233,39 +212,39 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				continue
 			}
 			if err != nil {
-				server.ServeErrorPage(writer, err.Error())
+				serveErrorPage(writer, err.Error())
 				return
 			}
 
-			err = db.QueryRow("SELECT `id` FROM `" + config.DBprefix + "boards` WHERE `dir` = '" + board + "'").Scan(&board_id)
+			err = db.QueryRow(`SELECT "id" FROM "` + config.DBprefix + `boards" WHERE "dir" = "` + board + `"`).Scan(&boardId)
 			if err != nil {
-				server.ServeErrorPage(writer, err.Error())
+				serveErrorPage(writer, err.Error())
 				return
 			}
 
-			if password != password_checksum && rank == 0 {
+			if password != passwordChecksum && rank == 0 {
 				fmt.Fprintf(writer, "Incorrect password for %s\n", post)
 				continue
 			}
 
-			if file_only {
+			if fileOnly {
 
-				if filename != "" && filename != "deleted" {
-					filetype = filename[strings.Index(filename, ".")+1:]
-					filename = filename[:strings.Index(filename, ".")]
-					err := os.Remove(path.Join(config.DocumentRoot, board, "/src/"+filename+"."+filetype))
+				if fileName != "" && fileName != "deleted" {
+					fileType = fileName[strings.Index(fileName, ".")+1:]
+					fileName = fileName[:strings.Index(fileName, ".")]
+					err := os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
 					if err != nil {
-						server.ServeErrorPage(writer, err.Error())
+						serveErrorPage(writer, err.Error())
 						return
 					}
-					err = os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+filename+"t."+filetype))
+					err = os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+fileType))
 					if err != nil {
-						server.ServeErrorPage(writer, err.Error())
+						serveErrorPage(writer, err.Error())
 						return
 					}
-					_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `filename` = 'deleted' WHERE `id` = " + post)
+					_, err = db.Exec(`UPDATE "` + config.DBprefix + `posts" SET "filename" = "deleted" WHERE "id" = ` + post)
 					if err != nil {
-						server.ServeErrorPage(writer, err.Error())
+						serveErrorPage(writer, err.Error())
 						return
 					}
 				}
@@ -274,38 +253,38 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			} else {
 
 				// delete the post
-				_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `id` = " + post)
-				if parent_id == 0 {
+				_, err = db.Exec(`UPDATE "` + config.DBprefix + `posts" SET "deleted_timestamp" = "` + getSQLDateTime() + `" WHERE "id" = ` + post)
+				if parentId == 0 {
 					err = os.Remove(path.Join(config.DocumentRoot, board, "/res/"+post+".html"))
 				} else {
-					_board, _ := getBoardArr("`id` = " + strconv.Itoa(board_id))
+					_board, _ := getBoardArr("`id` = " + strconv.Itoa(boardId))
 					buildBoardPages(&_board[0])
 				}
 
 				// if the deleted post is actually a thread, delete its posts
-				_, _ = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `parentid` = " + post)
+				_, err = db.Exec(`UPDATE "` + config.DBprefix + `posts" SET "deleted_timestamp" = "` + getSQLDateTime() + `" WHERE "parentid" = ` + post)
 				if err != nil {
-					server.ServeErrorPage(writer, err.Error())
+					serveErrorPage(writer, err.Error())
 					return
 				}
 
-				// delete the
-				var deleted_filename string
-				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `id` = " + post + " AND `filename` != ''").Scan(&deleted_filename)
+				// delete the file
+				var deletedFilename string
+				err = db.QueryRow(`SELECT "filename" FROM "` + config.DBprefix + `posts" WHERE "id" = ` + post + ` AND "filename" != ""`).Scan(&deletedFilename)
 				if err == nil {
-					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deleted_filename))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "t.", -1)))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "c.", -1)))
+					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
 				}
 
-				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `parentid` = " + post + " AND `filename` != ''").Scan(&deleted_filename)
+				err = db.QueryRow(`SELECT "filename" FROM "` + config.DBprefix + `posts" WHERE "parentid" = ` + post + ` AND "filename" != ""`).Scan(&deletedFilename)
 				if err == nil {
-					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deleted_filename))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "t.", -1)))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deleted_filename, ".", "c.", -1)))
+					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
 				}
 
-				buildBoards(false, board_id)
+				buildBoards(false, boardId)
 
 				writer.Header().Add("refresh", "3;url="+request.Referer())
 				fmt.Fprintf(writer, "%s deleted successfully\n<br />", post)

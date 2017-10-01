@@ -114,7 +114,7 @@ func connectToSQLServer() {
 		printf(0, "Starting initial setup...")
 		initial_sql_str = strings.Replace(initial_sql_str, "DBNAME", config.DBname, -1)
 		initial_sql_str = strings.Replace(initial_sql_str, "DBPREFIX", config.DBprefix, -1)
-		initial_sql_str += "\nINSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcrypt_sum("password") + "', 'abc', 3);"
+		initial_sql_str += "\nINSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3);"
 		initial_sql_arr := strings.Split(initial_sql_str, ";")
 		initial_sql_str = ""
 
