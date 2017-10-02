@@ -999,12 +999,12 @@ var manage_functions = map[string]ManageFunction{
 					new_rank := request.FormValue("rank")
 					_, err := db.Exec("INSERT INTO `" + config.DBprefix + "staff` (`username`, `password_checksum`, `rank`) VALUES('" + new_username + "','" + bcryptSum(new_password) + "', '" + new_rank + "');")
 					if err != nil {
-						server.ServeErrorPage(writer, err.Error())
+						serveErrorPage(writer, err.Error())
 					}
 				} else if request.FormValue("do") == "del" && request.FormValue("username") != "" {
 					_, err := db.Exec("DELETE FROM `" + config.DBprefix + "staff` WHERE `username` = '" + request.FormValue("username") + "'")
 					if err != nil {
-						server.ServeErrorPage(writer, err.Error())
+						serveErrorPage(writer, err.Error())
 					}
 				}
 

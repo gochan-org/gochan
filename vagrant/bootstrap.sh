@@ -60,6 +60,7 @@ mkdir -p /vagrant/lib || true
 export GOPATH=/vagrant/lib
 cd /vagrant
 su ubuntu
+echo "GOPATH=$GOPATH" >> ~/.bashrc
 go get github.com/disintegration/imaging
 go get github.com/nranchev/go-libGeoIP
 go get github.com/nyarla/go-crypt
