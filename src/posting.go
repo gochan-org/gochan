@@ -399,7 +399,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		return
 	}
 
-	replies, err = getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'")
+	replies, err = getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` ASC")
 	if err != nil {
 		errortext = "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
 		html += errortext
