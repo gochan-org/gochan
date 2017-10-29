@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 )
 
@@ -338,5 +338,5 @@ func renderTemplate(tmpl *template.Template, name string, output io.Writer, wrap
 		interfaces = append(interfaces, wrapper)
 	}
 	wrapped := &Wrapper{IName: name, Data: interfaces}
-	return img_boardpage_tmpl.Execute(output, wrapped)
+	return tmpl.Execute(output, wrapped)
 }
