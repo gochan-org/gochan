@@ -3,7 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-    "html"
+	"html"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -87,20 +88,20 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
-    "truncateString": func(msg string, limit int, ellipsis bool) string {
-        if len(msg) > limit {
-            if ellipsis {
-                return msg[:limit] + "..."
-            } else {
-                return msg[:limit]
-            }
-        } else {
-            return msg
-        }
-    },
-    "unescapeString": func(a string) string {
-        return html.UnescapeString(a)
-    },
+	"truncateString": func(msg string, limit int, ellipsis bool) string {
+		if len(msg) > limit {
+			if ellipsis {
+				return msg[:limit] + "..."
+			} else {
+				return msg[:limit]
+			}
+		} else {
+			return msg
+		}
+	},
+	"unescapeString": func(a string) string {
+		return html.UnescapeString(a)
+	},
 	"intEq": func(a, b int) bool {
 		return a == b
 	},
@@ -327,4 +328,15 @@ func getStyleLinks(w http.ResponseWriter, stylesheet string) {
 		fmt.Println(err.Error())
 		os.Exit(2)
 	}
+}
+
+func renderTemplate(tmpl *template.Template, name string, output io.Writer, wrappers ...*Wrapper) error {
+	var interfaces []interface{}
+	interfaces = append(interfaces, config)
+
+	for _, wrapper := range wrappers {
+		interfaces = append(interfaces, wrapper)
+	}
+	wrapped := &Wrapper{IName: name, Data: interfaces}
+	return img_boardpage_tmpl.Execute(output, wrapped)
 }

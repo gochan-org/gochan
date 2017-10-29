@@ -8,8 +8,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/nyarla/go-crypt"
 	"html"
 	"image"
 	"io/ioutil"
@@ -23,6 +21,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/disintegration/imaging"
+	crypt "github.com/nyarla/go-crypt"
 )
 
 const (
@@ -78,7 +79,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	//	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
 	var boardinfo_i []interface{}
 	var current_page_file *os.File
-	var interfaces []interface{}
 	var threads []interface{}
 	var thread_pages [][]interface{}
 	var stickied_threads []interface{}
@@ -200,16 +200,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		boardinfo_i = nil
 		boardinfo_i = append(boardinfo_i, board)
 
-		// Package up boards, sections, threads, the boardinfo for the template to use.
-		interfaces = nil
-		interfaces = append(interfaces, config,
-			&Wrapper{IName: "boards", Data: all_boards},
-			&Wrapper{IName: "sections", Data: all_sections},
-			&Wrapper{IName: "threads", Data: threads},
-			&Wrapper{IName: "boardinfo", Data: boardinfo_i})
-		wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
-
-		// Write to board.html for the first page.
+		// Open board.html for writing to the first page.
 		printf(1, "Current page: %s/%d\n", board.Dir, board.CurrentPage)
 		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
@@ -220,8 +211,14 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			return
 		}
 
-		// Run the template, pointing it to the file, and passing in the data required.
-		err = img_boardpage_tmpl.Execute(board_page_file, wrapped)
+		// Render board page template to the file,
+		// packaging the board/section list, threads, and board info
+		err = renderTemplate(img_boardpage_tmpl, "boardpage", board_page_file,
+			&Wrapper{IName: "boards", Data: all_boards},
+			&Wrapper{IName: "sections", Data: all_sections},
+			&Wrapper{IName: "threads", Data: threads},
+			&Wrapper{IName: "boardinfo", Data: boardinfo_i},
+		)
 		if err != nil {
 			errortext = "Failed building /" + board.Dir + "/: " + err.Error()
 			html += errortext + "<br />\n"
@@ -262,15 +259,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			boardinfo_i = nil
 			boardinfo_i = append(boardinfo_i, board)
 
-			// Package up boards, sections, threads, the boardinfo for the template to use.
-			interfaces = nil
-			interfaces = append(interfaces, config,
-				&Wrapper{IName: "boards", Data: all_boards},
-				&Wrapper{IName: "sections", Data: all_sections},
-				&Wrapper{IName: "threads", Data: page_threads},
-				&Wrapper{IName: "boardinfo", Data: boardinfo_i})
-			wrapped := &Wrapper{IName: "boardpage", Data: interfaces}
-
 			// Write to board.html for the first page.
 			var current_page_filepath string
 			if board.CurrentPage == 0 {
@@ -278,6 +266,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			} else {
 				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html")
 			}
+
 			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 			if err != nil {
 				errortext = "Failed opening board page: " + err.Error()
@@ -286,9 +275,13 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				println(1, errortext)
 				continue
 			}
-
-			// Run the template, pointing it to the file, and passing in the data required.
-			err = img_boardpage_tmpl.Execute(current_page_file, wrapped)
+			// Render the boardpage template, given boards, sections, threads, and board info
+			err = renderTemplate(img_boardpage_tmpl, "boardpage", current_page_file,
+				&Wrapper{IName: "boards", Data: all_boards},
+				&Wrapper{IName: "sections", Data: all_sections},
+				&Wrapper{IName: "threads", Data: page_threads},
+				&Wrapper{IName: "boardinfo", Data: boardinfo_i},
+			)
 			if err != nil {
 				errortext = "Failed building /" + board.Dir + "/: " + err.Error()
 				html += errortext + "<br />\n"
@@ -385,8 +378,6 @@ func buildThreadPages(op *PostTable) (html string) {
 	var board_dir string
 	var anonymous string
 	var replies []interface{}
-	var interfaces []interface{}
-	var page []interface{}
 	var current_page_file *os.File
 	var errortext string
 
@@ -416,13 +407,6 @@ func buildThreadPages(op *PostTable) (html string) {
 	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), "^"+strconv.Itoa(op.ID)+"p")
 
 	op.NumPages = len(thread_pages)
-	// build main page
-	page = append([]interface{}{op}, replies...)
-	interfaces = append(interfaces, config,
-		&Wrapper{IName: "boards_", Data: all_boards},
-		&Wrapper{IName: "sections_w", Data: all_sections},
-		&Wrapper{IName: "posts_w", Data: page})
-	wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
 
 	current_page_filepath := path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html")
 	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
@@ -433,7 +417,12 @@ func buildThreadPages(op *PostTable) (html string) {
 		error_log.Println(errortext)
 		return
 	}
-	err = img_threadpage_tmpl.Execute(current_page_file, wrapped)
+	// render main page
+	err = renderTemplate(img_threadpage_tmpl, "threadpage", current_page_file,
+		&Wrapper{IName: "boards_", Data: all_boards},
+		&Wrapper{IName: "sections_w", Data: all_sections},
+		&Wrapper{IName: "posts_w", Data: append([]interface{}{op}, replies...)},
+	)
 	if err != nil {
 		errortext = "Failed building /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".html: " + err.Error()
 		html += errortext + "<br />\n"
@@ -498,17 +487,8 @@ func buildThreadPages(op *PostTable) (html string) {
 
 	for page_num, page_posts := range thread_pages {
 		op.CurrentPage = page_num
-		interfaces = nil
-		interfaces = append(interfaces, config,
-			&Wrapper{IName: "boards_", Data: all_boards},
-			&Wrapper{IName: "sections_w", Data: all_sections},
-			&Wrapper{IName: "posts_w", Data: page_posts})
 
-		wrapped := &Wrapper{IName: "threadpage", Data: interfaces}
-
-		var current_page_filepath string
-		current_page_filepath = path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
-
+		current_page_filepath := path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
 		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
@@ -517,8 +497,11 @@ func buildThreadPages(op *PostTable) (html string) {
 			error_log.Println(errortext)
 			return
 		}
-
-		err = img_threadpage_tmpl.Execute(current_page_file, wrapped)
+		err = renderTemplate(img_threadpage_tmpl, "threadpage", current_page_file,
+			&Wrapper{IName: "boards_", Data: all_boards},
+			&Wrapper{IName: "sections_w", Data: all_sections},
+			&Wrapper{IName: "posts_w", Data: page_posts},
+		)
 		if err != nil {
 			errortext = "Failed building /" + board_dir + "/" + strconv.Itoa(op.ID) + ": " + err.Error()
 			html += errortext + "<br />\n"
@@ -537,6 +520,7 @@ func buildFrontPage() (html string) {
 	initTemplates()
 	var front_arr []interface{}
 	var recent_posts_arr []interface{}
+
 	var errortext string
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
@@ -605,15 +589,12 @@ func buildFrontPage() (html string) {
 		recent_posts_arr = append(recent_posts_arr, recent_post)
 	}
 
-	var interfaces []interface{}
-	interfaces = append(interfaces, config,
+	err = renderTemplate(front_page_tmpl, "frontpage", front_file,
 		&Wrapper{IName: "fronts", Data: front_arr},
 		&Wrapper{IName: "boards", Data: all_boards},
 		&Wrapper{IName: "sections", Data: all_sections},
-		&Wrapper{IName: "recent posts", Data: recent_posts_arr})
-
-	wrapped := &Wrapper{IName: "frontpage", Data: interfaces}
-	err = front_page_tmpl.Execute(front_file, wrapped)
+		&Wrapper{IName: "recent posts", Data: recent_posts_arr},
+	)
 	if err != nil {
 		errortext = "Failed executing front page template: " + err.Error()
 		error_log.Println(errortext)
@@ -1091,13 +1072,10 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	}
 
 	if len(isbanned) > 0 {
-		wrapped := &Wrapper{IName: "bans", Data: isbanned}
-
 		var banpage_buffer bytes.Buffer
 		var banpage_html string
 		banpage_buffer.Write([]byte(""))
-
-		err = banpage_tmpl.Execute(&banpage_buffer, wrapped)
+		err = renderTemplate(banpage_tmpl, "bans", isbanned)
 		if err != nil {
 			fmt.Fprintf(writer, banpage_html+err.Error()+"\n</body>\n</html>")
 			println(1, err.Error())
