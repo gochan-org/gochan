@@ -15,6 +15,7 @@ function makeLink {
 
 export GOCHAN_PATH=/home/ubuntu/gochan
 apt-get update
+apt-get -y upgrade
 apt-get -y install git subversion mercurial golang nginx redis-server mariadb-server mariadb-client #gifsicle
 
 # Make sure any imported database is utf8mb4
@@ -57,10 +58,16 @@ service nginx restart
 
 
 mkdir -p /vagrant/lib || true
-export GOPATH=/vagrant/lib
 cd /vagrant
 su ubuntu
-echo "GOPATH=$GOPATH" >> ~/.bashrc
+export GOPATH=/vagrant/lib
+cat - <<EOF >/home/ubuntu/.bashrc
+set nowrap
+set number
+export GOPATH=/vagrant/lib
+export GOCHAN_PATH=/home/ubuntu/gochan
+EOF
+
 go get github.com/disintegration/imaging
 go get github.com/nranchev/go-libGeoIP
 go get github.com/nyarla/go-crypt
@@ -91,6 +98,6 @@ sed -e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' -i $GOCHAN_PATH/gochan.json
 
 echo
 echo "Server set up, please run \"vagrant ssh\" on your host machine, and"
-echo "\"cd ~/gochan && ./gochan\" in the guest. Then browse to http://172.27.0.3/manage"
+echo "\"cd /home/ubuntu/gochan && ./gochan\" in the guest. Then browse to http://172.27.0.3/manage"
 echo "to complete installation (TODO: add further instructions as default initial announcement"
 echo "or /manage?action=firstrun)"
