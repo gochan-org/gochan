@@ -21,4 +21,4 @@ This is just a very preliminary roadmap to map out what I plan to focus on with 
 3.x
 ----
 * ???
-* I'll figure this out when we get to 2.x but feel free to put suggestions in the [issue page](https://github.com/Eggbertx/gochan/issues), or make a post at http://gochan.lunachan.net/
+* I'll figure this out when we get to 2.x but feel free to put suggestions in the [issue page](https://github.com/Eggbertx/gochan/issues), or make a post at http://gochan.org/

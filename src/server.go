@@ -203,8 +203,20 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			var fileType string
 			var passwordChecksum string
 			var boardId int
+			stmt, err := db.Prepare("SELECT `parentid, `filename`, `password` FROM " + config.DBprefix + "posts WHERE `id` = ? AND `deleted_timestamp`  = ?")
+			defer func() {
+				if stmt != nil {
+					stmt.Close()
+				}
+			}()
 
-			err := db.QueryRow(`SELECT "parentid", "filename", "password" FROM "`+config.DBprefix+`posts" WHERE "id" = `+post+` AND "deleted_timestamp" = "`+nil_timestamp+`"`).Scan(&parentId, &fileName, &passwordChecksum)
+			if err != nil {
+				error_log.Print(err.Error())
+				println(1, err.Error())
+				serveErrorPage(writer, err.Error())
+			}
+			err = stmt.QueryRow(&post, nil_timestamp).Scan(&parentId, &fileName, &passwordChecksum)
+
 			if err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "3;url="+request.Referer())
@@ -228,7 +240,6 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			}
 
 			if fileOnly {
-
 				if fileName != "" && fileName != "deleted" {
 					fileType = fileName[strings.Index(fileName, ".")+1:]
 					fileName = fileName[:strings.Index(fileName, ".")]

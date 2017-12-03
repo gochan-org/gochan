@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -132,4 +133,22 @@ func connectToSQLServer() {
 		needs_initial_setup = false
 		db_connected = true
 	}
+}
+func makeInsertString(table string, columns []string) string {
+	columnString := ""
+	valuePlaceholders := ""
+	for i,column := range columns {
+		columnString += "`" + column + "`"
+		if i < len(columns) - 1 {
+			columnString += ", "
+		}
+
+		//valuePlaceholders += fmt.Sprintf("$%d", i+1)
+		valuePlaceholders += "?"
+		if i < len(columns) - 1 {
+			valuePlaceholders += ", "
+		}
+	}
+	return fmt.Sprintf("INSERT INTO %s%s (%s) VALUES (%s)", 
+						config.DBprefix, table, columnString,valuePlaceholders)
 }

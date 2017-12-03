@@ -8,3 +8,4 @@ log/mod.log
 vagrant/.vagrant/
 vagrant/ubuntu-xenial-16.04-cloudimg-console.log
 html/boards.json
+html/test/

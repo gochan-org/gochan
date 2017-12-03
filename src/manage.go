@@ -646,6 +646,7 @@ var manage_functions = map[string]ManageFunction{
 						board_creation_status = err.Error()
 						continue
 					}
+					//_, err := db.Prepare("INSERT INTO (" + generatePlaceholders(24, ", ") + ")")
 					_, err := db.Exec(
 						"INSERT INTO `" + config.DBprefix + "boards` (" +
 							"`order`, " +
@@ -834,12 +835,12 @@ var manage_functions = map[string]ManageFunction{
 					html += "<input type=\"checkbox\" name=\"forcedanon\" />"
 				}
 
-				html += "<br />Anonymous: <input type=\"text\" name=\"anonymous\" value=\"" + board.Anonymous + "\" /><br />" +
-					"Max age: <input type=\"text\" name=\"maxage\" value=\"" + strconv.Itoa(board.MaxAge) + "\"/><br />" +
-					"Bump limit: <input type=\"text\" name=\"autosageafter\" value=\"" + strconv.Itoa(board.AutosageAfter) + "\"/><br />" +
-					"No images after <input type=\"text\" name=\"noimagesafter\" value=\"" + strconv.Itoa(board.NoImagesAfter) + "\"/>px<br />" +
-					"Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\"" + strconv.Itoa(board.MaxMessageLength) + "\"/><br />" +
-					"Embeds allowed "
+				html += fmt.Sprintf("<br />Anonymous: <input type=\"text\" name=\"anonymous\" value=\"%s\" /><br />"+
+					"Max age: <input type=\"text\" name=\"maxage\" value=\"%d\"/><br />"+
+					"Bump limit: <input type=\"text\" name=\"autosageafter\" value=\"%d\"/><br />"+
+					"No images after <input type=\"text\" name=\"noimagesafter\" value=\"%d\"/>px<br />"+
+					"Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\"%d\"/><br />"+
+					"Embeds allowed ", board.Anonymous, board.MaxAge, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength)
 
 				if board.EmbedsAllowed {
 					html += "<input type=\"checkbox\" name=\"embedsallowed\" checked/>"

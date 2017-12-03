@@ -135,16 +135,26 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		op_post := op_post_i.(PostTable)
 
 		// Get the number of replies to this thread.
-		err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " +
-			strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'").Scan(&thread.NumReplies)
+		stmt, err := db.Prepare("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?")
+		if err != nil {
+			html += err.Error() + "<br />\n"
+		}
+		defer func() {
+			if stmt != nil {
+				stmt.Close()
+			}
+		}()
+		err = stmt.QueryRow(board.ID, op_post.ID, nil_timestamp).Scan(&thread.NumReplies)
 		if err != nil {
 			html += err.Error() + "<br />\n"
 		}
 
 		// Get the number of image replies in this thread
-		err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " +
-			strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "'" +
-			" AND `filesize` <> 0").Scan(&thread.NumImages)
+		stmt, err = db.Prepare("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ? AND `filesize` <> 0")
+		if err != nil {
+			html += err.Error() + "<br />\n"
+		}
+		err = stmt.QueryRow(board.ID, op_post.ID, nil_timestamp).Scan(&thread.NumImages)
 		if err != nil {
 			html += err.Error() + "<br />\n"
 		}
@@ -381,7 +391,17 @@ func buildThreadPages(op *PostTable) (html string) {
 	var current_page_file *os.File
 	var errortext string
 
-	err := db.QueryRow("SELECT `dir`,`anonymous` FROM `"+config.DBprefix+"boards` WHERE `id` = '"+strconv.Itoa(op.BoardID)+"';").Scan(&board_dir, &anonymous)
+	stmt, err := db.Prepare("SELECT `dir`,`anonymous` FROM `" + config.DBprefix + "boards` WHERE `id` = ?")
+	if err != nil {
+		// possibly a syntax error? This normally shouldn't happen so this might be removed
+		errortext = err.Error()
+		html += errortext + "<br />\n"
+		error_log.Println(errortext)
+		println(1, errortext)
+		return
+	}
+
+	err = stmt.QueryRow(op.BoardID).Scan(&board_dir, &anonymous)
 	if err != nil {
 		errortext = "Failed getting board directory and board's anonymous setting from post: " + err.Error()
 		html += errortext + "<br />\n"
@@ -503,13 +523,13 @@ func buildThreadPages(op *PostTable) (html string) {
 			&Wrapper{IName: "posts_w", Data: page_posts},
 		)
 		if err != nil {
-			errortext = "Failed building /" + board_dir + "/" + strconv.Itoa(op.ID) + ": " + err.Error()
+			errortext = fmt.Sprintf("Failed building /%s/%d: %s", board_dir, op.ID, err.Error())
 			html += errortext + "<br />\n"
 			println(1, errortext)
 			error_log.Print(errortext)
 			return
 		}
-		success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + "p" + strconv.Itoa(op.CurrentPage+1) + " successfully"
+		success_text := fmt.Sprintf("Built /%s/%dp%d successfully", board_dir, op.ID, op.CurrentPage+1)
 		html += success_text + "<br />\n"
 		println(2, success_text)
 	}
@@ -555,22 +575,27 @@ func buildFrontPage() (html string) {
 	}
 
 	// get recent posts
-	rows, err = db.Query("SELECT `" + config.DBprefix + "posts`.`id`, " +
-		"`" + config.DBprefix + "posts`.`parentid`, " +
-		"`" + config.DBprefix + "boards`.`dir` AS boardname, " +
-		"`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
-		"`name`, " +
-		"`tripcode`, " +
-		"`message`, " +
-		"`filename`, " +
-		"`thumb_w`, " +
-		"`thumb_h` " +
-		"FROM `" + config.DBprefix + "posts`, " +
-		"`" + config.DBprefix + "boards` " +
-		"WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"" +
-		"AND `boardid` = `" + config.DBprefix + "boards`.`id` " +
-		"ORDER BY `timestamp` DESC " +
-		"LIMIT " + strconv.Itoa(config.MaxRecentPosts))
+	stmt, err := db.Prepare(
+		"SELECT `" + config.DBprefix + "posts`.`id`, " +
+			"`" + config.DBprefix + "posts`.`parentid`, " +
+			"`" + config.DBprefix + "boards`.`dir` AS boardname, " +
+			"`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
+			"`name`, `tripcode`, `message`, `filename`, `thumb_w`, `thumb_h` " +
+			"FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
+			"WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = ? " +
+			"AND `boardid` = `" + config.DBprefix + "boards`.`id` " +
+			"ORDER BY `timestamp` DESC LIMIT ?")
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+	if err != nil {
+		error_log.Print(err.Error())
+		println(1, err.Error())
+		return err.Error() + "<br />\n"
+	}
+	rows, err = stmt.Query(nil_timestamp, config.MaxRecentPosts)
 	if err != nil {
 		errortext = "Failed getting list of recent posts for front page: " + err.Error()
 		error_log.Print(errortext)
@@ -659,10 +684,21 @@ func buildBoardListJSON() (html string) {
 func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interface{}, error) {
 	var is_expired bool
 	var ban_entry BanlistTable
+	var interfaces []interface{}
 	// var count int
 	// var search string
-	err := db.QueryRow("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = '"+post.IP+"'").Scan(&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
-	var interfaces []interface{}
+	stmt, err := db.Prepare("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `" + config.DBprefix + "banlist` WHERE `ip` = ?")
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+	if err != nil {
+		println(1, err.Error())
+		error_log.Print("Error checking banned status: " + err.Error())
+		return interfaces, nil
+	}
+	err = stmt.QueryRow(&post.IP).Scan(&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -776,42 +812,44 @@ func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
 
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(post PostTable, bump bool) (sql.Result, error) {
-	post_sql_str := "INSERT INTO `" + config.DBprefix + "posts` (`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`message_raw`,`password`"
-	if post.Filename != "" {
-		post_sql_str += ",`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`"
+	var result sql.Result
+	insertString := "INSERT INTO " + config.DBprefix + "posts (`boardid`, `parentid`, `name`, `tripcode`, `email`, `subject`, `message`, `message_raw`, `password`, `filename`, `filename_original`, `file_checksum`, `filesize`, `image_w`, `image_h`, `thumb_w`, `thumb_h`, `ip`, `tag`, `timestamp`, `autosage`, `poster_authority`, `deleted_timestamp`,`bumped`,`stickied`, `locked`, `reviewed`, `sillytag`) "
+
+	insertValues := "VALUES("
+	numColumns := 28 // number of columns in the post table minus `id`
+	for i := 0; i < numColumns-1; i++ {
+		insertValues += "?, "
 	}
-	post_sql_str += ",`ip`"
-	post_sql_str += ",`timestamp`,`poster_authority`,"
-	if post.ParentID == 0 {
-		post_sql_str += "`bumped`,"
+	insertValues += " ? )"
+
+	stmt, err := db.Prepare(insertString + insertValues)
+	if err != nil {
+		return nil, err
 	}
-	post_sql_str += "`stickied`,`locked`) VALUES(" + strconv.Itoa(post.BoardID) + "," + strconv.Itoa(post.ParentID) + ",'" + post.Name + "','" + post.Tripcode + "','" + post.Email + "','" + post.Subject + "','" + post.MessageHTML + "','" + post.MessageText + "','" + post.Password + "'"
-	if post.Filename != "" {
-		post_sql_str += ",'" + post.Filename + "','" + post.FilenameOriginal + "','" + post.FileChecksum + "'," + strconv.Itoa(int(post.Filesize)) + "," + strconv.Itoa(post.ImageW) + "," + strconv.Itoa(post.ImageH) + "," + strconv.Itoa(post.ThumbW) + "," + strconv.Itoa(post.ThumbH)
-	}
-	post_sql_str += ",'" + post.IP + "','" + getSpecificSQLDateTime(post.Timestamp) + "'," + strconv.Itoa(post.PosterAuthority) + ","
-	if post.ParentID == 0 {
-		post_sql_str += "'" + getSpecificSQLDateTime(post.Bumped) + "',"
-	}
-	if post.Stickied {
-		post_sql_str += "1,"
-	} else {
-		post_sql_str += "0,"
-	}
-	if post.Locked {
-		post_sql_str += "1);"
-	} else {
-		post_sql_str += "0);"
-	}
-	result, err := db.Exec(post_sql_str)
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+	result, err = stmt.Exec(
+		post.BoardID, post.ParentID, post.Name, post.Tripcode,
+		post.Email, post.Subject, post.MessageHTML, post.MessageText,
+		post.Password, post.Filename, post.FilenameOriginal,
+		post.FileChecksum, post.Filesize, post.ImageW, post.ImageH,
+		post.ThumbW, post.ThumbH, post.IP, post.Tag, post.Timestamp,
+		post.Autosage, post.PosterAuthority, post.DeletedTimestamp,
+		post.Bumped, post.Stickied, post.Locked, post.Reviewed, post.Sillytag,
+	)
 	if err != nil {
 		return result, err
 	}
+
 	if post.ParentID != 0 {
-		_, err := db.Exec("UPDATE `" + config.DBprefix + "posts` SET `bumped` = '" + getSpecificSQLDateTime(post.Bumped) + "' WHERE `id` = " + strconv.Itoa(post.ParentID))
+		stmt, err = db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `bumped` = ? WHERE `id` = ?")
 		if err != nil {
-			return result, err
+			return nil, err
 		}
+		result, err = stmt.Exec(getSpecificSQLDateTime(post.Bumped), post.ParentID)
 	}
 	return result, err
 }
@@ -833,8 +871,8 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
 
 	var emailCommand string
-
-	postName := html.EscapeString(escapeString(request.FormValue("postname")))
+	//postName := html.EscapeString(escapeString(request.FormValue("postname")))
+	postName := html.EscapeString(request.FormValue("postname"))
 
 	if strings.Index(postName, "#") == -1 {
 		post.Name = postName
@@ -860,7 +898,18 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
 	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")), "\r\n")
 
-	err := db.QueryRow("SELECT `max_message_length` FROM `" + config.DBprefix + "boards` WHERE `id` = " + strconv.Itoa(post.BoardID)).Scan(&maxMessageLength)
+	stmt, err := db.Prepare("SELECT `max_message_length` from `" + config.DBprefix + "boards` WHERE `id` = ?")
+	if err != nil {
+		serveErrorPage(w, "Error getting board info.")
+		error_log.Print("Error getting board info: " + err.Error())
+	}
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+	err = stmt.QueryRow(post.BoardID).Scan(&maxMessageLength)
+
 	if err != nil {
 		serveErrorPage(w, "Requested board does not exist.")
 		error_log.Print("requested board does not exist. Error: " + err.Error())
@@ -874,12 +923,12 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	formatMessage(&post)
 
 	post.Password = md5Sum(request.FormValue("postpassword"))
-
+	println(1, postName)
 	// Reverse escapes
 	post_name_cookie := strings.Replace(postName, "&amp;", "&", -1)
 	post_name_cookie = strings.Replace(post_name_cookie, "\\&#39;", "'", -1)
-
 	post_name_cookie = strings.Replace(url.QueryEscape(post_name_cookie), "+", "%20", -1)
+	println(1, post_name_cookie)
 
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
 	// http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
@@ -1129,7 +1178,8 @@ func formatMessage(post *PostTable) {
 					// the link is in fact, a valid int
 					var board_dir string
 					var link_parent int
-					db.QueryRow("SELECT `dir`,`parentid` FROM "+config.DBprefix+"posts,"+config.DBprefix+"boards WHERE "+config.DBprefix+"posts.id = '"+word[8:]+"';").Scan(&board_dir, &link_parent)
+					stmt, _ := db.Prepare("SELECT `dir`,`parentid` FROM " + config.DBprefix + "posts," + config.DBprefix + "boards WHERE " + config.DBprefix + "posts.id = ?")
+					stmt.QueryRow(word[8:]).Scan(&board_dir, &link_parent)
 					// get post board dir
 
 					if board_dir == "" {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=1.5
+VERSION=1.5.1
 GOOS_ORIG=$GOOS
 
 function copyStuff {
