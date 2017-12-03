@@ -1075,7 +1075,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		var banpage_buffer bytes.Buffer
 		var banpage_html string
 		banpage_buffer.Write([]byte(""))
-		err = renderTemplate(banpage_tmpl, "bans", isbanned)
+		err = renderTemplate(banpage_tmpl, "banpage", &banpage_buffer, &Wrapper{IName: "bans", Data: isbanned})
 		if err != nil {
 			fmt.Fprintf(writer, banpage_html+err.Error()+"\n</body>\n</html>")
 			println(1, err.Error())
