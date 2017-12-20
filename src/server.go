@@ -80,7 +80,7 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) []byte
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
 
-			access_log.Print("Success: 200 from " + getRealIP(&request) + " @ " + request.RequestURI)
+			accessLog.Print("Success: 200 from " + getRealIP(&request) + " @ " + request.RequestURI)
 			return fileBytes
 		}
 	}
@@ -94,7 +94,7 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		writer.Write(errorPage)
 	}
-	error_log.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.RequestURI)
+	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.RequestURI)
 }
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
@@ -123,7 +123,7 @@ func initServer() {
 	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
 	if err != nil {
 		fmt.Printf("Failed listening on %s:%d, see log for details", config.ListenIP, config.Port)
-		error_log.Fatal(err.Error())
+		errorLog.Fatal(err.Error())
 	}
 	server = new(GochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request, interface{}))
@@ -211,7 +211,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			}()
 
 			if err != nil {
-				error_log.Print(err.Error())
+				errorLog.Print(err.Error())
 				println(1, err.Error())
 				serveErrorPage(writer, err.Error())
 			}

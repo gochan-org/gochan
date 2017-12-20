@@ -26,17 +26,18 @@ const (
 	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
 )
 
-func benchmarkTimer(name string, given_time time.Time, starting bool) time.Time {
+func benchmarkTimer(name string, givenTime time.Time, starting bool) (returnTime time.Time) {
 	if starting {
 		// starting benchmark test
 		println(2, "Starting benchmark \""+name+"\"")
-		return given_time
+		returnTime = givenTime
 	} else {
 		// benchmark is finished, print the duration
 		// convert nanoseconds to a decimal seconds
-		printf(2, "benchmark %s completed in %f seconds", name, time.Since(given_time).Seconds())
-		return time.Now() // we don't really need this, but we have to return something
+		printf(2, "benchmark %s completed in %f seconds", name, time.Since(givenTime).Seconds())
+		returnTime = time.Now() // we don't really need this, but we have to return something
 	}
+	return
 }
 
 func md5Sum(str string) string {
@@ -63,7 +64,7 @@ func byteByByteReplace(input, from, to string) string {
 	if len(from) != len(to) {
 		return ""
 	}
-	for i := 0; i < len(from); i += 1 {
+	for i := 0; i < len(from); i++ {
 		input = strings.Replace(input, from[i:i+1], to[i:i+1], -1)
 	}
 	return input
@@ -120,7 +121,7 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	}()
 
 	if err != nil {
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 		return
 	}
 
@@ -158,12 +159,11 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 		)
 		board.IName = "board"
 		if err != nil {
-			error_log.Print(err.Error())
+			errorLog.Print(err.Error())
 			fmt.Println(err.Error())
 			return
-		} else {
-			boards = append(boards, *board)
 		}
+		boards = append(boards, *board)
 	}
 	return
 }
@@ -198,13 +198,13 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 	}()
 
 	if err != nil {
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 		return
 	}
 
 	rows, err := stmt.Query(parameterValues...)
 	if err != nil {
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 		return
 	}
 	// For each row in the results from the database, populate a new PostTable instance,
@@ -219,12 +219,11 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
 		post.IName = "post"
 		if err != nil {
-			error_log.Print(err.Error())
+			errorLog.Print(err.Error())
 			fmt.Println(err.Error())
 			return
-		} else {
-			posts = append(posts, post)
 		}
+		posts = append(posts, post)
 	}
 	return
 }
@@ -235,7 +234,7 @@ func getSectionArr(where string) (sections []interface{}, err error) {
 	}
 	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "sections` WHERE " + where + " ORDER BY `order`;")
 	if err != nil {
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 		return
 	}
 
@@ -245,7 +244,7 @@ func getSectionArr(where string) (sections []interface{}, err error) {
 
 		err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation)
 		if err != nil {
-			error_log.Print(err.Error())
+			errorLog.Print(err.Error())
 			return
 		}
 		sections = append(sections, section)
@@ -254,8 +253,8 @@ func getSectionArr(where string) (sections []interface{}, err error) {
 }
 
 func getCookie(name string) *http.Cookie {
-	num_cookies := len(cookies)
-	for c := 0; c < num_cookies; c += 1 {
+	numCookies := len(cookies)
+	for c := 0; c < numCookies; c++ {
 		if cookies[c].Name == name {
 			return cookies[c]
 		}
@@ -271,13 +270,13 @@ func generateSalt() string {
 	return string(salt)
 }
 
-func getFileExtension(filename string) string {
+func getFileExtension(filename string) (extension string) {
 	if strings.Index(filename, ".") == -1 {
-		return ""
-		//} else if strings.Index(filename, "/") > -1 {
+		extension = ""
 	} else {
-		return filename[strings.LastIndex(filename, ".")+1:]
+		extension = filename[strings.LastIndex(filename, ".")+1:]
 	}
+	return
 }
 
 func getFormattedFilesize(size float32) string {
@@ -308,26 +307,26 @@ func humanReadableTime(t time.Time) string {
 //	with a specified number of values per array in the 2d array.
 // interface_length is the number of interfaces per array in the 2d array (e.g, threads per page)
 // interf is the array of interfaces to be split up.
-func paginate(interface_length int, interf []interface{}) [][]interface{} {
+func paginate(interfaceLength int, interf []interface{}) [][]interface{} {
 	// paginated_interfaces = the finished interface array
 	// num_arrays = the current number of arrays (before remainder overflow)
 	// interfaces_remaining = if greater than 0, these are the remaining interfaces
 	// 		that will be added to the super-interface
 
-	var paginated_interfaces [][]interface{}
-	num_arrays := len(interf) / interface_length
-	interfaces_remaining := len(interf) % interface_length
+	var paginatedInterfaces [][]interface{}
+	numArrays := len(interf) / interfaceLength
+	interfacesRemaining := len(interf) % interfaceLength
 	//paginated_interfaces = append(paginated_interfaces, interf)
-	current_interface := 0
-	for l := 0; l < num_arrays; l++ {
-		paginated_interfaces = append(paginated_interfaces,
-			interf[current_interface:current_interface+interface_length])
-		current_interface += interface_length
+	currentInterface := 0
+	for l := 0; l < numArrays; l++ {
+		paginatedInterfaces = append(paginatedInterfaces,
+			interf[currentInterface:currentInterface+interfaceLength])
+		currentInterface += interfaceLength
 	}
-	if interfaces_remaining > 0 {
-		paginated_interfaces = append(paginated_interfaces, interf[len(interf)-interfaces_remaining:])
+	if interfacesRemaining > 0 {
+		paginatedInterfaces = append(paginatedInterfaces, interf[len(interf)-interfacesRemaining:])
 	}
-	return paginated_interfaces
+	return paginatedInterfaces
 }
 
 func printf(v int, format string, a ...interface{}) {
@@ -357,6 +356,13 @@ func resetBoardSectionArrays() {
 	}
 }
 
+func reverse(arr []interface{}) (reversed []interface{}) {
+	for i := len(arr); i > 0; i-- {
+		reversed = append(reversed, arr[i-1])
+	}
+	return
+}
+
 func searchStrings(item string, arr []string, permissive bool) int {
 	for i, str := range arr {
 		if item == str {
@@ -366,14 +372,14 @@ func searchStrings(item string, arr []string, permissive bool) int {
 	return -1
 }
 
-func Btoi(b bool) int {
+func bToI(b bool) int {
 	if b == true {
 		return 1
 	}
 	return 0
 }
 
-func Btoa(b bool) string {
+func bToA(b bool) string {
 	if b == true {
 		return "1"
 	}
@@ -383,14 +389,18 @@ func Btoa(b bool) string {
 // Checks the validity of the Akismet API key given in the config file.
 func checkAkismetAPIKey() {
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {config.AkismetAPIKey}, "blog": {"http://" + config.SiteDomain}})
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 	}
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
-		error_log.Print("Akismet API key is invalid, Akismet spam protection will be disabled.")
+		errorLog.Print("Akismet API key is invalid, Akismet spam protection will be disabled.")
 		config.AkismetAPIKey = ""
 	}
 }
@@ -407,23 +417,23 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		req, err := http.NewRequest("POST", "https://"+config.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(data.Encode()))
 		if err != nil {
-			error_log.Print(err.Error())
+			errorLog.Print(err.Error())
 			return "other_failure"
 		}
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
 		if err != nil {
-			error_log.Print(err.Error())
+			errorLog.Print(err.Error())
 			return "other_failure"
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			error_log.Print(err.Error())
+			errorLog.Print(err.Error())
 			return "other_failure"
 		}
-		error_log.Print("Response from Akismet: " + string(body))
+		errorLog.Print("Response from Akismet: " + string(body))
 
 		if string(body) == "true" {
 			if proTip, ok := resp.Header["X-akismet-pro-tip"]; ok && proTip[0] == "discard" {
@@ -439,34 +449,34 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 	return "other_failure"
 }
 
-func makePostJSON(post PostTable, anonymous string) (post_obj PostJSON) {
+func makePostJSON(post PostTable, anonymous string) (postObj PostJSON) {
 	var filename string
-	var fileext string
-	var orig_filename string
+	var fileExt string
+	var origFilename string
 
 	// Separate out the extension from the filenames
 	if post.Filename != "deleted" && post.Filename != "" {
-		ext_start := strings.LastIndex(post.Filename, ".")
-		fileext = post.Filename[ext_start:]
+		extStart := strings.LastIndex(post.Filename, ".")
+		fileExt = post.Filename[extStart:]
 
-		orig_ext_start := strings.LastIndex(post.FilenameOriginal, fileext)
-		orig_filename = post.FilenameOriginal[:orig_ext_start]
-		filename = post.Filename[:ext_start]
+		origExtStart := strings.LastIndex(post.FilenameOriginal, fileExt)
+		origFilename = post.FilenameOriginal[:origExtStart]
+		filename = post.Filename[:extStart]
 	}
 
-	post_obj = PostJSON{ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
+	postObj = PostJSON{ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
 		Name: post.Name, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
 		ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
-		FileSize: post.Filesize, OrigFilename: orig_filename, Extension: fileext, Filename: filename, FileChecksum: post.FileChecksum}
+		FileSize: post.Filesize, OrigFilename: origFilename, Extension: fileExt, Filename: filename, FileChecksum: post.FileChecksum}
 
 	// Handle Anonymous
 	if post.Name == "" {
-		post_obj.Name = anonymous
+		postObj.Name = anonymous
 	}
 
 	// If we have a Tripcode, prepend a !
 	if post.Tripcode != "" {
-		post_obj.Tripcode = "!" + post.Tripcode
+		postObj.Tripcode = "!" + post.Tripcode
 	}
 	return
 }

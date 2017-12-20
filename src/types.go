@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	needs_initial_setup = true
-	config              GochanConfig
-	access_log          *log.Logger
-	error_log           *log.Logger
-	mod_log             *log.Logger
-	read_banned_ips     []string
+	needsInitialSetup = true
+	config            GochanConfig
+	accessLog         *log.Logger
+	errorLog          *log.Logger
+	modLog            *log.Logger
+	readBannedIPs     []string
 )
 
 type RecentPost struct {
@@ -259,67 +259,67 @@ type Wrapper struct {
 
 // Types for the JSON files we generate as a sort of "API"
 type BoardJSONWrapper struct {
-	Boards 				[]BoardJSON `json:"boards"`
+	Boards []BoardJSON `json:"boards"`
 }
 
 type BoardJSON struct {
-	BoardName			string `json:"board"`
-	Title					string `json:"title"`
-	WorkSafeBoard 		int `json:"ws_board"`
-	ThreadsPerPage 	int `json:"per_page"`
-	Pages					int `json:"pages"`
-	MaxFilesize			int `json:"max_filesize"`
-	MaxMessageLength 	int `json:"max_comment_chars"`
-	BumpLimit 			int `json:"bump_limit"`
-	ImageLimit			int `json:"image_limit"`
-	Cooldowns			BoardCooldowns `json:"cooldowns"`
-	Description 		string `json:"meta_description"`
-	IsArchived 			int `json:"is_archived"`
+	BoardName        string         `json:"board"`
+	Title            string         `json:"title"`
+	WorkSafeBoard    int            `json:"ws_board"`
+	ThreadsPerPage   int            `json:"per_page"`
+	Pages            int            `json:"pages"`
+	MaxFilesize      int            `json:"max_filesize"`
+	MaxMessageLength int            `json:"max_comment_chars"`
+	BumpLimit        int            `json:"bump_limit"`
+	ImageLimit       int            `json:"image_limit"`
+	Cooldowns        BoardCooldowns `json:"cooldowns"`
+	Description      string         `json:"meta_description"`
+	IsArchived       int            `json:"is_archived"`
 }
 
 type BoardCooldowns struct {
-	NewThread 			int `json:"threads"`
-	Reply 				int `json:"replies"`
-	ImageReply 			int `json:"images"`
+	NewThread  int `json:"threads"`
+	Reply      int `json:"replies"`
+	ImageReply int `json:"images"`
 }
 
 type ThreadJSONWrapper struct {
-	Posts 				[]PostJSON `json:"posts"`
+	Posts []PostJSON `json:"posts"`
 }
 
 type PostJSON struct {
-	ID 					int `json:"no"`
-	ParentID 			int `json:"resto"`
-	Subject 				string `json:"sub"`
-	Message 				string `json:"com"`
-	Name 					string `json:"name"`
-	Tripcode 			string `json:"trip"`
-	Timestamp			int64 `json:"time"`
-	Bumped				int64 `json:"last_modified"`
-	ThumbWidth 			int `json:"tn_w"`
-	ThumbHeight 		int `json:"tn_h"`
-	ImageWidth 			int `json:"w"`
-	ImageHeight 		int `json:"h"`
-	FileSize				int `json:"fsize"`
-	OrigFilename		string `json:"filename"`
-	Extension			string `json:"ext"`
-	Filename 			string `json:"tim"`
-	FileChecksum		string `json:"md5"`
+	ID           int    `json:"no"`
+	ParentID     int    `json:"resto"`
+	Subject      string `json:"sub"`
+	Message      string `json:"com"`
+	Name         string `json:"name"`
+	Tripcode     string `json:"trip"`
+	Timestamp    int64  `json:"time"`
+	Bumped       int64  `json:"last_modified"`
+	ThumbWidth   int    `json:"tn_w"`
+	ThumbHeight  int    `json:"tn_h"`
+	ImageWidth   int    `json:"w"`
+	ImageHeight  int    `json:"h"`
+	FileSize     int    `json:"fsize"`
+	OrigFilename string `json:"filename"`
+	Extension    string `json:"ext"`
+	Filename     string `json:"tim"`
+	FileChecksum string `json:"md5"`
 }
 
 type BoardPageJSON struct {
-	Threads 				[]ThreadJSON `json:"threads"`
-	Page 					int `json:"page"`
+	Threads []ThreadJSON `json:"threads"`
+	Page    int          `json:"page"`
 }
 
 type ThreadJSON struct {
 	*PostJSON
-	OmittedPosts 		int `json:"omitted_posts"`
-	OmittedImages 		int `json:"omitted_images"`
-	Replies 				int `json:"replies"`
-	ImagesOnArchive 	int `json:"images"`
-	Sticky 				int `json:"sticky"`
-	Locked 				int `json:"locked"`
+	OmittedPosts    int `json:"omitted_posts"`
+	OmittedImages   int `json:"omitted_images"`
+	Replies         int `json:"replies"`
+	ImagesOnArchive int `json:"images"`
+	Sticky          int `json:"sticky"`
+	Locked          int `json:"locked"`
 }
 
 // Global variables, most initialized by config.cfg
@@ -471,28 +471,28 @@ func initConfig() {
 		os.Exit(2)
 	}
 
-	access_log_f, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	accessLogFile, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		println(0, "Couldn't open access log. Returned error: "+err.Error())
 		os.Exit(1)
 	} else {
-		access_log = log.New(access_log_f, "", log.Ltime|log.Ldate)
+		accessLog = log.New(accessLogFile, "", log.Ltime|log.Ldate)
 
 	}
 
-	error_log_f, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	errorLogFile, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		println(0, "Couldn't open error log. Returned error: "+err.Error())
 		os.Exit(1)
 	} else {
-		error_log = log.New(error_log_f, "", log.Ltime|log.Ldate)
+		errorLog = log.New(errorLogFile, "", log.Ltime|log.Ldate)
 	}
 
-	mod_log_f, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	modLogFile, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err != nil {
 		println(0, "Couldn't open mod log. Returned error: "+err.Error())
 	} else {
-		mod_log = log.New(mod_log_f, "", log.Ltime|log.Ldate)
+		modLog = log.New(modLogFile, "", log.Ltime|log.Ldate)
 	}
 
 	if config.DBtype == "" {

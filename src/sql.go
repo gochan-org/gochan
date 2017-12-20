@@ -76,7 +76,7 @@ func connectToSQLServer() {
 	db, err = sql.Open("mysql", config.DBusername+":"+config.DBpassword+"@"+config.DBhost+"/"+config.DBname+"?parseTime=true&collation=utf8mb4_unicode_ci")
 	if err != nil {
 		println(0, "Failed to connect to the database, see log for details.")
-		error_log.Fatal(err.Error())
+		errorLog.Fatal(err.Error())
 	}
 
 	// get the number of tables in the database. If the number > 1, we can assume that initial setup has already been run
@@ -86,13 +86,13 @@ func connectToSQLServer() {
 		num_rows = 0
 	} else if err != nil {
 		println(0, "Failed retrieving list of tables in database.")
-		error_log.Fatal(err.Error())
+		errorLog.Fatal(err.Error())
 	}
 	// Detect that there are at least the number of tables that we are setting up.
 	// If there are fewer than that, then we either half-way set up, or there's other tables in our database.
 	if num_rows >= 16 {
 		// the initial setup has already been run
-		needs_initial_setup = false
+		needsInitialSetup = false
 		db_connected = true
 		println(0, "complete.")
 		return
@@ -101,14 +101,14 @@ func connectToSQLServer() {
 		_, err := os.Stat("initialsetupdb.sql")
 		if err != nil {
 			println(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
-			error_log.Fatal("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
+			errorLog.Fatal("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
 		}
 
 		// read the initial setup sql file into a string
 		initial_sql_bytes, err := ioutil.ReadFile("initialsetupdb.sql")
 		if err != nil {
 			println(0, "failed, see log for details.")
-			error_log.Fatal(err.Error())
+			errorLog.Fatal(err.Error())
 		}
 		initial_sql_str := string(initial_sql_bytes)
 		initial_sql_bytes = nil
@@ -124,31 +124,31 @@ func connectToSQLServer() {
 				_, err := db.Exec(statement)
 				if err != nil {
 					println(0, "failed, see log for details.")
-					error_log.Fatal(err.Error())
+					errorLog.Fatal(err.Error())
 					return
 				}
 			}
 		}
 		println(0, "complete.")
-		needs_initial_setup = false
+		needsInitialSetup = false
 		db_connected = true
 	}
 }
 func makeInsertString(table string, columns []string) string {
 	columnString := ""
 	valuePlaceholders := ""
-	for i,column := range columns {
+	for i, column := range columns {
 		columnString += "`" + column + "`"
-		if i < len(columns) - 1 {
+		if i < len(columns)-1 {
 			columnString += ", "
 		}
 
 		//valuePlaceholders += fmt.Sprintf("$%d", i+1)
 		valuePlaceholders += "?"
-		if i < len(columns) - 1 {
+		if i < len(columns)-1 {
 			valuePlaceholders += ", "
 		}
 	}
-	return fmt.Sprintf("INSERT INTO %s%s (%s) VALUES (%s)", 
-						config.DBprefix, table, columnString,valuePlaceholders)
+	return fmt.Sprintf("INSERT INTO %s%s (%s) VALUES (%s)",
+		config.DBprefix, table, columnString, valuePlaceholders)
 }

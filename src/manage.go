@@ -30,50 +30,50 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 	cookies = r.Cookies()
 	request.ParseForm()
 	action := request.FormValue("action")
-	staff_rank := getStaffRank()
-	var manage_page_buffer bytes.Buffer
-	manage_page_html := ""
+	staffRank := getStaffRank()
+	var managePageBuffer bytes.Buffer
+	mangePageHTML := ""
 
 	if action == "" {
 		action = "announcements"
 	}
 
-	err := global_header_tmpl.Execute(&manage_page_buffer, config)
+	err := global_header_tmpl.Execute(&managePageBuffer, config)
 	if err != nil {
-		fmt.Fprintf(writer, manage_page_html+err.Error()+"\n</body>\n</html>")
+		fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
 		return
 	}
 
-	err = manage_header_tmpl.Execute(&manage_page_buffer, config)
+	err = manage_header_tmpl.Execute(&managePageBuffer, config)
 	if err != nil {
-		fmt.Println(manage_page_html)
-		fmt.Fprintf(writer, manage_page_html+err.Error()+"\n</body>\n</html>")
+		fmt.Println(mangePageHTML)
+		fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
 		return
 	}
 
 	if _, ok := manage_functions[action]; ok {
-		if staff_rank >= manage_functions[action].Permissions {
+		if staffRank >= manage_functions[action].Permissions {
 			if action == "rebuildall" || action == "purgeeverything" {
 				rebuildfront = manage_functions["rebuildfront"].Callback
 				rebuildboards = manage_functions["rebuildboards"].Callback
 			}
-			manage_page_buffer.Write([]byte(manage_functions[action].Callback()))
-		} else if staff_rank == 0 && manage_functions[action].Permissions == 0 {
-			manage_page_buffer.Write([]byte(manage_functions[action].Callback()))
-		} else if staff_rank == 0 {
-			manage_page_buffer.Write([]byte(manage_functions["login"].Callback()))
+			managePageBuffer.Write([]byte(manage_functions[action].Callback()))
+		} else if staffRank == 0 && manage_functions[action].Permissions == 0 {
+			managePageBuffer.Write([]byte(manage_functions[action].Callback()))
+		} else if staffRank == 0 {
+			managePageBuffer.Write([]byte(manage_functions["login"].Callback()))
 		} else {
-			manage_page_buffer.Write([]byte(action + " is undefined."))
+			managePageBuffer.Write([]byte(action + " is undefined."))
 		}
 	} else {
-		manage_page_buffer.Write([]byte(action + " is undefined."))
+		managePageBuffer.Write([]byte(action + " is undefined."))
 	}
-	manage_page_buffer.Write([]byte("\n</body>\n</html>"))
+	managePageBuffer.Write([]byte("\n</body>\n</html>"))
 	extension := getFileExtension(request.URL.Path)
 	if extension == "" {
 		//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	}
-	fmt.Fprintf(writer, manage_page_buffer.String())
+	fmt.Fprintf(writer, managePageBuffer.String())
 }
 
 func getCurrentStaff() (string, error) {
@@ -114,7 +114,7 @@ func getStaffRank() int {
 
 	staff, err := getStaff(staffname)
 	if err != nil {
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 		return 0
 	}
 	return staff.Rank
@@ -128,19 +128,19 @@ func createSession(key string, username string, password string, request *http.R
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !validReferrer(*request) {
-		mod_log.Print("Rejected login from possible spambot @ : " + request.RemoteAddr)
+		modLog.Print("Rejected login from possible spambot @ : " + request.RemoteAddr)
 		return 2
 	}
 	staff, err := getStaff(username)
 	if err != nil {
 		fmt.Println(err.Error())
-		error_log.Print(err.Error())
+		errorLog.Print(err.Error())
 		return 1
 	} else {
 		success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 		if success == bcrypt.ErrMismatchedHashAndPassword {
 			// password mismatch
-			mod_log.Print("Failed login (password mismatch) from " + request.RemoteAddr + " at " + getSQLDateTime())
+			modLog.Print("Failed login (password mismatch) from " + request.RemoteAddr + " at " + getSQLDateTime())
 			return 1
 		} else {
 			// successful login
@@ -149,12 +149,12 @@ func createSession(key string, username string, password string, request *http.R
 			http.SetCookie(*writer, cookie)
 			_, err := db.Exec("INSERT INTO `" + config.DBprefix + "sessions` (`key`, `data`, `expires`) VALUES('" + key + "','" + username + "', '" + getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))) + "');")
 			if err != nil {
-				error_log.Print(err.Error())
+				errorLog.Print(err.Error())
 				return 2
 			}
 			_, err = db.Exec("UPDATE `" + config.DBprefix + "staff` SET `last_active` ='" + getSQLDateTime() + "' WHERE `username` = '" + username + "';")
 			if err != nil {
-				error_log.Print(err.Error())
+				errorLog.Print(err.Error())
 			}
 			return 0
 		}
@@ -356,7 +356,7 @@ var manage_functions = map[string]ManageFunction{
 
 			rows, err := db.Query("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC;")
 			if err != nil {
-				error_log.Print(err.Error())
+				errorLog.Print(err.Error())
 				html += err.Error()
 				return
 			}
@@ -462,7 +462,7 @@ var manage_functions = map[string]ManageFunction{
 			rows, err = db.Query("SELECT * FROM `" + config.DBprefix + "banlist`")
 			if err != nil {
 				html += "</table><br />" + err.Error()
-				error_log.Print(err.Error())
+				errorLog.Print(err.Error())
 				return
 			}
 			var ban BanlistTable
@@ -477,7 +477,7 @@ var manage_functions = map[string]ManageFunction{
 				err = rows.Scan(&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.Tripcode, &ban.Message, &ban.SilentBan, &ban.Boards, &ban.BannedBy, &ban.Timestamp, &ban.Expires, &ban.Reason, &ban.StaffNote, &ban.AppealMessage, &ban.AppealAt)
 				if err != nil {
 					html += "</table><br />" + err.Error()
-					error_log.Print(err.Error())
+					errorLog.Print(err.Error())
 					return
 				}
 				ban_name := ""
@@ -523,7 +523,7 @@ var manage_functions = map[string]ManageFunction{
 			staff := new(StaffTable)
 			err = row.Scan(&staff.Rank, &staff.Boards)
 			if err != nil {
-				error_log.Print(err.Error())
+				errorLog.Print(err.Error())
 				html += err.Error()
 				return
 			}
@@ -937,7 +937,7 @@ var manage_functions = map[string]ManageFunction{
 				recentpost := new(RecentPost)
 				err = rows.Scan(&recentpost.BoardName, &recentpost.BoardID, &recentpost.PostID, &recentpost.ParentID, &recentpost.Message, &recentpost.IP, &recentpost.Timestamp)
 				if err != nil {
-					error_log.Print(err.Error())
+					errorLog.Print(err.Error())
 					return err.Error()
 				}
 				html += "<tr><td><b>Post:</b> <a href=\"" + path.Join(config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)) + "\">" + recentpost.BoardName + "/" + strconv.Itoa(recentpost.PostID) + "</a><br /><b>IP:</b> " + recentpost.IP + "</td><td>" + recentpost.Message + "</td><td>" + recentpost.Timestamp.Format("01/02/06, 15:04") + "</td></tr>"
@@ -969,7 +969,7 @@ var manage_functions = map[string]ManageFunction{
 				staff := new(StaffTable)
 				err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn)
 				if err != nil {
-					error_log.Print(err.Error())
+					errorLog.Print(err.Error())
 					return err.Error()
 				}
 
