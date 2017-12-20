@@ -647,63 +647,42 @@ var manage_functions = map[string]ManageFunction{
 						continue
 					}
 					//_, err := db.Prepare("INSERT INTO (" + generatePlaceholders(24, ", ") + ")")
-					_, err := db.Exec(
-						"INSERT INTO `" + config.DBprefix + "boards` (" +
-							"`order`, " +
-							"`dir`, " +
-							"`type`, " +
-							"`upload_type`, " +
-							"`title`, " +
-							"`subtitle`, " +
-							"`description`, " +
-							"`section`, " +
-							"`max_image_size`, " +
-							"`max_pages`, " +
-							"`locale`, " +
-							"`default_style`, " +
-							"`locked`, " +
-							"`created_on`, " +
-							"`anonymous`, " +
-							"`forced_anon`, " +
-							"`max_age`, " +
-							"`autosage_after`, " +
-							"`no_images_after`, " +
-							"`max_message_length`, " +
-							"`embeds_allowed`, " +
-							"`redirect_to_thread`, " +
-							"`require_file`, " +
-							"`enable_catalog`" +
-							") VALUES(" +
-							strconv.Itoa(board.Order) + ", '" +
-							board.Dir + "', " +
-							strconv.Itoa(board.Type) + ", " +
-							strconv.Itoa(board.UploadType) + ", '" +
-							board.Title + "', '" +
-							board.Subtitle + "', '" +
-							board.Description + "', " +
-							strconv.Itoa(board.Section) + ", " +
-							strconv.Itoa(board.MaxImageSize) + ", " +
-							strconv.Itoa(board.MaxPages) + ", '" +
-							board.Locale + "', '" +
-							board.DefaultStyle + "', " +
-							Btoa(board.Locked) + ", '" +
-							getSpecificSQLDateTime(board.CreatedOn) + "', '" +
-							board.Anonymous + "', " +
-							Btoa(board.ForcedAnon) + ", " +
-							strconv.Itoa(board.MaxAge) + ", " +
-							strconv.Itoa(board.AutosageAfter) + ", " +
-							strconv.Itoa(board.NoImagesAfter) + ", " +
-							strconv.Itoa(board.MaxMessageLength) + ", " +
-							Btoa(board.EmbedsAllowed) + ", " +
-							Btoa(board.RedirectToThread) + ", " +
-							Btoa(board.RequireFile) + ", " +
-							Btoa(board.EnableCatalog) + ")")
+					stmt, err := db.Prepare(
+						"INSERT INTO `" + config.DBprefix + "boards` (`order`,`dir`,`type`,`upload_type`,`title`,`subtitle`," +
+							"`description`,`section`,`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`," +
+							"`anonymous`,`forced_anon`,`max_age`,`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`," +
+							"`redirect_to_thread`,`require_file`,`enable_catalog`) " +
+							"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+					defer func() {
+						if stmt != nil {
+							stmt.Close()
+						}
+					}()
+
+					if err != nil {
+						do = ""
+						board_creation_status = err.Error()
+						continue
+					}
+
+					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
+
+					_, err = stmt.Exec(
+						&board.Order, &board.Dir, &board.Type, &board.UploadType,
+						&board.Title, &board.Subtitle, &board.Description, &board.Section,
+						&board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle,
+						&board.Locked, &boardCreationTimestamp, &board.Anonymous,
+						&board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
+						&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
+						&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
+					)
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
 						continue
 					} else {
 						board_creation_status = "Board created successfully"
+						rebuildboards()
 						done = true
 					}
 					resetBoardSectionArrays()
@@ -998,15 +977,32 @@ var manage_functions = map[string]ManageFunction{
 					new_username := request.FormValue("username")
 					new_password := request.FormValue("password")
 					new_rank := request.FormValue("rank")
-					_, err := db.Exec("INSERT INTO `" + config.DBprefix + "staff` (`username`, `password_checksum`, `rank`) VALUES('" + new_username + "','" + bcryptSum(new_password) + "', '" + new_rank + "');")
+					stmt, err := db.Prepare("INSERT INTO `" + config.DBprefix + "staff` (`username`, `password_checksum`, `rank`) VALUES(?,?,?)")
+					defer func() {
+						if stmt != nil {
+							stmt.Close()
+						}
+					}()
 					if err != nil {
 						serveErrorPage(writer, err.Error())
 					}
+
+					_, err = stmt.Exec(&new_username, bcryptSum(new_password), &new_rank)
+					if err != nil {
+						serveErrorPage(writer, err.Error())
+					}
+
 				} else if request.FormValue("do") == "del" && request.FormValue("username") != "" {
-					_, err := db.Exec("DELETE FROM `" + config.DBprefix + "staff` WHERE `username` = '" + request.FormValue("username") + "'")
+					stmt, err := db.Prepare("DELETE FROM `" + config.DBprefix + "staff` WHERE `username` = ?")
+					defer func() {
+						if stmt != nil {
+							stmt.Close()
+						}
+					}()
 					if err != nil {
 						serveErrorPage(writer, err.Error())
 					}
+					_, err = stmt.Exec(request.FormValue("username"))
 				}
 
 				var rank string

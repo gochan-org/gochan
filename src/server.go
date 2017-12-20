@@ -268,7 +268,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				if parentId == 0 {
 					err = os.Remove(path.Join(config.DocumentRoot, board, "/res/"+post+".html"))
 				} else {
-					_board, _ := getBoardArr("`id` = " + strconv.Itoa(boardId))
+					_board, _ := getBoardArr(map[string]interface{}{"id": boardId}, "") // getBoardArr("`id` = " + strconv.Itoa(boardId))
 					buildBoardPages(&_board[0])
 				}
 

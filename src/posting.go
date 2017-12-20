@@ -55,13 +55,13 @@ func generateTripCode(input string) string {
 func buildBoards(all bool, which int) (html string) {
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
 	if !all {
-		_board, _ := getBoardArr("`id` = " + strconv.Itoa(which))
+		_board, _ := getBoardArr(map[string]interface{}{"id": which}, "")
 		board := _board[0]
 		html += buildBoardPages(&board) + "<br />\n"
 		html += buildThreads(true, board.ID, 0)
 		return
 	}
-	boards, _ := getBoardArr("")
+	boards, _ := getBoardArr(nil, "")
 	if len(boards) == 0 {
 		return html + "No boards to build.<br />\n"
 	}
@@ -116,11 +116,16 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	}
 
 	// Get all top level posts for the board.
-	op_posts, err := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " +
-		strconv.Itoa(board.ID) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC")
+	//op_posts, err := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " +
+	//	strconv.Itoa(board.ID) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `bumped` DESC")
+	op_posts, err := getPostArr(map[string]interface{}{
+		"boardid":           board.ID,
+		"parentid":          0,
+		"deleted_timestamp": nil_timestamp,
+	}, " ORDER BY `bumped` DESC")
 	if err != nil {
 		html += err.Error() + "<br />"
-		op_posts = make([]interface{}, 0)
+		op_posts = nil //make([]interface{}, 0)
 		return
 	}
 
@@ -128,11 +133,11 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	for _, op_post_i := range op_posts {
 		var thread Thread
 		var posts_in_thread []interface{}
-
+		op_post := op_post_i.(PostTable)
 		thread.IName = "thread"
 
 		// Store the OP post for this thread
-		op_post := op_post_i.(PostTable)
+		//op_post := op_post_i.(PostTable)
 
 		// Get the number of replies to this thread.
 		stmt, err := db.Prepare("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?")
@@ -159,22 +164,42 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			html += err.Error() + "<br />\n"
 		}
 
-		thread.OP = op_post_i
+		thread.OP = op_post
 
 		if op_post.Stickied {
 			// If the thread is stickied, limit replies on the archive page to the
 			// 	configured value for stickied threads.
-			posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.StickyRepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
+			//posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.StickyRepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
+			posts_in_thread, err = getPostArr(map[string]interface{}{
+				"boardid":           board.ID,
+				"parentid":          op_post.ID,
+				"deleted_timestamp": nil_timestamp,
+			}, fmt.Sprintf(" ORDER BY `id` DESC LIMIT %d", config.StickyRepliesOnBoardPage))
+
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
 		} else {
 			// Otherwise, limit the replies to the configured value for normal threads.
-			posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.RepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
+			//posts_in_thread, err = getPostArr("SELECT * FROM (SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(board.ID) + " AND `parentid` = " + strconv.Itoa(op_post.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` DESC LIMIT " + strconv.Itoa(config.RepliesOnBoardPage) + ") AS posts ORDER BY id ASC")
+			/*
+				SELECT * FROM (
+					SELECT * FROM `gc_posts` WHERE
+						`boardid` = board.ID AND
+						`parentid` = op_post.ID AND
+						`deleted_timestamp` = '000'
+						ORDER BY `id` DESC LIMIT config.RepliesOnBoardPage
+				) AS posts ORDER BY id ASC;
+			*/
+			posts_in_thread, err = getPostArr(map[string]interface{}{
+				"boardid":           board.ID,
+				"parentid":          op_post.ID,
+				"deleted_timestamp": nil_timestamp,
+			}, fmt.Sprintf("ORDER BY `id` DESC LIMIT %d", config.RepliesOnBoardPage))
+
 			if err != nil {
 				html += err.Error() + "<br />"
 			}
-
 		}
 
 		if len(posts_in_thread) > 0 {
@@ -366,19 +391,30 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 	// TODO: detect which page will be built and only build that one and the board page
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
 	if !all {
-		_thread, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `id` = " + strconv.Itoa(threadid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
-		thread := _thread[0]
-		thread_struct := thread.(PostTable)
-		html += buildThreadPages(&thread_struct) + "<br />\n"
+		//_thread, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `id` = " + strconv.Itoa(threadid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
+		_thread, _ := getPostArr(map[string]interface{}{
+			"boardid":           boardid,
+			"id":                threadid,
+			"parentid":          0,
+			"deleted_timestamp": nil_timestamp,
+		}, "")
+		thread := _thread[0].(PostTable)
+		//thread_struct := thread.(PostTable)
+		html += buildThreadPages(&thread) + "<br />\n"
 		return
 	}
-	threads, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
+	//threads, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
+	threads, _ := getPostArr(map[string]interface{}{
+		"boardid":           boardid,
+		"parentid":          0,
+		"deleted_timestamp": nil_timestamp,
+	}, "")
 	if len(threads) == 0 {
 		return
 	}
-	for _, op := range threads {
-		op_struct := op.(PostTable)
-		html += buildThreadPages(&op_struct) + "<br />\n"
+	for _, op_i := range threads {
+		op := op_i.(PostTable)
+		html += buildThreadPages(&op) + "<br />\n"
 	}
 	return
 }
@@ -410,7 +446,12 @@ func buildThreadPages(op *PostTable) (html string) {
 		return
 	}
 
-	replies, err = getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` ASC")
+	//replies, err = getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` ASC")
+	replies, err = getPostArr(map[string]interface{}{
+		"boardid":           op.BoardID,
+		"parentid":          op.ID,
+		"deleted_timestamp": nil_timestamp,
+	}, "ORDER BY `ID` ASC")
 	if err != nil {
 		errortext = "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
 		html += errortext
@@ -994,11 +1035,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			}
 			post.FilenameOriginal = escapeString(post.FilenameOriginal)
 			post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
-			board_arr, _ := getBoardArr("`id` = " + request.FormValue("boardid"))
+			board_arr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "") // getBoardArr("`id` = " + request.FormValue("boardid"))
 			if len(board_arr) == 0 {
 				serveErrorPage(w, "No boards have been created yet")
 			}
-			_board_dir, _ := getBoardArr("`id` = " + request.FormValue("boardid"))
+			_board_dir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "") // getBoardArr("`id` = " + request.FormValue("boardid"))
 			board_dir := _board_dir[0].Dir
 			file_path := path.Join(config.DocumentRoot, "/"+board_dir+"/src/", post.Filename)
 			thumb_path := path.Join(config.DocumentRoot, "/"+board_dir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumb_filetype, -1))
@@ -1143,7 +1184,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	postid, _ := result.LastInsertId()
 	post.ID = int(postid)
 
-	boards, _ := getBoardArr("")
+	boards, _ := getBoardArr(nil, "")
 	// rebuild the board page
 	buildBoards(false, post.BoardID)
 

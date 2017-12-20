@@ -90,16 +90,41 @@ func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 
 // getBoardArr performs a query against the database, and returns an array of BoardsTables along with an error value.
 // If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
-func getBoardArr(where string) (boards []BoardsTable, err error) {
-	if where == "" {
-		where = "1"
+//func getBoardArr(where string) (boards []BoardsTable, err error) {
+func getBoardArr(parameterList map[string]interface{}, extra string) (boards []BoardsTable, err error) {
+	queryString := "SELECT * FROM `" + config.DBprefix + "boards` "
+	numKeys := len(parameterList)
+	var parameterValues []interface{}
+	if numKeys > 0 {
+		queryString += "WHERE "
 	}
-	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "boards` WHERE " + where + " ORDER BY `order`;")
+
+	for key, value := range parameterList {
+		queryString += fmt.Sprintf("`%s` = ? AND ", key)
+		parameterValues = append(parameterValues, value)
+	}
+
+	// Find and remove any trailing instances of "AND "
+	if numKeys > 0 {
+		queryString = queryString[:len(queryString)-4]
+	}
+
+	queryString += fmt.Sprintf(" %s ORDER BY `order`", extra)
+	printf(1, "queryString@getBoardArr: %s\n", queryString)
+
+	stmt, err := db.Prepare(queryString)
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+
 	if err != nil {
 		error_log.Print(err.Error())
 		return
 	}
 
+	rows, err := stmt.Query(parameterValues...)
 	// For each row in the results from the database, populate a new BoardsTable instance,
 	// 	then append it to the boards array we are going to return
 	for rows.Next() {
@@ -143,12 +168,47 @@ func getBoardArr(where string) (boards []BoardsTable, err error) {
 	return
 }
 
-func getPostArr(sql string) (posts []interface{}, err error) {
-	rows, err := db.Query(sql)
+// if parameterList is nil, ignore it and treat extra like a whole SQL query
+func getPostArr(parameterList map[string]interface{}, extra string) (posts []interface{}, err error) {
+	queryString := "SELECT * FROM `" + config.DBprefix + "posts` "
+	numKeys := len(parameterList)
+	var parameterValues []interface{}
+	if numKeys > 0 {
+		queryString += "WHERE "
+	}
+
+	for key, value := range parameterList {
+		queryString += fmt.Sprintf("`%s` = ? AND ", key)
+		parameterValues = append(parameterValues, value)
+	}
+
+	// Find and remove any trailing instances of "AND "
+	if numKeys > 0 {
+		queryString = queryString[:len(queryString)-4]
+	}
+
+	queryString += " " + extra // " ORDER BY `order`"
+	printf(1, "queryString@getPostArr queryString: %s\n", queryString)
+
+	stmt, err := db.Prepare(queryString)
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+
 	if err != nil {
 		error_log.Print(err.Error())
 		return
 	}
+
+	rows, err := stmt.Query(parameterValues...)
+	if err != nil {
+		error_log.Print(err.Error())
+		return
+	}
+	// For each row in the results from the database, populate a new PostTable instance,
+	// 	then append it to the posts array we are going to return
 	for rows.Next() {
 		var post PostTable
 		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
@@ -157,11 +217,14 @@ func getPostArr(sql string) (posts []interface{}, err error) {
 			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp,
 			&post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped,
 			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
+		post.IName = "post"
 		if err != nil {
-			error_log.Print("util.go:getPostArr() ERROR: " + err.Error())
+			error_log.Print(err.Error())
+			fmt.Println(err.Error())
 			return
+		} else {
+			posts = append(posts, post)
 		}
-		posts = append(posts, post)
 	}
 	return
 }
@@ -284,7 +347,7 @@ func resetBoardSectionArrays() {
 	all_boards = nil
 	all_sections = nil
 
-	all_boards_a, _ := getBoardArr("")
+	all_boards_a, _ := getBoardArr(nil, "")
 	for _, b := range all_boards_a {
 		all_boards = append(all_boards, b)
 	}
@@ -295,9 +358,8 @@ func resetBoardSectionArrays() {
 }
 
 func searchStrings(item string, arr []string, permissive bool) int {
-	var length = len(arr)
-	for i := 0; i < length; i++ {
-		if item == arr[i] {
+	for i, str := range arr {
+		if item == str {
 			return i
 		}
 	}
