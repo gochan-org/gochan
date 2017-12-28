@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"fmt"
+	"html"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nranchev/go-libGeoIP"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -111,7 +113,7 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	}
 
 	queryString += fmt.Sprintf(" %s ORDER BY `order`", extra)
-	printf(1, "queryString@getBoardArr: %s\n", queryString)
+	printf(2, "queryString@getBoardArr: %s\n", queryString)
 
 	stmt, err := db.Prepare(queryString)
 	defer func() {
@@ -188,7 +190,7 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 	}
 
 	queryString += " " + extra // " ORDER BY `order`"
-	printf(1, "queryString@getPostArr queryString: %s\n", queryString)
+	printf(2, "queryString@getPostArr queryString: %s\n", queryString)
 
 	stmt, err := db.Prepare(queryString)
 	defer func() {
@@ -262,6 +264,17 @@ func getCookie(name string) *http.Cookie {
 	return nil
 }
 
+func getCountryCode(ip string) (string, error) {
+	if config.EnableGeoIP && config.GeoIPDBlocation != "" {
+		gi, err := libgeo.Load(config.GeoIPDBlocation)
+		if err != nil {
+			return "", err
+		}
+		return gi.GetLocationByIP(ip).CountryCode, nil
+	}
+	return "", nil
+}
+
 func generateSalt() string {
 	salt := make([]byte, 3)
 	salt[0] = chars[rand.Intn(86)]
@@ -288,15 +301,6 @@ func getFormattedFilesize(size float32) string {
 		return fmt.Sprintf("%fMB", size/1024/1024)
 	}
 	return fmt.Sprintf("%0.2fGB", size/1024/1024/1024)
-}
-
-func getSQLDateTime() string {
-	now := time.Now()
-	return now.Format(mysql_datetime_format)
-}
-
-func getSpecificSQLDateTime(t time.Time) string {
-	return t.Format(mysql_datetime_format)
 }
 
 func humanReadableTime(t time.Time) string {
@@ -363,6 +367,16 @@ func reverse(arr []interface{}) (reversed []interface{}) {
 	return
 }
 
+// sanitize/escape HTML strings in a post. This should be run immediately before
+// the post is inserted into the database
+func sanitizeHTML(post PostTable) PostTable {
+	sanitized := post
+	html.EscapeString(sanitized.Name)
+	html.EscapeString(sanitized.Email)
+	html.EscapeString(sanitized.Subject)
+	return sanitized
+}
+
 func searchStrings(item string, arr []string, permissive bool) int {
 	for i, str := range arr {
 		if item == str {
@@ -373,14 +387,14 @@ func searchStrings(item string, arr []string, permissive bool) int {
 }
 
 func bToI(b bool) int {
-	if b == true {
+	if b {
 		return 1
 	}
 	return 0
 }
 
 func bToA(b bool) string {
-	if b == true {
+	if b {
 		return "1"
 	}
 	return "0"
