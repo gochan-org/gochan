@@ -367,13 +367,19 @@ func reverse(arr []interface{}) (reversed []interface{}) {
 	return
 }
 
+func sanitizeHTML(input string) (output string) {
+	output = html.EscapeString(input)
+	return
+}
+
 // sanitize/escape HTML strings in a post. This should be run immediately before
 // the post is inserted into the database
-func sanitizeHTML(post PostTable) PostTable {
+func sanitizePost(post PostTable) PostTable {
 	sanitized := post
-	html.EscapeString(sanitized.Name)
-	html.EscapeString(sanitized.Email)
-	html.EscapeString(sanitized.Subject)
+	sanitized.Name = sanitizeHTML(sanitized.Name)
+	sanitized.Email = sanitizeHTML(sanitized.Email)
+	sanitized.Subject = sanitizeHTML(sanitized.Subject)
+	sanitized.Password = sanitizeHTML(sanitized.Password)
 	return sanitized
 }
 

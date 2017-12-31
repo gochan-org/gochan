@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -18,8 +19,8 @@ const (
 )
 
 var (
-	db           *sql.DB
-	db_connected = false
+	db          *sql.DB
+	dbConnected = false
 )
 
 // escapeString and escapeQuotes copied from github.com/ziutek/mymysql/native/codecs.go
@@ -93,11 +94,11 @@ func connectToSQLServer() {
 	if num_rows >= 16 {
 		// the initial setup has already been run
 		needsInitialSetup = false
-		db_connected = true
+		dbConnected = true
 		println(0, "complete.")
 		return
 	} else {
-		// does the  initialsetupdb.sql exist?
+		// check if initialsetupdb.sql still exists
 		_, err := os.Stat("initialsetupdb.sql")
 		if err != nil {
 			println(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
@@ -131,9 +132,19 @@ func connectToSQLServer() {
 		}
 		println(0, "complete.")
 		needsInitialSetup = false
-		db_connected = true
+		dbConnected = true
 	}
 }
+
+func getSQLDateTime() string {
+	now := time.Now()
+	return now.Format(mysql_datetime_format)
+}
+
+func getSpecificSQLDateTime(t time.Time) string {
+	return t.Format(mysql_datetime_format)
+}
+
 func makeInsertString(table string, columns []string) string {
 	columnString := ""
 	valuePlaceholders := ""
