@@ -705,10 +705,10 @@ func buildBoardListJSON() (html string) {
 
 // bumps the given thread on the given board and returns true if it exists
 // or false on error
-func bumpThread(postID, boardID int) bool {
+func bumpThread(postID, boardID int) error {
 	stmt, err := db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `bumped` = ? WHERE `id` = ? AND `boardid` = ?")
 	if err != nil {
-		return false
+		return err
 	}
 	defer func() {
 		if stmt != nil {
@@ -718,9 +718,9 @@ func bumpThread(postID, boardID int) bool {
 
 	_, err = stmt.Exec(time.Now(), postID, boardID)
 	if err != nil {
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
@@ -888,12 +888,12 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 		return result, err
 	}
 
-	if post.ParentID != 0 {
-		stmt, err = db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `bumped` = ? WHERE `id` = ?")
+	// Bump parent post if requested.
+	if post.ParentID != 0 && bump {
+		err = bumpThread(post.ParentID, post.BoardID)
 		if err != nil {
 			return nil, err
 		}
-		result, err = stmt.Exec(getSpecificSQLDateTime(post.Bumped), post.ParentID)
 	}
 	return result, err
 }
