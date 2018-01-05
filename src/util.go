@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
 	"fmt"
@@ -89,6 +90,54 @@ func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 		}
 	}
 	return filesDeleted, err
+}
+
+// escapeString and escapeQuotes copied from github.com/ziutek/mymysql/native/codecs.go
+func escapeString(txt string) string {
+	var (
+		esc string
+		buf bytes.Buffer
+	)
+	last := 0
+	for ii, bb := range txt {
+		switch bb {
+		case 0:
+			esc = `\0`
+		case '\n':
+			esc = `\n`
+		case '\r':
+			esc = `\r`
+		case '\\':
+			esc = `\\`
+		case '\'':
+			esc = `\'`
+		case '"':
+			esc = `\"`
+		case '\032':
+			esc = `\Z`
+		default:
+			continue
+		}
+		io.WriteString(&buf, txt[last:ii])
+		io.WriteString(&buf, esc)
+		last = ii + 1
+	}
+	io.WriteString(&buf, txt[last:])
+	return buf.String()
+}
+
+func escapeQuotes(txt string) string {
+	var buf bytes.Buffer
+	last := 0
+	for ii, bb := range txt {
+		if bb == '\'' {
+			io.WriteString(&buf, txt[last:ii])
+			io.WriteString(&buf, `''`)
+			last = ii + 1
+		}
+	}
+	io.WriteString(&buf, txt[last:])
+	return buf.String()
 }
 
 // getBoardArr performs a query against the database, and returns an array of BoardsTables along with an error value.
