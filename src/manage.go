@@ -163,75 +163,79 @@ func createSession(key string, username string, password string, request *http.R
 }
 
 var manage_functions = map[string]ManageFunction{
-	/*"cleanup": {
+	"cleanup": {
 		Permissions: 3,
 		Callback: func() (html string) {
 			html = "<h2>Cleanup</h2><br />"
+			if request.FormValue("run") == "Run Cleanup" {
+				/*
+					// kinda sorta "borrowed" from Kusaba X
+						html += "<hr />Deleting non-deleted replies which belong to deleted threads.<hr />";
+					 	boards_rows,err := db.Query("SELECT `id`,`dir` FROM `" + config.DBprefix + "boards`")
+						if err != nil {
+							html += "<tr><td>"+err.Error()+"</td></tr></table>"
+							return
+						}
+						var id int
+						var dir string
+						for boards_rows.Next() {
+							err = boards_rows.Scan(&id, &dir)
+							html += "<b>Looking for orphans in /" + dir + "/</b><br />";
 
-			if (request.FormValue("run") == 1) {
-				html += "<hr />Deleting non-deleted replies which belong to deleted threads.<hr />";
-			 	boards_rows,err := db.Query("SELECT `id`,`dir` FROM `" + config.DBprefix + "boards`")
+							parentid_rows, err := db.Query("SELECT `id`,`parentid` FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(id) + " AND `parentid` != '0' AND `is_deleted` = 0")
+							if err != nil {
+								html += err.Error()
+								return
+							}
+							var id2 string
+							var parentid string
+							for parentid_rows.Next() {
+								err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + id2 + " AND `id` = '" + parentid + "' AND `IS_DELETED` = 0")
+								if err != nil {
+									deletePost()
+									$post_class = new Post($line['id'], $lineboard['name'], $lineboard['id']);
+									$post_class->Delete;
+
+									html +='Reply #%1$s\'s thread (#%2$s) does not exist! It has been deleted.'),$line['id'],$line['parentid']).'<br />';
+								}
+							}
+						}
+
+						html += "<hr />Deleting unused images<hr />"
+						$this->delunusedimages(true);
+						html += "<hr />Removing posts deleted more than one week ago from the database.<hr />"
+						$results = $tc_db->GetAll("SELECT `name`, `type`, `id` FROM `" . KU_DBPREFIX . "boards`");
+						foreach ($results AS $line) {
+							if ($line['type'] != 1) {
+								$tc_db->Execute("DELETE FROM `" . KU_DBPREFIX . "posts` WHERE `boardid` = " . $line['id'] . " AND `IS_DELETED` = 1 AND `deleted_timestamp` < " . (time() - 604800) . "");
+							}
+						}
+				*/
+				html += "Optimizing all tables in database.<hr />"
+				rows, err := db.Query("SHOW TABLES")
 				if err != nil {
-					html += "<tr><td>"+err.Error()+"</td></tr></table>"
+					html += err.Error()
 					return
 				}
-				var id int
-				var dir string
-				for boards_rows.Next() {
-					err = boards_rows.Scan(&id, &dir)
-					html += "<b>Looking for orphans in /" + dir + "/</b><br />";
 
-					parentid_rows, err := db.Query("SELECT `id`,`parentid` FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(id) + " AND `parentid` != '0' AND `is_deleted` = 0")
+				for rows.Next() {
+					var table string
+					rows.Scan(&table)
+					_, err = db.Exec("OPTIMIZE TABLE " + table)
 					if err != nil {
 						html += err.Error()
 						return
 					}
-					var id2 string
-					var parentid string
-					for parentid_rows.Next() {
-						err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + id2 + " AND `id` = '" + parentid + "' AND `IS_DELETED` = 0")
-						if err != nil {
-							deletePost()
-							$post_class = new Post($line['id'], $lineboard['name'], $lineboard['id']);
-							$post_class->Delete;
-
-							html +='Reply #%1$s\'s thread (#%2$s) does not exist! It has been deleted.'),$line['id'],$line['parentid']).'<br />';
-						}
-
-
-					}
 				}
 
-				$tpl_page .= '<hr />'. _gettext('Deleting unused images.') .'<hr />';
-				$this->delunusedimages(true);
-				$tpl_page .= '<hr />'. _gettext('Removing posts deleted more than one week ago from the database.') .'<hr />';
-				$results = $tc_db->GetAll("SELECT `name`, `type`, `id` FROM `" . KU_DBPREFIX . "boards`");
-				foreach ($results AS $line) {
-					if ($line['type'] != 1) {
-						$tc_db->Execute("DELETE FROM `" . KU_DBPREFIX . "posts` WHERE `boardid` = " . $line['id'] . " AND `IS_DELETED` = 1 AND `deleted_timestamp` < " . (time() - 604800) . "");
-					}
-				}
-				$tpl_page .= _gettext('Optimizing all tables in database.') .'<hr />';
-				if (KU_DBTYPE == 'mysql' || KU_DBTYPE == 'mysqli') {
-					$results = $tc_db->GetAll("SHOW TABLES");
-								foreach ($results AS $line) {
-										$tc_db->Execute("OPTIMIZE TABLE `" . $line[0] . "`");
-								}
-				}
-				if (KU_DBTYPE == 'postgres7' || KU_DBTYPE == 'postgres8' || KU_DBTYPE == 'postgres') {
-									$results = $tc_db->GetAll("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
-									foreach ($results AS $line) {
-											$tc_db->Execute("VACUUM ANALYZE `" . $line[0] . "`");
-									}
-				}
-				$tpl_page .= _gettext('Cleanup finished.');
-				management_addlogentry(_gettext('Ran cleanup'), 2);
+				html += "Cleanup finished"
 			} else {
-				$tpl_page .= '<form action="manage_page.php?action=cleanup" method="post">'. "\n" .
-							'	<input name="run" id="run" type="submit" value="'. _gettext('Run Cleanup') . '" />'. "\n" .
-							'</form>';
+				html += "<form action=\"/manage?action=cleanup\" method=\"post\">\n" +
+					"	<input name=\"run\" id=\"run\" type=\"submit\" value=\"Run Cleanup\" />\n" +
+					"</form>"
 			}
-	}},*/
+			return
+		}},
 	"purgeeverything": {
 		Permissions: 3,
 		Callback: func() (html string) {
@@ -500,12 +504,6 @@ var manage_functions = map[string]ManageFunction{
 				"<script type=\"text/javascript\">banPage();</script>\n "
 			return
 		}},
-	"cleanup": {
-		Permissions: 3,
-		Callback: func() (html string) {
-
-			return
-		}},
 	"getstaffjquery": {
 		Permissions: 0,
 		Callback: func() (html string) {
@@ -542,26 +540,34 @@ var manage_functions = map[string]ManageFunction{
 			for !done {
 				switch {
 				case do == "add":
-					board.Dir = escapeString(request.FormValue("dir"))
+					//board.Dir = escapeString(request.FormValue("dir"))
+					board.Dir = request.FormValue("dir")
 					if board.Dir == "" {
 						board_creation_status = "Error: \"Directory\" cannot be blank"
 						do = ""
 						continue
 					}
-					order_str := escapeString(request.FormValue("order"))
+					//order_str := escapeString(request.FormValue("order"))
+					order_str := request.FormValue("order")
 					board.Order, err = strconv.Atoi(order_str)
 					if err != nil {
 						board.Order = 0
 					}
-					board.Title = escapeString(request.FormValue("title"))
+					//board.Title = escapeString(request.FormValue("title"))
+					board.Title = request.FormValue("title")
 					if board.Title == "" {
 						board_creation_status = "Error: \"Title\" cannot be blank"
 						do = ""
 						continue
 					}
-					board.Subtitle = escapeString(request.FormValue("subtitle"))
-					board.Description = escapeString(request.FormValue("description"))
-					section_str := escapeString(request.FormValue("section"))
+					//board.Subtitle = escapeString(request.FormValue("subtitle"))
+					board.Subtitle = request.FormValue("subtitle")
+
+					//board.Description = escapeString(request.FormValue("description"))
+					board.Description = request.FormValue("description")
+
+					//section_str := escapeString(request.FormValue("section"))
+					section_str := request.FormValue("section")
 					if section_str == "none" {
 						section_str = "0"
 					}
@@ -572,42 +578,50 @@ var manage_functions = map[string]ManageFunction{
 					if err != nil {
 						board.Section = 0
 					}
-					maximagesize_str := escapeString(request.FormValue("maximagesize"))
+					//maximagesize_str := escapeString(request.FormValue("maximagesize"))
+					maximagesize_str := request.FormValue("maximagesize")
 					board.MaxImageSize, err = strconv.Atoi(maximagesize_str)
 					if err != nil {
 						board.MaxImageSize = 1024 * 4
 					}
 
-					maxpages_str := escapeString(request.FormValue("maxpages"))
+					//maxpages_str := escapeString(request.FormValue("maxpages"))
+					maxpages_str := request.FormValue("maxpages")
 					board.MaxPages, err = strconv.Atoi(maxpages_str)
 					if err != nil {
 						board.MaxPages = 11
 					}
-					board.DefaultStyle = escapeString(request.FormValue("defaultstyle"))
+					//board.DefaultStyle = escapeString(request.FormValue("defaultstyle"))
+					board.DefaultStyle = request.FormValue("defaultstyle")
 					board.Locked = (request.FormValue("locked") == "on")
 
 					board.ForcedAnon = (request.FormValue("forcedanon") == "on")
 
-					board.Anonymous = escapeString(request.FormValue("anonymous"))
+					//board.Anonymous = escapeString(request.FormValue("anonymous"))
+					board.Anonymous = request.FormValue("anonymous")
 					if board.Anonymous == "" {
 						board.Anonymous = "Anonymous"
 					}
-					maxage_str := escapeString(request.FormValue("maxage"))
+					//maxage_str := escapeString(request.FormValue("maxage"))
+					maxage_str := request.FormValue("maxage")
 					board.MaxAge, err = strconv.Atoi(maxage_str)
 					if err != nil {
 						board.MaxAge = 0
 					}
-					autosageafter_str := escapeString(request.FormValue("autosageafter"))
+					//autosageafter_str := escapeString(request.FormValue("autosageafter"))
+					autosageafter_str := request.FormValue("autosageafter")
 					board.AutosageAfter, err = strconv.Atoi(autosageafter_str)
 					if err != nil {
 						board.AutosageAfter = 200
 					}
-					noimagesafter_str := escapeString(request.FormValue("noimagesafter"))
+					//noimagesafter_str := escapeString(request.FormValue("noimagesafter"))
+					noimagesafter_str := request.FormValue("noimagesafter")
 					board.NoImagesAfter, err = strconv.Atoi(noimagesafter_str)
 					if err != nil {
 						board.NoImagesAfter = 0
 					}
-					maxmessagelength_str := escapeString(request.FormValue("maxmessagelength"))
+					//maxmessagelength_str := escapeString(request.FormValue("maxmessagelength"))
+					maxmessagelength_str := request.FormValue("maxmessagelength")
 					board.MaxMessageLength, err = strconv.Atoi(maxmessagelength_str)
 					if err != nil {
 						board.MaxMessageLength = 1024 * 8
@@ -867,6 +881,7 @@ var manage_functions = map[string]ManageFunction{
 				html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"purgeeverything\" class=\"staffmenu-item\">Purge everything!</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
+					"<a href=\"javascript:void(0)\" id=\"cleanup\" class=\"staffmenu-item\">Run cleanup</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildall\" class=\"staffmenu-item\">Rebuild all</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildboards\" class=\"staffmenu-item\">Rebuild board pages</a><br />\n" +

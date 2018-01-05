@@ -5,9 +5,8 @@ This is just a very preliminary roadmap to map out what I plan to focus on with 
 
 1.x
 ----
-* Improve posting stability (almost done)
+* Improve posting stability (done)
 * Add management functions to make things simpler
-* Fix bugfixes (almost done, as far as we can tell)
 * Add some kind of database schema to handle any possible changes in the database structure with new versions (if there are any)
 * Add functionality to aid new admins in transferring boards from other imageboard systems (TinyBoard, Kusaba, etc) to Gochan. This would largely be a database issue (see above)
 
