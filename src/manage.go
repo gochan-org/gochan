@@ -143,11 +143,10 @@ func createSession(key string, username string, password string, request *http.R
 			modLog.Print("Failed login (password mismatch) from " + request.RemoteAddr + " at " + getSQLDateTime())
 			return 1
 		} else {
-			// successful login
-			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour * 2))), MaxAge: 7200}
-			// cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))),MaxAge: 7200}
+			// successful login, add cookie that expires in one month
+			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: domain, Expires: time.Now().Add(time.Duration(time.Hour * 730))}
 			http.SetCookie(*writer, cookie)
-			_, err := db.Exec("INSERT INTO `" + config.DBprefix + "sessions` (`key`, `data`, `expires`) VALUES('" + key + "','" + username + "', '" + getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*2))) + "');")
+			_, err := db.Exec("INSERT INTO `" + config.DBprefix + "sessions` (`key`, `data`, `expires`) VALUES('" + key + "','" + username + "', '" + getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))) + "')")
 			if err != nil {
 				errorLog.Print(err.Error())
 				return 2
@@ -159,7 +158,6 @@ func createSession(key string, username string, password string, request *http.R
 			return 0
 		}
 	}
-	return 2
 }
 
 var manage_functions = map[string]ManageFunction{

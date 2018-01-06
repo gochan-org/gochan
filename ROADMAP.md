@@ -8,6 +8,7 @@ This is just a very preliminary roadmap to map out what I plan to focus on with 
 * Improve posting stability (done)
 * Add management functions to make things simpler
 * Add some kind of database schema to handle any possible changes in the database structure with new versions (if there are any)
+* Add PostgreSQL (and possibly SQLite) support
 * Add functionality to aid new admins in transferring boards from other imageboard systems (TinyBoard, Kusaba, etc) to Gochan. This would largely be a database issue (see above)
 
 2.x
