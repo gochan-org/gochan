@@ -255,7 +255,9 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 
 	rows, err := stmt.Query(parameterValues...)
 	if err != nil {
-		errorLog.Print(err.Error())
+		errortext := "Error in getPostArr: " + err.Error()
+		errorLog.Print(errortext)
+		println(1, errortext)
 		return
 	}
 	// For each row in the results from the database, populate a new PostTable instance,

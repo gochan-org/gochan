@@ -166,59 +166,25 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			html = "<h2>Cleanup</h2><br />"
 			if request.FormValue("run") == "Run Cleanup" {
-				/*
-					// kinda sorta "borrowed" from Kusaba X
-						html += "<hr />Deleting non-deleted replies which belong to deleted threads.<hr />";
-					 	boards_rows,err := db.Query("SELECT `id`,`dir` FROM `" + config.DBprefix + "boards`")
-						if err != nil {
-							html += "<tr><td>"+err.Error()+"</td></tr></table>"
-							return
-						}
-						var id int
-						var dir string
-						for boards_rows.Next() {
-							err = boards_rows.Scan(&id, &dir)
-							html += "<b>Looking for orphans in /" + dir + "/</b><br />";
-
-							parentid_rows, err := db.Query("SELECT `id`,`parentid` FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + strconv.Itoa(id) + " AND `parentid` != '0' AND `is_deleted` = 0")
-							if err != nil {
-								html += err.Error()
-								return
-							}
-							var id2 string
-							var parentid string
-							for parentid_rows.Next() {
-								err = db.QueryRow("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = " + id2 + " AND `id` = '" + parentid + "' AND `IS_DELETED` = 0")
-								if err != nil {
-									deletePost()
-									$post_class = new Post($line['id'], $lineboard['name'], $lineboard['id']);
-									$post_class->Delete;
-
-									html +='Reply #%1$s\'s thread (#%2$s) does not exist! It has been deleted.'),$line['id'],$line['parentid']).'<br />';
-								}
-							}
-						}
-
-						html += "<hr />Deleting unused images<hr />"
-						$this->delunusedimages(true);
-						html += "<hr />Removing posts deleted more than one week ago from the database.<hr />"
-						$results = $tc_db->GetAll("SELECT `name`, `type`, `id` FROM `" . KU_DBPREFIX . "boards`");
-						foreach ($results AS $line) {
-							if ($line['type'] != 1) {
-								$tc_db->Execute("DELETE FROM `" . KU_DBPREFIX . "posts` WHERE `boardid` = " . $line['id'] . " AND `IS_DELETED` = 1 AND `deleted_timestamp` < " . (time() - 604800) . "");
-							}
-						}
-				*/
-				html += "Optimizing all tables in database.<hr />"
-				rows, err := db.Query("SHOW TABLES")
+				html += "Removing deleted posts from the database.<hr />"
+				_, err := db.Exec("DELETE FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '" + nil_timestamp + "'")
 				if err != nil {
-					html += err.Error()
+					html += "<tr><td>" + err.Error() + "</td></tr></table>"
+					return
+				}
+				// TODO: remove orphaned replies
+				// TODO: remove orphaned uploads
+
+				html += "Optimizing all tables in database.<hr />"
+				tableRows, tablesErr := db.Query("SHOW TABLES")
+				if tablesErr != nil {
+					html += "<tr><td>" + tablesErr.Error() + "</td></tr></table>"
 					return
 				}
 
-				for rows.Next() {
+				for tableRows.Next() {
 					var table string
-					rows.Scan(&table)
+					tableRows.Scan(&table)
 					_, err = db.Exec("OPTIMIZE TABLE " + table)
 					if err != nil {
 						html += err.Error()

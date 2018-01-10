@@ -60,7 +60,7 @@ func connectToSQLServer() {
 		initial_sql_bytes, err := ioutil.ReadFile("initialsetupdb.sql")
 		if err != nil {
 			println(0, "failed, see log for details.")
-			errorLog.Fatal(err.Error())
+			errorLog.Fatal("Error reading initialsetupdb.sql: " + err.Error())
 		}
 		initial_sql_str := string(initial_sql_bytes)
 		initial_sql_bytes = nil
@@ -76,7 +76,7 @@ func connectToSQLServer() {
 				_, err := db.Exec(statement)
 				if err != nil {
 					println(0, "failed, see log for details.")
-					errorLog.Fatal(err.Error())
+					errorLog.Fatal("Error executing initialsetupdb.sql: " + err.Error())
 					return
 				}
 			}

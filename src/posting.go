@@ -738,8 +738,9 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 		}
 	}()
 	if err != nil {
-		println(1, err.Error())
-		errorLog.Print("Error checking banned status: " + err.Error())
+		errortext := "Error checking banned status: " + err.Error()
+		println(1, errortext)
+		errorLog.Print(errortext)
 		return interfaces, nil
 	}
 	err = stmt.QueryRow(&post.IP).Scan(&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
@@ -975,13 +976,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	formatMessage(&post)
 
 	post.Password = md5Sum(request.FormValue("postpassword"))
-	println(1, formName)
 
 	// Reverse escapes
 	nameCookie = strings.Replace(formName, "&amp;", "&", -1)
 	nameCookie = strings.Replace(nameCookie, "\\&#39;", "'", -1)
 	nameCookie = strings.Replace(url.QueryEscape(nameCookie), "+", "%20", -1)
-	printf(1, "nameCookie: %s\n", nameCookie)
 
 	// add name and email cookies that will expire in a year (31536000 seconds)
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
