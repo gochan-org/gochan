@@ -624,7 +624,6 @@ var manage_functions = map[string]ManageFunction{
 						board_creation_status = err.Error()
 						continue
 					}
-					//_, err := db.Prepare("INSERT INTO (" + generatePlaceholders(24, ", ") + ")")
 					stmt, err := db.Prepare(
 						"INSERT INTO `" + config.DBprefix + "boards` (`order`,`dir`,`type`,`upload_type`,`title`,`subtitle`," +
 							"`description`,`section`,`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`," +
@@ -743,92 +742,28 @@ var manage_functions = map[string]ManageFunction{
 				}
 				var board_dir string
 				for rows.Next() {
-					err = rows.Scan(&board_dir)
+					rows.Scan(&board_dir)
 					html += "<option>" + board_dir + "</option>\n"
 				}
-				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />"
-				html += fmt.Sprintf("<h2>Create new board</h2>"+
-					"<span id=\"board-creation-message\">%s</span><br />"+
-					"<form action=\"/manage?action=boards\" method=\"POST\">"+
-					"<input type=\"hidden\" name=\"do\" value=\"add\" />"+
-					"Directory <input type=\"text\" name=\"dir\" value=\"%s\" /><br />"+
-					"Order <input type=\"text\" name=\"order\" value=\"%d\" /><br />"+
-					"Title <input type=\"text\" name=\"title\" value=\"%s\" /><br />"+
-					"Subtitle <input type=\"text\" name=\"subtitle\" value=\"%s\" /><br />"+
-					"Description <input type=\"text\" name=\"description\" value=\"%s\" /><br />"+
-					"Section <select name=\"section\" selected=\"%d\">\n<option value=\"none\">Select section...</option>\n",
-					board_creation_status, board.Dir, board.Order, board.Title, board.Subtitle, board.Description, board.Section)
+				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />" +
+					"<h2>Create new board</h2>\n<span id=\"board-creation-message\">" + board_creation_status + "</span><br />"
 
-				rows, err = db.Query("SELECT `name` FROM `" + config.DBprefix + "sections` WHERE `hidden` = 0 ORDER BY `order`;")
+				manageBoardsBuffer := bytes.NewBufferString("")
+				all_sections, _ = getSectionArr("")
+				if len(all_sections) == 0 {
+					db.Exec("INSERT INTO `" + config.DBprefix + "sections` (`hidden`,`name`,`abbreviation`) VALUES(0,'Main','main')")
+				}
+				all_sections, _ = getSectionArr("")
+
+				err := renderTemplate(manage_boards_tmpl, "manage_boards", manageBoardsBuffer,
+					&Wrapper{IName: "board", Data: []interface{}{board}},
+					&Wrapper{IName: "section_arr", Data: all_sections},
+				)
 				if err != nil {
 					html += err.Error()
 					return
 				}
-
-				iter := 0
-				var section_name string
-				for rows.Next() {
-					err = rows.Scan(&section_name)
-					html += "<option value=\"" + strconv.Itoa(iter) + "\">" + section_name + "</option>\n"
-					iter += 1
-				}
-				html += "</select><br />Max image size: <input type=\"text\" name=\"maximagesize\" value=\"" + strconv.Itoa(board.MaxImageSize) + "\" /><br />Max pages: <input type=\"text\" name=\"maxpages\" value=\"" + strconv.Itoa(board.MaxPages) + "\" /><br />Default style</td><td><select name=\"defaultstyle\" selected=\"" + board.DefaultStyle + "\">"
-				for _, style := range config.Styles_img {
-					html += "<option value=\"" + style + "\">" + style + "</option>"
-				}
-
-				html += "</select>Locked"
-				if board.Locked {
-					html += "<input type=\"checkbox\" name=\"locked\" checked/>"
-				} else {
-					html += "<input type=\"checkbox\" name=\"locked\" />"
-				}
-
-				html += "<br />Forced anonymity"
-
-				if board.ForcedAnon {
-					html += "<input type=\"checkbox\" name=\"forcedanon\" checked/>"
-				} else {
-					html += "<input type=\"checkbox\" name=\"forcedanon\" />"
-				}
-
-				html += fmt.Sprintf("<br />Anonymous: <input type=\"text\" name=\"anonymous\" value=\"%s\" /><br />"+
-					"Max age: <input type=\"text\" name=\"maxage\" value=\"%d\"/><br />"+
-					"Bump limit: <input type=\"text\" name=\"autosageafter\" value=\"%d\"/><br />"+
-					"No images after <input type=\"text\" name=\"noimagesafter\" value=\"%d\"/>px<br />"+
-					"Max message length</td><td><input type=\"text\" name=\"maxmessagelength\" value=\"%d\"/><br />"+
-					"Embeds allowed ", board.Anonymous, board.MaxAge, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength)
-
-				if board.EmbedsAllowed {
-					html += "<input type=\"checkbox\" name=\"embedsallowed\" checked/>"
-				} else {
-					html += "<input type=\"checkbox\" name=\"embedsallowed\" />"
-				}
-
-				html += "<br />Redirect to thread</td><td>"
-				if board.RedirectToThread {
-					html += "<input type=\"checkbox\" name=\"redirecttothread\" checked/>"
-				} else {
-					html += "<input type=\"checkbox\" name=\"redirecttothread\" />"
-				}
-
-				html += "<br />Require an uploaded file"
-
-				if board.RequireFile {
-					html += "<input type=\"checkbox\" name=\"require_file\" checked/>"
-				} else {
-					html += "<input type=\"checkbox\" name=\"require_file\" />"
-				}
-
-				html += "<br />Enable catalog"
-
-				if board.EnableCatalog {
-					html += "<input type=\"checkbox\" name=\"enablecatalog\" checked />"
-				} else {
-					html += "<input type=\"checkbox\" name=\"enablecatalog\" />"
-				}
-
-				html += "<br /><input type=\"submit\" /></form>"
+				html += manageBoardsBuffer.String()
 				return
 			}
 			resetBoardSectionArrays()
