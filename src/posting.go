@@ -22,13 +22,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aquilax/tripcode"
 	"github.com/disintegration/imaging"
-	crypt "github.com/nyarla/go-crypt"
 )
 
 const (
-	whitespace_match = "[\000-\040]"
-	gt               = "&gt;"
+	whitespaceMatch = "[\000-\040]"
+	gt              = "&gt;"
+	yearInSeconds   = 31536000
 )
 
 var (
@@ -37,26 +38,14 @@ var (
 	all_boards   []interface{}
 )
 
-func generateTripCode(input string) string {
-	re := regexp.MustCompile("[^\\.-z]") // remove every ASCII character before . and after z
-
-	input += "   " // padding
-	input = strings.Replace(input, "&amp;", "&", -1)
-	input = strings.Replace(input, "\\&#39;", "'", -1)
-
-	salt := string(re.ReplaceAllLiteral([]byte(input), []byte(".")))
-	salt = byteByByteReplace(salt[1:3], ":;<=>?@[\\]^_`", "ABCDEFGabcdef") // stole-I MEAN BORROWED from Kusaba X
-	return crypt.Crypt(input, salt)[3:]
-}
-
 // buildBoards builds one or all boards. If all == true, all boards will have their pages built.
 // If all == false, the board with the id equal to the value specified as which.
 // The return value is a string of HTML with debug information produced by the build process.
 func buildBoards(all bool, which int) (html string) {
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
 	if !all {
-		_board, _ := getBoardArr(map[string]interface{}{"id": which}, "")
-		board := _board[0]
+		boardArr, _ := getBoardArr(map[string]interface{}{"id": which}, "")
+		board := boardArr[0]
 		html += buildBoardPages(&board) + "<br />\n"
 		html += buildThreads(true, board.ID, 0)
 		return
@@ -174,26 +163,17 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			// Otherwise, limit the replies to the configured value for normal threads.
 			numRepliesOnBoardPage = config.RepliesOnBoardPage
 		}
-		/*
-			SELECT * FROM (
-				SELECT * FROM `gc_posts` WHERE
-					`boardid` = board.ID AND
-					`parentid` = op_post.ID AND
-					`deleted_timestamp` = '000'
-					ORDER BY `id` DESC LIMIT config.RepliesOnBoardPage
-				) AS posts ORDER BY id ASC;
-		*/
+
 		posts_in_thread, err = getPostArr(map[string]interface{}{
 			"boardid":           board.ID,
 			"parentid":          op_post.ID,
 			"deleted_timestamp": nil_timestamp,
 		}, fmt.Sprintf(" ORDER BY `id` DESC LIMIT %d", numRepliesOnBoardPage))
-
-		posts_in_thread = reverse(posts_in_thread)
-
 		if err != nil {
 			html += err.Error() + "<br />"
 		}
+
+		posts_in_thread = reverse(posts_in_thread)
 
 		if len(posts_in_thread) > 0 {
 			// Store the posts to show on board page
@@ -384,19 +364,19 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 	// TODO: detect which page will be built and only build that one and the board page
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
 	if !all {
-		//_thread, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `id` = " + strconv.Itoa(threadid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
 		_thread, _ := getPostArr(map[string]interface{}{
 			"boardid":           boardid,
 			"id":                threadid,
 			"parentid":          0,
 			"deleted_timestamp": nil_timestamp,
 		}, "")
-		thread := _thread[0].(PostTable)
-		//thread_struct := thread.(PostTable)
-		html += buildThreadPages(&thread) + "<br />\n"
+		//thread := _thread[0].(PostTable)
+		thread := _thread[0]
+		thread_struct := thread.(PostTable)
+		html += buildThreadPages(&thread_struct) + "<br />\n"
 		return
 	}
-	//threads, _ := getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(boardid) + " AND `parentid` = 0 AND `deleted_timestamp` = '" + nil_timestamp + "'")
+
 	threads, _ := getPostArr(map[string]interface{}{
 		"boardid":           boardid,
 		"parentid":          0,
@@ -414,7 +394,7 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 
 // buildThreadPages builds the pages for a thread given by a PostTable object.
 func buildThreadPages(op *PostTable) (html string) {
-	var board_dir string
+	var boardDir string
 	var anonymous string
 	var replies []interface{}
 	var current_page_file *os.File
@@ -430,7 +410,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		return
 	}
 
-	err = stmt.QueryRow(op.BoardID).Scan(&board_dir, &anonymous)
+	err = stmt.QueryRow(op.BoardID).Scan(&boardDir, &anonymous)
 	if err != nil {
 		errortext = "Failed getting board directory and board's anonymous setting from post: " + err.Error()
 		html += errortext + "<br />\n"
@@ -439,7 +419,6 @@ func buildThreadPages(op *PostTable) (html string) {
 		return
 	}
 
-	//replies, err = getPostArr("SELECT * FROM " + config.DBprefix + "posts WHERE `boardid` = " + strconv.Itoa(op.BoardID) + " AND `parentid` = " + strconv.Itoa(op.ID) + " AND `deleted_timestamp` = '" + nil_timestamp + "' ORDER BY `id` ASC")
 	replies, err = getPostArr(map[string]interface{}{
 		"boardid":           op.BoardID,
 		"parentid":          op.ID,
@@ -452,17 +431,23 @@ func buildThreadPages(op *PostTable) (html string) {
 		println(1, errortext)
 		return
 	}
-	os.Remove(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html"))
+	os.Remove(path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+".html"))
 
-	thread_pages := paginate(config.PostsPerThreadPage, replies)
+	var repliesInterface []interface{}
+	for _, reply := range replies {
+		repliesInterface = append(repliesInterface, reply)
+	}
+
+	//thread_pages := paginate(config.PostsPerThreadPage, replies)
+	thread_pages := paginate(config.PostsPerThreadPage, repliesInterface)
 	for i, _ := range thread_pages {
 		thread_pages[i] = append([]interface{}{op}, thread_pages[i]...)
 	}
-	deleteMatchingFiles(path.Join(config.DocumentRoot, board_dir, "res"), "^"+strconv.Itoa(op.ID)+"p")
+	deleteMatchingFiles(path.Join(config.DocumentRoot, boardDir, "res"), "^"+strconv.Itoa(op.ID)+"p")
 
 	op.NumPages = len(thread_pages)
 
-	current_page_filepath := path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".html")
+	current_page_filepath := path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+".html")
 	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
@@ -477,8 +462,9 @@ func buildThreadPages(op *PostTable) (html string) {
 		&Wrapper{IName: "sections_w", Data: all_sections},
 		&Wrapper{IName: "posts_w", Data: append([]interface{}{op}, replies...)},
 	)
+
 	if err != nil {
-		errortext = "Failed building /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".html: " + err.Error()
+		fmt.Sprintf("Failed building /%s/res/%d.html: %s", boardDir, op.ID, err.Error())
 		html += errortext + "<br />\n"
 		println(1, errortext)
 		errorLog.Print(errortext)
@@ -486,14 +472,14 @@ func buildThreadPages(op *PostTable) (html string) {
 	}
 
 	// Put together the thread JSON
-	thread_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	defer func() {
-		if thread_json_file != nil {
-			thread_json_file.Close()
+		if threadJSONFile != nil {
+			threadJSONFile.Close()
 		}
 	}()
 	if err != nil {
-		errortext = "Failed opening /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".json: " + err.Error()
+		errortext = fmt.Sprintf("Failed opening /%s/res/%d.json: %s", boardDir, op.ID, err.Error())
 		html += errortext + "<br />\n"
 		println(1, errortext)
 		errorLog.Print(errortext)
@@ -510,12 +496,10 @@ func buildThreadPages(op *PostTable) (html string) {
 	// Iterate through each reply, which are of type PostTable
 	for _, post_int := range replies {
 		post := post_int.(PostTable)
-
 		post_obj := makePostJSON(post, anonymous)
-
 		thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, post_obj)
 	}
-	thread_json, err := json.Marshal(thread_json_wrapper)
+	threadJSON, err := json.Marshal(thread_json_wrapper)
 
 	if err != nil {
 		errortext = "Failed to marshal to JSON: " + err.Error()
@@ -525,24 +509,23 @@ func buildThreadPages(op *PostTable) (html string) {
 		return
 	}
 
-	_, err = thread_json_file.Write(thread_json)
-
+	_, err = threadJSONFile.Write(threadJSON)
 	if err != nil {
-		errortext = "Failed writing /" + board_dir + "/res/" + strconv.Itoa(op.ID) + ".json: " + err.Error()
+		errortext = fmt.Sprintf("Failed writing /%s/res/%d.json: %s", boardDir, op.ID, err.Error())
 		errorLog.Println(errortext)
 		println(1, errortext)
 		html += errortext + "<br />\n"
 		return
 	}
 
-	success_text := "Built /" + board_dir + "/" + strconv.Itoa(op.ID) + " successfully"
+	success_text := fmt.Sprintf("Built /%s/%d successfully", boardDir, op.ID)
 	html += success_text + "<br />\n"
 	println(2, success_text)
 
 	for page_num, page_posts := range thread_pages {
 		op.CurrentPage = page_num
 
-		current_page_filepath := path.Join(config.DocumentRoot, board_dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
+		current_page_filepath := path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage+1)+".html")
 		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
@@ -551,19 +534,26 @@ func buildThreadPages(op *PostTable) (html string) {
 			errorLog.Println(errortext)
 			return
 		}
+
+		// var postsSanitized []interface{}
+		// for i := 0; i < len(page_posts); i++ {
+		// 	postsSanitized = append(postsSanitized, sanitizePost(page_posts[i].(PostTable)))
+		// }
+
 		err = renderTemplate(img_threadpage_tmpl, "threadpage", current_page_file,
 			&Wrapper{IName: "boards_", Data: all_boards},
 			&Wrapper{IName: "sections_w", Data: all_sections},
+			//&Wrapper{IName: "posts_w", Data: postsSanitized},
 			&Wrapper{IName: "posts_w", Data: page_posts},
 		)
 		if err != nil {
-			errortext = fmt.Sprintf("Failed building /%s/%d: %s", board_dir, op.ID, err.Error())
+			errortext = fmt.Sprintf("Failed building /%s/%d: %s", boardDir, op.ID, err.Error())
 			html += errortext + "<br />\n"
 			println(1, errortext)
 			errorLog.Print(errortext)
 			return
 		}
-		success_text := fmt.Sprintf("Built /%s/%dp%d successfully", board_dir, op.ID, op.CurrentPage+1)
+		success_text := fmt.Sprintf("Built /%s/%dp%d successfully", boardDir, op.ID, op.CurrentPage+1)
 		html += success_text + "<br />\n"
 		println(2, success_text)
 	}
@@ -590,7 +580,7 @@ func buildFrontPage() (html string) {
 	}
 
 	// get front pages
-	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "frontpage`;")
+	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "frontpage`")
 	if err != nil {
 		errortext = "Failed getting front page rows: " + err.Error()
 		errorLog.Print(errortext)
@@ -694,7 +684,7 @@ func buildBoardListJSON() (html string) {
 		board_list_wrapper.Boards = append(board_list_wrapper.Boards, board_obj)
 	}
 
-	board_json, err := json.Marshal(board_list_wrapper)
+	boardJSON, err := json.Marshal(board_list_wrapper)
 
 	if err != nil {
 		errortext = "Failed marshal to JSON: " + err.Error()
@@ -702,7 +692,7 @@ func buildBoardListJSON() (html string) {
 		println(1, errortext)
 		return errortext + "<br />\n"
 	}
-	_, err = board_list_file.Write(board_json)
+	_, err = board_list_file.Write(boardJSON)
 
 	if err != nil {
 		errortext = "Failed writing boards.json file: " + err.Error()
@@ -711,6 +701,26 @@ func buildBoardListJSON() (html string) {
 		return errortext + "<br />\n"
 	}
 	return "Board list JSON rebuilt successfully.<br />"
+}
+
+// bumps the given thread on the given board and returns true if it exists
+// or false on error
+func bumpThread(postID, boardID int) error {
+	stmt, err := db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `bumped` = ? WHERE `id` = ? AND `boardid` = ?")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if stmt != nil {
+			stmt.Close()
+		}
+	}()
+
+	_, err = stmt.Exec(time.Now(), postID, boardID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
@@ -728,8 +738,9 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 		}
 	}()
 	if err != nil {
-		println(1, err.Error())
-		errorLog.Print("Error checking banned status: " + err.Error())
+		errortext := "Error checking banned status: " + err.Error()
+		println(1, errortext)
+		errorLog.Print(errortext)
 		return interfaces, nil
 	}
 	err = stmt.QueryRow(&post.IP).Scan(&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
@@ -878,59 +889,67 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 		return result, err
 	}
 
-	if post.ParentID != 0 {
-		stmt, err = db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `bumped` = ? WHERE `id` = ?")
+	// Bump parent post if requested.
+	if post.ParentID != 0 && bump {
+		err = bumpThread(post.ParentID, post.BoardID)
 		if err != nil {
 			return nil, err
 		}
-		result, err = stmt.Exec(getSpecificSQLDateTime(post.Bumped), post.ParentID)
 	}
 	return result, err
 }
 
+// called when a user accesses /post. Parse form data, then insert and build
 func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	startTime := benchmarkTimer("makePost", time.Now(), true)
 	request = *r
 	writer = w
 	var maxMessageLength int
 	var errorText string
+	var post PostTable
 	domain := r.Host
+	var formName string
+	var nameCookie string
+	var formEmail string
 
+	// fix new cookie domain for when you use a port number
 	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
-	post := PostTable{}
 	post.IName = "post"
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
 
 	var emailCommand string
-	//postName := html.EscapeString(escapeString(request.FormValue("postname")))
-	postName := html.EscapeString(request.FormValue("postname"))
+	formName = request.FormValue("postname")
 
-	if strings.Index(postName, "#") == -1 {
-		post.Name = postName
-	} else if strings.Index(postName, "#") == 0 {
-		post.Tripcode = generateTripCode(postName[1:])
-	} else if strings.Index(postName, "#") > 0 {
-		postNameArr := strings.SplitN(postName, "#", 2)
+	if strings.Index(formName, "#") == -1 {
+		post.Name = formName
+	} else if strings.Index(formName, "#") == 0 {
+		post.Tripcode = tripcode.Tripcode(formName[1:])
+	} else if strings.Index(formName, "#") > 0 {
+		postNameArr := strings.SplitN(formName, "#", 2)
 		post.Name = postNameArr[0]
-		post.Tripcode = generateTripCode(postNameArr[1])
+		post.Tripcode = tripcode.Tripcode(postNameArr[1])
 	}
 
-	postEmail := escapeString(request.FormValue("postemail"))
-	if strings.Index(postEmail, "noko") == -1 && strings.Index(postEmail, "sage") == -1 {
-		post.Email = html.EscapeString(escapeString(postEmail))
-	} else if strings.Index(postEmail, "#") > 1 {
-		postEmailArr := strings.SplitN(postEmail, "#", 2)
-		post.Email = html.EscapeString(escapeString(postEmailArr[0]))
-		emailCommand = postEmailArr[1]
-	} else if postEmail == "noko" || postEmail == "sage" {
-		emailCommand = postEmail
+	nameCookie = post.Name + post.Tripcode
+	formEmail = request.FormValue("postemail")
+	http.SetCookie(writer, &http.Cookie{Name: "email", Value: formEmail, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
+
+	if strings.Index(formEmail, "noko") == -1 && strings.Index(formEmail, "sage") == -1 {
+		post.Email = formEmail
+	} else if strings.Index(formEmail, "#") > 1 {
+		formEmailArr := strings.SplitN(formEmail, "#", 2)
+		post.Email = formEmailArr[0]
+		emailCommand = formEmailArr[1]
+	} else if formEmail == "noko" || formEmail == "sage" {
+		emailCommand = formEmail
 		post.Email = ""
 	}
-	post.Subject = html.EscapeString(escapeString(request.FormValue("postsubject")))
-	post.MessageText = strings.Trim(escapeString(request.FormValue("postmsg")), "\r\n")
+
+	post.Subject = request.FormValue("postsubject")
+	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
 
 	stmt, err := db.Prepare("SELECT `max_message_length` from `" + config.DBprefix + "boards` WHERE `id` = ?")
 	if err != nil {
@@ -953,36 +972,19 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		serveErrorPage(w, "Post body is too long")
 		return
 	}
-	post.MessageHTML = html.EscapeString(post.MessageText)
+	post.MessageHTML = sanitizeHTML(post.MessageText)
 	formatMessage(&post)
 
 	post.Password = md5Sum(request.FormValue("postpassword"))
-	println(1, postName)
+
 	// Reverse escapes
-	post_name_cookie := strings.Replace(postName, "&amp;", "&", -1)
-	post_name_cookie = strings.Replace(post_name_cookie, "\\&#39;", "'", -1)
-	post_name_cookie = strings.Replace(url.QueryEscape(post_name_cookie), "+", "%20", -1)
-	println(1, post_name_cookie)
+	nameCookie = strings.Replace(formName, "&amp;", "&", -1)
+	nameCookie = strings.Replace(nameCookie, "\\&#39;", "'", -1)
+	nameCookie = strings.Replace(url.QueryEscape(nameCookie), "+", "%20", -1)
 
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
-	// http.SetCookie(writer, &http.Cookie{Name: "name", Value: post_name_cookie, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-	if emailCommand == "" {
-		http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
-		// http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email, Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-	} else {
-		if emailCommand == "noko" {
-			if post.Email == "" {
-				http.SetCookie(writer, &http.Cookie{Name: "email", Value: "noko", Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
-				// http.SetCookie(writer, &http.Cookie{Name: "email", Value:"noko", Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-			} else {
-				http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email + "#noko", Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
-				//http.SetCookie(writer, &http.Cookie{Name: "email", Value: post.Email + "#noko", Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
-			}
-		}
-	}
-
-	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))), MaxAge: 31536000})
-	//http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: config.Domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(31536000))),MaxAge: 31536000})
+	// add name and email cookies that will expire in a year (31536000 seconds)
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
+	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
 
 	post.IP = getRealIP(&request)
 	post.Timestamp = time.Now()
@@ -995,6 +997,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	if !validReferrer(request) {
 		accessLog.Print("Rejected post from possible spambot @ " + post.IP)
 		//TODO: insert post into temporary post table and add to report list
+		// or maybe not
 		return
 	}
 
@@ -1009,12 +1012,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	default:
 	}
 
-	file, handler, uploaderr := request.FormFile("imagefile")
-	if uploaderr != nil {
+	file, handler, err := request.FormFile("imagefile")
+	if err != nil {
 		// no file was uploaded
 		post.Filename = ""
 		accessLog.Print("Receiving post from " + request.RemoteAddr + ", referred from: " + request.Referer())
-
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
@@ -1022,26 +1024,25 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		} else {
 			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
-			thumb_filetype := filetype
-			if thumb_filetype == "gif" {
-				thumb_filetype = "jpg"
+			thumbFiletype := filetype
+			if thumbFiletype == "gif" {
+				thumbFiletype = "jpg"
 			}
-			post.FilenameOriginal = escapeString(post.FilenameOriginal)
 			post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
-			board_arr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "") // getBoardArr("`id` = " + request.FormValue("boardid"))
-			if len(board_arr) == 0 {
+			boardArr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
+			if len(boardArr) == 0 {
 				serveErrorPage(w, "No boards have been created yet")
 			}
-			_board_dir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "") // getBoardArr("`id` = " + request.FormValue("boardid"))
-			board_dir := _board_dir[0].Dir
-			file_path := path.Join(config.DocumentRoot, "/"+board_dir+"/src/", post.Filename)
-			thumb_path := path.Join(config.DocumentRoot, "/"+board_dir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumb_filetype, -1))
-			catalog_thumb_path := path.Join(config.DocumentRoot, "/"+board_dir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumb_filetype, -1))
+			_boardDir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
+			boardDir := _boardDir[0].Dir
+			filePath := path.Join(config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
+			thumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
+			catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
-			err := ioutil.WriteFile(file_path, data, 0777)
+			err := ioutil.WriteFile(filePath, data, 0777)
 			if err != nil {
 				errorText = "Couldn't write file \"" + post.Filename + "\"" + err.Error()
-				println(1, errorText)
+				println(0, errorText)
 				errorLog.Println(errorText)
 				serveErrorPage(w, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
@@ -1051,7 +1052,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
 			// Attempt to load uploaded file with imaging library
-			img, err := imaging.Open(file_path)
+			img, err := imaging.Open(filePath)
 			if err != nil {
 				errorText = "Couldn't open uploaded file \"" + post.Filename + "\"" + err.Error()
 				errorLog.Println(errorText)
@@ -1061,11 +1062,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				return
 			} else {
 				// Get image filesize
-				stat, err := os.Stat(file_path)
+				stat, err := os.Stat(filePath)
 				if err != nil {
-					errorLog.Println(err.Error())
-					println(1, err.Error())
-					serveErrorPage(w, err.Error())
+					errorLog.Println("Couldn't get image filesize: " + err.Error())
+					println(1, "Couldn't get image filesize: "+err.Error())
+					serveErrorPage(w, "Couldn't get image filesize: "+err.Error())
 				} else {
 					post.Filesize = int(stat.Size())
 				}
@@ -1088,7 +1089,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 						serveErrorPage(w, "missing /spoiler.png")
 						return
 					} else {
-						err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumb_path)
+						err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumbPath)
 						if err != nil {
 							serveErrorPage(w, err.Error())
 							return
@@ -1098,54 +1099,60 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					// If image fits in thumbnail size, symlink thumbnail to original
 					post.ThumbW = img.Bounds().Max.X
 					post.ThumbH = img.Bounds().Max.Y
-					err := syscall.Symlink(file_path, thumb_path)
+					err := syscall.Symlink(filePath, thumbPath)
 					if err != nil {
 						serveErrorPage(w, err.Error())
 						return
 					}
 				} else {
 					var thumbnail image.Image
-					var catalog_thumbnail image.Image
+					var catalogThumbnail image.Image
 					if post.ParentID == 0 {
 						// If this is a new thread, generate thumbnail and catalog thumbnail
 						thumbnail = createThumbnail(img, "op")
-						catalog_thumbnail = createThumbnail(img, "catalog")
-						err = imaging.Save(catalog_thumbnail, catalog_thumb_path)
+						catalogThumbnail = createThumbnail(img, "catalog")
+						println(1, catalogThumbPath)
+						err = imaging.Save(catalogThumbnail, catalogThumbPath)
 						if err != nil {
-							serveErrorPage(w, err.Error())
+							errorLog.Println("Couldn't generate catalog thumbnail: " + err.Error())
+							serveErrorPage(w, "Couldn't generate catalog thumbnail: "+err.Error())
 							return
 						}
 					} else {
 						thumbnail = createThumbnail(img, "reply")
 					}
-					err = imaging.Save(thumbnail, thumb_path)
+					err = imaging.Save(thumbnail, thumbPath)
 					if err != nil {
-						println(1, err.Error())
-						errorLog.Println(err.Error())
-						serveErrorPage(w, err.Error())
+						println(0, "Couldn't save thumbnail: "+err.Error())
+						errorLog.Println("Couldn't save thumbnail: " + err.Error())
+						serveErrorPage(w, "Couldn't save thumbnail: "+err.Error())
 						return
 					}
 				}
 			}
 		}
 	}
+	if post.FilenameOriginal != "" {
+		//post.FilenameOriginal = sanitizeHTML(post.FilenameOriginal)
+	}
 
 	if strings.TrimSpace(post.MessageText) == "" && post.Filename == "" {
 		serveErrorPage(w, "Post must contain a message if no image is uploaded.")
 		return
 	}
-	post_delay := sinceLastPost(&post)
-	if post_delay > -1 {
-		if post.ParentID == 0 && post_delay < config.NewThreadDelay {
+
+	postDelay := sinceLastPost(&post)
+	if postDelay > -1 {
+		if post.ParentID == 0 && postDelay < config.NewThreadDelay {
 			serveErrorPage(w, "Please wait before making a new thread.")
 			return
-		} else if post.ParentID > 0 && post_delay < config.ReplyDelay {
+		} else if post.ParentID > 0 && postDelay < config.ReplyDelay {
 			serveErrorPage(w, "Please wait before making a reply.")
 			return
 		}
 	}
 
-	isbanned, err := checkBannedStatus(&post, &w)
+	isBanned, err := checkBannedStatus(&post, &w)
 	if err != nil {
 		errorText = "Error in checkBannedStatus: " + err.Error()
 		serveErrorPage(w, err.Error())
@@ -1154,11 +1161,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		return
 	}
 
-	if len(isbanned) > 0 {
+	if len(isBanned) > 0 {
 		var banpage_buffer bytes.Buffer
 		var banpage_html string
 		banpage_buffer.Write([]byte(""))
-		err = renderTemplate(banpage_tmpl, "banpage", &banpage_buffer, &Wrapper{IName: "bans", Data: isbanned})
+		err = renderTemplate(banpage_tmpl, "banpage", &banpage_buffer, &Wrapper{IName: "bans", Data: isBanned})
 		if err != nil {
 			fmt.Fprintf(writer, banpage_html+err.Error()+"\n</body>\n</html>")
 			println(1, err.Error())
@@ -1169,6 +1176,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		return
 	}
 
+	post = sanitizePost(post)
 	result, err := insertPost(post, emailCommand != "sage")
 	if err != nil {
 		serveErrorPage(w, err.Error())
@@ -1199,42 +1207,42 @@ func formatMessage(post *PostTable) {
 	message := post.MessageHTML
 
 	// prepare each line to be formatted
-	post_lines := strings.Split(message, "\\r\\n")
-	for i, line := range post_lines {
-		trimmed_line := strings.TrimSpace(line)
-		line_words := strings.Split(trimmed_line, " ")
-		is_greentext := false // if true, append </span> to end of line
-		for w, word := range line_words {
+	postLines := strings.Split(message, "\\r\\n")
+	for i, line := range postLines {
+		trimmedLine := strings.TrimSpace(line)
+		lineWords := strings.Split(trimmedLine, " ")
+		isGreentext := false // if true, append </span> to end of line
+		for w, word := range lineWords {
 			if strings.LastIndex(word, gt+gt) == 0 {
 				//word is a backlink
 				_, err := strconv.Atoi(word[8:])
 				if err == nil {
 					// the link is in fact, a valid int
-					var board_dir string
-					var link_parent int
+					var boardDir string
+					var linkParent int
 					stmt, _ := db.Prepare("SELECT `dir`,`parentid` FROM " + config.DBprefix + "posts," + config.DBprefix + "boards WHERE " + config.DBprefix + "posts.id = ?")
-					stmt.QueryRow(word[8:]).Scan(&board_dir, &link_parent)
+					stmt.QueryRow(word[8:]).Scan(&boardDir, &linkParent)
 					// get post board dir
 
-					if board_dir == "" {
-						line_words[w] = "<a href=\"javascript:;\"><strike>" + word + "</strike></a>"
-					} else if link_parent == 0 {
-						line_words[w] = "<a href=\"/" + board_dir + "/res/" + word[8:] + ".html\">" + word + "</a>"
+					if boardDir == "" {
+						lineWords[w] = "<a href=\"javascript:;\"><strike>" + word + "</strike></a>"
+					} else if linkParent == 0 {
+						lineWords[w] = "<a href=\"/" + boardDir + "/res/" + word[8:] + ".html\">" + word + "</a>"
 					} else {
-						line_words[w] = "<a href=\"/" + board_dir + "/res/" + strconv.Itoa(link_parent) + ".html#" + word[8:] + "\">" + word + "</a>"
+						lineWords[w] = "<a href=\"/" + boardDir + "/res/" + strconv.Itoa(linkParent) + ".html#" + word[8:] + "\">" + word + "</a>"
 					}
 				}
 			} else if strings.Index(word, gt) == 0 && w == 0 {
 				// word is at the beginning of a line, and is greentext
-				is_greentext = true
-				line_words[w] = "<span class=\"greentext\">" + word
+				isGreentext = true
+				lineWords[w] = "<span class=\"greentext\">" + word
 			}
 		}
-		line = strings.Join(line_words, " ")
-		if is_greentext {
+		line = strings.Join(lineWords, " ")
+		if isGreentext {
 			line += "</span>"
 		}
-		post_lines[i] = line
+		postLines[i] = line
 	}
-	post.MessageHTML = strings.Join(post_lines, "<br />")
+	post.MessageHTML = strings.Join(postLines, "<br />")
 }

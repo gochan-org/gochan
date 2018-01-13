@@ -1,3 +1,7 @@
+table#board-options, table#board-options th, td, tr {
+	border: solid 1px;
+}
+
 .loginbox {
 	width:300px;
 	height: 120px;

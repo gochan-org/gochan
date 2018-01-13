@@ -1,15 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"database/sql"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -18,57 +18,9 @@ const (
 )
 
 var (
-	db           *sql.DB
-	db_connected = false
+	db          *sql.DB
+	dbConnected = false
 )
-
-// escapeString and escapeQuotes copied from github.com/ziutek/mymysql/native/codecs.go
-func escapeString(txt string) string {
-	var (
-		esc string
-		buf bytes.Buffer
-	)
-	last := 0
-	for ii, bb := range txt {
-		switch bb {
-		case 0:
-			esc = `\0`
-		case '\n':
-			esc = `\n`
-		case '\r':
-			esc = `\r`
-		case '\\':
-			esc = `\\`
-		case '\'':
-			esc = `\'`
-		case '"':
-			esc = `\"`
-		case '\032':
-			esc = `\Z`
-		default:
-			continue
-		}
-		io.WriteString(&buf, txt[last:ii])
-		io.WriteString(&buf, esc)
-		last = ii + 1
-	}
-	io.WriteString(&buf, txt[last:])
-	return buf.String()
-}
-
-func escapeQuotes(txt string) string {
-	var buf bytes.Buffer
-	last := 0
-	for ii, bb := range txt {
-		if bb == '\'' {
-			io.WriteString(&buf, txt[last:ii])
-			io.WriteString(&buf, `''`)
-			last = ii + 1
-		}
-	}
-	io.WriteString(&buf, txt[last:])
-	return buf.String()
-}
 
 func connectToSQLServer() {
 	var err error
@@ -93,11 +45,11 @@ func connectToSQLServer() {
 	if num_rows >= 16 {
 		// the initial setup has already been run
 		needsInitialSetup = false
-		db_connected = true
+		dbConnected = true
 		println(0, "complete.")
 		return
 	} else {
-		// does the  initialsetupdb.sql exist?
+		// check if initialsetupdb.sql still exists
 		_, err := os.Stat("initialsetupdb.sql")
 		if err != nil {
 			println(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
@@ -108,7 +60,7 @@ func connectToSQLServer() {
 		initial_sql_bytes, err := ioutil.ReadFile("initialsetupdb.sql")
 		if err != nil {
 			println(0, "failed, see log for details.")
-			errorLog.Fatal(err.Error())
+			errorLog.Fatal("Error reading initialsetupdb.sql: " + err.Error())
 		}
 		initial_sql_str := string(initial_sql_bytes)
 		initial_sql_bytes = nil
@@ -124,16 +76,26 @@ func connectToSQLServer() {
 				_, err := db.Exec(statement)
 				if err != nil {
 					println(0, "failed, see log for details.")
-					errorLog.Fatal(err.Error())
+					errorLog.Fatal("Error executing initialsetupdb.sql: " + err.Error())
 					return
 				}
 			}
 		}
 		println(0, "complete.")
 		needsInitialSetup = false
-		db_connected = true
+		dbConnected = true
 	}
 }
+
+func getSQLDateTime() string {
+	now := time.Now()
+	return now.Format(mysql_datetime_format)
+}
+
+func getSpecificSQLDateTime(t time.Time) string {
+	return t.Format(mysql_datetime_format)
+}
+
 func makeInsertString(table string, columns []string) string {
 	columnString := ""
 	valuePlaceholders := ""

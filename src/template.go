@@ -196,6 +196,9 @@ var (
 	manage_header_tmpl_str string
 	manage_header_tmpl     *template.Template
 
+	manage_boards_tmpl_str string
+	manage_boards_tmpl     *template.Template
+
 	front_page_tmpl_str string
 	front_page_tmpl     *template.Template
 
@@ -287,6 +290,21 @@ func initTemplates() {
 	manage_header_tmpl, tmpl_err = template.New("manage_header_tmpl").Funcs(funcMap).Parse(manage_header_tmpl_str)
 	if tmpl_err != nil {
 		fmt.Println("Failed loading template \"" + config.TemplateDir + "/manage_header.html\": " + tmpl_err.Error())
+		os.Exit(2)
+	}
+
+	manage_boards_tmpl_bytes, err := ioutil.ReadFile(config.TemplateDir + "/manage_boards.html")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	manage_boards_tmpl_str = "{{$config := getInterface .Data 0}}" +
+		"{{$board := getInterface (getInterface .Data 1).Data 0}}" +
+		"{{$section_arr := (getInterface .Data 2).Data}}" +
+		string(manage_boards_tmpl_bytes)
+
+	manage_boards_tmpl, tmpl_err = template.New("manage_boards_tmpl").Funcs(funcMap).Parse(manage_boards_tmpl_str)
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \"" + config.TemplateDir + "/manage_boards.html\": " + tmpl_err.Error())
 		os.Exit(2)
 	}
 
