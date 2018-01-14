@@ -1,4 +1,4 @@
-table#board-options, table#board-options th, td, tr {
+table, table th, td, tr {
 	border: solid 1px;
 }
 

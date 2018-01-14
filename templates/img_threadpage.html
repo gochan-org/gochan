@@ -22,6 +22,7 @@
 	<link rel="stylesheet" href="/css/global/img.css" />
 {{range $i, $style := $config.Styles_img}}
 	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/img.css" />{{end}}
+	<link rel="shortcut icon" href="/favicon.png">
 </head>
 <body>
 	<div id="topbar">
