@@ -99,8 +99,8 @@ var funcMap = template.FuncMap{
 			return msg
 		}
 	},
-	"unescapeString": func(a string) string {
-		return html.UnescapeString(a)
+	"escapeString": func(a string) string {
+		return html.EscapeString(a)
 	},
 	"intEq": func(a, b int) bool {
 		return a == b
@@ -198,6 +198,9 @@ var (
 
 	manage_boards_tmpl_str string
 	manage_boards_tmpl     *template.Template
+
+	manage_config_tmpl_str string
+	manage_config_tmpl     *template.Template
 
 	front_page_tmpl_str string
 	front_page_tmpl     *template.Template
@@ -308,16 +311,29 @@ func initTemplates() {
 		os.Exit(2)
 	}
 
+	manage_config_tmpl_bytes, err := ioutil.ReadFile(config.TemplateDir + "/manage_config.html")
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	manage_config_tmpl_str = "{{$config := getInterface .Data 0}}" +
+		string(manage_config_tmpl_bytes)
+
+	manage_config_tmpl, tmpl_err = template.New("manage_config_tmpl").Funcs(funcMap).Parse(manage_config_tmpl_str)
+	if tmpl_err != nil {
+		fmt.Println("Failed loading template \"" + config.TemplateDir + "/manage_config.html\": " + tmpl_err.Error())
+		os.Exit(2)
+	}
+
 	front_page_tmpl_bytes, err := ioutil.ReadFile(config.TemplateDir + "/front.html")
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(2)
 	}
-	front_page_tmpl_str = "{{$config := getInterface .Data 0}}\n" +
-		"{{$page_arr := getInterface .Data 1}}\n" +
-		"{{$board_arr := getInterface .Data 2}}\n" +
-		"{{$section_arr := getInterface .Data 3}}\n" +
-		"{{$recent_posts_arr := getInterface .Data 4}}\n" +
+	front_page_tmpl_str = "{{$config := getInterface .Data 0}}" +
+		"{{$page_arr := getInterface .Data 1}}" +
+		"{{$board_arr := getInterface .Data 2}}" +
+		"{{$section_arr := getInterface .Data 3}}" +
+		"{{$recent_posts_arr := getInterface .Data 4}}" +
 		string(front_page_tmpl_bytes)
 	front_page_tmpl, tmpl_err = template.New("front_page_tmpl").Funcs(funcMap).Parse(front_page_tmpl_str)
 	if tmpl_err != nil {
