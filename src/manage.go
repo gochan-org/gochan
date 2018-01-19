@@ -85,12 +85,12 @@ func getCurrentStaff() (string, error) {
 		key = session_cookie.Value
 	}
 
-	row := db.QueryRow("SELECT `data` FROM `" + config.DBprefix + "sessions` WHERE `key` = '" + key + "';")
+	row := db.QueryRow("SELECT `data` FROM `" + config.DBprefix + "sessions` WHERE `key` = '" + key + "'")
 	current_session := new(SessionsTable)
 
 	err := row.Scan(&current_session.Data)
+
 	if err != nil {
-		fmt.Println(err.Error())
 		return "", err
 	}
 	return current_session.Data, nil
@@ -198,6 +198,33 @@ var manage_functions = map[string]ManageFunction{
 					"	<input name=\"run\" id=\"run\" type=\"submit\" value=\"Run Cleanup\" />\n" +
 					"</form>"
 			}
+			return
+		}},
+	"config": {
+		Permissions: 3,
+		Callback: func() (html string) {
+			do := request.FormValue("do")
+			if do == "save" {
+				// configJSON, err := json.Marshal(config)
+				// if err != nil {
+				// 	html += err.Error()
+				// 	return
+				// }
+
+				// err = ioutil.WriteFile("gochan.json", configJSON, 0777)
+				// if err != nil {
+				// 	html += "Error writing \"gochan.json\": %s\n" + err.Error()
+				// 	return
+				// }
+			}
+			manageConfigBuffer := bytes.NewBufferString("")
+
+			err := renderTemplate(manage_config_tmpl, "manage_config", manageConfigBuffer)
+			if err != nil {
+				html += err.Error()
+				return
+			}
+			html += manageConfigBuffer.String()
 			return
 		}},
 	"purgeeverything": {
@@ -481,11 +508,12 @@ var manage_functions = map[string]ManageFunction{
 				html = "nobody;0;"
 				return
 			}
-			row := db.QueryRow("SELECT `rank`,`boards` FROM `" + config.DBprefix + "staff` WHERE `username` = '" + current_staff + "';")
+			row := db.QueryRow("SELECT `rank`,`boards` FROM `" + config.DBprefix + "staff` WHERE `username` = '" + current_staff + "'")
 			staff := new(StaffTable)
 			err = row.Scan(&staff.Rank, &staff.Boards)
 			if err != nil {
-				errorLog.Print(err.Error())
+				errorLog.Print("Error getting staff list: " + err.Error())
+				println(1, "Error getting staff list: "+err.Error())
 				html += err.Error()
 				return
 			}
@@ -504,89 +532,69 @@ var manage_functions = map[string]ManageFunction{
 			for !done {
 				switch {
 				case do == "add":
-					//board.Dir = escapeString(request.FormValue("dir"))
 					board.Dir = request.FormValue("dir")
 					if board.Dir == "" {
 						board_creation_status = "Error: \"Directory\" cannot be blank"
 						do = ""
 						continue
 					}
-					//order_str := escapeString(request.FormValue("order"))
 					order_str := request.FormValue("order")
 					board.Order, err = strconv.Atoi(order_str)
 					if err != nil {
 						board.Order = 0
 					}
-					//board.Title = escapeString(request.FormValue("title"))
 					board.Title = request.FormValue("title")
 					if board.Title == "" {
 						board_creation_status = "Error: \"Title\" cannot be blank"
 						do = ""
 						continue
 					}
-					//board.Subtitle = escapeString(request.FormValue("subtitle"))
 					board.Subtitle = request.FormValue("subtitle")
-
-					//board.Description = escapeString(request.FormValue("description"))
 					board.Description = request.FormValue("description")
-
-					//section_str := escapeString(request.FormValue("section"))
 					section_str := request.FormValue("section")
 					if section_str == "none" {
 						section_str = "0"
 					}
 
 					board.CreatedOn = time.Now()
-
 					board.Section, err = strconv.Atoi(section_str)
 					if err != nil {
 						board.Section = 0
 					}
-					//maximagesize_str := escapeString(request.FormValue("maximagesize"))
-					maximagesize_str := request.FormValue("maximagesize")
-					board.MaxImageSize, err = strconv.Atoi(maximagesize_str)
+					board.MaxImageSize, err = strconv.Atoi(request.FormValue("maximagesize"))
 					if err != nil {
 						board.MaxImageSize = 1024 * 4
 					}
 
-					//maxpages_str := escapeString(request.FormValue("maxpages"))
-					maxpages_str := request.FormValue("maxpages")
-					board.MaxPages, err = strconv.Atoi(maxpages_str)
+					board.MaxPages, err = strconv.Atoi(request.FormValue("maxpages"))
 					if err != nil {
 						board.MaxPages = 11
 					}
-					//board.DefaultStyle = escapeString(request.FormValue("defaultstyle"))
 					board.DefaultStyle = request.FormValue("defaultstyle")
 					board.Locked = (request.FormValue("locked") == "on")
-
 					board.ForcedAnon = (request.FormValue("forcedanon") == "on")
 
-					//board.Anonymous = escapeString(request.FormValue("anonymous"))
 					board.Anonymous = request.FormValue("anonymous")
 					if board.Anonymous == "" {
 						board.Anonymous = "Anonymous"
 					}
-					//maxage_str := escapeString(request.FormValue("maxage"))
-					maxage_str := request.FormValue("maxage")
-					board.MaxAge, err = strconv.Atoi(maxage_str)
+
+					board.MaxAge, err = strconv.Atoi(request.FormValue("maxage"))
 					if err != nil {
 						board.MaxAge = 0
 					}
-					//autosageafter_str := escapeString(request.FormValue("autosageafter"))
-					autosageafter_str := request.FormValue("autosageafter")
-					board.AutosageAfter, err = strconv.Atoi(autosageafter_str)
+
+					board.AutosageAfter, err = strconv.Atoi(request.FormValue("autosageafter"))
 					if err != nil {
 						board.AutosageAfter = 200
 					}
-					//noimagesafter_str := escapeString(request.FormValue("noimagesafter"))
-					noimagesafter_str := request.FormValue("noimagesafter")
-					board.NoImagesAfter, err = strconv.Atoi(noimagesafter_str)
+
+					board.NoImagesAfter, err = strconv.Atoi(request.FormValue("noimagesafter"))
 					if err != nil {
 						board.NoImagesAfter = 0
 					}
-					//maxmessagelength_str := escapeString(request.FormValue("maxmessagelength"))
-					maxmessagelength_str := request.FormValue("maxmessagelength")
-					board.MaxMessageLength, err = strconv.Atoi(maxmessagelength_str)
+
+					board.MaxMessageLength, err = strconv.Atoi(request.FormValue("maxmessagelength"))
 					if err != nil {
 						board.MaxMessageLength = 1024 * 8
 					}

@@ -3,20 +3,12 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+export GOCHAN_PATH=/home/vagrant/gochan
+export GOPATH=/vagrant/lib
 
-function changePerms {
-	chmod -R 755 $1 
-	chown -R ubuntu:ubuntu $1
-}
-
-function makeLink {
-	ln -sf /vagrant/$1 $GOCHAN_PATH/$1
-}
-
-export GOCHAN_PATH=/home/ubuntu/gochan
 apt-get update
 apt-get -y upgrade
-apt-get -y install git subversion mercurial golang nginx redis-server mariadb-server mariadb-client #gifsicle
+apt-get -y install git subversion mercurial golang nginx redis-server mariadb-server mariadb-client
 
 # Make sure any imported database is utf8mb4
 # http://mathiasbynens.be/notes/mysql-utf8mb4
@@ -59,13 +51,22 @@ service nginx restart
 
 mkdir -p /vagrant/lib || true
 cd /vagrant
-su ubuntu
+su vagrant
+export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
-cat - <<EOF >/home/ubuntu/.bashrc
-set nowrap
-set number
+
+function changePerms {
+	chmod -R 755 $1 
+	chown -R vagrant:vagrant $1
+}
+
+function makeLink {
+	ln -sf /vagrant/$1 $GOCHAN_PATH/$1
+}
+
+cat - <<EOF >>/home/vagrant/.bashrc
 export GOPATH=/vagrant/lib
-export GOCHAN_PATH=/home/ubuntu/gochan
+export GOCHAN_PATH=/home/vagrant/gochan
 EOF
 
 go get github.com/disintegration/imaging
@@ -78,7 +79,7 @@ make verbose
 rm -f $GOCHAN_PATH/gochan
 rm -f $GOCHAN_PATH/initialsetupdb.sql
 
-install -m 775 -o ubuntu -g ubuntu -d $GOCHAN_PATH
+install -m 775 -o vagrant -g vagrant -d $GOCHAN_PATH
 makeLink html
 makeLink log
 makeLink gochan
@@ -87,17 +88,17 @@ makeLink initialsetupdb.sql
 changePerms $GOCHAN_PATH
 
 if [ ! -e "$GOCHAN_PATH/gochan.json" ]; then
-	install -m 775 -o ubuntu -g ubuntu -T /vagrant/gochan.example.json $GOCHAN_PATH/gochan.json
+	install -m 775 -o vagrant -g vagrant -T /vagrant/gochan.example.json $GOCHAN_PATH/gochan.json
 fi
 
 sed -e 's/"Port": 8080,/"Port": 9000,/' -i $GOCHAN_PATH/gochan.json
 sed -e 's/"UseFastCGI": false,/"UseFastCGI": true,/' -i /$GOCHAN_PATH/gochan.json
 sed -e 's/"DomainRegex": ".*",/"DomainRegex": "(https|http):\\\/\\\/(.*)\\\/(.*)",/' -i $GOCHAN_PATH/gochan.json
-sed -e 's/"DBpassword": ""/"DBpassword": "gochan"/' -i /home/ubuntu/gochan/gochan.json
+sed -e 's/"DBpassword": ""/"DBpassword": "gochan"/' -i /home/vagrant/gochan/gochan.json
 sed -e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' -i $GOCHAN_PATH/gochan.json
 
 echo
 echo "Server set up, please run \"vagrant ssh\" on your host machine, and"
-echo "\"cd /home/ubuntu/gochan && ./gochan\" in the guest. Then browse to http://172.27.0.3/manage"
+echo "\"cd /home/vagrant/gochan && ./gochan\" in the guest. Then browse to http://172.27.0.3/manage"
 echo "to complete installation (TODO: add further instructions as default initial announcement"
 echo "or /manage?action=firstrun)"
