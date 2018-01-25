@@ -1,15 +1,17 @@
-# pass everything to gochan via FastCGI
-# this should go in /etc/nginx/sites-enabled. Change as necessary.
-#
+# Pass everything to gochan via FastCGI
+# This should go in /etc/nginx/sites-enabled, as a symbolic link if you're using vagrant. 
+# Change as necessary (duh).
+
 server {
-	listen		80;
-	server_name	localhost;
-	
+	listen					80;
+	server_name				localhost;
+	client_max_body_size	5M;
+
 	location / {
 		fastcgi_pass	127.0.0.1:9000;
 		fastcgi_index	index.html;
 		fastcgi_param	SCRIPT_FILENAME /scripts$fastcgi_script_name;
-		include		fastcgi_params;
+		include			fastcgi_params;
 	}
 
 	

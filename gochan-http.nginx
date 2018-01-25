@@ -1,10 +1,11 @@
 # pass everything to gochan via HTTP
 # this should go in /etc/nginx/sites-enabled. Change as necessary.
-#
+
 server {
-	listen		80;
-	server_name	localhost;
-	
+	listen					80;
+	server_name				localhost;
+	client_max_body_size	5M;
+
 	location / {
 		proxy_pass	http://127.0.0.1:8080;
 	}
