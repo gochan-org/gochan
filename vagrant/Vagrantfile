@@ -3,6 +3,8 @@
 
 
 Vagrant.configure("2") do |config|
+	# just in case Canonical desides to change the default SSH username on us again
+	config.ssh.username = "vagrant"
 	config.vm.box = "ubuntu/xenial64"
 
 	# Disable automatic box update checking. If you disable this, then
