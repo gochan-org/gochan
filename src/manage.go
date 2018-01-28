@@ -19,11 +19,6 @@ type ManageFunction struct {
 	Callback    func() string //return string of html output
 }
 
-var (
-	rebuildfront  func() string
-	rebuildboards func() string
-)
-
 func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}) {
 	request = *r
 	writer = w
@@ -53,10 +48,6 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 
 	if _, ok := manage_functions[action]; ok {
 		if staffRank >= manage_functions[action].Permissions {
-			if action == "rebuildall" || action == "purgeeverything" {
-				rebuildfront = manage_functions["rebuildfront"].Callback
-				rebuildboards = manage_functions["rebuildboards"].Callback
-			}
 			managePageBuffer.Write([]byte(manage_functions[action].Callback()))
 		} else if staffRank == 0 && manage_functions[action].Permissions == 0 {
 			managePageBuffer.Write([]byte(manage_functions[action].Callback()))
@@ -89,7 +80,6 @@ func getCurrentStaff() (string, error) {
 	current_session := new(SessionsTable)
 
 	err := row.Scan(&current_session.Data)
-
 	if err != nil {
 		return "", err
 	}
@@ -264,14 +254,16 @@ var manage_functions = map[string]ManageFunction{
 					return
 				}
 			}
-			_, err = db.Exec("truncate `" + config.DBprefix + "posts`")
+			_, err = db.Exec("TRUNCATE `" + config.DBprefix + "posts`")
 			if err != nil {
 				html += err.Error() + "<br />"
 				return
 			}
-			_, _ = db.Exec("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1")
-			html += "<br />Everything purged, rebuilding all<br />"
-			html += rebuildboards() + "<hr />\n"
+			db.Exec("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1")
+			html += "<br />Everything purged, rebuilding all<br />" +
+				buildBoards(true, 0) + "<hr />\n" +
+				buildFrontPage()
+
 			return
 		}},
 	"executesql": {
@@ -282,10 +274,12 @@ var manage_functions = map[string]ManageFunction{
 			if statement != "" {
 				html += "<hr />"
 				result, sqlerr := db.Exec(statement)
-				fmt.Println(&result)
+				println(1, &result)
 
 				if sqlerr != nil {
-					html += sqlerr.Error()
+					errortext := sqlerr.Error()
+					html += errortext
+					println(1, errortext)
 				} else {
 					html += "Statement esecuted successfully."
 				}
@@ -366,7 +360,7 @@ var manage_functions = map[string]ManageFunction{
 						"<div class=\"section-title-block\"><b>" + announcement.Subject + "</b> by " + announcement.Poster + " at " + humanReadableTime(announcement.Timestamp) + "</div>\n" +
 						"<div class=\"section-body\">" + announcement.Message + "\n</div></div>\n"
 				}
-				iterations += 1
+				iterations++
 			}
 
 			if iterations == 0 {
@@ -609,28 +603,28 @@ var manage_functions = map[string]ManageFunction{
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
-						continue
+						break
 					}
 
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "res"), 0777)
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
-						continue
+						break
 					}
 
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0777)
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
-						continue
+						break
 					}
 
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "src"), 0777)
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
-						continue
+						break
 					}
 					stmt, err := db.Prepare(
 						"INSERT INTO `" + config.DBprefix + "boards` (`order`,`dir`,`type`,`upload_type`,`title`,`subtitle`," +
@@ -647,7 +641,7 @@ var manage_functions = map[string]ManageFunction{
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
-						continue
+						break
 					}
 
 					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
@@ -664,13 +658,18 @@ var manage_functions = map[string]ManageFunction{
 					if err != nil {
 						do = ""
 						board_creation_status = err.Error()
-						continue
+						println(1, "Error creating board: "+board_creation_status)
+						break
 					} else {
 						board_creation_status = "Board created successfully"
-						rebuildboards()
+						println(1, board_creation_status)
+						buildBoards(true, 0)
+						resetBoardSectionArrays()
+						println(1, "Boards rebuilt successfully")
 						done = true
+						break
 					}
-					resetBoardSectionArrays()
+
 				case do == "del":
 					// resetBoardSectionArrays()
 				case do == "edit":
@@ -680,6 +679,7 @@ var manage_functions = map[string]ManageFunction{
 					rows, err = db.Query("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
 					if err != nil {
 						html += err.Error()
+						println(1, err.Error())
 						return
 					}
 
@@ -687,8 +687,14 @@ var manage_functions = map[string]ManageFunction{
 						var column_name string
 						var column_default string
 						err = rows.Scan(&column_name, &column_default)
+						if err != nil {
+							html += err.Error()
+							println(1, err.Error())
+							return
+						}
 						column_default_int, _ := strconv.Atoi(column_default)
 						column_default_bool := (column_default_int == 1)
+						println(1, "Got this far...")
 						switch column_name {
 						case "id":
 							board.ID = column_default_int
@@ -739,6 +745,7 @@ var manage_functions = map[string]ManageFunction{
 						case "enable_catalog":
 							board.EnableCatalog = column_default_bool
 						}
+						println(1, "Done with the switch")
 					}
 				}
 
@@ -810,15 +817,16 @@ var manage_functions = map[string]ManageFunction{
 	"rebuildfront": {
 		Permissions: 3,
 		Callback: func() (html string) {
+			initTemplates()
 			return buildFrontPage()
 		}},
 	"rebuildall": {
 		Permissions: 3,
 		Callback: func() (html string) {
-			html += rebuildfront() + "<hr />\n"
-			html += buildBoardListJSON() + "<hr />\n"
-			html += rebuildboards() + "<hr />\n"
-			return
+			initTemplates()
+			return buildFrontPage() + "<hr />\n" +
+				buildBoardListJSON() + "<hr />\n" +
+				buildBoards(true, 0) + "<hr />\n"
 		}},
 	"rebuildboards": {
 		Permissions: 3,

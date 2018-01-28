@@ -365,6 +365,7 @@ type GochanConfig struct {
 	DefaultStyle_txt string
 
 	AllowDuplicateImages bool
+	AllowVideoUploads    bool
 	NewThreadDelay       int
 	ReplyDelay           int
 	MaxLineLength        int
@@ -566,6 +567,18 @@ func initConfig() {
 
 	if config.DefaultStyle_txt == "" {
 		config.DefaultStyle_txt = config.Styles_txt[0]
+	}
+
+	if config.NewThreadDelay == 0 {
+		config.NewThreadDelay = 30
+	}
+
+	if config.ReplyDelay == 0 {
+		config.ReplyDelay = 7
+	}
+
+	if config.MaxLineLength == 0 {
+		config.MaxLineLength = 150
 	}
 
 	//ReservedTrips string //eventually this will be map[string]string

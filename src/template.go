@@ -142,12 +142,31 @@ var funcMap = template.FuncMap{
 		if name == "" || name == "deleted" {
 			return ""
 		}
-		if name[len(name)-3:] == "gif" || name[len(name)-3:] == "gif" {
+
+		if name[len(name)-3:] == "gif" {
 			name = name[:len(name)-3] + "jpg"
+		} else if name[len(name)-4:] == "webm" {
+			name = name[:len(name)-4] + "jpg"
 		}
 		ext_begin := strings.LastIndex(name, ".")
 		new_name := name[:ext_begin] + "t." + getFileExtension(name)
 		return new_name
+	},
+	"getUploadType": func(name string) string {
+		extension := getFileExtension(name)
+		var uploadType string
+		switch extension {
+		case "":
+		case "deleted":
+			uploadType = ""
+		case "webm":
+		case "jpg":
+		case "gif":
+			uploadType = "jpg"
+		case "png":
+			uploadType = "png"
+		}
+		return uploadType
 	},
 	"formatFilesize": func(size_int int) string {
 		size := float32(size_int)
@@ -163,8 +182,8 @@ var funcMap = template.FuncMap{
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
 	"imageToThumbnailPath": func(img string) string {
-		filetype := img[strings.LastIndex(img, ".")+1:]
-		if filetype == "gif" || filetype == "GIF" {
+		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
+		if filetype == "gif" || filetype == "webm" {
 			filetype = "jpg"
 		}
 		index := strings.LastIndex(img, ".")

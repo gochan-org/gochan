@@ -32,12 +32,12 @@ func (s GochanServer) AddNamespace(basePath string, namespaceFunction func(http.
 	s.namespaces[basePath] = namespaceFunction
 }
 
-func (s GochanServer) getFileData(writer http.ResponseWriter, url string) []byte {
+func (s GochanServer) getFileData(writer http.ResponseWriter, url string) (fileBytes []byte) {
 	filePath := path.Join(config.DocumentRoot, url)
 	results, err := os.Stat(filePath)
 	if err != nil {
 		// the requested path isn't a file or directory, 404
-		return nil
+		fileBytes = nil
 	} else {
 		//the file exists, or there is a folder here
 		if results.IsDir() {
@@ -54,7 +54,7 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) []byte
 			}
 		} else {
 			//the file exists, and is not a folder
-			fileBytes, _ := ioutil.ReadFile(filePath)
+			fileBytes, _ = ioutil.ReadFile(filePath)
 			extension := getFileExtension(url)
 			switch extension {
 			case "png":
@@ -75,24 +75,29 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) []byte
 			case "json":
 				writer.Header().Add("Content-Type", "application/json")
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+			case "webm":
+				writer.Header().Add("Content-Type", "video/webm")
+				writer.Header().Add("Cache-Control", "max-age=86400")
 			}
 			if strings.HasPrefix(extension, "htm") {
+				writer.Header().Add("Content-Type", "text/html")
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
-
 			accessLog.Print("Success: 200 from " + getRealIP(&request) + " @ " + request.RequestURI)
-			return fileBytes
 		}
 	}
-	return nil
+	return
 }
 
 func serveNotFound(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Add("Content-Type", "text/html; charset=utf-8")
+	writer.WriteHeader(404)
 	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
 	if err != nil {
 		writer.Write([]byte("Requested page not found, and 404 error page not found"))
 	} else {
 		writer.Write(errorPage)
+
 	}
 	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.RequestURI)
 }

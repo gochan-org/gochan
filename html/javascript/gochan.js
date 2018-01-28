@@ -42,13 +42,87 @@ function preparePostPreviews(is_inline) {
 			if($(this).next().attr("class") != "inlinepostprev") {
 				$(".postprev").remove();
 				$(this).after($("div#"+this.innerHTML.replace("&gt;&gt;","")).clone().attr({"class":"inlinepostprev","id":"i"+$(this).parent().attr("id")+"-"+($(this).parent().find("div#i"+$(this).parent().attr("id")).length+1)}));
-				console.debug("honk");
 				preparePostPreviews(true);
 			} else {
 				$(this).next().remove();
-			}		
+			}
 		});
 	}
+}
+
+function getUploadPostID(upload, container) {
+	// if container, upload is div.upload-container
+	// otherwise it's img or video
+	var jqu = container? $jq(upload) : $jq(upload).parent();
+	if(insideOP(jqu)) return jqu.siblings().eq(4).text();
+	else return jqu.siblings().eq(3).text();
+}
+
+function insideOP(elem) {
+	return $jq(elem).parents("div.op-post").length > 0;
+}
+
+function prepareThumbnails() {
+	// set thumbnails to expand when clicked
+	$jq("a.upload-container").click(function(e) {
+		var a = $jq(this);
+		var thumb = a.find("img.thumbnail");
+		var video;
+		var thumbURL;
+		if(thumb.attr("alt") == undefined) thumbURL = thumb.attr("src");
+		else thumbURL = thumb.attr("alt");
+		var thumb_width = thumb.attr("width");
+		var thumb_height = thumb.attr("height");
+		var file_info_elem = a.prevAll(".file-info:first");
+		var uploadURL = file_info_elem.children("a:first")[0].href;
+
+		if(thumb.attr("src") == thumbURL) {
+			// Expanding thumbnail
+			if(uploadURL.indexOf(".webm") > 0) {
+				// Upload is a video
+				thumb.hide();
+				video = $jq("<video />")
+				.prop({
+					src: uploadURL,
+					autoplay: true,
+					controls: true,
+					loop: true
+				}).click(function(e) {
+					e.preventDefault();
+					if(this.pause) this.pause();
+					this.removeAttribute("src");
+					this.remove();
+				}).insertAfter(a);
+
+				var close_video_btn = $jq("<a />")
+				.prop("href", "javascript:;")
+				.click(function(e) {
+					video.remove();
+					thumb.show();
+					this.remove();
+				}).css({
+					"padding-left": "8px"
+				})
+				.text("[Close]")
+				.insertAfter(file_info_elem);
+			} else {
+				thumb.attr({
+					src: uploadURL,
+					alt: thumbURL
+				});
+				thumb.removeAttr("width");
+				thumb.removeAttr("height");
+			}
+		} else {
+			// Shrinking back to thumbnail
+			thumb.attr({
+				"src": thumbURL,
+				"width": thumb_width,
+				"height": thumb_height
+			});
+		}
+		return false;
+	});
 }
 
 var TopBarButton = function(title,callback_open, callback_close) {
@@ -113,7 +187,7 @@ function showMessage(msg) {
 		lightbox_css_added = true;
 	}
 	$jq(document.body).prepend("<div class=\"lightbox-bg\"></div><div class=\"lightbox-msg\">"+msg+"<br /><button class=\"lightbox-msg-ok\" style=\"float: right; margin-top:8px;\">OK</button></div>");
-	console.debug($jq(".lightbox-msg").width());
+	console.log($jq(".lightbox-msg").width());
 	var centeroffset = parseInt($jq(".lightbox-msg").css("transform-origin").replace("px",""),10)+$jq(".lightbox-msg").width()/2
 	
 	$jq(".lightbox-msg").css({
@@ -191,19 +265,19 @@ function changeFrontPage(page_name) {
 
 // heavily based on 4chan's quote() function, with a few tweaks
 function quote(e) {
-    var msgbox_id = "postmsg";
-    if(qr_enabled) msgbox_id = "postmsg-qr";
-    
-    if (document.selection) {
-        document.getElementById(msgbox_id).focus();
-        var t = document.getselection.createRange();
-        t.text = ">>" + e + "\n"
-    } else if (document.getElementById(msgbox_id).selectionStart || "0" == document.getElementById(msgbox_id).selectionStart) {
-        var n = document.getElementById(msgbox_id).selectionStart,
-        o = document.getElementById(msgbox_id).selectionEnd;
-        document.getElementById(msgbox_id).value = document.getElementById(msgbox_id).value.substring(0, n) + ">>" + e + "\n" + document.getElementById(msgbox_id).value.substring(o, document.getElementById(msgbox_id).value.length)
-    } else document.getElementById(msgbox_id).value += ">>" + e + "\n"
-    window.scroll(0,document.getElementById(msgbox_id).offsetTop-48);
+	var msgbox_id = "postmsg";
+	if(qr_enabled) msgbox_id = "postmsg-qr";
+
+	if (document.selection) {
+		document.getElementById(msgbox_id).focus();
+		var t = document.getselection.createRange();
+		t.text = ">>" + e + "\n"
+	} else if (document.getElementById(msgbox_id).selectionStart || "0" == document.getElementById(msgbox_id).selectionStart) {
+		var n = document.getElementById(msgbox_id).selectionStart,
+		o = document.getElementById(msgbox_id).selectionEnd;
+		document.getElementById(msgbox_id).value = document.getElementById(msgbox_id).value.substring(0, n) + ">>" + e + "\n" + document.getElementById(msgbox_id).value.substring(o, document.getElementById(msgbox_id).value.length)
+	} else document.getElementById(msgbox_id).value += ">>" + e + "\n"
+	window.scroll(0,document.getElementById(msgbox_id).offsetTop-48);
 }
 
 function deletePost(id) {
@@ -284,48 +358,10 @@ function getCookie(name) {
 	for(var i = 0; i < cookie_arr.length; i++) {
 		pair = cookie_arr[i].split("=");
 		if(pair[0] == name) {
-			//var val = decodeURIComponent(pair[1]);
-			val = pair[1].replace("+", " ");
-			val = val.replace("%2B", "+");
-			val = decodeURIComponent(val);
-			return val;
+			return decodeURIComponent(pair[1].replace("+", " ").replace("%2B", "+"))
 		}
 	}
 }
-
-/*function preparePostPreviews(is_inline) {
-	var m_type = "mousemove";
-	if(!movable_postpreviews) m_type = "mouseover";
-	if(expandable_postrefs) $("a.postref").attr("href","javascript:void(0);");
-	var hvr_str = "a.postref";
-	if(is_inline) hvr_str = "div.inlinepostprev "+hvr_str;
-	$(hvr_str).hover(function(){
-		$(document.body).append($("div#"+this.innerHTML.replace("&gt;&gt;","")).clone().attr("class","postprev"))
-		$(document).bind(m_type, function(e){
-		    $('.postprev').css({
-		       left:  e.pageX + 8,
-		       top:   e.pageY + 8
-		    });
-		})
-	},
-	function() {
-		$(".postprev").remove();
-	});
-
-	if(expandable_postrefs) {
-		var clk_str = "a.postref";
-		if(is_inline) clk_str = "div.inlinepostprev "+clk_str;
-		$(clk_str).click(function() {
-			if($(this).next().attr("class") != "inlinepostprev") {
-				$(".postprev").remove();
-				$(this).after($("div#"+this.innerHTML.replace("&gt;&gt;","")).clone().attr({"class":"inlinepostprev","id":"i"+$(this).parent().attr("id")+"-"+($(this).parent().find("div#i"+$(this).parent().attr("id")).length+1)}));
-				preparePostPreviews(true);
-			} else {
-				$(this).next().remove();
-			}		
-		});
-	}
-} */
 
 function reportPost(id) {
 	var reason = prompt("Reason");
@@ -359,9 +395,8 @@ $jq(document).ready(function() {
  		addStaffButtons();
  	}
 
-	if(isFrontPage()) {
-		changeFrontPage(getHashVal());
-	}
+	if(isFrontPage()) changeFrontPage(getHashVal());
+	else prepareThumbnails();
 
 	$jq(".plus").click(function() {
 		var block = $jq(this).parent().next();
@@ -397,30 +432,4 @@ $jq(document).ready(function() {
 			}
 		}
 	});
-
-    // set thumbnails to expand when clicked
-	var thumbnails = document.getElementsByClassName("thumbnail");
-	for(var i = 0; i < thumbnails.length; i++) {
-		var is_thumb = true;
-		thumbnails[i].onclick = function(e) {
-			var src = this.parentNode.getAttribute("href");
-			if(this.getAttribute("width") != null) {
-				// change the width and height constraints
-				this.setAttribute("old-width",this.getAttribute("width"));
-				this.removeAttribute("width");
-				this.setAttribute("old-height",this.getAttribute("height"));
-				this.removeAttribute("height");
-			} else {
-				// this is an expanded image, shrink it
-				var src = this.parentNode.getAttribute("href");
-				this.setAttribute("width", this.getAttribute("old-width"));
-				this.removeAttribute("old-width");
-				this.setAttribute("height", this.getAttribute("old-height"));
-				this.removeAttribute("old-height");
-			}
-			this.setAttribute("src", src);
-			//thumbnails[i].setAttribute("onclick", "function() { alert(\"hi!\"); return ")
-			return false;
-		}
-	}
 });

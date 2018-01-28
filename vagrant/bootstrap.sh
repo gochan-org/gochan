@@ -8,7 +8,7 @@ export GOPATH=/vagrant/lib
 
 apt-get update
 apt-get -y upgrade
-apt-get -y install git subversion mercurial golang nginx redis-server mariadb-server mariadb-client
+apt-get -y install git subversion mercurial golang nginx redis-server mariadb-server mariadb-client ffmpeg
 
 # Make sure any imported database is utf8mb4
 # http://mathiasbynens.be/notes/mysql-utf8mb4
