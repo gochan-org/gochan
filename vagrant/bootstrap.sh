@@ -38,16 +38,22 @@ cat - <<EOF123 >/etc/mysql/conf.d/open.cnf
 bind-address = 0.0.0.0
 EOF123
 
-service mysql restart &
-wait
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
 ln -sf /etc/nginx/sites-available/gochan.nginx /etc/nginx/sites-enabled/
 
 # VirtualBox shared folders don't play nicely with sendfile.
 sed -e 's/sendfile on;/sendfile off;/' -i /etc/nginx/nginx.conf
-service nginx restart
 
+# Make sure our shared directories are mounted before nginx starts
+systemctl disable nginx
+sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/system/nginx.service
+systemctl daemon-reload
+systemctl enable nginx
+
+
+systemctl restart nginx mysql &
+wait
 
 mkdir -p /vagrant/lib || true
 cd /vagrant

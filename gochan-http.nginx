@@ -2,8 +2,9 @@
 # this should go in /etc/nginx/sites-enabled. Change as necessary.
 
 server {
-	listen					80;
-	server_name				localhost;
+	listen			80;
+	listen[::]:80;
+	server_name		localhost;
 	client_max_body_size	5M;
 
 	location / {
