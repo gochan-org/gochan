@@ -75,7 +75,7 @@ function prepareThumbnails() {
 		var thumb_height = thumb.attr("height");
 		var file_info_elem = a.prevAll(".file-info:first");
 		var uploadURL = file_info_elem.children("a:first")[0].href;
-
+		var viewBtn = a.nextAll("span.post-links:first");
 		if(thumb.attr("src") == thumbURL) {
 			// Expanding thumbnail
 			if(uploadURL.indexOf(".webm") > 0) {
@@ -87,12 +87,7 @@ function prepareThumbnails() {
 					autoplay: true,
 					controls: true,
 					loop: true
-				}).click(function(e) {
-					e.preventDefault();
-					if(this.pause) this.pause();
-					this.removeAttribute("src");
-					this.remove();
-				}).insertAfter(a);
+				}).insertAfter(file_info_elem);
 
 				var close_video_btn = $jq("<a />")
 				.prop("href", "javascript:;")
@@ -103,15 +98,15 @@ function prepareThumbnails() {
 				}).css({
 					"padding-left": "8px"
 				})
-				.text("[Close]")
+				.html("[Close]<br />")
 				.insertAfter(file_info_elem);
 			} else {
 				thumb.attr({
 					src: uploadURL,
 					alt: thumbURL
-				});
-				thumb.removeAttr("width");
-				thumb.removeAttr("height");
+				})
+				.removeAttr("width")
+				.removeAttr("height");
 			}
 		} else {
 			// Shrinking back to thumbnail

@@ -211,7 +211,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		boardinfo_i = append(boardinfo_i, board)
 
 		// Open board.html for writing to the first page.
-		printf(1, "Current page: %s/%d\n", board.Dir, board.CurrentPage)
 		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			errortext = "Failed opening /" + board.Dir + "/board.html: " + err.Error()
@@ -1340,7 +1339,7 @@ func formatMessage(post *PostTable) {
 	message := post.MessageHTML
 
 	// prepare each line to be formatted
-	postLines := strings.Split(message, "\r\n")
+	postLines := strings.Split(message, "\\r\\n")
 	for i, line := range postLines {
 		trimmedLine := strings.TrimSpace(line)
 		//lineWords := regexp.MustCompile("\\s").Split(trimmedLine, -1)
