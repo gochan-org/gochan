@@ -66,7 +66,7 @@ function prepareThumbnails() {
 	// set thumbnails to expand when clicked
 	$jq("a.upload-container").click(function(e) {
 		var a = $jq(this);
-		var thumb = a.find("img.thumbnail");
+		var thumb = a.find("img.upload");
 		var video;
 		var thumbURL;
 		if(thumb.attr("alt") == undefined) thumbURL = thumb.attr("src");
@@ -86,6 +86,7 @@ function prepareThumbnails() {
 					src: uploadURL,
 					autoplay: true,
 					controls: true,
+					class: "upload",
 					loop: true
 				}).insertAfter(file_info_elem);
 
@@ -98,8 +99,8 @@ function prepareThumbnails() {
 				}).css({
 					"padding-left": "8px"
 				})
-				.html("[Close]<br />")
-				.insertAfter(file_info_elem);
+				.html("[Close]<br />");
+				file_info_elem.append(close_video_btn);
 			} else {
 				thumb.attr({
 					src: uploadURL,

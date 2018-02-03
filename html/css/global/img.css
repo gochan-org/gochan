@@ -246,7 +246,7 @@ hr {
 }
 
 
-img.thumbnail {
+.upload {
 	float:left;
 	max-width: 100%;
 	margin: 5px 10px 10px 0px;
