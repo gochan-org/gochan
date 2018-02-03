@@ -221,7 +221,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func() (html string) {
 			html = "<img src=\"/css/purge.jpg\" />"
-			rows, err := db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`;")
+			rows, err := db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`")
 			if err != nil {
 				html += err.Error()
 				return
@@ -602,28 +602,28 @@ var manage_functions = map[string]ManageFunction{
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
 					if err != nil {
 						do = ""
-						board_creation_status = err.Error()
+						board_creation_status = "ERROR: directory /" + config.DocumentRoot + "/" + board.Dir + "/ already exists!"
 						break
 					}
 
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "res"), 0777)
 					if err != nil {
 						do = ""
-						board_creation_status = err.Error()
+						board_creation_status = "ERROR: directory /" + config.DocumentRoot + "/" + board.Dir + "/res/ already exists!"
 						break
 					}
 
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0777)
 					if err != nil {
 						do = ""
-						board_creation_status = err.Error()
+						board_creation_status = "ERROR: directory /" + config.DocumentRoot + "/" + board.Dir + "/thumb/ already exists!"
 						break
 					}
 
 					err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "src"), 0777)
 					if err != nil {
 						do = ""
-						board_creation_status = err.Error()
+						board_creation_status = "ERROR: directory /" + config.DocumentRoot + "/" + board.Dir + "/src/ already exists!"
 						break
 					}
 					stmt, err := db.Prepare(
@@ -677,24 +677,23 @@ var manage_functions = map[string]ManageFunction{
 				default:
 					// put the default column values in the text boxes
 					rows, err = db.Query("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
+					defer func() {
+						if rows != nil {
+							rows.Close()
+						}
+					}()
 					if err != nil {
 						html += err.Error()
-						println(1, err.Error())
+						println(1, "Error getting column names from boards table:"+err.Error())
 						return
 					}
 
 					for rows.Next() {
 						var column_name string
 						var column_default string
-						err = rows.Scan(&column_name, &column_default)
-						if err != nil {
-							html += err.Error()
-							println(1, err.Error())
-							return
-						}
+						rows.Scan(&column_name, &column_default)
 						column_default_int, _ := strconv.Atoi(column_default)
 						column_default_bool := (column_default_int == 1)
-						println(1, "Got this far...")
 						switch column_name {
 						case "id":
 							board.ID = column_default_int
@@ -745,7 +744,6 @@ var manage_functions = map[string]ManageFunction{
 						case "enable_catalog":
 							board.EnableCatalog = column_default_bool
 						}
-						println(1, "Done with the switch")
 					}
 				}
 

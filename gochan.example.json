@@ -40,6 +40,7 @@
 	"DefaultStyle_txt": "pipes",
 
 	"AllowDuplicateImages": true,
+	"AllowVideoUploads": true,
 	"NewThreadDelay": 30,
 	"ReplyDelay": 7,
 	"MaxLineLength": 150,

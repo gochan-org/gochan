@@ -497,7 +497,7 @@ func initConfig() {
 	}
 
 	if config.DBtype == "" {
-		println(0, "DBtype not set in gochan.json, halting.")
+		println(0, "DBtype not set in gochan.json, halting (currently supported values: mysql).")
 		os.Exit(2)
 	}
 
@@ -548,7 +548,10 @@ func initConfig() {
 	}
 
 	if config.DomainRegex == "" {
-		config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
+		println(0, "DomainRegex not set in gochan.json, consider using (https|http):\\/\\/("+config.SiteDomain+")\\/(.*)")
+		println(0, "This should work in most cases. Halting")
+		os.Exit(2)
+		//config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
 	}
 
 	if config.Styles_img == nil {

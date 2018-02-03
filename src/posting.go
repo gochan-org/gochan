@@ -822,6 +822,7 @@ func createImageThumbnail(image_obj image.Image, size string) image.Image {
 func createVideoThumbnail(video, thumb string, size int) error {
 	sizeStr := strconv.Itoa(size)
 	outputBytes, err := exec.Command("ffmpeg", "-y", "-itsoffset", "-1", "-i", video, "-vframes", "1", "-filter:v", "scale='min("+sizeStr+"\\, "+sizeStr+"):-1'", thumb).CombinedOutput()
+	println(2, "ffmpeg output: \n"+string(outputBytes))
 	if err != nil {
 		outputStringArr := strings.Split(string(outputBytes), "\n")
 		if len(outputStringArr) > 1 {
