@@ -1340,9 +1340,10 @@ func formatMessage(post *PostTable) {
 	message := post.MessageHTML
 
 	// prepare each line to be formatted
-	postLines := strings.Split(message, "\\r\\n")
+	postLines := strings.Split(message, "\r\n")
 	for i, line := range postLines {
 		trimmedLine := strings.TrimSpace(line)
+		//lineWords := regexp.MustCompile("\\s").Split(trimmedLine, -1)
 		lineWords := strings.Split(trimmedLine, " ")
 		isGreentext := false // if true, append </span> to end of line
 		for w, word := range lineWords {
