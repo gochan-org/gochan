@@ -175,7 +175,7 @@ func validReferrer(request http.Request) bool {
 
 // register /util handler
 func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
-	writer.Header().Add("Content-Type", "text/css")
+	//writer.Header().Add("Content-Type", "text/css")
 	action := request.FormValue("action")
 	password := request.FormValue("password")
 	board := request.FormValue("board")
@@ -192,23 +192,27 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			postsArr = append(postsArr, key[5:])
 		}
 	}
-	if reportBtn == "Delete" {
+	if deleteBtn == "Delete" {
 		// Delete a post or thread
-		password = md5Sum(password)
+		passwordMD5 := md5Sum(password)
 		rank := getStaffRank()
 
-		if password == "" && rank == 0 {
+		if passwordMD5 == "" && rank == 0 {
 			serveErrorPage(writer, "Password required for post deletion")
 			return
 		}
 
-		for _, post := range postsArr {
-			var parentId int
-			var fileName string
+		for _, checkedPostID := range postsArr {
+			// var parentID int
+			// var fileName string
 			var fileType string
-			var passwordChecksum string
-			var boardId int
-			stmt, err := db.Prepare("SELECT `parentid, `filename`, `password` FROM " + config.DBprefix + "posts WHERE `id` = ? AND `deleted_timestamp`  = ?")
+			var thumbType string
+			// var passwordChecksum string
+			// var boardid int
+			var post PostTable
+			post.ID, _ = strconv.Atoi(checkedPostID)
+
+			stmt, err := db.Prepare("SELECT `parentID`, `filename`, `password` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `deleted_timestamp` = ?")
 			defer func() {
 				if stmt != nil {
 					stmt.Close()
@@ -220,12 +224,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				println(1, err.Error())
 				serveErrorPage(writer, err.Error())
 			}
-			err = stmt.QueryRow(&post, nil_timestamp).Scan(&parentId, &fileName, &passwordChecksum)
+			err = stmt.QueryRow(&post.ID, nil_timestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
 
 			if err == sql.ErrNoRows {
 				//the post has already been deleted
-				writer.Header().Add("refresh", "3;url="+request.Referer())
-				fmt.Fprintf(writer, "%s has already been deleted or is a post in a deleted thread.\n<br />", post)
+				writer.Header().Add("refresh", "4;url="+request.Referer())
+				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n<br />", post.ID)
 				continue
 			}
 			if err != nil {
@@ -233,52 +237,56 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				return
 			}
 
-			err = db.QueryRow(`SELECT "id" FROM "` + config.DBprefix + `boards" WHERE "dir" = "` + board + `"`).Scan(&boardId)
+			err = db.QueryRow("SELECT `id` FROM `" + config.DBprefix + "boards` WHERE `dir` = '" + board + "'").Scan(&post.BoardID)
 			if err != nil {
 				serveErrorPage(writer, err.Error())
 				return
 			}
 
-			if password != passwordChecksum && rank == 0 {
-				fmt.Fprintf(writer, "Incorrect password for %s\n", post)
+			if passwordMD5 != post.Password && rank == 0 {
+				fmt.Fprintf(writer, "Incorrect password for %d\n", post.ID)
 				continue
 			}
 
 			if fileOnly {
+				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
-					fileType = fileName[strings.Index(fileName, ".")+1:]
 					fileName = fileName[:strings.Index(fileName, ".")]
-					err := os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
-					if err != nil {
-						serveErrorPage(writer, err.Error())
-						return
+					fileType = fileName[strings.Index(fileName, ".")+1:]
+					if fileType == "gif" || fileType == "webm" {
+						thumbType = "jpg"
 					}
-					err = os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+fileType))
-					if err != nil {
-						serveErrorPage(writer, err.Error())
-						return
-					}
-					_, err = db.Exec(`UPDATE "` + config.DBprefix + `posts" SET "filename" = "deleted" WHERE "id" = ` + post)
+
+					os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
+					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
+
+					_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `filename` = 'deleted' WHERE `id` = " + strconv.Itoa(post.ID) + " AND `boardid` = " + strconv.Itoa(post.BoardID))
 					if err != nil {
 						serveErrorPage(writer, err.Error())
 						return
 					}
 				}
-				writer.Header().Add("refresh", "3;url="+request.Referer())
-				fmt.Fprintf(writer, "Attached image from %s deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url="+config.DocumentRoot+"/"+board+"/\">", post)
-			} else {
+				_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
+				buildBoardPages(&_board[0])
+				_post, _ := getPostArr(map[string]interface{}{"id": post.ID, "boardid": post.BoardID}, "")
+				postBoard := _post[0].(PostTable)
+				buildThreadPages(&postBoard)
 
+				writer.Header().Add("refresh", "4;url="+request.Referer())
+				fmt.Fprintf(writer, "Attached image from %d deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url=/"+board+"/\">", post.ID)
+			} else {
 				// delete the post
-				_, err = db.Exec(`UPDATE "` + config.DBprefix + `posts" SET "deleted_timestamp" = "` + getSQLDateTime() + `" WHERE "id" = ` + post)
-				if parentId == 0 {
-					err = os.Remove(path.Join(config.DocumentRoot, board, "/res/"+post+".html"))
+				_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `id` = " + strconv.Itoa(post.ID))
+				if post.ParentID == 0 {
+					err = os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
-					_board, _ := getBoardArr(map[string]interface{}{"id": boardId}, "") // getBoardArr("`id` = " + strconv.Itoa(boardId))
+					_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "") // getBoardArr("`id` = " + strconv.Itoa(boardid))
 					buildBoardPages(&_board[0])
 				}
 
 				// if the deleted post is actually a thread, delete its posts
-				_, err = db.Exec(`UPDATE "` + config.DBprefix + `posts" SET "deleted_timestamp" = "` + getSQLDateTime() + `" WHERE "parentid" = ` + post)
+				_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `parentID` = " + strconv.Itoa(post.ID))
 				if err != nil {
 					serveErrorPage(writer, err.Error())
 					return
@@ -286,24 +294,24 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 
 				// delete the file
 				var deletedFilename string
-				err = db.QueryRow(`SELECT "filename" FROM "` + config.DBprefix + `posts" WHERE "id" = ` + post + ` AND "filename" != ""`).Scan(&deletedFilename)
+				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `id` = " + strconv.Itoa(post.ID) + " AND `filename` != ''").Scan(&deletedFilename)
 				if err == nil {
 					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
 				}
 
-				err = db.QueryRow(`SELECT "filename" FROM "` + config.DBprefix + `posts" WHERE "parentid" = ` + post + ` AND "filename" != ""`).Scan(&deletedFilename)
+				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `parentID` = " + strconv.Itoa(post.ID) + " AND `filename` != ''").Scan(&deletedFilename)
 				if err == nil {
 					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
 				}
 
-				buildBoards(false, boardId)
+				buildBoards(false, post.BoardID)
 
-				writer.Header().Add("refresh", "3;url="+request.Referer())
-				fmt.Fprintf(writer, "%s deleted successfully\n<br />", post)
+				writer.Header().Add("refresh", "4;url="+request.Referer())
+				fmt.Fprintf(writer, "%d deleted successfully\n<br />", post.ID)
 			}
 		}
 	}

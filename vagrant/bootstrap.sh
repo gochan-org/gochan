@@ -80,6 +80,7 @@ go get github.com/nranchev/go-libGeoIP
 go get github.com/nyarla/go-crypt
 go get github.com/go-sql-driver/mysql
 go get golang.org/x/crypto/bcrypt
+go get github.com/frustra/bbcode
 make verbose
 
 rm -f $GOCHAN_PATH/gochan

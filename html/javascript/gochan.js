@@ -277,8 +277,8 @@ function quote(e) {
 }
 
 function deletePost(id) {
-	var password = prompt("Password");
-	window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password";
+	var password = prompt("Password (this doesn't do anything yet)");
+	//window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password";
 }
 
 function deleteCheckedPosts() {
@@ -335,9 +335,11 @@ function initCookies() {
 	var name_field = $jq("input#postname");
 	var email_field = $jq("input#postemail");
 	var password_field = $jq("input#postpassword");
+	var deletepassword_field = $jq("input#delete-password");
 	name_field.val(getCookie("name"));
 	email_field.val(getCookie("email"));
 	password_field.val(getCookie("password"));
+	deletepassword_field.val(getCookie("password"));
 }
 
 function isFrontPage() {
@@ -360,7 +362,7 @@ function getCookie(name) {
 }
 
 function reportPost(id) {
-	var reason = prompt("Reason");
+	var reason = prompt("Reason (this doesn't do anything yet)");
 }
 
 $jq(document).ready(function() {

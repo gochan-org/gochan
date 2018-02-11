@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -354,6 +355,25 @@ func getFormattedFilesize(size float32) string {
 	return fmt.Sprintf("%0.2fGB", size/1024/1024/1024)
 }
 
+// returns the filename, line number, and function where getMetaInfo() is called
+// stackOffset increases/decreases which item on the stack is referenced.
+//	see documentation for runtime.Caller() for more info
+func getMetaInfo(stackOffset int) (string, int, string) {
+	pc, file, line, _ := runtime.Caller(1 + stackOffset)
+	return file, line, runtime.FuncForPC(pc).Name()
+}
+
+func customError(v int, err error) (errored bool) {
+	if err != nil {
+		if config.Verbosity >= v {
+			file, line, _ := getMetaInfo(1)
+			fmt.Printf("[ERROR] %s:%d: %s\n", file, line, err.Error())
+		}
+		return true
+	}
+	return false
+}
+
 func humanReadableTime(t time.Time) string {
 	return t.Format(config.DateTimeFormat)
 }
@@ -401,12 +421,12 @@ func resetBoardSectionArrays() {
 	all_boards = nil
 	all_sections = nil
 
-	all_boards_a, _ := getBoardArr(nil, "")
-	for _, b := range all_boards_a {
+	allBoardsArr, _ := getBoardArr(nil, "")
+	for _, b := range allBoardsArr {
 		all_boards = append(all_boards, b)
 	}
-	all_sections_a, _ := getSectionArr("")
-	for _, b := range all_sections_a {
+	allSectionsArr, _ := getSectionArr("")
+	for _, b := range allSectionsArr {
 		all_sections = append(all_sections, b)
 	}
 }
