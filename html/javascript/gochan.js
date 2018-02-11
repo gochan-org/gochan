@@ -150,13 +150,13 @@ var DropDownMenu = function(title,menu_html) {
 	this.menuHTML = menu_html;
 	this.button = new TopBarButton(title, function() {
 		topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>");
-		$jq("a#"+title.toLowerCase()).children(0).html(title+up_arrow_symbol);
+		$jq("a#"+title.toLowerCase() + "-menu").children(0).html(title+up_arrow_symbol);
 		$jq("div#"+title.toLowerCase()).css({
 			top:topbar.height()
 		});
 	}, function() {
 		$jq("div#"+title.toLowerCase() + ".dropdown-menu").remove();
-		$jq("a#"+title.toLowerCase()).children(0).html(title+down_arrow_symbol);
+		$jq("a#"+title.toLowerCase() + "-menu").children(0).html(title+down_arrow_symbol);
 	});
 }
 

@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"github.com/frustra/bbcode"
 )
 
 var (
@@ -16,6 +18,7 @@ var (
 	errorLog          *log.Logger
 	modLog            *log.Logger
 	readBannedIPs     []string
+	bbcompiler        bbcode.Compiler
 )
 
 type RecentPost struct {
@@ -662,6 +665,13 @@ func initConfig() {
 		println(0, "RandomSeed not set in gochan.json, halting.")
 		os.Exit(2)
 	}
+	bbcompiler = bbcode.NewCompiler(true, true)
+	bbcompiler.SetTag("center", nil)
+	bbcompiler.SetTag("code", nil)
+	bbcompiler.SetTag("color", nil)
+	bbcompiler.SetTag("img", nil)
+	bbcompiler.SetTag("quote", nil)
+	bbcompiler.SetTag("size", nil)
 
 	config.Version = version
 }

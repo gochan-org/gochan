@@ -178,7 +178,6 @@ table#pages td {
 }
 
 .post-text {
-	white-space: pre-wrap;
 	padding: 8px;
 }
 
@@ -232,8 +231,7 @@ table#pages td {
 }
 
 .dropdown-button {
-	display: inline;
-	padding: 4px;
+	padding: 4px 8px;
 	float: right;
 }
 

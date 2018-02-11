@@ -1008,8 +1008,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		serveErrorPage(w, "Post body is too long")
 		return
 	}
-	post.MessageHTML = html.EscapeString(post.MessageText)
-	formatMessage(&post)
+	post.MessageHTML = formatMessage(post.MessageText)
 
 	post.Password = md5Sum(request.FormValue("postpassword"))
 
@@ -1335,11 +1334,10 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	benchmarkTimer("makePost", startTime, false)
 }
 
-func formatMessage(post *PostTable) {
-	message := post.MessageHTML
-
+func formatMessage(message string) string {
+	message = bbcompiler.Compile(message)
 	// prepare each line to be formatted
-	postLines := strings.Split(message, "\\r\\n")
+	postLines := strings.Split(message, "<br>")
 	for i, line := range postLines {
 		trimmedLine := strings.TrimSpace(line)
 		//lineWords := regexp.MustCompile("\\s").Split(trimmedLine, -1)
@@ -1377,5 +1375,5 @@ func formatMessage(post *PostTable) {
 		}
 		postLines[i] = line
 	}
-	post.MessageHTML = strings.Join(postLines, "<br />")
+	return strings.Join(postLines, "<br />")
 }

@@ -791,12 +791,13 @@ var manage_functions = map[string]ManageFunction{
 				"<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
 			if rank == 3 {
 				html += "<b>Admin stuff</b><br />\n<a href=\"javascript:void(0)\" id=\"staff\" class=\"staffmenu-item\">Manage staff</a><br />\n" +
-					"<a href=\"javascript:void(0)\" id=\"purgeeverything\" class=\"staffmenu-item\">Purge everything!</a><br />\n" +
+					//"<a href=\"javascript:void(0)\" id=\"purgeeverything\" class=\"staffmenu-item\">Purge everything!</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"executesql\" class=\"staffmenu-item\">Execute SQL statement(s)</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"cleanup\" class=\"staffmenu-item\">Run cleanup</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildall\" class=\"staffmenu-item\">Rebuild all</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildfront\" class=\"staffmenu-item\">Rebuild front page</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"rebuildboards\" class=\"staffmenu-item\">Rebuild board pages</a><br />\n" +
+					"<a href=\"javascript:void(0)\" id=\"reparsehtml\" class=\"staffmenu-item\">Reparse all posts</a><br />\n" +
 					"<a href=\"javascript:void(0)\" id=\"boards\" class=\"staffmenu-item\">Add/edit/delete boards</a><br />\n"
 			}
 			if rank >= 2 {
@@ -831,6 +832,37 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			initTemplates()
 			return buildBoards(true, 0)
+		}},
+	"reparsehtml": {
+		Permissions: 3,
+		Callback: func() (html string) {
+			posts, err := getPostArr(map[string]interface{}{
+				"deleted_timestamp": nil_timestamp,
+			}, "")
+			if err != nil {
+				html += err.Error() + "<br />"
+				return
+			}
+
+			for _, postInter := range posts {
+				post := postInter.(PostTable)
+				stmt, err := db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `message` = ? WHERE `id` = ? AND `boardid` = ?")
+				if err != nil {
+					html += err.Error() + "<br />"
+					return
+				}
+				defer func() {
+					if stmt != nil {
+						stmt.Close()
+					}
+				}()
+				stmt.Exec(formatMessage(post.MessageText), post.ID, post.BoardID)
+			}
+			html += "Done reparsing HTML<hr />" +
+				buildFrontPage() + "<hr />\n" +
+				buildBoardListJSON() + "<hr />\n" +
+				buildBoards(true, 0) + "<hr />\n"
+			return
 		}},
 	"recentposts": {
 		Permissions: 1,
