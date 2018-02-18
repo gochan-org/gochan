@@ -33,7 +33,7 @@ func connectToSQLServer() {
 
 	// get the number of tables in the database. If the number > 1, we can assume that initial setup has already been run
 	var num_rows int
-	err = db.QueryRow("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '" + config.DBname + "';").Scan(&num_rows)
+	err = db.QueryRow("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '" + config.DBname + "'").Scan(&num_rows)
 	if err == sql.ErrNoRows {
 		num_rows = 0
 	} else if err != nil {
@@ -50,8 +50,7 @@ func connectToSQLServer() {
 		return
 	} else {
 		// check if initialsetupdb.sql still exists
-		_, err := os.Stat("initialsetupdb.sql")
-		if err != nil {
+		if _, err := os.Stat("initialsetupdb.sql"); err != nil {
 			println(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
 			errorLog.Fatal("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
 		}
@@ -73,8 +72,7 @@ func connectToSQLServer() {
 
 		for _, statement := range initial_sql_arr {
 			if statement != "" {
-				_, err := db.Exec(statement)
-				if err != nil {
+				if _, err := db.Exec(statement); err != nil {
 					println(0, "failed, see log for details.")
 					errorLog.Fatal("Error executing initialsetupdb.sql: " + err.Error())
 					return

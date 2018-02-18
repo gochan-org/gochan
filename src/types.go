@@ -418,8 +418,7 @@ func initConfig() {
 		os.Exit(2)
 	}
 
-	err = json.Unmarshal(jfile, &config)
-	if err != nil {
+	if err = json.Unmarshal(jfile, &config); err != nil {
 		printf(0, "Error parsing \"gochan.json\": %s\n", err.Error())
 		os.Exit(2)
 	}

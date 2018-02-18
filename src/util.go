@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
+	"database/sql"
 	"fmt"
 	"html"
 	"io"
@@ -72,6 +73,25 @@ func byteByByteReplace(input, from, to string) string {
 		input = strings.Replace(input, from[i:i+1], to[i:i+1], -1)
 	}
 	return input
+}
+
+// for easier defer cleaning
+func closeFile(file *os.File) {
+	if file != nil {
+		file.Close()
+	}
+}
+
+func closeRows(rows *sql.Rows) {
+	if rows != nil {
+		rows.Close()
+	}
+}
+
+func closeStatement(stmt *sql.Stmt) {
+	if stmt != nil {
+		stmt.Close()
+	}
 }
 
 /*
@@ -166,23 +186,19 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	printf(2, "queryString@getBoardArr: %s\n", queryString)
 
 	stmt, err := db.Prepare(queryString)
-	defer func() {
-		if stmt != nil {
-			stmt.Close()
-		}
-	}()
-
 	if err != nil {
 		errorLog.Print(err.Error())
 		return
 	}
+	defer closeStatement(stmt)
 
 	rows, err := stmt.Query(parameterValues...)
 	// For each row in the results from the database, populate a new BoardsTable instance,
 	// 	then append it to the boards array we are going to return
 	for rows.Next() {
 		board := new(BoardsTable)
-		err = rows.Scan(
+		board.IName = "board"
+		if err = rows.Scan(
 			&board.ID,
 			&board.Order,
 			&board.Dir,
@@ -208,11 +224,9 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 			&board.RedirectToThread,
 			&board.RequireFile,
 			&board.EnableCatalog,
-		)
-		board.IName = "board"
-		if err != nil {
+		); err != nil {
 			errorLog.Print(err.Error())
-			fmt.Println(err.Error())
+			println(0, err.Error())
 			return
 		}
 		boards = append(boards, *board)
@@ -243,16 +257,11 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 	printf(2, "queryString@getPostArr queryString: %s\n", queryString)
 
 	stmt, err := db.Prepare(queryString)
-	defer func() {
-		if stmt != nil {
-			stmt.Close()
-		}
-	}()
-
 	if err != nil {
 		errorLog.Print(err.Error())
 		return
 	}
+	defer closeStatement(stmt)
 
 	rows, err := stmt.Query(parameterValues...)
 	if err != nil {
@@ -261,20 +270,22 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 		println(1, errortext)
 		return
 	}
+	defer closeRows(rows)
+
 	// For each row in the results from the database, populate a new PostTable instance,
 	// 	then append it to the posts array we are going to return
 	for rows.Next() {
 		var post PostTable
-		err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
+		post.IName = "post"
+		if err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
 			&post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password, &post.Filename,
 			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW,
 			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp,
 			&post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped,
-			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag)
-		post.IName = "post"
-		if err != nil {
+			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag,
+		); err != nil {
 			errorLog.Print(err.Error())
-			fmt.Println(err.Error())
+			println(0, err.Error())
 			return
 		}
 		posts = append(posts, post)
@@ -291,13 +302,13 @@ func getSectionArr(where string) (sections []interface{}, err error) {
 		errorLog.Print(err.Error())
 		return
 	}
+	defer closeRows(rows)
 
 	for rows.Next() {
 		section := new(BoardSectionsTable)
 		section.IName = "section"
 
-		err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation)
-		if err != nil {
+		if err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
 			errorLog.Print(err.Error())
 			return
 		}
@@ -367,11 +378,17 @@ func customError(v int, err error) (errored bool) {
 	if err != nil {
 		if config.Verbosity >= v {
 			file, line, _ := getMetaInfo(1)
-			fmt.Printf("[ERROR] %s:%d: %s\n", file, line, err.Error())
+			printf(v, "[ERROR] %s:%d: %s\n", file, line, err.Error())
 		}
 		return true
 	}
 	return false
+}
+
+func handleError(verbosity int, text string) string {
+	printf(verbosity, text)
+	errorLog.Println(text)
+	return text
 }
 
 func humanReadableTime(t time.Time) string {
@@ -475,6 +492,9 @@ func bToA(b bool) string {
 // Checks the validity of the Akismet API key given in the config file.
 func checkAkismetAPIKey() {
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {config.AkismetAPIKey}, "blog": {"http://" + config.SiteDomain}})
+	if err != nil {
+		handleError(1, err.Error())
+	}
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			resp.Body.Close()
@@ -482,7 +502,7 @@ func checkAkismetAPIKey() {
 	}()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		errorLog.Print(err.Error())
+		handleError(1, err.Error())
 	}
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
@@ -503,20 +523,20 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		req, err := http.NewRequest("POST", "https://"+config.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(data.Encode()))
 		if err != nil {
-			errorLog.Print(err.Error())
+			handleError(1, err.Error())
 			return "other_failure"
 		}
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
 		if err != nil {
-			errorLog.Print(err.Error())
+			handleError(1, err.Error())
 			return "other_failure"
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			errorLog.Print(err.Error())
+			handleError(1, err.Error())
 			return "other_failure"
 		}
 		errorLog.Print("Response from Akismet: " + string(body))

@@ -127,7 +127,7 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 func initServer() {
 	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
 	if err != nil {
-		fmt.Printf("Failed listening on %s:%d, see log for details", config.ListenIP, config.Port)
+		printf(0, "Failed listening on %s:%d, see log for details", config.ListenIP, config.Port)
 		errorLog.Fatal(err.Error())
 	}
 	server = new(GochanServer)
@@ -182,7 +182,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 	fileOnly := request.FormValue("fileonly") == "on"
 	deleteBtn := request.PostFormValue("delete_btn")
 	reportBtn := request.PostFormValue("report_btn")
-	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" {
+	editBtn := request.PostFormValue("edit_btn")
+
+	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" {
 		http.Redirect(writer, request, path.Join(config.SiteWebfolder, "/"), http.StatusFound)
 		return
 	}
@@ -192,6 +194,19 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			postsArr = append(postsArr, key[5:])
 		}
 	}
+
+	if editBtn == "Edit" {
+		if len(postsArr) == 0 {
+			serveErrorPage(writer, "You need to select one post to edit.")
+			return
+		} else if len(postsArr) > 1 {
+			serveErrorPage(writer, "You can only edit one post at a time.")
+			return
+		} else {
+
+		}
+	}
+
 	if deleteBtn == "Delete" {
 		// Delete a post or thread
 		passwordMD5 := md5Sum(password)
@@ -213,17 +228,13 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			post.ID, _ = strconv.Atoi(checkedPostID)
 
 			stmt, err := db.Prepare("SELECT `parentID`, `filename`, `password` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `deleted_timestamp` = ?")
-			defer func() {
-				if stmt != nil {
-					stmt.Close()
-				}
-			}()
-
 			if err != nil {
 				errorLog.Print(err.Error())
 				println(1, err.Error())
 				serveErrorPage(writer, err.Error())
 			}
+			defer closeStatement(stmt)
+
 			err = stmt.QueryRow(&post.ID, nil_timestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
 
 			if err == sql.ErrNoRows {
@@ -279,7 +290,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				// delete the post
 				_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `id` = " + strconv.Itoa(post.ID))
 				if post.ParentID == 0 {
-					err = os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
+					os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
 					_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "") // getBoardArr("`id` = " + strconv.Itoa(boardid))
 					buildBoardPages(&_board[0])

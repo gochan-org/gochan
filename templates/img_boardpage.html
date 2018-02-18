@@ -1,36 +1,6 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="UTF-8">
-	<title>/{{$board.Dir}}/ - {{$board.Title}}</title>
-	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript">
-		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
-		var webroot = "{{$config.SiteWebfolder}}";
-		var thread_type = "board";
-	</script>
-	<script type="text/javascript" src="/javascript/gochan.js"></script>
-	<script type="text/javascript" src="/javascript/manage.js"></script>
-	<link rel="stylesheet" href="/css/global/img.css" />
-{{range $i, $style := $config.Styles_img}}
-	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/img.css" />{{end}}
-	<link rel="shortcut icon" href="/favicon.png" />
-</head>
-<body>
-	<div id="topbar">
-		{{range $i, $boardlink := $board_arr}}
-			<a href="/{{$boardlink.Dir}}/" class="topbar-item">/{{$boardlink.Dir}}/</a>
-{{end}}
-	</div>
-	<div id="top-pane">
-		<span id="board-title">{{$board.Title}}</span><br />
-		<span id="board-subtitle">{{$board.Subtitle}}</span>
-	</div>
-	<hr />
 	<div id="right-sidelinks">
 		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/catalog.html">Board catalog</a><br />
 	</div>
-
 	<div id="postbox-area">
 		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			<input type="hidden" name="threadid" value="0" />
@@ -81,16 +51,15 @@
 								{{end}}{{end}}
 							<div class="post-text">{{$reply.MessageHTML}}</div>
 						</div>
-					</div>
-					{{end}}
+					</div>{{end}}
 				</div>
-				<hr />
-			{{end}}
+				<hr />{{end}}
 			<div id="right-bottom-content">
 				<div id="report-delbox">
 					<input type="hidden" name="board" value="{{$board.Dir}}" />
 					<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
-					Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" value="Report" />
+					Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" name="report_btn" value="Report" /><br />
+					Edit post <input type="submit" name="edit_btn" value="Edit" />
 				</div>
 			</div>
 		</form>
@@ -118,9 +87,3 @@
 			</span>
 		</div>
 	</div>
-	<div id="footer">
-		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />
-		Powered by <a href="http://github.com/eggbertx/gochan/">Gochan {{$config.Version}}</a><br />
-	</div>
-</body>
-</html>

@@ -1,40 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="UTF-8">
-	{{if stringNeq $op.Subject ""}}
-		<title>/{{$board.Dir}}/ - {{truncateString $op.Subject 20 true}}</title>
-	{{else}}{{if stringNeq $op.MessageHTML ""}}
-		<title>/{{$board.Dir}}/ - {{truncateString $op.MessageText 20 true}}</title>
-	{{end}}{{end}}
-	<title>/{{$board.Dir}} - {{$board.Title}}</title>
-	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript">
-		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
-		var webroot = "{{$config.SiteWebfolder}}";
-		var thread_type = "thread";
-		function changePage(sel) {
-			window.location = webroot+"test/res/"+{{$op.ID}}+"p"+sel.value+".html";
-		}
-	</script>
-	<script type="text/javascript" src="/javascript/gochan.js"></script>
-	<script type="text/javascript" src="/javascript/manage.js"></script>
-	<link rel="stylesheet" href="/css/global/img.css" />
-{{range $i, $style := $config.Styles_img}}
-	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/img.css" />{{end}}
-	<link rel="shortcut icon" href="/favicon.png" />
-</head>
-<body>
-	<div id="topbar">
-		{{range $i, $board := $board_arr}}
-			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
-{{end}}
-	</div>
-	<div id="top-pane">
-		<span id="board-title">{{$board.Title}}</span><br />
-		<span id="board-subtitle">{{$board.Subtitle}}</span>
-	</div>
-	<hr />
 	<div id="threadlinks-top">
 		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/board.html" >Return</a><br />
 		<select id="changepage" onchange="changePage(this)">
@@ -50,7 +13,6 @@
 	<div id="right-sidelinks">
 		<a href="{{$config.SiteWebfolder}}{{$board.Dir}}/catalog.html">Board catalog</a><br />
 	</div>
-
 	<div id="postbox-area">
 		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			<input type="hidden" name="threadid" value="{{$op.ID}}" />
@@ -77,8 +39,7 @@
 						<a class="upload-container" href="{{$config.SiteWebfolder}}{{$board.Dir}}/src/{{$op.Filename}}"><img src="{{$config.SiteWebfolder}}{{$board.Dir}}/thumb/{{imageToThumbnailPath $op.Filename}}" width="{{$op.ThumbW}}" height="{{$op.ThumbH}}" class="upload" /></a>
 					{{else}}
 						<div class="file-deleted-box" style="text-align:center;">File removed</div>
-					{{end}}
-				{{end}}
+					{{end}}{{end}}
 				<input type="checkbox" id="check{{$op.ID}}" name="check{{$op.ID}}" /><label class="post-info" for="check{{$op.ID}}"> <span class="subject">{{$op.Subject}}</span> <span class="postername">{{if stringNeq $op.Email ""}}<a href="mailto:{{$op.Email}}">{{end}}{{if stringNeq $op.Name ""}}{{$op.Name}}{{else}}{{if stringEq $op.Tripcode ""}}{{$board.Anonymous}}{{end}}{{end}}{{if stringNeq $op.Email ""}}</a>{{end}}</span>{{if stringNeq $op.Tripcode ""}}<span class="tripcode">!{{$op.Tripcode}}</span>{{end}} {{formatTimestamp $op.Timestamp}} </label><a href="/{{$board.Dir}}/res/{{$op.ID}}.html#{{$op.ID}}">No.</a> <a href="javascript:quote({{$op.ID}})" class="backlink-click">{{$op.ID}}</a> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 				<div class="post-text">{{$op.MessageHTML}}</div>
 			</div>
@@ -96,15 +57,15 @@
 							{{end}}{{end}}
 						<div class="post-text">{{$reply.MessageHTML}}</div>
 					</div>
-				</div>
-			{{end}}{{end}}
+				</div>{{end}}{{end}}
 		</div>
 		<hr />
 		<div id="right-bottom-content">
 			<div id="report-delbox">
 				<input type="hidden" name="board" value="{{$board.Dir}}" />
 				<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
-				Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" value="Report" />
+				Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" name="report_btn" value="Report" /><br />
+				Edit post <input type="submit" name="edit_btn" value="Edit" />
 			</div>
 		</div>
 	</form>
@@ -130,9 +91,3 @@
 		</span>
 	</div>
 	</div>
-	<div id="footer">
-		<a href="{{$config.SiteWebfolder}}">Home</a> | <a href="{{$config.SiteWebfolder}}#boards">Boards</a> | <a href="{{$config.SiteWebfolder}}#rules">Rules</a> | <a href="{{$config.SiteWebfolder}}#faq">FAQ</a><br />
-		Powered by <a href="http://github.com/eggbertx/gochan/">Gochan {{$config.Version}}</a><br />
-	</div>
-</body>
-</html>

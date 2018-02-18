@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	{{if stringNeq $op.Subject ""}}
+		<title>/{{$board.Dir}}/ - {{truncateString $op.Subject 20 true}}</title>
+	{{else}}{{if stringNeq $op.MessageHTML ""}}
+		<title>/{{$board.Dir}}/ - {{truncateString $op.MessageText 20 true}}</title>
+	{{end}}{{end}}
+	<title>/{{$board.Dir}} - {{$board.Title}}</title>
+	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
+	<script type="text/javascript">
+		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
+		var webroot = "{{$config.SiteWebfolder}}";
+		var thread_type = "thread";
+		function changePage(sel) {
+			window.location = webroot+"test/res/{{$op.ID}}p"+sel.value+".html";
+		}
+	</script>
+	<script type="text/javascript" src="/javascript/gochan.js"></script>
+	<script type="text/javascript" src="/javascript/manage.js"></script>
+	<link rel="stylesheet" href="/css/global/img.css" />
+{{range $i, $style := $config.Styles_img}}
+	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/img.css" />{{end}}
+	<link rel="shortcut icon" href="/favicon.png" />
+</head>
+<body>
+	<div id="topbar">
+		{{range $i, $board := $board_arr}}
+			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
+{{end}}
+	</div>
+	<div id="top-pane">
+		<span id="board-title">{{$board.Title}}</span><br />
+		<span id="board-subtitle">{{$board.Subtitle}}</span>
+	</div>
+	<hr />
