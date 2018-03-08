@@ -265,9 +265,7 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []int
 
 	rows, err := stmt.Query(parameterValues...)
 	if err != nil {
-		errortext := "Error in getPostArr: " + err.Error()
-		errorLog.Print(errortext)
-		println(1, errortext)
+		handleError(1, "Error in getPostArr: "+err.Error())
 		return
 	}
 	defer closeRows(rows)
@@ -385,10 +383,11 @@ func customError(v int, err error) (errored bool) {
 	return false
 }
 
-func handleError(verbosity int, text string) string {
-	printf(verbosity, text)
-	errorLog.Println(text)
-	return text
+func handleError(verbosity int, format string, a ...interface{}) string {
+	out := fmt.Sprintf(format, a...)
+	println(verbosity, out)
+	errorLog.Print(out)
+	return out
 }
 
 func humanReadableTime(t time.Time) string {
@@ -457,13 +456,11 @@ func reverse(arr []interface{}) (reversed []interface{}) {
 
 // sanitize/escape HTML strings in a post. This should be run immediately before
 // the post is inserted into the database
-func sanitizePost(post PostTable) PostTable {
-	sanitized := post
-	sanitized.Name = html.EscapeString(sanitized.Name)
-	sanitized.Email = html.EscapeString(sanitized.Email)
-	sanitized.Subject = html.EscapeString(sanitized.Subject)
-	sanitized.Password = html.EscapeString(sanitized.Password)
-	return sanitized
+func sanitizePost(post *PostTable) {
+	post.Name = html.EscapeString(post.Name)
+	post.Email = html.EscapeString(post.Email)
+	post.Subject = html.EscapeString(post.Subject)
+	post.Password = html.EscapeString(post.Password)
 }
 
 func searchStrings(item string, arr []string, permissive bool) int {

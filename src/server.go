@@ -229,9 +229,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 
 			stmt, err := db.Prepare("SELECT `parentID`, `filename`, `password` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `deleted_timestamp` = ?")
 			if err != nil {
-				errorLog.Print(err.Error())
-				println(1, err.Error())
-				serveErrorPage(writer, err.Error())
+				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
 			}
 			defer closeStatement(stmt)
 

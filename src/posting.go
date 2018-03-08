@@ -74,7 +74,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	var thread_pages [][]interface{}
 	var stickied_threads []interface{}
 	var nonstickied_threads []interface{}
-	var errortext string
 
 	defer func() {
 		// This function cleans up after we return. If there was an error, it prints on the log and the console.
@@ -93,17 +92,13 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		// Try creating the board's configured directory if it doesn't exist
 		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
 		if err != nil {
-			errortext = "Failed creating /" + board.Dir + "/: " + err.Error()
-			html += errortext + "<br />\n"
-			errorLog.Println(errortext)
-			println(1, errortext)
+			html += handleError(1, "Failed creating /"+board.Dir+"/: "+err.Error())
+			return
 		}
 	} else if !results.IsDir() {
 		// If the file exists, but is not a folder, notify the user
-		errortext = "Error: /" + board.Dir + "/ exists, but is not a folder."
-		html += errortext + "<br />\n"
-		errorLog.Println(errortext)
-		println(1, errortext)
+		html += handleError(1, "Error: /"+board.Dir+"/ exists, but is not a folder.")
+		return
 	}
 
 	// Get all top level posts for the board.
@@ -113,7 +108,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		"deleted_timestamp": nil_timestamp,
 	}, " ORDER BY `bumped` DESC")
 	if err != nil {
-		html += err.Error() + "<br />"
+		html += handleError(1, err.Error()) + "<br />"
 		op_posts = nil //make([]interface{}, 0)
 		return
 	}
@@ -209,10 +204,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		// Open board.html for writing to the first page.
 		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			errortext = "Failed opening /" + board.Dir + "/board.html: " + err.Error()
-			html += errortext + "<br />\n"
-			errorLog.Println(errortext)
-			println(1, errortext)
+			html += handleError(1, "Failed opening /"+board.Dir+"/board.html: "+err.Error()) + "<br />"
 			return
 		}
 
@@ -227,10 +219,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			&Wrapper{IName: "op", Data: []interface{}{PostTable{}}},
 			&Wrapper{IName: "board", Data: []interface{}{board}},
 		); err != nil {
-			errortext = fmt.Sprintf("Failed building /%s/res/%d.html: %s", board.Dir, 0, err.Error())
-			html += errortext + "<br />\n"
-			println(1, errortext)
-			errorLog.Print(errortext)
+			html += handleError(1, fmt.Sprintf("Failed building /%s/res/%d.html: %s", board.Dir, 0, err.Error())) + "<br />"
 			return
 		}
 
@@ -240,18 +229,12 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			&Wrapper{IName: "threads", Data: threads},
 			&Wrapper{IName: "boardinfo", Data: boardinfo_i},
 		); err != nil {
-			errortext = "Failed building /" + board.Dir + "/: " + err.Error()
-			html += errortext + "<br />\n"
-			errorLog.Print(errortext)
-			println(1, errortext)
+			html += handleError(1, "Failed building /"+board.Dir+"/: "+err.Error()) + "<br />"
 			return
 		}
 
 		if err = renderTemplate(global_footer_tmpl, "global_footer", board_page_file); err != nil {
-			errortext = "Failed building /" + board.Dir + "/: " + err.Error()
-			html += errortext + "<br />\n"
-			errorLog.Print(errortext)
-			println(1, errortext)
+			html += handleError(1, "Failed building /"+board.Dir+"/: "+err.Error()) + "<br />"
 			return
 		}
 
@@ -269,10 +252,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 
 		catalog_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			errortext = "Failed opening /" + board.Dir + "/catalog.json: " + err.Error()
-			html += errortext + "<br />\n"
-			println(1, errortext)
-			errorLog.Print(errortext)
+			html += handleError(1, "Failed opening /"+board.Dir+"/catalog.json: "+err.Error())
 			return
 		}
 		defer closeFile(catalog_json_file)
@@ -285,18 +265,17 @@ func buildBoardPages(board *BoardsTable) (html string) {
 
 			// Write to board.html for the first page.
 			var current_page_filepath string
+			var pageFilename string
 			if board.CurrentPage == 0 {
-				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, "board.html")
+				pageFilename = "board.html"
 			} else {
-				current_page_filepath = path.Join(config.DocumentRoot, board.Dir, strconv.Itoa(page_num)+".html")
+				pageFilename = strconv.Itoa(page_num) + ".html"
 			}
 
+			current_page_filepath = path.Join(config.DocumentRoot, board.Dir, pageFilename)
 			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 			if err != nil {
-				errortext = "Failed opening board page: " + err.Error()
-				html += errortext + "<br />\n"
-				errorLog.Println(errortext)
-				println(1, errortext)
+				html += handleError(1, "Failed opening board page: "+err.Error()) + "<br />"
 				continue
 			}
 
@@ -310,10 +289,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				&Wrapper{IName: "op", Data: []interface{}{PostTable{}}},
 				&Wrapper{IName: "board", Data: []interface{}{board}},
 			); err != nil {
-				errortext = fmt.Sprintf("Failed building /%s/res/%d.html: %s", board.Dir, 0, err.Error())
-				html += errortext + "<br />\n"
-				println(1, errortext)
-				errorLog.Print(errortext)
+				html += handleError(1, "Failed building /"+board.Dir+"/ header: "+err.Error()) + "<br />"
 				return
 			}
 
@@ -323,22 +299,15 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				&Wrapper{IName: "threads", Data: page_threads},
 				&Wrapper{IName: "boardinfo", Data: boardinfo_i},
 			); err != nil {
-				errortext = "Failed building /" + board.Dir + "/: " + err.Error()
-				html += errortext + "<br />\n"
-				errorLog.Print(errortext)
-				println(1, errortext)
+				html += handleError(1, "Failed building /"+board.Dir+"/ boardpage: "+err.Error()) + "<br />"
 				return
 			}
 
 			if err = renderTemplate(global_footer_tmpl, "global_footer", current_page_file); err != nil {
-				errortext = "Failed building /" + board.Dir + "/: " + err.Error()
-				html += errortext + "<br />\n"
-				errorLog.Print(errortext)
-				println(1, errortext)
+				html += handleError(1, "Failed building /"+board.Dir+"/ footer: "+err.Error())
 				return
 			}
 
-			// Clean up page's file
 			current_page_file.Close()
 
 			// Collect up threads for this page.
@@ -374,18 +343,12 @@ func buildBoardPages(board *BoardsTable) (html string) {
 
 		catalog_json, err := json.Marshal(pages_obj)
 		if err != nil {
-			errortext = "Failed to marshal to JSON: " + err.Error()
-			errorLog.Println(errortext)
-			println(1, errortext)
-			html += errortext + "<br />\n"
+			html += handleError(1, "Failed to marshal to JSON: "+err.Error()) + "<br />"
 			return
 		}
 
 		if _, err = catalog_json_file.Write(catalog_json); err != nil {
-			errortext = "Failed writing /" + board.Dir + "/catalog.json: " + err.Error()
-			errorLog.Println(errortext)
-			println(1, errortext)
-			html += errortext + "<br />\n"
+			html += handleError(1, "Failed writing /"+board.Dir+"/catalog.json: "+err.Error()) + "<br />"
 			return
 		}
 		html += "/" + board.Dir + "/ built successfully.\n"
@@ -399,14 +362,13 @@ func buildThreads(all bool, boardid, threadid int) (html string) {
 	// TODO: detect which page will be built and only build that one and the board page
 	// if all is set to true, ignore which, otherwise, which = build only specified boardid
 	if !all {
-		_thread, _ := getPostArr(map[string]interface{}{
+		threads, _ := getPostArr(map[string]interface{}{
 			"boardid":           boardid,
 			"id":                threadid,
 			"parentid":          0,
 			"deleted_timestamp": nil_timestamp,
 		}, "")
-		//thread := _thread[0].(PostTable)
-		thread := _thread[0]
+		thread := threads[0]
 		thread_struct := thread.(PostTable)
 		html += buildThreadPages(&thread_struct) + "<br />\n"
 		return
@@ -433,23 +395,16 @@ func buildThreadPages(op *PostTable) (html string) {
 	var anonymous string
 	var replies []interface{}
 	var current_page_file *os.File
-	var errortext string
 
 	stmt, err := db.Prepare("SELECT `dir`,`anonymous` FROM `" + config.DBprefix + "boards` WHERE `id` = ?")
 	if err != nil {
 		// possibly a syntax error? This normally shouldn't happen so this might be removed
-		errortext = err.Error()
-		html += errortext + "<br />\n"
-		errorLog.Println(errortext)
-		println(1, errortext)
+		html += handleError(1, err.Error())
 		return
 	}
 
 	if err = stmt.QueryRow(op.BoardID).Scan(&boardDir, &anonymous); err != nil {
-		errortext = "Failed getting board directory and board's anonymous setting from post: " + err.Error()
-		html += errortext + "<br />\n"
-		errorLog.Println(errortext)
-		println(1, errortext)
+		html += handleError(1, "Failed getting board directory and board's anonymous setting from post: "+err.Error())
 		return
 	}
 
@@ -459,10 +414,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		"deleted_timestamp": nil_timestamp,
 	}, "ORDER BY `ID` ASC")
 	if err != nil {
-		errortext = "Error building thread " + strconv.Itoa(op.ID) + ":" + err.Error()
-		html += errortext
-		errorLog.Println(errortext)
-		println(1, errortext)
+		html += handleError(1, "Error building thread "+strconv.Itoa(op.ID)+":"+err.Error())
 		return
 	}
 	os.Remove(path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+".html"))
@@ -484,10 +436,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	current_page_filepath := path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+".html")
 	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		errortext = "Failed opening " + current_page_filepath + ": " + err.Error()
-		html += errortext + "<br />\n"
-		println(1, errortext)
-		errorLog.Println(errortext)
+		html += handleError(1, "Failed opening "+current_page_filepath+": "+err.Error())
 		return
 	}
 	// render main page
@@ -496,10 +445,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		&Wrapper{IName: "sections_w", Data: all_sections},
 		&Wrapper{IName: "posts_w", Data: append([]interface{}{op}, replies...)},
 	); err != nil {
-		errortext = fmt.Sprintf("Failed building /%s/res/%d.html: %s", boardDir, op.ID, err.Error())
-		html += errortext + "<br />\n"
-		println(1, errortext)
-		errorLog.Print(errortext)
+		html += handleError(1, "Failed building /"+boardDir+"/res/"+strconv.Itoa(op.ID)+" header: "+err.Error()) + "<br />\n"
 		return
 	}
 
@@ -508,28 +454,19 @@ func buildThreadPages(op *PostTable) (html string) {
 		&Wrapper{IName: "sections_w", Data: all_sections},
 		&Wrapper{IName: "posts_w", Data: append([]interface{}{op}, replies...)},
 	); err != nil {
-		errortext = fmt.Sprintf("Failed building /%s/res/%d.html: %s", boardDir, op.ID, err.Error())
-		html += errortext + "<br />\n"
-		println(1, errortext)
-		errorLog.Print(errortext)
+		html += handleError(1, "Failed building /%s/res/%d threadpage: ", boardDir, op.ID, err.Error()) + "<br />\n"
 		return
 	}
 
 	if err = renderTemplate(global_footer_tmpl, "global_footer", current_page_file); err != nil {
-		errortext = fmt.Sprintf("Failed building /%s/res/%d.html: %s", boardDir, op.ID, err.Error())
-		html += errortext + "<br />\n"
-		println(1, errortext)
-		errorLog.Print(errortext)
+		html += handleError(1, "Failed building /%s/res/%d.html: %s", boardDir, op.ID, err.Error())
 		return
 	}
 
 	// Put together the thread JSON
 	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, boardDir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		errortext = fmt.Sprintf("Failed opening /%s/res/%d.json: %s", boardDir, op.ID, err.Error())
-		html += errortext + "<br />\n"
-		println(1, errortext)
-		errorLog.Print(errortext)
+		html += handleError(1, "Failed opening /%s/res/%d.json: %s", boardDir, op.ID, err.Error())
 		return
 	}
 	defer closeFile(threadJSONFile)
@@ -539,7 +476,6 @@ func buildThreadPages(op *PostTable) (html string) {
 
 	// Handle the OP, of type *PostTable
 	op_post_obj := makePostJSON(*op, anonymous)
-
 	thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, op_post_obj)
 
 	// Iterate through each reply, which are of type PostTable
@@ -551,18 +487,12 @@ func buildThreadPages(op *PostTable) (html string) {
 	threadJSON, err := json.Marshal(thread_json_wrapper)
 
 	if err != nil {
-		errortext = "Failed to marshal to JSON: " + err.Error()
-		errorLog.Println(errortext)
-		println(1, errortext)
-		html += errortext + "<br />\n"
+		html += handleError(1, "Failed to marshal to JSON: %s", err.Error()) + "<br />"
 		return
 	}
 
 	if _, err = threadJSONFile.Write(threadJSON); err != nil {
-		errortext = fmt.Sprintf("Failed writing /%s/res/%d.json: %s", boardDir, op.ID, err.Error())
-		errorLog.Println(errortext)
-		println(1, errortext)
-		html += errortext + "<br />\n"
+		html += handleError(1, "Failed writing /%s/res/%d.json: %s", boardDir, op.ID, err.Error()) + "<br />"
 		return
 	}
 
@@ -593,12 +523,12 @@ func buildThreadPages(op *PostTable) (html string) {
 			&Wrapper{IName: "sections_w", Data: all_sections},
 			&Wrapper{IName: "posts_w", Data: page_posts},
 		); err != nil {
-			html += handleError(1, fmt.Sprintf("Failed building /%s/%d: %s", boardDir, op.ID, err.Error()))
+			html += handleError(1, "Failed building /%s/%d: %s", boardDir, op.ID, err.Error())
 			return
 		}
 
 		if err = renderTemplate(global_footer_tmpl, "global_footer", current_page_file); err != nil {
-			html += handleError(1, fmt.Sprintf("Failed building /%s/%d: %s", boardDir, op.ID, err.Error()))
+			html += handleError(1, "Failed building /%s/%d: %s", boardDir, op.ID, err.Error())
 			return
 		}
 
@@ -1198,7 +1128,6 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 							// If this is a new thread, generate thumbnail and catalog thumbnail
 							thumbnail = createImageThumbnail(img, "op")
 							catalogThumbnail = createImageThumbnail(img, "catalog")
-							println(1, catalogThumbPath)
 							if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
 								serveErrorPage(w, handleError(1, "Couldn't generate catalog thumbnail: "+err.Error()))
 								return
@@ -1254,7 +1183,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		return
 	}
 
-	post = sanitizePost(post)
+	sanitizePost(&post)
 	result, err := insertPost(post, emailCommand != "sage")
 	if err != nil {
 		serveErrorPage(w, handleError(1, err.Error()))
