@@ -7,7 +7,7 @@
 	{{else}}{{if stringNeq $op.MessageHTML ""}}
 		<title>/{{$board.Dir}}/ - {{truncateString $op.MessageText 20 true}}</title>
 	{{end}}{{end}}
-	<title>/{{$board.Dir}} - {{$board.Title}}</title>
+	<title>/{{$board.Dir}}/ - {{$board.Title}}</title>
 	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
@@ -30,8 +30,8 @@
 			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
 {{end}}
 	</div>
-	<div id="top-pane">
-		<span id="board-title">{{$board.Title}}</span><br />
-		<span id="board-subtitle">{{$board.Subtitle}}</span>
-	</div>
+	<header>
+		<h1>/{{$board.Dir}}/ - {{$board.Title}}</h1>
+		<div id="board-subtitle">{{$board.Subtitle}}</div>
+	</header>
 	<hr />

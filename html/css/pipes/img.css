@@ -53,7 +53,7 @@ body {
 ul.staffmenu li:hover {
   background: #404040; }
 
-#board-title {
+header h1 {
   color: #e1b400; }
 
 img.thumbnail {
