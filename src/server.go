@@ -179,6 +179,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 	action := request.FormValue("action")
 	password := request.FormValue("password")
 	board := request.FormValue("board")
+	boardid := request.FormValue("boardid")
 	fileOnly := request.FormValue("fileonly") == "on"
 	deleteBtn := request.PostFormValue("delete_btn")
 	reportBtn := request.PostFormValue("report_btn")
@@ -203,7 +204,33 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			serveErrorPage(writer, "You can only edit one post at a time.")
 			return
 		} else {
-
+			passwordMD5 := md5Sum(password)
+			rank := getStaffRank()
+			if passwordMD5 == "" && rank == 0 {
+				serveErrorPage(writer, "Password required for post editing")
+				return
+			}
+			var post PostTable
+			post.ID, _ = strconv.Atoi(postsArr[0])
+			post.BoardID, _ = strconv.Atoi(boardid)
+			stmt, err := db.Prepare("SELECT `parentid`,` password`,`message_raw` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `deleted_timestamp` = ?")
+			if err != nil {
+				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
+			}
+			defer closeStatement(stmt)
+			/* var post_edit_buffer bytes.Buffer
+			if err = renderTemplate(post_edit_tmpl, "post_edit", post_edit_buffer,
+				&Wrapper{IName: "boards_", Data: all_boards},
+				&Wrapper{IName: "sections_w", Data: all_sections},
+				&Wrapper{IName: "posts_w", Data: []interface{}{
+					PostTable{BoardID: board.ID},
+				}},
+				&Wrapper{IName: "op", Data: []interface{}{PostTable{}}},
+				&Wrapper{IName: "board", Data: []interface{}{board}},
+			); err != nil {
+				html += handleError(1, fmt.Sprintf("Failed building /%s/res/%d.html: %s", board.Dir, 0, err.Error())) + "<br />"
+				return
+			} */
 		}
 	}
 
@@ -218,23 +245,19 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 		}
 
 		for _, checkedPostID := range postsArr {
-			// var parentID int
-			// var fileName string
 			var fileType string
 			var thumbType string
-			// var passwordChecksum string
-			// var boardid int
 			var post PostTable
 			post.ID, _ = strconv.Atoi(checkedPostID)
+			post.BoardID, _ = strconv.Atoi(boardid)
 
-			stmt, err := db.Prepare("SELECT `parentID`, `filename`, `password` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `deleted_timestamp` = ?")
+			stmt, err := db.Prepare("SELECT `parentid`, `filename`, `password` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?")
 			if err != nil {
 				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
 			}
 			defer closeStatement(stmt)
 
-			err = stmt.QueryRow(&post.ID, nil_timestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
-
+			err = stmt.QueryRow(&post.ID, &post.BoardID, nil_timestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
 			if err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())
@@ -279,7 +302,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
 				buildBoardPages(&_board[0])
 				_post, _ := getPostArr(map[string]interface{}{"id": post.ID, "boardid": post.BoardID}, "")
-				postBoard := _post[0].(PostTable)
+				postBoard := _post[0]
+				// postBoard := _post[0].(PostTable)
 				buildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())

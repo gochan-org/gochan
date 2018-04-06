@@ -2,21 +2,21 @@
 <form action="/manage?action=config" method="POST">
 <table>
 	<tr><th>Name</th><th>Value</th><th>Description</th></tr>
-	<tr><th>DocumentRoot</th><td><input type="text" value="{{$config.DocumentRoot}}"/></td></tr>
-	<tr><th>TemplateDir</th><td><input type="text" value="{{$config.TemplateDir}}" /></td></tr>
-	<tr><th>LogDir</th><td><input type="text" value="{{$config.LogDir}}" /></td></tr>
+	<tr><th>DocumentRoot</th><td><input type="text" value="{{.config.DocumentRoot}}"/></td></tr>
+	<tr><th>TemplateDir</th><td><input type="text" value="{{.config.TemplateDir}}" /></td></tr>
+	<tr><th>LogDir</th><td><input type="text" value="{{.config.LogDir}}" /></td></tr>
 
-	<tr><th>Lockdown</th><td><input type="checkbox" {{if $config.Lockdown}}checked{{end}}/></td></tr>
-	<tr><th>LockdownMessage</th><td><input type="text" value="{{$config.LockdownMessage}}" /></td></tr>
+	<tr><th>Lockdown</th><td><input type="checkbox" {{if .config.Lockdown}}checked{{end}}/></td></tr>
+	<tr><th>LockdownMessage</th><td><input type="text" value="{{.config.LockdownMessage}}" /></td></tr>
 	
 	<tr><th>UseSillytags</th><td><input type="checkbox" /></td></tr>
-	<tr><th>Modboard</th><td><input type="text" value="{{$config.Modboard}}"></td></tr>
+	<tr><th>Modboard</th><td><input type="text" value="{{.config.Modboard}}"></td></tr>
 
-	<tr><th>SiteName</th><td><input type="text" value="{{$config.SiteName}}" /></td></tr>
-	<tr><th>SiteSlogan</th><td><input type="text" value="{{$config.SiteSlogan}}" /></td></tr>
-	<tr><th>SiteHeaderURL</th><td><input type="text" value="{{$config.SiteHeaderURL}}" /></td></tr>
-	{{/*<tr><th>SiteWebfolder</th><td><input type="text" value="{{$config.SiteWebFolder}}" /></td></tr>*/}}
-	<tr><th>DomainRegex</th><td><input type="text" value="{{$config.DomainRegex}}" /></td><td>Don't touch this unless you know what you're doing! This could fuck your shit up<br />Default: (https|http)://(.*)/(.*)</td></tr>
+	<tr><th>SiteName</th><td><input type="text" value="{{.config.SiteName}}" /></td></tr>
+	<tr><th>SiteSlogan</th><td><input type="text" value="{{.config.SiteSlogan}}" /></td></tr>
+	<tr><th>SiteHeaderURL</th><td><input type="text" value="{{.config.SiteHeaderURL}}" /></td></tr>
+	{{/*<tr><th>SiteWebfolder</th><td><input type="text" value="{{.config.SiteWebFolder}}" /></td></tr>*/}}
+	<tr><th>DomainRegex</th><td><input type="text" value="{{.config.DomainRegex}}" /></td><td>Don't touch this unless you know what you're doing! This could fuck your shit up<br />Default: (https|http)://(.*)/(.*)</td></tr>
 </table>
 <input type="submit" />
 </form>

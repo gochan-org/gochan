@@ -95,9 +95,9 @@ func closeStatement(stmt *sql.Stmt) {
 }
 
 /*
-Deletes files in a folder (root) that match a given regular expression.
-Returns the number of files that were deleted, and any error encountered.
-*/
+ * Deletes files in a folder (root) that match a given regular expression.
+ * Returns the number of files that were deleted, and any error encountered.
+ */
 func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 	files, err := ioutil.ReadDir(root)
 	if err != nil {
@@ -234,8 +234,33 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	return
 }
 
+func getBoardFromID(id int) (*BoardsTable, error) {
+	board := new(BoardsTable)
+	stmt, err := db.Prepare("SELECT `order`,`dir`,`type`,`upload_type`,`title`,`subtitle`,`description`,`section`," +
+		"`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`,`anonymous`,`forced_anon`,`max_age`," +
+		"`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,`redirect_to_thread`,`require_file`," +
+		"`enable_catalog` FROM `" + config.DBprefix + "boards` WHERE `id` = ?")
+	if err != nil {
+		return nil, err
+	}
+	defer closeStatement(stmt)
+
+	board.ID = id
+	if err = stmt.QueryRow(id).Scan(
+		&board.Order, &board.Dir, &board.Type, &board.UploadType, &board.Title,
+		&board.Subtitle, &board.Description, &board.Section, &board.MaxImageSize,
+		&board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn,
+		&board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
+		&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
+		&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
+	); err != nil {
+		return nil, err
+	}
+	return board, nil
+}
+
 // if parameterList is nil, ignore it and treat extra like a whole SQL query
-func getPostArr(parameterList map[string]interface{}, extra string) (posts []interface{}, err error) {
+func getPostArr(parameterList map[string]interface{}, extra string) (posts []PostTable, err error) {
 	queryString := "SELECT * FROM `" + config.DBprefix + "posts` "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
@@ -353,7 +378,7 @@ func getFileExtension(filename string) (extension string) {
 	return
 }
 
-func getFormattedFilesize(size float32) string {
+func getFormattedFilesize(size int) string {
 	if size < 1000 {
 		return fmt.Sprintf("%fB", size)
 	} else if size <= 100000 {

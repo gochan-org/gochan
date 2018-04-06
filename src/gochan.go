@@ -1,16 +1,17 @@
 package main
 
 import (
+	"os"
 	"strconv"
 )
 
-// set in build.sh via -ldflags
+// set in Makefile via -ldflags
 var version string
 
 // verbose = 0 for no debugging info. Critical errors and general output only
 // verbose = 1 for non-critical warnings and important info
 // verbose = 2 for all debugging/benchmarks/warnings
-// set in build.sh via -ldflags
+// set in Makefile via -ldflags
 var verbosity_str string
 var buildtime_str string // set in build.sh, format: YRMMDD.HHMM
 
@@ -24,7 +25,11 @@ func main() {
 	connectToSQLServer()
 
 	println(0, "Loading and parsing templates...")
-	initTemplates()
+	if err := initTemplates(); err != nil {
+		println(0, err.Error())
+		os.Exit(2)
+	}
+
 	println(0, "Initializing server...")
 	if db != nil {
 		db.Exec("USE `" + config.DBname + "`;")

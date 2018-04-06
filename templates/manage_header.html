@@ -1,7 +1,7 @@
 	<title>Gochan Manage page</title>
 	<link rel="stylesheet" href="/css/global/manage.css" />
 {{range $i, $style := .Styles_img}}
-	<link rel="{{if isStyleNotDefault_img $style}}alternate {{end}}stylesheet" href="/css/{{$style}}/manage.css" />{{end}}
+	<link rel="{{if not (isStyleDefault_img $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/manage.css" />{{end}}
 	<link rel="shortcut icon" href="/favicon.png" />
 	<script type="text/javascript">
 		var styles = [{{range $i, $style := .Styles_img}}{{if gt $i  0}}, {{end}}"{{$style}}"{{end}}];

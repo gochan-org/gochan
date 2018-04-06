@@ -3,20 +3,12 @@ package main
 import (
 	"fmt"
 	"html"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"text/template"
-	"time"
 )
-
-type FooterData struct {
-	Version       string
-	GeneratedTime float32
-}
 
 var funcMap = template.FuncMap{
 	"add": func(a, b int) int {
@@ -40,26 +32,32 @@ var funcMap = template.FuncMap{
 	"gt": func(a int, b int) bool {
 		return a > b
 	},
-	"gte": func(a int, b int) bool {
+	"ge": func(a int, b int) bool {
 		return a >= b
 	},
 	"lt": func(a int, b int) bool {
 		return a < b
 	},
-	"lte": func(a int, b int) bool {
+	"le": func(a int, b int) bool {
 		return a <= b
 	},
-	"makeLoop": func(n int) []struct{} {
-		return make([]struct{}, n)
+	"makeLoop": func(n int, offset int) []int {
+		loopArr := make([]int, n)
+		for i := range loopArr {
+			loopArr[i] = i + offset
+		}
+		return loopArr
+	},
+	"printf": func(v int, format string, a ...interface{}) string {
+		printf(v, format, a...)
+		return ""
+	},
+	"println": func(v int, i ...interface{}) string {
+		println(v, i...)
+		return ""
 	},
 	"stringAppend": func(a, b string) string {
 		return a + b
-	},
-	"stringEq": func(a, b string) bool {
-		return a == b
-	},
-	"stringNeq": func(a, b string) bool {
-		return a != b
 	},
 	"truncateMessage": func(msg string, limit int, max_lines int) string {
 		var truncated bool
@@ -100,36 +98,17 @@ var funcMap = template.FuncMap{
 	"escapeString": func(a string) string {
 		return html.EscapeString(a)
 	},
+	"isNil": func(i interface{}) bool {
+		return i == nil
+	},
 	"intEq": func(a, b int) bool {
 		return a == b
 	},
-	"intToString": func(a int) string {
-		return strconv.Itoa(a)
-	},
+	"intToString": strconv.Itoa,
 	"isStyleDefault_img": func(style string) bool {
 		return style == config.DefaultStyle_img
 	},
-	"isStyleNotDefault_img": func(style string) bool {
-		return style != config.DefaultStyle_img
-	},
-	"getElement": func(in []interface{}, element int) interface{} {
-		if len(in) > element {
-			return in[element]
-		}
-		return nil
-	},
-	"getInterface": func(in []interface{}, index int) interface{} {
-		var nope interface{}
-		if len(in) == 0 {
-			return nope
-		} else if len(in) < index+1 {
-			return nope
-		}
-		return in[index]
-	},
-	"formatTimestamp": func(timestamp time.Time) string {
-		return humanReadableTime(timestamp)
-	},
+	"formatTimestamp": humanReadableTime,
 	"getThreadID": func(post_i interface{}) (thread int) {
 		post := post_i.(PostTable)
 		if post.ParentID == 0 {
@@ -196,121 +175,82 @@ var funcMap = template.FuncMap{
 }
 
 var (
-	footer_data = FooterData{version, float32(0)}
-
 	banpage_tmpl        *template.Template
-	global_footer_tmpl  *template.Template
 	global_header_tmpl  *template.Template
-	img_header_tmpl     *template.Template
 	img_boardpage_tmpl  *template.Template
 	img_threadpage_tmpl *template.Template
 	img_post_form_tmpl  *template.Template
+	post_edit_tmpl      *template.Template
 	manage_header_tmpl  *template.Template
 	manage_boards_tmpl  *template.Template
 	manage_config_tmpl  *template.Template
 	front_page_tmpl     *template.Template
 )
 
-func loadTemplate(name string, filename string, before string) (*template.Template, error) {
-	tmplBytes, err := ioutil.ReadFile(config.TemplateDir + "/" + filename)
-	if err != nil {
-		return nil, err
+func loadTemplate(files ...string) (*template.Template, error) {
+	if len(files) == 0 {
+		return nil, fmt.Errorf("ERROR: no files named in call to loadTemplate")
 	}
-	tmplStr := before + string(tmplBytes)
-	return template.New(name).Funcs(funcMap).Parse(tmplStr)
+	var templates []string
+	for i, file := range files {
+		templates = append(templates, file)
+		files[i] = config.TemplateDir + "/" + files[i]
+	}
+	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
 }
 
-func initTemplates() {
+func templateError(name string, err error) error {
+	return fmt.Errorf("Failed loading template \"" + config.TemplateDir + "/" + name + ": \"" + err.Error())
+}
+
+func initTemplates() error {
 	var err error
 	resetBoardSectionArrays()
-
-	banpage_tmpl, err = loadTemplate("banpage_tmpl", "banpage.html",
-		"{{$config := getInterface .Data 0}}"+
-			"{{$ban := getInterface .Data 1}}")
+	banpage_tmpl, err = loadTemplate("banpage.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/banpage.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("banpage.html", err)
 	}
 
-	global_footer_tmpl, err = loadTemplate("global_footer_tmpl", "global_footer.html", "{{$config := getInterface .Data 0}}")
+	global_header_tmpl, err = loadTemplate("global_header.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/global_footer.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("global_header.html", err)
 	}
 
-	global_header_tmpl, err = loadTemplate("global_header_tmpl", "global_header.html", "")
+	img_boardpage_tmpl, err = loadTemplate("img_boardpage.html", "img_header.html", "postbox.html", "global_footer.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/global_header.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("img_boardpage.html", err)
 	}
 
-	img_header_tmpl, err = loadTemplate("img_header_tmpl", "img_header.html",
-		"{{$config := getInterface .Data 0}}"+
-			"{{$board_arr := (getInterface .Data 1).Data}}"+
-			"{{$section_arr := (getInterface .Data 2).Data}}"+
-			"{{$post_arr := (getInterface .Data 3).Data}}"+
-			"{{$op := getElement $post_arr 0}}"+
-			"{{$board := getElement $board_arr (subtract $op.BoardID 1)}}")
+	img_threadpage_tmpl, err = loadTemplate("img_threadpage.html", "img_header.html", "postbox.html", "global_footer.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/img_header.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("img_threadpage.html", err)
 	}
 
-	img_boardpage_tmpl, err = loadTemplate("img_boardpage_tmpl", "img_boardpage.html",
-		"{{$config := getInterface .Data 0}}"+
-			"{{$board_arr := (getInterface .Data 1).Data}}"+
-			"{{$section_arr := (getInterface .Data 2).Data}}"+
-			"{{$thread_arr := (getInterface .Data 3).Data}}"+
-			"{{$board_info := (getInterface .Data 4).Data}}"+
-			"{{$board := getInterface $board_info 0}}")
+	/* post_edit_tmpl, err = loadTemplate("post_edit_tmpl", "post_edit.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/img_boardpage.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("img_threadpage.html", err)
+	} */
+
+	manage_header_tmpl, err = loadTemplate("manage_header.html")
+	if err != nil {
+		return templateError("manage_header.html", err)
 	}
 
-	img_threadpage_tmpl, err = loadTemplate("img_threadpage_tmpl", "img_threadpage.html",
-		"{{$config := getInterface .Data 0}}"+
-			"{{$board_arr := (getInterface .Data 1).Data}}"+
-			"{{$section_arr := (getInterface .Data 2).Data}}"+
-			"{{$post_arr := (getInterface .Data 3).Data}}"+
-			"{{$op := getElement $post_arr 0}}"+
-			"{{$board := getElement $board_arr (subtract $op.BoardID 1)}}")
+	manage_boards_tmpl, err = loadTemplate("manage_boards.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/img_threadpage.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("manage_boards.html", err)
 	}
 
-	manage_header_tmpl, err = loadTemplate("manage_header_tmpl", "manage_header.html", "")
+	manage_config_tmpl, err = loadTemplate("manage_config.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/manage_header.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("manage_config.html", err)
 	}
 
-	manage_boards_tmpl, err = loadTemplate("manage_boards_tmpl", "manage_boards.html",
-		"{{$config := getInterface .Data 0}}"+
-			"{{$board := getInterface (getInterface .Data 1).Data 0}}"+
-			"{{$section_arr := (getInterface .Data 2).Data}}")
+	front_page_tmpl, err = loadTemplate("front.html", "global_footer.html")
 	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/manage_boards.html: \""+err.Error())
-		os.Exit(2)
+		return templateError("front.html", err)
 	}
-
-	manage_config_tmpl, err = loadTemplate("manage_config_tmpl", "manage_config.html", "{{$config := getInterface .Data 0}}")
-	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/manage_config.html: \""+err.Error())
-		os.Exit(2)
-	}
-
-	front_page_tmpl, err = loadTemplate("front_page_tmpl", "front.html",
-		"{{$config := getInterface .Data 0}}"+
-			"{{$page_arr := getInterface .Data 1}}"+
-			"{{$board_arr := getInterface .Data 2}}"+
-			"{{$section_arr := getInterface .Data 3}}"+
-			"{{$recent_posts_arr := getInterface .Data 4}}")
-	if err != nil {
-		println(0, "Failed loading template \""+config.TemplateDir+"/front.html\": "+err.Error())
-		os.Exit(2)
-	}
+	return nil
 }
 
 func getStyleLinks(w http.ResponseWriter, stylesheet string) {
@@ -323,15 +263,4 @@ func getStyleLinks(w http.ResponseWriter, stylesheet string) {
 		println(0, err.Error())
 		os.Exit(2)
 	}
-}
-
-func renderTemplate(tmpl *template.Template, name string, output io.Writer, wrappers ...*Wrapper) error {
-	var interfaces []interface{}
-	interfaces = append(interfaces, config)
-
-	for _, wrapper := range wrappers {
-		interfaces = append(interfaces, wrapper)
-	}
-	wrapped := &Wrapper{IName: name, Data: interfaces}
-	return tmpl.Execute(output, wrapped)
 }

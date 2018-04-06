@@ -5,7 +5,7 @@
 	<tr><td>Directory</td><td><input type="text" name="dir" value="" /></td></tr>
 	<tr><td>Section</td><td><select name="section" selected="0">
 		<option value="none">Select section...</option>
-		{{range $_, $section := $section_arr}}
+		{{range $_, $section := .section_arr}}
 		<option value="{{$section.ID}}">{{$section.Name}}</option>{{end}}
 	</select></td></tr>
 	<tr><td>Order</td><td><input type="text" name="order" value="0" /></td></tr>
@@ -15,19 +15,18 @@
 	<tr><td>Max image size</td><td><input type="text" name="maximagesize" value="4718592" /></td></tr>
 	<tr><td>Max pages</td><td><input type="text" name="maxpages" value="11" /></td></tr>
 	<tr><td>Default style</td><td><select name="defaultstyle" selected="">
-		{{range $i, $style := $config.Styles_img}}
-			<option value="{{$style}}">{{$style}}</option>{{end}}
+		{{range $_, $style := .config.Styles_img}}<option value="{{$style}}">{{$style}}</option>{{end}}
 	</select></td></tr>
-	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if $board.Locked}}checked{{end}}/></td></tr>
-	<tr><td>Forced anonymity</td><td><input type="checkbox" name="forcedanon" {{if $board.ForcedAnon}}checked{{end}}/></td></tr>
-	<tr><td>Anonymous name</td><td><input type="text" name="anonymous" value="{{$board.Anonymous}}" /></td></tr>
-	<tr><td>Max age</td><td><input type="text" name="maxage" value="{{$board.MaxAge}}"/></td></tr>
-	<tr><td>Bump limit<sup title="After this many posts, the thread will stop being bumped when a new post is made. ">[?]</sup></td><td><input type="text" name="autosageafter" value="{{$board.AutosageAfter}}"/></td></tr>
-	<tr><td>No images after</td><td><input type="text" name="noimagesafter" value="{{$board.NoImagesAfter}}"/></td></tr>
-	<tr><td>Max message length</td><td><input type="text" name="maxmessagelength" value="{{$board.MaxMessageLength}}"/></td></tr>
-	<tr><td>Embeds allowed</td><td><input type="checkbox" name="embedsallowed" {{if $board.EmbedsAllowed}}checked{{end}}/></td></tr>
-	<tr><td>Redirect to thread<sup title="If checked, posts will redirect to the thread by default without requiring 'noko' in the email">[?]</sup></td><td><input type="checkbox" name="redirecttothread" {{if $board.RedirectToThread}}checked{{end}}/></td></tr>
-	<tr><td>Require an uploaded file</td><td><input type="checkbox" name="require_file" {{if $board.RequireFile}}checked{{end}}/></td></tr>
-	<tr><td>Enable catalog</td><td><input type="checkbox" name="enablecatalog" {{if $board.EnableCatalog}}checked{{end}}/></td></tr>
+	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if .board.Locked}}checked{{end}}/></td></tr>
+	<tr><td>Forced anonymity</td><td><input type="checkbox" name="forcedanon" {{if .board.ForcedAnon}}checked{{end}}/></td></tr>
+	<tr><td>Anonymous name</td><td><input type="text" name="anonymous" value="{{.board.Anonymous}}" /></td></tr>
+	<tr><td>Max age</td><td><input type="text" name="maxage" value="{{.board.MaxAge}}"/></td></tr>
+	<tr><td>Bump limit<sup title="After this many posts, the thread will stop being bumped when a new post is made. ">[?]</sup></td><td><input type="text" name="autosageafter" value="{{.board.AutosageAfter}}"/></td></tr>
+	<tr><td>No images after</td><td><input type="text" name="noimagesafter" value="{{.board.NoImagesAfter}}"/></td></tr>
+	<tr><td>Max message length</td><td><input type="text" name="maxmessagelength" value="{{.board.MaxMessageLength}}"/></td></tr>
+	<tr><td>Embeds allowed</td><td><input type="checkbox" name="embedsallowed" {{if .board.EmbedsAllowed}}checked{{end}}/></td></tr>
+	<tr><td>Redirect to thread<sup title="If checked, posts will redirect to the thread by default without requiring 'noko' in the email">[?]</sup></td><td><input type="checkbox" name="redirecttothread" {{if .board.RedirectToThread}}checked{{end}}/></td></tr>
+	<tr><td>Require an uploaded file</td><td><input type="checkbox" name="require_file" {{if .board.RequireFile}}checked{{end}}/></td></tr>
+	<tr><td>Enable catalog</td><td><input type="checkbox" name="enablecatalog" {{if .board.EnableCatalog}}checked{{end}}/></td></tr>
 </table>
 <input type="submit" /></form>

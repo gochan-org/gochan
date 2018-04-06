@@ -38,11 +38,11 @@ type RecentPost struct {
 
 type Thread struct {
 	IName         string
-	OP            interface{}
+	OP            PostTable
 	NumReplies    int
 	NumImages     int
 	OmittedImages int
-	BoardReplies  []interface{}
+	BoardReplies  []PostTable
 	Stickied      bool
 	ThreadPage    int
 }
@@ -253,11 +253,6 @@ type WordFiltersTable struct {
 	To     string
 	Boards string
 	RegEx  bool
-}
-
-type Wrapper struct {
-	IName string
-	Data  []interface{}
 }
 
 // Types for the JSON files we generate as a sort of "API"

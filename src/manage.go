@@ -206,7 +206,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			manageConfigBuffer := bytes.NewBufferString("")
 
-			if err := renderTemplate(manage_config_tmpl, "manage_config", manageConfigBuffer); err != nil {
+			if err := manage_config_tmpl.Execute(manageConfigBuffer, nil); err != nil {
 				html += handleError(1, err.Error())
 				return
 			}
@@ -733,10 +733,10 @@ var manage_functions = map[string]ManageFunction{
 				}
 				all_sections, _ = getSectionArr("")
 
-				if err := renderTemplate(manage_boards_tmpl, "manage_boards", manageBoardsBuffer,
-					&Wrapper{IName: "board", Data: []interface{}{board}},
-					&Wrapper{IName: "section_arr", Data: all_sections},
-				); err != nil {
+				if err := manage_boards_tmpl.Execute(manageBoardsBuffer, map[string]interface{}{
+					"board":       []interface{}{board},
+					"section_arr": all_sections,
+				}); err != nil {
 					html += handleError(1, err.Error())
 					return
 				}
@@ -807,8 +807,7 @@ var manage_functions = map[string]ManageFunction{
 				return
 			}
 
-			for _, postInter := range posts {
-				post := postInter.(PostTable)
+			for _, post := range posts {
 				stmt, err := db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `message` = ? WHERE `id` = ? AND `boardid` = ?")
 				if err != nil {
 					html += handleError(1, err.Error()) + "<br />"
