@@ -2,11 +2,11 @@
 <html>
 <head>
 	<meta charset="UTF-8">
-	{{with .op.Subject}}
-		{{if ne .op.Subject ""}}
-			<title>/{{.board.Dir}}/ - {{truncateString .op.Subject 20 true}}</title>
-		{{else if ne .op.MessageHTML ""}}
-			<title>/{{.board.Dir}}/ - {{truncateString .op.MessageText 20 true}}</title>
+	{{with $.op.Subject}}
+		{{if ne $.op.Subject ""}}
+			<title>/{{$.board.Dir}}/ - {{truncateString $.op.Subject 20 true}}</title>
+		{{else if ne $.op.MessageHTML ""}}
+			<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
 		{{end}}
 	{{else}}<title>/{{.board.Dir}}/ - {{.board.Title}}</title>{{end}}
 	<title>/{{.board.Dir}}/ - {{.board.Title}}</title>
