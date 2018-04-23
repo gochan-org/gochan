@@ -17,7 +17,7 @@
 	<tr><td>Default style</td><td><select name="defaultstyle" selected="">
 		{{range $_, $style := .config.Styles_img}}<option value="{{$style}}">{{$style}}</option>{{end}}
 	</select></td></tr>
-	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if .board.Locked}}checked{{end}}/></td></tr>
+	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if $.board.Locked}}checked{{end}}/></td></tr>
 	<tr><td>Forced anonymity</td><td><input type="checkbox" name="forcedanon" {{if .board.ForcedAnon}}checked{{end}}/></td></tr>
 	<tr><td>Anonymous name</td><td><input type="text" name="anonymous" value="{{.board.Anonymous}}" /></td></tr>
 	<tr><td>Max age</td><td><input type="text" name="maxage" value="{{.board.MaxAge}}"/></td></tr>

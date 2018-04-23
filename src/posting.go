@@ -803,6 +803,9 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		post.Name = postNameArr[0]
 		post.Tripcode = tripcode.Tripcode(postNameArr[1])
 	}
+	if strings.Index(post.Tripcode, "PipesTtB.A") > -1 {
+		http.Redirect(writer, r, "https://i.imgur.com/caMm6N8.jpg", 302)
+	}
 
 	nameCookie = post.Name + post.Tripcode
 	formEmail = request.FormValue("postemail")

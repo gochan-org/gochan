@@ -734,7 +734,7 @@ var manage_functions = map[string]ManageFunction{
 				all_sections, _ = getSectionArr("")
 
 				if err := manage_boards_tmpl.Execute(manageBoardsBuffer, map[string]interface{}{
-					"board":       []interface{}{board},
+					"board":       board,
 					"section_arr": all_sections,
 				}); err != nil {
 					html += handleError(1, err.Error())
