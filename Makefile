@@ -11,7 +11,6 @@ else
 	GOCHAN_BIN=gochan
 endif
 
-GO=/usr/lib/go-1.10/bin/go
 CGO_ENABLED=0
 GOARCH=amd64
 
@@ -34,4 +33,4 @@ ifndef GOPATH
 endif
 	@echo ${GOCHAN_VERBOSITY}
 	@echo ${GOCHAN_VERBOSE}
-	${GO} build -v -ldflags "-w -s -X main.version=${GOCHAN_VERSION} -X main.buildtime_str=${GOCHAN_BUILDTIME} -X main.verbosity_str=${GOCHAN_VERBOSITY}" -o ${DIRNAME}${GOCHAN_BIN} ./src
+	go build -v -ldflags "-w -X main.version=${GOCHAN_VERSION} -X main.buildtime_str=${GOCHAN_BUILDTIME} -X main.verbosity_str=${GOCHAN_VERBOSITY}" -o ${DIRNAME}${GOCHAN_BIN} ./src
