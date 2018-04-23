@@ -5,7 +5,10 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
-export PATH="$PATH:/usr/lib/go-1.10/bin"
+
+mkdir ~/bin
+ln -s /usr/lib/go-1.10/bin/* ~/bin/ 
+export PATH="$PATH:/home/vagrant/bin"
 
 apt-get update
 apt-get -y upgrade
@@ -61,7 +64,7 @@ cd /vagrant
 su vagrant
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
-export PATH="$PATH:/usr/lib/go-1.10/bin"
+export PATH="$PATH:/home/vagrant/bin"
 
 function changePerms {
 	chmod -R 755 $1 
