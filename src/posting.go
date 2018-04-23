@@ -887,7 +887,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			file.Close()
 		}
 	}()
-	if err != nil {
+	if err != nil || handler.Size == 0 {
 		// no file was uploaded
 		post.Filename = ""
 		accessLog.Print("Receiving post from " + request.RemoteAddr + ", referred from: " + request.Referer())
