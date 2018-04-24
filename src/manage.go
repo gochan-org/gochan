@@ -34,15 +34,17 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 		action = "announcements"
 	}
 
-	if err = global_header_tmpl.Execute(&managePageBuffer, config); err != nil {
-		fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
-		return
-	}
+	if action != "getstaffjquery" {
+		if err = global_header_tmpl.Execute(&managePageBuffer, config); err != nil {
+			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
+			return
+		}
 
-	if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
-		println(0, mangePageHTML)
-		fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
-		return
+		if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
+			println(0, mangePageHTML)
+			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
+			return
+		}
 	}
 
 	if _, ok := manage_functions[action]; ok {
@@ -58,7 +60,10 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 	} else {
 		managePageBuffer.Write([]byte(action + " is undefined."))
 	}
-	managePageBuffer.Write([]byte("\n</body>\n</html>"))
+	if action != "getstaffjquery" {
+		managePageBuffer.Write([]byte("\n</body>\n</html>"))
+	}
+
 	extension := getFileExtension(request.URL.Path)
 	if extension == "" {
 		//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
