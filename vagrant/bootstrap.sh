@@ -6,10 +6,6 @@ export DEBIAN_FRONTEND=noninteractive
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
 
-mkdir ~/bin
-ln -s /usr/lib/go-1.10/bin/* ~/bin/ 
-export PATH="$PATH:/home/vagrant/bin"
-
 apt-get update
 apt-get -y upgrade
 apt-get -y install git subversion mercurial golang-1.10 nginx redis-server mariadb-server mariadb-client ffmpeg
@@ -64,6 +60,8 @@ cd /vagrant
 su vagrant
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
+mkdir /home/vagrant/bin
+ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
 export PATH="$PATH:/home/vagrant/bin"
 
 function changePerms {
