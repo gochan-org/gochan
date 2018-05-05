@@ -14,6 +14,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// ManageFunction represents the functions accessed by staff members at /manage?action=<functionname>.
+// Eventually a plugin system might allow you to add more
 type ManageFunction struct {
 	Permissions int           // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
 	Callback    func() string //return string of html output
@@ -23,12 +25,17 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 	request = *r
 	writer = w
 	cookies = r.Cookies()
-	request.ParseForm()
+
+	err := request.ParseForm()
+	if err != nil {
+		serveErrorPage(writer, err.Error())
+		errorLog.Println(customError(err))
+	}
+
 	action := request.FormValue("action")
 	staffRank := getStaffRank()
 	var managePageBuffer bytes.Buffer
 	mangePageHTML := ""
-	var err error
 
 	if action == "" {
 		action = "announcements"
@@ -36,12 +43,13 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 
 	if action != "getstaffjquery" {
 		if err = global_header_tmpl.Execute(&managePageBuffer, config); err != nil {
+			handleError(0, customError(err))
 			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
 			return
 		}
 
 		if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
-			println(0, mangePageHTML)
+			handleError(0, customError(err))
 			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
 			return
 		}
@@ -64,23 +72,22 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 		managePageBuffer.Write([]byte("\n</body>\n</html>"))
 	}
 
-	extension := getFileExtension(request.URL.Path)
+	/* extension := getFileExtension(request.URL.Path)
 	if extension == "" {
-		//writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-	}
+		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+	} */
 	fmt.Fprintf(writer, managePageBuffer.String())
 }
 
 func getCurrentStaff() (string, error) {
-	session_cookie := getCookie("sessiondata")
+	sessionCookie := getCookie("sessiondata")
 	var key string
-	if session_cookie == nil {
+	if sessionCookie == nil {
 		return "", nil
-	} else {
-		key = session_cookie.Value
 	}
+	key = sessionCookie.Value
 
-	row := db.QueryRow("SELECT `data` FROM `" + config.DBprefix + "sessions` WHERE `key` = '" + key + "'")
+	row := db.QueryRow("SELECT `data` FROM `"+config.DBprefix+"sessions` WHERE `key` = ?", key)
 	current_session := new(SessionsTable)
 
 	if err := row.Scan(&current_session.Data); err != nil {
@@ -90,7 +97,7 @@ func getCurrentStaff() (string, error) {
 }
 
 func getStaff(name string) (*StaffTable, error) {
-	row := db.QueryRow("SELECT * FROM `" + config.DBprefix + "staff` WHERE `username` = '" + name + "';")
+	row := db.QueryRow("SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = ?", name)
 	staff_obj := new(StaffTable)
 	err := row.Scan(&staff_obj.ID, &staff_obj.Username, &staff_obj.PasswordChecksum, &staff_obj.Salt, &staff_obj.Rank, &staff_obj.Boards, &staff_obj.AddedOn, &staff_obj.LastActive)
 	return staff_obj, err
@@ -98,6 +105,7 @@ func getStaff(name string) (*StaffTable, error) {
 
 func getStaffRank() int {
 	staffname, err := getCurrentStaff()
+	println(1, customError(err))
 	if staffname == "" {
 		return 0
 	}
@@ -107,7 +115,7 @@ func getStaffRank() int {
 
 	staff, err := getStaff(staffname)
 	if err != nil {
-		handleError(1, err.Error())
+		handleError(1, customError(err))
 		return 0
 	}
 	return staff.Rank
@@ -126,7 +134,7 @@ func createSession(key string, username string, password string, request *http.R
 	}
 	staff, err := getStaff(username)
 	if err != nil {
-		handleError(1, err.Error())
+		handleError(1, customError(err))
 		return 1
 	} else {
 		success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
@@ -140,12 +148,12 @@ func createSession(key string, username string, password string, request *http.R
 			http.SetCookie(*writer, cookie)
 			_, err := db.Exec("INSERT INTO `" + config.DBprefix + "sessions` (`key`, `data`, `expires`) VALUES('" + key + "','" + username + "', '" + getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))) + "')")
 			if err != nil {
-				handleError(1, err.Error())
+				handleError(1, customError(err))
 				return 2
 			}
-			_, err = db.Exec("UPDATE `" + config.DBprefix + "staff` SET `last_active` ='" + getSQLDateTime() + "' WHERE `username` = '" + username + "';")
+			_, err = db.Exec("UPDATE `"+config.DBprefix+"staff` SET `last_active` = ? WHERE `username` = ?", getSQLDateTime(), username)
 			if err != nil {
-				handleError(1, err.Error())
+				handleError(1, customError(err))
 			}
 			return 0
 		}
@@ -159,9 +167,9 @@ var manage_functions = map[string]ManageFunction{
 			html = "<h2>Cleanup</h2><br />"
 			if request.FormValue("run") == "Run Cleanup" {
 				html += "Removing deleted posts from the database.<hr />"
-				_, err := db.Exec("DELETE FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '" + nil_timestamp + "'")
+				_, err := db.Exec("DELETE FROM `" + config.DBprefix + "posts` WHERE `deleted_timestamp` = '" + nilTimestamp + "'")
 				if err != nil {
-					html += "<tr><td>" + err.Error() + "</td></tr></table>"
+					html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 					return
 				}
 				// TODO: remove orphaned replies
@@ -203,7 +211,7 @@ var manage_functions = map[string]ManageFunction{
 				// 	return
 				// }
 
-				// err = ioutil.WriteFile("gochan.json", configJSON, 0777)
+				// err = ioutil.WriteFile("gochan.json", configJSON, 0666)
 				// if err != nil {
 				// 	html += "Error writing \"gochan.json\": %s\n" + err.Error()
 				// 	return
@@ -224,34 +232,41 @@ var manage_functions = map[string]ManageFunction{
 			html = "<img src=\"/css/purge.jpg\" />"
 			rows, err := db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`")
 			if err != nil {
-				html += handleError(1, err.Error())
+				html += err.Error()
+				handleError(1, customError(err))
 				return
 			}
 			var board string
 			for rows.Next() {
 				if err = rows.Scan(&board); err != nil {
-					html += handleError(1, err.Error())
+					html += err.Error()
+					handleError(1, customError(err))
 					return
 				}
 				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board), ".html"); err != nil {
-					html += handleError(1, err.Error())
+					html += err.Error()
+					handleError(1, customError(err))
 					return
 				}
 				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), ".*"); err != nil {
-					html += handleError(1, err.Error())
+					html += err.Error()
+					handleError(1, customError(err))
 					return
 				}
 				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), ".*"); err != nil {
-					html += handleError(1, err.Error())
+					html += err.Error()
+					handleError(1, customError(err))
 					return
 				}
 				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), ".*"); err != nil {
-					html += handleError(1, err.Error())
+					html += err.Error()
+					handleError(1, customError(err))
 					return
 				}
 			}
 			if _, err = db.Exec("TRUNCATE `" + config.DBprefix + "posts`"); err != nil {
-				html += handleError(1, err.Error()) + "<br />"
+				html += err.Error() + "<br />"
+				handleError(1, customError(err))
 				return
 			}
 			db.Exec("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1")
@@ -268,9 +283,7 @@ var manage_functions = map[string]ManageFunction{
 			html = "<h1>Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">" + statement + "</textarea>\n<input type=\"submit\" />\n</form>"
 			if statement != "" {
 				html += "<hr />"
-				result, sqlerr := db.Exec(statement)
-				println(1, &result)
-
+				_, sqlerr := db.Exec(statement)
 				if sqlerr != nil {
 					html += handleError(1, sqlerr.Error())
 				} else {
@@ -336,7 +349,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func() (html string) {
 			html = "<h1>Announcements</h1><br />"
 
-			rows, err := db.Query("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC;")
+			rows, err := db.Query("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC")
 			if err != nil {
 				html += handleError(1, err.Error())
 				return
@@ -386,7 +399,7 @@ var manage_functions = map[string]ManageFunction{
 			boards_list_html := "		<span style=\"font-weight: bold;\">Boards: </span><br />\n" +
 				"		<label>All boards <input type=\"checkbox\" id=\"allboards\" /></label> overrides individual board selection<br />\n"
 
-			rows, err := db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`;")
+			rows, err := db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`")
 			if err != nil {
 				html += "<hr />" + handleError(1, err.Error())
 				return
@@ -489,7 +502,7 @@ var manage_functions = map[string]ManageFunction{
 				html = "nobody;0;"
 				return
 			}
-			row := db.QueryRow("SELECT `rank`,`boards` FROM `" + config.DBprefix + "staff` WHERE `username` = '" + current_staff + "'")
+			row := db.QueryRow("SELECT `rank`,`boards` FROM `"+config.DBprefix+"staff` WHERE `username` = ?", current_staff)
 			staff := new(StaffTable)
 			if err = row.Scan(&staff.Rank, &staff.Boards); err != nil {
 				html += handleError(1, "Error getting staff list: "+err.Error())
@@ -583,25 +596,25 @@ var manage_functions = map[string]ManageFunction{
 					board.EnableCatalog = (request.FormValue("enablecatalog") == "on")
 
 					//actually start generating stuff
-					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777); err != nil {
+					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0666); err != nil {
 						do = ""
 						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/ already exists!")
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "res"), 0777); err != nil {
+					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "res"), 0666); err != nil {
 						do = ""
 						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/res/ already exists!")
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0777); err != nil {
+					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
 						do = ""
 						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/thumb/ already exists!")
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "src"), 0777); err != nil {
+					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "src"), 0666); err != nil {
 						do = ""
 						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/src/ already exists!")
 						break
@@ -631,9 +644,8 @@ var manage_functions = map[string]ManageFunction{
 						&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
 					); err != nil {
 						do = ""
-						board_creation_status = err.Error()
+						board_creation_status = customError(err)
 						handleError(1, "Error creating board: "+board_creation_status)
-						break
 					} else {
 						board_creation_status = "Board created successfully"
 						println(2, board_creation_status)
@@ -641,81 +653,80 @@ var manage_functions = map[string]ManageFunction{
 						resetBoardSectionArrays()
 						println(2, "Boards rebuilt successfully")
 						done = true
-						break
 					}
-
+					break
 				case do == "del":
 					// resetBoardSectionArrays()
 				case do == "edit":
 					// resetBoardSectionArrays()
 				default:
 					// put the default column values in the text boxes
-					rows, err = db.Query("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
+					rows, err = db.Query("SELECT `column_name`,`columnDefault` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
 					if err != nil {
 						html += handleError(1, "Error getting column names from boards table:"+err.Error())
 						return
 					}
 					for rows.Next() {
-						var column_name string
-						var column_default string
-						rows.Scan(&column_name, &column_default)
-						column_default_int, _ := strconv.Atoi(column_default)
-						column_default_bool := (column_default_int == 1)
-						switch column_name {
+						var columnName string
+						var columnDefault string
+						rows.Scan(&columnName, &columnDefault)
+						columnDefaultInt, _ := strconv.Atoi(columnDefault)
+						columnDefaultBool := (columnDefaultInt == 1)
+						switch columnName {
 						case "id":
-							board.ID = column_default_int
+							board.ID = columnDefaultInt
 						case "order":
-							board.Order = column_default_int
+							board.Order = columnDefaultInt
 						case "dir":
-							board.Dir = column_default
+							board.Dir = columnDefault
 						case "type":
-							board.Type = column_default_int
+							board.Type = columnDefaultInt
 						case "upload_type":
-							board.UploadType = column_default_int
+							board.UploadType = columnDefaultInt
 						case "title":
-							board.Title = column_default
+							board.Title = columnDefault
 						case "subtitle":
-							board.Subtitle = column_default
+							board.Subtitle = columnDefault
 						case "description":
-							board.Description = column_default
+							board.Description = columnDefault
 						case "section":
-							board.Section = column_default_int
+							board.Section = columnDefaultInt
 						case "max_image_size":
-							board.MaxImageSize = column_default_int
+							board.MaxImageSize = columnDefaultInt
 						case "max_pages":
-							board.MaxPages = column_default_int
+							board.MaxPages = columnDefaultInt
 						case "locale":
-							board.Locale = column_default
+							board.Locale = columnDefault
 						case "default_style":
-							board.DefaultStyle = column_default
+							board.DefaultStyle = columnDefault
 						case "locked":
-							board.Locked = column_default_bool
+							board.Locked = columnDefaultBool
 						case "anonymous":
-							board.Anonymous = column_default
+							board.Anonymous = columnDefault
 						case "forced_anon":
-							board.ForcedAnon = column_default_bool
+							board.ForcedAnon = columnDefaultBool
 						case "max_age":
-							board.MaxAge = column_default_int
+							board.MaxAge = columnDefaultInt
 						case "autosage_after":
-							board.AutosageAfter = column_default_int
+							board.AutosageAfter = columnDefaultInt
 						case "no_images_after":
-							board.NoImagesAfter = column_default_int
+							board.NoImagesAfter = columnDefaultInt
 						case "max_message_length":
-							board.MaxMessageLength = column_default_int
+							board.MaxMessageLength = columnDefaultInt
 						case "embeds_allowed":
-							board.EmbedsAllowed = column_default_bool
+							board.EmbedsAllowed = columnDefaultBool
 						case "redirect_to_thread":
-							board.RedirectToThread = column_default_bool
+							board.RedirectToThread = columnDefaultBool
 						case "require_file":
-							board.RequireFile = column_default_bool
+							board.RequireFile = columnDefaultBool
 						case "enable_catalog":
-							board.EnableCatalog = column_default_bool
+							board.EnableCatalog = columnDefaultBool
 						}
 					}
 				}
 
 				html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-				rows, err = db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`;")
+				rows, err = db.Query("SELECT `dir` FROM `" + config.DBprefix + "boards`")
 				if err != nil {
 					html += handleError(1, err.Error())
 					return
@@ -723,24 +734,24 @@ var manage_functions = map[string]ManageFunction{
 				defer closeRows(rows)
 
 				for rows.Next() {
-					var board_dir string
-					rows.Scan(&board_dir)
-					html += "<option>" + board_dir + "</option>\n"
+					var boardDir string
+					rows.Scan(&boardDir)
+					html += "<option>" + boardDir + "</option>\n"
 				}
 
 				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />" +
 					"<h2>Create new board</h2>\n<span id=\"board-creation-message\">" + board_creation_status + "</span><br />"
 
 				manageBoardsBuffer := bytes.NewBufferString("")
-				all_sections, _ = getSectionArr("")
-				if len(all_sections) == 0 {
+				allSections, _ = getSectionArr("")
+				if len(allSections) == 0 {
 					db.Exec("INSERT INTO `" + config.DBprefix + "sections` (`hidden`,`name`,`abbreviation`) VALUES(0,'Main','main')")
 				}
-				all_sections, _ = getSectionArr("")
+				allSections, _ = getSectionArr("")
 
 				if err := manage_boards_tmpl.Execute(manageBoardsBuffer, map[string]interface{}{
 					"board":       board,
-					"section_arr": all_sections,
+					"section_arr": allSections,
 				}); err != nil {
 					html += handleError(1, err.Error())
 					return
@@ -805,7 +816,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func() (html string) {
 			posts, err := getPostArr(map[string]interface{}{
-				"deleted_timestamp": nil_timestamp,
+				"deleted_timestamp": nilTimestamp,
 			}, "")
 			if err != nil {
 				html += err.Error() + "<br />"
@@ -836,7 +847,7 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-			rows, err := db.Query("SELECT  `" + config.DBprefix + "boards`.`dir` AS `boardname`, " +
+			rows, err := db.Query("SELECT `" + config.DBprefix + "boards`.`dir` AS `boardname`, " +
 				"`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
 				"`" + config.DBprefix + "posts`.`id` AS id, " +
 				"`" + config.DBprefix + "posts`. " +
@@ -849,9 +860,9 @@ var manage_functions = map[string]ManageFunction{
 				"`timestamp` AS timestamp  " +
 				"FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
 				"WHERE `reviewed` = 0 " +
-				"AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nil_timestamp + "\"  " +
+				"AND `" + config.DBprefix + "posts`.`deleted_timestamp` = \"" + nilTimestamp + "\"  " +
 				"AND `boardid` = `" + config.DBprefix + "boards`.`id` " +
-				"ORDER BY `timestamp` DESC LIMIT " + limit + ";")
+				"ORDER BY `timestamp` DESC LIMIT " + limit + "")
 			if err != nil {
 				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 				return
@@ -884,7 +895,7 @@ var manage_functions = map[string]ManageFunction{
 			html = "<h1>Staff</h1><br />\n" +
 				"<table id=\"stafftable\" border=\"1\">\n" +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
-			rows, err := db.Query("SELECT `username`,`rank`,`boards`,`added_on` FROM `" + config.DBprefix + "staff`;")
+			rows, err := db.Query("SELECT `username`,`rank`,`boards`,`added_on` FROM `" + config.DBprefix + "staff`")
 			if err != nil {
 				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 				return
@@ -900,16 +911,16 @@ var manage_functions = map[string]ManageFunction{
 				}
 
 				if request.FormValue("do") == "add" {
-					new_username := request.FormValue("username")
-					new_password := request.FormValue("password")
-					new_rank := request.FormValue("rank")
+					newUsername := request.FormValue("username")
+					newPassword := request.FormValue("password")
+					newRank := request.FormValue("rank")
 					stmt, err := db.Prepare("INSERT INTO `" + config.DBprefix + "staff` (`username`, `password_checksum`, `rank`) VALUES(?,?,?)")
 					if err != nil {
 						serveErrorPage(writer, handleError(1, err.Error()))
 					}
 					defer closeStatement(stmt)
 
-					if _, err = stmt.Exec(&new_username, bcryptSum(new_password), &new_rank); err != nil {
+					if _, err = stmt.Exec(&newUsername, bcryptSum(newPassword), &newRank); err != nil {
 						serveErrorPage(writer, handleError(1, err.Error()))
 					}
 

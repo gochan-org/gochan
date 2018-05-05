@@ -12,15 +12,15 @@ var version string
 // verbose = 1 for non-critical warnings and important info
 // verbose = 2 for all debugging/benchmarks/warnings
 // set in Makefile via -ldflags
-var verbosity_str string
-var buildtime_str string // set in build.sh, format: YRMMDD.HHMM
+var verbosityString string
+var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
 
 func main() {
 	defer db.Close()
 	initConfig()
-	config.Verbosity, _ = strconv.Atoi(verbosity_str)
+	config.Verbosity, _ = strconv.Atoi(verbosityString)
 	config.Version = version
-	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", config.Version, buildtime_str, config.Verbosity)
+	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", config.Version, buildtimeString, config.Verbosity)
 	printf(0, "Config file loaded. Connecting to database...")
 	connectToSQLServer()
 
@@ -32,7 +32,10 @@ func main() {
 
 	println(0, "Initializing server...")
 	if db != nil {
-		db.Exec("USE `" + config.DBname + "`;")
+		_, err := db.Exec("USE `" + config.DBname + "`")
+		if err != nil {
+			println(0, customError(err))
+		}
 	}
 	initServer()
 }

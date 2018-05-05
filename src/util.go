@@ -78,19 +78,19 @@ func byteByByteReplace(input, from, to string) string {
 // for easier defer cleaning
 func closeFile(file *os.File) {
 	if file != nil {
-		file.Close()
+		_ = file.Close()
 	}
 }
 
 func closeRows(rows *sql.Rows) {
 	if rows != nil {
-		rows.Close()
+		_ = rows.Close()
 	}
 }
 
 func closeStatement(stmt *sql.Stmt) {
 	if stmt != nil {
-		stmt.Close()
+		_ = stmt.Close()
 	}
 }
 
@@ -397,15 +397,12 @@ func getMetaInfo(stackOffset int) (string, int, string) {
 	return file, line, runtime.FuncForPC(pc).Name()
 }
 
-func customError(v int, err error) (errored bool) {
+func customError(err error) string {
 	if err != nil {
-		if config.Verbosity >= v {
-			file, line, _ := getMetaInfo(1)
-			printf(v, "[ERROR] %s:%d: %s\n", file, line, err.Error())
-		}
-		return true
+		file, line, _ := getMetaInfo(2)
+		return fmt.Sprintf("[ERROR] %s:%d: %s\n", file, line, err.Error())
 	}
-	return false
+	return ""
 }
 
 func handleError(verbosity int, format string, a ...interface{}) string {
@@ -459,24 +456,16 @@ func println(v int, a ...interface{}) {
 
 func resetBoardSectionArrays() {
 	// run when the board list needs to be changed (board/section is added, deleted, etc)
-	all_boards = nil
-	all_sections = nil
+	allBoards = nil
+	allSections = nil
 
 	allBoardsArr, _ := getBoardArr(nil, "")
 	for _, b := range allBoardsArr {
-		all_boards = append(all_boards, b)
+		allBoards = append(allBoards, b)
 	}
-	allSectionsArr, _ := getSectionArr("")
-	for _, b := range allSectionsArr {
-		all_sections = append(all_sections, b)
-	}
-}
 
-func reverse(arr []interface{}) (reversed []interface{}) {
-	for i := len(arr); i > 0; i-- {
-		reversed = append(reversed, arr[i-1])
-	}
-	return
+	allSectionsArr, _ := getSectionArr("")
+	allSections = append(allSections, allSectionsArr...)
 }
 
 // sanitize/escape HTML strings in a post. This should be run immediately before

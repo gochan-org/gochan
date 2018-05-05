@@ -108,7 +108,7 @@ type BoardsTable struct {
 	MaxMessageLength       int
 	EmbedsAllowed          bool
 	RedirectToThread       bool
-	ShowId                 bool
+	ShowID                 bool
 	RequireFile            bool
 	EnableCatalog          bool
 	EnableSpoileredImages  bool
@@ -126,6 +126,8 @@ type BoardSectionsTable struct {
 	Abbreviation string
 }
 
+// EmbedsTable represents the embedable media on different sites.
+// It's held over from Kusaba X and may be removed in the future
 type EmbedsTable struct {
 	ID        uint8
 	Filetype  string
@@ -136,6 +138,8 @@ type EmbedsTable struct {
 	EmbedCode string
 }
 
+// FiletypesTable represents the allowed filetypes
+// It's held over from Kusaba X and may be removed in the future
 type FiletypesTable struct {
 	ID         uint8
 	Filetype   string
@@ -145,6 +149,7 @@ type FiletypesTable struct {
 	ImageH     uint
 }
 
+// FrontTable represents the information (News, rules, etc) on the front page
 type FrontTable struct {
 	IName     string
 	ID        int
@@ -157,6 +162,7 @@ type FrontTable struct {
 	Email     string
 }
 
+// FrontLinksTable is used for linking to sites that the admin linkes
 type FrontLinksTable struct {
 	ID    uint8
 	Title string
@@ -177,6 +183,7 @@ type ModLogTable struct {
 	Timestamp time.Time
 }
 
+// PollResultsTable may or may not be used in the future for polls (duh)
 type PollResultsTable struct {
 	ID        uint
 	IP        string
@@ -184,6 +191,7 @@ type PollResultsTable struct {
 	Timestamp time.Time
 }
 
+// PostTable represents each post in the database
 type PostTable struct {
 	IName            string
 	ID               int
@@ -236,6 +244,7 @@ type SessionsTable struct {
 	Expires string
 }
 
+// StaffTable represents a single staff member's info stored in the database
 type StaffTable struct {
 	ID               int
 	Username         string
@@ -320,8 +329,7 @@ type ThreadJSON struct {
 	Locked          int `json:"locked"`
 }
 
-// Global variables, most initialized by config.cfg
-
+// GochanConfig stores crucial info and is read from/written to gochan.json
 type GochanConfig struct {
 	IName        string //used by our template parser
 	ListenIP     string
@@ -469,7 +477,7 @@ func initConfig() {
 		os.Exit(2)
 	}
 
-	accessLogFile, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	accessLogFile, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		println(0, "Couldn't open access log. Returned error: "+err.Error())
 		os.Exit(1)
@@ -478,7 +486,7 @@ func initConfig() {
 
 	}
 
-	errorLogFile, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	errorLogFile, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		println(0, "Couldn't open error log. Returned error: "+err.Error())
 		os.Exit(1)
@@ -486,7 +494,7 @@ func initConfig() {
 		errorLog = log.New(errorLogFile, "", log.Ltime|log.Ldate)
 	}
 
-	modLogFile, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	modLogFile, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		println(0, "Couldn't open mod log. Returned error: "+err.Error())
 	} else {

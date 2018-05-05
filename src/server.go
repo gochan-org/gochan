@@ -23,8 +23,8 @@ var (
 )
 
 type GochanServer struct {
-	writer     http.ResponseWriter
-	request    http.Request
+	/* writer     http.ResponseWriter
+	request    http.Request */
 	namespaces map[string]func(http.ResponseWriter, *http.Request, interface{})
 }
 
@@ -105,7 +105,7 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 func serveErrorPage(writer http.ResponseWriter, err string) {
 	errorPageBytes, _ := ioutil.ReadFile("templates/error.html")
 	errorPage := strings.Replace(string(errorPageBytes), "{ERRORTEXT}", err, -1)
-	writer.Write([]byte(errorPage))
+	_, _ = writer.Write([]byte(errorPage))
 }
 
 func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -127,8 +127,8 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 func initServer() {
 	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
 	if err != nil {
-		printf(0, "Failed listening on %s:%d, see log for details", config.ListenIP, config.Port)
-		errorLog.Fatal(err.Error())
+		handleError(0, "Failed listening on %s:%d: %s", config.ListenIP, config.Port, customError(err))
+		os.Exit(2)
 	}
 	server = new(GochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request, interface{}))
@@ -151,10 +151,16 @@ func initServer() {
 	server.AddNamespace("post", makePost)
 	server.AddNamespace("util", utilHandler)
 	// eventually plugins will be able to register new namespaces. Or they will be restricted to something like /plugin
+
 	if config.UseFastCGI {
-		fcgi.Serve(listener, server)
+		err = fcgi.Serve(listener, server)
 	} else {
-		http.Serve(listener, server)
+		err = http.Serve(listener, server)
+	}
+
+	if err != nil {
+		handleError(0, customError(err))
+		os.Exit(2)
 	}
 }
 
@@ -257,7 +263,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			}
 			defer closeStatement(stmt)
 
-			err = stmt.QueryRow(&post.ID, &post.BoardID, nil_timestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
+			err = stmt.QueryRow(&post.ID, &post.BoardID, nilTimestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
 			if err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())
