@@ -185,14 +185,13 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	queryString += fmt.Sprintf(" %s ORDER BY `order`", extra)
 	printf(2, "queryString@getBoardArr: %s\n", queryString)
 
-	stmt, err := db.Prepare(queryString)
+	rows, err := querySQL(queryString, parameterValues...)
+	defer closeRows(rows)
 	if err != nil {
-		errorLog.Print(err.Error())
+		handleError(0, "error getting board list: %s", customError(err))
 		return
 	}
-	defer closeStatement(stmt)
 
-	rows, err := stmt.Query(parameterValues...)
 	// For each row in the results from the database, populate a new BoardsTable instance,
 	// 	then append it to the boards array we are going to return
 	for rows.Next() {
@@ -225,8 +224,7 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 			&board.RequireFile,
 			&board.EnableCatalog,
 		); err != nil {
-			errorLog.Print(err.Error())
-			println(0, err.Error())
+			handleError(0, customError(err))
 			return
 		}
 		boards = append(boards, *board)
@@ -236,27 +234,24 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 
 func getBoardFromID(id int) (*BoardsTable, error) {
 	board := new(BoardsTable)
-	stmt, err := db.Prepare("SELECT `order`,`dir`,`type`,`upload_type`,`title`,`subtitle`,`description`,`section`," +
-		"`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`,`anonymous`,`forced_anon`,`max_age`," +
-		"`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,`redirect_to_thread`,`require_file`," +
-		"`enable_catalog` FROM `" + config.DBprefix + "boards` WHERE `id` = ?")
-	if err != nil {
-		return nil, err
-	}
-	defer closeStatement(stmt)
+	err := queryRowSQL(
+		"SELECT `order`,`dir`,`type`,`upload_type`,`title`,`subtitle`,`description`,`section`,"+
+			"`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`,`anonymous`,`forced_anon`,`max_age`,"+
+			"`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,`redirect_to_thread`,`require_file`,"+
+			"`enable_catalog` FROM `"+config.DBprefix+"boards` WHERE `id` = ?",
+		[]interface{}{id},
+		[]interface{}{
+			&board.Order, &board.Dir, &board.Type, &board.UploadType, &board.Title,
+			&board.Subtitle, &board.Description, &board.Section, &board.MaxImageSize,
+			&board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn,
+			&board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
+			&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
+			&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
+		},
+	)
 
 	board.ID = id
-	if err = stmt.QueryRow(id).Scan(
-		&board.Order, &board.Dir, &board.Type, &board.UploadType, &board.Title,
-		&board.Subtitle, &board.Description, &board.Section, &board.MaxImageSize,
-		&board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn,
-		&board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
-		&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
-		&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
-	); err != nil {
-		return nil, err
-	}
-	return board, nil
+	return board, err
 }
 
 // if parameterList is nil, ignore it and treat extra like a whole SQL query
@@ -281,19 +276,12 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 	queryString += " " + extra // " ORDER BY `order`"
 	printf(2, "queryString@getPostArr queryString: %s\n", queryString)
 
-	stmt, err := db.Prepare(queryString)
-	if err != nil {
-		errorLog.Print(err.Error())
-		return
-	}
-	defer closeStatement(stmt)
-
-	rows, err := stmt.Query(parameterValues...)
-	if err != nil {
-		handleError(1, "Error in getPostArr: "+err.Error())
-		return
-	}
+	rows, err := querySQL(queryString, parameterValues...)
 	defer closeRows(rows)
+	if err != nil {
+		handleError(1, customError(err))
+		return
+	}
 
 	// For each row in the results from the database, populate a new PostTable instance,
 	// 	then append it to the posts array we are going to return
@@ -307,8 +295,7 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 			&post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped,
 			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag,
 		); err != nil {
-			errorLog.Print(err.Error())
-			println(0, err.Error())
+			handleError(0, customError(err))
 			return
 		}
 		posts = append(posts, post)
@@ -316,23 +303,24 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 	return
 }
 
+// TODO: replace where with a map[string]interface{} like getBoardsArr()
 func getSectionArr(where string) (sections []interface{}, err error) {
 	if where == "" {
 		where = "1"
 	}
-	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "sections` WHERE " + where + " ORDER BY `order`;")
+	rows, err := querySQL("SELECT * FROM `" + config.DBprefix + "sections` WHERE " + where + " ORDER BY `order`")
+	defer closeRows(rows)
 	if err != nil {
 		errorLog.Print(err.Error())
 		return
 	}
-	defer closeRows(rows)
 
 	for rows.Next() {
 		section := new(BoardSectionsTable)
 		section.IName = "section"
 
 		if err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
-			errorLog.Print(err.Error())
+			handleError(1, customError(err))
 			return
 		}
 		sections = append(sections, section)
@@ -370,7 +358,7 @@ func generateSalt() string {
 }
 
 func getFileExtension(filename string) (extension string) {
-	if strings.Index(filename, ".") == -1 {
+	if !strings.Contains(filename, ".") {
 		extension = ""
 	} else {
 		extension = filename[strings.LastIndex(filename, ".")+1:]
@@ -544,7 +532,11 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 			handleError(1, err.Error())
 			return "other_failure"
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if resp != nil && resp.Body != nil {
+				resp.Body.Close()
+			}
+		}()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			handleError(1, err.Error())

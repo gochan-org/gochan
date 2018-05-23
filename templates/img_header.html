@@ -10,7 +10,6 @@
 			<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
 		{{end}}
 	{{else}}<title>/{{.board.Dir}}/ - {{.board.Title}}</title>{{end}}
-	<title>/{{.board.Dir}}/ - {{.board.Title}}</title>
 	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $.config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];

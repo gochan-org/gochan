@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
@@ -189,7 +190,7 @@ var (
 
 func loadTemplate(files ...string) (*template.Template, error) {
 	if len(files) == 0 {
-		return nil, fmt.Errorf("ERROR: no files named in call to loadTemplate")
+		return nil, errors.New("ERROR: no files named in call to loadTemplate")
 	}
 	var templates []string
 	for i, file := range files {
@@ -200,7 +201,7 @@ func loadTemplate(files ...string) (*template.Template, error) {
 }
 
 func templateError(name string, err error) error {
-	return fmt.Errorf("Failed loading template \"" + config.TemplateDir + "/" + name + ": \"" + err.Error())
+	return errors.New("Failed loading template \"" + config.TemplateDir + "/" + name + ": \"" + err.Error())
 }
 
 func initTemplates() error {
@@ -260,7 +261,7 @@ func getStyleLinks(w http.ResponseWriter, stylesheet string) {
 	}
 
 	if err := manage_header_tmpl.Execute(w, config); err != nil {
-		println(0, err.Error())
+		handleError(0, customError(err))
 		os.Exit(2)
 	}
 }

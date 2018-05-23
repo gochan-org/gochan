@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	db          *sql.DB
-	dbConnected = false
+	db *sql.DB
 )
 
 func connectToSQLServer() {
@@ -31,45 +30,25 @@ func connectToSQLServer() {
 		os.Exit(2)
 	}
 
-	// get the number of tables in the database. If the number > 1, we can assume that initial setup has already been run
-	var numRows int
-	err = db.QueryRow("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ?", config.DBname).Scan(&numRows)
-	if err == sql.ErrNoRows {
-		numRows = 0
-	} else if err != nil {
-		printf(0, "Failed retrieving list of tables in database: ")
-		handleError(0, customError(err))
-		os.Exit(2)
-	}
-	// Detect that there are at least the number of tables that we are setting up.
-	// If there are fewer than that, then we either half-way set up, or there's other tables in our database.
-	if numRows >= 16 {
-		// the initial setup has already been run
-		needsInitialSetup = false
-		dbConnected = true
-		println(0, "complete.")
-		return
-	}
-
 	// check if initialsetupdb.sql still exists
 	if _, err = os.Stat("initialsetupdb.sql"); err != nil {
-		println(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
-		errorLog.Fatal("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
+		handleError(0, "Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
+		os.Exit(2)
 	}
 
 	// read the initial setup sql file into a string
 	initialSQLBytes, err := ioutil.ReadFile("initialsetupdb.sql")
 	if err != nil {
-		printf(0, "failed: ")
+		print(0, "failed: ")
 		handleError(0, customError(err))
 		os.Exit(2)
 	}
 	initialSQLStr := string(initialSQLBytes)
 
-	printf(0, "Starting initial setup...")
-	initialSQLStr = strings.Replace(initialSQLStr, "DBNAME", config.DBname, -1)
-	initialSQLStr = strings.Replace(initialSQLStr, "DBPREFIX", config.DBprefix, -1)
-	initialSQLStr += "\nINSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3);"
+	print(0, "Starting initial setup...")
+	initialSQLStr += "\nINSERT INTO `DBNAME`.`DBPREFIXstaff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3);"
+	initialSQLStr = strings.NewReplacer("DBNAME", config.DBname, "DBPREFIX", config.DBprefix).Replace(initialSQLStr)
+
 	initialSQLArr := strings.Split(initialSQLStr, ";")
 
 	for _, statement := range initialSQLArr {
@@ -82,9 +61,34 @@ func connectToSQLServer() {
 		}
 	}
 	println(0, "complete.")
-	needsInitialSetup = false
-	dbConnected = true
+}
 
+func execSQL(query string, values ...interface{}) (sql.Result, error) {
+	stmt, err := db.Prepare(query)
+	defer closeStatement(stmt)
+	if err != nil {
+		return nil, err
+	}
+	return stmt.Exec(values...)
+}
+
+func queryRowSQL(query string, values []interface{}, out []interface{}) error {
+	stmt, err := db.Prepare(query)
+	defer closeStatement(stmt)
+	if err != nil {
+		return err
+	}
+	err = stmt.QueryRow(values...).Scan(out...)
+	return err
+}
+
+func querySQL(query string, a ...interface{}) (*sql.Rows, error) {
+	stmt, err := db.Prepare(query)
+	defer closeStatement(stmt)
+	if err != nil {
+		return nil, err
+	}
+	return stmt.Query(a...)
 }
 
 func getSQLDateTime() string {

@@ -1,5 +1,4 @@
 -- Initial setup file for Gochan
--- Deleted after setup is finished
 
 -- Turn off warnings in case tables are already there.
 SET sql_notes=0;
@@ -200,11 +199,11 @@ CREATE TABLE IF NOT EXISTS `DBPREFIXstaff` (
 	PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
 
-# create a temp table with the same columns as the posts table to be stored in memory
-# This is currently not used, and commented out.
-#CREATE TABLE IF NOT EXISTS `DBPREFIXtempposts` SELECT * FROM DBPREFIXposts;
-#ALTER TABLE `DBPREFIXtempposts` CHANGE `message` `message` VARCHAR(1024);
-#ALTER TABLE `DBPREFIXtempposts` ENGINE=MEMORY;
+-- create a temp table with the same columns as the posts table to be stored in memory
+-- This is currently not used, and commented out.
+-- CREATE TABLE IF NOT EXISTS `DBPREFIXtempposts` SELECT * FROM DBPREFIXposts;
+-- ALTER TABLE `DBPREFIXtempposts` CHANGE `message` `message` VARCHAR(1024);
+-- ALTER TABLE `DBPREFIXtempposts` ENGINE=MEMORY;
 
 CREATE TABLE IF NOT EXISTS `DBPREFIXwordfilters` (
 	`id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,

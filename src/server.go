@@ -94,10 +94,9 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(404)
 	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
 	if err != nil {
-		writer.Write([]byte("Requested page not found, and 404 error page not found"))
+		_, _ = writer.Write([]byte("Requested page not found, and 404 error page not found"))
 	} else {
-		writer.Write(errorPage)
-
+		_, _ = writer.Write(errorPage)
 	}
 	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.RequestURI)
 }
@@ -121,7 +120,7 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 		serveNotFound(writer, request)
 		return
 	}
-	writer.Write(fb)
+	_, _ = writer.Write(fb)
 }
 
 func initServer() {
@@ -143,7 +142,7 @@ func initServer() {
 
 	testfunc := func(writer http.ResponseWriter, response *http.Request, data interface{}) {
 		if writer != nil {
-			writer.Write([]byte("hahahaha"))
+			_, _ = writer.Write([]byte("hahahaha"))
 		}
 	}
 	server.AddNamespace("example", testfunc)
@@ -254,29 +253,29 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			var fileType string
 			var thumbType string
 			var post PostTable
+			var err error
 			post.ID, _ = strconv.Atoi(checkedPostID)
 			post.BoardID, _ = strconv.Atoi(boardid)
 
-			stmt, err := db.Prepare("SELECT `parentid`, `filename`, `password` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?")
-			if err != nil {
-				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
-			}
-			defer closeStatement(stmt)
-
-			err = stmt.QueryRow(&post.ID, &post.BoardID, nilTimestamp).Scan(&post.ParentID, &post.Filename, &post.Password)
-			if err == sql.ErrNoRows {
+			if err = queryRowSQL(
+				"SELECT `parentid`, `filename`, `password` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?",
+				[]interface{}{&post.ID, &post.BoardID, nilTimestamp},
+				[]interface{}{&post.ParentID, &post.Filename, &post.Password},
+			); err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n<br />", post.ID)
 				continue
-			}
-			if err != nil {
-				serveErrorPage(writer, err.Error())
+			} else if err != nil {
+				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
 				return
 			}
 
-			err = db.QueryRow("SELECT `id` FROM `" + config.DBprefix + "boards` WHERE `dir` = '" + board + "'").Scan(&post.BoardID)
-			if err != nil {
+			if err = queryRowSQL(
+				"SELECT `id` FROM `"+config.DBprefix+"boards` WHERE `dir` = ?",
+				[]interface{}{board},
+				[]interface{}{&post.BoardID},
+			); err != nil {
 				serveErrorPage(writer, err.Error())
 				return
 			}
@@ -299,8 +298,10 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
 
-					_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `filename` = 'deleted' WHERE `id` = " + strconv.Itoa(post.ID) + " AND `boardid` = " + strconv.Itoa(post.BoardID))
-					if err != nil {
+					if _, err = execSQL(
+						"UPDATE `"+config.DBprefix+"posts` SET `filename` = 'deleted' WHERE `id` = ? AND `boardid` = ?",
+						post.ID, post.BoardID,
+					); err != nil {
 						serveErrorPage(writer, err.Error())
 						return
 					}
@@ -309,14 +310,18 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				buildBoardPages(&_board[0])
 				_post, _ := getPostArr(map[string]interface{}{"id": post.ID, "boardid": post.BoardID}, "")
 				postBoard := _post[0]
-				// postBoard := _post[0].(PostTable)
 				buildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "Attached image from %d deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url=/"+board+"/\">", post.ID)
 			} else {
 				// delete the post
-				_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `id` = " + strconv.Itoa(post.ID))
+				if _, err = execSQL(
+					"UPDATE `"+config.DBprefix+"posts` SET `deleted_timestamp` = ? WHERE `id` = ?",
+					getSQLDateTime(), post.ID,
+				); err != nil {
+					serveErrorPage(writer, err.Error())
+				}
 				if post.ParentID == 0 {
 					os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
@@ -325,23 +330,30 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				}
 
 				// if the deleted post is actually a thread, delete its posts
-				_, err = db.Exec("UPDATE `" + config.DBprefix + "posts` SET `deleted_timestamp` = '" + getSQLDateTime() + "' WHERE `parentID` = " + strconv.Itoa(post.ID))
-				if err != nil {
+				if _, err = execSQL("UPDATE `"+config.DBprefix+"posts` SET `deleted_timestamp` = ? WHERE `parentID` = ?",
+					getSQLDateTime(), post.ID,
+				); err != nil {
 					serveErrorPage(writer, err.Error())
 					return
 				}
 
 				// delete the file
 				var deletedFilename string
-				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `id` = " + strconv.Itoa(post.ID) + " AND `filename` != ''").Scan(&deletedFilename)
-				if err == nil {
+				if err = queryRowSQL(
+					"SELECT `filename` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `filename` != ''",
+					[]interface{}{post.ID},
+					[]interface{}{&deletedFilename},
+				); err == nil {
 					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
 				}
 
-				err = db.QueryRow("SELECT `filename` FROM `" + config.DBprefix + "posts` WHERE `parentID` = " + strconv.Itoa(post.ID) + " AND `filename` != ''").Scan(&deletedFilename)
-				if err == nil {
+				if err = queryRowSQL(
+					"SELECT `filename` FROM `"+config.DBprefix+"posts` WHERE `parentID` = ? AND `filename` != ''",
+					[]interface{}{post.ID},
+					[]interface{}{&deletedFilename},
+				); err == nil {
 					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))

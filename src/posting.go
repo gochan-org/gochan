@@ -115,22 +115,18 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		thread.IName = "thread"
 
 		// Get the number of replies to this thread.
-		stmt, err := db.Prepare("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?")
-		if err != nil {
-			html += err.Error() + "<br />\n"
-		}
-		defer closeStatement(stmt)
-
-		if err = stmt.QueryRow(board.ID, op.ID, nilTimestamp).Scan(&thread.NumReplies); err != nil {
+		if err = queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?",
+			[]interface{}{board.ID, op.ID, nilTimestamp},
+			[]interface{}{&thread.NumReplies},
+		); err != nil {
 			html += err.Error() + "<br />\n"
 		}
 
 		// Get the number of image replies in this thread
-		stmt, err = db.Prepare("SELECT COUNT(*) FROM `" + config.DBprefix + "posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ? AND `filesize` <> 0")
-		if err != nil {
-			html += err.Error() + "<br />\n"
-		}
-		if err = stmt.QueryRow(board.ID, op.ID, nilTimestamp).Scan(&thread.NumImages); err != nil {
+		if err = queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ? AND `filesize` <> 0",
+			[]interface{}{board.ID, op.ID, nilTimestamp},
+			[]interface{}{&thread.NumImages},
+		); err != nil {
 			html += err.Error() + "<br />\n"
 		}
 
@@ -225,11 +221,12 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		var pages_obj []BoardPageJSON
 
 		catalog_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+		defer closeFile(catalog_json_file)
 		if err != nil {
 			html += handleError(1, "Failed opening /"+board.Dir+"/catalog.json: "+err.Error())
 			return
 		}
-		defer closeFile(catalog_json_file)
+
 		currentBoardPage := board.CurrentPage
 		for _, page_threads := range thread_pages {
 			board.CurrentPage++
@@ -237,11 +234,11 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			pageFilename := strconv.Itoa(board.CurrentPage) + ".html"
 			current_page_filepath = path.Join(config.DocumentRoot, board.Dir, pageFilename)
 			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+			defer closeFile(current_page_file)
 			if err != nil {
 				html += handleError(1, "Failed opening board page: "+err.Error()) + "<br />"
 				continue
 			}
-			defer closeFile(current_page_file)
 
 			// Render the boardpage template, don't forget config
 			if err = img_boardpage_tmpl.Execute(current_page_file, map[string]interface{}{
@@ -396,11 +393,11 @@ func buildThreadPages(op *PostTable) (html string) {
 
 	// Put together the thread JSON
 	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	defer closeFile(threadJSONFile)
 	if err != nil {
 		html += handleError(1, "Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
 		return
 	}
-	defer closeFile(threadJSONFile)
 
 	// Create the wrapper object
 	thread_json_wrapper := new(ThreadJSONWrapper)
@@ -464,17 +461,17 @@ func buildFrontPage() (html string) {
 
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	defer closeFile(front_file)
 	if err != nil {
 		return handleError(1, "Failed opening front page for writing: "+err.Error()) + "<br />\n"
 	}
-	defer closeFile(front_file)
 
 	// get front pages
-	rows, err := db.Query("SELECT * FROM `" + config.DBprefix + "frontpage`")
+	rows, err := querySQL("SELECT * FROM `" + config.DBprefix + "frontpage`")
+	defer closeRows(rows)
 	if err != nil {
 		return handleError(1, "Failed getting front page rows: "+err.Error())
 	}
-	defer closeRows(rows)
 
 	for rows.Next() {
 		frontpage := new(FrontTable)
@@ -487,25 +484,23 @@ func buildFrontPage() (html string) {
 	}
 
 	// get recent posts
-	stmt, err := db.Prepare(
-		"SELECT `" + config.DBprefix + "posts`.`id`, " +
-			"`" + config.DBprefix + "posts`.`parentid`, " +
-			"`" + config.DBprefix + "boards`.`dir` AS boardname, " +
-			"`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
-			"`name`, `tripcode`, `message`, `filename`, `thumb_w`, `thumb_h` " +
-			"FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
-			"WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = ? " +
-			"AND `boardid` = `" + config.DBprefix + "boards`.`id` " +
-			"ORDER BY `timestamp` DESC LIMIT ?")
+	rows, err = querySQL(
+		"SELECT `"+config.DBprefix+"posts`.`id`, "+
+			"`"+config.DBprefix+"posts`.`parentid`, "+
+			"`"+config.DBprefix+"boards`.`dir` AS boardname, "+
+			"`"+config.DBprefix+"posts`.`boardid` AS boardid, "+
+			"`name`, `tripcode`, `message`, `filename`, `thumb_w`, `thumb_h` "+
+			"FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` "+
+			"WHERE `"+config.DBprefix+"posts`.`deleted_timestamp` = ? "+
+			"AND `boardid` = `"+config.DBprefix+"boards`.`id` "+
+			"ORDER BY `timestamp` DESC LIMIT ?",
+		nilTimestamp, config.MaxRecentPosts,
+	)
+	defer closeRows(rows)
 	if err != nil {
 		return handleError(1, err.Error())
 	}
-	defer closeStatement(stmt)
 
-	rows, err = stmt.Query(nilTimestamp, config.MaxRecentPosts)
-	if err != nil {
-		return handleError(1, "Failed getting list of recent posts for front page: "+err.Error())
-	}
 	for rows.Next() {
 		recent_post := new(RecentPost)
 		err = rows.Scan(&recent_post.PostID, &recent_post.ParentID, &recent_post.BoardName, &recent_post.BoardID, &recent_post.Name, &recent_post.Tripcode, &recent_post.Message, &recent_post.Filename, &recent_post.ThumbW, &recent_post.ThumbH)
@@ -529,10 +524,10 @@ func buildFrontPage() (html string) {
 
 func buildBoardListJSON() (html string) {
 	board_list_file, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	defer closeFile(board_list_file)
 	if err != nil {
 		return handleError(1, "Failed opening board.json for writing: "+err.Error()) + "<br />\n"
 	}
-	defer closeFile(board_list_file)
 
 	board_list_wrapper := new(BoardJSONWrapper)
 
@@ -563,13 +558,10 @@ func buildBoardListJSON() (html string) {
 
 // bumps the given thread on the given board and returns true if there were no errors
 func bumpThread(postID, boardID int) error {
-	stmt, err := db.Prepare("UPDATE `" + config.DBprefix + "posts` SET `bumped` = ? WHERE `id` = ? AND `boardid` = ?")
-	if err != nil {
-		return err
-	}
-	defer closeStatement(stmt)
+	_, err := execSQL("UPDATE `"+config.DBprefix+"posts` SET `bumped` = ? WHERE `id` = ? AND `boardid` = ?",
+		[]interface{}{time.Now(), postID, boardID},
+	)
 
-	_, err = stmt.Exec(time.Now(), postID, boardID)
 	return err
 }
 
@@ -581,51 +573,44 @@ func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interfac
 	var interfaces []interface{}
 	// var count int
 	// var search string
-	stmt, err := db.Prepare("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `" + config.DBprefix + "banlist` WHERE `ip` = ?")
-	if err != nil {
+	err := queryRowSQL("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ?",
+		[]interface{}{&post.IP},
+		[]interface{}{&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt},
+	)
+	if err == sql.ErrNoRows {
+		// the user isn't banned
+		// We don't need to return err because it isn't necessary
+		return interfaces, nil
+	} else if err != nil {
 		handleError(1, "Error checking banned status: "+err.Error())
 		return interfaces, err
 	}
-	defer closeStatement(stmt)
-
-	err = stmt.QueryRow(&post.IP).Scan(&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			// the user isn't banned
-			// We don't need to return err because it isn't necessary
-			return interfaces, nil
-		}
-		return interfaces, err // something went wrong
-	} else {
-		isExpired = ban_entry.Expires.After(time.Now()) == false
-		if isExpired {
-			// if it is expired, send a message saying that it's expired, but still post
-			println(1, "expired")
-			return interfaces, nil
-		}
-		// the user's IP is in the banlist. Check if the ban has expired
-		if getSpecificSQLDateTime(ban_entry.Expires) == "0001-01-01 00:00:00" || ban_entry.Expires.After(time.Now()) {
-			// for some funky reason, Go's MySQL driver seems to not like getting a supposedly nil timestamp as an ACTUAL nil timestamp
-			// so we're just going to wing it and cheat. Of course if they change that, we're kind of hosed.
-
-			var interfaces []interface{}
-			interfaces = append(interfaces, config)
-			interfaces = append(interfaces, ban_entry)
-			return interfaces, nil
-		}
+	isExpired = ban_entry.Expires.After(time.Now()) == false
+	if isExpired {
+		// if it is expired, send a message saying that it's expired, but still post
+		println(1, "expired")
 		return interfaces, nil
 	}
+	// the user's IP is in the banlist. Check if the ban has expired
+	if getSpecificSQLDateTime(ban_entry.Expires) == "0001-01-01 00:00:00" || ban_entry.Expires.After(time.Now()) {
+		// for some funky reason, Go's MySQL driver seems to not like getting a supposedly nil timestamp as an ACTUAL nil timestamp
+		// so we're just going to wing it and cheat. Of course if they change that, we're kind of hosed.
+
+		return []interface{}{config, ban_entry}, nil
+	}
+	return interfaces, nil
 }
 
 func sinceLastPost(post *PostTable) int {
 	var lastPostTime time.Time
-	if err := db.QueryRow("SELECT `timestamp` FROM `" + config.DBprefix + "posts` WHERE `ip` = '" + post.IP + "' ORDER BY `timestamp` DESC LIMIT 1").Scan(&lastPostTime); err == sql.ErrNoRows {
+	if err := queryRowSQL("SELECT `timestamp` FROM `"+config.DBprefix+"posts` WHERE `ip` = '?' ORDER BY `timestamp` DESC LIMIT 1",
+		[]interface{}{post.IP},
+		[]interface{}{&lastPostTime},
+	); err == sql.ErrNoRows {
 		// no posts by that IP.
 		return -1
-	} else {
-		return int(time.Since(lastPostTime).Seconds())
 	}
-	return -1
+	return int(time.Since(lastPostTime).Seconds())
 }
 
 func createImageThumbnail(image_obj image.Image, size string) image.Image {
@@ -738,13 +723,7 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 	}
 	insertValues += " ? )"
 
-	stmt, err := db.Prepare(insertString + insertValues)
-	if err != nil {
-		return nil, err
-	}
-	defer closeStatement(stmt)
-
-	result, err = stmt.Exec(
+	result, err := execSQL(insertString+insertValues,
 		post.BoardID, post.ParentID, post.Name, post.Tripcode,
 		post.Email, post.Subject, post.MessageHTML, post.MessageText,
 		post.Password, post.Filename, post.FilenameOriginal,
@@ -753,6 +732,7 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 		post.Autosage, post.PosterAuthority, post.DeletedTimestamp,
 		post.Bumped, post.Stickied, post.Locked, post.Reviewed, post.Sillytag,
 	)
+
 	if err != nil {
 		return result, err
 	}
@@ -821,16 +801,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	post.Subject = request.FormValue("postsubject")
 	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
 
-	stmt, err := db.Prepare("SELECT `max_message_length` from `" + config.DBprefix + "boards` WHERE `id` = ?")
-	if err != nil {
-		serveErrorPage(w, "Error getting board info.")
-		errorLog.Print("Error getting board info: " + err.Error())
-		return
-	}
-	defer closeStatement(stmt)
-
-	if err = stmt.QueryRow(post.BoardID).Scan(&maxMessageLength); err != nil {
-		serveErrorPage(w, handleError(1, "Requested board does not exist."))
+	if err := queryRowSQL("SELECT `max_message_length` from `"+config.DBprefix+"boards` WHERE `id` = ?",
+		[]interface{}{post.BoardID},
+		[]interface{}{&maxMessageLength},
+	); err != nil {
+		serveErrorPage(w, handleError(0, "Error getting board info: "+err.Error()))
 		return
 	}
 
@@ -921,14 +896,10 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
 			var allowsVids bool
-			vidStmt, err := db.Prepare("SELECT `embeds_allowed` FROM `" + config.DBprefix + "boards` WHERE `id` = ? LIMIT 1")
-			if err != nil {
-				serveErrorPage(w, handleError(1, "Couldn't get board info: "+err.Error()))
-				return
-			}
-			defer closeStatement(vidStmt)
-
-			if err = vidStmt.QueryRow(post.BoardID).Scan(&allowsVids); err != nil {
+			if err = queryRowSQL("SELECT `embeds_allowed` FROM `"+config.DBprefix+"boards` WHERE `id` = ? LIMIT 1",
+				[]interface{}{post.BoardID},
+				[]interface{}{&allowsVids},
+			); err != nil {
 				serveErrorPage(w, handleError(1, "Couldn't get board info: "+err.Error()))
 				return
 			}
@@ -1142,9 +1113,13 @@ func formatMessage(message string) string {
 					// the link is in fact, a valid int
 					var boardDir string
 					var linkParent int
-					stmt, err := db.Prepare("SELECT `dir`,`parentid` FROM " + config.DBprefix + "posts," + config.DBprefix + "boards WHERE " + config.DBprefix + "posts.id = ?")
-					handleError(1, customError(err))
-					stmt.QueryRow(word[8:]).Scan(&boardDir, &linkParent)
+
+					if err = queryRowSQL("SELECT `dir`,`parentid` FROM "+config.DBprefix+"posts,"+config.DBprefix+"boards WHERE "+config.DBprefix+"posts.id = ?",
+						[]interface{}{word[8:]},
+						[]interface{}{&boardDir, &linkParent},
+					); err != nil {
+						handleError(1, customError(err))
+					}
 
 					// get post board dir
 					if boardDir == "" {

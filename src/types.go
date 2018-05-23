@@ -12,13 +12,12 @@ import (
 )
 
 var (
-	needsInitialSetup = true
-	config            GochanConfig
-	accessLog         *log.Logger
-	errorLog          *log.Logger
-	modLog            *log.Logger
-	readBannedIPs     []string
-	bbcompiler        bbcode.Compiler
+	config        GochanConfig
+	accessLog     *log.Logger
+	errorLog      *log.Logger
+	modLog        *log.Logger
+	readBannedIPs []string
+	bbcompiler    bbcode.Compiler
 )
 
 type RecentPost struct {

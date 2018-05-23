@@ -16,7 +16,11 @@ var verbosityString string
 var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
 
 func main() {
-	defer db.Close()
+	defer func() {
+		if db != nil {
+			_ = db.Close()
+		}
+	}()
 	initConfig()
 	config.Verbosity, _ = strconv.Atoi(verbosityString)
 	config.Version = version
@@ -26,7 +30,7 @@ func main() {
 
 	println(0, "Loading and parsing templates...")
 	if err := initTemplates(); err != nil {
-		println(0, err.Error())
+		handleError(0, customError(err))
 		os.Exit(2)
 	}
 
@@ -34,7 +38,8 @@ func main() {
 	if db != nil {
 		_, err := db.Exec("USE `" + config.DBname + "`")
 		if err != nil {
-			println(0, customError(err))
+			handleError(0, customError(err))
+			os.Exit(2)
 		}
 	}
 	initServer()

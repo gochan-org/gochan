@@ -13,7 +13,7 @@
 						{{if ne $op.Filename ""}}
 							{{if ne $op.Filename "deleted"}}
 								<div class="file-info">File: <a href="src/{{$op.Filename}}" target="_blank">{{$op.Filename}}</a> - ({{formatFilesize $op.Filesize}} , {{$op.ImageW}}x{{$op.ImageH}}, {{$op.FilenameOriginal}})</div>
-								<a class="upload-container" href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$op.Filename}}"><img src="{{$.config.SiteWebfolder}}{{$.board.Dir}}/thumb/{{imageToThumbnailPath $op.Filename}}" width="{{$op.ThumbW}}" height="{{$op.ThumbH}}" class="upload" /></a>
+								<a class="upload-container" href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$op.Filename}}"><img src="{{$.config.SiteWebfolder}}{{$.board.Dir}}/thumb/{{imageToThumbnailPath $op.Filename}}" width="{{$op.ThumbW}}" height="{{$op.ThumbH}}" class="upload" alt="" /></a>
 							{{else}}
 								<div class="file-deleted-box" style="text-align:center;">File removed</div>
 							{{end}}
@@ -32,7 +32,7 @@
 							{{if ne $reply.Filename ""}}
 								{{if ne $reply.Filename "deleted"}}
 									<span class="file-info">File: <a href="src/{{$reply.Filename}}" target="_blank">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}}x{{$reply.ImageH}}, {{$reply.FilenameOriginal}})</span><br />
-									<a class="upload-container" href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$reply.Filename}}"><img src="{{$.config.SiteWebfolder}}{{$.board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="upload" /></a>
+									<a class="upload-container" href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$reply.Filename}}"><img src="{{$.config.SiteWebfolder}}{{$.board.Dir}}/thumb/{{imageToThumbnailPath $reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="upload" alt=""/></a>
 								{{else}}
 									<div class="file-deleted-box" style="text-align:center;">File removed</div>
 								{{end}}{{end}}
