@@ -147,13 +147,11 @@ function getStaff() {
 		data: {
 			action: 'getstaffjquery',
 		},
-		dataType:"xml",
+		dataType:"text",
 		cache: true,
 		async:false,
 		success: function(result) {
-			var return_jq = $jq(result);
-			var text = $jq($jq(return_jq.children()[0]).children()[1]).text();
-			var return_data = text.trim().split(";");
+			var return_data = result.trim().split(";");
 			s = new Staff(return_data[0],return_data[1],return_data[2].split(","));
 		},
 		error: function() {
