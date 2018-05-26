@@ -3,7 +3,7 @@ GOCHAN_DEBUG=1
 GOCHAN_VERBOSE=2
 GOCHAN_VERBOSITY=0 # This is set by "make release/debug/verbose"
 
-GOCHAN_VERSION=1.9.2
+GOCHAN_VERSION=1.9.3
 GOCHAN_BUILDTIME=$(shell date +%y%m%d.%H%M)
 ifeq ($(GOOS), windows)
 	GOCHAN_BIN=gochan.exe
@@ -33,4 +33,4 @@ ifndef GOPATH
 endif
 	@echo ${GOCHAN_VERBOSITY}
 	@echo ${GOCHAN_VERBOSE}
-	go build -v -ldflags "-w -X main.version=${GOCHAN_VERSION} -X main.buildtime_str=${GOCHAN_BUILDTIME} -X main.verbosity_str=${GOCHAN_VERBOSITY}" -o ${DIRNAME}${GOCHAN_BIN} ./src
+	go build -v -ldflags "-w -X main.version=${GOCHAN_VERSION} -X main.buildtimeString=${GOCHAN_BUILDTIME} -X main.verbosityString=${GOCHAN_VERBOSITY}" -o ${DIRNAME}${GOCHAN_BIN} ./src

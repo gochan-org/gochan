@@ -645,15 +645,13 @@ var manage_functions = map[string]ManageFunction{
 							"`anonymous`,`forced_anon`,`max_age`,`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,"+
 							"`redirect_to_thread`,`require_file`,`enable_catalog`) "+
 							"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-						[]interface{}{
-							&board.Order, &board.Dir, &board.Type, &board.UploadType,
-							&board.Title, &board.Subtitle, &board.Description, &board.Section,
-							&board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle,
-							&board.Locked, &boardCreationTimestamp, &board.Anonymous,
-							&board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
-							&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
-							&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
-						},
+						&board.Order, &board.Dir, &board.Type, &board.UploadType,
+						&board.Title, &board.Subtitle, &board.Description, &board.Section,
+						&board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle,
+						&board.Locked, &boardCreationTimestamp, &board.Anonymous,
+						&board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
+						&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
+						&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
 					); err != nil {
 						do = ""
 						board_creation_status = handleError(1, "Error creating board: "+customError(err))
@@ -673,7 +671,7 @@ var manage_functions = map[string]ManageFunction{
 					// resetBoardSectionArrays()
 				default:
 					// put the default column values in the text boxes
-					rows, err = querySQL("SELECT `column_name`,`columnDefault` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
+					rows, err = querySQL("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
 					if err != nil {
 						html += handleError(1, "Error getting column names from boards table:"+err.Error())
 						return

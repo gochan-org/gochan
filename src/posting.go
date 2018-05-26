@@ -559,7 +559,7 @@ func buildBoardListJSON() (html string) {
 // bumps the given thread on the given board and returns true if there were no errors
 func bumpThread(postID, boardID int) error {
 	_, err := execSQL("UPDATE `"+config.DBprefix+"posts` SET `bumped` = ? WHERE `id` = ? AND `boardid` = ?",
-		[]interface{}{time.Now(), postID, boardID},
+		time.Now(), postID, boardID,
 	)
 
 	return err
