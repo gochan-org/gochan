@@ -85,7 +85,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	results, err := os.Stat(path.Join(config.DocumentRoot, board.Dir))
 	if err != nil {
 		// Try creating the board's configured directory if it doesn't exist
-		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0600)
+		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
 		if err != nil {
 			html += handleError(1, "Failed creating /"+board.Dir+"/: "+err.Error())
 			return
@@ -190,7 +190,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	if len(threads) == 0 {
 		board.CurrentPage = 1
 		// Open board.html for writing to the first page.
-		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			html += handleError(1, "Failed opening /"+board.Dir+"/board.html: "+err.Error()) + "<br />"
 			return
@@ -220,7 +220,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		// Create array of page wrapper objects, and open the file.
 		var pages_obj []BoardPageJSON
 
-		catalog_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+		catalog_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		defer closeFile(catalog_json_file)
 		if err != nil {
 			html += handleError(1, "Failed opening /"+board.Dir+"/catalog.json: "+err.Error())
@@ -233,7 +233,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			var current_page_filepath string
 			pageFilename := strconv.Itoa(board.CurrentPage) + ".html"
 			current_page_filepath = path.Join(config.DocumentRoot, board.Dir, pageFilename)
-			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 			defer closeFile(current_page_file)
 			if err != nil {
 				html += handleError(1, "Failed opening board page: "+err.Error()) + "<br />"
@@ -373,7 +373,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	op.NumPages = len(thread_pages)
 
 	current_page_filepath := path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
-	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		html += handleError(1, "Failed opening "+current_page_filepath+": "+err.Error())
 		return
@@ -392,7 +392,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	}
 
 	// Put together the thread JSON
-	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	defer closeFile(threadJSONFile)
 	if err != nil {
 		html += handleError(1, "Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
@@ -429,7 +429,7 @@ func buildThreadPages(op *PostTable) (html string) {
 	for page_num, page_posts := range thread_pages {
 		op.CurrentPage = page_num + 1
 		current_page_filepath := path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage)+".html")
-		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			html += handleError(1, "Failed opening "+current_page_filepath+": "+err.Error()) + "<br />\n"
 			return
@@ -460,7 +460,7 @@ func buildFrontPage() (html string) {
 	var recent_posts_arr []interface{}
 
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
-	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	defer closeFile(front_file)
 	if err != nil {
 		return handleError(1, "Failed opening front page for writing: "+err.Error()) + "<br />\n"
@@ -523,7 +523,7 @@ func buildFrontPage() (html string) {
 }
 
 func buildBoardListJSON() (html string) {
-	board_list_file, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	board_list_file, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	defer closeFile(board_list_file)
 	if err != nil {
 		return handleError(1, "Failed opening board.json for writing: "+err.Error()) + "<br />\n"
@@ -886,7 +886,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			thumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
 			catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
-			if err := ioutil.WriteFile(filePath, data, 0600); err != nil {
+			if err := ioutil.WriteFile(filePath, data, 0777); err != nil {
 				handleError(0, "Couldn't write file \""+post.Filename+"\""+err.Error())
 				serveErrorPage(w, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
