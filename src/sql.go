@@ -8,7 +8,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	// _ "github.com/lib/pq"
 )
 
 const (
@@ -25,8 +25,7 @@ func connectToSQLServer() {
 
 	db, err = sql.Open("mysql", config.DBusername+":"+config.DBpassword+"@"+config.DBhost+"/"+config.DBname+"?parseTime=true&collation=utf8mb4_unicode_ci")
 	if err != nil {
-		printf(0, "Failed to connect to the database: ")
-		handleError(0, customError(err))
+		handleError(0, "Failed to connect to the database: %s\n", customError(err))
 		os.Exit(2)
 	}
 
@@ -39,13 +38,12 @@ func connectToSQLServer() {
 	// read the initial setup sql file into a string
 	initialSQLBytes, err := ioutil.ReadFile("initialsetupdb.sql")
 	if err != nil {
-		print(0, "failed: ")
-		handleError(0, customError(err))
+		handleError(0, "failed: %s\n", customError(err))
 		os.Exit(2)
 	}
 	initialSQLStr := string(initialSQLBytes)
 
-	print(0, "Starting initial setup...")
+	printf(0, "Starting initial setup...")
 	initialSQLStr += "\nINSERT INTO `DBNAME`.`DBPREFIXstaff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3);"
 	initialSQLStr = strings.NewReplacer("DBNAME", config.DBname, "DBPREFIX", config.DBprefix).Replace(initialSQLStr)
 
@@ -54,9 +52,8 @@ func connectToSQLServer() {
 	for _, statement := range initialSQLArr {
 		if statement != "" {
 			if _, err := db.Exec(statement); err != nil {
-				println(0, "failed, see log for details.")
-				errorLog.Fatal("Error executing initialsetupdb.sql: " + customError(err))
-				return
+				handleError(0, "failed with error: %s\n", customError(err))
+				os.Exit(2)
 			}
 		}
 	}
@@ -78,8 +75,7 @@ func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	if err != nil {
 		return err
 	}
-	err = stmt.QueryRow(values...).Scan(out...)
-	return err
+	return stmt.QueryRow(values...).Scan(out...)
 }
 
 func querySQL(query string, a ...interface{}) (*sql.Rows, error) {

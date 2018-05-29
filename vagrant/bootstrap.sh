@@ -101,6 +101,9 @@ if [ ! -e "$GOCHAN_PATH/gochan.json" ]; then
 	install -m 775 -o vagrant -g vagrant -T /vagrant/gochan.example.json $GOCHAN_PATH/gochan.json
 fi
 
+mkdir -p /home/vagrant/.config/systemd/user/
+ln -s /vagrant/gochan.service /home/vagrant/.config/systemd/user/gochan.service
+
 sed -e 's/"Port": 8080,/"Port": 9000,/' -i $GOCHAN_PATH/gochan.json
 sed -e 's/"UseFastCGI": false,/"UseFastCGI": true,/' -i /$GOCHAN_PATH/gochan.json
 sed -e 's/"DomainRegex": ".*",/"DomainRegex": "(https|http):\\\/\\\/(.*)\\\/(.*)",/' -i $GOCHAN_PATH/gochan.json
@@ -109,6 +112,7 @@ sed -e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' -i $GOCHAN_PATH/gochan.json
 
 echo
 echo "Server set up, please run \"vagrant ssh\" on your host machine, and"
-echo "\"cd /home/vagrant/gochan && ./gochan\" in the guest. Then browse to http://172.27.0.3/manage"
-echo "to complete installation (TODO: add further instructions as default initial announcement"
-echo "or /manage?action=firstrun)"
+echo "(optionally) \"systemctl --user start gochan\" in the guest."
+echo "Then browse to http://172.27.0.3/manage to complete installation"
+echo "If you want gochan to run on system startup run \"systemctl --user enable gochan\""
+# TODO: add further instructions as default initial announcement or /manage?action=firstrun

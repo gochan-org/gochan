@@ -25,7 +25,7 @@ func main() {
 	config.Verbosity, _ = strconv.Atoi(verbosityString)
 	config.Version = version
 	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", config.Version, buildtimeString, config.Verbosity)
-	printf(0, "Config file loaded. Connecting to database...")
+	println(0, "Config file loaded. Connecting to database...")
 	connectToSQLServer()
 
 	println(0, "Loading and parsing templates...")

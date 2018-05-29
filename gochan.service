@@ -1,0 +1,10 @@
+[Unit]
+Description=gochan Daemon
+After=network.target
+
+[Service]
+ExecStart=/home/vagrant/gochan/gochan
+WorkingDirectory=/home/vagrant/gochan
+
+[Install]
+WantedBy=default.target
