@@ -387,7 +387,7 @@ func getMetaInfo(stackOffset int) (string, int, string) {
 
 func customError(err error) string {
 	if err != nil {
-		file, line, _ := getMetaInfo(2)
+		file, line, _ := getMetaInfo(1)
 		return fmt.Sprintf("[ERROR] %s:%d: %s\n", file, line, err.Error())
 	}
 	return ""

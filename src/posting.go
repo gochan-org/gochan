@@ -844,9 +844,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	switch checkPostForSpam(post.IP, request.Header["User-Agent"][0], request.Referer(),
 		post.Name, post.Email, post.MessageText) {
 	case "discard":
+		serveErrorPage(w, "Your post looks like spam.")
 		accessLog.Print("Akismet recommended discarding post from: " + post.IP)
 		return
 	case "spam":
+		serveErrorPage(w, "Your post looks like spam.")
 		accessLog.Print("Akismet suggested post is spam from " + post.IP)
 		return
 	default:
