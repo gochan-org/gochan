@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"html"
-	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -57,8 +55,12 @@ var funcMap = template.FuncMap{
 		println(v, i...)
 		return ""
 	},
-	"stringAppend": func(a, b string) string {
-		return a + b
+	"stringAppend": func(strings ...string) string {
+		var appended string
+		for _, str := range strings {
+			appended += str
+		}
+		return appended
 	},
 	"truncateMessage": func(msg string, limit int, max_lines int) string {
 		var truncated bool
@@ -89,12 +91,10 @@ var funcMap = template.FuncMap{
 		if len(msg) > limit {
 			if ellipsis {
 				return msg[:limit] + "..."
-			} else {
-				return msg[:limit]
 			}
-		} else {
-			return msg
+			return msg[:limit]
 		}
+		return msg
 	},
 	"escapeString": func(a string) string {
 		return html.EscapeString(a)
@@ -129,9 +129,9 @@ var funcMap = template.FuncMap{
 		} else if name[len(name)-4:] == "webm" {
 			name = name[:len(name)-4] + "jpg"
 		}
-		ext_begin := strings.LastIndex(name, ".")
-		new_name := name[:ext_begin] + "t." + getFileExtension(name)
-		return new_name
+		extBegin := strings.LastIndex(name, ".")
+		newName := name[:extBegin] + "t." + getFileExtension(name)
+		return newName
 	},
 	"getUploadType": func(name string) string {
 		extension := getFileExtension(name)
@@ -177,26 +177,29 @@ var funcMap = template.FuncMap{
 
 var (
 	banpage_tmpl        *template.Template
+	errorpage_tmpl      *template.Template
+	front_page_tmpl     *template.Template
 	global_header_tmpl  *template.Template
 	img_boardpage_tmpl  *template.Template
 	img_threadpage_tmpl *template.Template
 	img_post_form_tmpl  *template.Template
-	post_edit_tmpl      *template.Template
-	manage_header_tmpl  *template.Template
-	manage_boards_tmpl  *template.Template
-	manage_config_tmpl  *template.Template
-	front_page_tmpl     *template.Template
+	// manage_bans_tmpl    *template.Template
+	manage_boards_tmpl *template.Template
+	manage_config_tmpl *template.Template
+	manage_header_tmpl *template.Template
+	post_edit_tmpl     *template.Template
 )
 
 func loadTemplate(files ...string) (*template.Template, error) {
 	if len(files) == 0 {
-		return nil, errors.New("ERROR: no files named in call to loadTemplate")
+		return nil, errors.New("No files named in call to loadTemplate")
 	}
 	var templates []string
 	for i, file := range files {
 		templates = append(templates, file)
 		files[i] = config.TemplateDir + "/" + files[i]
 	}
+
 	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
 }
 
@@ -210,6 +213,11 @@ func initTemplates() error {
 	banpage_tmpl, err = loadTemplate("banpage.html")
 	if err != nil {
 		return templateError("banpage.html", err)
+	}
+
+	errorpage_tmpl, err = loadTemplate("error.html")
+	if err != nil {
+		return templateError("error.html", err)
 	}
 
 	global_header_tmpl, err = loadTemplate("global_header.html")
@@ -227,15 +235,15 @@ func initTemplates() error {
 		return templateError("img_threadpage.html", err)
 	}
 
-	/* post_edit_tmpl, err = loadTemplate("post_edit_tmpl", "post_edit.html")
+	post_edit_tmpl, err = loadTemplate("post_edit.html", "img_header.html", "global_footer.html")
 	if err != nil {
 		return templateError("img_threadpage.html", err)
-	} */
-
-	manage_header_tmpl, err = loadTemplate("manage_header.html")
-	if err != nil {
-		return templateError("manage_header.html", err)
 	}
+
+	/* manage_bans_tmpl, err = loadTemplate("manage_bans.html")
+	if err != nil {
+		return templateError("manage_bans.html", err)
+	} */
 
 	manage_boards_tmpl, err = loadTemplate("manage_boards.html")
 	if err != nil {
@@ -247,21 +255,14 @@ func initTemplates() error {
 		return templateError("manage_config.html", err)
 	}
 
+	manage_header_tmpl, err = loadTemplate("manage_header.html")
+	if err != nil {
+		return templateError("manage_header.html", err)
+	}
+
 	front_page_tmpl, err = loadTemplate("front.html", "global_footer.html")
 	if err != nil {
 		return templateError("front.html", err)
 	}
 	return nil
-}
-
-func getStyleLinks(w http.ResponseWriter, stylesheet string) {
-	styles_map := make(map[int]string)
-	for i := 0; i < len(config.Styles_img); i++ {
-		styles_map[i] = config.Styles_img[i]
-	}
-
-	if err := manage_header_tmpl.Execute(w, config); err != nil {
-		handleError(0, customError(err))
-		os.Exit(2)
-	}
 }

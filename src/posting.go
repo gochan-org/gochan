@@ -67,7 +67,7 @@ func buildBoards(all bool, which int) (html string) {
 // buildBoardPages builds the pages for the board archive. board is a BoardsTable object representing the board to
 // 	build archive pages for. The return value is a string of HTML with debug information from the build process.
 func buildBoardPages(board *BoardsTable) (html string) {
-	//	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
+	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
 	var current_page_file *os.File
 	var threads []interface{}
 	var thread_pages [][]interface{}
@@ -210,7 +210,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		}
 
 		html += "/" + board.Dir + "/ built successfully, no threads to build.\n"
-		//benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
+		benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
 		return
 	} else {
 		// Create the archive pages.
@@ -306,7 +306,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		}
 		html += "/" + board.Dir + "/ built successfully.\n"
 	}
-	//benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
+	benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), start_time, false)
 	return
 }
 
@@ -567,7 +567,7 @@ func bumpThread(postID, boardID int) error {
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
 // returns true if the user is banned
-func checkBannedStatus(post *PostTable, writer *http.ResponseWriter) ([]interface{}, error) {
+func checkBannedStatus(post *PostTable, writer http.ResponseWriter) ([]interface{}, error) {
 	var isExpired bool
 	var ban_entry BanlistTable
 	var interfaces []interface{}
@@ -711,6 +711,21 @@ func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
 	return
 }
 
+func parseName(name string) map[string]string {
+	parsed := make(map[string]string)
+	if !strings.Contains(name, "#") {
+		parsed["name"] = name
+		parsed["tripcode"] = ""
+	} else if strings.Index(name, "#") == 0 {
+		parsed["tripcode"] = tripcode.Tripcode(name[1:])
+	} else if strings.Index(name, "#") > 0 {
+		postNameArr := strings.SplitN(name, "#", 2)
+		parsed["name"] = postNameArr[0]
+		parsed["tripcode"] = tripcode.Tripcode(postNameArr[1])
+	}
+	return parsed
+}
+
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(post PostTable, bump bool) (sql.Result, error) {
 	var result sql.Result
@@ -748,13 +763,11 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 }
 
 // called when a user accesses /post. Parse form data, then insert and build
-func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
+func makePost(writer http.ResponseWriter, request *http.Request) {
 	startTime := benchmarkTimer("makePost", time.Now(), true)
-	request = *r
-	writer = w
 	var maxMessageLength int
 	var post PostTable
-	domain := r.Host
+	domain := request.Host
 	var formName string
 	var nameCookie string
 	var formEmail string
@@ -769,25 +782,15 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 	var emailCommand string
 	formName = request.FormValue("postname")
-
-	if strings.Index(formName, "#") == -1 {
-		post.Name = formName
-	} else if strings.Index(formName, "#") == 0 {
-		post.Tripcode = tripcode.Tripcode(formName[1:])
-	} else if strings.Index(formName, "#") > 0 {
-		postNameArr := strings.SplitN(formName, "#", 2)
-		post.Name = postNameArr[0]
-		post.Tripcode = tripcode.Tripcode(postNameArr[1])
-	}
-	if strings.Index(post.Tripcode, "PipesTtB.A") > -1 {
-		http.Redirect(writer, r, "https://i.imgur.com/caMm6N8.jpg", 302)
-	}
+	parsedName := parseName(formName)
+	post.Name = parsedName["name"]
+	post.Tripcode = parsedName["tripcode"]
 
 	nameCookie = post.Name + post.Tripcode
 	formEmail = request.FormValue("postemail")
 	http.SetCookie(writer, &http.Cookie{Name: "email", Value: formEmail, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
 
-	if strings.Index(formEmail, "noko") == -1 && strings.Index(formEmail, "sage") == -1 {
+	if !strings.Contains(formEmail, "noko") && !strings.Contains(formEmail, "sage") {
 		post.Email = formEmail
 	} else if strings.Index(formEmail, "#") > 1 {
 		formEmailArr := strings.SplitN(formEmail, "#", 2)
@@ -805,16 +808,15 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 		[]interface{}{post.BoardID},
 		[]interface{}{&maxMessageLength},
 	); err != nil {
-		serveErrorPage(w, handleError(0, "Error getting board info: "+err.Error()))
+		serveErrorPage(writer, handleError(0, "Error getting board info: "+err.Error()))
 		return
 	}
 
 	if len(post.MessageText) > maxMessageLength {
-		serveErrorPage(w, "Post body is too long")
+		serveErrorPage(writer, "Post body is too long")
 		return
 	}
 	post.MessageHTML = formatMessage(post.MessageText)
-
 	post.Password = md5Sum(request.FormValue("postpassword"))
 
 	// Reverse escapes
@@ -826,9 +828,9 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
 	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
 
-	post.IP = getRealIP(&request)
+	post.IP = getRealIP(request)
 	post.Timestamp = time.Now()
-	post.PosterAuthority = getStaffRank()
+	post.PosterAuthority = getStaffRank(request)
 	post.Bumped = time.Now()
 	post.Stickied = request.FormValue("modstickied") == "on"
 	post.Locked = request.FormValue("modlocked") == "on"
@@ -844,11 +846,11 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	switch checkPostForSpam(post.IP, request.Header["User-Agent"][0], request.Referer(),
 		post.Name, post.Email, post.MessageText) {
 	case "discard":
-		serveErrorPage(w, "Your post looks like spam.")
+		serveErrorPage(writer, "Your post looks like spam.")
 		accessLog.Print("Akismet recommended discarding post from: " + post.IP)
 		return
 	case "spam":
-		serveErrorPage(w, "Your post looks like spam.")
+		serveErrorPage(writer, "Your post looks like spam.")
 		accessLog.Print("Akismet suggested post is spam from " + post.IP)
 		return
 	default:
@@ -867,7 +869,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			serveErrorPage(w, handleError(1, "Couldn't read file: "+err.Error()))
+			serveErrorPage(writer, handleError(1, "Couldn't read file: "+err.Error()))
 		} else {
 			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
@@ -879,7 +881,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
 			boardArr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
 			if len(boardArr) == 0 {
-				serveErrorPage(w, "No boards have been created yet")
+				serveErrorPage(writer, "No boards have been created yet")
 				return
 			}
 			_boardDir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
@@ -890,7 +892,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 
 			if err := ioutil.WriteFile(filePath, data, 0777); err != nil {
 				handleError(0, "Couldn't write file \""+post.Filename+"\""+err.Error())
-				serveErrorPage(w, "Couldn't write file \""+post.FilenameOriginal+"\"")
+				serveErrorPage(writer, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
 			}
 
@@ -902,13 +904,13 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				[]interface{}{post.BoardID},
 				[]interface{}{&allowsVids},
 			); err != nil {
-				serveErrorPage(w, handleError(1, "Couldn't get board info: "+err.Error()))
+				serveErrorPage(writer, handleError(1, "Couldn't get board info: "+err.Error()))
 				return
 			}
 
 			if filetype == "webm" {
 				if !allowsVids || !config.AllowVideoUploads {
-					serveErrorPage(w, "Video uploading is not currently enabled for this board.")
+					serveErrorPage(writer, "Video uploading is not currently enabled for this board.")
 					os.Remove(filePath)
 					return
 				}
@@ -917,25 +919,25 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				if post.ParentID == 0 {
 					err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth)
 					if err != nil {
-						serveErrorPage(w, handleError(1, err.Error()))
+						serveErrorPage(writer, handleError(1, err.Error()))
 						return
 					}
 				} else {
 					err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth_reply)
 					if err != nil {
-						serveErrorPage(w, handleError(1, err.Error()))
+						serveErrorPage(writer, handleError(1, err.Error()))
 						return
 					}
 				}
 
 				if err := createVideoThumbnail(filePath, catalogThumbPath, config.ThumbWidth_catalog); err != nil {
-					serveErrorPage(w, handleError(1, err.Error()))
+					serveErrorPage(writer, handleError(1, err.Error()))
 					return
 				}
 
 				outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
 				if err != nil {
-					serveErrorPage(w, handleError(1, "Error getting video info: "+err.Error()))
+					serveErrorPage(writer, handleError(1, "Error getting video info: "+err.Error()))
 					return
 				}
 				if err == nil && outputBytes != nil {
@@ -968,13 +970,13 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 				if err != nil {
 					os.Remove(filePath)
 					handleError(1, "Couldn't open uploaded file \""+post.Filename+"\""+err.Error())
-					serveErrorPage(w, "Upload filetype not supported")
+					serveErrorPage(writer, "Upload filetype not supported")
 					return
 				} else {
 					// Get image filesize
 					stat, err := os.Stat(filePath)
 					if err != nil {
-						serveErrorPage(w, handleError(1, "Couldn't get image filesize: "+err.Error()))
+						serveErrorPage(writer, handleError(1, "Couldn't get image filesize: "+err.Error()))
 						return
 					} else {
 						post.Filesize = int(stat.Size())
@@ -994,12 +996,12 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 					if request.FormValue("spoiler") == "on" {
 						// If spoiler is enabled, symlink thumbnail to spoiler image
 						if _, err := os.Stat(path.Join(config.DocumentRoot, "spoiler.png")); err != nil {
-							serveErrorPage(w, "missing /spoiler.png")
+							serveErrorPage(writer, "missing /spoiler.png")
 							return
 						} else {
 							err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumbPath)
 							if err != nil {
-								serveErrorPage(w, err.Error())
+								serveErrorPage(writer, err.Error())
 								return
 							}
 						}
@@ -1008,7 +1010,7 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 						post.ThumbW = img.Bounds().Max.X
 						post.ThumbH = img.Bounds().Max.Y
 						if err := syscall.Symlink(filePath, thumbPath); err != nil {
-							serveErrorPage(w, err.Error())
+							serveErrorPage(writer, err.Error())
 							return
 						}
 					} else {
@@ -1019,14 +1021,14 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 							thumbnail = createImageThumbnail(img, "op")
 							catalogThumbnail = createImageThumbnail(img, "catalog")
 							if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-								serveErrorPage(w, handleError(1, "Couldn't generate catalog thumbnail: "+err.Error()))
+								serveErrorPage(writer, handleError(1, "Couldn't generate catalog thumbnail: "+err.Error()))
 								return
 							}
 						} else {
 							thumbnail = createImageThumbnail(img, "reply")
 						}
 						if err = imaging.Save(thumbnail, thumbPath); err != nil {
-							serveErrorPage(w, handleError(1, "Couldn't save thumbnail: "+err.Error()))
+							serveErrorPage(writer, handleError(1, "Couldn't save thumbnail: "+err.Error()))
 							return
 						}
 					}
@@ -1036,25 +1038,25 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	}
 
 	if strings.TrimSpace(post.MessageText) == "" && post.Filename == "" {
-		serveErrorPage(w, "Post must contain a message if no image is uploaded.")
+		serveErrorPage(writer, "Post must contain a message if no image is uploaded.")
 		return
 	}
 
 	postDelay := sinceLastPost(&post)
 	if postDelay > -1 {
 		if post.ParentID == 0 && postDelay < config.NewThreadDelay {
-			serveErrorPage(w, "Please wait before making a new thread.")
+			serveErrorPage(writer, "Please wait before making a new thread.")
 			return
 		} else if post.ParentID > 0 && postDelay < config.ReplyDelay {
-			serveErrorPage(w, "Please wait before making a reply.")
+			serveErrorPage(writer, "Please wait before making a reply.")
 			return
 		}
 	}
 
-	isBanned, err := checkBannedStatus(&post, &w)
+	isBanned, err := checkBannedStatus(&post, writer)
 	if err != nil {
 		handleError(1, "Error in checkBannedStatus: "+err.Error())
-		serveErrorPage(w, err.Error())
+		serveErrorPage(writer, err.Error())
 		return
 	}
 
@@ -1068,14 +1070,14 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 			fmt.Fprintf(writer, banpage_html+handleError(1, err.Error())+"\n</body>\n</html>")
 			return
 		}
-		fmt.Fprintf(w, banpage_buffer.String())
+		fmt.Fprintf(writer, banpage_buffer.String())
 		return
 	}
 
 	sanitizePost(&post)
 	result, err := insertPost(post, emailCommand != "sage")
 	if err != nil {
-		serveErrorPage(w, handleError(1, err.Error()))
+		serveErrorPage(writer, handleError(1, err.Error()))
 		return
 	}
 	postid, _ := result.LastInsertId()
@@ -1084,17 +1086,16 @@ func makePost(w http.ResponseWriter, r *http.Request, data interface{}) {
 	boards, _ := getBoardArr(nil, "")
 	// rebuild the board page
 	buildBoards(false, post.BoardID)
-
 	buildFrontPage()
 
 	if emailCommand == "noko" {
 		if post.ParentID == 0 {
-			http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
+			http.Redirect(writer, request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
-			http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
+			http.Redirect(writer, request, "/"+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
 		}
 	} else {
-		http.Redirect(writer, &request, "/"+boards[post.BoardID-1].Dir+"/", http.StatusFound)
+		http.Redirect(writer, request, "/"+boards[post.BoardID-1].Dir+"/", http.StatusFound)
 	}
 	benchmarkTimer("makePost", startTime, false)
 }

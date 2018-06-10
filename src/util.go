@@ -328,16 +328,6 @@ func getSectionArr(where string) (sections []interface{}, err error) {
 	return
 }
 
-func getCookie(name string) *http.Cookie {
-	numCookies := len(cookies)
-	for c := 0; c < numCookies; c++ {
-		if cookies[c].Name == name {
-			return cookies[c]
-		}
-	}
-	return nil
-}
-
 func getCountryCode(ip string) (string, error) {
 	if config.EnableGeoIP && config.GeoIPDBlocation != "" {
 		gi, err := libgeo.Load(config.GeoIPDBlocation)

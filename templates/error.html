@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Error :c</title>
+	<meta charset="UTF-8">
+	<title>{{.ErrorTitle}}</title>
 </head>
 <body>
-<center>
-	<h1>Error!</h1>
-	<h2>{ERRORTEXT}</h2>
-</center>
+<h1>{{.ErrorHeader}}</h1>
+<img src="{{.ErrorImage}}" border="0" alt="">
+<p>{{.ErrorText}}</p>
+<hr><address>http://gochan.org powered by Gochan {{.config.Version}}</address>
 </body>
 </html>

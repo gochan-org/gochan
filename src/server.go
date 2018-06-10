@@ -15,29 +15,27 @@ import (
 )
 
 var (
-	cookies       []*http.Cookie
-	writer        http.ResponseWriter
-	request       http.Request
 	server        *GochanServer
 	referrerRegex *regexp.Regexp
 )
 
 type GochanServer struct {
-	/* writer     http.ResponseWriter
-	request    http.Request */
-	namespaces map[string]func(http.ResponseWriter, *http.Request, interface{})
+	namespaces map[string]func(http.ResponseWriter, *http.Request)
 }
 
-func (s GochanServer) AddNamespace(basePath string, namespaceFunction func(http.ResponseWriter, *http.Request, interface{})) {
+func (s GochanServer) AddNamespace(basePath string, namespaceFunction func(http.ResponseWriter, *http.Request)) {
 	s.namespaces[basePath] = namespaceFunction
 }
 
-func (s GochanServer) getFileData(writer http.ResponseWriter, url string) (fileBytes []byte) {
-	filePath := path.Join(config.DocumentRoot, url)
+func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Request) {
+	filePath := path.Join(config.DocumentRoot, request.URL.Path)
+	var fileBytes []byte
 	results, err := os.Stat(filePath)
 	if err != nil {
 		// the requested path isn't a file or directory, 404
-		fileBytes = nil
+		writer.WriteHeader(404)
+		serveNotFound(writer, request)
+		return
 	} else {
 		//the file exists, or there is a folder here
 		if results.IsDir() {
@@ -46,16 +44,13 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) (fileB
 				newPath := path.Join(filePath, value)
 				_, err := os.Stat(newPath)
 				if err == nil {
-					// serve the index page
-					writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-					fileBytes, _ := ioutil.ReadFile(newPath)
-					return fileBytes
+					filePath = newPath
+					break
 				}
 			}
 		} else {
 			//the file exists, and is not a folder
-			fileBytes, _ = ioutil.ReadFile(filePath)
-			extension := getFileExtension(url)
+			extension := getFileExtension(request.URL.Path)
 			switch extension {
 			case "png":
 				writer.Header().Add("Content-Type", "image/png")
@@ -83,10 +78,14 @@ func (s GochanServer) getFileData(writer http.ResponseWriter, url string) (fileB
 				writer.Header().Add("Content-Type", "text/html")
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
-			accessLog.Print("Success: 200 from " + getRealIP(&request) + " @ " + request.RequestURI)
+			accessLog.Print("Success: 200 from " + getRealIP(request) + " @ " + request.URL.Path)
 		}
 	}
-	return
+	// serve the index page
+	writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+	fileBytes, _ = ioutil.ReadFile(filePath)
+	writer.Header().Add("Cache-Control", "max-age=86400")
+	_, _ = writer.Write(fileBytes)
 }
 
 func serveNotFound(writer http.ResponseWriter, request *http.Request) {
@@ -98,29 +97,28 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		_, _ = writer.Write(errorPage)
 	}
-	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.RequestURI)
+	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.URL.Path)
 }
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
-	errorPageBytes, _ := ioutil.ReadFile("templates/error.html")
-	errorPage := strings.Replace(string(errorPageBytes), "{ERRORTEXT}", err, -1)
-	_, _ = writer.Write([]byte(errorPage))
+	errorpage_tmpl.Execute(writer, map[string]interface{}{
+		"config":      config,
+		"ErrorTitle":  "Error :c",
+		"ErrorImage":  "/error/lol 404.gif",
+		"ErrorHeader": "Error",
+		"ErrorText":   err,
+	})
 }
 
 func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	for name, namespaceFunction := range s.namespaces {
 		if request.URL.Path == "/"+name {
-			namespaceFunction(writer, request, nil)
+			// writer.WriteHeader(200)
+			namespaceFunction(writer, request)
 			return
 		}
 	}
-	fb := s.getFileData(writer, request.URL.Path)
-	writer.Header().Add("Cache-Control", "max-age=86400")
-	if fb == nil {
-		serveNotFound(writer, request)
-		return
-	}
-	_, _ = writer.Write(fb)
+	s.serveFile(writer, request)
 }
 
 func initServer() {
@@ -130,7 +128,7 @@ func initServer() {
 		os.Exit(2)
 	}
 	server = new(GochanServer)
-	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request, interface{}))
+	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
 
 	// Check if Akismet API key is usable at startup.
 	if config.AkismetAPIKey != "" {
@@ -140,11 +138,12 @@ func initServer() {
 	// Compile regex for checking referrers.
 	referrerRegex = regexp.MustCompile(config.DomainRegex)
 
-	testfunc := func(writer http.ResponseWriter, response *http.Request, data interface{}) {
+	testfunc := func(writer http.ResponseWriter, request *http.Request) {
 		if writer != nil {
 			_, _ = writer.Write([]byte("hahahaha"))
 		}
 	}
+
 	server.AddNamespace("example", testfunc)
 	server.AddNamespace("manage", callManageFunction)
 	server.AddNamespace("post", makePost)
@@ -163,23 +162,23 @@ func initServer() {
 	}
 }
 
-func getRealIP(r *http.Request) string {
+func getRealIP(request *http.Request) string {
 	// HTTP_CF_CONNECTING_IP > X-Forwarded-For > RemoteAddr
-	if r.Header.Get("HTTP_CF_CONNECTING_IP") != "" {
-		return r.Header.Get("HTTP_CF_CONNECTING_IP")
+	if request.Header.Get("HTTP_CF_CONNECTING_IP") != "" {
+		return request.Header.Get("HTTP_CF_CONNECTING_IP")
 	}
-	if r.Header.Get("X-Forwarded-For") != "" {
-		return r.Header.Get("X-Forwarded-For")
+	if request.Header.Get("X-Forwarded-For") != "" {
+		return request.Header.Get("X-Forwarded-For")
 	}
-	return r.RemoteAddr
+	return request.RemoteAddr
 }
 
-func validReferrer(request http.Request) bool {
+func validReferrer(request *http.Request) bool {
 	return referrerRegex.MatchString(request.Referer())
 }
 
 // register /util handler
-func utilHandler(writer http.ResponseWriter, request *http.Request, data interface{}) {
+func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	//writer.Header().Add("Content-Type", "text/css")
 	action := request.FormValue("action")
 	password := request.FormValue("password")
@@ -189,8 +188,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 	deleteBtn := request.PostFormValue("delete_btn")
 	reportBtn := request.PostFormValue("report_btn")
 	editBtn := request.PostFormValue("edit_btn")
+	doEdit := request.PostFormValue("doedit")
 
-	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" {
+	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
 		http.Redirect(writer, request, path.Join(config.SiteWebfolder, "/"), http.StatusFound)
 		return
 	}
@@ -202,6 +202,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 	}
 
 	if editBtn == "Edit" {
+		var err error
 		if len(postsArr) == 0 {
 			serveErrorPage(writer, "You need to select one post to edit.")
 			return
@@ -209,40 +210,99 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			serveErrorPage(writer, "You can only edit one post at a time.")
 			return
 		} else {
-			passwordMD5 := md5Sum(password)
-			rank := getStaffRank()
-			if passwordMD5 == "" && rank == 0 {
+			rank := getStaffRank(request)
+			if password == "" && rank == 0 {
 				serveErrorPage(writer, "Password required for post editing")
 				return
 			}
+			passwordMD5 := md5Sum(password)
+
 			var post PostTable
 			post.ID, _ = strconv.Atoi(postsArr[0])
 			post.BoardID, _ = strconv.Atoi(boardid)
-			stmt, err := db.Prepare("SELECT `parentid`,` password`,`message_raw` FROM `" + config.DBprefix + "posts` WHERE `id` = ? AND `deleted_timestamp` = ?")
-			if err != nil {
-				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
-			}
-			defer closeStatement(stmt)
-			/* var post_edit_buffer bytes.Buffer
-			if err = renderTemplate(post_edit_tmpl, "post_edit", post_edit_buffer,
-				&Wrapper{IName: "boards_", Data: all_boards},
-				&Wrapper{IName: "sections_w", Data: all_sections},
-				&Wrapper{IName: "posts_w", Data: []interface{}{
-					PostTable{BoardID: board.ID},
-				}},
-				&Wrapper{IName: "op", Data: []interface{}{PostTable{}}},
-				&Wrapper{IName: "board", Data: []interface{}{board}},
+			if err = queryRowSQL("SELECT `parentid`,`name`,`tripcode`,`email`,`subject`,`password`,`message_raw` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?",
+				[]interface{}{post.ID, post.BoardID, nilTimestamp},
+				[]interface{}{
+					&post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject,
+					&post.Password, &post.MessageText},
 			); err != nil {
-				html += handleError(1, fmt.Sprintf("Failed building /%s/res/%d.html: %s", board.Dir, 0, err.Error())) + "<br />"
+				serveErrorPage(writer, handleError(0, err.Error()))
 				return
-			} */
+			}
+
+			if post.Password != passwordMD5 && rank == 0 {
+				serveErrorPage(writer, "Wrong password")
+				return
+			}
+
+			if err = post_edit_tmpl.Execute(writer, map[string]interface{}{
+				"config":   config,
+				"post":     post,
+				"referrer": request.Referer(),
+			}); err != nil {
+				serveErrorPage(writer, handleError(0, err.Error()))
+				return
+			}
+
 		}
+	}
+	if doEdit == "1" {
+		var postPassword string
+
+		postid, err := strconv.Atoi(request.FormValue("postid"))
+		if err != nil {
+			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			return
+		}
+		boardid, err := strconv.Atoi(request.FormValue("boardid"))
+		if err != nil {
+			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			return
+		}
+
+		if err = queryRowSQL("SELECT `password` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ?",
+			[]interface{}{postid, boardid},
+			[]interface{}{&postPassword},
+		); err != nil {
+			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+		}
+
+		rank := getStaffRank(request)
+		if request.FormValue("password") != password && rank == 0 {
+			serveErrorPage(writer, "Wrong password")
+			return
+		}
+
+		board, err := getBoardFromID(boardid)
+		if err != nil {
+			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			return
+		}
+
+		if _, err = execSQL("UPDATE `"+config.DBprefix+"posts` SET "+
+			"`email` = ?, `subject` = ?, `message` = ?, `message_raw` = ? WHERE `id` = ? AND `boardid` = ?",
+			request.FormValue("editemail"), request.FormValue("editsubject"), formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg"),
+			postid, boardid,
+		); err != nil {
+			serveErrorPage(writer, handleError(0, "editing post: %s", err.Error()))
+			return
+		}
+
+		buildBoards(false, boardid)
+		if request.FormValue("parentid") == "0" {
+			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
+		} else {
+			http.Redirect(writer, request, "/"+board.Dir+"/res/"+request.FormValue("parentid")+".html#"+strconv.Itoa(postid), http.StatusFound)
+		}
+
+		return
 	}
 
 	if deleteBtn == "Delete" {
 		// Delete a post or thread
+		writer.Header().Add("Content-Type", "text/plain")
 		passwordMD5 := md5Sum(password)
-		rank := getStaffRank()
+		rank := getStaffRank(request)
 
 		if passwordMD5 == "" && rank == 0 {
 			serveErrorPage(writer, "Password required for post deletion")
@@ -264,7 +324,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 			); err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n<br />", post.ID)
+				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n", post.ID)
 				continue
 			} else if err != nil {
 				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
@@ -313,7 +373,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				buildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "Attached image from %d deleted successfully<br />\n<meta http-equiv=\"refresh\" content=\"1;url=/"+board+"/\">", post.ID)
+				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID) //<br />\n<meta http-equiv=\"refresh\" content=\"1;url=/"+board+"/\">", post.ID)
 			} else {
 				// delete the post
 				if _, err = execSQL(
@@ -362,7 +422,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request, data interfa
 				buildBoards(false, post.BoardID)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "%d deleted successfully\n<br />", post.ID)
+				fmt.Fprintf(writer, "%d deleted successfully\n", post.ID)
 			}
 		}
 	}

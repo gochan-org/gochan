@@ -17,23 +17,19 @@ import (
 // ManageFunction represents the functions accessed by staff members at /manage?action=<functionname>.
 // Eventually a plugin system might allow you to add more
 type ManageFunction struct {
-	Permissions int           // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	Callback    func() string //return string of html output
+	Permissions int                                                            // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
+	Callback    func(writer http.ResponseWriter, request *http.Request) string //return string of html output
 }
 
-func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}) {
-	request = *r
-	writer = w
-	cookies = r.Cookies()
-
-	err := request.ParseForm()
-	if err != nil {
+func callManageFunction(writer http.ResponseWriter, request *http.Request) {
+	var err error
+	if err = request.ParseForm(); err != nil {
 		serveErrorPage(writer, err.Error())
 		errorLog.Println(customError(err))
 	}
 
 	action := request.FormValue("action")
-	staffRank := getStaffRank()
+	staffRank := getStaffRank(request)
 	var managePageBuffer bytes.Buffer
 	mangePageHTML := ""
 
@@ -57,11 +53,11 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 
 	if _, ok := manage_functions[action]; ok {
 		if staffRank >= manage_functions[action].Permissions {
-			managePageBuffer.Write([]byte(manage_functions[action].Callback()))
+			managePageBuffer.Write([]byte(manage_functions[action].Callback(writer, request)))
 		} else if staffRank == 0 && manage_functions[action].Permissions == 0 {
-			managePageBuffer.Write([]byte(manage_functions[action].Callback()))
+			managePageBuffer.Write([]byte(manage_functions[action].Callback(writer, request)))
 		} else if staffRank == 0 {
-			managePageBuffer.Write([]byte(manage_functions["login"].Callback()))
+			managePageBuffer.Write([]byte(manage_functions["login"].Callback(writer, request)))
 		} else {
 			managePageBuffer.Write([]byte(action + " is undefined."))
 		}
@@ -79,14 +75,12 @@ func callManageFunction(w http.ResponseWriter, r *http.Request, data interface{}
 	fmt.Fprintf(writer, managePageBuffer.String())
 }
 
-func getCurrentStaff() (string, error) {
-	sessionCookie := getCookie("sessiondata")
-	var key string
-	if sessionCookie == nil {
+func getCurrentStaff(request *http.Request) (string, error) {
+	sessionCookie, err := request.Cookie("sessiondata")
+	if err != nil {
 		return "", nil
 	}
-	key = sessionCookie.Value
-
+	key := sessionCookie.Value
 	current_session := new(SessionsTable)
 	if err := queryRowSQL(
 		"SELECT `data` FROM `"+config.DBprefix+"sessions` WHERE `key` = ?",
@@ -108,13 +102,13 @@ func getStaff(name string) (*StaffTable, error) {
 	return staff_obj, err
 }
 
-func getStaffRank() int {
-	staffname, err := getCurrentStaff()
-	println(1, customError(err))
+func getStaffRank(request *http.Request) int {
+	staffname, err := getCurrentStaff(request)
 	if staffname == "" {
 		return 0
 	}
 	if err != nil {
+		handleError(1, customError(err))
 		return 0
 	}
 
@@ -126,14 +120,14 @@ func getStaffRank() int {
 	return staff.Rank
 }
 
-func createSession(key string, username string, password string, request *http.Request, writer *http.ResponseWriter) int {
+func createSession(key string, username string, password string, request *http.Request, writer http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
 	var err error
 	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
-	if !validReferrer(*request) {
+	if !validReferrer(request) {
 		modLog.Print("Rejected login from possible spambot @ : " + request.RemoteAddr)
 		return 2
 	}
@@ -150,7 +144,7 @@ func createSession(key string, username string, password string, request *http.R
 		} else {
 			// successful login, add cookie that expires in one month
 			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: domain, Expires: time.Now().Add(time.Duration(time.Hour * 730))}
-			http.SetCookie(*writer, cookie)
+			http.SetCookie(writer, cookie)
 			if _, err = execSQL(
 				"INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES(?,?,?)",
 				key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
@@ -172,7 +166,7 @@ func createSession(key string, username string, password string, request *http.R
 var manage_functions = map[string]ManageFunction{
 	"cleanup": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h2>Cleanup</h2><br />"
 			var err error
 			if request.FormValue("run") == "Run Cleanup" {
@@ -213,7 +207,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"config": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
 			if do == "save" {
 				// configJSON, err := json.Marshal(config)
@@ -239,7 +233,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"purgeeverything": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<img src=\"/css/purge.jpg\" />"
 			rows, err := querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
 			defer closeRows(rows)
@@ -294,7 +288,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"executesql": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			statement := request.FormValue("sql")
 			html = "<h1>Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">" + statement + "</textarea>\n<input type=\"submit\" />\n</form>"
 			if statement != "" {
@@ -309,9 +303,9 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"login": {
 		Permissions: 0,
-		Callback: func() (html string) {
-			if getStaffRank() > 0 {
-				http.Redirect(writer, &request, path.Join(config.SiteWebfolder, "manage"), http.StatusFound)
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+			if getStaffRank(request) > 0 {
+				http.Redirect(writer, request, path.Join(config.SiteWebfolder, "manage"), http.StatusFound)
 			}
 			username := request.FormValue("username")
 			password := request.FormValue("password")
@@ -329,15 +323,18 @@ var manage_functions = map[string]ManageFunction{
 					"\t</form>"
 			} else {
 				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + generateSalt())[0:10]
-				createSession(key, username, password, &request, &writer)
-				http.Redirect(writer, &request, path.Join(config.SiteWebfolder, "/manage?action="+request.FormValue("redirect")), http.StatusFound)
+				createSession(key, username, password, request, writer)
+				http.Redirect(writer, request, path.Join(config.SiteWebfolder, "/manage?action="+request.FormValue("redirect")), http.StatusFound)
 			}
 			return
 		}},
 	"logout": {
 		Permissions: 1,
-		Callback: func() (html string) {
-			cookie := getCookie("sessiondata")
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+			cookie, err := request.Cookie("sessiondata")
+			if err != nil {
+				serveErrorPage(writer, err.Error())
+			}
 			var key string
 			if cookie != nil {
 				key = cookie.Value
@@ -361,7 +358,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"announcements": {
 		Permissions: 1,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h1>Announcements</h1><br />"
 
 			rows, err := querySQL("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC")
@@ -391,7 +388,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"bans": {
 		Permissions: 1,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			var ban_which string // user, image, or both
 
 			if request.PostFormValue("ban-user-button") == "Ban user" {
@@ -508,13 +505,13 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"getstaffjquery": {
 		Permissions: 0,
-		Callback: func() (html string) {
-			current_staff, err := getCurrentStaff()
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+			current_staff, err := getCurrentStaff(request)
 			if err != nil {
 				html = "nobody;0;"
 				return
 			}
-			staff_rank := getStaffRank()
+			staff_rank := getStaffRank(request)
 			if staff_rank == 0 {
 				html = "nobody;0;"
 				return
@@ -532,7 +529,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"boards": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
 			var done bool
 			board := new(BoardsTable)
@@ -774,8 +771,8 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"staffmenu": {
 		Permissions: 1,
-		Callback: func() (html string) {
-			rank := getStaffRank()
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+			rank := getStaffRank(request)
 
 			html = "<a href=\"javascript:void(0)\" id=\"logout\" class=\"staffmenu-item\">Log out</a><br />\n" +
 				"<a href=\"javascript:void(0)\" id=\"announcements\" class=\"staffmenu-item\">Announcements</a><br />\n"
@@ -804,13 +801,13 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"rebuildfront": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildFrontPage()
 		}},
 	"rebuildall": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildFrontPage() + "<hr />\n" +
 				buildBoardListJSON() + "<hr />\n" +
@@ -818,13 +815,13 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"rebuildboards": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildBoards(true, 0)
 		}},
 	"reparsehtml": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			posts, err := getPostArr(map[string]interface{}{
 				"deleted_timestamp": nilTimestamp,
 			}, "")
@@ -850,7 +847,7 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"recentposts": {
 		Permissions: 1,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			limit := request.FormValue("limit")
 			if limit == "" {
 				limit = "50"
@@ -896,13 +893,13 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"killserver": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			os.Exit(0)
 			return
 		}},
 	"staff": {
 		Permissions: 3,
-		Callback: func() (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
 			html = "<h1>Staff</h1><br />\n" +
 				"<table id=\"stafftable\" border=\"1\">\n" +
