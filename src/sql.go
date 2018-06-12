@@ -22,6 +22,8 @@ var (
 
 func connectToSQLServer() {
 	var err error
+	var sqlVersion string
+	var newInstall bool
 
 	db, err = sql.Open("mysql", config.DBusername+":"+config.DBpassword+"@"+config.DBhost+"/"+config.DBname+"?parseTime=true&collation=utf8mb4_unicode_ci")
 	if err != nil {
@@ -41,22 +43,51 @@ func connectToSQLServer() {
 		handleError(0, "failed: %s\n", customError(err))
 		os.Exit(2)
 	}
-	initialSQLStr := string(initialSQLBytes)
 
 	printf(0, "Starting initial setup...")
-	initialSQLStr += "\nINSERT INTO `DBNAME`.`DBPREFIXstaff` (`username`, `password_checksum`, `salt`, `rank`) VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3);"
+
+	initialSQLStr := string(initialSQLBytes)
 	initialSQLStr = strings.NewReplacer("DBNAME", config.DBname, "DBPREFIX", config.DBprefix).Replace(initialSQLStr)
-
 	initialSQLArr := strings.Split(initialSQLStr, ";")
-
 	for _, statement := range initialSQLArr {
-		if statement != "" {
+		if statement != "" && statement != "\n" && strings.Index(statement, "--") != 0 {
 			if _, err := db.Exec(statement); err != nil {
 				handleError(0, "failed with error: %s\n", customError(err))
 				os.Exit(2)
 			}
 		}
 	}
+
+	sqlVersion = ""
+	err = queryRowSQL("SELECT `value` FROM `"+config.DBprefix+"info` WHERE `name` = 'version'",
+		[]interface{}{}, []interface{}{&version})
+	if err == sql.ErrNoRows {
+		newInstall = true
+	} else if err != nil {
+		handleError(0, "failed with error: %s\n", customError(err))
+		os.Exit(2)
+	}
+
+	if newInstall {
+		printf(0, "\nThis looks like a new install, setting up the database...")
+		if _, err = db.Exec(
+			"INSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` " +
+				"(`username`, `password_checksum`, `salt`, `rank`) " +
+				"VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3)",
+		); err != nil {
+			handleError(0, "failed with error: %s\n", customError(err))
+			os.Exit(2)
+		}
+	}
+
+	if sqlVersion != version {
+		_, err = execSQL("INSERT INTO `"+config.DBprefix+"info` (`name`,`value`) VALUES('version',?)", version)
+		if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
+			handleError(0, "failed with error: %s\n", customError(err))
+			os.Exit(2)
+		}
+	}
+
 	println(0, "complete.")
 }
 
