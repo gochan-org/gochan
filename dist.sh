@@ -10,7 +10,8 @@ function copyStuff {
 	cp -r html/css $DIRNAME/html/css
 	cp -r html/error $DIRNAME/html/error
 	cp -r html/javascript $DIRNAME/html/javascript
-	touch $DIRNAME/html/index.html
+	touch $DIRNAME/html/firstrun.html
+	cp html/firstrun.html $DIRNAME/html/firstrun.html
 	mkdir $DIRNAME/log
 	cp -r templates $DIRNAME
 	cp initialsetupdb.sql $DIRNAME

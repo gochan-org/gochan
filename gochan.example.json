@@ -89,7 +89,7 @@
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
 	"MaxRecentPosts": 3,
-	"verbosity": 0,
+	"Verbosity": 0,
 	"EnableAppeals": true,
 	"MaxModlogDays": 14,
 	"_comment": "Set RandomSeed to a (preferrably large) string of letters and numbers",
