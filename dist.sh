@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION=1.10.1
+VERSION=`cat version`
 GOOS_ORIG=$GOOS
 
 function copyStuff {
@@ -14,6 +14,7 @@ function copyStuff {
 	mkdir $DIRNAME/log
 	cp -r templates $DIRNAME
 	cp initialsetupdb.sql $DIRNAME
+	cp *.nginx $DIRNAME
 	cp README.md $DIRNAME
 	cp LICENSE $DIRNAME
 	cp gochan.example.json $DIRNAME
@@ -22,6 +23,7 @@ function copyStuff {
 export GOOS=linux
 export DIRNAME=releases/gochan-v${VERSION}_${GOOS}64/
 copyStuff
+cp gochan.service $DIRNAME
 cd releases
 tar -zcvf gochan-v${VERSION}_${GOOS}-64.tar.gz gochan-v${VERSION}_${GOOS}64/
 cd ..
@@ -30,7 +32,7 @@ export GOOS=darwin
 export DIRNAME=releases/gochan-v${VERSION}_macos64/
 copyStuff
 cd releases
-tar -zcvf gochan-v${VERSION}_macos.tar.gz gochan-v${VERSION}_macos/
+tar -zcvf gochan-v${VERSION}_macos64.tar.gz gochan-v${VERSION}_macos64/
 cd ..
 
 export GOOS=windows

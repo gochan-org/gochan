@@ -1,7 +1,7 @@
 {
 	"ListenIP": "127.0.0.1",
 	"Port": 8080,
-	"FirstPage": ["index.html","board.html"],
+	"FirstPage": ["index.html","board.html","firstrun.html"],
 	"Error404Path": "/error/404.html",
 	"Error500Path": "/error/500.html",
 	"Username": "gochan",
@@ -89,8 +89,7 @@
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
 	"MaxRecentPosts": 3,
-	"MakeRSS": true,
-	"MakeSitemap": true,
+	"verbosity": 0,
 	"EnableAppeals": true,
 	"MaxModlogDays": 14,
 	"_comment": "Set RandomSeed to a (preferrably large) string of letters and numbers",

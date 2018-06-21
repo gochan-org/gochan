@@ -614,22 +614,22 @@ func sinceLastPost(post *PostTable) int {
 }
 
 func createImageThumbnail(image_obj image.Image, size string) image.Image {
-	var thumb_width int
-	var thumb_height int
+	var thumbWidth int
+	var thumbHeight int
 
 	switch size {
 	case "op":
-		thumb_width = config.ThumbWidth
-		thumb_height = config.ThumbHeight
+		thumbWidth = config.ThumbWidth
+		thumbHeight = config.ThumbHeight
 	case "reply":
-		thumb_width = config.ThumbWidth_reply
-		thumb_height = config.ThumbHeight_reply
+		thumbWidth = config.ThumbWidth_reply
+		thumbHeight = config.ThumbHeight_reply
 	case "catalog":
-		thumb_width = config.ThumbWidth_catalog
-		thumb_height = config.ThumbHeight_catalog
+		thumbWidth = config.ThumbWidth_catalog
+		thumbHeight = config.ThumbHeight_catalog
 	}
 	old_rect := image_obj.Bounds()
-	if thumb_width >= old_rect.Max.X && thumb_height >= old_rect.Max.Y {
+	if thumbWidth >= old_rect.Max.X && thumbHeight >= old_rect.Max.Y {
 		return image_obj
 	}
 
@@ -681,29 +681,29 @@ func getNewFilename() string {
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
 func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
-	var thumb_width int
-	var thumb_height int
+	var thumbWidth int
+	var thumbHeight int
 
 	switch {
 	case size == "op":
-		thumb_width = config.ThumbWidth
-		thumb_height = config.ThumbHeight
+		thumbWidth = config.ThumbWidth
+		thumbHeight = config.ThumbHeight
 	case size == "reply":
-		thumb_width = config.ThumbWidth_reply
-		thumb_height = config.ThumbHeight_reply
+		thumbWidth = config.ThumbWidth_reply
+		thumbHeight = config.ThumbHeight_reply
 	case size == "catalog":
-		thumb_width = config.ThumbWidth_catalog
-		thumb_height = config.ThumbHeight_catalog
+		thumbWidth = config.ThumbWidth_catalog
+		thumbHeight = config.ThumbHeight_catalog
 	}
 	if w == h {
-		new_w = thumb_width
-		new_h = thumb_height
+		new_w = thumbWidth
+		new_h = thumbHeight
 	} else {
 		var percent float32
 		if w > h {
-			percent = float32(thumb_width) / float32(w)
+			percent = float32(thumbWidth) / float32(w)
 		} else {
-			percent = float32(thumb_height) / float32(h)
+			percent = float32(thumbHeight) / float32(h)
 		}
 		new_w = int(float32(w) * percent)
 		new_h = int(float32(h) * percent)
@@ -728,23 +728,15 @@ func parseName(name string) map[string]string {
 
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(post PostTable, bump bool) (sql.Result, error) {
-	var result sql.Result
-	insertString := "INSERT INTO " + config.DBprefix + "posts (`boardid`, `parentid`, `name`, `tripcode`, `email`, `subject`, `message`, `message_raw`, `password`, `filename`, `filename_original`, `file_checksum`, `filesize`, `image_w`, `image_h`, `thumb_w`, `thumb_h`, `ip`, `tag`, `timestamp`, `autosage`, `poster_authority`, `deleted_timestamp`,`bumped`,`stickied`, `locked`, `reviewed`, `sillytag`) "
-
-	insertValues := "VALUES("
-	numColumns := 28 // number of columns in the post table minus `id`
-	for i := 0; i < numColumns-1; i++ {
-		insertValues += "?, "
-	}
-	insertValues += " ? )"
-
-	result, err := execSQL(insertString+insertValues,
-		post.BoardID, post.ParentID, post.Name, post.Tripcode,
-		post.Email, post.Subject, post.MessageHTML, post.MessageText,
-		post.Password, post.Filename, post.FilenameOriginal,
-		post.FileChecksum, post.Filesize, post.ImageW, post.ImageH,
-		post.ThumbW, post.ThumbH, post.IP, post.Tag, post.Timestamp,
-		post.Autosage, post.PosterAuthority, post.DeletedTimestamp,
+	result, err := execSQL(
+		"INSERT INTO "+config.DBprefix+"posts "+
+			"(`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`message_raw`,`password`,`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`,`ip`,`tag`,`timestamp`,`autosage`,`poster_authority`,`deleted_timestamp`,`bumped`,`stickied`,`locked`,`reviewed`,`sillytag`)"+
+			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+		post.BoardID, post.ParentID, post.Name, post.Tripcode, post.Email,
+		post.Subject, post.MessageHTML, post.MessageText, post.Password,
+		post.Filename, post.FilenameOriginal, post.FileChecksum, post.Filesize,
+		post.ImageW, post.ImageH, post.ThumbW, post.ThumbH, post.IP, post.Tag,
+		post.Timestamp, post.Autosage, post.PosterAuthority, post.DeletedTimestamp,
 		post.Bumped, post.Stickied, post.Locked, post.Reviewed, post.Sillytag,
 	)
 

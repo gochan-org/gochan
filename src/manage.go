@@ -177,8 +177,7 @@ var manage_functions = map[string]ManageFunction{
 					html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 					return
 				}
-				// TODO: remove orphaned replies
-				// TODO: remove orphaned uploads
+				// TODO: remove orphaned replies and uploads
 
 				html += "Optimizing all tables in database.<hr />"
 				tableRows, tablesErr := querySQL("SHOW TABLES")
@@ -399,7 +398,7 @@ var manage_functions = map[string]ManageFunction{
 				ban_which = "both"
 			}
 			// if none of these are true, we can assume that the page was loaded without sending anything
-			println(0, "ban_which"+ban_which)
+			println(1, "ban_which"+ban_which)
 
 			if ban_which == "user" {
 				//var banned_tripcode string
@@ -466,6 +465,7 @@ var manage_functions = map[string]ManageFunction{
 				"<h2>Banned IPs</h2>\n"
 
 			rows, err = querySQL("SELECT * FROM `" + config.DBprefix + "banlist`")
+			defer closeRows(rows)
 			if err != nil {
 				html += "</table><br />" + handleError(1, err.Error())
 				return
@@ -669,6 +669,7 @@ var manage_functions = map[string]ManageFunction{
 				default:
 					// put the default column values in the text boxes
 					rows, err = querySQL("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
+					defer closeRows(rows)
 					if err != nil {
 						html += handleError(1, "Error getting column names from boards table:"+err.Error())
 						return

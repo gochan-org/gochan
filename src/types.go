@@ -182,7 +182,7 @@ type ModLogTable struct {
 	Timestamp time.Time
 }
 
-// PollResultsTable may or may not be used in the future for polls (duh)
+// PollResultsTable may or may not be used in the future for user polls
 type PollResultsTable struct {
 	ID        uint
 	IP        string
@@ -404,13 +404,14 @@ type GochanConfig struct {
 	EnableGeoIP      bool
 	GeoIPDBlocation  string // set to "cf" or the path to the db
 	MaxRecentPosts   int
-	MakeRSS          bool
-	MakeSitemap      bool
-	EnableAppeals    bool
-	MaxModlogDays    int
-	RandomSeed       string
-	Version          string
-	Verbosity        int
+	// verbose = 0 for no debugging info. Critical errors and general output only
+	// verbose = 1 for non-critical warnings and important info
+	// verbose = 2 for all debugging/benchmarks/warnings
+	Verbosity     int
+	EnableAppeals bool
+	MaxModlogDays int
+	RandomSeed    string
+	Version       string
 }
 
 func initConfig() {

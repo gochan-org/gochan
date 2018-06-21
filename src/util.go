@@ -163,7 +163,6 @@ func escapeQuotes(txt string) string {
 
 // getBoardArr performs a query against the database, and returns an array of BoardsTables along with an error value.
 // If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
-//func getBoardArr(where string) (boards []BoardsTable, err error) {
 func getBoardArr(parameterList map[string]interface{}, extra string) (boards []BoardsTable, err error) {
 	queryString := "SELECT * FROM `" + config.DBprefix + "boards` "
 	numKeys := len(parameterList)

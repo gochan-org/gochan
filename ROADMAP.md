@@ -1,6 +1,6 @@
 # Gochan Development Roadmap
 
-This is just a very preliminary roadmap to map out what I plan to focus on with the versions
+This is a rough roadmap to map out what I plan to focus on with the versions
 
 
 1.x

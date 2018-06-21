@@ -2,17 +2,10 @@ package main
 
 import (
 	"os"
-	"strconv"
 )
 
 // set in Makefile via -ldflags
 var version string
-
-// verbose = 0 for no debugging info. Critical errors and general output only
-// verbose = 1 for non-critical warnings and important info
-// verbose = 2 for all debugging/benchmarks/warnings
-// set in Makefile via -ldflags
-var verbosityString string
 var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
 
 func main() {
@@ -22,7 +15,6 @@ func main() {
 		}
 	}()
 	initConfig()
-	config.Verbosity, _ = strconv.Atoi(verbosityString)
 	config.Version = version
 	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", config.Version, buildtimeString, config.Verbosity)
 	println(0, "Config file loaded. Connecting to database...")
