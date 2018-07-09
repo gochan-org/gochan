@@ -67,54 +67,43 @@ function prepareThumbnails() {
 	$jq("a.upload-container").click(function(e) {
 		var a = $jq(this);
 		var thumb = a.find("img.upload");
-		var video;
-		var thumbURL;
-		if(thumb.attr("alt") == undefined) thumbURL = thumb.attr("src");
-		else thumbURL = thumb.attr("alt");
-		var thumb_width = thumb.attr("width");
-		var thumb_height = thumb.attr("height");
-		var file_info_elem = a.prevAll(".file-info:first");
-		var uploadURL = file_info_elem.children("a:first")[0].href;
-		var viewBtn = a.nextAll("span.post-links:first");
-		if(thumb.attr("src") == thumbURL) {
-			// Expanding thumbnail
-			if(uploadURL.indexOf(".webm") > 0) {
-				// Upload is a video
-				thumb.hide();
-				video = $jq("<video />")
-				.prop({
-					src: uploadURL,
-					autoplay: true,
-					controls: true,
-					class: "upload",
-					loop: true
-				}).insertAfter(file_info_elem);
+		var thumbURL = thumb.attr("src");
+		var uploadURL = thumb.attr("alt");
+		thumb.removeAttr("width").removeAttr("height");
 
-				var close_video_btn = $jq("<a />")
-				.prop("href", "javascript:;")
-				.click(function(e) {
-					video.remove();
-					thumb.show();
-					this.remove();
-				}).css({
-					"padding-left": "8px"
-				})
-				.html("[Close]<br />");
-				file_info_elem.append(close_video_btn);
-			} else {
-				thumb.attr({
-					src: uploadURL,
-					alt: thumbURL
-				})
-				.removeAttr("width")
-				.removeAttr("height");
-			}
+		var file_info_elem = a.prevAll(".file-info:first");
+
+		if((thumbURL+uploadURL).indexOf(".webm") > 0) {
+			// Upload is a video
+			thumb.hide();
+			var video = $jq("<video />")
+			.prop({
+				src: uploadURL,
+				autoplay: true,
+				controls: true,
+				class: "upload",
+				loop: true
+			}).insertAfter(file_info_elem);
+
+			file_info_elem.append($jq("<a />")
+			.prop("href", "javascript:;")
+			.click(function(e) {
+				video.remove();
+				thumb.show();
+				this.remove();
+				thumb.prop({
+					src: thumbURL,
+					alt: uploadURL
+				});
+			}).css({
+				"padding-left": "8px"
+			})
+			.html("[Close]<br />"));
 		} else {
-			// Shrinking back to thumbnail
+			// upload is an image
 			thumb.attr({
-				"src": thumbURL,
-				"width": thumb_width,
-				"height": thumb_height
+				src: uploadURL,
+				alt: thumbURL
 			});
 		}
 		return false;

@@ -1,13 +1,10 @@
 gochan.json
-config.cfg
 gochan
 lib/
-log/access.log
-log/error.log
-log/mod.log
+log/
+releases/
 vagrant/.vagrant/
 vagrant/ubuntu-xenial-16.04-cloudimg-console.log
 html/boards.json
 html/index.html
 html/test/
-releases/

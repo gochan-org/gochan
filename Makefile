@@ -13,7 +13,7 @@ release: LDFLAGS=-w -s
 release: build
 
 # includes debugging info in the gochan executable
-debug: LDFLAGS=""
+debug: LDFLAGS=
 debug: build
 
 build:
