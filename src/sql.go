@@ -91,6 +91,13 @@ func connectToSQLServer() {
 	println(0, "complete.")
 }
 
+/*
+ * Automatically escapes the given values and caches the statement
+ * Example:
+ * var intVal int
+ * var stringVal string
+ * result, err := execSQL("INSERT INTO `tablename` (`intval`,`stringval`) VALUES(?,?)", intVal, stringVal)
+ */
 func execSQL(query string, values ...interface{}) (sql.Result, error) {
 	stmt, err := db.Prepare(query)
 	defer closeStatement(stmt)
@@ -100,6 +107,18 @@ func execSQL(query string, values ...interface{}) (sql.Result, error) {
 	return stmt.Exec(values...)
 }
 
+/*
+ * Gets a row from the db with the values in values[] and fills the respective pointers in out[]
+ * Automatically escapes the given values and caches the query
+ * Example:
+ * id := 32
+ * var intVal int
+ * var stringVal string
+ * err := queryRowSQL("SELECT `intval`,`stringval` FROM `table` WHERE `id` = ?",
+ * 	[]interface{}{&id},
+ * 	[]interface{}{&intVal, &stringVal}
+ * )
+ */
 func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	stmt, err := db.Prepare(query)
 	defer closeStatement(stmt)
@@ -109,6 +128,20 @@ func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	return stmt.QueryRow(values...).Scan(out...)
 }
 
+/*
+ * Gets all rows from the db with the values in values[] and fills the respective pointers in out[]
+ * Automatically escapes the given values and caches the query
+ * Example:
+ * rows, err := querySQL("SELECT * FROM `table`")
+ * if err == nil {
+ * 	for rows.Next() {
+ * 		var intVal int
+ * 		var stringVal string
+ * 		rows.Scan(&intVal, &stringVal)
+ * 		// do something with intVal and stringVal
+ * 	}
+ * }
+ */
 func querySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	stmt, err := db.Prepare(query)
 	defer closeStatement(stmt)

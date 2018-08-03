@@ -39,7 +39,7 @@ func benchmarkTimer(name string, givenTime time.Time, starting bool) (returnTime
 	} else {
 		// benchmark is finished, print the duration
 		// convert nanoseconds to a decimal seconds
-		printf(2, "benchmark %s completed in %f seconds", name, time.Since(givenTime).Seconds())
+		printf(2, "benchmark %s completed in %f seconds\n", name, time.Since(givenTime).Seconds())
 		returnTime = time.Now() // we don't really need this, but we have to return something
 	}
 	return
@@ -182,7 +182,6 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	}
 
 	queryString += fmt.Sprintf(" %s ORDER BY `order`", extra)
-	printf(2, "queryString@getBoardArr: %s\n", queryString)
 
 	rows, err := querySQL(queryString, parameterValues...)
 	defer closeRows(rows)
@@ -273,8 +272,6 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 	}
 
 	queryString += " " + extra // " ORDER BY `order`"
-	printf(2, "queryString@getPostArr queryString: %s\n", queryString)
-
 	rows, err := querySQL(queryString, parameterValues...)
 	defer closeRows(rows)
 	if err != nil {
@@ -577,4 +574,38 @@ func makePostJSON(post PostTable, anonymous string) (postObj PostJSON) {
 		postObj.Tripcode = "!" + post.Tripcode
 	}
 	return
+}
+
+func getBan(post PostTable) (*BanlistTable, error) {
+	ban := new(BanlistTable)
+
+	if err := queryRowSQL(
+		"SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `banned_by`, `timestamp`, `expires`, `reason` FROM `"+config.DBprefix+"banlist` "+
+			"WHERE ? like `ip` OR ? REGEXP `name` OR ? REGEXP `tripcode`",
+		[]interface{}{post.IP, post.Name, post.Tripcode},
+		[]interface{}{&ban.IP, &ban.Name, &ban.Tripcode},
+	); err != nil {
+		return nil, err
+	}
+	return ban, nil
+}
+
+func ipMatch(newIP, existingIP string) bool {
+	if newIP == existingIP {
+		// both are single IPs and are the same
+		return true
+	}
+	wildcardIndex := strings.Index(existingIP, "*")
+	if wildcardIndex < 0 {
+		// single (or invalid) and they don't match
+		return false
+	}
+	ipRegexStr := existingIP[0:wildcardIndex]
+	ipRegexStr = strings.Replace(ipRegexStr, ".", "\\.", -1) + ".*"
+	ipRegex, err := regexp.Compile(ipRegexStr)
+	if err != nil {
+		// this shouldn't happen unless you enter an invalid IP in the db
+		return false
+	}
+	return ipRegex.MatchString(newIP)
 }

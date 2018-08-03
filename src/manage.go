@@ -465,7 +465,6 @@ var manage_functions = map[string]ManageFunction{
 				"<h2>Banned IPs</h2>\n"
 
 			rows, err = querySQL("SELECT * FROM `" + config.DBprefix + "banlist`")
-			defer closeRows(rows)
 			if err != nil {
 				html += "</table><br />" + handleError(1, err.Error())
 				return

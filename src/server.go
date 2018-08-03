@@ -170,7 +170,11 @@ func getRealIP(request *http.Request) string {
 	if request.Header.Get("X-Forwarded-For") != "" {
 		return request.Header.Get("X-Forwarded-For")
 	}
-	return request.RemoteAddr
+	remoteHost, _, err := net.SplitHostPort(request.RemoteAddr)
+	if err != nil {
+		return request.RemoteAddr
+	}
+	return remoteHost
 }
 
 func validReferrer(request *http.Request) bool {

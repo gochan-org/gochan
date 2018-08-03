@@ -404,9 +404,9 @@ type GochanConfig struct {
 	EnableGeoIP      bool
 	GeoIPDBlocation  string // set to "cf" or the path to the db
 	MaxRecentPosts   int
-	// verbose = 0 for no debugging info. Critical errors and general output only
-	// verbose = 1 for non-critical warnings and important info
-	// verbose = 2 for all debugging/benchmarks/warnings
+	// Verbosity = 0 for no debugging info. Critical errors and general output only
+	// Verbosity = 1 for non-critical warnings and important info
+	// Verbosity = 2 for all debugging/benchmarks/warnings
 	Verbosity     int
 	EnableAppeals bool
 	MaxModlogDays int
