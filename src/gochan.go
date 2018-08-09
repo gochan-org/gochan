@@ -4,7 +4,6 @@ import (
 	"os"
 )
 
-// set in Makefile via -ldflags
 var version string
 var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
 

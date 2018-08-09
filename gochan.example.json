@@ -34,25 +34,17 @@
 	"SiteWebfolder": "/",
 	"DomainRegex": "(https|http):\\/\\/(gochan\\.lunachan\\.net|gochan\\.org)\\/(.*)",
 
-	"Styles_img": ["pipes","efchan"],
-	"DefaultStyle_img": "pipes",
-	"Styles_txt": ["efchan,pipes"],
-	"DefaultStyle_txt": "pipes",
+	"Styles": ["pipes","efchan"],
+	"DefaultStyle": "pipes",
 
 	"AllowDuplicateImages": true,
 	"AllowVideoUploads": true,
 	"NewThreadDelay": 30,
 	"ReplyDelay": 7,
 	"MaxLineLength": 150,
-	"ReversedTrips": [
-		{
-			"from": "##thischangesto",
-			"to": "this"
-		},
-		{
-			"from": "##andthischangesto",
-			"to": "this"
-		}
+	"ReservedTrips": [
+		"thischangesto##this",
+		"andthischangesto##this"
 	],
 
 	"ThumbWidth": 200,
@@ -62,18 +54,15 @@
 	"ThumbWidth_catalog": 50,
 	"ThumbHeight_catalog": 50,
 
-	"ThreadsPerPage_img": 4,
-	"ThreadsPerPage_txt": 15,
-	"PostsPerThreadPage": 4,
+	"ThreadsPerPage": 15,
+	"PostsPerThreadPage": 50,
 	"RepliesOnBoardPage": 3,
 	"StickyRepliesOnBoardPage": 1,
 	"BanColors": [
-		{
-			"Role": "admin",
-			"Color": "#0000A0"
-		}
+		"admin:#0000A0",
+		"somemod:blue"
 	],
-	"BanMsg": "<br /><span style=\"color:##BANCOLOR## \"><b>(USER WAS BANNED FOR THIS POST)</b></span>",
+	"BanMsg": "USER WAS BANNED FOR THIS POST",
 	"EmbedWidth": 200,
 	"EmbedHeight": 164,
 	"ExpandButton": true,
@@ -81,9 +70,7 @@
 	"MakeURLsHyperlinked": true,
 	"NewTabOnOutlinks": true,
 
-
 	"DateTimeFormat": "Mon, January 02, 2006 15:04 PM",
-	"DefaultBanReason": "",
 	"AkismetAPIKey": "",
 	"EnableGeoIP": true,
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
@@ -91,7 +78,7 @@
 	"MaxRecentPosts": 3,
 	"Verbosity": 0,
 	"EnableAppeals": true,
-	"MaxModlogDays": 14,
+	"MaxLogDays": 14,
 	"_comment": "Set RandomSeed to a (preferrably large) string of letters and numbers",
 	"RandomSeed": ""
 }

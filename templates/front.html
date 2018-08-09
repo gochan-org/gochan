@@ -7,15 +7,15 @@
 	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript" src="/javascript/msgpack.js"></script>
 	<script type="text/javascript">
-		var styles = [{{range $ii, $style := .config.Styles_img}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
+		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{.config.SiteWebfolder}}"
 	</script>
 	<script type="text/javascript" src="/javascript/gochan.js"></script>
 	<script type="text/javascript" src="/javascript/manage.js"></script>
 	
 	<link rel="stylesheet" href="/css/global/front.css" />
-{{range $i, $style := .config.Styles_img}}
-	<link rel="{{if not (isStyleDefault_img $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
+{{range $i, $style := .config.Styles}}
+	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
 	<link rel="shortcut icon" href="/favicon.png">
 </head>
 <body>

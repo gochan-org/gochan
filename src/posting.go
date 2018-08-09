@@ -112,7 +112,6 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	for _, op := range op_posts {
 		var thread Thread
 		var posts_in_thread []PostTable
-		thread.IName = "thread"
 
 		// Get the number of replies to this thread.
 		if err = queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?",
@@ -214,7 +213,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		return
 	} else {
 		// Create the archive pages.
-		thread_pages = paginate(config.ThreadsPerPage_img, threads)
+		thread_pages = paginate(config.ThreadsPerPage, threads)
 		board.NumPages = len(thread_pages) - 1
 
 		// Create array of page wrapper objects, and open the file.
@@ -475,7 +474,6 @@ func buildFrontPage() (html string) {
 
 	for rows.Next() {
 		frontpage := new(FrontTable)
-		frontpage.IName = "front page"
 		if err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject,
 			&frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email); err != nil {
 			return handleError(1, err.Error())
@@ -537,7 +535,7 @@ func buildBoardListJSON() (html string) {
 	for _, board_int := range allBoards {
 		board := board_int.(BoardsTable)
 		board_obj := BoardJSON{BoardName: board.Dir, Title: board.Title, WorkSafeBoard: 1,
-			ThreadsPerPage: config.ThreadsPerPage_img, Pages: board.MaxPages, MaxFilesize: board.MaxImageSize,
+			ThreadsPerPage: config.ThreadsPerPage, Pages: board.MaxPages, MaxFilesize: board.MaxImageSize,
 			MaxMessageLength: board.MaxMessageLength, BumpLimit: 200, ImageLimit: board.NoImagesAfter,
 			Cooldowns: cooldowns_obj, Description: board.Description, IsArchived: 0}
 		if board.EnableNSFW {
@@ -568,14 +566,13 @@ func bumpThread(postID, boardID int) error {
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
 // returns true if the user is banned
 func checkBannedStatus(post *PostTable, writer http.ResponseWriter) ([]interface{}, error) {
-	var isExpired bool
-	var ban_entry BanlistTable
+	var banEntry BanlistTable
 	var interfaces []interface{}
 	// var count int
 	// var search string
 	err := queryRowSQL("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ?",
 		[]interface{}{&post.IP},
-		[]interface{}{&ban_entry.IP, &ban_entry.Name, &ban_entry.Tripcode, &ban_entry.Message, &ban_entry.Boards, &ban_entry.Timestamp, &ban_entry.Expires, &ban_entry.AppealAt},
+		[]interface{}{&banEntry.IP, &banEntry.Name, &banEntry.Tripcode, &banEntry.Message, &banEntry.Boards, &banEntry.Timestamp, &banEntry.Expires, &banEntry.AppealAt},
 	)
 	if err == sql.ErrNoRows {
 		// the user isn't banned
@@ -585,18 +582,18 @@ func checkBannedStatus(post *PostTable, writer http.ResponseWriter) ([]interface
 		handleError(1, "Error checking banned status: "+err.Error())
 		return interfaces, err
 	}
-	isExpired = ban_entry.Expires.After(time.Now()) == false
-	if isExpired {
+
+	if !banEntry.Expires.After(time.Now()) {
 		// if it is expired, send a message saying that it's expired, but still post
 		println(1, "expired")
 		return interfaces, nil
 	}
 	// the user's IP is in the banlist. Check if the ban has expired
-	if getSpecificSQLDateTime(ban_entry.Expires) == "0001-01-01 00:00:00" || ban_entry.Expires.After(time.Now()) {
+	if getSpecificSQLDateTime(banEntry.Expires) == "0001-01-01 00:00:00" || banEntry.Expires.After(time.Now()) {
 		// for some funky reason, Go's MySQL driver seems to not like getting a supposedly nil timestamp as an ACTUAL nil timestamp
 		// so we're just going to wing it and cheat. Of course if they change that, we're kind of hosed.
 
-		return []interface{}{config, ban_entry}, nil
+		return []interface{}{config, banEntry}, nil
 	}
 	return interfaces, nil
 }
@@ -633,8 +630,8 @@ func createImageThumbnail(image_obj image.Image, size string) image.Image {
 		return image_obj
 	}
 
-	thumb_w, thumb_h := getThumbnailSize(old_rect.Max.X, old_rect.Max.Y, size)
-	image_obj = imaging.Resize(image_obj, thumb_w, thumb_h, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
+	thumbW, thumbH := getThumbnailSize(old_rect.Max.X, old_rect.Max.Y, size)
+	image_obj = imaging.Resize(image_obj, thumbW, thumbH, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
 	return image_obj
 }
 
@@ -680,7 +677,7 @@ func getNewFilename() string {
 }
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
-func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
+func getThumbnailSize(w int, h int, size string) (newWidth int, newHeight int) {
 	var thumbWidth int
 	var thumbHeight int
 
@@ -696,8 +693,8 @@ func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
 		thumbHeight = config.ThumbHeight_catalog
 	}
 	if w == h {
-		new_w = thumbWidth
-		new_h = thumbHeight
+		newWidth = thumbWidth
+		newHeight = thumbHeight
 	} else {
 		var percent float32
 		if w > h {
@@ -705,8 +702,8 @@ func getThumbnailSize(w int, h int, size string) (new_w int, new_h int) {
 		} else {
 			percent = float32(thumbHeight) / float32(h)
 		}
-		new_w = int(float32(w) * percent)
-		new_h = int(float32(h) * percent)
+		newWidth = int(float32(w) * percent)
+		newHeight = int(float32(h) * percent)
 	}
 	return
 }
@@ -729,7 +726,7 @@ func parseName(name string) map[string]string {
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(post PostTable, bump bool) (sql.Result, error) {
 	result, err := execSQL(
-		"INSERT INTO "+config.DBprefix+"posts "+
+		"INSERT INTO `"+config.DBprefix+"posts` "+
 			"(`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`message_raw`,`password`,`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`,`ip`,`tag`,`timestamp`,`autosage`,`poster_authority`,`deleted_timestamp`,`bumped`,`stickied`,`locked`,`reviewed`,`sillytag`)"+
 			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 		post.BoardID, post.ParentID, post.Name, post.Tripcode, post.Email,
@@ -768,7 +765,6 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
-	post.IName = "post"
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
 

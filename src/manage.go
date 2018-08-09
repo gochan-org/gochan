@@ -3,12 +3,15 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -124,7 +127,7 @@ func createSession(key string, username string, password string, request *http.R
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
 	var err error
-	chopPortNumRegex := regexp.MustCompile("(.+|\\w+):(\\d+)$")
+	chopPortNumRegex := regexp.MustCompile(`(.+|\w+):(\d+)$`)
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !validReferrer(request) {
@@ -208,22 +211,205 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
+			var status string
 			if do == "save" {
-				// configJSON, err := json.Marshal(config)
-				// if err != nil {
-				// 	html += err.Error()
-				// 	return
-				// }
+				configJSON, err := json.MarshalIndent(config, "", "\t")
+				if err != nil {
+					status += err.Error() + "<br />\n"
+				} else if err = ioutil.WriteFile("gochan.json", configJSON, 0777); err != nil {
+					status += "Error backing up old gochan.json, cancelling save: " + err.Error() + "\n"
+				} else {
+					config.Lockdown = (request.PostFormValue("Lockdown") == "on")
+					config.LockdownMessage = request.PostFormValue("LockdownMessage")
+					Sillytags_arr := strings.Split(request.PostFormValue("Sillytags"), "\n")
+					var Sillytags []string
+					for _, tag := range Sillytags_arr {
+						Sillytags = append(Sillytags, strings.Trim(tag, " \n\r"))
+					}
+					config.Sillytags = Sillytags
+					config.UseSillytags = (request.PostFormValue("UseSillytags") == "on")
+					config.Modboard = request.PostFormValue("Modboard")
+					config.SiteName = request.PostFormValue("SiteName")
+					config.SiteSlogan = request.PostFormValue("SiteSlogan")
+					config.SiteHeaderURL = request.PostFormValue("SiteHeaderURL")
+					config.SiteWebfolder = request.PostFormValue("SiteWebfolder")
+					Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
+					var Styles []string
+					for _, style := range Styles_arr {
+						Styles = append(Styles, strings.Trim(style, " \n\r"))
+					}
+					config.Styles = Styles
+					config.DefaultStyle = request.PostFormValue("DefaultStyle")
+					config.AllowDuplicateImages = (request.PostFormValue("AllowDuplicateImages") == "on")
+					config.AllowVideoUploads = (request.PostFormValue("AllowVideoUploads") == "on")
+					NewThreadDelay, err := strconv.Atoi(request.PostFormValue("NewThreadDelay"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.NewThreadDelay = NewThreadDelay
+					}
 
-				// err = ioutil.WriteFile("gochan.json", configJSON, 0666)
-				// if err != nil {
-				// 	html += "Error writing \"gochan.json\": %s\n" + err.Error()
-				// 	return
-				// }
+					ReplyDelay, err := strconv.Atoi(request.PostFormValue("ReplyDelay"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ReplyDelay = ReplyDelay
+					}
+
+					MaxLineLength, err := strconv.Atoi(request.PostFormValue("MaxLineLength"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.MaxLineLength = MaxLineLength
+					}
+
+					ReservedTrips_arr := strings.Split(request.PostFormValue("ReservedTrips"), "\n")
+					var ReservedTrips []string
+					for _, trip := range ReservedTrips_arr {
+						ReservedTrips = append(ReservedTrips, strings.Trim(trip, " \n\r"))
+
+					}
+					config.ReservedTrips = ReservedTrips
+
+					ThumbWidth, err := strconv.Atoi(request.PostFormValue("ThumbWidth"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ThumbWidth = ThumbWidth
+					}
+
+					ThumbHeight, err := strconv.Atoi(request.PostFormValue("ThumbHeight"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ThumbHeight = ThumbHeight
+					}
+
+					ThumbWidth_reply, err := strconv.Atoi(request.PostFormValue("ThumbWidth_reply"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ThumbWidth_reply = ThumbWidth_reply
+					}
+
+					ThumbHeight_reply, err := strconv.Atoi(request.PostFormValue("ThumbHeight_reply"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ThumbHeight_reply = ThumbHeight_reply
+					}
+
+					ThumbWidth_catalog, err := strconv.Atoi(request.PostFormValue("ThumbWidth_catalog"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ThumbWidth_catalog = ThumbWidth_catalog
+					}
+
+					ThumbHeight_catalog, err := strconv.Atoi(request.PostFormValue("ThumbHeight_catalog"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.ThumbHeight_catalog = ThumbHeight_catalog
+					}
+
+					PostsPerThreadPage, err := strconv.Atoi(request.PostFormValue("PostsPerThreadPage"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.PostsPerThreadPage = PostsPerThreadPage
+					}
+
+					RepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("RepliesOnBoardPage"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.RepliesOnBoardPage = RepliesOnBoardPage
+					}
+
+					StickyRepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("StickyRepliesOnBoardPage"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.StickyRepliesOnBoardPage = StickyRepliesOnBoardPage
+					}
+
+					BanColors_arr := strings.Split(request.PostFormValue("BanColors"), "\n")
+					var BanColors []string
+					for _, color := range BanColors_arr {
+						BanColors = append(BanColors, strings.Trim(color, " \n\r"))
+
+					}
+					config.BanColors = BanColors
+
+					config.BanMsg = request.PostFormValue("BanMsg")
+					EmbedWidth, err := strconv.Atoi(request.PostFormValue("EmbedWidth"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.EmbedWidth = EmbedWidth
+					}
+
+					EmbedHeight, err := strconv.Atoi(request.PostFormValue("EmbedHeight"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.EmbedHeight = EmbedHeight
+					}
+
+					config.ExpandButton = (request.PostFormValue("ExpandButton") == "on")
+					config.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
+					config.MakeURLsHyperlinked = (request.PostFormValue("MakeURLsHyperlinked") == "on")
+					config.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
+					config.EnableQuickReply = (request.PostFormValue("EnableQuickReply") == "on")
+					config.DateTimeFormat = request.PostFormValue("DateTimeFormat")
+					AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
+					err = checkAkismetAPIKey(AkismetAPIKey)
+					if err != nil {
+						status += err.Error() + "<br />"
+					} else {
+						config.AkismetAPIKey = AkismetAPIKey
+					}
+
+					config.EnableGeoIP = (request.PostFormValue("EnableGeoIP") == "on")
+					config.GeoIPDBlocation = request.PostFormValue("GeoIPDBlocation")
+
+					MaxRecentPosts, err := strconv.Atoi(request.PostFormValue("MaxRecentPosts"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.MaxRecentPosts = MaxRecentPosts
+					}
+
+					Verbosity, err := strconv.Atoi(request.PostFormValue("Verbosity"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.Verbosity = Verbosity
+					}
+
+					config.EnableAppeals = (request.PostFormValue("EnableAppeals") == "on")
+					MaxLogDays, err := strconv.Atoi(request.PostFormValue("MaxLogDays"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.MaxLogDays = MaxLogDays
+					}
+
+					configJSON, err = json.MarshalIndent(config, "", "\t")
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else if err = ioutil.WriteFile("gochan.json", configJSON, 0777); err != nil {
+						status = "Error writing gochan.json: %s\n" + err.Error()
+					} else {
+						status = "Wrote gochan.json successfully <br />"
+					}
+				}
 			}
 			manageConfigBuffer := bytes.NewBufferString("")
-
-			if err := manage_config_tmpl.Execute(manageConfigBuffer, nil); err != nil {
+			if err := manage_config_tmpl.Execute(manageConfigBuffer,
+				map[string]interface{}{"config": config, "status": status},
+			); err != nil {
 				html += handleError(1, err.Error())
 				return
 			}
@@ -576,7 +762,8 @@ var manage_functions = map[string]ManageFunction{
 					if err != nil {
 						board.MaxPages = 11
 					}
-					board.DefaultStyle = request.FormValue("defaultstyle")
+
+					board.DefaultStyle = strings.Trim(request.FormValue("defaultstyle"), "\n")
 					board.Locked = (request.FormValue("locked") == "on")
 					board.ForcedAnon = (request.FormValue("forcedanon") == "on")
 

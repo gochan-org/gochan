@@ -15,7 +15,7 @@
 	<tr><td>Max image size</td><td><input type="text" name="maximagesize" value="4718592" /></td></tr>
 	<tr><td>Max pages</td><td><input type="text" name="maxpages" value="11" /></td></tr>
 	<tr><td>Default style</td><td><select name="defaultstyle" selected="">
-		{{range $_, $style := .config.Styles_img}}<option value="{{$style}}">{{$style}}</option>{{end}}
+		{{range $_, $style := .config.Styles}}<option value="{{$style}}">{{$style}}</option>{{end}}
 	</select></td></tr>
 	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if $.board.Locked}}checked{{end}}/></td></tr>
 	<tr><td>Forced anonymity</td><td><input type="checkbox" name="forcedanon" {{if .board.ForcedAnon}}checked{{end}}/></td></tr>

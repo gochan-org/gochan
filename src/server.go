@@ -131,23 +131,23 @@ func initServer() {
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
 
 	// Check if Akismet API key is usable at startup.
-	if config.AkismetAPIKey != "" {
-		checkAkismetAPIKey()
+	if err = checkAkismetAPIKey(config.AkismetAPIKey); err != nil {
+		config.AkismetAPIKey = ""
+		handleError(0, "%s", err.Error())
 	}
 
 	// Compile regex for checking referrers.
 	referrerRegex = regexp.MustCompile(config.DomainRegex)
 
-	testfunc := func(writer http.ResponseWriter, request *http.Request) {
-		if writer != nil {
-			_, _ = writer.Write([]byte("hahahaha"))
-		}
-	}
-
-	server.AddNamespace("example", testfunc)
 	server.AddNamespace("manage", callManageFunction)
 	server.AddNamespace("post", makePost)
 	server.AddNamespace("util", utilHandler)
+	server.AddNamespace("example", func(writer http.ResponseWriter, request *http.Request) {
+		if writer != nil {
+			_, _ = writer.Write([]byte("hahahaha"))
+		}
+	})
+
 	// eventually plugins will be able to register new namespaces. Or they will be restricted to something like /plugin
 
 	if config.UseFastCGI {

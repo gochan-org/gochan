@@ -31,6 +31,17 @@ const (
 	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
 )
 
+func arrToString(arr []string) string {
+	var out string
+	for i, val := range arr {
+		out += val
+		if i < len(arr)-1 {
+			out += ","
+		}
+	}
+	return out
+}
+
 func benchmarkTimer(name string, givenTime time.Time, starting bool) (returnTime time.Time) {
 	if starting {
 		// starting benchmark test
@@ -194,7 +205,6 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	// 	then append it to the boards array we are going to return
 	for rows.Next() {
 		board := new(BoardsTable)
-		board.IName = "board"
 		if err = rows.Scan(
 			&board.ID,
 			&board.Order,
@@ -283,7 +293,6 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 	// 	then append it to the posts array we are going to return
 	for rows.Next() {
 		var post PostTable
-		post.IName = "post"
 		if err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
 			&post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password, &post.Filename,
 			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW,
@@ -313,8 +322,6 @@ func getSectionArr(where string) (sections []interface{}, err error) {
 
 	for rows.Next() {
 		section := new(BoardSectionsTable)
-		section.IName = "section"
-
 		if err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
 			handleError(1, customError(err))
 			return
@@ -352,15 +359,15 @@ func getFileExtension(filename string) (extension string) {
 	return
 }
 
-func getFormattedFilesize(size int) string {
+func getFormattedFilesize(size float64) string {
 	if size < 1000 {
-		return fmt.Sprintf("%fB", size)
+		return fmt.Sprintf("%dB", int(size))
 	} else if size <= 100000 {
 		return fmt.Sprintf("%fKB", size/1024)
 	} else if size <= 100000000 {
-		return fmt.Sprintf("%fMB", size/1024/1024)
+		return fmt.Sprintf("%fMB", size/1024.0/1024.0)
 	}
-	return fmt.Sprintf("%0.2fGB", size/1024/1024/1024)
+	return fmt.Sprintf("%0.2fGB", size/1024.0/1024.0/1024.0)
 }
 
 // returns the filename, line number, and function where getMetaInfo() is called
@@ -475,25 +482,30 @@ func bToA(b bool) string {
 }
 
 // Checks the validity of the Akismet API key given in the config file.
-func checkAkismetAPIKey() {
-	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {config.AkismetAPIKey}, "blog": {"http://" + config.SiteDomain}})
-	if err != nil {
-		handleError(1, err.Error())
+func checkAkismetAPIKey(key string) error {
+	if key == "" {
+		return fmt.Errorf("Blank key given, Akismet won't be used.")
 	}
+	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.SiteDomain}})
 	defer func() {
 		if resp != nil && resp.Body != nil {
 			resp.Body.Close()
 		}
 	}()
+	if err != nil {
+		return err
+	}
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		handleError(1, err.Error())
+		return err
 	}
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
-		errorLog.Print("Akismet API key is invalid, Akismet spam protection will be disabled.")
-		config.AkismetAPIKey = ""
+		errmsg := "Akismet API key is invalid, Akismet spam protection will be disabled."
+		return fmt.Errorf(errmsg)
 	}
+	return nil
 }
 
 // Checks a given post for spam with Akismet. Only checks if Akismet API key is set.

@@ -36,7 +36,6 @@ type RecentPost struct {
 }
 
 type Thread struct {
-	IName         string
 	OP            PostTable
 	NumReplies    int
 	NumImages     int
@@ -81,7 +80,6 @@ type BannedHashesTable struct {
 }
 
 type BoardsTable struct {
-	IName                  string
 	ID                     int
 	CurrentPage            int
 	NumPages               int
@@ -117,7 +115,6 @@ type BoardsTable struct {
 }
 
 type BoardSectionsTable struct {
-	IName        string
 	ID           int
 	Order        int
 	Hidden       bool
@@ -150,7 +147,6 @@ type FiletypesTable struct {
 
 // FrontTable represents the information (News, rules, etc) on the front page
 type FrontTable struct {
-	IName     string
 	ID        int
 	Page      int
 	Order     int
@@ -192,7 +188,6 @@ type PollResultsTable struct {
 
 // PostTable represents each post in the database
 type PostTable struct {
-	IName            string
 	ID               int
 	CurrentPage      int
 	NumPages         int
@@ -330,7 +325,6 @@ type ThreadJSON struct {
 
 // GochanConfig stores crucial info and is read from/written to gochan.json
 type GochanConfig struct {
-	IName        string //used by our template parser
 	ListenIP     string
 	Port         int
 	FirstPage    []string
@@ -351,67 +345,63 @@ type GochanConfig struct {
 	DBprefix    string
 	DBkeepalive bool
 
-	Lockdown        bool
-	LockdownMessage string
-	Sillytags       []string
-	UseSillytags    bool
-	Modboard        string
+	Lockdown        bool     `description:"Disables posting." default:"unchecked"`
+	LockdownMessage string   `description:"Message displayed when someone tries to post while the site is on lockdown."`
+	Sillytags       []string `description:"List of randomly selected staff tags separated by line, e.g. <span style=\"color: red;\">## Mod</span>, to be randomly assigned to posts if UseSillytags is checked. Don't include the \"## \""`
+	UseSillytags    bool     `description:"Use Sillytags" default:"unchecked"`
+	Modboard        string   `description:"A super secret clubhouse board that only staff can view/post to." default:"staff"`
 
-	SiteName      string
-	SiteSlogan    string
-	SiteHeaderURL string
-	SiteWebfolder string
-	SiteDomain    string
-	DomainRegex   string
+	SiteName      string `description:"The name of the site that appears in the header of the front page." default:"Gochan"`
+	SiteSlogan    string `description:"The text that appears below SiteName on the home page"`
+	SiteHeaderURL string `description:"To be honest, I'm not even sure what this does. It'll probably be removed later."`
+	SiteWebfolder string `description:"The HTTP root appearing in the browser (e.g. https://gochan.org/&lt;SiteWebFolder&gt;" default:"/"`
+	SiteDomain    string `description:"The server's domain (duh). Do not edit this unless you know what you are doing or BAD THINGS WILL HAPPEN!" default:"127.0.0.1" critical:"true"`
+	DomainRegex   string `description:"Regular expression used for incoming request validation. Do not edit this unless you know what you are doing or BAD THINGS WILL HAPPEN!" default:"(https|http):\\\\/\\\\/(gochan\\\\.lunachan\\.net|gochan\\\\.org)\\/(.*)" critical:"true"`
 
-	Styles_img       []string
-	DefaultStyle_img string
-	Styles_txt       []string
-	DefaultStyle_txt string
+	Styles       []string `description:"List of styles (one per line) that should be accessed online at /&lt;SiteWebFolder&gt;/css/&lt;Style&gt;/"`
+	DefaultStyle string   `description:"Style used by default (duh). This should appear in the list above or bad things might happen."`
 
-	AllowDuplicateImages bool
-	AllowVideoUploads    bool
-	NewThreadDelay       int
-	ReplyDelay           int
-	MaxLineLength        int
-	ReservedTrips        []interface{}
+	AllowDuplicateImages bool     `description:"Disabling this will cause gochan to reject a post if the image has already been uploaded for another post.<br />This may end up being removed or being made board-specific in the future." default:"checked"`
+	AllowVideoUploads    bool     `description:"Allows users to upload .webm videos. <br />This may end up being removed or being made board-specific in the future."`
+	NewThreadDelay       int      `description:"The amount of time in seconds that is required before an IP can make a new thread.<br />This may end up being removed or being made board-specific in the future." default:"30"`
+	ReplyDelay           int      `description:"Same as the above, but for replies." default:"7"`
+	MaxLineLength        int      `description:"Any line in a post that exceeds this will be split into two (or more) lines.<br />I'm not really sure why this is here, so it may end up being removed." default:"150"`
+	ReservedTrips        []string `description:"Secure tripcodes (!!Something) can be reserved here.<br />Each reservation should go on its own line and should look like this:<br />TripPassword1##Tripcode1<br />TripPassword2##Tripcode2"`
 
-	ThumbWidth          int
-	ThumbHeight         int
-	ThumbWidth_reply    int
-	ThumbHeight_reply   int
-	ThumbWidth_catalog  int
-	ThumbHeight_catalog int
+	ThumbWidth          int `description:"OP thumbnails use this as their max width.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger." default:"200"`
+	ThumbHeight         int `description:"OP thumbnails use this as their max height.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger." default:"200"`
+	ThumbWidth_reply    int `description:"Same as ThumbWidth and ThumbHeight but for reply images." default:"125"`
+	ThumbHeight_reply   int `description:"Same as ThumbWidth and ThumbHeight but for reply images." default:"125"`
+	ThumbWidth_catalog  int `description:"Same as ThumbWidth and ThumbHeight but for catalog images." default:"125"`
+	ThumbHeight_catalog int `description:"Same as ThumbWidth and ThumbHeight but for catalog images." default:"125"`
 
-	ThreadsPerPage_img       int
-	ThreadsPerPage_txt       int
-	PostsPerThreadPage       int
-	RepliesOnBoardPage       int
-	StickyRepliesOnBoardPage int
-	BanColors                []interface{}
-	BanMsg                   string
-	EmbedWidth               int
-	EmbedHeight              int
-	ExpandButton             bool
-	ImagesOpenNewTab         bool
-	MakeURLsHyperlinked      bool
-	NewTabOnOutlinks         bool
-	EnableQuickReply         bool
+	ThreadsPerPage           int      `default:"15"`
+	PostsPerThreadPage       int      `description:"Max number of replies to a thread to show on each thread page." default:"50"`
+	RepliesOnBoardPage       int      `description:"Number of replies to a thread to show on the board page." default:"3"`
+	StickyRepliesOnBoardPage int      `description:"Same as above for stickied threads." default:"1"`
+	BanColors                []string `description:"Colors to be used for public ban messages (e.g. USER WAS BANNED FOR THIS POST).<br />Each entry should be on its own line, and should look something like this:<br />username1:#FF0000<br />username2:#FAF00F<br />username3:blue<br />Invalid entries/nonexistent usernames will show a warning and use the default red."`
+	BanMsg                   string   `description:"The default public ban message." default:"USER WAS BANNED FOR THIS POST"`
+	EmbedWidth               int      `description:"The width for inline/expanded webm videos." default:"200"`
+	EmbedHeight              int      `description:"The height for inline/expanded webm videos." default:"164"`
+	ExpandButton             bool     `description:"If checked, adds [Embed] after a Youtube, Vimeo, etc link to toggle an inline video frame." default:"checked"`
+	ImagesOpenNewTab         bool     `description:"If checked, thumbnails will open the respective image/video in a new tab instead of expanding them." default:"unchecked"`
+	MakeURLsHyperlinked      bool     `description:"If checked, URLs in posts will be turned into a hyperlink. If unchecked, ExpandButton and NewTabOnOutlinks are ignored." default:"checked"`
+	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
+	EnableQuickReply         bool     `description:"If checked, an optional quick reply box is used. This may end up being removed." default:"checked"`
 
-	DateTimeFormat   string
-	DefaultBanReason string
-	AkismetAPIKey    string
-	EnableGeoIP      bool
-	GeoIPDBlocation  string // set to "cf" or the path to the db
-	MaxRecentPosts   int
+	DateTimeFormat  string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
+	AkismetAPIKey   string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+	EnableGeoIP     bool   `description:"If checked, this enables the usage of GeoIP for posts." default:"checked"`
+	GeoIPDBlocation string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information." default:"/usr/share/GeoIP/GeoIP.dat"`
+	MaxRecentPosts  int    `description:"The maximum number of posts to show on the Recent Posts list on the front page." default:"3"`
 	// Verbosity = 0 for no debugging info. Critical errors and general output only
 	// Verbosity = 1 for non-critical warnings and important info
 	// Verbosity = 2 for all debugging/benchmarks/warnings
-	Verbosity     int
-	EnableAppeals bool
-	MaxModlogDays int
-	RandomSeed    string
-	Version       string
+	Verbosity     int    `description:"The level of verbosity to use in error/warning messages. 0 = critical errors/startup messages, 1 = warnings, 2 = benchmarks/notices." default:"0"`
+	EnableAppeals bool   `description:"If checked, allow banned users to appeal their bans.<br />This will likely be removed (permanently allowing appeals) or made board-specific in the future." default:"checked"`
+	MaxLogDays    int    `description:"The maximum number of days to keep messages in the moderation/staff log file."`
+	RandomSeed    string `critical:"true"`
+	Version       string `critical:"true"`
 }
 
 func initConfig() {
@@ -426,7 +416,6 @@ func initConfig() {
 		os.Exit(2)
 	}
 
-	config.IName = "GochanConfig"
 	if config.ListenIP == "" {
 		println(0, "ListenIP not set in gochan.json, halting.")
 		os.Exit(2)
@@ -559,22 +548,13 @@ func initConfig() {
 		//config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
 	}
 
-	if config.Styles_img == nil {
-		println(0, "Styles_img not set in gochan.json, halting.")
+	if config.Styles == nil {
+		println(0, "Styles not set in gochan.json, halting.")
 		os.Exit(2)
 	}
 
-	if config.DefaultStyle_img == "" {
-		config.DefaultStyle_img = config.Styles_img[0]
-	}
-
-	if config.Styles_txt == nil {
-		println(0, "Styles_txt not set in gochan.json, halting.")
-		os.Exit(2)
-	}
-
-	if config.DefaultStyle_txt == "" {
-		config.DefaultStyle_txt = config.Styles_txt[0]
+	if config.DefaultStyle == "" {
+		config.DefaultStyle = config.Styles[0]
 	}
 
 	if config.NewThreadDelay == 0 {
@@ -615,12 +595,8 @@ func initConfig() {
 		config.ThumbHeight_catalog = 50
 	}
 
-	if config.ThreadsPerPage_img == 0 {
-		config.ThreadsPerPage_img = 10
-	}
-
-	if config.ThreadsPerPage_txt == 0 {
-		config.ThreadsPerPage_txt = 15
+	if config.ThreadsPerPage == 0 {
+		config.ThreadsPerPage = 10
 	}
 
 	if config.PostsPerThreadPage == 0 {
@@ -659,8 +635,8 @@ func initConfig() {
 		config.MaxRecentPosts = 10
 	}
 
-	if config.MaxModlogDays == 0 {
-		config.MaxModlogDays = 15
+	if config.MaxLogDays == 0 {
+		config.MaxLogDays = 15
 	}
 
 	if config.RandomSeed == "" {

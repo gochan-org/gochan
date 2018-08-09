@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
@@ -106,8 +107,9 @@ var funcMap = template.FuncMap{
 		return a == b
 	},
 	"intToString": strconv.Itoa,
-	"isStyleDefault_img": func(style string) bool {
-		return style == config.DefaultStyle_img
+	"arrToString": arrToString,
+	"isStyleDefault": func(style string) bool {
+		return style == config.DefaultStyle
 	},
 	"formatTimestamp": humanReadableTime,
 	"getThreadID": func(post_i interface{}) (thread int) {
@@ -152,12 +154,10 @@ var funcMap = template.FuncMap{
 	"formatFilesize": func(size_int int) string {
 		size := float32(size_int)
 		if size < 1000 {
-			return fmt.Sprintf("%fB", size)
+			return fmt.Sprintf("%d B", size_int)
 		} else if size <= 100000 {
-			//size = size * 0.2
 			return fmt.Sprintf("%0.1f KB", size/1024)
 		} else if size <= 100000000 {
-			//size = size * 0.2
 			return fmt.Sprintf("%0.2f MB", size/1024/1024)
 		}
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
@@ -172,6 +172,58 @@ var funcMap = template.FuncMap{
 			return ""
 		}
 		return img[0:index] + "t." + filetype
+	},
+	"generateConfigTable": func() string {
+		configType := reflect.TypeOf(config)
+		tableOut := "<table style=\"border-collapse: collapse;\"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>\n"
+		numFields := configType.NumField()
+		for f := 17; f < numFields-2; f++ {
+			// starting at Lockdown because the earlier fields can't be safely edited from a web interface
+			field := configType.Field(f)
+			if field.Tag.Get("critical") != "" {
+				continue
+			}
+			name := field.Name
+			tableOut += "<tr><th>" + name + "</th><td>"
+			f := reflect.Indirect(reflect.ValueOf(config)).FieldByName(name)
+
+			kind := f.Kind()
+			switch kind {
+			case reflect.Int:
+				tableOut += "<input name=\"" + name + "\" type=\"number\" value=\"" + html.EscapeString(fmt.Sprintf("%v", f)) + "\" class=\"config-text\"/>"
+			case reflect.String:
+				tableOut += "<input name=\"" + name + "\" type=\"text\" value=\"" + html.EscapeString(fmt.Sprintf("%v", f)) + "\" class=\"config-text\"/>"
+			case reflect.Bool:
+				checked := ""
+				if f.Bool() {
+					checked = "checked"
+				}
+				tableOut += "<input name=\"" + name + "\" type=\"checkbox\" " + checked + " />"
+			case reflect.Slice:
+				tableOut += "<textarea name=\"" + name + "\" rows=\"4\" cols=\"28\">"
+				arrLength := f.Len()
+				for s := 0; s < arrLength; s++ {
+					newLine := "\n"
+					if s == arrLength-1 {
+						newLine = ""
+					}
+					tableOut += html.EscapeString(f.Slice(s, s+1).Index(0).String()) + newLine
+				}
+				tableOut += "</textarea>"
+			default:
+				tableOut += fmt.Sprintf("%v", kind)
+			}
+			tableOut += "</td><td>" + kind.String() + "</td><td>"
+			defaultTag := field.Tag.Get("default")
+			var defaultTagHTML string
+			if defaultTag != "" {
+				defaultTagHTML = " <b>Default: " + defaultTag + "</b>"
+			}
+			tableOut += field.Tag.Get("description") + defaultTagHTML + "</td>"
+			tableOut += "</tr>\n"
+		}
+		tableOut += "</table>\n"
+		return tableOut
 	},
 }
 

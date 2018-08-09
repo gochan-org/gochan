@@ -69,7 +69,7 @@ func connectToSQLServer() {
 	}
 
 	if newInstall {
-		printf(0, "\nThis looks like a new install, setting up the database...")
+		printf(0, "\nThis looks like a new install or one that needs updating, setting up the database...")
 		if _, err = db.Exec(
 			"INSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` " +
 				"(`username`, `password_checksum`, `salt`, `rank`) " +
