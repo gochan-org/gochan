@@ -513,12 +513,6 @@ func initConfig() {
 		os.Exit(2)
 	}
 
-	if config.DBprefix == "" {
-		config.DBprefix = "gc_"
-	} else {
-		config.DBprefix += "_"
-	}
-
 	if config.LockdownMessage == "" {
 		config.LockdownMessage = "This imageboard has temporarily disabled posting. We apologize for the inconvenience"
 	}

@@ -18,7 +18,7 @@
 	"DBname": "gochan",
 	"DBusername": "gochan",
 	"DBpassword": "",
-	"DBprefix": "gc",
+	"DBprefix": "gc_",
 	"DBkeepalive": false,
 
 	"Lockdown": false,
