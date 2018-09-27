@@ -70,7 +70,7 @@
 						{{else}}Next{{end}}</td></tr>
 			</table>
 			<span id="boardmenu-bottom">
-				[{{range $i, $boardlink := $.boards}}{{if gt $i 0}}/{{end}} <a href="{{$.config.SiteWebfolder}}/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a> {{end}}]
+				[{{range $i, $boardlink := $.boards}}{{if gt $i 0}}/{{end}} <a href="{{$.config.SiteWebfolder}}{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a> {{end}}]
 			</span>
 		</div>
 	</div>

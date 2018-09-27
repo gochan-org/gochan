@@ -10,7 +10,7 @@
 			<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
 		{{end}}
 	{{else}}<title>/{{.board.Dir}}/ - {{.board.Title}}</title>{{end}}
-	<script type="text/javascript" src="{{$.config.SiteWebfolder}}/javascript/jquery-3.3.1.min.js"></script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $.config.Styles}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{$.config.SiteWebfolder}}";
@@ -25,7 +25,7 @@
 	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/global/img.css" />
 {{range $_, $style := .config.Styles}}
 	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="{{$.config.SiteWebfolder}}css/{{$style}}/img.css" />{{end}}
-	<link rel="shortcut icon" href="{{$.config.SiteWebfolder}}/favicon.png" />
+	<link rel="shortcut icon" href="{{$.config.SiteWebfolder}}favicon.png" />
 </head>
 <body>
 	<div id="topbar">

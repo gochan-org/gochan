@@ -531,8 +531,12 @@ func initConfig() {
 	}
 
 	if config.SiteWebfolder == "" {
-		println(0, "SiteWebfolder not set in gochan.json, halting.")
-		os.Exit(2)
+		println(0, "SiteWebFolder not set in gochan.json, using / as default.")
+	} else if string(config.SiteWebfolder[0]) != "/" {
+		config.SiteWebfolder = "/" + config.SiteWebfolder
+	}
+	if config.SiteWebfolder[len(config.SiteWebfolder)-1:] != "/" {
+		config.SiteWebfolder += "/"
 	}
 
 	if config.DomainRegex == "" {
