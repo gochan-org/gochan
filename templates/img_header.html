@@ -10,7 +10,7 @@
 			<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
 		{{end}}
 	{{else}}<title>/{{.board.Dir}}/ - {{.board.Title}}</title>{{end}}
-	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}/javascript/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := $.config.Styles}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{$.config.SiteWebfolder}}";
@@ -20,16 +20,16 @@
 			window.location = webroot+"{{$.board.Dir}}/res/{{$.op.ID}}p"+sel.value+".html";
 		}
 	</script>
-	<script type="text/javascript" src="/javascript/gochan.js"></script>
-	<script type="text/javascript" src="/javascript/manage.js"></script>
-	<link rel="stylesheet" href="/css/global/img.css" />
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/gochan.js"></script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/manage.js"></script>
+	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/global/img.css" />
 {{range $_, $style := .config.Styles}}
-	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/img.css" />{{end}}
-	<link rel="shortcut icon" href="/favicon.png" />
+	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="{{$.config.SiteWebfolder}}css/{{$style}}/img.css" />{{end}}
+	<link rel="shortcut icon" href="{{$.config.SiteWebfolder}}/favicon.png" />
 </head>
 <body>
 	<div id="topbar">
-		{{range $i, $board := .boards}}<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
+		{{range $i, $board := .boards}}<a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
 	</div>
 	<header>
 		<h1>/{{$.board.Dir}}/ - {{$.board.Title}}</h1>

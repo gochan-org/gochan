@@ -4,117 +4,97 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>{{.config.SiteName}}</title>
-	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript" src="/javascript/msgpack.js"></script>
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/msgpack.js"></script>
 	<script type="text/javascript">
-		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
+		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{.config.SiteWebfolder}}"
 	</script>
-	<script type="text/javascript" src="/javascript/gochan.js"></script>
-	<script type="text/javascript" src="/javascript/manage.js"></script>
-	
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/gochan.js"></script>
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/manage.js"></script>	
+
 	<link rel="stylesheet" href="/css/global/front.css" />
-{{range $i, $style := .config.Styles}}
+	{{range $i, $style := .config.Styles}}
 	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
 	<link rel="shortcut icon" href="/favicon.png">
 </head>
 <body>
-	<div id="topbar">
-		{{range $i, $board := .boards}}
-			<a href="/{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>
-{{end}}
+	<div id="topbar">{{range $i, $board := .boards}}
+		<a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
 	</div>
 	<div id="top-pane">
 		<span id="site-title">{{.config.SiteName}}</span><br />
 		<span id="site-slogan">{{.config.SiteSlogan}}</span>
 	</div>
 	<div id="main">
-			<div id="tab-bar">
-				<div id="current-tab" class="tab">
-					<a href="#">News</a>
+		<div id="tab-bar">
+			<div id="current-tab" class="tab">
+				<a href="#">News</a>
+			</div>
+			<div class="tab">
+				<a href="#boards">Boards</a>
+			</div>
+			<div class="tab">
+				<a href="#rules">Rules</a>
+			</div>
+			<div class="tab">
+				<a href="#faq">FAQ</a>
+			</div>
+		</div>
+		<div id="first-page" class="page">{{range $ii, $page := .page_arr}}{{if eq $page.Page 0}}
+			<div class="section-block">
+				<div class="section-title-block" id="first-page0">
+					<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="{{.config.SiteWebfolder}}#first-page{{$ii}}" class="permalink">#</a>
 				</div>
-				<div class="tab">
-					<a href="#boards">Boards</a>
+				<div class="section-body">
+					{{$page.Message}}
 				</div>
-				<div class="tab">
-					<a href="#rules">Rules</a>
+			</div>{{end}}{{end}}
+		</div>
+		<div id="boards-page" class="page">
+			<div class="section-block">
+				<div class="section-title-block">
+					<b>Boards</b>
 				</div>
-				<div class="tab">
-					<a href="#faq">FAQ</a>
+				<div class="section-body">
+					<ul>{{range $_, $board := .boards}}{{if eq $board.Dir $.config.Modboard}}{{else}}
+						<li><b>/{{$board.Dir}}/</b> {{$board.Description}}</li>{{end}}{{end}}
+					</ul>
 				</div>
 			</div>
-			<div id="first-page" class="page">
-			{{range $ii, $page := .page_arr}}
-				{{if eq $page.Page 0}}
-				<div class="section-block">
-					<div class="section-title-block" id="first-page0">
-						<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="/#first-page{{$ii}}" class="permalink">#</a>
-					</div>
-					<div class="section-body">
-						{{$page.Message}}
-					</div>
+		</div>
+		<div id="rules-page" class="page">{{range $ii, $page := .page_arr}}{{if eq $page.Page 1}}
+			<div class="section-block">
+				<div class="section-title-block" id="first-page0">
+					<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="{{.config.SiteWebfolder}}#first-page{{$ii}}" class="permalink">#</a>
 				</div>
-				{{end}}
-			{{end}}
-			</div>
-			<div id="boards-page" class="page">
-				<div class="section-block">
-					<div class="section-title-block">
-						<b>Boards</b>
-					</div>
-					<div class="section-body">
-						<ul>
-						{{range $_, $board := .boards}}
-						{{if eq $board.Dir $.config.Modboard}}{{else}}
-							<li><b>/{{$board.Dir}}/</b> {{$board.Description}}</li>{{end}}{{end}}
-						</ul>
-					</div>
+				<div class="section-body">
+					{{$page.Message}}
 				</div>
-			</div>
-			<div id="rules-page" class="page">
-			{{range $ii, $page := .page_arr}}
-				{{if eq $page.Page 1}}
-				<div class="section-block">
-					<div class="section-title-block" id="first-page0">
-						<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="/#first-page{{$ii}}" class="permalink">#</a>
-					</div>
-					<div class="section-body">
-						{{$page.Message}}
-					</div>
+			</div>{{end}}{{end}}
+		</div>
+		<div id="faq-page" class="page">{{range $ii, $page := .page_arr.Data}}{{if eq $page.Page 2}}
+			<div class="section-block">
+				<div class="section-title-block" id="first-page0">
+					<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="{{.config.SiteWebfolder}}#first-page{{$ii}}" class="permalink">#</a>
 				</div>
-				{{end}}
-			{{end}}
-			</div>
-			<div id="faq-page" class="page">
-			{{range $ii, $page := .page_arr.Data}}
-				{{if eq $page.Page 2}}
-				<div class="section-block">
-					<div class="section-title-block" id="first-page0">
-						<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="/#first-page{{$ii}}" class="permalink">#</a>
-					</div>
-					<div class="section-body">
-						{{$page.Message}}
-					</div>
+				<div class="section-body">
+					{{$page.Message}}
 				</div>
-				{{end}}
-			{{end}}
-			</div>
-		{{if gt .config.MaxRecentPosts 0}}
-			<div id="recent-posts">
-				<div id="recent-posts-header" class="section-title-block"><b>Recent Posts</b></div>
-				{{range $i, $post := $.recent_posts}}
-				<div class="section-block">
-					<div class="section-title-block">
-						<span class="section-title"><a href="{{$post.BoardName}}/res/{{if eq $post.ParentID 0}}{{intToString $post.PostID}}.html{{else}}{{intToString $post.ParentID}}.html#{{intToString $post.PostID}}{{end}}">/{{$post.BoardName}}/</a></span> - {{$appended := stringAppend $post.Name $post.Tripcode}}{{if eq  $appended ""}}<b>Anonymous</b>{{else}}<b>{{$post.Name}}</b>{{if ne $post.Tripcode ""}}!{{$post.Tripcode}}{{end}}{{end}}
-					</div>
-					<div class="section-body">
-						{{if ne $post.Filename ""}}<a href="{{$post.BoardName}}/src/{{$post.Filename}}" target="_blank"><img src="{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/></a>{{end}}
-						{{truncateMessage $post.Message 225 12}}
-					</div>
+			</div>{{end}}{{end}}
+		</div>
+		{{if gt .config.MaxRecentPosts 0}}<div id="recent-posts">
+			<div id="recent-posts-header" class="section-title-block"><b>Recent Posts</b></div>
+			{{range $i, $post := $.recent_posts}}<div class="section-block">
+				<div class="section-title-block">
+				<span class="section-title"><a href="{{$post.BoardName}}/res/{{if eq $post.ParentID 0}}{{intToString $post.PostID}}.html{{else}}{{intToString $post.ParentID}}.html#{{intToString $post.PostID}}{{end}}">/{{$post.BoardName}}/</a></span> - {{$appended := stringAppend $post.Name $post.Tripcode}}{{if eq $appended ""}}<b>Anonymous</b>{{else}}<b>{{$post.Name}}</b>{{if ne $post.Tripcode ""}}!{{$post.Tripcode}}{{end}}{{end}}
 				</div>
-				{{end}}
-			</div>
-		{{end}}
+				<div class="section-body">
+				{{if ne $post.Filename ""}}<a href="{{$.config.SiteWebfolder}}{{$post.BoardName}}/src/{{$post.Filename}}" target="_blank"><img src="{{$.config.SiteWebfolder}}{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/></a>{{end}}
+				{{truncateMessage $post.Message 225 12}}
+				</div>
+			</div>{{end}}{{end}}
+		</div>
 	</div>
 	<div id="footer">
 		<a href="{{.config.SiteWebfolder}}">Home</a> | <a href="{{.config.SiteWebfolder}}#boards">Boards</a> | <a href="{{.config.SiteWebfolder}}#rules">Rules</a> | <a href="{{.config.SiteWebfolder}}#faq">FAQ</a><br />

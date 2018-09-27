@@ -52,7 +52,7 @@ func connectToSQLServer() {
 	for _, statement := range initialSQLArr {
 		if statement != "" && statement != "\n" && strings.Index(statement, "--") != 0 {
 			if _, err := db.Exec(statement); err != nil {
-				handleError(0, "failed with error: %s\n", customError(err))
+				handleError(0, "failed: %s\n", customError(err))
 				os.Exit(2)
 			}
 		}
@@ -64,7 +64,7 @@ func connectToSQLServer() {
 	if err == sql.ErrNoRows {
 		newInstall = true
 	} else if err != nil {
-		handleError(0, "failed with error: %s\n", customError(err))
+		handleError(0, "failed: %s\n", customError(err))
 		os.Exit(2)
 	}
 
