@@ -1,5 +1,8 @@
 #!/bin/bash
-# Vagrant provision script, kinda sorta based on Ponychan's
+# Vagrant provision script
+# I guess I should give credit where credit is due since a fair amount
+# of this script was was originally written by Macil (as far as I know) for Ponychan
+# https://github.com/MacilPrime/ponychan
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -76,6 +79,20 @@ function makeLink {
 cat - <<EOF >>/home/vagrant/.bashrc
 export GOPATH=/vagrant/lib
 export GOCHAN_PATH=/home/vagrant/gochan
+EOF
+
+# a couple convenience shell scripts, since they're nice to have
+cat - <<EOF >>/home/vagrant/dbconnect.sh
+#!/usr/bin/env bash
+
+mysql -s -t -u gochan -D gochan -pgochan
+EOF
+chmod +x /home/vagrant/dbconnect.sh
+
+cat - <<EOF >>/home/vagrant/buildgochan.sh
+#!/usr/bin/env bash
+
+cd /vagrant && make debug && cd ~/gochan && ./gochan
 EOF
 
 go get github.com/disintegration/imaging

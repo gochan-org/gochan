@@ -35,7 +35,6 @@ const (
 )
 
 var (
-	lastPost    PostTable
 	allSections []interface{}
 	allBoards   []interface{}
 )
@@ -386,7 +385,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		"posts":    replies,
 		"op":       op,
 	}); err != nil {
-		html += handleError(1, "Failed building /%s/res/%d threadpage: ", board.Dir, op.ID, err.Error()) + "<br />\n"
+		html += handleError(1, "Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error()) + "<br />\n"
 		return
 	}
 
@@ -564,38 +563,14 @@ func bumpThread(postID, boardID int) error {
 }
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
-// returns true if the user is banned
-func checkBannedStatus(post *PostTable, writer http.ResponseWriter) ([]interface{}, error) {
+// returns ban table if the user is banned or errNotBanned if they aren't
+func getBannedStatus(post *PostTable, writer http.ResponseWriter) (BanlistTable, error) {
 	var banEntry BanlistTable
-	var interfaces []interface{}
-	// var count int
-	// var search string
-	err := queryRowSQL("SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ?",
+	err := queryRowSQL("SELECT `ip`, `name`, `reason`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ? ORDER BY `id` DESC LIMIT 1",
 		[]interface{}{&post.IP},
-		[]interface{}{&banEntry.IP, &banEntry.Name, &banEntry.Tripcode, &banEntry.Message, &banEntry.Boards, &banEntry.Timestamp, &banEntry.Expires, &banEntry.AppealAt},
+		[]interface{}{&banEntry.IP, &banEntry.Name, &banEntry.Reason, &banEntry.Boards, &banEntry.Timestamp, &banEntry.Expires, &banEntry.AppealAt},
 	)
-	if err == sql.ErrNoRows {
-		// the user isn't banned
-		// We don't need to return err because it isn't necessary
-		return interfaces, nil
-	} else if err != nil {
-		handleError(1, "Error checking banned status: "+err.Error())
-		return interfaces, err
-	}
-
-	if !banEntry.Expires.After(time.Now()) {
-		// if it is expired, send a message saying that it's expired, but still post
-		println(1, "expired")
-		return interfaces, nil
-	}
-	// the user's IP is in the banlist. Check if the ban has expired
-	if getSpecificSQLDateTime(banEntry.Expires) == "0001-01-01 00:00:00" || banEntry.Expires.After(time.Now()) {
-		// for some funky reason, Go's MySQL driver seems to not like getting a supposedly nil timestamp as an ACTUAL nil timestamp
-		// so we're just going to wing it and cheat. Of course if they change that, we're kind of hosed.
-
-		return []interface{}{config, banEntry}, nil
-	}
-	return interfaces, nil
+	return banEntry, err
 }
 
 func sinceLastPost(post *PostTable) int {
@@ -673,7 +648,7 @@ func getVideoInfo(path string) (map[string]int, error) {
 func getNewFilename() string {
 	now := time.Now().Unix()
 	rand.Seed(now)
-	return strconv.Itoa(int(now)) + strconv.Itoa(int(rand.Intn(98)+1))
+	return strconv.Itoa(int(now)) + strconv.Itoa(rand.Intn(98)+1)
 }
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
@@ -1041,19 +1016,19 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	isBanned, err := checkBannedStatus(&post, writer)
-	if err != nil {
-		handleError(1, "Error in checkBannedStatus: "+err.Error())
+	banStatus, err := getBannedStatus(&post, writer)
+	if err != nil && err != sql.ErrNoRows {
+		handleError(1, "Error in getBannedStatus: "+err.Error())
 		serveErrorPage(writer, err.Error())
 		return
 	}
 
-	if len(isBanned) > 0 {
+	if banStatus.IsBanned() {
 		var banpage_buffer bytes.Buffer
 		var banpage_html string
 		banpage_buffer.Write([]byte(""))
 		if err = banpage_tmpl.Execute(&banpage_buffer, map[string]interface{}{
-			"bans": isBanned,
+			"config": config, "ban": banStatus,
 		}); err != nil {
 			fmt.Fprintf(writer, banpage_html+handleError(1, err.Error())+"\n</body>\n</html>")
 			return
@@ -1062,7 +1037,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	sanitizePost(&post)
+	post.Sanitize()
 	result, err := insertPost(post, emailCommand != "sage")
 	if err != nil {
 		serveErrorPage(writer, handleError(1, err.Error()))

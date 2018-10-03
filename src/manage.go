@@ -41,12 +41,7 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if action != "getstaffjquery" {
-		if err = global_header_tmpl.Execute(&managePageBuffer, config); err != nil {
-			handleError(0, customError(err))
-			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
-			return
-		}
-
+		managePageBuffer.WriteString("<!DOCTYPE html>\n<html>\n<head>\n")
 		if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
 			handleError(0, customError(err))
 			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
@@ -574,118 +569,28 @@ var manage_functions = map[string]ManageFunction{
 	"bans": {
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			var ban_which string // user, image, or both
-
-			if request.PostFormValue("ban-user-button") == "Ban user" {
-				ban_which = "user"
-			} else if request.PostFormValue("ban-image-button") == "Ban image" {
-				ban_which = "image"
-			} else if request.PostFormValue("ban-both-button") == "Ban both" {
-				ban_which = "both"
-			}
-			// if none of these are true, we can assume that the page was loaded without sending anything
-			println(1, "ban_which"+ban_which)
-
-			if ban_which == "user" {
-				//var banned_tripcode string
-				banned_ip := request.PostFormValue("ip")
-				if banned_ip != "" {
-					println(0, banned_ip)
-				}
-			}
-
-			boards_list_html := "		<span style=\"font-weight: bold;\">Boards: </span><br />\n" +
-				"		<label>All boards <input type=\"checkbox\" id=\"allboards\" /></label> overrides individual board selection<br />\n"
-
-			rows, err := querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
+			rows, err := querySQL("SELECT `ip`,`name`,`tripcode`,`reason`,`boards`,`banned_by`,`timestamp`,`expires` FROM `" + config.DBprefix + "banlist`")
 			defer closeRows(rows)
 			if err != nil {
 				html += "<hr />" + handleError(1, err.Error())
 				return
 			}
-			var board_dir string
+
+			var banlist []BanlistTable
 			for rows.Next() {
-				if err = rows.Scan(&board_dir); err != nil {
-					html += "<hr />" + handleError(1, err.Error())
-				}
-				boards_list_html += "			<label>/" + board_dir + "/ <input type=\"checkbox\" id=\"" + board_dir + "\" class=\"board-check\"/></label>&nbsp;&nbsp;\n"
+				var ban BanlistTable
+				rows.Scan(&ban.IP, &ban.Name, &ban.Tripcode, &ban.Reason, &ban.Boards, &ban.BannedBy, &ban.Timestamp, &ban.Expires)
+				banlist = append(banlist, ban)
 			}
+			manageBansBuffer := bytes.NewBufferString("")
 
-			html = "<h1>Ban user(s)</h1>\n" +
-				"<form method=\"POST\" action=\"/manage\">\n" +
-				"<input type=\"hidden\" name=\"action\" value=\"bans\" />\n" +
-				"<fieldset><legend>User(s)</legend>" +
-				"	<div id=\"ip\" class=\"ban-type-div\" style=\"width:100%%; display: inline;\">\n" +
-				"		<span style=\"font-weight: bold;\">IP address:</span> <input type=\"text\" name=\"ip\" /><br />\n" +
-				"		\"192.168.1.36\" will ban posts from that IP address<br />\n" +
-				"		\"192.168\" will block all IPs starting with 192.168<br /><hr />\n" +
-				"	</div>\n" +
-				"	<div id=\"name\" class=\"ban-type-div\" style=\"width:100%%;\">\n" +
-				"		<span style=\"font-weight: bold;\">Name/tripcode:</span> <input type=\"text\" name=\"ip\" /><br />\n" +
-				"		(format: \"Poster!tripcode\", \"!tripcode\", or \"Poster\")<br />\n" +
-				"		<hr />\n" +
-				"	</div>\n" +
-				"		<span style=\"font-weight: bold;\">Duration: </span><br />\n" +
-				"		<label>Permanent ban (overrides duration dropdowns if checked)<input type=\"checkbox\" name=\"forever\" value=\"forever\" /></label><br />\n" +
-				"		<div class=\"duration-select\"></div>\n<hr />\n" +
-				boards_list_html + "<hr />\n" +
-				"	<div id=\"reason-staffnote\" style=\"text-align: right; float:left;\">\n" +
-				"		<span style=\"font-weight: bold;\">Reason: </span><input type=\"text\" name=\"reason\" /><br />\n" +
-				"		<span style=\"font-weight: bold;\">Staff note: </span><input type=\"text\" name=\"staff-note\" /><br />\n" +
-				"	</div>\n<br /><br /><br /><input type=\"submit\" name=\"ban-user-button\" value=\"Ban user\"/>" +
-				"</fieldset>\n<br />\n<hr />\n" +
-				"<fieldset><legend>Image</legend>\n" +
-				"	This will disallow an image with this hash from being posted, and will ban users who try to post it for the specified amount of time.<br /><br />\n" +
-				"	<label style=\"font-weight: bold;\">Ban image hash: <input type=\"checkbox\" /></label><br />\n" +
-				"		<span style=\"font-weight: bold;\">Duration: </span><br />\n" +
-				"		<label>Permanent ban (overrides duration dropdowns if checked)<input type=\"checkbox\" name=\"forever\" value=\"forever\" /></label><br />\n" +
-				"		<div class=\"duration-select\"></div>\n" +
-				"		<hr />\n" +
-				boards_list_html + "<hr />\n" +
-				"	<div id=\"reason-staffnote\" style=\"text-align: right; float:left;\">\n" +
-				"		<span style=\"font-weight: bold;\">Reason: </span><input type=\"text\" name=\"reason\" /><br />\n" +
-				"		<span style=\"font-weight: bold;\">Staff note: </span><input type=\"text\" name=\"staff-note\" /><br />\n" +
-				"	</div>\n<br /><br /><br /><input type=\"submit\" name=\"ban-image-button\" value=\"Ban image\"/>" +
-				"</fieldset><br />\n" +
-				"<input type=\"submit\" name=\"ban-both-button\" value=\"Ban both\" /></form>\n</br />" +
-				"<h2>Banned IPs</h2>\n"
-
-			rows, err = querySQL("SELECT * FROM `" + config.DBprefix + "banlist`")
-			if err != nil {
-				html += "</table><br />" + handleError(1, err.Error())
+			if err := manage_bans_tmpl.Execute(manageBansBuffer,
+				map[string]interface{}{"config": config, "banlist": banlist, "boards": allBoards},
+			); err != nil {
+				html += handleError(1, err.Error())
 				return
 			}
-			var ban BanlistTable
-
-			num_rows := 0
-			for rows.Next() {
-				if num_rows == 0 {
-					html += "<table width=\"100%%\" border=\"1\">\n" +
-						"<tr><th>IP</th><th>Name/Tripcode</th><th>Message</th><th>Date added</th><th>Added by</th><th>Reason</th><th>Expires/expired</th><th></th></tr>"
-				}
-				err = rows.Scan(&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.Tripcode, &ban.Message, &ban.SilentBan, &ban.Boards, &ban.BannedBy, &ban.Timestamp, &ban.Expires, &ban.Reason, &ban.StaffNote, &ban.AppealMessage, &ban.AppealAt)
-				if err != nil {
-					html += "</table><br />" + handleError(1, err.Error())
-					return
-				}
-				ban_name := ""
-				if ban.Name+ban.Tripcode != "" {
-					ban_name = ban.Name + "!" + ban.Tripcode
-				}
-
-				html += "<tr><td>" + ban.IP + "</td><td>" + ban_name + "</td><td>" + ban.Message + "</td><td>" + humanReadableTime(ban.Timestamp) + "</td><td>" + ban.BannedBy + "</td><td>" + ban.Reason + "</td><td>" + humanReadableTime(ban.Expires) + "</td><td>Delete</td></tr>"
-				num_rows++
-			}
-			if num_rows == 0 {
-				html += "No banned IPs"
-			} else {
-				html += "</table>\n"
-			}
-
-			// html += "<tr><td>127.0.0.1</td><td>Banned message</td><td>12/25/1991</td><td>Luna</td><td>Spam</td><td>never</td><td>Delete</td></tr>" +
-
-			html += "<br /><br /><br />" +
-				"<script type=\"text/javascript\">banPage();</script>\n "
+			html += manageBansBuffer.String()
 			return
 		}},
 	"getstaffjquery": {

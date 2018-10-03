@@ -2,6 +2,7 @@
 <html>
 <head>
 	<title>Banned</title>
+	<link rel="shortcut icon" href="/favicon.png">
 	<link rel="stylesheet" href="/css/global/front.css" />
 {{range $i, $style := .config.Styles}}
 	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
@@ -18,40 +19,33 @@
 		<span id="site-title">{{.config.SiteName}}</span><br />
 		<span id="site-slogan">{{.config.SiteSlogan}}</span>
 	</div>
-	<br />
-	<br />
+	<br /><br />
 	<div class="section-block" style="margin: 0px 26px 0px 24px">
 		<div class="section-title-block">
 			<span class="section-title"><b>YOU ARE BANNED :(</b></span>
 		</div>
 		<div class="section-body" style="padding-top:8px">
-			<div id="ban-info" style="float:left">
-				{{if eq .ban.Boards  "*"}}
-					You are banned from posting on <b>all boards</b> for the following reason:
-				{{else}}
-					You are banned from posting on <b>{{.ban.Boards}}</b> for the following reason:
-				{{end}}
+			<div id="ban-info" style="float:left">{{if eq $.ban.Boards ""}}
+				You are banned from posting on <b>all boards</b> for the following reason:{{else}}
+				You are banned from posting on <b>{{.ban.Boards}}</b> for the following reason:{{end}}
 				<br /><br />
-				<b>{{.ban.Message}}</b>
+				<b>{{.ban.Reason}}</b>
+				<br /><br />{{$expires_timestamp := formatTimestamp .ban.Expires}}{{$appeal_timestamp := formatTimestamp .ban.AppealAt}}{{if eq $expires_timestamp "Mon, January 01, 0001 00:00 AM"}}
+				Your ban was placed on {{formatTimestamp .ban.Timestamp}} and will <b>not expire.</b><br />{{else}}
+				Your ban was placed on <b>{{formatTimestamp .ban.Timestamp}}</b> and will expire on <b>{{$expires_timestamp}}</b><br />{{end}}
+				<br />{{if eq $appeal_timestamp "Mon, January 01, 0001 00:00 AM"}}
+				You may not appeal this ban.{{else}}
+				You may appeal this ban on <b>{{$appeal_timestamp}}</b>.{{end}}
 				<br /><br />
-				{{$expires_timestamp := formatTimestamp .ban.Expires}}
-				{{$appeal_timestamp := formatTimestamp .ban.AppealAt}}
-				{{if eq $expires_timestamp "Mon, January 01, 0001 00:00 AM"}}
-					Your ban was placed on {{formatTimestamp .ban.Timestamp}} and will not expire.<br />
-				{{else}}
-					Your ban was placed on {{formatTimestamp .ban.Timestamp}} and will expire on {{$expires_timestamp}}<br />
-				{{end}}
-				<br />
-				{{if eq .appeal_timestamp "Mon, January 01, 0001 00:00 AM"}}
-					You may not appeal this ban.
-				{{else}}
-					You may appeal this ban {{$appeal_timestamp}}
-				{{end}}
-				<br /><br />
-				Your IP address is {{.ban.IP}}.
+				Your IP address is <b>{{.ban.IP}}</b>.<br /><br />
+				<form id="appeal-form">
+					<table id="postbox-static">
+						<tr><th class="postblock">Email</th><td><input type="email" name="email" /><input type="submit" value="Appeal" /></td></tr>
+						<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="postmsg" id="postmsg"></textarea></td></tr>	
+					</table>
+				</form>
 			</div>
-			<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/>
+			<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />
 		</div>
 	</div>
-</body>
-</html>
+	{{template "global_footer.html" .}}

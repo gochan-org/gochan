@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"html"
 	"io/ioutil"
 	"log"
 	"os"
@@ -73,6 +74,13 @@ type BanlistTable struct {
 	AppealAt      time.Time
 }
 
+func (bt *BanlistTable) IsBanned() bool {
+	if getSpecificSQLDateTime(bt.Expires) == "0001-01-01 00:00:00" || bt.Expires.After(time.Now()) {
+		return true
+	}
+	return false
+}
+
 type BannedHashesTable struct {
 	ID          uint
 	Checksum    string
@@ -134,17 +142,6 @@ type EmbedsTable struct {
 	EmbedCode string
 }
 
-// FiletypesTable represents the allowed filetypes
-// It's held over from Kusaba X and may be removed in the future
-type FiletypesTable struct {
-	ID         uint8
-	Filetype   string
-	Mime       string
-	ThumbImage string
-	ImageW     uint
-	ImageH     uint
-}
-
 // FrontTable represents the information (News, rules, etc) on the front page
 type FrontTable struct {
 	ID        int
@@ -157,7 +154,7 @@ type FrontTable struct {
 	Email     string
 }
 
-// FrontLinksTable is used for linking to sites that the admin linkes
+// FrontLinksTable is used for linking to sites that the admin likes
 type FrontLinksTable struct {
 	ID    uint8
 	Title string
@@ -219,6 +216,15 @@ type PostTable struct {
 	Locked           bool
 	Reviewed         bool
 	Sillytag         bool
+}
+
+// Sanitize escapes HTML strings in a post. This should be run immediately before
+// the post is inserted into the database
+func (p *PostTable) Sanitize() {
+	p.Name = html.EscapeString(p.Name)
+	p.Email = html.EscapeString(p.Email)
+	p.Subject = html.EscapeString(p.Subject)
+	p.Password = html.EscapeString(p.Password)
 }
 
 type ReportsTable struct {

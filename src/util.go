@@ -5,8 +5,8 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"database/sql"
+	"errors"
 	"fmt"
-	"html"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,7 +25,10 @@ import (
 )
 
 var (
-	nullTime, _ = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
+	nullTime, _              = time.Parse("2006-01-02 15:04:05", "0000-00-00 00:00:00")
+	errEmptyDurationString   = errors.New("Empty Duration string")
+	errInvalidDurationString = errors.New("Invalid Duration string")
+	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
 )
 
 const (
@@ -410,7 +414,6 @@ func paginate(interfaceLength int, interf []interface{}) [][]interface{} {
 	var paginatedInterfaces [][]interface{}
 	numArrays := len(interf) / interfaceLength
 	interfacesRemaining := len(interf) % interfaceLength
-	//paginated_interfaces = append(paginated_interfaces, interf)
 	currentInterface := 0
 	for l := 0; l < numArrays; l++ {
 		paginatedInterfaces = append(paginatedInterfaces,
@@ -447,15 +450,6 @@ func resetBoardSectionArrays() {
 
 	allSectionsArr, _ := getSectionArr("")
 	allSections = append(allSections, allSectionsArr...)
-}
-
-// sanitize/escape HTML strings in a post. This should be run immediately before
-// the post is inserted into the database
-func sanitizePost(post *PostTable) {
-	post.Name = html.EscapeString(post.Name)
-	post.Email = html.EscapeString(post.Email)
-	post.Subject = html.EscapeString(post.Subject)
-	post.Password = html.EscapeString(post.Password)
 }
 
 func searchStrings(item string, arr []string, permissive bool) int {
@@ -620,4 +614,47 @@ func ipMatch(newIP, existingIP string) bool {
 		return false
 	}
 	return ipRegex.MatchString(newIP)
+}
+
+// based on TinyBoard's parse_time function
+func parseDurationString(str string) (time.Duration, error) {
+	if str == "" {
+		return 0, errEmptyDurationString
+	}
+
+	matches := durationRegexp.FindAllStringSubmatch(str, -1)
+	if len(matches) == 0 {
+		return 0, errInvalidDurationString
+	}
+
+	var expire int
+	if matches[0][2] != "" {
+		years, _ := strconv.Atoi(matches[0][2])
+		expire += years * 60 * 60 * 24 * 365
+	}
+	if matches[0][4] != "" {
+		months, _ := strconv.Atoi(matches[0][4])
+		expire += months * 60 * 60 * 24 * 30
+	}
+	if matches[0][6] != "" {
+		weeks, _ := strconv.Atoi(matches[0][6])
+		expire += weeks * 60 * 60 * 24 * 7
+	}
+	if matches[0][8] != "" {
+		days, _ := strconv.Atoi(matches[0][8])
+		expire += days * 60 * 60 * 24
+	}
+	if matches[0][10] != "" {
+		hours, _ := strconv.Atoi(matches[0][10])
+		expire += hours * 60 * 60
+	}
+	if matches[0][12] != "" {
+		minutes, _ := strconv.Atoi(matches[0][12])
+		expire += minutes * 60
+	}
+	if matches[0][14] != "" {
+		seconds, _ := strconv.Atoi(matches[0][14])
+		expire += seconds
+	}
+	return time.ParseDuration(strconv.Itoa(expire) + "s")
 }

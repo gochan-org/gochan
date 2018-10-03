@@ -231,15 +231,14 @@ var (
 	banpage_tmpl        *template.Template
 	errorpage_tmpl      *template.Template
 	front_page_tmpl     *template.Template
-	global_header_tmpl  *template.Template
 	img_boardpage_tmpl  *template.Template
 	img_threadpage_tmpl *template.Template
 	img_post_form_tmpl  *template.Template
-	// manage_bans_tmpl    *template.Template
-	manage_boards_tmpl *template.Template
-	manage_config_tmpl *template.Template
-	manage_header_tmpl *template.Template
-	post_edit_tmpl     *template.Template
+	manage_bans_tmpl    *template.Template
+	manage_boards_tmpl  *template.Template
+	manage_config_tmpl  *template.Template
+	manage_header_tmpl  *template.Template
+	post_edit_tmpl      *template.Template
 )
 
 func loadTemplate(files ...string) (*template.Template, error) {
@@ -262,7 +261,7 @@ func templateError(name string, err error) error {
 func initTemplates() error {
 	var err error
 	resetBoardSectionArrays()
-	banpage_tmpl, err = loadTemplate("banpage.html")
+	banpage_tmpl, err = loadTemplate("banpage.html", "global_footer.html")
 	if err != nil {
 		return templateError("banpage.html", err)
 	}
@@ -270,11 +269,6 @@ func initTemplates() error {
 	errorpage_tmpl, err = loadTemplate("error.html")
 	if err != nil {
 		return templateError("error.html", err)
-	}
-
-	global_header_tmpl, err = loadTemplate("global_header.html")
-	if err != nil {
-		return templateError("global_header.html", err)
 	}
 
 	img_boardpage_tmpl, err = loadTemplate("img_boardpage.html", "img_header.html", "postbox.html", "global_footer.html")
@@ -292,10 +286,10 @@ func initTemplates() error {
 		return templateError("img_threadpage.html", err)
 	}
 
-	/* manage_bans_tmpl, err = loadTemplate("manage_bans.html")
+	manage_bans_tmpl, err = loadTemplate("manage_bans.html")
 	if err != nil {
 		return templateError("manage_bans.html", err)
-	} */
+	}
 
 	manage_boards_tmpl, err = loadTemplate("manage_boards.html")
 	if err != nil {
