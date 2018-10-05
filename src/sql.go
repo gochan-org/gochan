@@ -87,7 +87,7 @@ func connectToSQLServer() {
 			os.Exit(2)
 		}
 	}
-
+	checkDeprecatedSchema()
 	println(0, "complete.")
 }
 
@@ -157,4 +157,53 @@ func getSQLDateTime() string {
 
 func getSpecificSQLDateTime(t time.Time) string {
 	return t.Format(mysqlDatetimeFormat)
+}
+
+// checkDeprecatedSchema checks the tables for outdated columns and column values
+// and causes gochan to quit with an error message specific to the needed change
+func checkDeprecatedSchema() {
+	var hasColumn int
+	var err error
+
+	execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `id` `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT", nil)
+
+	if err = queryRowSQL(
+		"SELECT COUNT(*) FROM information_schema.COlUMNS WHERE `TABLE_SCHEMA` = '"+config.DBname+"' AND TABLE_NAME = '"+config.DBprefix+"banlist' AND COLUMN_NAME = 'appeal_message'",
+		[]interface{}{}, []interface{}{&hasColumn},
+	); err != nil {
+		println(0, "error checking for deprecated column: "+err.Error())
+		os.Exit(2)
+		return
+	}
+	if hasColumn > 0 {
+		// Running them one at a time, in case we get errors from individual queries
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `banned_by` `staff` VARCHAR(50) NOT NULL", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `type` TINYINT UNSIGNED NOT NULL DEFAULT '3'", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `name_is_regex` TINYINT(1) DEFAULT '0'", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `filename` VARCHAR(255) NOT NULL DEFAULT ''", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `file_checksum` VARCHAR(255) NOT NULL DEFAULT ''", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `permaban` TINYINT(1) DEFAULT '0'", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `can_appeal` TINYINT(1) DEFAULT '1'", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` DROP COLUMN `message`", nil)
+
+		println(0, "The column `appeal_message` in table "+config.DBprefix+"banlist is deprecated. A new table , `"+config.DBprefix+"appeals` has been created for it, and the banlist table will be modified accordingly.")
+		println(0, "Just to be safe, you may want to check both tables to make sure everything is good.")
+
+		rows, err := querySQL("SELECT `id`,`appeal_message` FROM `" + config.DBprefix + "banlist`")
+		if err != nil {
+			println(0, "Error updating banlist schema: "+err.Error())
+			os.Exit(2)
+			return
+		}
+
+		for rows.Next() {
+			var id int
+			var appeal_message string
+			rows.Scan(&id, &appeal_message)
+			if appeal_message != "" {
+				execSQL("INSERT INTO `"+config.DBprefix+"appeals` (`ban`,`message`) VALUES(?,?)", &id, &appeal_message)
+			}
+			execSQL("ALTER TABLE `" + config.DBprefix + "banlist` DROP COLUMN `appeal_message`")
+		}
+	}
 }

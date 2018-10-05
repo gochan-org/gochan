@@ -564,12 +564,16 @@ func bumpThread(postID, boardID int) error {
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
 // returns ban table if the user is banned or errNotBanned if they aren't
-func getBannedStatus(post *PostTable, writer http.ResponseWriter) (BanlistTable, error) {
+func getBannedStatus(post *PostTable) (BanlistTable, error) {
 	var banEntry BanlistTable
-	err := queryRowSQL("SELECT `ip`, `name`, `reason`, `boards`, `timestamp`, `expires`, `appeal_at` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ? ORDER BY `id` DESC LIMIT 1",
-		[]interface{}{&post.IP},
-		[]interface{}{&banEntry.IP, &banEntry.Name, &banEntry.Reason, &banEntry.Boards, &banEntry.Timestamp, &banEntry.Expires, &banEntry.AppealAt},
+	err := queryRowSQL("SELECT `ip`,`name`,`boards`,`timestamp`,`expires`,`permaban`,`reason`,`type`,`appeal_at`,`can_appeal` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ? OR `name` = ? OR `filename` = ? OR `file_checksum` = ? ORDER BY `id` DESC LIMIT 1",
+		[]interface{}{&post.IP, &post.Name, &post.Filename, &post.FileChecksum},
+		[]interface{}{
+			&banEntry.IP, &banEntry.Name, &banEntry.Boards, &banEntry.Timestamp,
+			&banEntry.Expires, &banEntry.Permaban, &banEntry.Reason, &banEntry.Type,
+			&banEntry.AppealAt, &banEntry.CanAppeal},
 	)
+	println(1, banEntry.Timestamp)
 	return banEntry, err
 }
 
@@ -1016,13 +1020,12 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	banStatus, err := getBannedStatus(&post, writer)
+	banStatus, err := getBannedStatus(&post)
 	if err != nil && err != sql.ErrNoRows {
 		handleError(1, "Error in getBannedStatus: "+err.Error())
 		serveErrorPage(writer, err.Error())
 		return
 	}
-
 	if banStatus.IsBanned() {
 		var banpage_buffer bytes.Buffer
 		var banpage_html string

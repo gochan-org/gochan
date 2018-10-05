@@ -56,22 +56,44 @@ type AnnouncementsTable struct {
 	Timestamp time.Time
 }
 
-type BanlistTable struct {
-	ID            uint
-	AllowRead     bool
-	IP            string
-	Name          string
-	Tripcode      string
+type AppealsTable struct {
+	ID            int
+	Ban           int
 	Message       string
-	SilentBan     uint8
-	Boards        string
-	BannedBy      string
-	Timestamp     time.Time
-	Expires       time.Time
-	Reason        string
-	StaffNote     string
-	AppealMessage string
-	AppealAt      time.Time
+	Denied        bool
+	StaffResponse string
+}
+
+func (a *AppealsTable) GetBan() (BanlistTable, error) {
+	var ban BanlistTable
+	var err error
+
+	err = queryRowSQL("SELECT * FROM `"+config.DBprefix+"banlist` WHERE `id` = ? LIMIT 1",
+		[]interface{}{a.ID}, []interface{}{
+			&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
+			&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,
+			&ban.StaffNote, &ban.AppealAt},
+	)
+	return ban, err
+}
+
+type BanlistTable struct {
+	ID          uint
+	AllowRead   bool
+	IP          string
+	Name        string
+	NameIsRegex bool
+	SilentBan   uint8
+	Boards      string
+	Staff       string
+	Timestamp   time.Time
+	Expires     time.Time
+	Permaban    bool
+	Reason      string
+	Type        int
+	StaffNote   string
+	AppealAt    time.Time
+	CanAppeal   bool
 }
 
 func (bt *BanlistTable) IsBanned() bool {

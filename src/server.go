@@ -144,7 +144,7 @@ func initServer() {
 	server.AddNamespace("util", utilHandler)
 	server.AddNamespace("example", func(writer http.ResponseWriter, request *http.Request) {
 		if writer != nil {
-			_, _ = writer.Write([]byte("hahahaha"))
+			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
 		}
 	})
 
@@ -183,7 +183,6 @@ func validReferrer(request *http.Request) bool {
 
 // register /util handler
 func utilHandler(writer http.ResponseWriter, request *http.Request) {
-	//writer.Header().Add("Content-Type", "text/css")
 	action := request.FormValue("action")
 	password := request.FormValue("password")
 	board := request.FormValue("board")
@@ -377,7 +376,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				buildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID) //<br />\n<meta http-equiv=\"refresh\" content=\"1;url=/"+board+"/\">", post.ID)
+				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID)
 			} else {
 				// delete the post
 				if _, err = execSQL(

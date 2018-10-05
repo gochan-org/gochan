@@ -225,6 +225,9 @@ var funcMap = template.FuncMap{
 		tableOut += "</table>\n"
 		return tableOut
 	},
+	"bannedForever": func(ban BanlistTable) bool {
+		return ban.Permaban && !ban.CanAppeal && ban.Type == 3 && ban.Boards == ""
+	},
 }
 
 var (

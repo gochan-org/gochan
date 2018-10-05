@@ -582,20 +582,6 @@ func makePostJSON(post PostTable, anonymous string) (postObj PostJSON) {
 	return
 }
 
-func getBan(post PostTable) (*BanlistTable, error) {
-	ban := new(BanlistTable)
-
-	if err := queryRowSQL(
-		"SELECT `ip`, `name`, `tripcode`, `message`, `boards`, `banned_by`, `timestamp`, `expires`, `reason` FROM `"+config.DBprefix+"banlist` "+
-			"WHERE ? like `ip` OR ? REGEXP `name` OR ? REGEXP `tripcode`",
-		[]interface{}{post.IP, post.Name, post.Tripcode},
-		[]interface{}{&ban.IP, &ban.Name, &ban.Tripcode},
-	); err != nil {
-		return nil, err
-	}
-	return ban, nil
-}
-
 func ipMatch(newIP, existingIP string) bool {
 	if newIP == existingIP {
 		// both are single IPs and are the same

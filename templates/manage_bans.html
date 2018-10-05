@@ -2,32 +2,33 @@
 <form method="POST" action="/manage">
 <input type="hidden" name="action" value="bans" />
 
-<fieldset><legend>User filter</legend>
-	<b>IP address:</b> <input type="text" name="ip" /><br />
-	"192.168.1.36" will ban posts from that IP address<br />
-	"192.168" will block all IPs starting with 192.168<br /><hr />
-	<b>Name!Tripcode:</b> <input type="text" name="name" /><br />
-	<b>Ban filename:</b> <input type="text" name="filename" /><br />
-	<b>Ban file checksum: </b> <i>3bdffa672fefe458223629815d3b63e1</i> <input type="checkbox" />
-</fieldset><br />
+<b>User filter:</b><br />
+<table>
+	<tr><th>IP address</th><td><input type="text" name="ip" /></td></tr>
+	<tr><th></th><td>"192.168.1.36" will ban posts from that IP address<br />
+		"192.168" will block all IPs starting with 192.168<br /></td></tr>
+	<tr><th>Name!Tripcode</th><td><input type="text" name="name" /> <label>Regex<input type="checkbox" name="nameregex" /></label></td></tr>
+	<tr><th>Ban filename</th><td><input type="text" name="filename" /></td></tr>
+	<tr><th>Ban file checksum</th><td>3bdffa672fefe458223629815d3b63e1 <input type="checkbox" /></td></tr>
+</table><br /><hr />
 
-<fieldset><legend>Ban info</legend>
-	<b>Duration:</b><sup title="e.g. '1y2mo3w4d5h6m7s', '1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds' or 'forever', '0', or '' for a permaban">[?]</sup> <input type="text" name="ban-duration" /><br />
-	<b>Ban type:</b><br />
-	<label>Image ban <input type="checkbox" name="image-ban" /></label><br />
-	<label>Thread starting ban <input type="checkbox" name="thread-ban" /></label><br />
-	<label>Full ban (overrides the above) <input type="checkbox" name="full-ban" /></label><hr />
-	<table class="baninfotable">
-		<tr><td><b>Boards:</b><sup title="Comma-separated list of boards (e.g. board1,board2,board3) or blank for all boards">[?]</sup></td><td><input type="text" name="boards" /></td></tr>
-		<tr><td><b>Reason:</b></td><td><textarea name="reason" rows="5" cols="30"></textarea></td></tr>
-		<tr><td><b>Staff note:</b></td><td><input type="text" name="staff-note" /></td></tr>
-	</table>
-</fieldset>
+<b>Ban info</b><br />
+<table>
+	<tr><th>Duration</th><td><input type="text" name="ban-duration" /></td></tr>
+	<tr><th></th><td>e.g. '1y2mo3w4d5h6m7s',<br />'1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds',<br /> or 'forever', '0', or '' for a permaban</td></tr>
+	<tr><th>Ban type</th><td><label>Image ban <input type="checkbox" name="image-ban" /></label><br />
+		<label>Thread starting ban <input type="checkbox" name="thread-ban" /></label><br />
+		<label>Full ban (overrides the above) <input type="checkbox" name="full-ban" /></label></tr>
+	<tr><th>Boards</th><td><input type="text" name="boards" /></td></tr>
+	<tr><th></th><td>Comma-separated list of boards (e.g. board1,board2,board3) or blank for all boards</td></tr>
+	<tr><th>Reason</th><td><textarea name="reason" rows="5" cols="30"></textarea></td></tr>
+	<tr><th>Staff note</th><td><input type="text" name="staff-note" /></td></tr>
+</table>
 
 <h2>Banlist</h2>
 <table>
 	<th>IP</th><th>Name!Tripcode</th><th>Reason</th><th>Boards</th><th>Staff</th><th>Set</th><th>Expires</th>
 {{range $b, $ban := $.banlist}}<tr>
-	<td>{{$ban.IP}}</td><td>{{$ban.Name}}</td><td>{{$ban.Reason}}</td><td>{{$ban.Boards}}</td><td>{{$ban.BannedBy}}</td><td>{{$ban.Timestamp}}</td><td>{{$ban.Expires}}</td>
+	<td>{{$ban.IP}}</td><td>{{$ban.Name}}</td><td>{{$ban.Reason}}</td><td>{{if eq $ban.Boards ""}}<i>all boards</i>{{else}}{{$ban.Boards}}{{end}}</td><td>{{$ban.Staff}}</td><td>{{$ban.Timestamp}}</td><td>{{$ban.Expires}}</td>
 </tr>{{end}}
 </table>
