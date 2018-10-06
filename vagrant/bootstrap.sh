@@ -60,7 +60,7 @@ wait
 
 mkdir -p /vagrant/lib || true
 cd /vagrant
-su vagrant
+su - vagrant
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
 mkdir /home/vagrant/bin
@@ -82,18 +82,21 @@ export GOCHAN_PATH=/home/vagrant/gochan
 EOF
 
 # a couple convenience shell scripts, since they're nice to have
-cat - <<EOF >>/home/vagrant/dbconnect.sh
+cat - <<EOF >/home/vagrant/dbconnect.sh
 #!/usr/bin/env bash
 
 mysql -s -t -u gochan -D gochan -pgochan
 EOF
-chmod +x /home/vagrant/dbconnect.sh
 
-cat - <<EOF >>/home/vagrant/buildgochan.sh
+cat - <<EOF >/home/vagrant/buildgochan.sh
 #!/usr/bin/env bash
 
 cd /vagrant && make debug && cd ~/gochan && ./gochan
 EOF
+chmod +x /home/vagrant/dbconnect.sh
+chmod +x /home/vagrant/buildgochan.sh
+sudo chown vagrant:vagrant /home/vagrant/dbconnect.sh /home/vagrant/buildgochan.sh
+sudo chown -R vagrant:vagrant /home/vagrant/bin
 
 go get github.com/disintegration/imaging
 go get github.com/nranchev/go-libGeoIP

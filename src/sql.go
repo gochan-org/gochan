@@ -166,7 +166,7 @@ func checkDeprecatedSchema() {
 	var err error
 
 	execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `id` `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT", nil)
-
+	execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `expires` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP", nil)
 	if err = queryRowSQL(
 		"SELECT COUNT(*) FROM information_schema.COlUMNS WHERE `TABLE_SCHEMA` = '"+config.DBname+"' AND TABLE_NAME = '"+config.DBprefix+"banlist' AND COLUMN_NAME = 'appeal_message'",
 		[]interface{}{}, []interface{}{&hasColumn},
@@ -185,6 +185,7 @@ func checkDeprecatedSchema() {
 		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `permaban` TINYINT(1) DEFAULT '0'", nil)
 		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `can_appeal` TINYINT(1) DEFAULT '1'", nil)
 		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` DROP COLUMN `message`", nil)
+		execSQL("ALTER TABLE `"+config.DBprefix+"boards` CHANGE COLUMN `boards` VARCHAR(255) NOT NULL DEFAULT ''", nil)
 
 		println(0, "The column `appeal_message` in table "+config.DBprefix+"banlist is deprecated. A new table , `"+config.DBprefix+"appeals` has been created for it, and the banlist table will be modified accordingly.")
 		println(0, "Just to be safe, you may want to check both tables to make sure everything is good.")
@@ -198,10 +199,10 @@ func checkDeprecatedSchema() {
 
 		for rows.Next() {
 			var id int
-			var appeal_message string
-			rows.Scan(&id, &appeal_message)
-			if appeal_message != "" {
-				execSQL("INSERT INTO `"+config.DBprefix+"appeals` (`ban`,`message`) VALUES(?,?)", &id, &appeal_message)
+			var appealMessage string
+			rows.Scan(&id, &appealMessage)
+			if appealMessage != "" {
+				execSQL("INSERT INTO `"+config.DBprefix+"appeals` (`ban`,`message`) VALUES(?,?)", &id, &appealMessage)
 			}
 			execSQL("ALTER TABLE `" + config.DBprefix + "banlist` DROP COLUMN `appeal_message`")
 		}
