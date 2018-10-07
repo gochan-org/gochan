@@ -11,15 +11,35 @@ import (
 )
 
 var funcMap = template.FuncMap{
+	// Arithmetic functions
 	"add": func(a, b int) int {
 		return a + b
 	},
 	"subtract": func(a, b int) int {
 		return a - b
 	},
-	"len": func(arr []interface{}) int {
-		return len(arr)
+
+	// Comparison functions (some copied from text/template for compatibility)
+	"ge": func(a int, b int) bool {
+		return a >= b
 	},
+	"gt": func(a int, b int) bool {
+		return a > b
+	},
+	"le": func(a int, b int) bool {
+		return a <= b
+	},
+	"lt": func(a int, b int) bool {
+		return a < b
+	},
+	"intEq": func(a, b int) bool {
+		return a == b
+	},
+	"isNil": func(i interface{}) bool {
+		return i == nil
+	},
+
+	// Array functions
 	"getSlice": func(arr []interface{}, start, end int) []interface{} {
 		slice := arr[start:end]
 		defer func() {
@@ -29,25 +49,28 @@ var funcMap = template.FuncMap{
 		}()
 		return slice
 	},
-	"gt": func(a int, b int) bool {
-		return a > b
+	"len": func(arr []interface{}) int {
+		return len(arr)
 	},
-	"ge": func(a int, b int) bool {
-		return a >= b
+
+	// String functions
+	"arrToString": arrToString,
+	"intToString": strconv.Itoa,
+	"escapeString": func(a string) string {
+		return html.EscapeString(a)
 	},
-	"lt": func(a int, b int) bool {
-		return a < b
-	},
-	"le": func(a int, b int) bool {
-		return a <= b
-	},
-	"makeLoop": func(n int, offset int) []int {
-		loopArr := make([]int, n)
-		for i := range loopArr {
-			loopArr[i] = i + offset
+	"formatFilesize": func(size_int int) string {
+		size := float32(size_int)
+		if size < 1000 {
+			return fmt.Sprintf("%d B", size_int)
+		} else if size <= 100000 {
+			return fmt.Sprintf("%0.1f KB", size/1024)
+		} else if size <= 100000000 {
+			return fmt.Sprintf("%0.2f MB", size/1024/1024)
 		}
-		return loopArr
+		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
+	"formatTimestamp": humanReadableTime,
 	"printf": func(v int, format string, a ...interface{}) string {
 		printf(v, format, a...)
 		return ""
@@ -97,21 +120,9 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
-	"escapeString": func(a string) string {
-		return html.EscapeString(a)
-	},
-	"isNil": func(i interface{}) bool {
-		return i == nil
-	},
-	"intEq": func(a, b int) bool {
-		return a == b
-	},
-	"intToString": strconv.Itoa,
-	"arrToString": arrToString,
-	"isStyleDefault": func(style string) bool {
-		return style == config.DefaultStyle
-	},
-	"formatTimestamp": humanReadableTime,
+
+	// Imageboard functions
+	"bannedForever": bannedForever,
 	"getThreadID": func(post_i interface{}) (thread int) {
 		post := post_i.(PostTable)
 		if post.ParentID == 0 {
@@ -151,17 +162,6 @@ var funcMap = template.FuncMap{
 		}
 		return uploadType
 	},
-	"formatFilesize": func(size_int int) string {
-		size := float32(size_int)
-		if size < 1000 {
-			return fmt.Sprintf("%d B", size_int)
-		} else if size <= 100000 {
-			return fmt.Sprintf("%0.1f KB", size/1024)
-		} else if size <= 100000000 {
-			return fmt.Sprintf("%0.2f MB", size/1024/1024)
-		}
-		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
-	},
 	"imageToThumbnailPath": func(img string) string {
 		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
 		if filetype == "gif" || filetype == "webm" {
@@ -172,6 +172,16 @@ var funcMap = template.FuncMap{
 			return ""
 		}
 		return img[0:index] + "t." + filetype
+	},
+	"isBanned": isBanned,
+
+	// Template convenience functions
+	"makeLoop": func(n int, offset int) []int {
+		loopArr := make([]int, n)
+		for i := range loopArr {
+			loopArr[i] = i + offset
+		}
+		return loopArr
 	},
 	"generateConfigTable": func() string {
 		configType := reflect.TypeOf(config)
@@ -225,8 +235,8 @@ var funcMap = template.FuncMap{
 		tableOut += "</table>\n"
 		return tableOut
 	},
-	"bannedForever": func(ban BanlistTable) bool {
-		return ban.Permaban && !ban.CanAppeal && ban.Type == 3 && ban.Boards == ""
+	"isStyleDefault": func(style string) bool {
+		return style == config.DefaultStyle
 	},
 }
 

@@ -564,17 +564,72 @@ func bumpThread(postID, boardID int) error {
 
 // Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
 // returns ban table if the user is banned or errNotBanned if they aren't
-func getBannedStatus(post *PostTable) (BanlistTable, error) {
+func getBannedStatus(request *http.Request) (BanlistTable, error) {
 	var banEntry BanlistTable
-	err := queryRowSQL("SELECT `ip`,`name`,`boards`,`timestamp`,`expires`,`permaban`,`reason`,`type`,`appeal_at`,`can_appeal` FROM `"+config.DBprefix+"banlist` WHERE `ip` = ? OR `name` = ? OR `filename` = ? OR `file_checksum` = ? ORDER BY `id` DESC LIMIT 1",
-		[]interface{}{&post.IP, &post.Name, &post.Filename, &post.FileChecksum},
-		[]interface{}{
-			&banEntry.IP, &banEntry.Name, &banEntry.Boards, &banEntry.Timestamp,
-			&banEntry.Expires, &banEntry.Permaban, &banEntry.Reason, &banEntry.Type,
-			&banEntry.AppealAt, &banEntry.CanAppeal},
+
+	formName := request.FormValue("postname")
+	var tripcode string
+	if formName != "" {
+		parsedName := parseName(formName)
+		tripcode += parsedName["name"]
+		if tc, ok := parsedName["tripcode"]; ok {
+			tripcode += "!" + tc
+		}
+	}
+	ip := getRealIP(request)
+
+	var filename string
+	var checksum string
+	file, fileHandler, err := request.FormFile("imagefile")
+	defer func() {
+		if file != nil {
+			file.Close()
+		}
+	}()
+	if err == nil {
+		html.EscapeString(fileHandler.Filename)
+		if data, err2 := ioutil.ReadAll(file); err2 == nil {
+			checksum = fmt.Sprintf("%x", md5.Sum(data))
+		}
+	}
+
+	in := []interface{}{ip}
+	query := "SELECT `id`,`ip`,`name`,`boards`,`timestamp`,`expires`,`permaban`,`reason`,`type`,`appeal_at`,`can_appeal` FROM `" + config.DBprefix + "banlist` WHERE `ip` = ? "
+
+	if tripcode != "" {
+		in = append(in, tripcode)
+		query += "OR `name` = ? "
+	}
+	if filename != "" {
+		in = append(in, filename)
+		query += "OR `filename` = ? "
+	}
+	if checksum != "" {
+		in = append(in, checksum)
+		query += "OR `file_checksum` = ? "
+	}
+	query += " ORDER BY `id` DESC LIMIT 1"
+
+	err = queryRowSQL(query, in, []interface{}{
+		&banEntry.ID, &banEntry.IP, &banEntry.Name, &banEntry.Boards, &banEntry.Timestamp,
+		&banEntry.Expires, &banEntry.Permaban, &banEntry.Reason, &banEntry.Type,
+		&banEntry.AppealAt, &banEntry.CanAppeal},
 	)
-	println(1, banEntry.Timestamp)
 	return banEntry, err
+}
+
+func isBanned(ban BanlistTable, board string) bool {
+	if ban.Boards == "" && (ban.Expires.After(time.Now()) || ban.Permaban) {
+		return true
+	}
+	boardsArr := strings.Split(ban.Boards, ",")
+	for _, b := range boardsArr {
+		if b == board && (ban.Expires.After(time.Now()) || ban.Permaban) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func sinceLastPost(post *PostTable) int {
@@ -1020,18 +1075,21 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	banStatus, err := getBannedStatus(&post)
+	banStatus, err := getBannedStatus(request)
 	if err != nil && err != sql.ErrNoRows {
 		handleError(1, "Error in getBannedStatus: "+err.Error())
 		serveErrorPage(writer, err.Error())
 		return
 	}
-	if banStatus.IsBanned() {
+
+	boards, _ := getBoardArr(nil, "")
+
+	if isBanned(banStatus, boards[post.BoardID-1].Dir) {
 		var banpage_buffer bytes.Buffer
 		var banpage_html string
 		banpage_buffer.Write([]byte(""))
 		if err = banpage_tmpl.Execute(&banpage_buffer, map[string]interface{}{
-			"config": config, "ban": banStatus,
+			"config": config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
 		}); err != nil {
 			fmt.Fprintf(writer, banpage_html+handleError(1, err.Error())+"\n</body>\n</html>")
 			return
@@ -1049,7 +1107,6 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	postid, _ := result.LastInsertId()
 	post.ID = int(postid)
 
-	boards, _ := getBoardArr(nil, "")
 	// rebuild the board page
 	buildBoards(false, post.BoardID)
 	buildFrontPage()
@@ -1112,4 +1169,47 @@ func formatMessage(message string) string {
 		postLines[i] = line
 	}
 	return strings.Join(postLines, "<br />")
+}
+
+func bannedForever(ban BanlistTable) bool {
+	return ban.Permaban && !ban.CanAppeal && ban.Type == 3 && ban.Boards == ""
+}
+
+func banHandler(writer http.ResponseWriter, request *http.Request) {
+	appealMsg := request.FormValue("appealmsg")
+	banStatus, err := getBannedStatus(request)
+
+	if appealMsg != "" {
+		if bannedForever(banStatus) {
+			fmt.Fprint(writer, "No.")
+			return
+		}
+		escapedMsg := html.EscapeString(appealMsg)
+		if _, err = execSQL("INSERT INTO `"+config.DBprefix+"appeals` (`ban`,`message`) VALUES(?,?)",
+			banStatus.ID, escapedMsg,
+		); err != nil {
+			serveErrorPage(writer, err.Error())
+		}
+		fmt.Fprint(writer,
+			"Appeal sent. It will (hopefully) be read by a staff member. check "+config.SiteWebfolder+"banned occasionally for a response",
+		)
+		return
+	}
+
+	if err != nil && err != sql.ErrNoRows {
+		handleError(1, "Error in getBannedStatus: "+err.Error())
+		serveErrorPage(writer, err.Error())
+		return
+	}
+
+	var banpageBuffer bytes.Buffer
+
+	banpageBuffer.Write([]byte(""))
+	if err = banpage_tmpl.Execute(&banpageBuffer, map[string]interface{}{
+		"config": config, "ban": banStatus, "banBoards": banStatus.Boards,
+	}); err != nil {
+		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")
+		return
+	}
+	fmt.Fprintf(writer, banpageBuffer.String())
 }

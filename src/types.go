@@ -96,13 +96,6 @@ type BanlistTable struct {
 	CanAppeal   bool
 }
 
-func (bt *BanlistTable) IsBanned() bool {
-	if getSpecificSQLDateTime(bt.Expires) == "0001-01-01 00:00:00" || bt.Expires.After(time.Now()) {
-		return true
-	}
-	return false
-}
-
 type BannedHashesTable struct {
 	ID          uint
 	Checksum    string

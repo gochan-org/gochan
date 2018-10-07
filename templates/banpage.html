@@ -18,14 +18,13 @@
 	<div id="top-pane">
 		<span id="site-title">{{.config.SiteName}}</span><br />
 		<span id="site-slogan">{{.config.SiteSlogan}}</span>
-	</div>
-	<br /><br />
+	</div><br />
 	<div class="section-block" style="margin: 0px 26px 0px 24px">
 		<div class="section-title-block">
-			<span class="section-title"><b>{{if bannedForever .ban}}YOUR'E BANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</b></span>
+			<span class="section-title"><b>{{if bannedForever .ban}}YOUR'E PERMABANNED, IDIOT!{{else if isBanned .ban .banBoards}}YOU ARE BANNED :({{else}}YOU ARE NOT BANNED :){{end}}</b></span>
 		</div>
-		<div class="section-body" style="padding-top:8px">
-			<div id="ban-info" style="float:left">{{if eq $.ban.Boards ""}}
+		<div class="section-body" style="padding-top:8px">{{if not (isBanned .ban .banBoards)}}<div style="text-align:center;">You're not banned. Good job.</div><br /><img id="banpage-image" src="/notbanned.png" style="display: block;margin-left: auto;margin-right: auto;"/><br />{{else}}
+			<div id="ban-info" style="float:left">{{if eq .ban.Boards ""}}
 				You are banned from posting on <b>all boards</b> for the following reason:{{else}}
 				You are banned from posting on <b>{{.ban.Boards}}</b> for the following reason:{{end}}
 				<br /><br />
@@ -35,12 +34,11 @@
 				{{if .ban.Permaban}}<b>not expire</b>{{else}}expire on <b>{{$expires_timestamp}}</b>{{end}}.<br />
 				Your IP address is <b>{{.ban.IP}}</b>.<br /><br />
 				{{if .ban.CanAppeal}}You may appeal this ban:<br />
-					<form id="appeal-form">
-						<textarea rows="4" cols="48" name="postmsg" id="postmsg" placeholder="Appeal message"></textarea><br />
+					<form id="appeal-form" action="/banned" method="POST">
+						<textarea rows="4" cols="48" name="appealmsg" id="postmsg" placeholder="Appeal message"></textarea><br />
 						<input type="submit" value="Submit" /><br />
 					</form>{{else}}You may <b>not</b> appeal this ban.<br />{{end}}
-				</div>
-				{{if bannedForever .ban}}
+				</div>{{if bannedForever .ban}}
 				<img id="banpage-image" src="/permabanned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
 					<source src="{{.config.SiteWebfolder}}hittheroad.ogg" />
@@ -49,7 +47,8 @@
 				</audio>
 				<script type="text/javascript">
 					document.getElementById("jack").play();
-				</script>{{else}}<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />{{end}}
-			</div>
+				</script>{{else if isBanned .ban .banBoards}}
+				<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />{{end}}
+			{{end}}</div>
 		</div>
 	{{template "global_footer.html" .}}
