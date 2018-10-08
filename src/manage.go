@@ -569,7 +569,7 @@ var manage_functions = map[string]ManageFunction{
 	"bans": {
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			rows, err := querySQL("SELECT `ip`,`name`,`reason`,`boards`,`staff`,`timestamp`,`expires` FROM `" + config.DBprefix + "banlist`")
+			rows, err := querySQL("SELECT `ip`,`name`,`reason`,`boards`,`staff`,`timestamp`,`expires`,`permaban`,`can_appeal` FROM `" + config.DBprefix + "banlist`")
 			defer closeRows(rows)
 			if err != nil {
 				html += handleError(1, err.Error())
@@ -579,7 +579,7 @@ var manage_functions = map[string]ManageFunction{
 			var banlist []BanlistTable
 			for rows.Next() {
 				var ban BanlistTable
-				rows.Scan(&ban.IP, &ban.Name, &ban.Reason, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires)
+				rows.Scan(&ban.IP, &ban.Name, &ban.Reason, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.CanAppeal)
 				banlist = append(banlist, ban)
 			}
 			manageBansBuffer := bytes.NewBufferString("")

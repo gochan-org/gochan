@@ -26,7 +26,7 @@ export DIRNAME=releases/gochan-v${VERSION}_${GOOS}64/
 copyStuff
 cp gochan.service $DIRNAME
 cd releases
-tar -zcvf gochan-v${VERSION}_${GOOS}-64.tar.gz gochan-v${VERSION}_${GOOS}64/
+tar -zcvf gochan-v${VERSION}_${GOOS}64.tar.gz gochan-v${VERSION}_${GOOS}64/
 cd ..
 
 export GOOS=darwin
@@ -40,7 +40,7 @@ export GOOS=windows
 export DIRNAME=releases/gochan-v${VERSION}_${GOOS}64/
 copyStuff
 cd releases
-zip gochan-v${VERSION}_${GOOS}-64.zip gochan-v${VERSION}_${GOOS}64/*
+zip gochan-v${VERSION}_${GOOS}64.zip gochan-v${VERSION}_${GOOS}64/*
 cd ..
 
 export GOOS=$GOOS_ORIG
