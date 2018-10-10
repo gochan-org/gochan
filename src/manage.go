@@ -118,6 +118,17 @@ func getStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
+func newStaff(username string, password string, rank int) error {
+	_, err := execSQL("INSERT INTO `"+config.DBprefix+"staff` (`username`, `password_checksum`, `rank`) VALUES(?,?,?)",
+		&username, bcryptSum(password), &rank)
+	return err
+}
+
+func deleteStaff(username string) error {
+	_, err := execSQL("DELETE FROM `"+config.DBprefix+"staff` WHERE `username` = ?", username)
+	return err
+}
+
 func createSession(key string, username string, password string, request *http.Request, writer http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
@@ -1015,16 +1026,12 @@ var manage_functions = map[string]ManageFunction{
 				if do == "add" {
 					newUsername := request.FormValue("username")
 					newPassword := request.FormValue("password")
-					newRank := request.FormValue("rank")
-					if _, err := execSQL("INSERT INTO `"+config.DBprefix+"staff` (`username`, `password_checksum`, `rank`) VALUES(?,?,?)",
-						&newUsername, bcryptSum(newPassword), &newRank,
-					); err != nil {
+					newRank, _ := strconv.Atoi(request.FormValue("rank"))
+					if err := newStaff(newUsername, newPassword, newRank); err != nil {
 						serveErrorPage(writer, handleError(1, err.Error()))
 					}
 				} else if do == "del" && request.FormValue("username") != "" {
-					if _, err = execSQL("DELETE FROM `"+config.DBprefix+"staff` WHERE `username` = ?",
-						request.FormValue("username"),
-					); err != nil {
+					if err = deleteStaff(request.FormValue("username")); err != nil {
 						serveErrorPage(writer, handleError(1, err.Error()))
 					}
 				}

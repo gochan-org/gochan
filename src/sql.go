@@ -44,8 +44,6 @@ func connectToSQLServer() {
 		os.Exit(2)
 	}
 
-	printf(0, "Starting initial setup...")
-
 	initialSQLStr := string(initialSQLBytes)
 	initialSQLStr = strings.NewReplacer("DBNAME", config.DBname, "DBPREFIX", config.DBprefix).Replace(initialSQLStr)
 	initialSQLArr := strings.Split(initialSQLStr, ";")
@@ -88,7 +86,6 @@ func connectToSQLServer() {
 		}
 	}
 	checkDeprecatedSchema()
-	println(0, "complete.")
 }
 
 /*
