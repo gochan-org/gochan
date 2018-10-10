@@ -3,12 +3,12 @@
 <input type="hidden" name="do" value="add" />
 <b>User filter:</b><br />
 <table>
-	<tr><th>IP address</th><td><input type="text" name="ip" /></td></tr>
+	<tr><th>IP address</th><td><input type="text" name="ip" value="{{.post.IP}}" /></td></tr>
 	<tr><th></th><td>"192.168.1.36" will ban posts from that IP address<br />
 		"192.168" will block all IPs starting with 192.168<br /></td></tr>
-	<tr><th>Name!Tripcode</th><td><input type="text" name="name" /> <label>Regex<input type="checkbox" name="nameregex" /></label></td></tr>
-	<tr><th>Ban filename</th><td><input type="text" name="filename" /></td></tr>
-	<tr><th>Ban file checksum</th><td><input type="text" name="checksum" /></td></tr>
+	<tr><th>Name!Tripcode</th><td><input type="text" name="name" value="{{if ne .post.Name ""}}{{.post.Name}}!{{.post.Tripcode}}{{end}}"/> <label>Regex<input type="checkbox" name="nameregex" /></label></td></tr>
+	<tr><th>Ban filename</th><td><input type="text" name="filename" value="{{.post.FilenameOriginal}}"/></td></tr>
+	<tr><th>Ban file checksum</th><td><input type="text" name="checksum" value="{{.post.FileChecksum}}" /></td></tr>
 </table><br /><hr />
 
 <b>Ban info</b><br />

@@ -1206,7 +1206,7 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 
 	banpageBuffer.Write([]byte(""))
 	if err = banpage_tmpl.Execute(&banpageBuffer, map[string]interface{}{
-		"config": config, "ban": banStatus, "banBoards": banStatus.Boards,
+		"config": config, "ban": banStatus, "banBoards": banStatus.Boards, "post": PostTable{},
 	}); err != nil {
 		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")
 		return

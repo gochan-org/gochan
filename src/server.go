@@ -102,9 +102,9 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
 	errorpage_tmpl.Execute(writer, map[string]interface{}{
-		"config":      config,
-		"ErrorTitle":  "Error :c",
-		"ErrorImage":  "/error/lol 404.gif",
+		"config":     config,
+		"ErrorTitle": "Error :c",
+		// "ErrorImage":  "/error/lol 404.gif",
 		"ErrorHeader": "Error",
 		"ErrorText":   err,
 	})

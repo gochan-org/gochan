@@ -398,8 +398,8 @@ $jq(document).ready(function() {
 	thread_menu_open = false;
 	$jq(".thread-ddown a, body").click(function(e) {
 		e.stopPropagation();
-		var post_id = $jq(this).parent().parent().parent().attr("id")
-		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread"
+		var post_id = $jq(this).parent().parent().parent().attr("id");
+		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread";
 		
 		if(post_id != undefined) {
 			if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {

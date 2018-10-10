@@ -40,9 +40,12 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 
 	if action == "" {
 		action = "announcements"
+	} else if action == "postinfo" {
+		writer.Header().Add("Content-Type", "application/json")
+		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	}
 
-	if action != "getstaffjquery" {
+	if action != "getstaffjquery" && action != "postinfo" {
 		managePageBuffer.WriteString("<!DOCTYPE html>\n<html>\n<head>\n")
 		if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
 			handleError(0, customError(err))
@@ -64,7 +67,7 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		managePageBuffer.Write([]byte(action + " is undefined."))
 	}
-	if action != "getstaffjquery" {
+	if action != "getstaffjquery" && action != "postinfo" {
 		managePageBuffer.Write([]byte("\n</body>\n</html>"))
 	}
 
@@ -568,6 +571,7 @@ var manage_functions = map[string]ManageFunction{
 	"bans": {
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) {
+			var post PostTable
 			if request.FormValue("do") == "add" {
 				ip := net.ParseIP(request.FormValue("ip"))
 				name := request.FormValue("name")
@@ -608,6 +612,31 @@ var manage_functions = map[string]ManageFunction{
 					pageHTML += err.Error()
 				}
 			}
+
+			if request.FormValue("dir") != "" && request.FormValue("postid") != "" {
+				boardDir := request.FormValue("dir")
+				boards, err := getBoardArr(map[string]interface{}{
+					"dir": boardDir,
+				}, "")
+				if err != nil {
+					pageHTML += handleError(1, err.Error())
+				}
+				if len(boards) < 1 {
+					pageHTML += handleError(1, "Board doesn't exist")
+				}
+
+				posts, err := getPostArr(map[string]interface{}{
+					"id":      request.FormValue("postid"),
+					"boardid": boards[0].ID,
+				}, "")
+				if err != nil {
+					pageHTML += handleError(1, err.Error())
+				}
+				if len(posts) < 1 {
+					pageHTML += handleError(1, "Post doesn't exist")
+				}
+				post = posts[0]
+			}
 			rows, err := querySQL("SELECT `ip`,`name`,`reason`,`boards`,`staff`,`timestamp`,`expires`,`permaban`,`can_appeal` FROM `" + config.DBprefix + "banlist`")
 			defer closeRows(rows)
 			if err != nil {
@@ -624,7 +653,7 @@ var manage_functions = map[string]ManageFunction{
 			manageBansBuffer := bytes.NewBufferString("")
 
 			if err := manage_bans_tmpl.Execute(manageBansBuffer,
-				map[string]interface{}{"config": config, "banlist": banlist, "boards": allBoards},
+				map[string]interface{}{"config": config, "banlist": banlist, "post": post},
 			); err != nil {
 				pageHTML += handleError(1, err.Error())
 				return
@@ -1028,6 +1057,45 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			os.Exit(0)
 			return
+		}},
+	"postinfo": {
+		Permissions: 2,
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+			boardDir := request.FormValue("dir")
+			boards, err := getBoardArr(map[string]interface{}{
+				"dir": boardDir,
+			}, "")
+			if err != nil {
+				var jsonErr ErrorJSON
+				jsonErr.Message = err.Error()
+				jsonBytes, _ := json.Marshal(jsonErr)
+				return string(jsonBytes)
+			}
+			if len(boards) < 1 {
+				var jsonErr ErrorJSON
+				jsonErr.Message = "Board doesn't exist."
+				jsonBytes, _ := json.Marshal(jsonErr)
+				return string(jsonBytes)
+			}
+			posts, err := getPostArr(map[string]interface{}{
+				"id":      request.FormValue("postid"),
+				"boardid": boards[0].ID,
+			}, "")
+			if err != nil {
+				var jsonErr ErrorJSON
+				jsonErr.Message = err.Error()
+				jsonBytes, _ := json.Marshal(jsonErr)
+				return string(jsonBytes)
+			}
+			if len(posts) < 1 {
+				var jsonErr ErrorJSON
+				jsonErr.Message = "Post doesn't exist."
+				jsonBytes, _ := json.Marshal(jsonErr)
+				return string(jsonBytes)
+			}
+			jsonBytes, _ := json.Marshal(posts[0])
+
+			return string(jsonBytes)
 		}},
 	"staff": {
 		Permissions: 3,

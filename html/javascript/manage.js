@@ -6,11 +6,30 @@ var Staff = function(name,rank,boards) {
 
 function addStaffButtons() {
 	$jq("input#delete-password").remove();
-	$jq("input[value=Delete]").after("<input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"alert('Bans not yet implemented'); return false;\"  />")
+	$jq("input[value=Delete]").after("<input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"banSelectedPost(); return false;\"  />")
 }
 
 function getManagePage() {
 
+}
+
+function banSelectedPost() {
+	var board_dir_arr = location.pathname.split("/");
+	if(board_dir_arr.length < 2) return;
+	var board_dir = board_dir_arr[1];
+	var checks = $jq("input[type=checkbox]");
+	if(checks.length == 0) {
+		alert("No posts selected");
+		return false;
+	}
+	var post_id = 0;
+	for(var i = 0; i < checks.length; i++) {
+		if(checks[i].id.indexOf("check") == 0) {
+			post_id = checks[i].id.replace("check", "");
+			break;
+		}
+	}
+	window.location = webroot + "manage?action=bans&dir=" + board_dir + "&postid=" + post_id;
 }
 
 function makeNewStaff() {

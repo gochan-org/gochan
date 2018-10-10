@@ -344,6 +344,11 @@ type ThreadJSON struct {
 	Locked          int `json:"locked"`
 }
 
+// ErrorJSON and PostInfoJSON are mostly used for AJAX requests
+type ErrorJSON struct {
+	Message string `json:"error"`
+}
+
 // GochanConfig stores crucial info and is read from/written to gochan.json
 type GochanConfig struct {
 	ListenIP     string
