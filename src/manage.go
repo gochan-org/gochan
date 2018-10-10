@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -152,8 +154,13 @@ func createSession(key string, username string, password string, request *http.R
 			return 1
 		} else {
 			// successful login, add cookie that expires in one month
-			cookie := &http.Cookie{Name: "sessiondata", Value: key, Path: "/", Domain: domain, Expires: time.Now().Add(time.Duration(time.Hour * 730))}
-			http.SetCookie(writer, cookie)
+			http.SetCookie(writer, &http.Cookie{
+				Name:   "sessiondata",
+				Value:  key,
+				Path:   "/",
+				Domain: domain,
+				MaxAge: 60 * 60 * 24 * 7,
+			})
 			if _, err = execSQL(
 				"INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES(?,?,?)",
 				key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
@@ -522,30 +529,11 @@ var manage_functions = map[string]ManageFunction{
 	"logout": {
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			cookie, err := request.Cookie("sessiondata")
-			if err != nil {
-				serveErrorPage(writer, err.Error())
-			}
-			var key string
-			if cookie != nil {
-				key = cookie.Value
-				new_expire := time.Now().AddDate(0, 0, -1)
-				new_cookie := &http.Cookie{
-					Name:       "sessiondata",
-					Value:      cookie.Value,
-					Path:       "/",
-					Domain:     config.SiteDomain,
-					Expires:    new_expire,
-					RawExpires: new_expire.Format(time.UnixDate),
-					MaxAge:     -1,
-					Secure:     true,
-					HttpOnly:   true,
-					Raw:        "sessiondata=" + key}
-				// new_cookie := &http.Cookie{Name: "sessiondata",Value: cookie.Value,Path: "/",Domain: config.Domain,Expires: new_expire,RawExpires: new_expire.Format(time.UnixDate),MaxAge: -1,Secure: true,HttpOnly: true,Raw: "sessiondata="+key}
-				http.SetCookie(writer, new_cookie)
-				return "Logged out successfully"
-			}
-			return "wat"
+			cookie, _ := request.Cookie("sessiondata")
+			cookie.MaxAge = 0
+			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
+			http.SetCookie(writer, cookie)
+			return "Logged out successfully"
 		}},
 	"announcements": {
 		Permissions: 1,
@@ -579,11 +567,51 @@ var manage_functions = map[string]ManageFunction{
 		}},
 	"bans": {
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) {
+			if request.FormValue("do") == "add" {
+				ip := net.ParseIP(request.FormValue("ip"))
+				name := request.FormValue("name")
+				nameIsRegex := (request.FormValue("nameregex") == "on")
+				checksum := request.FormValue("checksum")
+				filename := request.FormValue("filename")
+				durationForm := request.FormValue("duration")
+				permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
+				duration, err := parseDurationString(durationForm)
+				if err != nil {
+					serveErrorPage(writer, err.Error())
+				}
+				expires := time.Now().Add(duration)
+				var bantype int
+				if request.FormValue("fullban") == "on" {
+					bantype = 3
+				} else {
+					if request.FormValue("threadban") == "on" {
+						bantype++
+					}
+					if request.FormValue("imageban") == "on" {
+						bantype += 2
+					}
+				}
+				if bantype == 0 {
+					bantype = 3
+				}
+
+				boards := request.FormValue("boards")
+				reason := html.EscapeString(request.FormValue("reason"))
+				staffNote := html.EscapeString(request.FormValue("staffnote"))
+				currentStaff, _ := getCurrentStaff(request)
+				if _, err := execSQL("INSERT INTO `"+config.DBprefix+"banlist`"+
+					"(`ip`,`name`,`name_is_regex`,`filename`,`file_checksum`,`boards`,`staff`,`expires`,`permaban`,`reason`,`type`,`staff_note`)"+
+					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+					ip.String(), name, nameIsRegex, filename, checksum, boards, currentStaff, expires, permaban, reason, bantype, staffNote,
+				); err != nil {
+					pageHTML += err.Error()
+				}
+			}
 			rows, err := querySQL("SELECT `ip`,`name`,`reason`,`boards`,`staff`,`timestamp`,`expires`,`permaban`,`can_appeal` FROM `" + config.DBprefix + "banlist`")
 			defer closeRows(rows)
 			if err != nil {
-				html += handleError(1, err.Error())
+				pageHTML += handleError(1, err.Error())
 				return
 			}
 
@@ -598,10 +626,10 @@ var manage_functions = map[string]ManageFunction{
 			if err := manage_bans_tmpl.Execute(manageBansBuffer,
 				map[string]interface{}{"config": config, "banlist": banlist, "boards": allBoards},
 			); err != nil {
-				html += handleError(1, err.Error())
+				pageHTML += handleError(1, err.Error())
 				return
 			}
-			html += manageBansBuffer.String()
+			pageHTML += manageBansBuffer.String()
 			return
 		}},
 	"getstaffjquery": {

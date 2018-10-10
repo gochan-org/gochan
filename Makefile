@@ -1,12 +1,10 @@
 GOCHAN_VERSION=`cat version`
-GOCHAN_BUILDTIME=$(shell date +%y%m%d.%H%M)
+GOCHAN_BUILDTIME=`date +%y%m%d.%H%M`
 ifeq ($(GOOS), windows)
 	GOCHAN_BIN=gochan.exe
 else
 	GOCHAN_BIN=gochan
 endif
-
-# CGO_ENABLED=0
 
 # strips debugging info in the gochan executable
 release: LDFLAGS=-w -s
