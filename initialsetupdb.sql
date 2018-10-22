@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS `DBPREFIXboards` (
 	`redirect_to_thread` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 	`require_file` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 	`enable_catalog` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+	UNIQUE (`dir`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 AUTO_INCREMENT=0;
 
 CREATE TABLE IF NOT EXISTS `DBPREFIXembeds` (
@@ -214,7 +215,8 @@ CREATE TABLE IF NOT EXISTS `DBPREFIXstaff` (
 	`boards` VARCHAR(128) NOT NULL DEFAULT 'all',
 	`added_on` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	`last_active` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+	UNIQUE (`username`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
 
 -- create a temp table with the same columns as the posts table to be stored in memory

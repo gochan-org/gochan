@@ -68,10 +68,9 @@ func connectToSQLServer() {
 
 	if newInstall {
 		printf(0, "\nThis looks like a new install or one that needs updating, setting up the database...")
-		if _, err = db.Exec(
-			"INSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` " +
-				"(`username`, `password_checksum`, `salt`, `rank`) " +
-				"VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3)",
+		if _, err = db.Exec("INSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` " +
+			"(`username`, `password_checksum`, `salt`, `rank`) " +
+			"VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3)",
 		); err != nil {
 			handleError(0, "failed with error: %s\n", customError(err))
 			os.Exit(2)

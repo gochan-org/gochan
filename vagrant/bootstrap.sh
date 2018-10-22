@@ -9,10 +9,12 @@ export DEBIAN_FRONTEND=noninteractive
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
 
-apt-get update
-apt-get -y upgrade
-apt-get -y install git subversion mercurial golang-1.10 nginx redis-server mariadb-server mariadb-client ffmpeg
+export DBTYPE=mysql
 
+apt-get update
+
+if [ "$DBTYPE" == "mysql" ]; then
+apt-get -y install mariadb-server mariadb-client 
 # Make sure any imported database is utf8mb4
 # http://mathiasbynens.be/notes/mysql-utf8mb4
 # Put in /etc/mysql/conf.d/local.cnf
@@ -40,6 +42,26 @@ cat - <<EOF123 >/etc/mysql/conf.d/open.cnf
 [mysqld]
 bind-address = 0.0.0.0
 EOF123
+elif [ "$DBTYPE" == "postgresql" ]; then
+	# apt-get -y install postgresql postgresql-contrib
+	# useradd gochan
+	# passwd -d gochan
+	# sudo -u postgres createuser -d gochan
+	echo "PostgreSQL not supported yet"
+	exit 1
+elif [ "$DBTYPE" == "mssql" ]; then
+	echo "Microsoft SQL Server not supported yet";
+	exit 1
+elif [ "$DBTYPE" == "sqlite" ]; then
+	echo "SQLite not supported yet"
+	exit 1
+else
+	echo "Invalid DB type: $DBTYPE"
+	exit 1
+fi
+
+apt-get -y install git subversion mercurial golang-1.10 nginx ffmpeg
+apt-get -y upgrade
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
@@ -102,6 +124,7 @@ go get github.com/disintegration/imaging
 go get github.com/nranchev/go-libGeoIP
 go get github.com/nyarla/go-crypt
 go get github.com/go-sql-driver/mysql
+go get github.com/lib/pq
 go get golang.org/x/crypto/bcrypt
 go get github.com/frustra/bbcode
 make debug

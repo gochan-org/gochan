@@ -112,7 +112,7 @@ func serveErrorPage(writer http.ResponseWriter, err string) {
 
 func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	for name, namespaceFunction := range s.namespaces {
-		if request.URL.Path == "/"+name {
+		if request.URL.Path == config.SiteWebfolder+name {
 			// writer.WriteHeader(200)
 			namespaceFunction(writer, request)
 			return
@@ -133,7 +133,7 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	if err = checkAkismetAPIKey(config.AkismetAPIKey); err != nil {
 		config.AkismetAPIKey = ""
-		handleError(0, "%s", err.Error())
+		handleError(0, err.Error())
 	}
 
 	// Compile regex for checking referrers.

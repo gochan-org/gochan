@@ -516,7 +516,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			if username == "" || password == "" {
 				//assume that they haven't logged in
-				html = "\t<form method=\"POST\" action=\"/manage?action=login\" id=\"login-box\" class=\"staff-form\">\n" +
+				html = "\t<form method=\"POST\" action=\"" + config.SiteWebfolder + "manage?action=login\" id=\"login-box\" class=\"staff-form\">\n" +
 					"\t\t<input type=\"hidden\" name=\"redirect\" value=\"" + redirect_action + "\" />\n" +
 					"\t\t<input type=\"text\" name=\"username\" class=\"logindata\" /><br />\n" +
 					"\t\t<input type=\"password\" name=\"password\" class=\"logindata\" /> <br />\n" +
@@ -525,7 +525,7 @@ var manage_functions = map[string]ManageFunction{
 			} else {
 				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + generateSalt())[0:10]
 				createSession(key, username, password, request, writer)
-				http.Redirect(writer, request, path.Join(config.SiteWebfolder, "/manage?action="+request.FormValue("redirect")), http.StatusFound)
+				http.Redirect(writer, request, path.Join(config.SiteWebfolder, "manage?action="+request.FormValue("redirect")), http.StatusFound)
 			}
 			return
 		}},
@@ -631,9 +631,11 @@ var manage_functions = map[string]ManageFunction{
 				}, "")
 				if err != nil {
 					pageHTML += handleError(1, err.Error())
+					return
 				}
 				if len(posts) < 1 {
 					pageHTML += handleError(1, "Post doesn't exist")
+					return
 				}
 				post = posts[0]
 			}

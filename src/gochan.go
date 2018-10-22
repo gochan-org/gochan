@@ -53,7 +53,7 @@ func parseCommandLine() {
 		}
 		printf(0, "Creating new staff: '%s', with password: '%s' and rank: %d\n", arr[0], arr[1], rank)
 		if err = newStaff(arr[0], arr[1], rank); err != nil {
-			handleError(0, "%s\n", err.Error())
+			handleError(0, err.Error())
 			os.Exit(2)
 		}
 		os.Exit(0)
