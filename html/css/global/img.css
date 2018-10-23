@@ -42,6 +42,21 @@ a.anchor {
 	visibility: hidden;
 }
 
+div.catalog-thread {
+	width:200px;
+	max-height: 250px;
+	display:inline-block;
+	position:relative;
+	vertical-align:top;
+	overflow: hidden;
+	text-align: center;
+	padding: 6px;
+}
+
+div.catalog-thread a {
+	clear: both;
+}
+
 table#pages {
 	margin-bottom:8px;
 	margin-top:4px;

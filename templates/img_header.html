@@ -31,8 +31,3 @@
 	<div id="topbar">
 		{{range $i, $board := .boards}}<a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
 	</div>
-	<header>
-		<h1>/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
-		<div id="board-subtitle">{{$.board.Subtitle}}</div>
-	</header>
-	<hr />

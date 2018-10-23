@@ -401,6 +401,22 @@ func humanReadableTime(t time.Time) string {
 	return t.Format(config.DateTimeFormat)
 }
 
+func getThumbnailPath(thumbType string, img string) string {
+	filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
+	if filetype == "gif" || filetype == "webm" {
+		filetype = "jpg"
+	}
+	index := strings.LastIndex(img, ".")
+	if index < 0 || index > len(img) {
+		return ""
+	}
+	thumbSuffix := "t." + filetype
+	if thumbType == "catalog" {
+		thumbSuffix = "c." + filetype
+	}
+	return img[0:index] + thumbSuffix
+}
+
 // paginate returns a 2d array of a specified interface from a 1d array passed in,
 //	with a specified number of values per array in the 2d array.
 // interface_length is the number of interfaces per array in the 2d array (e.g, threads per page)
@@ -580,6 +596,16 @@ func makePostJSON(post PostTable, anonymous string) (postObj PostJSON) {
 		postObj.Tripcode = "!" + post.Tripcode
 	}
 	return
+}
+
+func numReplies(boardid, threadid int) int {
+	var num int
+	if err := queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ?",
+		[]interface{}{boardid, threadid}, []interface{}{&num},
+	); err != nil {
+		return 0
+	}
+	return num
 }
 
 func ipMatch(newIP, existingIP string) bool {

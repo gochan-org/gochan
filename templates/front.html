@@ -5,7 +5,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>{{.config.SiteName}}</title>
 	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/msgpack.js"></script>
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{.config.SiteWebfolder}}"
@@ -90,15 +89,10 @@
 				<span class="section-title"><a href="{{$post.BoardName}}/res/{{if eq $post.ParentID 0}}{{intToString $post.PostID}}.html{{else}}{{intToString $post.ParentID}}.html#{{intToString $post.PostID}}{{end}}">/{{$post.BoardName}}/</a></span> - {{$appended := stringAppend $post.Name $post.Tripcode}}{{if eq $appended ""}}<b>Anonymous</b>{{else}}<b>{{$post.Name}}</b>{{if ne $post.Tripcode ""}}!{{$post.Tripcode}}{{end}}{{end}}
 				</div>
 				<div class="section-body">
-				{{if ne $post.Filename ""}}<a href="{{$.config.SiteWebfolder}}{{$post.BoardName}}/src/{{$post.Filename}}" target="_blank"><img src="{{$.config.SiteWebfolder}}{{$post.BoardName}}/thumb/{{getThumbnailFilename $post.Filename}}" alt="post thumbnail"/></a>{{end}}
+				{{if ne $post.Filename ""}}<a href="{{$.config.SiteWebfolder}}{{$post.BoardName}}/src/{{$post.Filename}}" target="_blank"><img src="{{$.config.SiteWebfolder}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a>{{end}}
 				{{truncateMessage $post.Message 225 12}}
 				</div>
 			</div>{{end}}{{end}}
 		</div>
 	</div>
-	<div id="footer">
-		<a href="{{.config.SiteWebfolder}}">Home</a> | <a href="{{.config.SiteWebfolder}}#boards">Boards</a> | <a href="{{.config.SiteWebfolder}}#rules">Rules</a> | <a href="{{.config.SiteWebfolder}}#faq">FAQ</a><br />
-		Powered by <a href="http://github.com/eggbertx/gochan">Gochan {{.config.Version}}</a><br />
-	</div>
-</body>
-</html>
+	{{template "global_footer.html" .}}

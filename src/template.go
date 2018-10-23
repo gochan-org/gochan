@@ -123,6 +123,9 @@ var funcMap = template.FuncMap{
 
 	// Imageboard functions
 	"bannedForever": bannedForever,
+	"getCatalogThumbnail": func(img string) string {
+		return getThumbnailPath("catalog", img)
+	},
 	"getThreadID": func(post_i interface{}) (thread int) {
 		post := post_i.(PostTable)
 		if post.ParentID == 0 {
@@ -132,19 +135,8 @@ var funcMap = template.FuncMap{
 		}
 		return
 	},
-	"getThumbnailFilename": func(name string) string {
-		if name == "" || name == "deleted" {
-			return ""
-		}
-
-		if name[len(name)-3:] == "gif" {
-			name = name[:len(name)-3] + "jpg"
-		} else if name[len(name)-4:] == "webm" {
-			name = name[:len(name)-4] + "jpg"
-		}
-		extBegin := strings.LastIndex(name, ".")
-		newName := name[:extBegin] + "t." + getFileExtension(name)
-		return newName
+	"getThreadThumbnail": func(img string) string {
+		return getThumbnailPath("thread", img)
 	},
 	"getUploadType": func(name string) string {
 		extension := getFileExtension(name)
@@ -162,7 +154,7 @@ var funcMap = template.FuncMap{
 		}
 		return uploadType
 	},
-	"imageToThumbnailPath": func(img string) string {
+	"imageToThumbnailPath": func(thumbType string, img string) string {
 		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
 		if filetype == "gif" || filetype == "webm" {
 			filetype = "jpg"
@@ -171,9 +163,14 @@ var funcMap = template.FuncMap{
 		if index < 0 || index > len(img) {
 			return ""
 		}
-		return img[0:index] + "t." + filetype
+		thumbSuffix := "t." + filetype
+		if thumbType == "catalog" {
+			thumbSuffix = "c." + filetype
+		}
+		return img[0:index] + thumbSuffix
 	},
-	"isBanned": isBanned,
+	"isBanned":   isBanned,
+	"numReplies": numReplies,
 
 	// Template convenience functions
 	"makeLoop": func(n int, offset int) []int {
@@ -242,6 +239,7 @@ var funcMap = template.FuncMap{
 
 var (
 	banpage_tmpl        *template.Template
+	catalog_tmpl        *template.Template
 	errorpage_tmpl      *template.Template
 	front_page_tmpl     *template.Template
 	img_boardpage_tmpl  *template.Template
@@ -277,6 +275,11 @@ func initTemplates() error {
 	banpage_tmpl, err = loadTemplate("banpage.html", "global_footer.html")
 	if err != nil {
 		return templateError("banpage.html", err)
+	}
+
+	catalog_tmpl, err = loadTemplate("catalog.html", "img_header.html", "global_footer.html")
+	if err != nil {
+		return templateError("catalog.html", err)
 	}
 
 	errorpage_tmpl, err = loadTemplate("error.html")

@@ -357,23 +357,68 @@ func buildBoardPages(board *BoardsTable) (html string) {
 // The return value is a string of HTML with debug information produced by the build process.
 // TODO: make this a variadic function (which ...int)
 func buildBoards(all bool, which int) (html string) {
-	// if all is set to true, ignore which, otherwise, which = build only specified boardid
-	if !all {
+	if all {
+		boards, _ := getBoardArr(nil, "")
+		if len(boards) == 0 {
+			return html + "No boards to build.<br />\n"
+		}
+		for _, board := range boards {
+			html += buildBoardPages(&board) + "<br />\n"
+			if board.EnableCatalog {
+				html += buildCatalog(board.ID) + "<br />\n"
+			}
+
+			html += buildThreads(true, board.ID, 0)
+		}
+	} else {
 		boardArr, _ := getBoardArr(map[string]interface{}{"id": which}, "")
 		board := boardArr[0]
 		html += buildBoardPages(&board) + "<br />\n"
+		if board.EnableCatalog {
+			html += buildCatalog(board.ID) + "<br />\n"
+		}
 		html += buildThreads(true, board.ID, 0)
-		return
-	}
-	boards, _ := getBoardArr(nil, "")
-	if len(boards) == 0 {
-		return html + "No boards to build.<br />\n"
 	}
 
-	for _, board := range boards {
-		html += buildBoardPages(&board) + "<br />\n"
-		html += buildThreads(true, board.ID, 0)
+	return
+}
+
+func buildCatalog(which int) (html string) {
+	board, err := getBoardFromID(which)
+	if err != nil {
+		html += handleError(1, err.Error())
 	}
+	catalogPath := path.Join(config.DocumentRoot, board.Dir, "catalog.html")
+	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	if err != nil {
+		html += handleError(1, "Failed opening /"+board.Dir+"/catalog.html: "+err.Error())
+		return
+	}
+	threadOPs, err := getPostArr(map[string]interface{}{
+		"boardid":           which,
+		"parentid":          0,
+		"deleted_timestamp": nilTimestamp,
+	}, "ORDER BY `bumped` ASC")
+	if err != nil {
+		html += handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
+		return
+	}
+	var threadInterfaces []interface{}
+	for _, thread := range threadOPs {
+		threadInterfaces = append(threadInterfaces, thread)
+	}
+	threadPages := paginate(config.PostsPerThreadPage, threadInterfaces)
+	if err = catalog_tmpl.Execute(catalogFile, map[string]interface{}{
+		"boards":      allBoards,
+		"config":      config,
+		"board":       board,
+		"sections":    allSections,
+		"threadPages": threadPages,
+	}); err != nil {
+		html += handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
+		return
+	}
+	html += fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
 	return
 }
 
@@ -457,16 +502,14 @@ func buildThreadPages(op *PostTable) (html string) {
 		return
 	}
 
-	success_text := fmt.Sprintf("Built /%s/%d successfully", board.Dir, op.ID)
-	html += success_text + "<br />\n"
-	println(2, success_text)
+	html += fmt.Sprintf("Built /%s/%d successfully", board.Dir, op.ID)
 
 	for page_num, page_posts := range thread_pages {
 		op.CurrentPage = page_num + 1
 		current_page_filepath := path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage)+".html")
 		current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			html += handleError(1, "Failed opening "+current_page_filepath+": "+err.Error()) + "<br />\n"
+			html += handleError(1, "<br />Failed opening "+current_page_filepath+": "+err.Error()) + "<br />\n"
 			return
 		}
 
@@ -478,13 +521,11 @@ func buildThreadPages(op *PostTable) (html string) {
 			"posts":    page_posts,
 			"op":       op,
 		}); err != nil {
-			html += handleError(1, "Failed building /%s/%d: %s", board.Dir, op.ID, err.Error())
+			html += handleError(1, "<br />Failed building /%s/%d: %s", board.Dir, op.ID, err.Error())
 			return
 		}
 
-		success_text := fmt.Sprintf("Built /%s/%dp%d successfully", board.Dir, op.ID, op.CurrentPage)
-		html += success_text + "<br />\n"
-		println(2, success_text)
+		html += fmt.Sprintf("<br />Built /%s/%dp%d successfully", board.Dir, op.ID, op.CurrentPage)
 	}
 	return
 }
