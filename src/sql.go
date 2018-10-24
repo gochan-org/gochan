@@ -48,7 +48,7 @@ func connectToSQLServer() {
 	initialSQLStr = strings.NewReplacer("DBNAME", config.DBname, "DBPREFIX", config.DBprefix).Replace(initialSQLStr)
 	initialSQLArr := strings.Split(initialSQLStr, ";")
 	for _, statement := range initialSQLArr {
-		if statement != "" && statement != "\n" && strings.Index(statement, "--") != 0 {
+		if statement != "" && statement != "\n" && statement != "\r\n" && strings.Index(statement, "--") != 0 {
 			if _, err := db.Exec(statement); err != nil {
 				handleError(0, "failed: %s\n", customError(err))
 				os.Exit(2)

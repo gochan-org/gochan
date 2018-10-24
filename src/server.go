@@ -33,7 +33,6 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	results, err := os.Stat(filePath)
 	if err != nil {
 		// the requested path isn't a file or directory, 404
-		writer.WriteHeader(404)
 		serveNotFound(writer, request)
 		return
 	} else {
