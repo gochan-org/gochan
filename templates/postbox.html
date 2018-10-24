@@ -1,6 +1,6 @@
 {{define "postbox.html"}}
 	<div id="postbox-area">
-		<form name="postform" action="/post" method="POST" enctype="multipart/form-data">
+		<form id="postform" name="postform" action="/post" method="POST" enctype="multipart/form-data">
 			{{with .op}}<input type="hidden" name="threadid" value="{{$.op.ID}}" />
 			<input type="hidden" name="boardid" value="{{$.board.ID}}" />
 			{{else}}<input type="hidden" name="threadid" value="0" />

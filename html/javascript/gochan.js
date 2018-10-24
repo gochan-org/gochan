@@ -354,6 +354,48 @@ function reportPost(id) {
 	var reason = prompt("Reason (this doesn't do anything yet)");
 }
 
+$jq(document).keydown(function(e) {
+	var tag;
+	if(e.ctrlKey) {
+		switch(e.keyCode) {
+			case 10: // Enter key
+				if(e.target.nodeName == "TEXTAREA")
+					document.getElementById("postform").submit();
+			break;
+			case 13: // Enter key in Chrome/IE
+				if(e.target.nodeName == "TEXTAREA")
+					document.getElementById("postform").submit();
+			break;
+			case 66: // B
+				tag = "b"; // bold
+			break;
+			case 73: // I
+				tag = "i"; // italics
+			break;
+			case 82: // R
+				tag = "s"; // strikethrough
+			break;
+			case 83:
+				tag = "?"; // spoiler (not yet implemented)
+			break;
+			case 85: // U
+				tag = "u"; // underlinee
+			break;
+		}
+	}
+
+	if (tag != null && e.target.nodeName == "TEXTAREA") {
+		e.preventDefault();
+		var ta = e.target;
+		var val = ta.value;
+		var ss = ta.selectionStart;
+		var se = ta.selectionEnd;
+		var r = se + 2 + tag.length;
+		ta.value = val.slice(0, ss) + ("[" + tag + "]") + val.slice(ss, se) + ("[/" + tag + "]") + val.slice(se);
+		ta.setSelectionRange(r, r);
+	}
+});
+
 $jq(document).ready(function() {
 	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
