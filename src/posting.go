@@ -323,7 +323,14 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	post.MessageHTML = formatMessage(post.MessageText)
-	post.Password = md5Sum(request.FormValue("postpassword"))
+	password := request.FormValue("postpassword")
+	if password == "" {
+		rand.Shuffle(len(chars), func(i, j int) {
+			password += fmt.Sprintf("%c", chars[j])
+		})
+		password = password[:8]
+	}
+	post.Password = md5Sum(password)
 
 	// Reverse escapes
 	nameCookie = strings.Replace(formName, "&amp;", "&", -1)
@@ -332,7 +339,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	// add name and email cookies that will expire in a year (31536000 seconds)
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
-	http.SetCookie(writer, &http.Cookie{Name: "password", Value: request.FormValue("postpassword"), Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
+	http.SetCookie(writer, &http.Cookie{Name: "password", Value: password, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
 
 	post.IP = getRealIP(request)
 	post.Timestamp = time.Now()
