@@ -1,4 +1,4 @@
-// functions for handling posting, uploading, and post/thread/board page building
+// functions for handling posting, uploading, and bans
 
 package main
 
@@ -401,7 +401,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 			thumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
 			catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
-			if err := ioutil.WriteFile(filePath, data, 0777); err != nil {
+			if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
 				handleError(0, "Couldn't write file \""+post.Filename+"\""+err.Error())
 				serveErrorPage(writer, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
@@ -451,7 +451,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 					serveErrorPage(writer, handleError(1, "Error getting video info: "+err.Error()))
 					return
 				}
-				if err == nil && outputBytes != nil {
+				if outputBytes != nil {
 					outputStringArr := strings.Split(string(outputBytes), "\n")
 					for _, line := range outputStringArr {
 						lineArr := strings.Split(line, "=")
@@ -574,16 +574,16 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	boards, _ := getBoardArr(nil, "")
 
 	if isBanned(banStatus, boards[post.BoardID-1].Dir) {
-		var banpage_buffer bytes.Buffer
-		var banpage_html string
-		banpage_buffer.Write([]byte(""))
-		if err = banpage_tmpl.Execute(&banpage_buffer, map[string]interface{}{
+		var banpageBuffer bytes.Buffer
+
+		banpageBuffer.Write([]byte(""))
+		if err = banpage_tmpl.Execute(&banpageBuffer, map[string]interface{}{
 			"config": config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
 		}); err != nil {
-			fmt.Fprintf(writer, banpage_html+handleError(1, err.Error())+"\n</body>\n</html>")
+			fmt.Fprintf(writer, handleError(1, err.Error()))
 			return
 		}
-		fmt.Fprintf(writer, banpage_buffer.String())
+		fmt.Fprintf(writer, banpageBuffer.String())
 		return
 	}
 

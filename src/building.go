@@ -1,3 +1,5 @@
+// functions for post, thread, board, and page building
+
 package main
 
 import (
