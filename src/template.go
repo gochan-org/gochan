@@ -127,8 +127,10 @@ var funcMap = template.FuncMap{
 		return getThumbnailPath("catalog", img)
 	},
 	"getThreadID": func(post_i interface{}) (thread int) {
-		post := post_i.(PostTable)
-		if post.ParentID == 0 {
+		post, ok := post_i.(PostTable)
+		if !ok {
+			thread = 0
+		} else if post.ParentID == 0 {
 			thread = post.ID
 		} else {
 			thread = post.ParentID
@@ -234,6 +236,11 @@ var funcMap = template.FuncMap{
 	},
 	"isStyleDefault": func(style string) bool {
 		return style == config.DefaultStyle
+	},
+
+	// Version functions
+	"formatVersion": func(v GochanVersion) string {
+		return v.String()
 	},
 }
 

@@ -423,11 +423,11 @@ type GochanConfig struct {
 	// Verbosity = 0 for no debugging info. Critical errors and general output only
 	// Verbosity = 1 for non-critical warnings and important info
 	// Verbosity = 2 for all debugging/benchmarks/warnings
-	Verbosity     int    `description:"The level of verbosity to use in error/warning messages. 0 = critical errors/startup messages, 1 = warnings, 2 = benchmarks/notices." default:"0"`
-	EnableAppeals bool   `description:"If checked, allow banned users to appeal their bans.<br />This will likely be removed (permanently allowing appeals) or made board-specific in the future." default:"checked"`
-	MaxLogDays    int    `description:"The maximum number of days to keep messages in the moderation/staff log file."`
-	RandomSeed    string `critical:"true"`
-	Version       string `critical:"true"`
+	Verbosity     int           `description:"The level of verbosity to use in error/warning messages. 0 = critical errors/startup messages, 1 = warnings, 2 = benchmarks/notices." default:"0"`
+	EnableAppeals bool          `description:"If checked, allow banned users to appeal their bans.<br />This will likely be removed (permanently allowing appeals) or made board-specific in the future." default:"checked"`
+	MaxLogDays    int           `description:"The maximum number of days to keep messages in the moderation/staff log file."`
+	RandomSeed    string        `critical:"true"`
+	Version       GochanVersion `critical:"true"`
 }
 
 func initConfig() {
@@ -675,5 +675,5 @@ func initConfig() {
 	bbcompiler.SetTag("quote", nil)
 	bbcompiler.SetTag("size", nil)
 
-	config.Version = version
+	config.Version = ParseVersion(version)
 }
