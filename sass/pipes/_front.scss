@@ -1,0 +1,41 @@
+@import 'colors';
+@import '../util';
+
+.dropdown-button:hover {
+	background-color: $bglight;
+}
+
+.dropdown-menu {
+	background-color: $bgcol;
+	box-shadow: 2px 2px 2px 3px $shadowcol;
+	z-index: 0;
+}
+
+.section-body {
+	background-color: #606060;
+}
+
+.section-title-block {
+	background-color: $bgcol;
+	border-radius: 4px 8px 4px 8px;
+}
+
+.tab {
+	background-color: $bglight!important;
+	border: 1px solid $bgcol;
+}
+
+#current-tab {
+	background-color: $bgcol!important;
+}
+
+div#recent-posts-header {
+	@include box-shadow(0px 2px 2px 3px $shadowcol);
+	margin-bottom: 8px;
+	padding: 4px 8px 4px 8px;
+}
+
+.postblock {
+	background-color: $bgcol;
+	font-weight: 700;
+}

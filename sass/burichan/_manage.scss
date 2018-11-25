@@ -1,0 +1,11 @@
+@import 'colors';
+@import '../util';
+
+.loginbox input {
+	height: 20%;
+}
+
+.manage-header {
+	background-color: $bgcol;
+	border-radius: 8px;
+}

@@ -1,0 +1,73 @@
+@import 'global/img';
+@import 'global/front';
+@import 'global/manage';
+@import 'global/lightbox';
+
+header {
+	margin-top:50px;
+	text-align:center;
+	h1 {
+		font-size:30px;
+		margin: 0px;
+	}
+}
+
+div#topbar {
+	left:0;
+	position:fixed;
+	top:0;
+	width:100%;
+	z-index:2;
+	margin-top:0px;
+	padding-left:8px;
+	padding-right:4px;
+
+	a.topbar-item {
+		display: inline-block;
+		padding: 4px;
+	}
+	a.dropdown-button {
+		padding: 4px 8px;
+		float: right;
+	}
+}
+
+div.dropdown-menu {
+	position: fixed;
+	min-width: 300px;
+	min-height: 100px;
+	top: 24px;
+	right: 0px;
+	z-index:8999;
+	padding: 4px 8px 4px 8px;
+
+	ul.staffmenu {
+		list-style:none;
+		margin:0px;
+		padding-left:0;
+	}
+}
+
+div.section-block {
+	margin-bottom: 8px;
+	div.section-title-block {
+		display:block;
+		padding:4px 8px 4px 8px;
+	}
+	div.section-body {
+		overflow-y: hidden;
+		margin-right: 0px;
+		margin-bottom:8px;
+		min-height: 48px;
+		padding:8px;
+	}
+}
+
+#footer {
+	bottom:0px;
+	clear:both;
+	left:0px;
+	position:static;
+	text-align:center;
+	width:100%;
+}

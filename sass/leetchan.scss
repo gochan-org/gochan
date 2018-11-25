@@ -1,0 +1,72 @@
+// This looks like crap but it isn't supposed to be pretty.
+// Leetchan was an imageboard populated by a bunch of morons that liked to spam other imageboards
+// This theme may end up being replaced with a GeoCities theme (because that looks /so/ much better)
+
+@import url(http://fonts.googleapis.com/css?family=Walter+Turncoat);
+
+@import 'leetchan/colors';
+@import 'leetchan/front';
+@import 'leetchan/img';
+
+body {
+	margin:0;
+	padding:0;
+	background: #135;
+	color: #fff;
+	font-family: "comic sans ms","Walter Turncoat",cursive;
+}
+
+h1 {
+	color:#000;
+	font-size:150%;
+	margin:0;
+}
+
+h1,h2 {
+	// background:#D6DAF0;
+	// text-align:left;
+	color: white;
+}
+
+h1,h3,.menu {
+	font-family:Verdana,Tahoma,sans-serif;
+}
+
+h2 {
+	// background:#D6DAF0;
+	font-size:100%;
+	margin:1em 0 0;
+}
+
+h2 a {
+	color:#550;
+	text-decoration:none;
+}
+
+h3 {
+	color:#800;
+	font-size:medium;
+	font-weight:400;
+	margin:0;
+	text-align:center;
+}
+
+a {
+	color: #ff0;
+	text-decoration: none;
+}
+
+li {
+	margin:0;
+}
+
+li a {
+	display:block;
+	width:100%;
+}
+
+.footer {
+	font-family: serif;
+	font-size: 12px;
+	text-align: center;
+}

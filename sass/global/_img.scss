@@ -7,32 +7,9 @@
 	padding-left:0px;
 }
 
-#footer {
-	bottom:0px;
-	clear:both;
-	left:0px;
-	position:static;
-	text-align:center;
-	width:100%;
-}
-
 #left-bottom-content {
 	float:left;
 	left:0px;
-}
-
-#main {
-	height:100%;
-	left:0px;
-	padding-left:8px;
-	position:absolute;
-	right:21%;
-	top:124px;
-	width:auto;
-}
-
-#menu {
-	position:absolute;
 }
 
 a.anchor {
@@ -92,11 +69,6 @@ table#pages td {
 	width:15%;
 }
 
-#tab-bar {
-	clear:both;
-	margin-left:16px;
-}
-
 #threadlinks-bottom {
 	clear:both;
 	float:right;
@@ -105,32 +77,6 @@ table#pages td {
 #threadlinks-top {
 	float:left;
 	position:absolute;
-}
-
-header {
-	margin-top:50px;
-	text-align:center;
-	
-}
-
-header h1 {
-	font-size:30px;
-	margin: 0px;
-}
-
-#topbar {
-	left:0;
-	position:fixed;
-	top:0;
-	width:100%;
-	z-index:2;
-	margin-top:0px;
-	padding-left:8px;
-	padding-right:4px;
-}
-
-#topbar div {
-	padding:4px;
 }
 
 .thread-ddown-menu {
@@ -152,25 +98,6 @@ header h1 {
 .thread-ddown-menu li {
 	padding-left: 8px;
 	padding-right: 8px;
-}
-
-
-.dropdown-menu {
-	list-style: none;
-	min-height:100px;
-	min-width:300px;
-	padding:4px 8px;
-	position:fixed;
-	right:0;
-	top:24px;
-	z-index:8999;
-}
-
-.plus {
-	float:right;
-	padding:0px 4px;
-	text-align:center;
-	width:12px;
 }
 
 .reply {
@@ -217,13 +144,6 @@ header h1 {
 	font-weight:700;
 }
 
-.tab {
-	display:block;
-	float:left;
-	padding-left:5px;
-	padding-right:5px;
-}
-
 .thread {
 	vertical-align:top;
 	overflow: hidden;
@@ -234,27 +154,16 @@ header h1 {
 	width:100%;
 }
 
-.topbar-item {
-	display: inline-block;
-	padding: 4px;
-}
-
-.topbar-dropdowns{
-	overflow: hidden;
-	float: right;
-}
-
-.dropdown-button {
-	padding: 4px 8px;
-	float: right;
-}
-
 a.permalink,#right-sidelinks {
 	float:right;
 }
 
 hr {
 	clear:both;
+}
+
+a.upload-container {
+	outline: none;
 }
 
 .upload {
@@ -287,6 +196,10 @@ input[type=file] {
 }
 
 table#postbox-static {
+	border: none;
+	tr, td {
+		border: none;
+	}
 	margin: 0px auto;
 }
 

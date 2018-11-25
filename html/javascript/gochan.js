@@ -9,7 +9,6 @@ var staff_btn;
 var watched_threads_btn;
 var settings_arr = [];
 var current_staff;
-var lightbox_css_added = false;
 var dropdown_div_created = false;
 var qr_enabled = false;
 
@@ -150,10 +149,6 @@ var DropDownMenu = function(title,menu_html) {
 }
 
 function showLightBox(title,innerHTML) {
-	if(!lightbox_css_added) {
-		$jq(document).find("head").append("\t<link rel=\"stylesheet\" href=\"/css/lightbox.css\" />");
-		lightbox_css_added = true;
-	}
 	$jq(document.body).prepend("<div class=\"lightbox-bg\"></div><div class=\"lightbox\"><div class=\"lightbox-title\">"+title+"<a href=\"#\" class=\"lightbox-x\">X</a><hr /></div>"+innerHTML+"</div>");
 	$jq("a.lightbox-x").click(function() {
 		$jq(".lightbox").remove();

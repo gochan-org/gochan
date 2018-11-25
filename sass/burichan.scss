@@ -1,0 +1,61 @@
+@import 'util';
+@import 'burichan/colors';
+@import 'burichan/img';
+@import 'burichan/front';
+@import 'burichan/manage';
+
+body {
+	font: $font;
+	background:$bgcol;
+	margin: 8px;
+}
+
+a, a:visited {
+	color:$linkcol;
+	text-decoration:none;
+}
+
+h1 {
+	margin:0;
+	text-align:center;
+}
+
+h2 {
+	margin: 0px 0px 0px 0px;
+	font-size: 140%;
+}
+
+h2 a {
+	text-decoration: none;
+	color: #550;
+}
+
+h3 {
+	margin: 0px;
+	text-align: center;
+	font-size: medium;
+}
+
+h1,h2 {
+	// background:#D6DAF0;
+	font-family: $hfont-family;
+}
+
+h1, h2, h3 {
+	font-weight: bold;
+	color: #333;
+}
+
+div#topbar {
+	@include box-shadow(3px 3px 5px 6px $shadowcol);
+	height: 30px;
+}
+
+div#topbar, .topbar-item, .topbar-item:visited, .dropdown-button, .dropdown-menu, .dropdown-menu a {
+	background-color:#000A89;
+	color:$bgcol!important;
+}
+
+div#footer {
+	font-size: 8pt;
+}

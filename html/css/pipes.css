@@ -1,0 +1,171 @@
+.dropdown-button:hover {
+  background-color: #404040;
+}
+
+.dropdown-menu {
+  background-color: #202020;
+  box-shadow: 2px 2px 2px 3px #101010;
+  z-index: 0;
+}
+
+.section-body {
+  background-color: #606060;
+}
+
+.section-title-block {
+  background-color: #202020;
+  border-radius: 4px 8px 4px 8px;
+}
+
+.tab {
+  background-color: #404040 !important;
+  border: 1px solid #202020;
+}
+
+#current-tab {
+  background-color: #202020 !important;
+}
+
+div#recent-posts-header {
+  -moz-box-shadow: 0px 2px 2px 3px #101010;
+  -ms-box-shadow: 0px 2px 2px 3px #101010;
+  -webkit-box-shadow: 0px 2px 2px 3px #101010;
+  box-shadow: 0px 2px 2px 3px #101010;
+  margin-bottom: 8px;
+  padding: 4px 8px 4px 8px;
+}
+
+.postblock {
+  background-color: #202020;
+  font-weight: 700;
+}
+
+.loginbox input {
+  height: 20%;
+}
+
+.manage-header {
+  background-color: #202020;
+  -moz-box-shadow: 2px 2px 3px 4px #101010;
+  -ms-box-shadow: 2px 2px 3px 4px #101010;
+  -webkit-box-shadow: 2px 2px 3px 4px #101010;
+  box-shadow: 2px 2px 3px 4px #101010;
+  border-radius: 8px;
+}
+
+.dropdown-button:hover {
+  background-color: #404040;
+}
+
+.dropdown-menu {
+  background-color: #202020;
+  -moz-box-shadow: 2px 2px 2px 3px #101010;
+  -ms-box-shadow: 2px 2px 2px 3px #101010;
+  -webkit-box-shadow: 2px 2px 2px 3px #101010;
+  box-shadow: 2px 2px 2px 3px #101010;
+  z-index: 0;
+}
+
+ul.staffmenu li:hover {
+  background: #404040;
+}
+
+img.thumbnail {
+  float: left;
+  max-width: 100%;
+  margin: 5px 10px 10px 0px;
+}
+
+.reply {
+  background-color: #25272D;
+  border: 1px solid #8C94AB;
+}
+
+.postblock {
+  background-color: #25272D;
+  font-weight: 700;
+}
+
+.postername {
+  color: #FC0;
+  font-weight: 700;
+}
+
+.postername a {
+  color: #ffcc00 !important;
+  text-decoration: underline;
+}
+
+.subject {
+  color: #F90;
+}
+
+.thread-ddown a {
+  font-size: 75%;
+  vertical-align: middle;
+}
+
+.tripcode {
+  color: #FC0;
+}
+
+form#postform input[type=text], form#postform input[type=password], form#postform input[type=file], form#postform textarea, form#postform .thread-ddown-menu {
+  background-color: #25272D;
+  border: 1px solid #8C94AB;
+  color: #FFF;
+}
+
+.thread-ddown-menu, input#reason, input#password {
+  background-color: #25272D;
+  border: 1px solid #8C94AB;
+  color: #FFF;
+}
+
+.thread-ddown-menu li:hover {
+  background-color: #404040;
+}
+
+* {
+  outline: none;
+}
+
+body {
+  background-image: url(res/pipes_bg.png);
+  color: #d8d0b9;
+  font: 12pt sans-serif;
+}
+
+header h1, span#site-title {
+  color: #e1b400;
+}
+
+a {
+  color: #f90;
+  font: 12pt sans-serif;
+  text-decoration: none;
+}
+
+a:hover {
+  background: inherit;
+  color: #ffd43f;
+}
+
+a.topbar-item:hover {
+  background-color: #404040;
+}
+
+div#footer, div#footer * {
+  font-size: 9pt;
+}
+
+div#topbar {
+  background-color: #202020;
+  -moz-box-shadow: 0px 2px 2px 3px #101010;
+  -ms-box-shadow: 0px 2px 2px 3px #101010;
+  -webkit-box-shadow: 0px 2px 2px 3px #101010;
+  box-shadow: 0px 2px 2px 3px #101010;
+  z-index: 9001;
+}
+div#topbar li:hover {
+  background-color: #404040;
+}

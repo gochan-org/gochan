@@ -12,9 +12,8 @@
 	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/gochan.js"></script>
 	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/manage.js"></script>	
 
-	<link rel="stylesheet" href="/css/global/front.css" />
-	{{range $i, $style := .config.Styles}}
-	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
+	<link rel="stylesheet" href="/css/global.css" />
+	<link rel="stylesheet" href="/css/{{.config.DefaultStyle}}.css" />
 	<link rel="shortcut icon" href="/favicon.png">
 </head>
 <body>
@@ -26,20 +25,20 @@
 		<span id="site-slogan">{{.config.SiteSlogan}}</span>
 	</div>
 	<div id="main">
-		<div id="tab-bar">
-			<div id="current-tab" class="tab">
+		<ul id="tab-bar">
+			<li id="current-tab" class="tab">
 				<a href="#">News</a>
-			</div>
-			<div class="tab">
+			</li>
+			<li class="tab">
 				<a href="#boards">Boards</a>
-			</div>
-			<div class="tab">
+			</li>
+			<li class="tab">
 				<a href="#rules">Rules</a>
-			</div>
-			<div class="tab">
+			</li>
+			<li class="tab">
 				<a href="#faq">FAQ</a>
-			</div>
-		</div>
+			</li>
+		</ul>
 		<div id="first-page" class="page">{{range $ii, $page := .page_arr}}{{if eq $page.Page 0}}
 			<div class="section-block">
 				<div class="section-title-block" id="first-page0">

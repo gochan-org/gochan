@@ -1,0 +1,73 @@
+@import '_colors';
+@import '../util';
+
+.dropdown-button:hover {
+	background-color: $bglight;
+}
+
+.dropdown-menu {
+	background-color: $bgcol;
+	@include box-shadow(2px 2px 2px 3px $shadowcol);
+	z-index: 0;
+}
+
+ul.staffmenu li:hover {
+	background: $bglight;
+}
+
+img.thumbnail {
+	float: left;
+	max-width: 100%;
+	margin: 5px 10px 10px 0px;
+}
+
+.reply {
+	background-color: #25272D;
+	border: 1px solid #8C94AB;
+}
+
+.postblock {
+	background-color: #25272D;
+	font-weight: 700;
+}
+
+.postername {
+	color: #FC0;
+	font-weight: 700;
+}
+
+.postername a {
+	color: #ffcc00 !important;
+	text-decoration: underline;
+}
+
+.subject {
+	color: #F90;
+}
+
+.thread-ddown a {
+	font-size: 75%;
+	vertical-align: middle;
+}
+
+.tripcode {
+	color: #FC0;
+}
+
+form#postform {
+	input[type=text], input[type=password], input[type=file], textarea, .thread-ddown-menu {
+		background-color: #25272D;
+		border: 1px solid #8C94AB;
+		color: #FFF;
+	}
+}
+
+.thread-ddown-menu, input#reason, input#password {
+	background-color: #25272D;
+	border: 1px solid #8C94AB;
+	color: #FFF;
+}
+
+.thread-ddown-menu li:hover {
+	background-color: #404040;
+}

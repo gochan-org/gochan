@@ -186,7 +186,7 @@ var manage_functions = map[string]ManageFunction{
 	"cleanup": {
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html = "<h2>Cleanup</h2><br />"
+			html = "<h2 class=\"manage-header\">Cleanup</h2><br />"
 			var err error
 			if request.FormValue("run") == "Run Cleanup" {
 				html += "Removing deleted posts from the database.<hr />"
@@ -491,7 +491,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			statement := request.FormValue("sql")
-			html = "<h1>Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">" + statement + "</textarea>\n<input type=\"submit\" />\n</form>"
+			html = "<h1 class=\"manage-header\">Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">" + statement + "</textarea>\n<input type=\"submit\" />\n</form>"
 			if statement != "" {
 				html += "<hr />"
 				if _, sqlerr := execSQL(statement); sqlerr != nil {
@@ -541,7 +541,7 @@ var manage_functions = map[string]ManageFunction{
 	"announcements": {
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html = "<h1>Announcements</h1><br />"
+			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
 			rows, err := querySQL("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC")
 			defer closeRows(rows)
@@ -894,7 +894,7 @@ var manage_functions = map[string]ManageFunction{
 					}
 				}
 
-				html = "<h1>Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
+				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 				rows, err = querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
 				defer closeRows(rows)
 				if err != nil {
@@ -909,7 +909,7 @@ var manage_functions = map[string]ManageFunction{
 				}
 
 				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />" +
-					"<h2>Create new board</h2>\n<span id=\"board-creation-message\">" + board_creation_status + "</span><br />"
+					"<h2 class=\"manage-header\">Create new board</h2>\n<span id=\"board-creation-message\">" + board_creation_status + "</span><br />"
 
 				manageBoardsBuffer := bytes.NewBufferString("")
 				allSections, _ = getSectionArr("")
@@ -1015,7 +1015,7 @@ var manage_functions = map[string]ManageFunction{
 			if limit == "" {
 				limit = "50"
 			}
-			html = "<h1>Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
+			html = "<h1 class=\"manage-header\">Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
 			rows, err := querySQL(
 				"SELECT `"+config.DBprefix+"boards`.`dir` AS `boardname`, "+
 					"`"+config.DBprefix+"posts`.`boardid` AS boardid, "+
@@ -1103,7 +1103,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
-			html = "<h1>Staff</h1><br />\n" +
+			html = "<h1 class=\"manage-header\">Staff</h1><br />\n" +
 				"<table id=\"stafftable\" border=\"1\">\n" +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
 			rows, err := querySQL("SELECT `username`,`rank`,`boards`,`added_on` FROM `" + config.DBprefix + "staff`")
@@ -1146,7 +1146,7 @@ var manage_functions = map[string]ManageFunction{
 				html += "<tr><td>" + staff.Username + "</td><td>" + rank + "</td><td>" + staff.Boards + "</td><td>" + humanReadableTime(staff.AddedOn) + "</td><td><a href=\"/manage?action=staff&amp;do=del&amp;username=" + staff.Username + "\" style=\"float:right;color:red;\">X</a></td></tr>\n"
 				iter++
 			}
-			html += "</table>\n\n<hr />\n<h2>Add new staff</h2>\n\n" +
+			html += "</table>\n\n<hr />\n<h2 class=\"manage-header\">Add new staff</h2>\n\n" +
 				"<form action=\"/manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +
 				"\t<input type=\"hidden\" name=\"do\" value=\"add\" />\n" +
 				"\tUsername: <input id=\"username\" name=\"username\" type=\"text\" /><br />\n" +

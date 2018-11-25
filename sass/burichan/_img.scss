@@ -1,0 +1,31 @@
+@import 'colors';
+
+h1#board-title {
+	font-family: serif!important;
+	font-size: 24pt;
+	color:#AF0A0F;
+}
+
+.postblock {
+	background:#9988EE;
+}
+
+div.file-info {
+	font-size:12px;
+	font-family:sans-serif;
+}
+
+.postername {
+	font-size:12px;
+	font-family:serif;
+	color:#117743;
+	font-weight:800;
+}
+
+.reply, .thread-ddown-menu {
+	background:#D6DAF0;
+}
+
+.thread-ddown-menu {
+	border: 1px solid $bordercol;
+}

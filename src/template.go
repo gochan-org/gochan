@@ -184,7 +184,7 @@ var funcMap = template.FuncMap{
 	},
 	"generateConfigTable": func() string {
 		configType := reflect.TypeOf(config)
-		tableOut := "<table style=\"border-collapse: collapse;\"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>\n"
+		tableOut := "<table style=\"border-collapse: collapse;\" id=\"config\"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>\n"
 		numFields := configType.NumField()
 		for f := 17; f < numFields-2; f++ {
 			// starting at Lockdown because the earlier fields can't be safely edited from a web interface

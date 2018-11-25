@@ -1,0 +1,23 @@
+#site-title {
+	font-family: sans-serif;
+	padding-top: 88px;
+}
+
+#site-slogan {
+	font-size:9pt;
+	font-style: italic;
+}
+
+.tab {
+	background-color: #dfdffe;
+	border: 1px solid #9295a4;
+}
+
+#current-tab {
+	margin-top: 16px;
+	border-bottom: 0px;
+}
+
+#current-tab, div.section-title-block {
+	background-color: #bfc6e7;
+}

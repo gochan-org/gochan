@@ -22,9 +22,8 @@
 	</script>
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/gochan.js"></script>
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/manage.js"></script>
-	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/global/img.css" />
-{{range $_, $style := .config.Styles}}
-	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="{{$.config.SiteWebfolder}}css/{{$style}}/img.css" />{{end}}
+	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/global.css" />
+	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/{{$.config.DefaultStyle}}.css" />
 	<link rel="shortcut icon" href="{{$.config.SiteWebfolder}}favicon.png" />
 </head>
 <body>

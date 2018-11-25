@@ -1,0 +1,72 @@
+div.page {
+	float: left;
+	width: 75%;
+	margin-left: 8px;
+	overflow-y: hidden;
+}
+
+div.section-block {
+	margin-bottom: 8px;
+	div.section-title-block {
+		display:block;
+		padding:4px 8px 4px 8px;
+	}
+	div.section-body {
+		overflow-y: hidden;
+		margin-right: 0px;
+		margin-bottom:8px;
+		min-height: 48px;
+		padding-bottom:8px;
+		padding-left:8px;
+		padding-right:8px;
+	}
+}
+
+#side-pane {
+	position:absolute;
+	top: 106px;
+	width:15%;
+	margin-right: 16px;
+}
+
+div#top-pane {
+	text-align: center;
+	margin-top: 32px;
+	width:100%;
+	// z-index: 1;
+	span#site-title {
+		font-size:50px;
+	}
+}
+
+#tab-bar {
+	margin-bottom: 0px;
+	margin-top: 2px;
+	margin-left: -24px;
+	.tab {
+		display: inline;
+		padding: 0px 8px 0px 8px;
+	}
+}
+
+div#recent-posts {
+	width:22%;
+	float: right;
+	margin-right: 8px;
+	display: inline-block;
+	img {
+		float: left;
+		padding-right: 8px;
+	}
+	div.section-body {
+		padding-top: 8px;
+	}
+}
+
+div#main {
+	overflow: hidden
+}
+
+a.permalink {
+	float: right;
+}

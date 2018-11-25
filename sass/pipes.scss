@@ -1,0 +1,48 @@
+@import 'pipes/colors';
+@import 'pipes/front';
+@import 'pipes/manage';
+@import 'pipes/img';
+@import 'util';
+
+* {
+	outline: none;
+}
+
+body {
+	background-image: url(res/pipes_bg.png);
+	color: #d8d0b9;
+	font: $font;
+}
+
+header h1, span#site-title {
+	color: $headercol;
+}
+
+a {
+	color: $linkcol;
+	font: $font;
+	text-decoration: none;
+}
+
+a:hover {
+	background: inherit;
+	color: $linklight;
+}
+
+a.topbar-item:hover {
+	background-color: $bglight;
+}
+
+div#footer, div#footer * {
+	font-size: 9pt;
+}
+
+div#topbar {
+	background-color: $bgcol;
+	@include box-shadow(0px 2px 2px 3px $shadowcol);
+	z-index: 9001;
+
+	li:hover {
+		background-color: $bglight;
+	}
+}

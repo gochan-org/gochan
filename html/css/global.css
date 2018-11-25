@@ -1,0 +1,481 @@
+#boardmenu-bottom {
+  margin-top: 16px;
+}
+
+#content {
+  margin-left: 0px;
+  padding-left: 0px;
+}
+
+#left-bottom-content {
+  float: left;
+  left: 0px;
+}
+
+a.anchor {
+  display: block;
+  position: relative;
+  top: -32px;
+  visibility: hidden;
+}
+
+div.catalog-thread {
+  width: 200px;
+  max-height: 250px;
+  display: inline-block;
+  position: relative;
+  vertical-align: top;
+  overflow: hidden;
+  text-align: center;
+  padding: 6px;
+}
+
+div.catalog-thread a {
+  clear: both;
+}
+
+table#pages {
+  margin-bottom: 8px;
+  margin-top: 4px;
+  border: 1px solid;
+}
+
+table#pages td {
+  border: 1px solid;
+}
+
+#postbox-area {
+  left: 0px;
+  width: 100%;
+}
+
+#report-delbox {
+  clear: both;
+  float: right;
+  line-height: 32px;
+  margin-top: 8px;
+  text-align: right;
+}
+
+#right-bottom-content {
+  float: right;
+  right: 0px;
+}
+
+#side-pane {
+  margin-right: 16px;
+  position: absolute;
+  top: 106px;
+  width: 15%;
+}
+
+#threadlinks-bottom {
+  clear: both;
+  float: right;
+}
+
+#threadlinks-top {
+  float: left;
+  position: absolute;
+}
+
+.thread-ddown-menu {
+  display: inline-block;
+  float: left;
+  margin-left: -4px;
+  margin-top: 8px;
+  padding: 4px;
+  position: absolute;
+}
+
+.thread-ddown-menu ul {
+  list-style: none;
+  padding-left: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.thread-ddown-menu li {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.reply {
+  margin-bottom: 4px;
+  padding: 4px 8px 4px 8px;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.reply-container {
+  width: 100%;
+}
+
+.postblock {
+  margin-left: 8px;
+  margin-right: 8px;
+  width: 100px;
+}
+
+.post-text {
+  padding: 8px;
+}
+
+.setting-name {
+  width: 50%;
+}
+
+.setting-value {
+  text-align: right;
+  width: 50%;
+}
+
+.spoiler {
+  background-color: #000;
+  color: #000;
+}
+
+.spoiler:hover {
+  color: #FFF;
+}
+
+.subject {
+  font-weight: 700;
+}
+
+.thread {
+  vertical-align: top;
+  overflow: hidden;
+  width: 100%;
+}
+
+.op-post {
+  width: 100%;
+}
+
+a.permalink, #right-sidelinks {
+  float: right;
+}
+
+hr {
+  clear: both;
+}
+
+a.upload-container {
+  outline: none;
+}
+
+.upload {
+  float: left;
+  max-width: 100%;
+  margin: 5px 10px 10px 0px;
+}
+
+ul.staffmenu {
+  list-style: none;
+  margin: 0px;
+  padding-left: 0;
+}
+
+div.file-deleted-box {
+  width: 120px;
+  height: 120px;
+  border-style: dashed;
+  vertical-align: middle;
+  text-align: center;
+  line-height: 120px;
+  float: left;
+  margin: 4px 8px;
+  border-width: 2px;
+}
+
+input[type=file] {
+  max-width: 275px;
+  width: 275px;
+}
+
+table#postbox-static {
+  border: none;
+  margin: 0px auto;
+}
+table#postbox-static tr, table#postbox-static td {
+  border: none;
+}
+
+.greentext {
+  color: #789922;
+}
+
+div.page {
+  float: left;
+  width: 75%;
+  margin-left: 8px;
+  overflow-y: hidden;
+}
+
+div.section-block {
+  margin-bottom: 8px;
+}
+div.section-block div.section-title-block {
+  display: block;
+  padding: 4px 8px 4px 8px;
+}
+div.section-block div.section-body {
+  overflow-y: hidden;
+  margin-right: 0px;
+  margin-bottom: 8px;
+  min-height: 48px;
+  padding-bottom: 8px;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+#side-pane {
+  position: absolute;
+  top: 106px;
+  width: 15%;
+  margin-right: 16px;
+}
+
+div#top-pane {
+  text-align: center;
+  margin-top: 32px;
+  width: 100%;
+}
+div#top-pane span#site-title {
+  font-size: 50px;
+}
+
+#tab-bar {
+  margin-bottom: 0px;
+  margin-top: 2px;
+  margin-left: -24px;
+}
+#tab-bar .tab {
+  display: inline;
+  padding: 0px 8px 0px 8px;
+}
+
+div#recent-posts {
+  width: 22%;
+  float: right;
+  margin-right: 8px;
+  display: inline-block;
+}
+div#recent-posts img {
+  float: left;
+  padding-right: 8px;
+}
+div#recent-posts div.section-body {
+  padding-top: 8px;
+}
+
+div#main {
+  overflow: hidden;
+}
+
+a.permalink {
+  float: right;
+}
+
+.loginbox {
+  width: 300px;
+  height: 120px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin-left: -150px;
+  margin-top: -60px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  text-align: center;
+  border: solid 1px;
+}
+
+.loginbox input {
+  width: 175px;
+  height: 30%;
+}
+
+.menu {
+  margin-top: 1em;
+}
+
+h1, h2 {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+table#board-options, table#board-options *,
+table#config, table#config td, table#config th {
+  border: solid 1px;
+}
+
+input.config-text {
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  display: block;
+  padding: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+.warning, div.config-status {
+  color: red;
+  font-weight: bold;
+}
+
+.lightbox {
+  background-color: #CDCDCD;
+  border: 1px solid #000;
+  bottom: 5%;
+  color: #000;
+  left: 20%;
+  padding: 16px;
+  position: fixed;
+  right: 20%;
+  top: 5%;
+  z-index: 9001;
+  overflow: auto;
+  display: hidden;
+}
+
+.lightbox * {
+  box-shadow: 0px 0px 0px 0px #000000;
+  color: #000000;
+}
+
+.lightbox-bg {
+  background-attachment: fixed;
+  background-color: #333;
+  height: 100%;
+  left: 0;
+  opacity: 0.5;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 9000;
+}
+
+.lightbox-footer {
+  bottom: 5%;
+  clear: both;
+  left: 16px;
+  position: absolute;
+  right: 16px;
+  text-align: center;
+}
+
+.lightbox-title {
+  font-size: 42px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.lightbox-x {
+  color: #000000 !important;
+  float: right;
+  z-index: 90002;
+}
+
+.lightbox-x:hover {
+  color: #555555 !important;
+}
+
+.lightbox a {
+  color: #5A5A5A;
+  font-weight: bold;
+}
+
+.lightbox input[type=text], .lightbox input[type=password], .lightbox input[type=file], .lightbox textarea {
+  background-color: #FFFFFF;
+  border: 1px solid #000000;
+  color: #000000;
+}
+
+.lightbox textarea#sql-statement {
+  width: 95%;
+  height: 300px;
+  margin-left: 0px;
+  clear: both;
+  background-color: #FFFFFF;
+  color: #000000;
+}
+
+.lightbox div.section-body {
+  background-color: #A0A0A0;
+}
+
+.lightbox div.section-title-block {
+  border: 1px solid #000000;
+  border-radius: 0px;
+  background-color: #777777;
+  box-shadow: 0px 0px 0px 0px #000000 !important;
+}
+
+header {
+  margin-top: 50px;
+  text-align: center;
+}
+header h1 {
+  font-size: 30px;
+  margin: 0px;
+}
+
+div#topbar {
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 2;
+  margin-top: 0px;
+  padding-left: 8px;
+  padding-right: 4px;
+}
+div#topbar a.topbar-item {
+  display: inline-block;
+  padding: 4px;
+}
+div#topbar a.dropdown-button {
+  padding: 4px 8px;
+  float: right;
+}
+
+div.dropdown-menu {
+  position: fixed;
+  min-width: 300px;
+  min-height: 100px;
+  top: 24px;
+  right: 0px;
+  z-index: 8999;
+  padding: 4px 8px 4px 8px;
+}
+div.dropdown-menu ul.staffmenu {
+  list-style: none;
+  margin: 0px;
+  padding-left: 0;
+}
+
+div.section-block {
+  margin-bottom: 8px;
+}
+div.section-block div.section-title-block {
+  display: block;
+  padding: 4px 8px 4px 8px;
+}
+div.section-block div.section-body {
+  overflow-y: hidden;
+  margin-right: 0px;
+  margin-bottom: 8px;
+  min-height: 48px;
+  padding: 8px;
+}
+
+#footer {
+  bottom: 0px;
+  clear: both;
+  left: 0px;
+  position: static;
+  text-align: center;
+  width: 100%;
+}
