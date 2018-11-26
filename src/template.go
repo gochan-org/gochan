@@ -239,8 +239,8 @@ var funcMap = template.FuncMap{
 	},
 
 	// Version functions
-	"formatVersion": func(v GochanVersion) string {
-		return v.String()
+	"version": func() string {
+		return version.String()
 	},
 }
 

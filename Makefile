@@ -18,5 +18,5 @@ build:
 ifndef GOPATH
 	@echo "$ GOPATH not set. Please run 'export GOPATH=\$$PWD/lib' (or wherever you prefer) and run this again."
 endif
-	go build -v -ldflags "${LDFLAGS} -X main.version=${GOCHAN_VERSION} -X main.buildtimeString=${GOCHAN_BUILDTIME}" -o ${DIRNAME}${GOCHAN_BIN} ./src
+	go build -v -ldflags "${LDFLAGS} -X main.versionStr=${GOCHAN_VERSION} -X main.buildtimeString=${GOCHAN_BUILDTIME}" -o ${DIRNAME}${GOCHAN_BIN} ./src
 

@@ -77,7 +77,7 @@ func connectToSQLServer() {
 		}
 	}
 
-	if sqlVersion != version {
+	if sqlVersion != versionStr {
 		_, err = execSQL("INSERT INTO `"+config.DBprefix+"info` (`name`,`value`) VALUES('version',?)", version)
 		if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
 			handleError(0, "failed with error: %s\n", customError(err))

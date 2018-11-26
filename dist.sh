@@ -7,6 +7,7 @@ function copyStuff {
 	mkdir $DIRNAME
 	make release
 	mkdir $DIRNAME/html
+	cp -r sass $DIRNAME
 	cp -r html/css $DIRNAME/html/css
 	cp -r html/error $DIRNAME/html/error
 	cp -r html/javascript $DIRNAME/html/javascript

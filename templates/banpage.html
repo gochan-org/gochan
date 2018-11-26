@@ -3,9 +3,8 @@
 <head>
 	<title>Banned</title>
 	<link rel="shortcut icon" href="/favicon.png">
-	<link rel="stylesheet" href="/css/global/front.css" />
-{{range $i, $style := .config.Styles}}
-	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/front.css" />{{end}}
+	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/global.css" />
+	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/{{$.config.DefaultStyle}}.css" />
 	<script type="text/javascript">
 		var styles = [{{range $i, $style := .config.Styles}}{{if gt $i  0}}, {{end}}"{{$style}}"{{end}}];
 		var webroot = "{{.config.SiteWebfolder}}"

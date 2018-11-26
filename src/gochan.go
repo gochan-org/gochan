@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var version string
+var versionStr string
 var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	connectToSQLServer()
 	parseCommandLine()
 
-	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", config.Version.String(), buildtimeString, config.Verbosity)
+	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", versionStr, buildtimeString, config.Verbosity)
 	println(0, "Loading and parsing templates...")
 	if err := initTemplates(); err != nil {
 		handleError(0, customError(err))
