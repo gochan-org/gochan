@@ -58,7 +58,7 @@ func connectToSQLServer() {
 
 	sqlVersion = ""
 	err = queryRowSQL("SELECT `value` FROM `"+config.DBprefix+"info` WHERE `name` = 'version'",
-		[]interface{}{}, []interface{}{&version})
+		[]interface{}{}, []interface{}{&versionStr})
 	if err == sql.ErrNoRows {
 		newInstall = true
 	} else if err != nil {
@@ -78,7 +78,7 @@ func connectToSQLServer() {
 	}
 
 	if sqlVersion != versionStr {
-		_, err = execSQL("INSERT INTO `"+config.DBprefix+"info` (`name`,`value`) VALUES('version',?)", version)
+		_, err = execSQL("INSERT INTO `"+config.DBprefix+"info` (`name`,`value`) VALUES('version',?)", versionStr)
 		if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
 			handleError(0, "failed with error: %s\n", customError(err))
 			os.Exit(2)
