@@ -4,9 +4,9 @@
 	<title>Banned</title>
 	<link rel="shortcut icon" href="/favicon.png">
 	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/global.css" />
-	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/{{$.config.DefaultStyle}}.css" />
+	<link rel="stylesheet" href="{{$.config.SiteWebfolder}}css/{{$.config.DefaultStyle}}" />
 	<script type="text/javascript">
-		var styles = [{{range $i, $style := .config.Styles}}{{if gt $i  0}}, {{end}}"{{$style}}"{{end}}];
+		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
 		var webroot = "{{.config.SiteWebfolder}}"
 	</script>
 	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>

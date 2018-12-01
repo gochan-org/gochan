@@ -249,12 +249,13 @@ var manage_functions = map[string]ManageFunction{
 					config.SiteSlogan = request.PostFormValue("SiteSlogan")
 					config.SiteHeaderURL = request.PostFormValue("SiteHeaderURL")
 					config.SiteWebfolder = request.PostFormValue("SiteWebfolder")
-					Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
+					// TODO: Change this to match the new Style type in gochan.json
+					/* Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
 					var Styles []string
 					for _, style := range Styles_arr {
 						Styles = append(Styles, strings.Trim(style, " \n\r"))
 					}
-					config.Styles = Styles
+					config.Styles = Styles */
 					config.DefaultStyle = request.PostFormValue("DefaultStyle")
 					config.AllowDuplicateImages = (request.PostFormValue("AllowDuplicateImages") == "on")
 					config.AllowVideoUploads = (request.PostFormValue("AllowVideoUploads") == "on")

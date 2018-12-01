@@ -350,6 +350,11 @@ type ErrorJSON struct {
 	Message string `json:"error"`
 }
 
+type Style struct {
+	Name     string
+	Filename string
+}
+
 // GochanConfig stores crucial info and is read from/written to gochan.json
 type GochanConfig struct {
 	ListenIP     string
@@ -385,8 +390,8 @@ type GochanConfig struct {
 	SiteDomain    string `description:"The server's domain (duh). Do not edit this unless you know what you are doing or BAD THINGS WILL HAPPEN!" default:"127.0.0.1" critical:"true"`
 	DomainRegex   string `description:"Regular expression used for incoming request validation. Do not edit this unless you know what you are doing or BAD THINGS WILL HAPPEN!" default:"(https|http):\\\\/\\\\/(gochan\\\\.lunachan\\.net|gochan\\\\.org)\\/(.*)" critical:"true"`
 
-	Styles       []string `description:"List of styles (one per line) that should be accessed online at /&lt;SiteWebFolder&gt;/css/&lt;Style&gt;/"`
-	DefaultStyle string   `description:"Style used by default (duh). This should appear in the list above or bad things might happen."`
+	Styles       []Style `description:"List of styles (one per line) that should be accessed online at &lt;SiteWebFolder&gt;/css/&lt;Style&gt;/"`
+	DefaultStyle string  `description:"Filename of the default Style. This should appear in the list above or bad things might happen."`
 
 	AllowDuplicateImages bool     `description:"Disabling this will cause gochan to reject a post if the image has already been uploaded for another post.<br />This may end up being removed or being made board-specific in the future." default:"checked"`
 	AllowVideoUploads    bool     `description:"Allows users to upload .webm videos. <br />This may end up being removed or being made board-specific in the future."`
@@ -438,7 +443,23 @@ func initConfig() {
 	}
 
 	if err = json.Unmarshal(jfile, &config); err != nil {
-		printf(0, "Error parsing \"gochan.json\": %s\n", err.Error())
+		errStr := err.Error()
+		switch errStr {
+		case "json: cannot unmarshal string into Go struct field GochanConfig.Styles of type main.Style":
+			printf(0, `Error parsing gochan.json. config.Styles has been changed from a string array to an object.
+Each Style in gochan.json must have a Name field that will appear in the style dropdowns and a Filename field. For example
+{
+	"Styles": [
+		{"Name": "Pipes", "Filename": "pipes.css"},
+		{"Name": "Burichan", "Filename": "burichan.css"}
+	],
+}
+DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does not appear in gochan.json, the first element in Styles will be used.
+`)
+		default:
+			printf(0, "Error parsing \"gochan.json\": %s\n", err.Error())
+		}
+
 		os.Exit(2)
 	}
 
@@ -578,7 +599,7 @@ func initConfig() {
 	}
 
 	if config.DefaultStyle == "" {
-		config.DefaultStyle = config.Styles[0]
+		config.DefaultStyle = config.Styles[0].Filename
 	}
 
 	if config.NewThreadDelay == 0 {

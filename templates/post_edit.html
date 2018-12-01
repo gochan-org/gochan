@@ -6,14 +6,14 @@
 	<title>Edit Post</title>
 	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
 	<script type="text/javascript">
-		var styles = [{{range $ii, $style := $.config.Styles}}{{if gt $ii  0}}, {{end}}"{{$style}}"{{end}}];
+		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
 		var webroot = "{{$.config.SiteWebfolder}}";
 	</script>
 	<script type="text/javascript" src="/javascript/gochan.js"></script>
 	<script type="text/javascript" src="/javascript/manage.js"></script>
 	<link rel="stylesheet" href="/css/global/img.css" />
 {{range $_, $style := .config.Styles}}
-	<link rel="{{if not (isStyleDefault $style)}}alternate {{end}}stylesheet" href="/css/{{$style}}/img.css" />{{end}}
+	<link rel="stylesheet" href="/css/{{$style.Filename}}" />{{end}}
 	<link rel="shortcut icon" href="/favicon.png" />
 </head>
 <body>
@@ -31,7 +31,7 @@
 		<table id="postbox-static" align="center">
 			<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "#" .post.Tripcode}}</td></tr>
 			<tr><th class="postblock">Email</th><td>{{.post.Email}}</td></tr>
-			<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="30" autocomplete="off" value="{{.post.Subject}}"/><input type="submit" value="{{with .op}}Reply{{else}}Post{{end}}"/></td></tr>
+			<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="28" autocomplete="off" value="{{.post.Subject}}"/><input type="submit" value="{{with .op}}Reply{{else}}Post{{end}}"/></td></tr>
 			<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="editmsg" id="editmsg">{{.post.MessageText}}</textarea></td></tr>
 		</table>
 	</form><br />

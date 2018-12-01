@@ -34,8 +34,11 @@
 	"SiteWebfolder": "/",
 	"DomainRegex": "(https|http):\\/\\/(gochan\\.lunachan\\.net|gochan\\.org)\\/(.*)",
 
-	"Styles": ["pipes","efchan"],
-	"DefaultStyle": "pipes",
+	"Styles": [
+		{ "Name": "Pipes", "Filename": "pipes.css" },
+		{ "Name": "Burichan", "Filename": "burichan.css" }
+	],
+	"DefaultStyle": "pipes.css",
 
 	"AllowDuplicateImages": true,
 	"AllowVideoUploads": true,
