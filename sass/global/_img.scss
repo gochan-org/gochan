@@ -206,3 +206,16 @@ table#postbox-static {
 .greentext {
   color: #789922;
 }
+
+div.postprev {
+	position:absolute;
+	overflow: hidden;
+	margin:8px;
+	padding: 4px 8px 4px 8px;
+}
+
+div.inlinepostprev {
+	overflow: hidden;
+	margin:8px;
+	padding: 4px 8px 4px 8px;
+}

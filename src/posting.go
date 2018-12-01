@@ -639,9 +639,9 @@ func formatMessage(message string) string {
 					if boardDir == "" {
 						lineWords[w] = "<a href=\"javascript:;\"><strike>" + word + "</strike></a>"
 					} else if linkParent == 0 {
-						lineWords[w] = "<a href=\"" + config.SiteWebfolder + boardDir + "/res/" + word[8:] + ".html\">" + word + "</a>"
+						lineWords[w] = "<a href=\"" + config.SiteWebfolder + boardDir + "/res/" + word[8:] + ".html\" class=\"postref\">" + word + "</a>"
 					} else {
-						lineWords[w] = "<a href=\"" + config.SiteWebfolder + boardDir + "/res/" + strconv.Itoa(linkParent) + ".html#" + word[8:] + "\">" + word + "</a>"
+						lineWords[w] = "<a href=\"" + config.SiteWebfolder + boardDir + "/res/" + strconv.Itoa(linkParent) + ".html#" + word[8:] + "\" class=\"postref\">" + word + "</a>"
 					}
 				}
 			} else if strings.Index(word, gt) == 0 && w == 0 {

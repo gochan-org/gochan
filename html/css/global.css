@@ -206,6 +206,19 @@ table#postbox-static tr, table#postbox-static td {
   color: #789922;
 }
 
+div.postprev {
+  position: absolute;
+  overflow: hidden;
+  margin: 8px;
+  padding: 4px 8px 4px 8px;
+}
+
+div.inlinepostprev {
+  overflow: hidden;
+  margin: 8px;
+  padding: 4px 8px 4px 8px;
+}
+
 div.page {
   float: left;
   width: 75%;

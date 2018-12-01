@@ -443,8 +443,7 @@ func initConfig() {
 	}
 
 	if err = json.Unmarshal(jfile, &config); err != nil {
-		errStr := err.Error()
-		switch errStr {
+		switch err.Error() {
 		case "json: cannot unmarshal string into Go struct field GochanConfig.Styles of type main.Style":
 			printf(0, `Error parsing gochan.json. config.Styles has been changed from a string array to an object.
 Each Style in gochan.json must have a Name field that will appear in the style dropdowns and a Filename field. For example
