@@ -7,7 +7,7 @@ var topbar;
 var settings_menu;
 var staff_btn;
 var watched_threads_btn;
-var settings_arr = [];
+var settings = [];
 var current_staff;
 var dropdown_div_created = false;
 var qr_enabled = false;
@@ -111,8 +111,7 @@ function prepareThumbnails() {
 				});
 			}).css({
 				"padding-left": "8px"
-			})
-			.html("[Close]<br />"));
+			}).html("[Close]<br />"));
 		} else {
 			// upload is an image
 			thumb.attr({
@@ -331,14 +330,10 @@ function hidePost(id) {
 
 // gets cookies ready to be used elsewhere
 function initCookies() {
-	var name_field = $jq("input#postname");
-	var email_field = $jq("input#postemail");
-	var password_field = $jq("input#postpassword");
-	var deletepassword_field = $jq("input#delete-password");
-	name_field.val(getCookie("name"));
-	email_field.val(getCookie("email"));
-	password_field.val(getCookie("password"));
-	deletepassword_field.val(getCookie("password"));
+	$jq("input#postname").val(getCookie("name"));
+	$jq("input#postemail").val(getCookie("email"));
+	$jq("input#postpassword").val(getCookie("password"));
+	$jq("input#delete-password").val(getCookie("password"));
 }
 
 function isFrontPage() {
@@ -406,21 +401,108 @@ $jq(document).keydown(function(e) {
 	}
 });
 
+var Setting = function(id, text, type, defaultVal, callback, options) {
+	this.id = id;
+	this.text = text;
+	this.type = type; // text, textarea, checkbox, select
+	this.defaultVal = defaultVal;
+	if(this.getCookie() === undefined) this.setCookie(this.defaultVal);
+	if(this.type == "select") this.options = options;
+	if(!callback) this.callback = function() {};
+	else this.callback = callback;
+}
+
+Setting.prototype.onSave == function(newVal) {
+	this.callback();
+	setCookie(this.id, newVal);
+}
+
+Setting.prototype.getCookie = function() {
+	var val = getCookie(this.id);
+	if(this.type == "checkbox") val = (val == "true");
+	return val;
+}
+
+Setting.prototype.setCookie = function(val) {
+	setCookie(this.id, val);
+}
+
+Setting.prototype.getVal = function() {
+	var elem = document.getElementById(this.id);
+	if(elem != null) {
+		if(elem.type == "checkbox") return elem.checked;
+		return elem.value;
+	}
+}
+
+Setting.prototype.renderHTML = function() {
+	var html;
+	switch (this.type) {
+		case "checkbox":
+			if(this.getCookie() == true) html = "<input id=\"" + this.id + "\" type=\"checkbox\" checked=\"checked\" />";
+			else html = "<input id=\"" + this.id + "\" type=\"checkbox\" />";
+			break;
+		case "select":
+			html = "<select id=\"" + this.id + "\" name=\"" + this.id + "\" style=\"min-width:50%\">";
+			for(var o = 0; o < this.options.length; o++) {
+				html += "<option value=\"" + this.options[o].val + "\""
+				if(this.getCookie() == this.options[o].val) html += "selected=\"" + this.getCookie() + "\"";
+				html += ">" + this.options[o].text + "</option>";
+			}
+			break;
+		case "textarea":
+			html = "<textarea id=\"" + this.id + "\" name=\"" + this.id + "\">" + this.getCookie() + "</textarea>";
+			break;
+		default:
+			html = "<input id=\"" + this.id + "\" type=\"checkbox\" val=\"" + this.getCookie() + "\" />";
+			break;
+	}
+	return html;
+}
+
+function initSettings() {
+	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup>";
+
+	settings.push(
+		new Setting("style", "Style", "select", "pipes.css", function() {
+
+		}, []),
+		new Setting("pintopbar", "Pin top bar", "checkbox", true),
+		new Setting("enableposthover", "Preview post on hover", "checkbox", true),
+		new Setting("enablepostclick", "Preview post on click", "checkbox", true),
+	);
+
+	for(var s = 0; s < styles.length; s++) {
+		settings[0].options.push({text: styles[s].Name, val: styles[s].Filename});
+	}
+
+	for(var s = 0; s < settings.length; s++) {
+		var setting = settings[s];
+		settings_html += "<tr><td><b>" + setting.text + ":</b></td><td>" + setting.renderHTML() + "</td></tr>";
+	}
+
+	settings_html += "</table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
+	
+	settings_menu = new TopBarButton("Settings",function(){
+		showLightBox("Settings",settings_html,null)
+		$jq("button#save-settings-button").click(function() {
+			for(var s = 0; s < settings.length; s++) {
+				var val = settings[s].getVal();
+				if(val !== undefined) settings[s].setCookie(val);
+			}
+		});
+	});
+}
+
 $jq(document).ready(function() {
 	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
 	initCookies();
 
 	topbar = $jq("div#topbar");
-	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup><tr><td><b>Style:</b></td><td><select name=\"style\" style=\"min-width:50%\">"
-	for(var i = 0; i < styles.length; i++) {
-		settings_html += "<option value=\""+styles[i].Filename+"\">"+styles[i].Name;
-	}
-	settings_html+="</select></td><tr><tr><td><b>Pin top bar:</b></td><td><input type=\"checkbox\" /></td></tr><tr><td><b>Enable post previews on hover</b></td><td><input type=\"checkbox\" /></td></tr></table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>"
 
- 	settings_menu = new TopBarButton("Settings",function(){
- 		showLightBox("Settings",settings_html,null)
- 	});
+	initSettings();
+
  	watched_threads_btn = new TopBarButton("WT",function() {});
 
  	if(current_staff.rank > 0) {
@@ -436,7 +518,7 @@ $jq(document).ready(function() {
 
 	if(isFrontPage()) changeFrontPage(getHashVal());
 	else prepareThumbnails();
-	 preparePostPreviews(false);
+	preparePostPreviews(false);
 	$jq(".plus").click(function() {
 		var block = $jq(this).parent().next();
 		if(block.css("display") == "none") {
