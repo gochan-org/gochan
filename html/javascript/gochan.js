@@ -181,7 +181,6 @@ function showMessage(msg) {
 		lightbox_css_added = true;
 	}
 	$jq(document.body).prepend("<div class=\"lightbox-bg\"></div><div class=\"lightbox-msg\">"+msg+"<br /><button class=\"lightbox-msg-ok\" style=\"float: right; margin-top:8px;\">OK</button></div>");
-	console.log($jq(".lightbox-msg").width());
 	var centeroffset = parseInt($jq(".lightbox-msg").css("transform-origin").replace("px",""),10)+$jq(".lightbox-msg").width()/2
 	
 	$jq(".lightbox-msg").css({
@@ -342,7 +341,7 @@ function isFrontPage() {
 }
 
 function setCookie(name,value) {
-	document.cookie = name + "=" + escape(value)
+	document.cookie = name + "=" + escape(value) + ";path=" + webroot;
 }
 
 function getCookie(name) {
@@ -406,15 +405,15 @@ var Setting = function(id, text, type, defaultVal, callback, options) {
 	this.text = text;
 	this.type = type; // text, textarea, checkbox, select
 	this.defaultVal = defaultVal;
-	if(this.getCookie() === undefined) this.setCookie(this.defaultVal);
+	if(!this.getCookie()) this.setCookie(this.defaultVal);
 	if(this.type == "select") this.options = options;
 	if(!callback) this.callback = function() {};
 	else this.callback = callback;
 }
 
-Setting.prototype.onSave == function(newVal) {
-	this.callback();
+Setting.prototype.save = function(newVal) {
 	setCookie(this.id, newVal);
+	this.callback();
 }
 
 Setting.prototype.getCookie = function() {
@@ -449,6 +448,7 @@ Setting.prototype.renderHTML = function() {
 				if(this.getCookie() == this.options[o].val) html += "selected=\"" + this.getCookie() + "\"";
 				html += ">" + this.options[o].text + "</option>";
 			}
+			html += "</select>";
 			break;
 		case "textarea":
 			html = "<textarea id=\"" + this.id + "\" name=\"" + this.id + "\">" + this.getCookie() + "</textarea>";
@@ -461,11 +461,12 @@ Setting.prototype.renderHTML = function() {
 }
 
 function initSettings() {
-	var settings_html = "<table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup>";
+	var settings_html = "<div id=\"settings-container\" style=\"overflow:auto\"><table width=\"100%\"><colgroup><col span=\"1\" width=\"50%\"><col span=\"1\" width=\"50%\"></colgroup>";
 
 	settings.push(
-		new Setting("style", "Style", "select", "pipes.css", function() {
-
+		new Setting("style", "Style", "select", defaultStyle, function() {
+			console.log(this.getCookie());
+			document.getElementById("theme").setAttribute("href", webroot + "css/" + this.getCookie()); 
 		}, []),
 		new Setting("pintopbar", "Pin top bar", "checkbox", true),
 		new Setting("enableposthover", "Preview post on hover", "checkbox", true),
@@ -481,26 +482,37 @@ function initSettings() {
 		settings_html += "<tr><td><b>" + setting.text + ":</b></td><td>" + setting.renderHTML() + "</td></tr>";
 	}
 
-	settings_html += "</table><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
+	settings_html += "</table></div><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
 	
 	settings_menu = new TopBarButton("Settings",function(){
 		showLightBox("Settings",settings_html,null)
 		$jq("button#save-settings-button").click(function() {
 			for(var s = 0; s < settings.length; s++) {
 				var val = settings[s].getVal();
-				if(val !== undefined) settings[s].setCookie(val);
+				settings[s].save(val);
 			}
 		});
 	});
 }
 
 $jq(document).ready(function() {
+	var style = getCookie("style");
+	if(style === undefined) style = defaultStyle;
+	var themeElem = document.getElementById("theme");
+	if(themeElem) themeElem.setAttribute("href", webroot + "css/" + style);
 	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
 	initCookies();
 
 	topbar = $jq("div#topbar");
-
+	if(getCookie("pintopbar") == "false") {
+		topbar.css({
+			"position": "absolute",
+			"top": "0px",
+			"padding-left": "0px",
+			"padding-right": "0px",
+		});
+	}
 	initSettings();
 
  	watched_threads_btn = new TopBarButton("WT",function() {});

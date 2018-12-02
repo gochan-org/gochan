@@ -1,9 +1,10 @@
 	<title>Gochan Manage page</title>
 	<link rel="stylesheet" href="{{.SiteWebfolder}}css/global.css" />
-	<link rel="stylesheet" href="{{$.SiteWebfolder}}css/{{.DefaultStyle}}" />
+	<link id="theme" rel="stylesheet" href="{{.SiteWebfolder}}css/{{.DefaultStyle}}" />
 	<link rel="shortcut icon" href="{{.SiteWebfolder}}favicon.png" />
 	<script type="text/javascript">
 		var styles = [{{range $ii, $style := .Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
+		var defaultStyle = "{{.DefaultStyle}}";
 		var webroot = "{{.SiteWebfolder}}"
 	</script>
 	<script type="text/javascript" src="{{.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
