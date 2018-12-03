@@ -2,15 +2,14 @@ var $jq = jQuery.noConflict();
 
 var down_arrow_symbol = "&#9660;";
 var up_arrow_symbol = "&#9650;";
-var board;
-var topbar;
-var settings_menu;
-var staff_btn;
-var watched_threads_btn;
+var $topbar;
+var $settings_menu;
+var $staff_btn;
+var $watched_threads_btn;
 var settings = [];
 var current_staff;
 var dropdown_div_created = false;
-var qr_enabled = false;
+var $qr;
 
 var movable_postpreviews = true;
 var expandable_postrefs = true;
@@ -125,10 +124,10 @@ function prepareThumbnails() {
 
 var TopBarButton = function(title,callback_open, callback_close) {
 	this.title = title;
-	$jq("div#topbar").append("<a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\">"+title+down_arrow_symbol+"</a>");
+	$topbar.append("<a href=\"javascript:void(0)\" class=\"dropdown-button\" id=\""+title.toLowerCase()+"\">"+title+down_arrow_symbol+"</a>");
 	var button_open = false;
 
-	$jq("div#topbar a#"+title.toLowerCase()).click(function(event) {
+	$topbar.find("a#"+title.toLowerCase()).click(function(event) {
 		if(!button_open) {
 			callback_open();
 			if(callback_close != null) {
@@ -151,10 +150,10 @@ var DropDownMenu = function(title,menu_html) {
 	this.title = title;
 	this.menuHTML = menu_html;
 	this.button = new TopBarButton(title, function() {
-		topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>");
+		$topbar.after("<div id=\""+title.toLowerCase()+"\" class=\"dropdown-menu\">"+menu_html+"</div>");
 		$jq("a#"+title.toLowerCase() + "-menu").children(0).html(title+up_arrow_symbol);
 		$jq("div#"+title.toLowerCase()).css({
-			top:topbar.height()
+			top:$topbar.outerHeight()
 		});
 	}, function() {
 		$jq("div#"+title.toLowerCase() + ".dropdown-menu").remove();
@@ -182,7 +181,7 @@ function showMessage(msg) {
 	}
 	$jq(document.body).prepend("<div class=\"lightbox-bg\"></div><div class=\"lightbox-msg\">"+msg+"<br /><button class=\"lightbox-msg-ok\" style=\"float: right; margin-top:8px;\">OK</button></div>");
 	var centeroffset = parseInt($jq(".lightbox-msg").css("transform-origin").replace("px",""),10)+$jq(".lightbox-msg").width()/2
-	
+
 	$jq(".lightbox-msg").css({
 		"position": "fixed",
 		"left": $jq(document).width()/2 - centeroffset/2-16
@@ -202,7 +201,7 @@ function showMessage(msg) {
 function changeFrontPage(page_name) {
 	var tabs = $jq(".tab");
 	var pages = $jq(".page");
-	var current_page = getHashVal();
+	var current_page = window.location.hash.replace("#","");
 	pages.hide();
 	if(current_page=="") {
 		$jq(pages[0]).show();
@@ -225,7 +224,7 @@ function changeFrontPage(page_name) {
 	}
 
 	tabs.find("a").click(function(event) {
-		current_page = getHashVal($jq(this).attr("href"));
+		var current_page = this.href.substring(this.href.lastIndexOf("#")+1);
 
 		if(current_page == "") {
 			$jq("#current-tab").attr({"id":""});
@@ -259,7 +258,6 @@ function changeFrontPage(page_name) {
 // heavily based on 4chan's quote() function, with a few tweaks
 function quote(e) {
 	var msgbox_id = "postmsg";
-	if(qr_enabled) msgbox_id = "postmsg-qr";
 
 	if (document.selection) {
 		document.getElementById(msgbox_id).focus();
@@ -304,20 +302,6 @@ function getArg(name) {
 	return args[name];
 }
 
-function getHashVal() {
-	var href = window.location.href;
-	if(arguments.length == 1) {
-		href = arguments[0];
-	}
-	if(href.indexOf("#") == -1) {
-		return "";
-	} else {
-		var hash = href.substring(href.indexOf("#"),href.length);
-		if(hash == "#") return ""
-		else return hash.substring(1,hash.length);
-	}
-}
-
 function hidePost(id) {
 	var posttext = $jq("div#"+id+".post .posttext");
 	if(posttext.length > 0) posttext.remove();
@@ -329,29 +313,31 @@ function hidePost(id) {
 
 // gets cookies ready to be used elsewhere
 function initCookies() {
-	$jq("input#postname").val(getCookie("name"));
-	$jq("input#postemail").val(getCookie("email"));
-	$jq("input#postpassword").val(getCookie("password"));
-	$jq("input#delete-password").val(getCookie("password"));
-}
-
-function isFrontPage() {
-	var page = window.location.pathname;
-	return page == "/" || page == "/index.html" || page == "/template.html";
+	$jq("input[name=postname]").val(getCookie("name", ""));
+	$jq("input[name=postemail]").val(getCookie("email", ""));
+	$jq("input[name=postpassword]").val(getCookie("password", ""));
+	$jq("input[name=delete-password]").val(getCookie("password", ""));
 }
 
 function setCookie(name,value) {
 	document.cookie = name + "=" + escape(value) + ";path=" + webroot;
 }
 
-function getCookie(name) {
+function getCookie(name, defaultVal) {
+	var val = defaultVal;
 	var cookie_arr = document.cookie.split("; ");
 	for(var i = 0; i < cookie_arr.length; i++) {
 		pair = cookie_arr[i].split("=");
 		if(pair[0] == name) {
-			return decodeURIComponent(pair[1].replace("+", " ").replace("%2B", "+"))
+			try {
+				val = decodeURIComponent(pair[1].replace("+", " ").replace("%2B", "+"))
+			} catch {
+				return defaultVal;
+			}
+			break;
 		}
 	}
+	return val;
 }
 
 function reportPost(id) {
@@ -400,12 +386,32 @@ $jq(document).keydown(function(e) {
 	}
 });
 
+function getPageThread() {
+	var pathArr = window.location.pathname.split("/");
+	if(pathArr.length < 3) {
+		return {board: "", boardID: -1, thread: 0};
+	} else if(pathArr.length == 3) {
+		return {board: pathArr[1], boardID: $jq("form#postform input[name=boardid]").val() -1, thread: 0};
+	} else if(pathArr.length > 3) {
+		return {board: pathArr[1], boardID: $jq("form#postform input[name=boardid]").val() -1, thread: parseInt(pathArr[3].replace(".html",""))};
+	}
+}
+
+function getSetting(id) {
+	for(var s = 0; s < settings.length; s++) {
+		if(settings[s].id == id) return settings[s];
+	}
+	return {};
+}
+
 var Setting = function(id, text, type, defaultVal, callback, options) {
 	this.id = id;
 	this.text = text;
 	this.type = type; // text, textarea, checkbox, select
 	this.defaultVal = defaultVal;
-	if(!this.getCookie()) this.setCookie(this.defaultVal);
+	if(getCookie(this.id) == undefined) {
+		this.setCookie(this.defaultVal);
+	}
 	if(this.type == "select") this.options = options;
 	if(!callback) this.callback = function() {};
 	else this.callback = callback;
@@ -416,8 +422,8 @@ Setting.prototype.save = function(newVal) {
 	this.callback();
 }
 
-Setting.prototype.getCookie = function() {
-	var val = getCookie(this.id);
+Setting.prototype.getCookie = function(defaultVal) {
+	var val = getCookie(this.id, defaultVal);
 	if(this.type == "checkbox") val = (val == "true");
 	return val;
 }
@@ -465,12 +471,12 @@ function initSettings() {
 
 	settings.push(
 		new Setting("style", "Style", "select", defaultStyle, function() {
-			console.log(this.getCookie());
-			document.getElementById("theme").setAttribute("href", webroot + "css/" + this.getCookie()); 
+			document.getElementById("theme").setAttribute("href", webroot + "css/" + this.getCookie(defaultStyle)); 
 		}, []),
 		new Setting("pintopbar", "Pin top bar", "checkbox", true),
 		new Setting("enableposthover", "Preview post on hover", "checkbox", true),
 		new Setting("enablepostclick", "Preview post on click", "checkbox", true),
+		new Setting("useqr", "Use Quick Reply box", "checkbox", true)
 	);
 
 	for(var s = 0; s < styles.length; s++) {
@@ -483,8 +489,8 @@ function initSettings() {
 	}
 
 	settings_html += "</table></div><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
-	
-	settings_menu = new TopBarButton("Settings",function(){
+
+	$settings_menu = new TopBarButton("Settings",function(){
 		showLightBox("Settings",settings_html,null)
 		$jq("button#save-settings-button").click(function() {
 			for(var s = 0; s < settings.length; s++) {
@@ -495,18 +501,91 @@ function initSettings() {
 	});
 }
 
+function initQR(pageThread) {
+	var $qrbuttons = $jq("<div />").prop("id", "qrbuttons")
+		.append(
+			"<input type=\"file\" id=\"imagefile\" style=\"display: none;\" />" +
+			"<input name=\"imagefilebtn\" type=\"button\" onclick=\"document.getElementById('imagefile').click();\" value=\"Browse...\">" +
+			"<input type=\"submit\" value=\"Post\" style=\"float:right;\"/>"
+		)
+	var $postform = $jq("<form />").prop({
+			id: "qrpostform",
+			name:"qrpostform",
+			action:"/post",
+			method:"POST",
+			enctype:"multipart/form-data"
+		}).append(
+			"<input type=\"hidden\" name=\"threadid\" value=\"" + pageThread.thread +"\" />" +
+			"<input type=\"hidden\" name=\"boardid\" value=\"1\" />" +
+			"<div id=\"qrpostname\"><input id=\"qrpostname\" type=\"text\" name=\"postname\" value=\"" + getCookie("name","") + "\" placeholder=\"Name\"/></div>" +
+			"<div id=\"qrpostemail\"><input id=\"qrpostemail\" type=\"text\" name=\"postemail\" value=\"" + getCookie("email","") + "\" placeholder=\"Email\"/></div>" +
+			"<div id=\"qrpostsubject\"><input id=\"qrpostsubject\" type=\"text\" name=\"postsubject\" placeholder=\"Subject\"/></div>" +
+			"<div id=\"qrpostmsg\"><textarea id=\"qrpostmsg\" name=\"postmsg\" id=\"postmsg\" placeholder=\"Message\"></textarea></div>",
+			$qrbuttons
+		);
+	var qrTop = 32;
+	if(!getCookie("pintopbar",true)) qrTop = $topbar.outerHeight() + 16;
+
+	var qrPos = JSON.parse(getCookie("qrpos", JSON.stringify({top: qrTop, left: 16})));
+	$qr = $jq("<div />").prop({
+			id: "qr-box",
+			style: "top:" + qrPos.top + "px;left:" + qrPos.left + "px;position:fixed"
+		}).append(
+			$jq("<div id=\"qr-title\" >" +
+				"<span id=\"qr-message\"></span>" +
+				"<span id=\"qr-buttons\"><a href=\"javascript:toBottom();\">&#9660;</a>" +
+				"<a href=\"javascript:toTop();\">&#9650;</a><a href=\"javascript:closeQR();\">X</a></span></div>"),
+			$postform
+		).draggable({
+			handle: "div#qr-title",
+			scroll: false,
+			containment: "window",
+			drag: function(event, ui) {
+				setCookie("qrpos", JSON.stringify(ui.position));
+				if(ui.position.top <= $topbar.outerHeight()) return false;
+			}
+		}).insertAfter("div#footer");
+
+	// Thread updating needs to be implemented for this to be useful
+	/* $jq("form#qrpostform").submit(function(e) {
+		var $form = $jq(this);
+		e.preventDefault();
+		$jq.ajax({
+			type: "POST",
+			url: $form.attr("action"),
+			data: $form.serialize(),
+			success: function(data) {
+
+			}
+		})
+		return false;
+	}); */
+}
+
+function closeQR() {
+	if($qr) $qr.remove();
+}
+
+function toTop() {
+	window.scrollTo(0,0);
+}
+
+function toBottom() {
+	window.scrollTo(0,document.body.scrollHeight);
+}
+
 $jq(document).ready(function() {
-	var style = getCookie("style");
-	if(style === undefined) style = defaultStyle;
+	var pageThread = getPageThread();
+
+	var style = getCookie("style", defaultStyle);
 	var themeElem = document.getElementById("theme");
 	if(themeElem) themeElem.setAttribute("href", webroot + "css/" + style);
-	board = location.pathname.substring(1,location.pathname.indexOf("/",1))
 	current_staff = getStaff()
 	initCookies();
 
-	topbar = $jq("div#topbar");
-	if(getCookie("pintopbar") == "false") {
-		topbar.css({
+	$topbar = $jq("div#topbar");
+	if(!getCookie("pintopbar", true)) {
+		$topbar.css({
 			"position": "absolute",
 			"top": "0px",
 			"padding-left": "0px",
@@ -515,21 +594,25 @@ $jq(document).ready(function() {
 	}
 	initSettings();
 
- 	watched_threads_btn = new TopBarButton("WT",function() {});
+	$watched_threads_btn = new TopBarButton("WT",function() {});
 
- 	if(current_staff.rank > 0) {
- 		staff_btn = new DropDownMenu("Staff",getStaffMenuHTML())
- 		$jq("a#staff.dropdown-button").click(function() {
- 			$jq("a.staffmenu-item").click(function() {
+	if(current_staff.rank > 0) {
+		$staff_btn = new DropDownMenu("Staff",getStaffMenuHTML())
+		$jq("a#staff.dropdown-button").click(function() {
+			$jq("a.staffmenu-item").click(function() {
 	 			var url = $jq(this).attr("id");
 				openStaffLightBox(url)
 	 		});
- 		});
- 		addStaffButtons();
- 	}
+		});
+		addStaffButtons();
+	}
 
-	if(isFrontPage()) changeFrontPage(getHashVal());
-	else prepareThumbnails();
+	if(pageThread.board == "") changeFrontPage(window.location.hash);
+	else {
+		prepareThumbnails();
+		if(getCookie("useqr") == "true") initQR(pageThread);
+	}
+
 	preparePostPreviews(false);
 	$jq(".plus").click(function() {
 		var block = $jq(this).parent().next();
@@ -546,7 +629,7 @@ $jq(document).ready(function() {
 		e.stopPropagation();
 		var post_id = $jq(this).parent().parent().parent().attr("id");
 		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread";
-		
+
 		if(post_id != undefined) {
 			if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {
 				$jq("div.thread-ddown-menu").remove();

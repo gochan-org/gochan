@@ -1,0 +1,64 @@
+@import '../util';
+
+div#qr-box {
+	// overflow:none;
+	padding:1px;
+	@include box-sizing(border-box);
+	min-width: 300px;
+	background-color:lightgray;
+	border: 1px solid #000;
+	display: table;
+
+	input[type=text],textarea {
+		display: table-cell;
+		min-width:300px;
+		background-color: #FFF!important;
+		color: #000!important;
+		width:100%;
+		@include box-sizing(border-box);
+	}
+	input[type=file] {
+		background-color: lightgray!important;
+		border: none!important;
+		color: #000!important;
+		width: auto;
+	}
+	label {
+		color: #000;
+	}
+	textarea {
+		min-height:40px;
+	}
+}
+
+div#qr-title {
+	background-color: #000;
+	min-width: 100%;
+	height: 22px;
+	color: #FFF;
+	text-align:right;
+	font-weight:bold;
+	width:100%;
+	cursor:move;
+}
+
+div#qr-title span#qr-buttons {
+	padding: 4px;
+}
+
+div#qr-title * {
+	text-decoration:none;
+	color:#FFF;
+	font-size: 15px;
+}
+
+table#qr-postbox {
+	width:100%;
+	input[type=text] {
+		width:100%
+	}
+	textarea {
+		background-color: #FFF!important;
+		color: #000;
+	}
+}

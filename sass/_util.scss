@@ -4,3 +4,9 @@
 	-webkit-box-shadow: $properties;
 	box-shadow: $properties;
 }
+
+@mixin box-sizing($sizing) {
+	box-sizing: $sizing;
+	-moz-box-sizing: $sizing;
+	-webkit-box-sizing: $sizing;
+}

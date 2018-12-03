@@ -598,6 +598,13 @@ func makePostJSON(post PostTable, anonymous string) (postObj PostJSON) {
 	return
 }
 
+func limitArraySize(arr []string, maxSize int) []string {
+	if maxSize > len(arr)-1 || maxSize < 0 {
+		return arr
+	}
+	return arr[:maxSize]
+}
+
 func numReplies(boardid, threadid int) int {
 	var num int
 	if err := queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ?",
