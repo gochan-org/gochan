@@ -331,7 +331,7 @@ function getCookie(name, defaultVal) {
 		if(pair[0] == name) {
 			try {
 				val = decodeURIComponent(pair[1].replace("+", " ").replace("%2B", "+"))
-			} catch {
+			} catch(err) {
 				return defaultVal;
 			}
 			break;
