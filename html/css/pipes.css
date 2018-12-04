@@ -130,6 +130,7 @@ form#postform input[type=text], form#postform input[type=password], form#postfor
 }
 
 body {
+  background-color: #363942;
   background-image: url(res/pipes_bg.png);
   color: #d8d0b9;
   font: 12pt sans-serif;

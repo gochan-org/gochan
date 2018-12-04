@@ -504,7 +504,7 @@ function initSettings() {
 function initQR(pageThread) {
 	var $qrbuttons = $jq("<div />").prop("id", "qrbuttons")
 		.append(
-			"<input type=\"file\" id=\"imagefile\" style=\"display: none;\" />" +
+			"<input type=\"file\" id=\"imagefile\" name=\"imagefile\" style=\"display: none;\" />" +
 			"<input name=\"imagefilebtn\" type=\"button\" onclick=\"document.getElementById('imagefile').click();\" value=\"Browse...\">" +
 			"<input type=\"submit\" value=\"Post\" style=\"float:right;\"/>"
 		)

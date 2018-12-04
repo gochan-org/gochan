@@ -1,10 +1,3 @@
-div.page {
-	float: left;
-	width: 75%;
-	margin-left: 8px;
-	overflow-y: hidden;
-}
-
 div.section-block {
 	margin-bottom: 8px;
 	div.section-title-block {
@@ -39,10 +32,13 @@ div#top-pane {
 	}
 }
 
+col#recent {
+	width:22%;
+}
+
 #tab-bar {
-	margin-bottom: 0px;
-	margin-top: 2px;
 	margin-left: -24px;
+	display: inline;
 	.tab {
 		display: inline;
 		padding: 0px 8px 0px 8px;
@@ -50,12 +46,9 @@ div#top-pane {
 }
 
 div#recent-posts {
-	width:22%;
-	float: right;
 	margin-right: 8px;
 	display: inline-block;
 	img {
-		float: left;
 		padding-right: 8px;
 	}
 	div.section-body {

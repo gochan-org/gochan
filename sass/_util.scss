@@ -6,7 +6,14 @@
 }
 
 @mixin box-sizing($sizing) {
-	box-sizing: $sizing;
 	-moz-box-sizing: $sizing;
 	-webkit-box-sizing: $sizing;
+	box-sizing: $sizing;
+}
+
+@mixin border-radius($properties...) {
+	-moz-border-radius: $properties;
+	-ms-border-radius: $properties;
+	-webkit-border-radius: $properties;
+	border-radius: $properties;
 }

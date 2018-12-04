@@ -219,13 +219,6 @@ div.inlinepostprev {
   padding: 4px 8px 4px 8px;
 }
 
-div.page {
-  float: left;
-  width: 75%;
-  margin-left: 8px;
-  overflow-y: hidden;
-}
-
 div.section-block {
   margin-bottom: 8px;
 }
@@ -259,10 +252,13 @@ div#top-pane span#site-title {
   font-size: 50px;
 }
 
+col#recent {
+  width: 22%;
+}
+
 #tab-bar {
-  margin-bottom: 0px;
-  margin-top: 2px;
   margin-left: -24px;
+  display: inline;
 }
 #tab-bar .tab {
   display: inline;
@@ -270,13 +266,10 @@ div#top-pane span#site-title {
 }
 
 div#recent-posts {
-  width: 22%;
-  float: right;
   margin-right: 8px;
   display: inline-block;
 }
 div#recent-posts img {
-  float: left;
   padding-right: 8px;
 }
 div#recent-posts div.section-body {
@@ -429,9 +422,9 @@ input.config-text {
 
 div#qr-box {
   padding: 1px;
-  box-sizing: border-box;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
+  box-sizing: border-box;
   min-width: 300px;
   background-color: lightgray;
   border: 1px solid #000;
@@ -443,9 +436,9 @@ div#qr-box input[type=text], div#qr-box textarea {
   background-color: #FFF !important;
   color: #000 !important;
   width: 100%;
-  box-sizing: border-box;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
+  box-sizing: border-box;
 }
 div#qr-box input[type=file] {
   background-color: lightgray !important;
