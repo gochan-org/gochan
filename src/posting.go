@@ -426,7 +426,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 					return
 				}
 
-				accessLog.Print("Receiving post with video: " + handler.Filename + " from " + request.RemoteAddr + ", referrer: " + request.Referer())
+				accessLog.Print("Receiving post with video: " + handler.Filename + " from " + post.IP + ", referrer: " + request.Referer())
 				if post.ParentID == 0 {
 					err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth)
 					if err != nil {
@@ -502,7 +502,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 						post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
 					}
 
-					accessLog.Print("Receiving post with image: " + handler.Filename + " from " + request.RemoteAddr + ", referrer: " + request.Referer())
+					accessLog.Print("Receiving post with image: " + handler.Filename + " from " + post.IP + ", referrer: " + request.Referer())
 
 					if request.FormValue("spoiler") == "on" {
 						// If spoiler is enabled, symlink thumbnail to spoiler image
