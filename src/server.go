@@ -49,7 +49,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 			}
 		} else {
 			//the file exists, and is not a folder
-			extension := getFileExtension(request.URL.Path)
+			extension := strings.ToLower(getFileExtension(request.URL.Path))
 			switch extension {
 			case "png":
 				writer.Header().Add("Content-Type", "image/png")

@@ -384,7 +384,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		} else {
 			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
-			thumbFiletype := filetype
+			thumbFiletype := strings.ToLower(filetype)
 			if thumbFiletype == "gif" || thumbFiletype == "webm" {
 				thumbFiletype = "jpg"
 			}
