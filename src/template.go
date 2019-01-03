@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -173,6 +174,13 @@ var funcMap = template.FuncMap{
 	},
 	"isBanned":   isBanned,
 	"numReplies": numReplies,
+	"getBoardDir": func(id int) string {
+		board, err := getBoardFromID(id)
+		if err != nil {
+			return ""
+		}
+		return board.Dir
+	},
 
 	// Template convenience functions
 	"makeLoop": func(n int, offset int) []int {
@@ -266,7 +274,11 @@ func loadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
 	for i, file := range files {
 		templates = append(templates, file)
-		files[i] = config.TemplateDir + "/" + files[i]
+		if _, err := os.Stat(config.TemplateDir + "/override/" + file); !os.IsNotExist(err) {
+			files[i] = config.TemplateDir + "/override/" + files[i]
+		} else {
+			files[i] = config.TemplateDir + "/" + files[i]
+		}
 	}
 
 	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)

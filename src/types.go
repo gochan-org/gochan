@@ -675,10 +675,6 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 		}
 	}
 
-	if config.MaxRecentPosts == 0 {
-		config.MaxRecentPosts = 10
-	}
-
 	if config.MaxLogDays == 0 {
 		config.MaxLogDays = 15
 	}
