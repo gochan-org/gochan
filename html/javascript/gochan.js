@@ -319,8 +319,15 @@ function initCookies() {
 	$jq("input[name=delete-password]").val(getCookie("password", ""));
 }
 
-function setCookie(name,value) {
-	document.cookie = name + "=" + escape(value) + ";path=" + webroot;
+function setCookie(name,value, expires) {
+	var expiresStr = "";
+	if(expires) {
+		expiresStr = ";expires="
+		var d = new Date();
+		d.setTime(d.getTime() + 1000*60*60*24*expires)
+		expiresStr += d.toUTCString();
+	}
+	document.cookie = name + "=" + escape(value) + expiresStr + ";path=" + webroot;
 }
 
 function getCookie(name, defaultVal) {
@@ -410,15 +417,15 @@ var Setting = function(id, text, type, defaultVal, callback, options) {
 	this.type = type; // text, textarea, checkbox, select
 	this.defaultVal = defaultVal;
 	if(getCookie(this.id) == undefined) {
-		this.setCookie(this.defaultVal);
+		this.setCookie(this.defaultVal, 7);
 	}
 	if(this.type == "select") this.options = options;
 	if(!callback) this.callback = function() {};
 	else this.callback = callback;
 }
 
-Setting.prototype.save = function(newVal) {
-	setCookie(this.id, newVal);
+Setting.prototype.save = function(newVal, expires) {
+	setCookie(this.id, newVal, expires);
 	this.callback();
 }
 
@@ -428,8 +435,8 @@ Setting.prototype.getCookie = function(defaultVal) {
 	return val;
 }
 
-Setting.prototype.setCookie = function(val) {
-	setCookie(this.id, val);
+Setting.prototype.setCookie = function(val,expires) {
+	setCookie(this.id, val,expires);
 }
 
 Setting.prototype.getVal = function() {
@@ -541,7 +548,7 @@ function initQR(pageThread) {
 			scroll: false,
 			containment: "window",
 			drag: function(event, ui) {
-				setCookie("qrpos", JSON.stringify(ui.position));
+				setCookie("qrpos", JSON.stringify(ui.position),7);
 				if(ui.position.top <= $topbar.outerHeight()) return false;
 			}
 		}).insertAfter("div#footer");

@@ -122,7 +122,7 @@ sudo chown -R vagrant:vagrant /home/vagrant/bin
 
 go get github.com/disintegration/imaging
 go get github.com/nranchev/go-libGeoIP
-go get github.com/nyarla/go-crypt
+#go get github.com/nyarla/go-crypt
 go get github.com/go-sql-driver/mysql
 go get github.com/lib/pq
 go get golang.org/x/crypto/bcrypt
