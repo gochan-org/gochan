@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/frustra/bbcode"
@@ -35,6 +36,21 @@ type RecentPost struct {
 	ThumbH    int
 	IP        string
 	Timestamp time.Time
+}
+
+func (p *RecentPost) GetURL(includeDomain bool) string {
+	postURL := ""
+	if includeDomain {
+		postURL += config.SiteDomain
+	}
+	idStr := strconv.Itoa(p.PostID)
+	postURL += config.SiteWebfolder + p.BoardName + "/res/"
+	if p.ParentID == 0 {
+		postURL += idStr + ".html#" + idStr
+	} else {
+		postURL += strconv.Itoa(p.ParentID) + ".html#" + idStr
+	}
+	return postURL
 }
 
 type Thread struct {
@@ -234,6 +250,27 @@ type PostTable struct {
 	Sillytag         bool
 }
 
+func (p *PostTable) GetURL(includeDomain bool) string {
+	postURL := ""
+	if includeDomain {
+		postURL += config.SiteDomain
+	}
+
+	board, err := getBoardFromID(p.BoardID)
+	if err != nil {
+		return postURL
+	}
+
+	idStr := strconv.Itoa(p.ID)
+	postURL += config.SiteWebfolder + board.Dir + "/res/"
+	if p.ParentID == 0 {
+		postURL += idStr + ".html#" + idStr
+	} else {
+		postURL += strconv.Itoa(p.ParentID) + ".html#" + idStr
+	}
+	return postURL
+}
+
 // Sanitize escapes HTML strings in a post. This should be run immediately before
 // the post is inserted into the database
 func (p *PostTable) Sanitize() {
@@ -421,11 +458,12 @@ type GochanConfig struct {
 	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
 	EnableQuickReply         bool     `description:"If checked, an optional quick reply box is used. This may end up being removed." default:"checked"`
 
-	DateTimeFormat  string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
-	AkismetAPIKey   string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
-	EnableGeoIP     bool   `description:"If checked, this enables the usage of GeoIP for posts." default:"checked"`
-	GeoIPDBlocation string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information." default:"/usr/share/GeoIP/GeoIP.dat"`
-	MaxRecentPosts  int    `description:"The maximum number of posts to show on the Recent Posts list on the front page." default:"3"`
+	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
+	AkismetAPIKey         string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+	EnableGeoIP           bool   `description:"If checked, this enables the usage of GeoIP for posts." default:"checked"`
+	GeoIPDBlocation       string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information." default:"/usr/share/GeoIP/GeoIP.dat"`
+	MaxRecentPosts        int    `description:"The maximum number of posts to show on the Recent Posts list on the front page." default:"3"`
+	RecentPostsWithNoFile bool   `description:"If checked, recent posts with no image/upload are shown on the front page (as well as those with images" default:"unchecked"`
 	// Verbosity = 0 for no debugging info. Critical errors and general output only
 	// Verbosity = 1 for non-critical warnings and important info
 	// Verbosity = 2 for all debugging/benchmarks/warnings

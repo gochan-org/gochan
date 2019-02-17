@@ -1,0 +1,22 @@
+@import '../util';
+@import 'colors';
+
+div.reply {
+	background-color: $replycol;
+	border: 1px solid $replyborder;
+	@include border-radius(5px);
+}
+
+span.subject {
+	color: $subjectcol;
+}
+
+div.section-title-block {
+	background-color: $replyborder;
+}
+
+div.section-block {
+	@include border-radius(5px);
+	background-color: $sectionbg;
+	border: 1px solid $sectionborder;
+}

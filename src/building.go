@@ -13,11 +13,9 @@ import (
 )
 
 // build front page using templates/front.html
-// TODO: provide alternative layouts (like 4chan, tinyboard, etc)
 func buildFrontPage() (html string) {
 	initTemplates()
-	var front_arr []interface{}
-	var recent_posts_arr []interface{}
+	var recentPostsArr []interface{}
 
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
@@ -26,54 +24,49 @@ func buildFrontPage() (html string) {
 		return handleError(1, "Failed opening front page for writing: "+err.Error()) + "<br />\n"
 	}
 
-	// get front pages
-	rows, err := querySQL("SELECT * FROM `" + config.DBprefix + "frontpage`")
-	defer closeRows(rows)
-	if err != nil {
-		return handleError(1, "Failed getting front page rows: "+err.Error())
-	}
-
-	for rows.Next() {
-		frontpage := new(FrontTable)
-		if err = rows.Scan(&frontpage.ID, &frontpage.Page, &frontpage.Order, &frontpage.Subject,
-			&frontpage.Message, &frontpage.Timestamp, &frontpage.Poster, &frontpage.Email); err != nil {
-			return handleError(1, err.Error())
-		}
-		front_arr = append(front_arr, frontpage)
-	}
-
 	// get recent posts
-	rows, err = querySQL("SELECT `"+config.DBprefix+"posts`.`id`, "+
-		"`"+config.DBprefix+"posts`.`parentid`, "+
-		"`"+config.DBprefix+"boards`.`dir` AS boardname, "+
-		"`"+config.DBprefix+"posts`.`boardid` AS boardid, "+
-		"`name`, `tripcode`, `message`, `filename`, `thumb_w`, `thumb_h` "+
-		"FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` "+
-		"WHERE `"+config.DBprefix+"posts`.`deleted_timestamp` = ? "+
-		"AND `boardid` = `"+config.DBprefix+"boards`.`id` "+
-		"ORDER BY `timestamp` DESC LIMIT ?",
-		nilTimestamp, config.MaxRecentPosts,
-	)
+	recentQueryStr := "SELECT `" + config.DBprefix + "posts`.`id`, " +
+		"`" + config.DBprefix + "posts`.`parentid`, " +
+		"`" + config.DBprefix + "boards`.`dir` AS boardname, " +
+		"`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
+		"`name`, `tripcode`, `message`, `filename`, `thumb_w`, `thumb_h` " +
+		"FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
+		"WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = ? "
+	if !config.RecentPostsWithNoFile {
+		recentQueryStr += "AND `" + config.DBprefix + "posts`.`filename` != '' AND `" + config.DBprefix + "posts`.filename != 'deleted' "
+	}
+	recentQueryStr += "AND `boardid` = `" + config.DBprefix + "boards`.`id` " +
+		"ORDER BY `timestamp` DESC LIMIT ?"
+
+	rows, err := querySQL(recentQueryStr, nilTimestamp, config.MaxRecentPosts)
 	defer closeRows(rows)
 	if err != nil {
 		return handleError(1, err.Error())
 	}
 
 	for rows.Next() {
-		recent_post := new(RecentPost)
-		err = rows.Scan(&recent_post.PostID, &recent_post.ParentID, &recent_post.BoardName, &recent_post.BoardID, &recent_post.Name, &recent_post.Tripcode, &recent_post.Message, &recent_post.Filename, &recent_post.ThumbW, &recent_post.ThumbH)
-		if err != nil {
+		recentPost := new(RecentPost)
+		if err = rows.Scan(
+			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
+			&recentPost.Name, &recentPost.Tripcode, &recentPost.Message, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
+		); err != nil {
 			return handleError(1, "Failed getting list of recent posts for front page: "+err.Error())
 		}
-		recent_posts_arr = append(recent_posts_arr, recent_post)
+		recentPostsArr = append(recentPostsArr, recentPost)
+	}
+
+	for i := range allBoards {
+		board := allBoards[i].(BoardsTable)
+		if board.Section == 0 {
+			board.Section = 1
+		}
 	}
 
 	if err = front_page_tmpl.Execute(front_file, map[string]interface{}{
 		"config":       config,
-		"fronts":       front_arr,
-		"boards":       allBoards,
 		"sections":     allSections,
-		"recent_posts": recent_posts_arr,
+		"boards":       allBoards,
+		"recent_posts": recentPostsArr,
 	}); err != nil {
 		return handleError(1, "Failed executing front page template: "+err.Error())
 	}

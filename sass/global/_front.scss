@@ -46,18 +46,28 @@ col#recent {
 }
 
 div#recent-posts {
-	margin-right: 8px;
-	display: inline-block;
-	img {
-		padding-right: 8px;
-	}
-	div.section-body {
-		padding-top: 8px;
+	margin:auto;
+	display: block;
+	width:90%;
+	div.recent-post {
+		vertical-align: top;
+		display: inline-block;
+		word-wrap: break-word;
+		overflow: hidden;
+		margin-top: 5px;
+		padding: 5px 0 3px;
+		position: relative;
+		width: 200px;
+		max-height: 320px;
+		margin-bottom: 10px;
+		text-align:center;
 	}
 }
 
-div#main {
-	overflow: hidden
+div#frontpage {
+	overflow: hidden;
+	width: 80%;
+	margin:auto;
 }
 
 a.permalink {

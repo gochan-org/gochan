@@ -266,18 +266,28 @@ col#recent {
 }
 
 div#recent-posts {
-  margin-right: 8px;
+  margin: auto;
+  display: block;
+  width: 90%;
+}
+div#recent-posts div.recent-post {
+  vertical-align: top;
   display: inline-block;
-}
-div#recent-posts img {
-  padding-right: 8px;
-}
-div#recent-posts div.section-body {
-  padding-top: 8px;
+  word-wrap: break-word;
+  overflow: hidden;
+  margin-top: 5px;
+  padding: 5px 0 3px;
+  position: relative;
+  width: 200px;
+  max-height: 320px;
+  margin-bottom: 10px;
+  text-align: center;
 }
 
-div#main {
+div#frontpage {
   overflow: hidden;
+  width: 80%;
+  margin: auto;
 }
 
 a.permalink {

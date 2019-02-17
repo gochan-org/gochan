@@ -973,6 +973,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
+			resetBoardSectionArrays()
 			return buildFrontPage() + "<hr />\n" +
 				buildBoardListJSON() + "<hr />\n" +
 				buildBoards(true, 0) + "<hr />\n"

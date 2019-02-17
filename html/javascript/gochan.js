@@ -197,63 +197,6 @@ function showMessage(msg) {
 	});
 }
 
-// organize front page into tabs
-function changeFrontPage(page_name) {
-	var tabs = $jq(".tab");
-	var pages = $jq(".page");
-	var current_page = window.location.hash.replace("#","");
-	pages.hide();
-	if(current_page=="") {
-		$jq(pages[0]).show();
-	} else {
-		for(var p = 0; p < pages.length; p++) {
-			var page = $jq(pages[p]);
-			if(page.attr("id").replace("-page","").replace("page","") == current_page) {
-				page.show()
-			}
-		}
-	}
-
-	for(var i = 0; i < tabs.length; i++) {
-		var child = $jq(tabs[i]).children(0)
-		var tabname = child.text();
-		if(tabname.toLowerCase() == current_page) {
-			$jq("#current-tab").attr({"id":""});
-			child.parent().attr({"id":"current-tab"});
-		}
-	}
-
-	tabs.find("a").click(function(event) {
-		var current_page = this.href.substring(this.href.lastIndexOf("#")+1);
-
-		if(current_page == "") {
-			$jq("#current-tab").attr({"id":""});
-			$jq(tabs[0]).attr({"id":"current-tab"});
-		} else {
-			for(var i = 0; i < tabs.length; i++) {
-				var child = $jq(tabs[i]).children(0)
-				var tabname = child.text();
-				if(tabname.toLowerCase() == current_page) {
-					$jq("#current-tab").attr({"id":""});
-					$jq(tabs[i]).attr({"id":"current-tab"});
-				}
-			}
-		}
-
-		pages.hide()
-		if(current_page=="") {
-			$jq(pages[0]).show();
-		} else {
-			for(var p = 0; p < pages.length; p++) {
-				var page = $jq(pages[p]);
-				if(page.attr("id").replace("-page","").replace("page","") == current_page) {
-					page.show()
-				}
-			}
-		}
-	});
-}
-
 
 // heavily based on 4chan's quote() function, with a few tweaks
 function quote(e) {
@@ -614,8 +557,7 @@ $jq(document).ready(function() {
 		addStaffButtons();
 	}
 
-	if(pageThread.board == "") changeFrontPage(window.location.hash);
-	else {
+	if(pageThread.board != "") {
 		prepareThumbnails();
 		if(getCookie("useqr") == "true") initQR(pageThread);
 	}
@@ -637,22 +579,21 @@ $jq(document).ready(function() {
 		var post_id = $jq(this).parent().parent().parent().attr("id");
 		var is_op = $jq(this).parent().parent().parent().attr("class") == "thread";
 
-		if(post_id != undefined) {
-			if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {
-				$jq("div.thread-ddown-menu").remove();
+		if(post_id == undefined) return;
+		if($jq(this).parent().find("div.thread-ddown-menu").length == 0) {
+			$jq("div.thread-ddown-menu").remove();
 
-				menu_html = "<div class=\"thread-ddown-menu\" id=\""+post_id+"\">";
-				if(!is_op) menu_html += "<ul><li><a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Show/Hide post</a></li>";
-				menu_html +="<li><a href=\"javascript:deletePost("+post_id+");\" class=\"delete-post\">Delete post</a></li>" +
-					"<li><a href=\"javascript:reportPost("+post_id+");\" class=\"report-post\">Report Post</a></li></ul>" +
-					"</div>";
+			menu_html = "<div class=\"thread-ddown-menu\" id=\""+post_id+"\">";
+			if(!is_op) menu_html += "<ul><li><a href=\"javascript:hidePost("+post_id+");\" class=\"hide-post\">Show/Hide post</a></li>";
+			menu_html +="<li><a href=\"javascript:deletePost("+post_id+");\" class=\"delete-post\">Delete post</a></li>" +
+				"<li><a href=\"javascript:reportPost("+post_id+");\" class=\"report-post\">Report Post</a></li></ul>" +
+				"</div>";
 
-				$jq(this).parent().append(menu_html);
-				thread_menu_open = true;
-			} else {
-				$jq("div.thread-ddown-menu").remove();
-				thread_menu_open = false;
-			}
+			$jq(this).parent().append(menu_html);
+			thread_menu_open = true;
+		} else {
+			$jq("div.thread-ddown-menu").remove();
+			thread_menu_open = false;
 		}
 	});
 });

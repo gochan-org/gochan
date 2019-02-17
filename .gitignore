@@ -7,6 +7,6 @@ vagrant/.vagrant/
 vagrant/*.log
 html/boards.json
 html/index.html
-html/test/
+html/test*
 templates/override/
 **/*.bak

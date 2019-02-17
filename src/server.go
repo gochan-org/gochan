@@ -58,6 +58,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 				writer.Header().Add("Content-Type", "image/gif")
 				writer.Header().Add("Cache-Control", "max-age=86400")
 			case "jpg":
+			case "jpeg":
 				writer.Header().Add("Content-Type", "image/jpeg")
 				writer.Header().Add("Cache-Control", "max-age=86400")
 			case "css":

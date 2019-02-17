@@ -36,7 +36,8 @@
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
-		{ "Name": "Burichan", "Filename": "burichan.css" }
+		{ "Name": "Burichan", "Filename": "burichan.css" },
+		{ "Name": "Photon", "Filename": "photon.css" }
 	],
 	"DefaultStyle": "pipes.css",
 
@@ -79,6 +80,7 @@
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
 	"MaxRecentPosts": 3,
+	"RecentPostsWithNoFile": false,
 	"Verbosity": 0,
 	"EnableAppeals": true,
 	"MaxLogDays": 14,

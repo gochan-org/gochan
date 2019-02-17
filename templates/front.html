@@ -1,108 +1,37 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>{{.config.SiteName}}</title>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript">
-		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
-		var defaultStyle = "{{.config.DefaultStyle}}";
-		var webroot = "{{.config.SiteWebfolder}}"
-	</script>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/gochan.js"></script>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/manage.js"></script>
-
-	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{.config.DefaultStyle}}" />
-	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png">
-</head>
-<body>
-	<div id="topbar">{{range $i, $board := .boards}}
-		<a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
-	</div>
+{{template "img_header.html" .}}
 	<div id="top-pane">
 		<span id="site-title">{{.config.SiteName}}</span><br />
 		<span id="site-slogan">{{.config.SiteSlogan}}</span>
+	</div><br />
+	<div id="frontpage">
+		<div class="section-block" style="margin: 16px 64px 16px 64px;">
+			<div class="section-body">
+				{{template "front_intro.html" .}}
+			</div>
+		</div>
+		<div class="section-block">
+			<div class="section-title-block"><b>Boards</b></div>
+			<div class="section-body">
+				{{range $_, $section := .sections}}{{if not $section.Hidden}}<ul style="float:left; list-style: none">
+				<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
+					{{range $_, $board := $.boards}}{{if and (eq $board.Section $section.ID) (ne $board.Dir $.config.Modboard)}}
+					<li><a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
+					{{end}}{{end}}
+				</ul>{{end}}{{end}}
+			</div>
+		</div>
+		{{if gt .config.MaxRecentPosts 0}}
+		<div class="section-block">
+			<div class="section-title-block"><b>Recent Posts</b></div>
+			<div class="section-body">
+				<div id="recent-posts">
+				{{range $i, $post := $.recent_posts}}{{$postURL := getPostURL $post "recent" false}}
+					<div class="recent-post">
+						{{if and (ne $post.Filename "deleted") (ne $post.Filename "")}}<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.config.SiteWebfolder}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
+						{{else}}<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$.postURL}}" class="front-reply" target="_blank">No file</a></div>{{end}}<br />
+						<a href="{{$.config.SiteWebfolder}}{{$post.BoardName}}/">/{{$post.BoardName}}/</a>
+						<hr />
+					{{truncateMessage (stripHTML $post.Message) 40 4}}</div>{{end}}</div>
+			</div>{{end}}</div>
 	</div>
-	<div id="main">
-		<table style="width:100%" cellspacing="10">
-			<colgroup>
-				<col id="sections" />
-				<col id="recent" />
-			</colgroup>
-			<tr>
-				<td valign="top">
-					<ul id="tab-bar">
-						<li id="current-tab" class="tab">
-							<a href="#">News</a>
-						</li>
-						<li class="tab">
-							<a href="#boards">Boards</a>
-						</li>
-						<li class="tab">
-							<a href="#rules">Rules</a>
-						</li>
-						<li class="tab">
-							<a href="#faq">FAQ</a>
-						</li>
-					</ul>
-					<div id="first-page" class="page">{{range $ii, $page := .page_arr}}{{if eq $page.Page 0}}
-						<div class="section-block">
-							<div class="section-title-block" id="first-page0">
-								<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="{{.config.SiteWebfolder}}#first-page{{$ii}}" class="permalink">#</a>
-							</div>
-							<div class="section-body">
-								{{$page.Message}}
-							</div>
-						</div>{{end}}{{end}}
-					</div>
-					<div id="boards-page" class="page">
-						<div class="section-block">
-							<div class="section-title-block">
-								<b>Boards</b>
-							</div>
-							<div class="section-body">
-								<ul>{{range $_, $board := .boards}}{{if eq $board.Dir $.config.Modboard}}{{else}}
-									<li><b>/{{$board.Dir}}/</b> {{$board.Description}}</li>{{end}}{{end}}
-								</ul>
-							</div>
-						</div>
-					</div>
-					<div id="rules-page" class="page">{{range $ii, $page := .page_arr}}{{if eq $page.Page 1}}
-						<div class="section-block">
-							<div class="section-title-block" id="first-page0">
-								<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="{{.config.SiteWebfolder}}#first-page{{$ii}}" class="permalink">#</a>
-							</div>
-							<div class="section-body">
-								{{$page.Message}}
-							</div>
-						</div>{{end}}{{end}}
-					</div>
-					<div id="faq-page" class="page">{{range $ii, $page := .page_arr.Data}}{{if eq $page.Page 2}}
-						<div class="section-block">
-							<div class="section-title-block" id="first-page0">
-								<b>{{$page.Subject}}</b> by <a href="mailto:{{$page.Email}}" >{{$page.Poster}}</a><a href="{{.config.SiteWebfolder}}#first-page{{$ii}}" class="permalink">#</a>
-							</div>
-							<div class="section-body">
-								{{$page.Message}}
-							</div>
-						</div>{{end}}{{end}}
-					</div>
-				</td>
-				{{if gt .config.MaxRecentPosts 0}}<td>
-					<div id="recent-posts-header" class="section-title-block"><b>Recent Posts</b></div>
-					{{range $i, $post := $.recent_posts}}<div class="section-block">
-						<div class="section-title-block">
-						<span class="section-title"><a href="{{$post.BoardName}}/res/{{if eq $post.ParentID 0}}{{intToString $post.PostID}}.html{{else}}{{intToString $post.ParentID}}.html#{{intToString $post.PostID}}{{end}}">/{{$post.BoardName}}/</a></span> - {{$appended := stringAppend $post.Name $post.Tripcode}}{{if eq $appended ""}}<b>Anonymous</b>{{else}}<b>{{$post.Name}}</b>{{if ne $post.Tripcode ""}}!{{$post.Tripcode}}{{end}}{{end}}
-						</div>
-						<div class="section-body">
-						{{if ne $post.Filename ""}}<a href="{{$.config.SiteWebfolder}}{{$post.BoardName}}/src/{{$post.Filename}}" target="_blank"><img src="{{$.config.SiteWebfolder}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a>{{end}}
-						{{truncateMessage $post.Message 225 12}}
-						</div>
-					</div>{{end}}{{end}}
-				</td>
-			</tr>
-		</table>
-	</div>
-	{{template "global_footer.html" .}}
+{{template "global_footer.html" .}}

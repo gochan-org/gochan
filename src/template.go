@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+
+	x_html "golang.org/x/net/html"
 )
 
 var funcMap = template.FuncMap{
@@ -112,6 +114,21 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
+	"stripHTML": func(htmlStr string) string {
+		dom := x_html.NewTokenizer(strings.NewReader(htmlStr))
+		for tokenType := dom.Next(); tokenType != x_html.ErrorToken; {
+			if tokenType != x_html.TextToken {
+				tokenType = dom.Next()
+				continue
+			}
+			txtContent := strings.TrimSpace(x_html.UnescapeString(string(dom.Text())))
+			if len(txtContent) > 0 {
+				return x_html.EscapeString(txtContent)
+			}
+			tokenType = dom.Next()
+		}
+		return ""
+	},
 	"truncateString": func(msg string, limit int, ellipsis bool) string {
 		if len(msg) > limit {
 			if ellipsis {
@@ -135,6 +152,27 @@ var funcMap = template.FuncMap{
 			thread = post.ID
 		} else {
 			thread = post.ParentID
+		}
+		return
+	},
+	"getPostURL": func(post_i interface{}, typeOf string, withDomain bool) (postURL string) {
+		if withDomain {
+			postURL = config.SiteDomain
+		}
+		postURL += config.SiteWebfolder
+
+		if typeOf == "recent" {
+			post, ok := post_i.(*RecentPost)
+			if !ok {
+				return
+			}
+			postURL = post.GetURL(withDomain)
+		} else {
+			post, ok := post_i.(*PostTable)
+			if !ok {
+				return
+			}
+			postURL = post.GetURL(withDomain)
 		}
 		return
 	},
@@ -341,7 +379,7 @@ func initTemplates() error {
 		return templateError("manage_header.html", err)
 	}
 
-	front_page_tmpl, err = loadTemplate("front.html", "global_footer.html")
+	front_page_tmpl, err = loadTemplate("front.html", "front_intro.html", "img_header.html", "global_footer.html")
 	if err != nil {
 		return templateError("front.html", err)
 	}

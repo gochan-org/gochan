@@ -3,8 +3,7 @@
 <table id="board-options">
 	<tr><th class="option-column">Option</th><th class="value-column">Value</th></tr>
 	<tr><td>Directory</td><td><input type="text" name="dir" value="" /></td></tr>
-	<tr><td>Section</td><td><select name="section" selected="0">
-		<option value="none">Select section...</option>{{range $_, $section := .section_arr}}
+	<tr><td>Section</td><td><select name="section" selected="0">{{range $_, $section := .section_arr}}
 		<option value="{{$section.ID}}">{{$section.Name}}</option>{{end}}
 	</select></td></tr>
 	<tr><td>Order</td><td><input type="text" name="order" value="0" /></td></tr>
