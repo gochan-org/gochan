@@ -135,19 +135,20 @@ function openStaffLightBox(action_url) {
 		data: {
 			action: action_url,
 		},
-		dataType:"xml",
+		dataType:"html",
 		async:false,
 
 		success: function(result) {
-			var result_body = $jq(result).find("body");
-			var header = $jq(result).find("h1");
+			var body = '<div id="body-mock">' + result.replace(/^[\s\S]*<body.*?>|<\/body>[\s\S]*$/ig, '') + '</div>';
+			var $body = $jq(body);
+			var header = $body.find("h1");
 			var header_text = header.text();
-			header.remove()
+			header.remove();
 			if(header_text == "") header_text = "Manage";
-			showLightBox(header_text,result_body.html());
+			showLightBox(header_text,$body.html());
 		},
 		error: function(result) {
-			var responsetext = result.responseText
+			var responsetext = result.responseText;
 			header = responsetext.substring(responsetext.indexOf("<h1>")+4,responsetext.indexOf("</h1>"))
 
 			responsetext = responsetext.substring(responsetext.indexOf("</h1>") + 5, responsetext.indexOf("</body>"));
