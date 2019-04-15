@@ -494,7 +494,7 @@ func bToA(b bool) string {
 // Checks the validity of the Akismet API key given in the config file.
 func checkAkismetAPIKey(key string) error {
 	if key == "" {
-		return fmt.Errorf("Blank key given, Akismet won't be used.")
+		return fmt.Errorf("Blank key given, Akismet spam checking won't be used.")
 	}
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.SiteDomain}})
 	defer func() {

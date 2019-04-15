@@ -31,10 +31,15 @@ func connectToSQLServer() {
 		os.Exit(2)
 	}
 
-	err = queryRowSQL("SELECT `value` FROM `"+config.DBprefix+"info` WHERE `name` = 'version'",
-		[]interface{}{}, []interface{}{&sqlVersionStr})
+	if !checkTableExists(config.DBprefix+"info") {
+		err = sql.ErrNoRows
+	} else {
+		err = queryRowSQL("SELECT `value` FROM `"+config.DBprefix+"info` WHERE `name` = 'version'",
+			[]interface{}{}, []interface{}{&sqlVersionStr})
+	}
+
 	if err == sql.ErrNoRows {
-		printf(0, "\nThis looks like a new installation\n")
+		println(0, "\nThis looks like a new installation")
 		if err = loadInitialSQL(); err != nil {
 			handleError(0, "failed with error: %s\n", customError(err))
 			os.Exit(2)
@@ -206,4 +211,10 @@ func checkDeprecatedSchema(dbVersion string) {
 		}
 	}
 	execSQL("UPDATE `"+config.DBprefix+"info` SET `value` = ? WHERE `name` = 'version'", versionStr)
+}
+
+func checkTableExists(tableName string) bool {
+	rows, err := querySQL("SELECT * FROM information_schema.tables WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ? LIMIT 1",
+		config.DBname, tableName)
+	return err == nil && rows.Next() == true
 }
