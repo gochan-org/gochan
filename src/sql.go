@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -23,66 +24,72 @@ var (
 
 func connectToSQLServer() {
 	var err error
-	var sqlVersionStr string
 
+	println(0, "Initializing server...")
 	db, err = sql.Open("mysql", config.DBusername+":"+config.DBpassword+"@"+config.DBhost+"/"+config.DBname+"?parseTime=true&collation=utf8mb4_unicode_ci")
 	if err != nil {
 		handleError(0, "Failed to connect to the database: %s\n", customError(err))
 		os.Exit(2)
 	}
 
-	if !checkTableExists(config.DBprefix+"info") {
-		err = sql.ErrNoRows
-	} else {
-		err = queryRowSQL("SELECT `value` FROM `"+config.DBprefix+"info` WHERE `name` = 'version'",
-			[]interface{}{}, []interface{}{&sqlVersionStr})
+	if err = initDB(); err != nil {
+		handleError(0, "Failed initializing DB: %s\n", customError(err))
+		os.Exit(2)
 	}
+
+	var sqlVersionStr string
+	err = queryRowSQL("SELECT `value` FROM `"+config.DBprefix+"info` WHERE `name` = 'version'",
+		[]interface{}{}, []interface{}{&sqlVersionStr})
 
 	if err == sql.ErrNoRows {
 		println(0, "\nThis looks like a new installation")
-		if err = loadInitialSQL(); err != nil {
-			handleError(0, "failed with error: %s\n", customError(err))
-			os.Exit(2)
-		}
 
 		if _, err = db.Exec("INSERT INTO `" + config.DBname + "`.`" + config.DBprefix + "staff` " +
 			"(`username`, `password_checksum`, `salt`, `rank`) " +
 			"VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3)",
 		); err != nil {
-			handleError(0, "failed with error: %s\n", customError(err))
+			handleError(0, "Failed creating admin user with error: %s\n", customError(err))
 			os.Exit(2)
 		}
 
 		_, err = execSQL("INSERT INTO `"+config.DBprefix+"info` (`name`,`value`) VALUES('version',?)", versionStr)
-		if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
-			handleError(0, "failed with error: %s\n", customError(err))
-			os.Exit(2)
-		}
+		return
 	} else if err != nil {
 		handleError(0, "failed: %s\n", customError(err))
 		os.Exit(2)
 	}
-
-	checkDeprecatedSchema(sqlVersionStr)
-}
-
-func loadInitialSQL() error {
-	var err error
-	if _, err = os.Stat("initialsetupdb.sql"); err != nil {
-		return errors.New("Initial setup file (initialsetupdb.sql) missing. Please reinstall gochan")
+	if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
+		handleError(0, "failed with error: %s\n", customError(err))
+		os.Exit(2)
+	}
+	if version.CompareString(sqlVersionStr) > 0 {
+		printf(0, "Updating version in database from %s to %s\n", sqlVersionStr, version.String())
+		execSQL("UPDATE `"+config.DBprefix+"info` SET `value` = ? WHERE `name` = 'version'", versionStr)
 	}
 
-	initialSQLBytes, err := ioutil.ReadFile("initialsetupdb.sql")
+}
+
+func initDB() error {
+	var err error
+	if _, err = os.Stat("initdb.sql"); err != nil {
+		return errors.New("SQL database initialization file (initdb.sql) missing. Please reinstall gochan")
+	}
+
+	sqlBytes, err := ioutil.ReadFile("initdb.sql")
 	if err != nil {
 		return err
 	}
 
-	initialSQLStr := string(initialSQLBytes)
-	initialSQLStr = strings.NewReplacer("DBNAME", config.DBname, "DBPREFIX", config.DBprefix).Replace(initialSQLStr)
-	initialSQLArr := strings.Split(initialSQLStr, ";")
-	for _, statement := range initialSQLArr {
-		if statement != "" && statement != "\n" && statement != "\r\n" && strings.Index(statement, "--") != 0 {
-			if _, err := db.Exec(statement); err != nil {
+	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
+	sqlStr = strings.NewReplacer(
+		"DBNAME", config.DBname,
+		"DBPREFIX", config.DBprefix,
+		"\n", " ").Replace(sqlStr)
+	sqlArr := strings.Split(sqlStr, ";")
+
+	for _, statement := range sqlArr {
+		if statement != "" && statement != " " {
+			if _, err := db.Exec(statement + ";"); err != nil {
 				return err
 			}
 		}
@@ -99,7 +106,7 @@ func loadInitialSQL() error {
  */
 func execSQL(query string, values ...interface{}) (sql.Result, error) {
 	stmt, err := db.Prepare(query)
-	defer closeStatement(stmt)
+	defer closeHandle(stmt)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +127,7 @@ func execSQL(query string, values ...interface{}) (sql.Result, error) {
  */
 func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	stmt, err := db.Prepare(query)
-	defer closeStatement(stmt)
+	defer closeHandle(stmt)
 	if err != nil {
 		return err
 	}
@@ -143,7 +150,7 @@ func queryRowSQL(query string, values []interface{}, out []interface{}) error {
  */
 func querySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	stmt, err := db.Prepare(query)
-	defer closeStatement(stmt)
+	defer closeHandle(stmt)
 	if err != nil {
 		return nil, err
 	}
@@ -156,61 +163,6 @@ func getSQLDateTime() string {
 
 func getSpecificSQLDateTime(t time.Time) string {
 	return t.Format(mysqlDatetimeFormat)
-}
-
-// checkDeprecatedSchema checks the tables for outdated columns and column values
-// and causes gochan to quit with an error message specific to the needed change
-func checkDeprecatedSchema(dbVersion string) {
-	var hasColumn int
-	var err error
-	if version.CompareString(dbVersion) < 1 {
-		return
-	}
-	printf(0, "Database is out of date (%s) updating for compatibility\n", dbVersion)
-
-	execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `id` `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT", nil)
-	execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `expires` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP", nil)
-	if err = queryRowSQL(
-		"SELECT COUNT(*) FROM information_schema.COlUMNS WHERE `TABLE_SCHEMA` = '"+config.DBname+"' AND TABLE_NAME = '"+config.DBprefix+"banlist' AND COLUMN_NAME = 'appeal_message'",
-		[]interface{}{}, []interface{}{&hasColumn},
-	); err != nil {
-		println(0, "error checking for deprecated column: "+err.Error())
-		os.Exit(2)
-		return
-	}
-	if hasColumn > 0 {
-		// Running them one at a time, in case we get errors from individual queries
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` CHANGE COLUMN `banned_by` `staff` VARCHAR(50) NOT NULL", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `type` TINYINT UNSIGNED NOT NULL DEFAULT '3'", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `name_is_regex` TINYINT(1) DEFAULT '0'", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `filename` VARCHAR(255) NOT NULL DEFAULT ''", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `file_checksum` VARCHAR(255) NOT NULL DEFAULT ''", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `permaban` TINYINT(1) DEFAULT '0'", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` ADD COLUMN `can_appeal` TINYINT(1) DEFAULT '1'", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"banlist` DROP COLUMN `message`", nil)
-		execSQL("ALTER TABLE `"+config.DBprefix+"boards` CHANGE COLUMN `boards` VARCHAR(255) NOT NULL DEFAULT ''", nil)
-
-		println(0, "The column `appeal_message` in table "+config.DBprefix+"banlist is deprecated. A new table , `"+config.DBprefix+"appeals` has been created for it, and the banlist table will be modified accordingly.")
-		println(0, "Just to be safe, you may want to check both tables to make sure everything is good.")
-
-		rows, err := querySQL("SELECT `id`,`appeal_message` FROM `" + config.DBprefix + "banlist`")
-		if err != nil {
-			handleError(0, "Error updating banlist schema: %s\n", err.Error())
-			os.Exit(2)
-			return
-		}
-
-		for rows.Next() {
-			var id int
-			var appealMessage string
-			rows.Scan(&id, &appealMessage)
-			if appealMessage != "" {
-				execSQL("INSERT INTO `"+config.DBprefix+"appeals` (`ban`,`message`) VALUES(?,?)", &id, &appealMessage)
-			}
-			execSQL("ALTER TABLE `" + config.DBprefix + "banlist` DROP COLUMN `appeal_message`")
-		}
-	}
-	execSQL("UPDATE `"+config.DBprefix+"info` SET `value` = ? WHERE `name` = 'version'", versionStr)
 }
 
 func checkTableExists(tableName string) bool {

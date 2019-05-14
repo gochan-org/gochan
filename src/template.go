@@ -145,7 +145,7 @@ var funcMap = template.FuncMap{
 		return getThumbnailPath("catalog", img)
 	},
 	"getThreadID": func(post_i interface{}) (thread int) {
-		post, ok := post_i.(PostTable)
+		post, ok := post_i.(Post)
 		if !ok {
 			thread = 0
 		} else if post.ParentID == 0 {
@@ -168,7 +168,7 @@ var funcMap = template.FuncMap{
 			}
 			postURL = post.GetURL(withDomain)
 		} else {
-			post, ok := post_i.(*PostTable)
+			post, ok := post_i.(*Post)
 			if !ok {
 				return
 			}

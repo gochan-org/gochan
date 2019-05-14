@@ -19,7 +19,7 @@ func buildFrontPage() (html string) {
 
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	front_file, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer closeFile(front_file)
+	defer closeHandle(front_file)
 	if err != nil {
 		return handleError(1, "Failed opening front page for writing: "+err.Error()) + "<br />\n"
 	}
@@ -39,7 +39,7 @@ func buildFrontPage() (html string) {
 		"ORDER BY `timestamp` DESC LIMIT ?"
 
 	rows, err := querySQL(recentQueryStr, nilTimestamp, config.MaxRecentPosts)
-	defer closeRows(rows)
+	defer closeHandle(rows)
 	if err != nil {
 		return handleError(1, err.Error())
 	}
@@ -55,8 +55,7 @@ func buildFrontPage() (html string) {
 		recentPostsArr = append(recentPostsArr, recentPost)
 	}
 
-	for i := range allBoards {
-		board := allBoards[i].(BoardsTable)
+	for _, board := range allBoards {
 		if board.Section == 0 {
 			board.Section = 1
 		}
@@ -75,29 +74,24 @@ func buildFrontPage() (html string) {
 
 func buildBoardListJSON() (html string) {
 	board_list_file, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer closeFile(board_list_file)
+	defer closeHandle(board_list_file)
 	if err != nil {
 		return handleError(1, "Failed opening board.json for writing: "+err.Error()) + "<br />\n"
 	}
 
-	board_list_wrapper := new(BoardJSONWrapper)
-
-	// Our cooldowns are site-wide currently.
-	cooldowns_obj := BoardCooldowns{NewThread: config.NewThreadDelay, Reply: config.ReplyDelay, ImageReply: config.ReplyDelay}
-
-	for _, board_int := range allBoards {
-		board := board_int.(BoardsTable)
-		board_obj := BoardJSON{BoardName: board.Dir, Title: board.Title, WorkSafeBoard: 1,
-			ThreadsPerPage: config.ThreadsPerPage, Pages: board.MaxPages, MaxFilesize: board.MaxImageSize,
-			MaxMessageLength: board.MaxMessageLength, BumpLimit: 200, ImageLimit: board.NoImagesAfter,
-			Cooldowns: cooldowns_obj, Description: board.Description, IsArchived: 0}
-		if board.EnableNSFW {
-			board_obj.WorkSafeBoard = 0
-		}
-		board_list_wrapper.Boards = append(board_list_wrapper.Boards, board_obj)
+	boardsMap := map[string][]Board{
+		"boards": []Board{},
 	}
 
-	boardJSON, err := json.Marshal(board_list_wrapper)
+	// Our cooldowns are site-wide currently.
+	cooldowns := BoardCooldowns{NewThread: config.NewThreadDelay, Reply: config.ReplyDelay, ImageReply: config.ReplyDelay}
+
+	for _, board := range allBoards {
+		board.Cooldowns = cooldowns
+		boardsMap["boards"] = append(boardsMap["boards"], board)
+	}
+
+	boardJSON, err := json.Marshal(boardsMap)
 	if err != nil {
 		return handleError(1, "Failed marshal to JSON: "+err.Error()) + "<br />\n"
 	}
@@ -108,9 +102,9 @@ func buildBoardListJSON() (html string) {
 }
 
 // buildBoardPages builds the pages for the board archive.
-// `board` is a BoardsTable object representing the board to build archive pages for.
+// `board` is a Board object representing the board to build archive pages for.
 // The return value is a string of HTML with debug information from the build process.
-func buildBoardPages(board *BoardsTable) (html string) {
+func buildBoardPages(board *Board) (html string) {
 	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
 	var current_page_file *os.File
 	var threads []interface{}
@@ -148,7 +142,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	// For each top level post, start building a Thread struct
 	for _, op := range op_posts {
 		var thread Thread
-		var posts_in_thread []PostTable
+		var posts_in_thread []Post
 
 		// Get the number of replies to this thread.
 		if err = queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?",
@@ -188,7 +182,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			html += err.Error() + "<br />"
 		}
 
-		var reversedPosts []PostTable
+		var reversedPosts []Post
 		for i := len(posts_in_thread); i > 0; i-- {
 			reversedPosts = append(reversedPosts, posts_in_thread[i-1])
 		}
@@ -254,10 +248,10 @@ func buildBoardPages(board *BoardsTable) (html string) {
 		board.NumPages = len(thread_pages) - 1
 
 		// Create array of page wrapper objects, and open the file.
-		var pages_obj []BoardPageJSON
+		pagesArr := make([]map[string]interface{}, board.NumPages)
 
 		catalog_json_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-		defer closeFile(catalog_json_file)
+		defer closeHandle(catalog_json_file)
 		if err != nil {
 			html += handleError(1, "Failed opening /"+board.Dir+"/catalog.json: "+err.Error())
 			return
@@ -270,7 +264,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			pageFilename := strconv.Itoa(board.CurrentPage) + ".html"
 			current_page_filepath = path.Join(config.DocumentRoot, board.Dir, pageFilename)
 			current_page_file, err = os.OpenFile(current_page_filepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-			defer closeFile(current_page_file)
+			defer closeHandle(current_page_file)
 			if err != nil {
 				html += handleError(1, "Failed opening board page: "+err.Error()) + "<br />"
 				continue
@@ -284,7 +278,7 @@ func buildBoardPages(board *BoardsTable) (html string) {
 				"threads":  page_threads,
 				"board":    board,
 				"posts": []interface{}{
-					PostTable{BoardID: board.ID},
+					Post{BoardID: board.ID},
 				},
 			}); err != nil {
 				html += handleError(1, "Failed building /"+board.Dir+"/ boardpage: "+err.Error()) + "<br />"
@@ -300,38 +294,14 @@ func buildBoardPages(board *BoardsTable) (html string) {
 			}
 
 			// Collect up threads for this page.
-			var page_obj BoardPageJSON
-			page_obj.Page = board.CurrentPage
-
-			for _, thread_int := range page_threads {
-				thread := thread_int.(Thread)
-				post_json := makePostJSON(thread.OP, board.Anonymous)
-				var thread_json ThreadJSON
-				thread_json.PostJSON = &post_json
-				thread_json.Replies = thread.NumReplies
-				thread_json.ImagesOnArchive = thread.NumImages
-				thread_json.OmittedImages = thread.OmittedImages
-				if thread.Stickied {
-					if thread.NumReplies > config.StickyRepliesOnBoardPage {
-						thread_json.OmittedPosts = thread.NumReplies - config.StickyRepliesOnBoardPage
-					}
-					thread_json.Sticky = 1
-				} else {
-					if thread.NumReplies > config.RepliesOnBoardPage {
-						thread_json.OmittedPosts = thread.NumReplies - config.RepliesOnBoardPage
-					}
-				}
-				if thread.OP.Locked {
-					thread_json.Locked = 1
-				}
-				page_obj.Threads = append(page_obj.Threads, thread_json)
-			}
-
-			pages_obj = append(pages_obj, page_obj)
+			pageMap := make(map[string]interface{})
+			pageMap["page"] = board.CurrentPage
+			pageMap["threads"] = page_threads
+			pagesArr = append(pagesArr, pageMap)
 		}
 		board.CurrentPage = currentBoardPage
 
-		catalog_json, err := json.Marshal(pages_obj)
+		catalog_json, err := json.Marshal(pagesArr)
 		if err != nil {
 			html += handleError(1, "Failed to marshal to JSON: "+err.Error()) + "<br />"
 			return
@@ -346,35 +316,34 @@ func buildBoardPages(board *BoardsTable) (html string) {
 	return
 }
 
-// buildBoards builds one or all boards.
-// If `all` == true, all boards will have their pages built and `which` is ignored
-// Otherwise, the board with the id equal to the value specified as which.
+// buildBoards builds the specified board IDs, or all boards if no arguments are passed
 // The return value is a string of HTML with debug information produced by the build process.
-// TODO: make this a variadic function (which ...int)
-func buildBoards(all bool, which int) (html string) {
-	if all {
-		boards, _ := getBoardArr(nil, "")
-		if len(boards) == 0 {
-			return html + "No boards to build.<br />\n"
-		}
-		for _, board := range boards {
-			html += buildBoardPages(&board) + "<br />\n"
-			if board.EnableCatalog {
-				html += buildCatalog(board.ID) + "<br />\n"
-			}
+func buildBoards(which ...int) (html string) {
+	var boards []Board
 
-			html += buildThreads(true, board.ID, 0)
-		}
+	if which == nil {
+		boards = allBoards
 	} else {
-		boardArr, _ := getBoardArr(map[string]interface{}{"id": which}, "")
-		board := boardArr[0]
-		html += buildBoardPages(&board) + "<br />\n"
+		for _, b := range which {
+			board, err := getBoardFromID(b)
+			if err != nil {
+				html += handleError(0, err.Error()) + "<br />\n"
+				continue
+			}
+			boards = append(boards, *board)
+		}
+	}
+
+	if len(boards) == 0 {
+		return html + "No boards to build.<br />\n"
+	}
+	for _, board := range boards {
 		if board.EnableCatalog {
 			html += buildCatalog(board.ID) + "<br />\n"
 		}
-		html += buildThreads(true, board.ID, 0)
+		html += buildBoardPages(&board) + "<br />\n" +
+			buildThreads(true, board.ID, 0) + "<br />\n"
 	}
-
 	return
 }
 
@@ -417,9 +386,9 @@ func buildCatalog(which int) (html string) {
 	return
 }
 
-// buildThreadPages builds the pages for a thread given by a PostTable object.
-func buildThreadPages(op *PostTable) (html string) {
-	var replies []PostTable
+// buildThreadPages builds the pages for a thread given by a Post object.
+func buildThreadPages(op *Post) (html string) {
+	var replies []Post
 	var current_page_file *os.File
 	board, err := getBoardFromID(op.BoardID)
 	if err != nil {
@@ -453,6 +422,7 @@ func buildThreadPages(op *PostTable) (html string) {
 		html += handleError(1, "Failed opening "+current_page_filepath+": "+err.Error())
 		return
 	}
+
 	// render main page
 	if err = img_threadpage_tmpl.Execute(current_page_file, map[string]interface{}{
 		"config":   config,
@@ -468,25 +438,22 @@ func buildThreadPages(op *PostTable) (html string) {
 
 	// Put together the thread JSON
 	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer closeFile(threadJSONFile)
+	defer closeHandle(threadJSONFile)
 	if err != nil {
 		html += handleError(1, "Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
 		return
 	}
 
-	// Create the wrapper object
-	thread_json_wrapper := new(ThreadJSONWrapper)
+	threadMap := make(map[string][]Post)
 
-	// Handle the OP, of type *PostTable
-	op_post_obj := makePostJSON(*op, board.Anonymous)
-	thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, op_post_obj)
+	// Handle the OP, of type *Post
+	threadMap["posts"] = []Post{*op}
 
-	// Iterate through each reply, which are of type PostTable
+	// Iterate through each reply, which are of type Post
 	for _, reply := range replies {
-		postJSON := makePostJSON(reply, board.Anonymous)
-		thread_json_wrapper.Posts = append(thread_json_wrapper.Posts, postJSON)
+		threadMap["posts"] = append(threadMap["posts"], reply)
 	}
-	threadJSON, err := json.Marshal(thread_json_wrapper)
+	threadJSON, err := json.Marshal(threadMap)
 	if err != nil {
 		html += handleError(1, "Failed to marshal to JSON: %s", err.Error()) + "<br />"
 		return
@@ -527,27 +494,24 @@ func buildThreadPages(op *PostTable) (html string) {
 
 // buildThreads builds thread(s) given a boardid, or if all = false, also given a threadid.
 // if all is set to true, ignore which, otherwise, which = build only specified boardid
-// TODO: detect which page will be built and only build that one and the board page
+// TODO: make it variadic
 func buildThreads(all bool, boardid, threadid int) (html string) {
-	if !all {
-		threads, _ := getPostArr(map[string]interface{}{
-			"boardid":           boardid,
-			"id":                threadid,
-			"parentid":          0,
-			"deleted_timestamp": nilTimestamp,
-		}, "")
-		thread := threads[0]
-		html += buildThreadPages(&thread) + "<br />\n"
-		return
-	}
+	var threads []Post
+	var err error
 
-	threads, _ := getPostArr(map[string]interface{}{
+	queryMap := map[string]interface{}{
 		"boardid":           boardid,
 		"parentid":          0,
 		"deleted_timestamp": nilTimestamp,
-	}, "")
+	}
+	if !all {
+		queryMap["id"] = threadid
+	}
+	if threads, err = getPostArr(queryMap, ""); err != nil {
+		return handleError(0, err.Error()) + "<br />\n"
+	}
 	if len(threads) == 0 {
-		return
+		return "No threads to build<br />\n"
 	}
 
 	for _, op := range threads {

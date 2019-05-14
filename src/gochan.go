@@ -11,11 +11,7 @@ var versionStr string
 var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
 
 func main() {
-	defer func() {
-		if db != nil {
-			_ = db.Close()
-		}
-	}()
+	defer closeHandle(db)
 	initConfig()
 	connectToSQLServer()
 	parseCommandLine()
@@ -27,11 +23,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	println(0, "Initializing server...")
-	if _, err := db.Exec("USE `" + config.DBname + "`"); err != nil {
-		handleError(0, customError(err))
-		os.Exit(2)
-	}
 	initServer()
 }
 

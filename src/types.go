@@ -54,26 +54,28 @@ func (p *RecentPost) GetURL(includeDomain bool) string {
 }
 
 type Thread struct {
-	OP            PostTable
-	NumReplies    int
-	NumImages     int
-	OmittedImages int
-	BoardReplies  []PostTable
-	Stickied      bool
-	ThreadPage    int
+	OP            Post   `json:"-"`
+	NumReplies    int    `json:"replies"`
+	NumImages     int    `json:"images"`
+	OmittedPosts  int    `json:"omitted_posts"`
+	OmittedImages int    `json:"omitted_images"`
+	BoardReplies  []Post `json:"-"`
+	Sticky        int    `json:"sticky"`
+	Locked        int    `json:"locked"`
+	ThreadPage    int    `json:"-"`
 }
 
 // SQL Table structs
 
-type AnnouncementsTable struct {
-	ID        uint
-	Subject   string
-	Message   string
-	Poster    string
+type Announcement struct {
+	ID        uint   `json:"no"`
+	Subject   string `json:"sub"`
+	Message   string `json:"com"`
+	Poster    string `json:"name"`
 	Timestamp time.Time
 }
 
-type AppealsTable struct {
+type BanAppeal struct {
 	ID            int
 	Ban           int
 	Message       string
@@ -81,8 +83,8 @@ type AppealsTable struct {
 	StaffResponse string
 }
 
-func (a *AppealsTable) GetBan() (BanlistTable, error) {
-	var ban BanlistTable
+func (a *BanAppeal) GetBan() (BanInfo, error) {
+	var ban BanInfo
 	var err error
 
 	err = queryRowSQL("SELECT * FROM `"+config.DBprefix+"banlist` WHERE `id` = ? LIMIT 1",
@@ -94,7 +96,7 @@ func (a *AppealsTable) GetBan() (BanlistTable, error) {
 	return ban, err
 }
 
-type BanlistTable struct {
+type BanInfo struct {
 	ID          uint
 	AllowRead   bool
 	IP          string
@@ -113,48 +115,49 @@ type BanlistTable struct {
 	CanAppeal   bool
 }
 
-type BannedHashesTable struct {
+type BannedHash struct {
 	ID          uint
 	Checksum    string
 	Description string
 }
 
-type BoardsTable struct {
-	ID                     int
-	CurrentPage            int
-	NumPages               int
-	Order                  int
-	Dir                    string
-	Type                   int
-	UploadType             int
-	Title                  string
-	Subtitle               string
-	Description            string
-	Section                int
-	MaxImageSize           int
-	MaxPages               int
-	Locale                 string
-	DefaultStyle           string
-	Locked                 bool
-	CreatedOn              time.Time
-	Anonymous              string
-	ForcedAnon             bool
-	MaxAge                 int
-	AutosageAfter          int
-	NoImagesAfter          int
-	MaxMessageLength       int
-	EmbedsAllowed          bool
-	RedirectToThread       bool
-	ShowID                 bool
-	RequireFile            bool
-	EnableCatalog          bool
-	EnableSpoileredImages  bool
-	EnableSpoileredThreads bool
-	EnableNSFW             bool
-	ThreadPage             int
+type Board struct {
+	ID                     int            `json:"-"`
+	CurrentPage            int            `json:`
+	NumPages               int            `json:"pages"`
+	Order                  int            `json:"-"`
+	Dir                    string         `json:"board"`
+	Type                   int            `json:"-"`
+	UploadType             int            `json:"-"`
+	Title                  string         `json:"title"`
+	Subtitle               string         `json:"meta_description"`
+	Description            string         `json:"-"`
+	Section                int            `json:"-"`
+	MaxFilesize            int            `json:"max_filesize"`
+	MaxPages               int            `json:"max_pages"`
+	DefaultStyle           string         `json:"-"`
+	Locked                 bool           `json:"is_archived"`
+	CreatedOn              time.Time      `json:"-"`
+	Anonymous              string         `json:"-"`
+	ForcedAnon             bool           `json:"-"`
+	MaxAge                 int            `json:"-"`
+	AutosageAfter          int            `json:"bump_limit"`
+	NoImagesAfter          int            `json:"image_limit"`
+	MaxMessageLength       int            `json:"max_comment_chars"`
+	EmbedsAllowed          bool           `json:"-"`
+	RedirectToThread       bool           `json:"-"`
+	ShowID                 bool           `json:"-"`
+	RequireFile            bool           `json:"-"`
+	EnableCatalog          bool           `json:"-"`
+	EnableSpoileredImages  bool           `json:"-"`
+	EnableSpoileredThreads bool           `json:"-"`
+	Worksafe               bool           `json:"ws_board"`
+	ThreadPage             int            `json:"-"`
+	Cooldowns              BoardCooldowns `json:"cooldowns"`
+	ThreadsPerPage         int            `json:"per_page"`
 }
 
-type BoardSectionsTable struct {
+type BoardSection struct {
 	ID           int
 	Order        int
 	Hidden       bool
@@ -162,95 +165,41 @@ type BoardSectionsTable struct {
 	Abbreviation string
 }
 
-// EmbedsTable represents the embedable media on different sites.
-// It's held over from Kusaba X and may be removed in the future
-type EmbedsTable struct {
-	ID        uint8
-	Filetype  string
-	Name      string
-	URL       string
-	Width     uint16
-	Height    uint16
-	EmbedCode string
+// Post represents each post in the database
+type Post struct {
+	ID               int       `json:"no"`
+	ParentID         int       `json:"resto"`
+	CurrentPage      int       `json:"-"`
+	NumPages         int       `json:"-"`
+	BoardID          int       `json:"-"`
+	Name             string    `json:"name"`
+	Tripcode         string    `json:"trip"`
+	Email            string    `json:"email"`
+	Subject          string    `json:"sub"`
+	MessageHTML      string    `json:"com"`
+	MessageText      string    `json:"-"`
+	Password         string    `json:"-"`
+	Filename         string    `json:"tim"`
+	FilenameOriginal string    `json:"filename"`
+	FileChecksum     string    `json:"md5"`
+	FileExt          string    `json:"extension"`
+	Filesize         int       `json:"fsize"`
+	ImageW           int       `json:"w"`
+	ImageH           int       `json:"h"`
+	ThumbW           int       `json:"tn_w"`
+	ThumbH           int       `json:"tn_h"`
+	IP               string    `json:"-"`
+	Capcode          string    `json:"capcode"`
+	Timestamp        time.Time `json:"time"`
+	Autosage         int       `json:"-"`
+	DeletedTimestamp time.Time `json:"-"`
+	Bumped           time.Time `json:"last_modified"`
+	Stickied         bool      `json:"-"`
+	Locked           bool      `json:"-"`
+	Reviewed         bool      `json:"-"`
 }
 
-// FrontTable represents the information (News, rules, etc) on the front page
-type FrontTable struct {
-	ID        int
-	Page      int
-	Order     int
-	Subject   string
-	Message   string
-	Timestamp time.Time
-	Poster    string
-	Email     string
-}
-
-// FrontLinksTable is used for linking to sites that the admin likes
-type FrontLinksTable struct {
-	ID    uint8
-	Title string
-	URL   string
-}
-
-type LoginAttemptsTable struct {
-	ID        uint
-	IP        string
-	Timestamp time.Time
-}
-
-type ModLogTable struct {
-	IP        uint
-	Entry     string
-	User      string
-	Category  uint8
-	Timestamp time.Time
-}
-
-// PollResultsTable may or may not be used in the future for user polls
-type PollResultsTable struct {
-	ID        uint
-	IP        string
-	Selection string
-	Timestamp time.Time
-}
-
-// PostTable represents each post in the database
-type PostTable struct {
-	ID               int
-	CurrentPage      int
-	NumPages         int
-	BoardID          int
-	ParentID         int
-	Name             string
-	Tripcode         string
-	Email            string
-	Subject          string
-	MessageHTML      string
-	MessageText      string
-	Password         string
-	Filename         string
-	FilenameOriginal string
-	FileChecksum     string
-	Filesize         int
-	ImageW           int
-	ImageH           int
-	ThumbW           int
-	ThumbH           int
-	IP               string
-	Tag              string
-	Timestamp        time.Time
-	Autosage         int
-	PosterAuthority  int
-	DeletedTimestamp time.Time
-	Bumped           time.Time
-	Stickied         bool
-	Locked           bool
-	Reviewed         bool
-	Sillytag         bool
-}
-
-func (p *PostTable) GetURL(includeDomain bool) string {
+func (p *Post) GetURL(includeDomain bool) string {
 	postURL := ""
 	if includeDomain {
 		postURL += config.SiteDomain
@@ -273,14 +222,14 @@ func (p *PostTable) GetURL(includeDomain bool) string {
 
 // Sanitize escapes HTML strings in a post. This should be run immediately before
 // the post is inserted into the database
-func (p *PostTable) Sanitize() {
+func (p *Post) Sanitize() {
 	p.Name = html.EscapeString(p.Name)
 	p.Email = html.EscapeString(p.Email)
 	p.Subject = html.EscapeString(p.Subject)
 	p.Password = html.EscapeString(p.Password)
 }
 
-type ReportsTable struct {
+type Report struct {
 	ID        uint
 	Board     string
 	PostID    uint
@@ -291,14 +240,14 @@ type ReportsTable struct {
 	IsTemp    bool
 }
 
-type SessionsTable struct {
+type LoginSession struct {
 	ID      uint
 	Data    string
 	Expires string
 }
 
-// StaffTable represents a single staff member's info stored in the database
-type StaffTable struct {
+// Staff represents a single staff member's info stored in the database
+type Staff struct {
 	ID               int
 	Username         string
 	PasswordChecksum string
@@ -309,7 +258,7 @@ type StaffTable struct {
 	LastActive       time.Time
 }
 
-type WordFiltersTable struct {
+type WordFilter struct {
 	ID     int
 	From   string
 	To     string
@@ -317,74 +266,10 @@ type WordFiltersTable struct {
 	RegEx  bool
 }
 
-// Types for the JSON files we generate as a sort of "API"
-type BoardJSONWrapper struct {
-	Boards []BoardJSON `json:"boards"`
-}
-
-type BoardJSON struct {
-	BoardName        string         `json:"board"`
-	Title            string         `json:"title"`
-	WorkSafeBoard    int            `json:"ws_board"`
-	ThreadsPerPage   int            `json:"per_page"`
-	Pages            int            `json:"pages"`
-	MaxFilesize      int            `json:"max_filesize"`
-	MaxMessageLength int            `json:"max_comment_chars"`
-	BumpLimit        int            `json:"bump_limit"`
-	ImageLimit       int            `json:"image_limit"`
-	Cooldowns        BoardCooldowns `json:"cooldowns"`
-	Description      string         `json:"meta_description"`
-	IsArchived       int            `json:"is_archived"`
-}
-
 type BoardCooldowns struct {
 	NewThread  int `json:"threads"`
 	Reply      int `json:"replies"`
 	ImageReply int `json:"images"`
-}
-
-type ThreadJSONWrapper struct {
-	Posts []PostJSON `json:"posts"`
-}
-
-type PostJSON struct {
-	ID           int    `json:"no"`
-	ParentID     int    `json:"resto"`
-	Subject      string `json:"sub"`
-	Message      string `json:"com"`
-	Name         string `json:"name"`
-	Tripcode     string `json:"trip"`
-	Timestamp    int64  `json:"time"`
-	Bumped       int64  `json:"last_modified"`
-	ThumbWidth   int    `json:"tn_w"`
-	ThumbHeight  int    `json:"tn_h"`
-	ImageWidth   int    `json:"w"`
-	ImageHeight  int    `json:"h"`
-	FileSize     int    `json:"fsize"`
-	OrigFilename string `json:"filename"`
-	Extension    string `json:"ext"`
-	Filename     string `json:"tim"`
-	FileChecksum string `json:"md5"`
-}
-
-type BoardPageJSON struct {
-	Threads []ThreadJSON `json:"threads"`
-	Page    int          `json:"page"`
-}
-
-type ThreadJSON struct {
-	*PostJSON
-	OmittedPosts    int `json:"omitted_posts"`
-	OmittedImages   int `json:"omitted_images"`
-	Replies         int `json:"replies"`
-	ImagesOnArchive int `json:"images"`
-	Sticky          int `json:"sticky"`
-	Locked          int `json:"locked"`
-}
-
-// ErrorJSON and PostInfoJSON are mostly used for AJAX requests
-type ErrorJSON struct {
-	Message string `json:"error"`
 }
 
 type Style struct {

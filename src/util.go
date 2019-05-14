@@ -1,10 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"crypto/md5"
 	"crypto/sha1"
-	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,13 +13,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/nranchev/go-libGeoIP"
+	libgeo "github.com/nranchev/go-libGeoIP"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -91,21 +91,13 @@ func byteByByteReplace(input, from, to string) string {
 }
 
 // for easier defer cleaning
-func closeFile(file *os.File) {
-	if file != nil {
-		_ = file.Close()
-	}
+type Closeable interface {
+	Close() error
 }
 
-func closeRows(rows *sql.Rows) {
-	if rows != nil {
-		_ = rows.Close()
-	}
-}
-
-func closeStatement(stmt *sql.Stmt) {
-	if stmt != nil {
-		_ = stmt.Close()
+func closeHandle(handle Closeable) {
+	if handle != nil && !reflect.ValueOf(handle).IsNil() {
+		handle.Close()
 	}
 }
 
@@ -128,57 +120,9 @@ func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 	return filesDeleted, err
 }
 
-// escapeString and escapeQuotes copied from github.com/ziutek/mymysql/native/codecs.go
-func escapeString(txt string) string {
-	var (
-		esc string
-		buf bytes.Buffer
-	)
-	last := 0
-	for ii, bb := range txt {
-		switch bb {
-		case 0:
-			esc = `\0`
-		case '\n':
-			esc = `\n`
-		case '\r':
-			esc = `\r`
-		case '\\':
-			esc = `\\`
-		case '\'':
-			esc = `\'`
-		case '"':
-			esc = `\"`
-		case '\032':
-			esc = `\Z`
-		default:
-			continue
-		}
-		io.WriteString(&buf, txt[last:ii])
-		io.WriteString(&buf, esc)
-		last = ii + 1
-	}
-	io.WriteString(&buf, txt[last:])
-	return buf.String()
-}
-
-func escapeQuotes(txt string) string {
-	var buf bytes.Buffer
-	last := 0
-	for ii, bb := range txt {
-		if bb == '\'' {
-			io.WriteString(&buf, txt[last:ii])
-			io.WriteString(&buf, `''`)
-			last = ii + 1
-		}
-	}
-	io.WriteString(&buf, txt[last:])
-	return buf.String()
-}
-
 // getBoardArr performs a query against the database, and returns an array of BoardsTables along with an error value.
 // If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
-func getBoardArr(parameterList map[string]interface{}, extra string) (boards []BoardsTable, err error) {
+func getBoardArr(parameterList map[string]interface{}, extra string) (boards []Board, err error) {
 	queryString := "SELECT * FROM `" + config.DBprefix + "boards` "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
@@ -199,7 +143,7 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	queryString += fmt.Sprintf(" %s ORDER BY `order`", extra)
 
 	rows, err := querySQL(queryString, parameterValues...)
-	defer closeRows(rows)
+	defer closeHandle(rows)
 	if err != nil {
 		handleError(0, "error getting board list: %s", customError(err))
 		return
@@ -208,7 +152,7 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	// For each row in the results from the database, populate a new BoardsTable instance,
 	// 	then append it to the boards array we are going to return
 	for rows.Next() {
-		board := new(BoardsTable)
+		board := new(Board)
 		if err = rows.Scan(
 			&board.ID,
 			&board.Order,
@@ -219,9 +163,8 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 			&board.Subtitle,
 			&board.Description,
 			&board.Section,
-			&board.MaxImageSize,
+			&board.MaxFilesize,
 			&board.MaxPages,
-			&board.Locale,
 			&board.DefaultStyle,
 			&board.Locked,
 			&board.CreatedOn,
@@ -244,30 +187,29 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	return
 }
 
-func getBoardFromID(id int) (*BoardsTable, error) {
-	board := new(BoardsTable)
+func getBoardFromID(id int) (*Board, error) {
+	board := new(Board)
 	err := queryRowSQL(
 		"SELECT `order`,`dir`,`type`,`upload_type`,`title`,`subtitle`,`description`,`section`,"+
-			"`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`,`anonymous`,`forced_anon`,`max_age`,"+
+			"`max_image_size`,`max_pages`,`default_style`,`locked`,`created_on`,`anonymous`,`forced_anon`,`max_age`,"+
 			"`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,`redirect_to_thread`,`require_file`,"+
 			"`enable_catalog` FROM `"+config.DBprefix+"boards` WHERE `id` = ?",
 		[]interface{}{id},
 		[]interface{}{
 			&board.Order, &board.Dir, &board.Type, &board.UploadType, &board.Title,
-			&board.Subtitle, &board.Description, &board.Section, &board.MaxImageSize,
-			&board.MaxPages, &board.Locale, &board.DefaultStyle, &board.Locked, &board.CreatedOn,
+			&board.Subtitle, &board.Description, &board.Section, &board.MaxFilesize,
+			&board.MaxPages, &board.DefaultStyle, &board.Locked, &board.CreatedOn,
 			&board.Anonymous, &board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
 			&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
 			&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
 		},
 	)
-
 	board.ID = id
 	return board, err
 }
 
 // if parameterList is nil, ignore it and treat extra like a whole SQL query
-func getPostArr(parameterList map[string]interface{}, extra string) (posts []PostTable, err error) {
+func getPostArr(parameterList map[string]interface{}, extra string) (posts []Post, err error) {
 	queryString := "SELECT * FROM `" + config.DBprefix + "posts` "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
@@ -287,22 +229,22 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 
 	queryString += " " + extra // " ORDER BY `order`"
 	rows, err := querySQL(queryString, parameterValues...)
-	defer closeRows(rows)
+	defer closeHandle(rows)
 	if err != nil {
 		handleError(1, customError(err))
 		return
 	}
 
 	// For each row in the results from the database, populate a new PostTable instance,
-	// 	then append it to the posts array we are going to return
+	// then append it to the posts array we are going to return
 	for rows.Next() {
-		var post PostTable
+		var post Post
+
 		if err = rows.Scan(&post.ID, &post.BoardID, &post.ParentID, &post.Name, &post.Tripcode,
 			&post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password, &post.Filename,
 			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW,
-			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Tag, &post.Timestamp,
-			&post.Autosage, &post.PosterAuthority, &post.DeletedTimestamp, &post.Bumped,
-			&post.Stickied, &post.Locked, &post.Reviewed, &post.Sillytag,
+			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Capcode, &post.Timestamp,
+			&post.Autosage, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed,
 		); err != nil {
 			handleError(0, customError(err))
 			return
@@ -313,19 +255,19 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 }
 
 // TODO: replace where with a map[string]interface{} like getBoardsArr()
-func getSectionArr(where string) (sections []interface{}, err error) {
+func getSectionArr(where string) (sections []BoardSection, err error) {
 	if where == "" {
 		where = "1"
 	}
 	rows, err := querySQL("SELECT * FROM `" + config.DBprefix + "sections` WHERE " + where + " ORDER BY `order`")
-	defer closeRows(rows)
+	defer closeHandle(rows)
 	if err != nil {
 		errorLog.Print(err.Error())
 		return
 	}
 
 	for rows.Next() {
-		section := new(BoardSectionsTable)
+		var section BoardSection
 		if err = rows.Scan(&section.ID, &section.Order, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
 			handleError(1, customError(err))
 			return
@@ -392,6 +334,7 @@ func customError(err error) string {
 
 func handleError(verbosity int, format string, a ...interface{}) string {
 	out := fmt.Sprintf(format, a...)
+	panic(out)
 	println(verbosity, out)
 	errorLog.Print(out)
 	return out
@@ -566,36 +509,33 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 	return "other_failure"
 }
 
-func makePostJSON(post PostTable, anonymous string) (postObj PostJSON) {
-	var filename string
-	var fileExt string
-	var origFilename string
-
-	// Separate out the extension from the filenames
-	if post.Filename != "deleted" && post.Filename != "" {
-		extStart := strings.LastIndex(post.Filename, ".")
-		fileExt = post.Filename[extStart:]
-
-		origExtStart := strings.LastIndex(post.FilenameOriginal, fileExt)
-		origFilename = post.FilenameOriginal[:origExtStart]
-		filename = post.Filename[:extStart]
+func marshalAPI(tag string, data interface{}, indent bool) (string, error) {
+	var apiMap map[string]interface{}
+	var apiBytes []byte
+	var err error
+	if indent {
+		if tag == "" {
+			apiBytes, err = json.MarshalIndent(data, "", "	")
+		} else {
+			apiMap = make(map[string]interface{})
+			apiMap[tag] = data
+			apiBytes, err = json.MarshalIndent(apiMap, "", "	")
+		}
+	} else {
+		if tag == "" {
+			apiBytes, err = json.Marshal(data)
+		} else {
+			apiMap := make(map[string]interface{})
+			apiMap[tag] = data
+			apiBytes, err = json.Marshal(apiMap)
+		}
 	}
-
-	postObj = PostJSON{ID: post.ID, ParentID: post.ParentID, Subject: post.Subject, Message: post.MessageHTML,
-		Name: post.Name, Timestamp: post.Timestamp.Unix(), Bumped: post.Bumped.Unix(),
-		ThumbWidth: post.ThumbW, ThumbHeight: post.ThumbH, ImageWidth: post.ImageW, ImageHeight: post.ImageH,
-		FileSize: post.Filesize, OrigFilename: origFilename, Extension: fileExt, Filename: filename, FileChecksum: post.FileChecksum}
-
-	// Handle Anonymous
-	if post.Name == "" {
-		postObj.Name = anonymous
+	if err != nil {
+		apiBytes, _ = json.Marshal(map[string]string{
+			"error": err.Error(),
+		})
 	}
-
-	// If we have a Tripcode, prepend a !
-	if post.Tripcode != "" {
-		postObj.Tripcode = "!" + post.Tripcode
-	}
-	return
+	return string(apiBytes), err
 }
 
 func limitArraySize(arr []string, maxSize int) []string {

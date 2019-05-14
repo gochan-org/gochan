@@ -34,8 +34,8 @@ const (
 )
 
 var (
-	allSections []interface{}
-	allBoards   []interface{}
+	allSections []BoardSection
+	allBoards   []Board
 )
 
 // bumps the given thread on the given board and returns true if there were no errors
@@ -47,10 +47,10 @@ func bumpThread(postID, boardID int) error {
 	return err
 }
 
-// Checks check poster's name/tripcode/file checksum (from PostTable post) for banned status
+// Checks check poster's name/tripcode/file checksum (from Post post) for banned status
 // returns ban table if the user is banned or errNotBanned if they aren't
-func getBannedStatus(request *http.Request) (BanlistTable, error) {
-	var banEntry BanlistTable
+func getBannedStatus(request *http.Request) (BanInfo, error) {
+	var banEntry BanInfo
 
 	formName := request.FormValue("postname")
 	var tripcode string
@@ -103,7 +103,7 @@ func getBannedStatus(request *http.Request) (BanlistTable, error) {
 	return banEntry, err
 }
 
-func isBanned(ban BanlistTable, board string) bool {
+func isBanned(ban BanInfo, board string) bool {
 	if ban.Boards == "" && (ban.Expires.After(time.Now()) || ban.Permaban) {
 		return true
 	}
@@ -117,7 +117,7 @@ func isBanned(ban BanlistTable, board string) bool {
 	return false
 }
 
-func sinceLastPost(post *PostTable) int {
+func sinceLastPost(post *Post) int {
 	var lastPostTime time.Time
 	if err := queryRowSQL("SELECT `timestamp` FROM `"+config.DBprefix+"posts` WHERE `ip` = '?' ORDER BY `timestamp` DESC LIMIT 1",
 		[]interface{}{post.IP},
@@ -243,17 +243,17 @@ func parseName(name string) map[string]string {
 }
 
 // inserts prepared post object into the SQL table so that it can be rendered
-func insertPost(post PostTable, bump bool) (sql.Result, error) {
+func insertPost(post Post, bump bool) (sql.Result, error) {
 	result, err := execSQL(
 		"INSERT INTO `"+config.DBprefix+"posts` "+
-			"(`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`message_raw`,`password`,`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`,`ip`,`tag`,`timestamp`,`autosage`,`poster_authority`,`deleted_timestamp`,`bumped`,`stickied`,`locked`,`reviewed`,`sillytag`)"+
-			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			"(`boardid`,`parentid`,`name`,`tripcode`,`email`,`subject`,`message`,`message_raw`,`password`,`filename`,`filename_original`,`file_checksum`,`filesize`,`image_w`,`image_h`,`thumb_w`,`thumb_h`,`ip`,`tag`,`timestamp`,`autosage`,`deleted_timestamp`,`bumped`,`stickied`,`locked`,`reviewed`)"+
+			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
 		post.BoardID, post.ParentID, post.Name, post.Tripcode, post.Email,
 		post.Subject, post.MessageHTML, post.MessageText, post.Password,
 		post.Filename, post.FilenameOriginal, post.FileChecksum, post.Filesize,
-		post.ImageW, post.ImageH, post.ThumbW, post.ThumbH, post.IP, post.Tag,
-		post.Timestamp, post.Autosage, post.PosterAuthority, post.DeletedTimestamp,
-		post.Bumped, post.Stickied, post.Locked, post.Reviewed, post.Sillytag,
+		post.ImageW, post.ImageH, post.ThumbW, post.ThumbH, post.IP, post.Capcode,
+		post.Timestamp, post.Autosage, post.DeletedTimestamp, post.Bumped,
+		post.Stickied, post.Locked, post.Reviewed,
 	)
 
 	if err != nil {
@@ -274,7 +274,7 @@ func insertPost(post PostTable, bump bool) (sql.Result, error) {
 func makePost(writer http.ResponseWriter, request *http.Request) {
 	startTime := benchmarkTimer("makePost", time.Now(), true)
 	var maxMessageLength int
-	var post PostTable
+	var post Post
 	domain := request.Host
 	var formName string
 	var nameCookie string
@@ -343,7 +343,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	post.IP = getRealIP(request)
 	post.Timestamp = time.Now()
-	post.PosterAuthority = getStaffRank(request)
+	// post.PosterAuthority = getStaffRank(request)
 	post.Bumped = time.Now()
 	post.Stickied = request.FormValue("modstickied") == "on"
 	post.Locked = request.FormValue("modlocked") == "on"
@@ -597,7 +597,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	post.ID = int(postid)
 
 	// rebuild the board page
-	buildBoards(false, post.BoardID)
+	buildBoards(post.BoardID)
 	buildFrontPage()
 
 	if emailCommand == "noko" {
@@ -659,7 +659,7 @@ func formatMessage(message string) string {
 	return strings.Join(postLines, "<br />")
 }
 
-func bannedForever(ban BanlistTable) bool {
+func bannedForever(ban BanInfo) bool {
 	return ban.Permaban && !ban.CanAppeal && ban.Type == 3 && ban.Boards == ""
 }
 
@@ -694,7 +694,7 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 
 	banpageBuffer.Write([]byte(""))
 	if err = banpage_tmpl.Execute(&banpageBuffer, map[string]interface{}{
-		"config": config, "ban": banStatus, "banBoards": banStatus.Boards, "post": PostTable{},
+		"config": config, "ban": banStatus, "banBoards": banStatus.Boards, "post": Post{},
 	}); err != nil {
 		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")
 		return

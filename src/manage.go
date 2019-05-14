@@ -84,25 +84,25 @@ func getCurrentStaff(request *http.Request) (string, error) {
 		return "", nil
 	}
 	key := sessionCookie.Value
-	current_session := new(SessionsTable)
+	currentSession := new(LoginSession)
 	if err := queryRowSQL(
 		"SELECT `data` FROM `"+config.DBprefix+"sessions` WHERE `key` = ?",
 		[]interface{}{key},
-		[]interface{}{&current_session.Data},
+		[]interface{}{&currentSession.Data},
 	); err != nil {
 		return "", err
 	}
-	return current_session.Data, nil
+	return currentSession.Data, nil
 }
 
-func getStaff(name string) (*StaffTable, error) {
-	staff_obj := new(StaffTable)
+func getStaff(name string) (*Staff, error) {
+	staff := new(Staff)
 	err := queryRowSQL(
 		"SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = ?",
 		[]interface{}{name},
-		[]interface{}{&staff_obj.ID, &staff_obj.Username, &staff_obj.PasswordChecksum, &staff_obj.Salt, &staff_obj.Rank, &staff_obj.Boards, &staff_obj.AddedOn, &staff_obj.LastActive},
+		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Salt, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
 	)
-	return staff_obj, err
+	return staff, err
 }
 
 func getStaffRank(request *http.Request) int {
@@ -200,7 +200,7 @@ var manage_functions = map[string]ManageFunction{
 
 				html += "Optimizing all tables in database.<hr />"
 				tableRows, tablesErr := querySQL("SHOW TABLES")
-				defer closeRows(tableRows)
+				defer closeHandle(tableRows)
 				if tablesErr != nil {
 					html += "<tr><td>" + tablesErr.Error() + "</td></tr></table>"
 					return
@@ -438,7 +438,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<img src=\"/css/purge.jpg\" />"
 			rows, err := querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
-			defer closeRows(rows)
+			defer closeHandle(rows)
 			if err != nil {
 				html += err.Error()
 				handleError(1, customError(err))
@@ -484,7 +484,7 @@ var manage_functions = map[string]ManageFunction{
 				return
 			}
 			html += "<br />Everything purged, rebuilding all<br />" +
-				buildBoards(true, 0) + "<hr />\n" +
+				buildBoards() + "<hr />\n" +
 				buildFrontPage()
 			return
 		}},
@@ -545,14 +545,14 @@ var manage_functions = map[string]ManageFunction{
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
 			rows, err := querySQL("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC")
-			defer closeRows(rows)
+			defer closeHandle(rows)
 			if err != nil {
 				html += handleError(1, err.Error())
 				return
 			}
 			iterations := 0
 			for rows.Next() {
-				announcement := new(AnnouncementsTable)
+				announcement := new(Announcement)
 				err = rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
 				if err != nil {
 					html += handleError(1, err.Error())
@@ -572,7 +572,7 @@ var manage_functions = map[string]ManageFunction{
 	"bans": {
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) {
-			var post PostTable
+			var post Post
 			if request.FormValue("do") == "add" {
 				ip := net.ParseIP(request.FormValue("ip"))
 				name := request.FormValue("name")
@@ -641,15 +641,15 @@ var manage_functions = map[string]ManageFunction{
 				post = posts[0]
 			}
 			rows, err := querySQL("SELECT `ip`,`name`,`reason`,`boards`,`staff`,`timestamp`,`expires`,`permaban`,`can_appeal` FROM `" + config.DBprefix + "banlist`")
-			defer closeRows(rows)
+			defer closeHandle(rows)
 			if err != nil {
 				pageHTML += handleError(1, err.Error())
 				return
 			}
 
-			var banlist []BanlistTable
+			var banlist []BanInfo
 			for rows.Next() {
-				var ban BanlistTable
+				var ban BanInfo
 				rows.Scan(&ban.IP, &ban.Name, &ban.Reason, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.CanAppeal)
 				banlist = append(banlist, ban)
 			}
@@ -677,7 +677,7 @@ var manage_functions = map[string]ManageFunction{
 				html = "nobody;0;"
 				return
 			}
-			staff := new(StaffTable)
+			staff := new(Staff)
 			if err := queryRowSQL("SELECT `rank`,`boards` FROM `"+config.DBprefix+"staff` WHERE `username` = ?",
 				[]interface{}{current_staff},
 				[]interface{}{&staff.Rank, &staff.Boards},
@@ -693,7 +693,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
 			var done bool
-			board := new(BoardsTable)
+			board := new(Board)
 			var board_creation_status string
 			var err error
 			var rows *sql.Rows
@@ -729,9 +729,9 @@ var manage_functions = map[string]ManageFunction{
 					if err != nil {
 						board.Section = 0
 					}
-					board.MaxImageSize, err = strconv.Atoi(request.FormValue("maximagesize"))
+					board.MaxFilesize, err = strconv.Atoi(request.FormValue("maximagesize"))
 					if err != nil {
-						board.MaxImageSize = 1024 * 4
+						board.MaxFilesize = 1024 * 4
 					}
 
 					board.MaxPages, err = strconv.Atoi(request.FormValue("maxpages"))
@@ -800,17 +800,17 @@ var manage_functions = map[string]ManageFunction{
 					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
 					if _, err := execSQL(
 						"INSERT INTO `"+config.DBprefix+"boards` (`order`,`dir`,`type`,`upload_type`,`title`,`subtitle`,"+
-							"`description`,`section`,`max_image_size`,`max_pages`,`locale`,`default_style`,`locked`,`created_on`,"+
+							"`description`,`section`,`max_image_size`,`max_pages`,`default_style`,`locked`,`created_on`,"+
 							"`anonymous`,`forced_anon`,`max_age`,`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,"+
 							"`redirect_to_thread`,`require_file`,`enable_catalog`) "+
-							"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-						&board.Order, &board.Dir, &board.Type, &board.UploadType,
-						&board.Title, &board.Subtitle, &board.Description, &board.Section,
-						&board.MaxImageSize, &board.MaxPages, &board.Locale, &board.DefaultStyle,
-						&board.Locked, &boardCreationTimestamp, &board.Anonymous,
-						&board.ForcedAnon, &board.MaxAge, &board.AutosageAfter,
-						&board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed,
-						&board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
+							"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+						board.Order, board.Dir, board.Type, board.UploadType,
+						board.Title, board.Subtitle, board.Description, board.Section,
+						board.MaxFilesize, board.MaxPages, board.DefaultStyle,
+						board.Locked, boardCreationTimestamp, board.Anonymous,
+						board.ForcedAnon, board.MaxAge, board.AutosageAfter,
+						board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
+						board.RedirectToThread, board.RequireFile, board.EnableCatalog,
 					); err != nil {
 						do = ""
 						board_creation_status = handleError(1, "Error creating board: "+customError(err))
@@ -818,7 +818,7 @@ var manage_functions = map[string]ManageFunction{
 					} else {
 						board_creation_status = "Board created successfully"
 						println(2, board_creation_status)
-						buildBoards(true, 0)
+						buildBoards()
 						resetBoardSectionArrays()
 						println(2, "Boards rebuilt successfully")
 						done = true
@@ -831,7 +831,7 @@ var manage_functions = map[string]ManageFunction{
 				default:
 					// put the default column values in the text boxes
 					rows, err = querySQL("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
-					defer closeRows(rows)
+					defer closeHandle(rows)
 					if err != nil {
 						html += handleError(1, "Error getting column names from boards table:"+err.Error())
 						return
@@ -862,11 +862,9 @@ var manage_functions = map[string]ManageFunction{
 						case "section":
 							board.Section = columnDefaultInt
 						case "max_image_size":
-							board.MaxImageSize = columnDefaultInt
+							board.MaxFilesize = columnDefaultInt
 						case "max_pages":
 							board.MaxPages = columnDefaultInt
-						case "locale":
-							board.Locale = columnDefault
 						case "default_style":
 							board.DefaultStyle = columnDefault
 						case "locked":
@@ -897,7 +895,7 @@ var manage_functions = map[string]ManageFunction{
 
 				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 				rows, err = querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
-				defer closeRows(rows)
+				defer closeHandle(rows)
 				if err != nil {
 					html += handleError(1, err.Error())
 					return
@@ -976,13 +974,13 @@ var manage_functions = map[string]ManageFunction{
 			resetBoardSectionArrays()
 			return buildFrontPage() + "<hr />\n" +
 				buildBoardListJSON() + "<hr />\n" +
-				buildBoards(true, 0) + "<hr />\n"
+				buildBoards() + "<hr />\n"
 		}},
 	"rebuildboards": {
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
-			return buildBoards(true, 0)
+			return buildBoards()
 		}},
 	"reparsehtml": {
 		Permissions: 3,
@@ -1007,7 +1005,7 @@ var manage_functions = map[string]ManageFunction{
 			html += "Done reparsing HTML<hr />" +
 				buildFrontPage() + "<hr />\n" +
 				buildBoardListJSON() + "<hr />\n" +
-				buildBoards(true, 0) + "<hr />\n"
+				buildBoards() + "<hr />\n"
 			return
 		}},
 	"recentposts": {
@@ -1037,7 +1035,7 @@ var manage_functions = map[string]ManageFunction{
 					"ORDER BY `timestamp` DESC LIMIT ?",
 				nilTimestamp, limit,
 			)
-			defer closeRows(rows)
+			defer closeHandle(rows)
 			if err != nil {
 				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 				return
@@ -1070,36 +1068,28 @@ var manage_functions = map[string]ManageFunction{
 				"dir": boardDir,
 			}, "")
 			if err != nil {
-				var jsonErr ErrorJSON
-				jsonErr.Message = err.Error()
-				jsonBytes, _ := json.Marshal(jsonErr)
-				return string(jsonBytes)
+				jsonErr, _ := marshalAPI("error", err.Error(), false)
+				return jsonErr
 			}
 			if len(boards) < 1 {
-				var jsonErr ErrorJSON
-				jsonErr.Message = "Board doesn't exist."
-				jsonBytes, _ := json.Marshal(jsonErr)
-				return string(jsonBytes)
+				jsonErr, _ := marshalAPI("error", "Board doesn't exist.", false)
+				return jsonErr
 			}
+
 			posts, err := getPostArr(map[string]interface{}{
 				"id":      request.FormValue("postid"),
 				"boardid": boards[0].ID,
 			}, "")
 			if err != nil {
-				var jsonErr ErrorJSON
-				jsonErr.Message = err.Error()
-				jsonBytes, _ := json.Marshal(jsonErr)
-				return string(jsonBytes)
+				jsonErr, _ := marshalAPI("error", err.Error(), false)
+				return jsonErr
 			}
 			if len(posts) < 1 {
-				var jsonErr ErrorJSON
-				jsonErr.Message = "Post doesn't exist."
-				jsonBytes, _ := json.Marshal(jsonErr)
-				return string(jsonBytes)
+				jsonErr, _ := marshalAPI("eror", "Post doesn't exist.", false)
+				return jsonErr
 			}
-			jsonBytes, _ := json.Marshal(posts[0])
-
-			return string(jsonBytes)
+			jsonStr, _ := marshalAPI("", posts[0], false)
+			return jsonStr
 		}},
 	"staff": {
 		Permissions: 3,
@@ -1109,7 +1099,7 @@ var manage_functions = map[string]ManageFunction{
 				"<table id=\"stafftable\" border=\"1\">\n" +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
 			rows, err := querySQL("SELECT `username`,`rank`,`boards`,`added_on` FROM `" + config.DBprefix + "staff`")
-			defer closeRows(rows)
+			defer closeHandle(rows)
 			if err != nil {
 				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 				return
@@ -1117,7 +1107,7 @@ var manage_functions = map[string]ManageFunction{
 
 			iter := 1
 			for rows.Next() {
-				staff := new(StaffTable)
+				staff := new(Staff)
 				if err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn); err != nil {
 					handleError(1, err.Error())
 					return err.Error()

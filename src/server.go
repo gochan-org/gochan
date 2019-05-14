@@ -58,6 +58,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 				writer.Header().Add("Content-Type", "image/gif")
 				writer.Header().Add("Cache-Control", "max-age=86400")
 			case "jpg":
+				fallthrough
 			case "jpeg":
 				writer.Header().Add("Content-Type", "image/jpeg")
 				writer.Header().Add("Cache-Control", "max-age=86400")
@@ -73,8 +74,9 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 			case "webm":
 				writer.Header().Add("Content-Type", "video/webm")
 				writer.Header().Add("Cache-Control", "max-age=86400")
-			}
-			if strings.HasPrefix(extension, "htm") {
+			case "htm":
+				fallthrough
+			case "html":
 				writer.Header().Add("Content-Type", "text/html")
 				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 			}
@@ -133,7 +135,7 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	if err = checkAkismetAPIKey(config.AkismetAPIKey); err != nil {
 		config.AkismetAPIKey = ""
-		handleError(0, err.Error())
+		// handleError(0, err.Error())
 	}
 
 	// Compile regex for checking referrers.
@@ -148,7 +150,6 @@ func initServer() {
 			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
 		}
 	})
-
 	// eventually plugins will be able to register new namespaces. Or they will be restricted to something like /plugin
 
 	if config.UseFastCGI {
@@ -221,7 +222,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			}
 			passwordMD5 := md5Sum(password)
 
-			var post PostTable
+			var post Post
 			post.ID, _ = strconv.Atoi(postsArr[0])
 			post.BoardID, _ = strconv.Atoi(boardid)
 			if err = queryRowSQL("SELECT `parentid`,`name`,`tripcode`,`email`,`subject`,`password`,`message_raw` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?",
@@ -292,7 +293,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		buildBoards(false, boardid)
+		buildBoards(boardid)
 		if request.FormValue("parentid") == "0" {
 			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
 		} else {
@@ -316,7 +317,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		for _, checkedPostID := range postsArr {
 			var fileType string
 			var thumbType string
-			var post PostTable
+			var post Post
 			var err error
 			post.ID, _ = strconv.Atoi(checkedPostID)
 			post.BoardID, _ = strconv.Atoi(boardid)
@@ -423,7 +424,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
 				}
 
-				buildBoards(false, post.BoardID)
+				buildBoards(post.BoardID)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "%d deleted successfully\n", post.ID)
