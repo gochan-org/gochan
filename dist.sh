@@ -15,7 +15,7 @@ function copyStuff {
 	cp html/firstrun.html $DIRNAME/html/firstrun.html
 	mkdir $DIRNAME/log
 	cp -r templates $DIRNAME
-	cp initialsetupdb.sql $DIRNAME
+	cp initdb.sql $DIRNAME
 	cp *.nginx $DIRNAME
 	cp README.md $DIRNAME
 	cp LICENSE $DIRNAME
