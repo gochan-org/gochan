@@ -334,7 +334,6 @@ func customError(err error) string {
 
 func handleError(verbosity int, format string, a ...interface{}) string {
 	out := fmt.Sprintf(format, a...)
-	panic(out)
 	println(verbosity, out)
 	errorLog.Print(out)
 	return out
