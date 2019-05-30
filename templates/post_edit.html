@@ -1,26 +1,4 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Edit Post</title>
-	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript">
-		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
-		var defaultStyle = "{{.config.DefaultStyle}}";
-		var webroot = "{{$.config.SiteWebfolder}}";
-	</script>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/gochan.js"></script>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/manage.js"></script>
-	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global/img.css" />
-{{range $_, $style := .config.Styles}}
-	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{$style.Filename}}" />{{end}}
-	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png" />
-	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{.config.DefaultStyle}}" />
-	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png">
-</head>
-<body>
+{{template "img_header.html" .}}
 	<header>
 		<h1>Edit post</h1><br />
 		<div class="subtitle"><a href="{{.referrer}}">Return</a></div>
