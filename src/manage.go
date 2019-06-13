@@ -86,7 +86,7 @@ func getCurrentStaff(request *http.Request) (string, error) {
 	key := sessionCookie.Value
 	currentSession := new(LoginSession)
 	if err := queryRowSQL(
-		"SELECT `data` FROM `"+config.DBprefix+"sessions` WHERE `key` = ?",
+		"SELECT sessiondata FROM "+config.DBprefix+"sessions WHERE name = ?",
 		[]interface{}{key},
 		[]interface{}{&currentSession.Data},
 	); err != nil {
@@ -97,8 +97,7 @@ func getCurrentStaff(request *http.Request) (string, error) {
 
 func getStaff(name string) (*Staff, error) {
 	staff := new(Staff)
-	err := queryRowSQL(
-		"SELECT * FROM `"+config.DBprefix+"staff` WHERE `username` = ?",
+	err := queryRowSQL("SELECT * FROM "+config.DBprefix+"staff WHERE username = ?",
 		[]interface{}{name},
 		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Salt, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
 	)
@@ -124,13 +123,13 @@ func getStaffRank(request *http.Request) int {
 }
 
 func newStaff(username string, password string, rank int) error {
-	_, err := execSQL("INSERT INTO `"+config.DBprefix+"staff` (`username`, `password_checksum`, `rank`) VALUES(?,?,?)",
+	_, err := execSQL("INSERT INTO `"+config.DBprefix+"staff` (username, password_checksum, rank) VALUES(?,?,?)",
 		&username, bcryptSum(password), &rank)
 	return err
 }
 
 func deleteStaff(username string) error {
-	_, err := execSQL("DELETE FROM `"+config.DBprefix+"staff` WHERE `username` = ?", username)
+	_, err := execSQL("DELETE FROM "+config.DBprefix+"staff WHERE username = ?", username)
 	return err
 }
 
@@ -164,16 +163,16 @@ func createSession(key string, username string, password string, request *http.R
 				Domain: domain,
 				MaxAge: 60 * 60 * 24 * 7,
 			})
+
 			if _, err = execSQL(
-				"INSERT INTO `"+config.DBprefix+"sessions` (`key`, `data`, `expires`) VALUES(?,?,?)",
-				key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
-			); err != nil {
-				handleError(1, customError(err))
+				"INSERT INTO "+config.DBprefix+"sessions (name,sessiondata,expires) VALUES(?,?,?)",
+				key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730)))); err != nil {
+				handleError(0, customError(err))
 				return 2
 			}
 
 			if _, err = execSQL(
-				"UPDATE `"+config.DBprefix+"staff` SET `last_active` = ? WHERE `username` = ?", getSQLDateTime(), username,
+				"UPDATE "+config.DBprefix+"staff SET last_active = ? WHERE username = ?", getSQLDateTime(), username,
 			); err != nil {
 				handleError(1, customError(err))
 			}
@@ -381,8 +380,8 @@ var manage_functions = map[string]ManageFunction{
 					config.EnableQuickReply = (request.PostFormValue("EnableQuickReply") == "on")
 					config.DateTimeFormat = request.PostFormValue("DateTimeFormat")
 					AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
-					err = checkAkismetAPIKey(AkismetAPIKey)
-					if err != nil {
+
+					if err = checkAkismetAPIKey(AkismetAPIKey); err != nil {
 						status += err.Error() + "<br />"
 					} else {
 						config.AkismetAPIKey = AkismetAPIKey
@@ -437,7 +436,7 @@ var manage_functions = map[string]ManageFunction{
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<img src=\"/css/purge.jpg\" />"
-			rows, err := querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
+			rows, err := querySQL("SELECT dir FROM " + config.DBprefix + "boards")
 			defer closeHandle(rows)
 			if err != nil {
 				html += err.Error()
@@ -472,15 +471,17 @@ var manage_functions = map[string]ManageFunction{
 					return
 				}
 			}
-			if _, err = execSQL("TRUNCATE `" + config.DBprefix + "posts`"); err != nil {
-				html += err.Error() + "<br />"
-				handleError(1, customError(err))
+			truncateSQL := "TRUNCATE " + config.DBprefix + "posts"
+			if config.DBtype == "postgres" {
+				truncateSQL += " RESTART IDENTITY"
+			}
+			if _, err = execSQL(truncateSQL); err != nil {
+				html += handleError(0, err.Error()) + "<br />\n"
 				return
 			}
 
 			if _, err = execSQL("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1"); err != nil {
-				html += err.Error() + "<br />"
-				handleError(1, customError(err))
+				html += handleError(0, err.Error()) + "<br />\n"
 				return
 			}
 			html += "<br />Everything purged, rebuilding all<br />" +
@@ -544,7 +545,7 @@ var manage_functions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
-			rows, err := querySQL("SELECT `subject`,`message`,`poster`,`timestamp` FROM `" + config.DBprefix + "announcements` ORDER BY `id` DESC")
+			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM " + config.DBprefix + "announcements ORDER BY id DESC")
 			defer closeHandle(rows)
 			if err != nil {
 				html += handleError(1, err.Error())
@@ -605,9 +606,16 @@ var manage_functions = map[string]ManageFunction{
 				reason := html.EscapeString(request.FormValue("reason"))
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
 				currentStaff, _ := getCurrentStaff(request)
-				if _, err := execSQL("INSERT INTO `"+config.DBprefix+"banlist`"+
-					"(`ip`,`name`,`name_is_regex`,`filename`,`file_checksum`,`boards`,`staff`,`expires`,`permaban`,`reason`,`type`,`staff_note`)"+
-					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+				sqlStr := "INSERT INTO " + config.DBprefix + "banlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
+				for i := 1; i <= 12; i++ {
+					sqlStr += "?"
+					if i < 12 {
+						sqlStr += ","
+					}
+				}
+				sqlStr += ")"
+				println(1, sqlStr)
+				if _, err := execSQL(sqlStr,
 					ip.String(), name, nameIsRegex, filename, checksum, boards, currentStaff, expires, permaban, reason, bantype, staffNote,
 				); err != nil {
 					pageHTML += err.Error()
@@ -640,7 +648,7 @@ var manage_functions = map[string]ManageFunction{
 				}
 				post = posts[0]
 			}
-			rows, err := querySQL("SELECT `ip`,`name`,`reason`,`boards`,`staff`,`timestamp`,`expires`,`permaban`,`can_appeal` FROM `" + config.DBprefix + "banlist`")
+			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM " + config.DBprefix + "banlist")
 			defer closeHandle(rows)
 			if err != nil {
 				pageHTML += handleError(1, err.Error())
@@ -678,7 +686,7 @@ var manage_functions = map[string]ManageFunction{
 				return
 			}
 			staff := new(Staff)
-			if err := queryRowSQL("SELECT `rank`,`boards` FROM `"+config.DBprefix+"staff` WHERE `username` = ?",
+			if err := queryRowSQL("SELECT rank,boards FROM "+config.DBprefix+"staff WHERE username = ?",
 				[]interface{}{current_staff},
 				[]interface{}{&staff.Rank, &staff.Boards},
 			); err != nil {
@@ -694,7 +702,7 @@ var manage_functions = map[string]ManageFunction{
 			do := request.FormValue("do")
 			var done bool
 			board := new(Board)
-			var board_creation_status string
+			var boardCreationStatus string
 			var err error
 			var rows *sql.Rows
 			for !done {
@@ -702,30 +710,30 @@ var manage_functions = map[string]ManageFunction{
 				case do == "add":
 					board.Dir = request.FormValue("dir")
 					if board.Dir == "" {
-						board_creation_status = "Error: \"Directory\" cannot be blank"
+						boardCreationStatus = "Error: \"Directory\" cannot be blank"
 						do = ""
 						continue
 					}
-					order_str := request.FormValue("order")
-					board.Order, err = strconv.Atoi(order_str)
+					orderStr := request.FormValue("order")
+					board.ListOrder, err = strconv.Atoi(orderStr)
 					if err != nil {
-						board.Order = 0
+						board.ListOrder = 0
 					}
 					board.Title = request.FormValue("title")
 					if board.Title == "" {
-						board_creation_status = "Error: \"Title\" cannot be blank"
+						boardCreationStatus = "Error: \"Title\" cannot be blank"
 						do = ""
 						continue
 					}
 					board.Subtitle = request.FormValue("subtitle")
 					board.Description = request.FormValue("description")
-					section_str := request.FormValue("section")
-					if section_str == "none" {
-						section_str = "0"
+					sectionStr := request.FormValue("section")
+					if sectionStr == "none" {
+						sectionStr = "0"
 					}
 
 					board.CreatedOn = time.Now()
-					board.Section, err = strconv.Atoi(section_str)
+					board.Section, err = strconv.Atoi(sectionStr)
 					if err != nil {
 						board.Section = 0
 					}
@@ -776,35 +784,35 @@ var manage_functions = map[string]ManageFunction{
 					//actually start generating stuff
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0666); err != nil {
 						do = ""
-						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/ already exists!")
+						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/ already exists!")
 						break
 					}
 
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "res"), 0666); err != nil {
 						do = ""
-						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/res/ already exists!")
+						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/res/ already exists!")
 						break
 					}
 
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
 						do = ""
-						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/thumb/ already exists!")
+						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/thumb/ already exists!")
 						break
 					}
 
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "src"), 0666); err != nil {
 						do = ""
-						board_creation_status = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/src/ already exists!")
+						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/src/ already exists!")
 						break
 					}
 					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
 					if _, err := execSQL(
-						"INSERT INTO `"+config.DBprefix+"boards` (`order`,`dir`,`type`,`upload_type`,`title`,`subtitle`,"+
-							"`description`,`section`,`max_image_size`,`max_pages`,`default_style`,`locked`,`created_on`,"+
-							"`anonymous`,`forced_anon`,`max_age`,`autosage_after`,`no_images_after`,`max_message_length`,`embeds_allowed`,"+
-							"`redirect_to_thread`,`require_file`,`enable_catalog`) "+
+						"INSERT INTO "+config.DBprefix+"boards (list_order,dir,type,upload_type,title,subtitle,"+
+							"description,section,max_file_size,max_pages,default_style,locked,created_on,"+
+							"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,embeds_allowed,"+
+							"redirect_to_thread,require_file,enable_catalog) "+
 							"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-						board.Order, board.Dir, board.Type, board.UploadType,
+						board.ListOrder, board.Dir, board.Type, board.UploadType,
 						board.Title, board.Subtitle, board.Description, board.Section,
 						board.MaxFilesize, board.MaxPages, board.DefaultStyle,
 						board.Locked, boardCreationTimestamp, board.Anonymous,
@@ -813,11 +821,11 @@ var manage_functions = map[string]ManageFunction{
 						board.RedirectToThread, board.RequireFile, board.EnableCatalog,
 					); err != nil {
 						do = ""
-						board_creation_status = handleError(1, "Error creating board: "+customError(err))
+						boardCreationStatus = handleError(1, "Error creating board: "+customError(err))
 						break
 					} else {
-						board_creation_status = "Board created successfully"
-						println(2, board_creation_status)
+						boardCreationStatus = "Board created successfully"
+						println(2, boardCreationStatus)
 						buildBoards()
 						resetBoardSectionArrays()
 						println(2, "Boards rebuilt successfully")
@@ -830,71 +838,21 @@ var manage_functions = map[string]ManageFunction{
 					// resetBoardSectionArrays()
 				default:
 					// put the default column values in the text boxes
-					rows, err = querySQL("SELECT `column_name`,`column_default` FROM `information_schema`.`columns` WHERE `table_name` = '" + config.DBprefix + "boards'")
-					defer closeHandle(rows)
-					if err != nil {
-						html += handleError(1, "Error getting column names from boards table:"+err.Error())
-						return
-					}
-					for rows.Next() {
-						var columnName string
-						var columnDefault string
-						rows.Scan(&columnName, &columnDefault)
-						columnDefaultInt, _ := strconv.Atoi(columnDefault)
-						columnDefaultBool := (columnDefaultInt == 1)
-						switch columnName {
-						case "id":
-							board.ID = columnDefaultInt
-						case "order":
-							board.Order = columnDefaultInt
-						case "dir":
-							board.Dir = columnDefault
-						case "type":
-							board.Type = columnDefaultInt
-						case "upload_type":
-							board.UploadType = columnDefaultInt
-						case "title":
-							board.Title = columnDefault
-						case "subtitle":
-							board.Subtitle = columnDefault
-						case "description":
-							board.Description = columnDefault
-						case "section":
-							board.Section = columnDefaultInt
-						case "max_image_size":
-							board.MaxFilesize = columnDefaultInt
-						case "max_pages":
-							board.MaxPages = columnDefaultInt
-						case "default_style":
-							board.DefaultStyle = columnDefault
-						case "locked":
-							board.Locked = columnDefaultBool
-						case "anonymous":
-							board.Anonymous = columnDefault
-						case "forced_anon":
-							board.ForcedAnon = columnDefaultBool
-						case "max_age":
-							board.MaxAge = columnDefaultInt
-						case "autosage_after":
-							board.AutosageAfter = columnDefaultInt
-						case "no_images_after":
-							board.NoImagesAfter = columnDefaultInt
-						case "max_message_length":
-							board.MaxMessageLength = columnDefaultInt
-						case "embeds_allowed":
-							board.EmbedsAllowed = columnDefaultBool
-						case "redirect_to_thread":
-							board.RedirectToThread = columnDefaultBool
-						case "require_file":
-							board.RequireFile = columnDefaultBool
-						case "enable_catalog":
-							board.EnableCatalog = columnDefaultBool
-						}
-					}
+					board.Section = 1
+					board.MaxFilesize = 4718592
+					board.MaxPages = 11
+					board.DefaultStyle = "pipes.css"
+					board.Anonymous = "Anonymous"
+					board.AutosageAfter = 200
+					board.MaxMessageLength = 8192
+					board.EmbedsAllowed = true
+					board.EnableCatalog = true
+					board.Worksafe = true
+					board.ThreadsPerPage = config.ThreadsPerPage
 				}
 
 				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-				rows, err = querySQL("SELECT `dir` FROM `" + config.DBprefix + "boards`")
+				rows, err = querySQL("SELECT dir FROM " + config.DBprefix + "boards")
 				defer closeHandle(rows)
 				if err != nil {
 					html += handleError(1, err.Error())
@@ -908,12 +866,12 @@ var manage_functions = map[string]ManageFunction{
 				}
 
 				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />" +
-					"<h2 class=\"manage-header\">Create new board</h2>\n<span id=\"board-creation-message\">" + board_creation_status + "</span><br />"
+					"<h2 class=\"manage-header\">Create new board</h2>\n<span id=\"board-creation-message\">" + boardCreationStatus + "</span><br />"
 
 				manageBoardsBuffer := bytes.NewBufferString("")
 				allSections, _ = getSectionArr("")
 				if len(allSections) == 0 {
-					execSQL("INSERT INTO `" + config.DBprefix + "sections` (`hidden`,`name`,`abbreviation`) VALUES(0,'Main','main')")
+					execSQL("INSERT INTO " + config.DBprefix + "sections (hidden,name,abbreviation) VALUES(0,'Main','main')")
 				}
 				allSections, _ = getSectionArr("")
 
@@ -1027,7 +985,7 @@ var manage_functions = map[string]ManageFunction{
 					"`"+config.DBprefix+"posts`. "+
 					"`ip` AS ip, "+
 					"`"+config.DBprefix+"posts`. "+
-					"`timestamp` AS timestamp  "+
+					"`timestamp` AS timestamp "+
 					"FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` "+
 					"WHERE `reviewed` = 0 "+
 					"AND `"+config.DBprefix+"posts`.`deleted_timestamp` = ? "+
@@ -1068,11 +1026,11 @@ var manage_functions = map[string]ManageFunction{
 				"dir": boardDir,
 			}, "")
 			if err != nil {
-				jsonErr, _ := marshalAPI("error", err.Error(), false)
+				jsonErr, _ := marshalJSON("error", err.Error(), false)
 				return jsonErr
 			}
 			if len(boards) < 1 {
-				jsonErr, _ := marshalAPI("error", "Board doesn't exist.", false)
+				jsonErr, _ := marshalJSON("error", "Board doesn't exist.", false)
 				return jsonErr
 			}
 
@@ -1081,14 +1039,14 @@ var manage_functions = map[string]ManageFunction{
 				"boardid": boards[0].ID,
 			}, "")
 			if err != nil {
-				jsonErr, _ := marshalAPI("error", err.Error(), false)
+				jsonErr, _ := marshalJSON("error", err.Error(), false)
 				return jsonErr
 			}
 			if len(posts) < 1 {
-				jsonErr, _ := marshalAPI("eror", "Post doesn't exist.", false)
+				jsonErr, _ := marshalJSON("eror", "Post doesn't exist.", false)
 				return jsonErr
 			}
-			jsonStr, _ := marshalAPI("", posts[0], false)
+			jsonStr, _ := marshalJSON("", posts[0], false)
 			return jsonStr
 		}},
 	"staff": {

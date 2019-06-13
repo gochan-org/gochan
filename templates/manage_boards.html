@@ -7,13 +7,13 @@
 		<option value="{{$section.ID}}">{{$section.Name}}</option>{{end}}
 	</select></td></tr>
 	<tr><td>Order</td><td><input type="text" name="order" value="0" /></td></tr>
-	<tr><td>Title</td><td><input type="text" name="title" value="" /></td></tr>
-	<tr><td>Subtitle</td><td><input type="text" name="subtitle" value="" /></td></tr>
-	<tr><td>Description</td><td><input type="text" name="description" value="" /></td></tr>
-	<tr><td>Max image size</td><td><input type="text" name="maximagesize" value="4718592" /></td></tr>
-	<tr><td>Max pages</td><td><input type="text" name="maxpages" value="11" /></td></tr>
+	<tr><td>Title</td><td><input type="text" name="title" value="{{$.board.Title}}" /></td></tr>
+	<tr><td>Subtitle</td><td><input type="text" name="subtitle" value="{{$.board.Subtitle}}" /></td></tr>
+	<tr><td>Description</td><td><input type="text" name="description" value="{{$.board.Description}}" /></td></tr>
+	<tr><td>Max image size</td><td><input type="text" name="maximagesize" value="{{$.board.MaxFilesize}}" /></td></tr>
+	<tr><td>Max pages</td><td><input type="text" name="maxpages" value="{{$.board.MaxPages}}" /></td></tr>
 	<tr><td>Default style</td><td><select name="defaultstyle">{{range $_, $style := $.config.Styles}}
-		<option value="{{$style}}">{{$style}}</option>{{end}}
+		<option value="{{$style.Filename}}">{{$style.Name}} ({{$style.Filename}})</option>{{end}}
 	</select></td></tr>
 	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if $.board.Locked}}checked{{end}}/></td></tr>
 	<tr><td>Forced anonymity</td><td><input type="checkbox" name="forcedanon" {{if .board.ForcedAnon}}checked{{end}}/></td></tr>

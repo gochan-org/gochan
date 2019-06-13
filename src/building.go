@@ -13,8 +13,11 @@ import (
 )
 
 // build front page using templates/front.html
-func buildFrontPage() (html string) {
-	initTemplates()
+func buildFrontPage() string {
+	err := initTemplates("front")
+	if err != nil {
+		return err.Error()
+	}
 	var recentPostsArr []interface{}
 
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
@@ -25,18 +28,25 @@ func buildFrontPage() (html string) {
 	}
 
 	// get recent posts
-	recentQueryStr := "SELECT `" + config.DBprefix + "posts`.`id`, " +
-		"`" + config.DBprefix + "posts`.`parentid`, " +
-		"`" + config.DBprefix + "boards`.`dir` AS boardname, " +
-		"`" + config.DBprefix + "posts`.`boardid` AS boardid, " +
-		"`name`, `tripcode`, `message`, `filename`, `thumb_w`, `thumb_h` " +
-		"FROM `" + config.DBprefix + "posts`, `" + config.DBprefix + "boards` " +
-		"WHERE `" + config.DBprefix + "posts`.`deleted_timestamp` = ? "
+	recentQueryStr := "SELECT " +
+		config.DBprefix + "posts.id, " +
+		config.DBprefix + "posts.parentid, " +
+		config.DBprefix + "boards.dir as boardname, " +
+		config.DBprefix + "posts.boardid as boardid, " +
+		config.DBprefix + "posts.name, " +
+		config.DBprefix + "posts.tripcode, " +
+		config.DBprefix + "posts.message, " +
+		config.DBprefix + "posts.filename, " +
+		config.DBprefix + "posts.thumb_w, " +
+		config.DBprefix + "posts.thumb_h " +
+		"FROM " + config.DBprefix + "posts, " + config.DBprefix + "boards " +
+		"WHERE " + config.DBprefix + "posts.deleted_timestamp = ? "
+
 	if !config.RecentPostsWithNoFile {
-		recentQueryStr += "AND `" + config.DBprefix + "posts`.`filename` != '' AND `" + config.DBprefix + "posts`.filename != 'deleted' "
+		recentQueryStr += "AND " + config.DBprefix + "posts.filename != '' AND " + config.DBprefix + "posts.filename != 'deleted' "
 	}
-	recentQueryStr += "AND `boardid` = `" + config.DBprefix + "boards`.`id` " +
-		"ORDER BY `timestamp` DESC LIMIT ?"
+	recentQueryStr += "AND boardid = " + config.DBprefix + "boards.id " +
+		"ORDER BY timestamp DESC LIMIT ?"
 
 	rows, err := querySQL(recentQueryStr, nilTimestamp, config.MaxRecentPosts)
 	defer closeHandle(rows)
@@ -73,8 +83,8 @@ func buildFrontPage() (html string) {
 }
 
 func buildBoardListJSON() (html string) {
-	board_list_file, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer closeHandle(board_list_file)
+	boardListFile, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	defer closeHandle(boardListFile)
 	if err != nil {
 		return handleError(1, "Failed opening board.json for writing: "+err.Error()) + "<br />\n"
 	}
@@ -95,7 +105,7 @@ func buildBoardListJSON() (html string) {
 	if err != nil {
 		return handleError(1, "Failed marshal to JSON: "+err.Error()) + "<br />\n"
 	}
-	if _, err = board_list_file.Write(boardJSON); err != nil {
+	if _, err = boardListFile.Write(boardJSON); err != nil {
 		return handleError(1, "Failed writing boards.json file: "+err.Error()) + "<br />\n"
 	}
 	return "Board list JSON rebuilt successfully.<br />"
@@ -105,6 +115,10 @@ func buildBoardListJSON() (html string) {
 // `board` is a Board object representing the board to build archive pages for.
 // The return value is a string of HTML with debug information from the build process.
 func buildBoardPages(board *Board) (html string) {
+	err := initTemplates("boardpage")
+	if err != nil {
+		return err.Error()
+	}
 	start_time := benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), time.Now(), true)
 	var current_page_file *os.File
 	var threads []interface{}
@@ -132,9 +146,9 @@ func buildBoardPages(board *Board) (html string) {
 		"boardid":           board.ID,
 		"parentid":          0,
 		"deleted_timestamp": nilTimestamp,
-	}, " ORDER BY `bumped` DESC")
+	}, " ORDER BY bumped DESC")
 	if err != nil {
-		html += handleError(1, err.Error()) + "<br />"
+		html += handleError(1, "Error getting OP posts for /%s/: %s", board.Dir, err.Error()) + "<br />\n"
 		op_posts = nil
 		return
 	}
@@ -142,22 +156,29 @@ func buildBoardPages(board *Board) (html string) {
 	// For each top level post, start building a Thread struct
 	for _, op := range op_posts {
 		var thread Thread
-		var posts_in_thread []Post
+		var postsInThread []Post
 
 		// Get the number of replies to this thread.
-		if err = queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ?",
+		queryStr := "SELECT COUNT(*) FROM " + config.DBprefix + "posts WHERE boardid = ? AND parentid = ? AND deleted_timestamp = ?"
+
+		if err = queryRowSQL(queryStr,
 			[]interface{}{board.ID, op.ID, nilTimestamp},
 			[]interface{}{&thread.NumReplies},
 		); err != nil {
-			html += err.Error() + "<br />\n"
+			html += handleError(1,
+				"Error getting replies to /%s/%d: %s",
+				board.Dir, op.ID, err.Error()) + "<br />\n"
 		}
 
 		// Get the number of image replies in this thread
-		if err = queryRowSQL("SELECT COUNT(*) FROM `"+config.DBprefix+"posts` WHERE `boardid` = ? AND `parentid` = ? AND `deleted_timestamp` = ? AND `filesize` <> 0",
-			[]interface{}{board.ID, op.ID, nilTimestamp},
+		queryStr += " AND filesize <> 0"
+		if err = queryRowSQL(queryStr,
+			[]interface{}{board.ID, op.ID, op.DeletedTimestamp},
 			[]interface{}{&thread.NumImages},
 		); err != nil {
-			html += err.Error() + "<br />\n"
+			html += handleError(1,
+				"Error getting number of image replies to /%s/%d: %s",
+				board.Dir, op.ID, err.Error()) + "<br />\n"
 		}
 
 		thread.OP = op
@@ -173,28 +194,30 @@ func buildBoardPages(board *Board) (html string) {
 			numRepliesOnBoardPage = config.RepliesOnBoardPage
 		}
 
-		posts_in_thread, err = getPostArr(map[string]interface{}{
+		postsInThread, err = getPostArr(map[string]interface{}{
 			"boardid":           board.ID,
 			"parentid":          op.ID,
 			"deleted_timestamp": nilTimestamp,
-		}, fmt.Sprintf(" ORDER BY `id` DESC LIMIT %d", numRepliesOnBoardPage))
+		}, fmt.Sprintf(" ORDER BY id DESC LIMIT %d", numRepliesOnBoardPage))
 		if err != nil {
-			html += err.Error() + "<br />"
+			html += handleError(1,
+				"Error getting posts in /%s/%d: %s",
+				board.Dir, op.ID, err.Error()) + "<br />\n"
 		}
 
 		var reversedPosts []Post
-		for i := len(posts_in_thread); i > 0; i-- {
-			reversedPosts = append(reversedPosts, posts_in_thread[i-1])
+		for i := len(postsInThread); i > 0; i-- {
+			reversedPosts = append(reversedPosts, postsInThread[i-1])
 		}
 
-		if len(posts_in_thread) > 0 {
+		if len(postsInThread) > 0 {
 			// Store the posts to show on board page
-			//thread.BoardReplies = posts_in_thread
+			//thread.BoardReplies = postsInThread
 			thread.BoardReplies = reversedPosts
 
 			// Count number of images on board page
 			image_count := 0
-			for _, reply := range posts_in_thread {
+			for _, reply := range postsInThread {
 				if reply.Filesize != 0 {
 					image_count++
 				}
@@ -222,7 +245,8 @@ func buildBoardPages(board *Board) (html string) {
 		// Open board.html for writing to the first page.
 		board_page_file, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			html += handleError(1, "Failed opening /"+board.Dir+"/board.html: "+err.Error()) + "<br />"
+			html += handleError(1,
+				"Failed opening /%s/board.html: %s", board.Dir, err.Error()) + "<br />"
 			return
 		}
 
@@ -347,31 +371,34 @@ func buildBoards(which ...int) (html string) {
 	return
 }
 
-func buildCatalog(which int) (html string) {
+func buildCatalog(which int) string {
+	err := initTemplates("catalog")
+	if err != nil {
+		return err.Error()
+	}
 	board, err := getBoardFromID(which)
 	if err != nil {
-		html += handleError(1, err.Error())
+		return handleError(1, err.Error())
 	}
 	catalogPath := path.Join(config.DocumentRoot, board.Dir, "catalog.html")
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		html += handleError(1, "Failed opening /"+board.Dir+"/catalog.html: "+err.Error())
-		return
+		return handleError(1, "Failed opening /%s/catalog.html: %s", board.Dir, err.Error())
 	}
 	threadOPs, err := getPostArr(map[string]interface{}{
 		"boardid":           which,
 		"parentid":          0,
 		"deleted_timestamp": nilTimestamp,
-	}, "ORDER BY `bumped` ASC")
+	}, "ORDER BY bumped ASC")
 	if err != nil {
-		html += handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
-		return
+		return handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
 	}
 	var threadInterfaces []interface{}
 	for _, thread := range threadOPs {
 		threadInterfaces = append(threadInterfaces, thread)
 	}
 	threadPages := paginate(config.PostsPerThreadPage, threadInterfaces)
+
 	if err = catalog_tmpl.Execute(catalogFile, map[string]interface{}{
 		"boards":      allBoards,
 		"config":      config,
@@ -379,19 +406,22 @@ func buildCatalog(which int) (html string) {
 		"sections":    allSections,
 		"threadPages": threadPages,
 	}); err != nil {
-		html += handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
-		return
+		return handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
 	}
-	html += fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
-	return
+	return fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
 }
 
 // buildThreadPages builds the pages for a thread given by a Post object.
 func buildThreadPages(op *Post) (html string) {
+	err := initTemplates("threadpage")
+	if err != nil {
+		return err.Error()
+	}
+
 	var replies []Post
 	var current_page_file *os.File
-	board, err := getBoardFromID(op.BoardID)
-	if err != nil {
+	var board *Board
+	if board, err = getBoardFromID(op.BoardID); err != nil {
 		html += handleError(1, err.Error())
 	}
 
@@ -399,7 +429,7 @@ func buildThreadPages(op *Post) (html string) {
 		"boardid":           op.BoardID,
 		"parentid":          op.ID,
 		"deleted_timestamp": nilTimestamp,
-	}, "ORDER BY `id` ASC")
+	}, "ORDER BY id ASC")
 	if err != nil {
 		html += handleError(1, "Error building thread "+strconv.Itoa(op.ID)+":"+err.Error())
 		return

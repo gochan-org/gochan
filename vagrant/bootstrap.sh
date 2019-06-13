@@ -4,55 +4,47 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-export DBTYPE=mysql
+export DBTYPE=postgresql
 
 apt-get -y update && apt-get -y upgrade
 
 if [ "$DBTYPE" == "mysql" ]; then
+# Using MySQL (stable)
 apt-get -y install mariadb-server mariadb-client 
-# Make sure any imported database is utf8mb4
-# http://mathiasbynens.be/notes/mysql-utf8mb4
-# Put in /etc/mysql/conf.d/local.cnf
-cat << EOF >/etc/mysql/conf.d/local.cnf
-[client]
-default-character-set = utf8mb4
-
-[mysql]
-default-character-set = utf8mb4
-
-[mysqld]
-character-set-client-handshake = FALSE
-character-set-server = utf8mb4
-collation-server = utf8mb4_unicode_ci
-default-storage-engine = innodb
-EOF
-
 mysql -uroot -e "CREATE DATABASE IF NOT EXISTS gochan; \
 GRANT USAGE ON *.* TO gochan IDENTIFIED BY ''; \
 GRANT ALL PRIVILEGES ON gochan.* TO gochan; \
 SET PASSWORD FOR 'gochan'@'%' = PASSWORD('gochan');
 FLUSH PRIVILEGES;"
 
-cat << EOF >/etc/mysql/conf.d/open.cnf
-[mysqld]
-bind-address = 0.0.0.0
-EOF
+systemctl enable mysql
+systemctl start mysql &
+wait
 elif [ "$DBTYPE" == "postgresql" ]; then
-	# apt-get -y install postgresql postgresql-contrib
-	# useradd gochan
-	# passwd -d gochan
-	# sudo -u postgres createuser -d gochan
-	echo "PostgreSQL not supported yet"
-	exit 1
+# using PostgreSQL (mostly stable)
+apt-get -y install postgresql postgresql-contrib
+
+sudo -u postgres psql -f - << EOF
+CREATE USER gochan PASSWORD 'gochan';
+CREATE DATABASE gochan;
+GRANT ALL PRIVILEGES ON DATABASE gochan TO gochan;
+EOF
+	echo "127.0.0.1:5432:gochan:gochan:gochan" > /home/vagrant/.pgpass
+	chown vagrant:vagrant /home/vagrant/.pgpass
+	chmod 0600 /home/vagrant/.pgpass
+	systemctl enable postgresql
+	systemctl start postgresql &
+	wait
+elif [ "$DBTYPE" == "sqlite3" ]; then
+# using SQLite (mostly stable)
+apt-get -y install sqlite3
 elif [ "$DBTYPE" == "mssql" ]; then
-	echo "Microsoft SQL Server not supported yet";
-	exit 1
-elif [ "$DBTYPE" == "sqlite" ]; then
-	echo "SQLite not supported yet"
-	exit 1
+# using Microsoft SQL Server (currently unsupported)
+echo "Microsoft SQL Server not supported yet";
+exit 1
 else
-	echo "Invalid DB type: $DBTYPE"
-	exit 1
+echo "Invalid DB type: $DBTYPE"
+exit 1
 fi
 
 apt-get -y install git subversion mercurial golang-1.10 nginx ffmpeg
@@ -69,13 +61,13 @@ systemctl disable nginx
 sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/system/nginx.service
 systemctl daemon-reload
 systemctl enable nginx
-
-systemctl restart nginx mysql &
+systemctl restart nginx &
 wait
 
 mkdir -p /vagrant/lib
 cd /vagrant
 su - vagrant
+
 export GOCHAN_PATH=/home/vagrant/gochan
 export GOPATH=/vagrant/lib
 mkdir /home/vagrant/bin
@@ -88,19 +80,28 @@ function changePerms {
 }
 
 function makeLink {
-	ln -sf /vagrant/$1 $GOCHAN_PATH/$1
+	ln -sf /vagrant/$1 $GOCHAN_PATH/
 }
 
 cat << EOF >>/home/vagrant/.bashrc
-export GOPATH=/vagrant/lib
-export GOCHAN_PATH=/home/vagrant/gochan
+export GOPATH=$GOPATH
+export GOCHAN_PATH=$GOCHAN_PATH
+export DBTYPE=$DBTYPE
 EOF
 
 # a couple convenience shell scripts, since they're nice to have
 cat << EOF >/home/vagrant/dbconnect.sh
 #!/usr/bin/env bash
 
-mysql -s -t -u gochan -D gochan -pgochan
+if [ "$DBTYPE" = "mysql" ] || [ -z "$DBTYPE" ]; then
+	mysql -stu gochan -D gochan -pgochan
+elif [ "$DBTYPE" = "postgresql" ]; then
+	psql -U gochan -h 127.0.0.1 gochan
+elif [ "$DBTYPE" = "sqlite3" ]; then
+	sqlite3 ~/gochan/gochan.db
+else
+	echo "DB type '$DBTYPE' not supported"
+fi
 EOF
 
 cat << EOF >/home/vagrant/buildgochan.sh
@@ -120,18 +121,19 @@ go get \
 	golang.org/x/net/html \
 	github.com/aquilax/tripcode \
 	golang.org/x/crypto/bcrypt \
-	github.com/frustra/bbcode
+	github.com/frustra/bbcode \
+	github.com/mattn/go-sqlite3
 make debug
 
 rm -f $GOCHAN_PATH/gochan
-rm -f $GOCHAN_PATH/initdb.sql
+rm -f $GOCHAN_PATH/initdb*.sql
 
 install -m 775 -o vagrant -g vagrant -d $GOCHAN_PATH
 makeLink html
 makeLink log
 makeLink gochan
 makeLink templates
-makeLink initdb.sql
+ln -sf /vagrant/initdb*.sql $GOCHAN_PATH/
 changePerms $GOCHAN_PATH
 
 mkdir -p /home/vagrant/.config/systemd/user/
@@ -144,7 +146,19 @@ sed /vagrant/gochan.example.json \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
 	-e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/' \
-	-e w\ $GOCHAN_PATH/gochan.json
+	-e "w $GOCHAN_PATH/gochan.json"
+
+if [ "$DBTYPE" = "postgresql" ]; then
+	sed \
+		-e 's/"DBtype": ".*",/"DBtype": "postgres",/' \
+		-e 's/"DBhost": ".*",/"DBhost": "127.0.0.1",/' \
+		-i $GOCHAN_PATH/gochan.json
+elif [ "$DBTYPE" = "sqlite3" ]; then
+	sed \
+		-e 's/"DBtype": ".*",/"DBtype": "sqlite3",/' \
+		-e 's/"DBhost": ".*",/"DBhost": "gochan.db",/' \
+		-i $GOCHAN_PATH/gochan.json
+fi
 
 echo
 echo "Server set up, please run \"vagrant ssh\" on your host machine and"

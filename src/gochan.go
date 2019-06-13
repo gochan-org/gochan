@@ -18,7 +18,7 @@ func main() {
 
 	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", versionStr, buildtimeString, config.Verbosity)
 	println(0, "Loading and parsing templates...")
-	if err := initTemplates(); err != nil {
+	if err := initTemplates("all"); err != nil {
 		handleError(0, customError(err))
 		os.Exit(2)
 	}

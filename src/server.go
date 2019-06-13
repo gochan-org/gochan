@@ -225,7 +225,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			var post Post
 			post.ID, _ = strconv.Atoi(postsArr[0])
 			post.BoardID, _ = strconv.Atoi(boardid)
-			if err = queryRowSQL("SELECT `parentid`,`name`,`tripcode`,`email`,`subject`,`password`,`message_raw` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?",
+			if err = queryRowSQL("SELECT parentid,name,tripcode,email,subject,password,message_raw FROM "+config.DBprefix+"posts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
 				[]interface{}{post.ID, post.BoardID, nilTimestamp},
 				[]interface{}{
 					&post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject,
@@ -265,7 +265,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if err = queryRowSQL("SELECT `password` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ?",
+		if err = queryRowSQL("SELECT password FROM "+config.DBprefix+"posts WHERE id = ? AND boardid = ?",
 			[]interface{}{postid, boardid},
 			[]interface{}{&postPassword},
 		); err != nil {
@@ -284,8 +284,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if _, err = execSQL("UPDATE `"+config.DBprefix+"posts` SET "+
-			"`email` = ?, `subject` = ?, `message` = ?, `message_raw` = ? WHERE `id` = ? AND `boardid` = ?",
+		if _, err = execSQL("UPDATE "+config.DBprefix+"posts SET "+
+			"email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ? AND boardid = ?",
 			request.FormValue("editemail"), request.FormValue("editsubject"), formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg"),
 			postid, boardid,
 		); err != nil {
@@ -323,8 +323,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			post.BoardID, _ = strconv.Atoi(boardid)
 
 			if err = queryRowSQL(
-				"SELECT `parentid`, `filename`, `password` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `boardid` = ? AND `deleted_timestamp` = ?",
-				[]interface{}{&post.ID, &post.BoardID, nilTimestamp},
+				"SELECT parentid, filename,password FROM "+config.DBprefix+"posts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
+				[]interface{}{post.ID, post.BoardID, nilTimestamp},
 				[]interface{}{&post.ParentID, &post.Filename, &post.Password},
 			); err == sql.ErrNoRows {
 				//the post has already been deleted
@@ -337,7 +337,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			}
 
 			if err = queryRowSQL(
-				"SELECT `id` FROM `"+config.DBprefix+"boards` WHERE `dir` = ?",
+				"SELECT id FROM "+config.DBprefix+"boards WHERE dir = ?",
 				[]interface{}{board},
 				[]interface{}{&post.BoardID},
 			); err != nil {
@@ -364,7 +364,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
 
 					if _, err = execSQL(
-						"UPDATE `"+config.DBprefix+"posts` SET `filename` = 'deleted' WHERE `id` = ? AND `boardid` = ?",
+						"UPDATE "+config.DBprefix+"posts SET filename = deleted WHERE id = ? AND boardid = ?",
 						post.ID, post.BoardID,
 					); err != nil {
 						serveErrorPage(writer, err.Error())
@@ -382,7 +382,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			} else {
 				// delete the post
 				if _, err = execSQL(
-					"UPDATE `"+config.DBprefix+"posts` SET `deleted_timestamp` = ? WHERE `id` = ?",
+					"UPDATE "+config.DBprefix+"posts SET deleted_timestamp = ? WHERE id = ?",
 					getSQLDateTime(), post.ID,
 				); err != nil {
 					serveErrorPage(writer, err.Error())
@@ -395,7 +395,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 
 				// if the deleted post is actually a thread, delete its posts
-				if _, err = execSQL("UPDATE `"+config.DBprefix+"posts` SET `deleted_timestamp` = ? WHERE `parentID` = ?",
+				if _, err = execSQL("UPDATE "+config.DBprefix+"posts SET deleted_timestamp = ? WHERE parentID = ?",
 					getSQLDateTime(), post.ID,
 				); err != nil {
 					serveErrorPage(writer, err.Error())
@@ -405,7 +405,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				// delete the file
 				var deletedFilename string
 				if err = queryRowSQL(
-					"SELECT `filename` FROM `"+config.DBprefix+"posts` WHERE `id` = ? AND `filename` != ''",
+					"SELECT filename FROM "+config.DBprefix+"posts WHERE id = ? AND filename != ''",
 					[]interface{}{post.ID},
 					[]interface{}{&deletedFilename},
 				); err == nil {
@@ -415,7 +415,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 
 				if err = queryRowSQL(
-					"SELECT `filename` FROM `"+config.DBprefix+"posts` WHERE `parentID` = ? AND `filename` != ''",
+					"SELECT filename FROM "+config.DBprefix+"posts WHERE parentID = ? AND filename != ''",
 					[]interface{}{post.ID},
 					[]interface{}{&deletedFilename},
 				); err == nil {

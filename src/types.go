@@ -87,7 +87,7 @@ func (a *BanAppeal) GetBan() (BanInfo, error) {
 	var ban BanInfo
 	var err error
 
-	err = queryRowSQL("SELECT * FROM `"+config.DBprefix+"banlist` WHERE `id` = ? LIMIT 1",
+	err = queryRowSQL("SELECT * FROM "+config.DBprefix+"banlist WHERE id = ? LIMIT 1",
 		[]interface{}{a.ID}, []interface{}{
 			&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
 			&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,
@@ -123,9 +123,9 @@ type BannedHash struct {
 
 type Board struct {
 	ID                     int            `json:"-"`
-	CurrentPage            int            `json:`
+	CurrentPage            int            `json:"-"`
 	NumPages               int            `json:"pages"`
-	Order                  int            `json:"-"`
+	ListOrder              int            `json:"-"`
 	Dir                    string         `json:"board"`
 	Type                   int            `json:"-"`
 	UploadType             int            `json:"-"`
@@ -159,7 +159,7 @@ type Board struct {
 
 type BoardSection struct {
 	ID           int
-	Order        int
+	ListOrder    int
 	Hidden       bool
 	Name         string
 	Abbreviation string
@@ -191,7 +191,7 @@ type Post struct {
 	IP               string    `json:"-"`
 	Capcode          string    `json:"capcode"`
 	Timestamp        time.Time `json:"time"`
-	Autosage         int       `json:"-"`
+	Autosage         bool      `json:"-"`
 	DeletedTimestamp time.Time `json:"-"`
 	Bumped           time.Time `json:"last_modified"`
 	Stickied         bool      `json:"-"`
@@ -242,6 +242,7 @@ type Report struct {
 
 type LoginSession struct {
 	ID      uint
+	Name    string
 	Data    string
 	Expires string
 }
@@ -291,13 +292,12 @@ type GochanConfig struct {
 	TemplateDir  string
 	LogDir       string
 
-	DBtype      string
-	DBhost      string
-	DBname      string
-	DBusername  string
-	DBpassword  string
-	DBprefix    string
-	DBkeepalive bool
+	DBtype     string
+	DBhost     string
+	DBname     string
+	DBusername string
+	DBpassword string
+	DBprefix   string
 
 	Lockdown        bool     `description:"Disables posting." default:"unchecked"`
 	LockdownMessage string   `description:"Message displayed when someone tries to post while the site is on lockdown."`

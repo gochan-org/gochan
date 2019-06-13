@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"html"
 	"os"
@@ -307,7 +306,7 @@ var (
 
 func loadTemplate(files ...string) (*template.Template, error) {
 	if len(files) == 0 {
-		return nil, errors.New("No files named in call to loadTemplate")
+		return nil, fmt.Errorf("No files named in call to loadTemplate")
 	}
 	var templates []string
 	for i, file := range files {
@@ -323,65 +322,83 @@ func loadTemplate(files ...string) (*template.Template, error) {
 }
 
 func templateError(name string, err error) error {
-	return errors.New("Failed loading template \"" + config.TemplateDir + "/" + name + ": \"" + err.Error())
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("Failed loading template '%s/%s': %s", config.TemplateDir, name, err.Error())
 }
 
-func initTemplates() error {
+func initTemplates(which ...string) error {
 	var err error
-	resetBoardSectionArrays()
-	banpage_tmpl, err = loadTemplate("banpage.html", "global_footer.html")
-	if err != nil {
-		return templateError("banpage.html", err)
-	}
+	buildAll := len(which) == 0 || which[0] == "all"
 
-	catalog_tmpl, err = loadTemplate("catalog.html", "img_header.html", "global_footer.html")
-	if err != nil {
-		return templateError("catalog.html", err)
-	}
-
-	errorpage_tmpl, err = loadTemplate("error.html")
-	if err != nil {
-		return templateError("error.html", err)
-	}
-
-	img_boardpage_tmpl, err = loadTemplate("img_boardpage.html", "img_header.html", "postbox.html", "global_footer.html")
-	if err != nil {
-		return templateError("img_boardpage.html", err)
-	}
-
-	img_threadpage_tmpl, err = loadTemplate("img_threadpage.html", "img_header.html", "postbox.html", "global_footer.html")
-	if err != nil {
-		return templateError("img_threadpage.html", err)
-	}
-
-	post_edit_tmpl, err = loadTemplate("post_edit.html", "img_header.html", "global_footer.html")
-	if err != nil {
-		return templateError("img_threadpage.html", err)
-	}
-
-	manage_bans_tmpl, err = loadTemplate("manage_bans.html")
-	if err != nil {
-		return templateError("manage_bans.html", err)
-	}
-
-	manage_boards_tmpl, err = loadTemplate("manage_boards.html")
-	if err != nil {
-		return templateError("manage_boards.html", err)
-	}
-
-	manage_config_tmpl, err = loadTemplate("manage_config.html")
-	if err != nil {
-		return templateError("manage_config.html", err)
-	}
-
-	manage_header_tmpl, err = loadTemplate("manage_header.html")
-	if err != nil {
-		return templateError("manage_header.html", err)
-	}
-
-	front_page_tmpl, err = loadTemplate("front.html", "front_intro.html", "img_header.html", "global_footer.html")
-	if err != nil {
-		return templateError("front.html", err)
+	for _, t := range which {
+		if buildAll || t == "banpage" {
+			banpage_tmpl, err = loadTemplate("banpage.html", "global_footer.html")
+			if err != nil {
+				return templateError("banpage.html", err)
+			}
+		}
+		if buildAll || t == "catalog" {
+			catalog_tmpl, err = loadTemplate("catalog.html", "img_header.html", "global_footer.html")
+			if err != nil {
+				return templateError("catalog.html", err)
+			}
+		}
+		if buildAll || t == "error" {
+			errorpage_tmpl, err = loadTemplate("error.html")
+			if err != nil {
+				return templateError("error.html", err)
+			}
+		}
+		if buildAll || t == "front" {
+			front_page_tmpl, err = loadTemplate("front.html", "front_intro.html", "img_header.html", "global_footer.html")
+			if err != nil {
+				return templateError("front.html", err)
+			}
+		}
+		if buildAll || t == "boardpage" {
+			img_boardpage_tmpl, err = loadTemplate("img_boardpage.html", "img_header.html", "postbox.html", "global_footer.html")
+			if err != nil {
+				return templateError("img_boardpage.html", err)
+			}
+		}
+		if buildAll || t == "threadpage" {
+			img_threadpage_tmpl, err = loadTemplate("img_threadpage.html", "img_header.html", "postbox.html", "global_footer.html")
+			if err != nil {
+				return templateError("img_threadpage.html", err)
+			}
+		}
+		if buildAll || t == "postedit" {
+			post_edit_tmpl, err = loadTemplate("post_edit.html", "img_header.html", "global_footer.html")
+			if err != nil {
+				return templateError("img_threadpage.html", err)
+			}
+		}
+		if buildAll || t == "managebans" {
+			manage_bans_tmpl, err = loadTemplate("manage_bans.html")
+			if err != nil {
+				return templateError("manage_bans.html", err)
+			}
+		}
+		if buildAll || t == "manageboards" {
+			manage_boards_tmpl, err = loadTemplate("manage_boards.html")
+			if err != nil {
+				return templateError("manage_boards.html", err)
+			}
+		}
+		if buildAll || t == "manageconfig" {
+			manage_config_tmpl, err = loadTemplate("manage_config.html")
+			if err != nil {
+				return templateError("manage_config.html", err)
+			}
+		}
+		if buildAll || t == "manageheader" {
+			manage_header_tmpl, err = loadTemplate("manage_header.html")
+			if err != nil {
+				return templateError("manage_header.html", err)
+			}
+		}
 	}
 	return nil
 }

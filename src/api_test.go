@@ -15,7 +15,7 @@ func TestAPI(t *testing.T) {
 	var api string
 	var err error
 
-	if api, err = marshalAPI("colorsSlice", []Color{
+	if api, err = marshalJSON("colorsSlice", []Color{
 		Color{255, 0, 0},
 		Color{0, 255, 0},
 		Color{0, 0, 255},
@@ -24,7 +24,7 @@ func TestAPI(t *testing.T) {
 	}
 	fmt.Println("API slice: " + api)
 
-	if api, err = marshalAPI("colorsMap", map[string]Color{
+	if api, err = marshalJSON("colorsMap", map[string]Color{
 		"red":   Color{255, 0, 0},
 		"green": Color{0, 255, 0},
 		"blue":  Color{0, 0, 255},
@@ -33,12 +33,12 @@ func TestAPI(t *testing.T) {
 	}
 	fmt.Println("API map: " + api)
 
-	if api, err = marshalAPI("color", Color{255, 0, 0}, true); err != nil {
+	if api, err = marshalJSON("color", Color{255, 0, 0}, true); err != nil {
 		t.Fatal(err.Error())
 	}
 	fmt.Println("API struct: " + api)
 
-	if api, err = marshalAPI("error", "Some error", false); err != nil {
+	if api, err = marshalJSON("error", "Some error", false); err != nil {
 		t.Fatal(err.Error())
 	}
 	fmt.Println("API string: " + api)
