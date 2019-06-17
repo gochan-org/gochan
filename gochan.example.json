@@ -14,12 +14,11 @@
 	"DBtype": "mysql",
 	"DBhost": "tcp(127.0.0.1:3306)",
 	"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
-	"DBtypealt": "unix(/var/run/mysqld/mysqld.sock)",
+	"DBhost_alt": "unix(/var/run/mysqld/mysqld.sock)",
 	"DBname": "gochan",
 	"DBusername": "gochan",
 	"DBpassword": "",
 	"DBprefix": "gc_",
-	"DBkeepalive": false,
 
 	"Lockdown": false,
 	"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
