@@ -362,6 +362,14 @@ func buildBoards(which ...int) (html string) {
 		return html + "No boards to build.<br />\n"
 	}
 	for _, board := range boards {
+		boardPath := path.Join(config.DocumentRoot, board.Dir)
+		if _, err := os.Stat(boardPath); err != nil {
+			// Board was most likely just recently created
+			if err = os.Mkdir(boardPath, 0666); err != nil {
+				html += handleError(0, "Error creating board directory: %s\n", err.Error()) + "<br />\n"
+			}
+		}
+
 		if board.EnableCatalog {
 			html += buildCatalog(board.ID) + "<br />\n"
 		}

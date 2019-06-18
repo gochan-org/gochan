@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -64,18 +65,41 @@ func connectToSQLServer() {
 	var sqlVersionStr string
 	err = queryRowSQL("SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
 		[]interface{}{}, []interface{}{&sqlVersionStr})
+	var numBoards, numStaff int
+	rows, err := querySQL("SELECT COUNT(*) FROM " + config.DBprefix + "boards UNION ALL SELECT COUNT(*) FROM " + config.DBprefix + "staff")
+	if err != nil {
+		handleError(0, "failed: %s\n", customError(err))
+		os.Exit(2)
+	}
+	rows.Next()
+	rows.Scan(&numBoards)
+	rows.Next()
+	rows.Scan(&numStaff)
 
-	if err == sql.ErrNoRows {
-		println(0, "\nThis looks like a new installation")
+	if numBoards == 0 && numStaff == 0 {
+		println(0, "This looks like a new installation. Creating /test/ and a new staff member.\nUsername: admin\nPassword: password")
 
-		if _, err = db.Exec("INSERT INTO " + config.DBprefix + "staff " +
-			"(username, password_checksum, salt, rank) " +
-			"VALUES ('admin', '" + bcryptSum("password") + "', 'abc', 3)",
+		if _, err = execSQL(
+			"INSERT INTO "+config.DBprefix+"staff (username,password_checksum,salt,rank) VALUES(?,?,?,?)", "admin",
+			bcryptSum("password"), "abc", 3,
 		); err != nil {
 			handleError(0, "Failed creating admin user with error: %s\n", customError(err))
 			os.Exit(2)
 		}
 
+		boardPath := path.Join(config.DocumentRoot, "/test/")
+		if _, err = os.Stat(boardPath); err == nil {
+			printf(0, "Can't create /test/, '%s' already exists\nYou must create a board manually\n", boardPath)
+		} else if _, err = execSQL(
+			"INSERT INTO "+config.DBprefix+"boards (dir,title,subtitle,description) VALUES(?,?,?,?)",
+			"test", "Testing board", "Board for testing", "Board for testing",
+		); err != nil {
+			handleError(0, "Failed creating /test/ with error: %s\n", customError(err))
+		}
+		resetBoardSectionArrays()
+		buildFrontPage()
+		buildBoardListJSON()
+		buildBoards()
 		_, err = execSQL("INSERT INTO "+config.DBprefix+"info (name,value) VALUES('version',?)", versionStr)
 		return
 	} else if err != nil {
