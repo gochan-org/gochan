@@ -4,7 +4,7 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-export DBTYPE=postgresql
+export DBTYPE=mysql
 
 apt-get -y update && apt-get -y upgrade
 
@@ -107,23 +107,13 @@ EOF
 cat << EOF >/home/vagrant/buildgochan.sh
 #!/usr/bin/env bash
 
-cd /vagrant && make debug && cd ~/gochan && ./gochan
+cd /vagrant && ./build.sh && cd ~/gochan && ./gochan
 EOF
 
 chmod +x /home/vagrant/dbconnect.sh
 chmod +x /home/vagrant/buildgochan.sh
 
-go get \
-	github.com/disintegration/imaging \
-	github.com/nranchev/go-libGeoIP \
-	github.com/go-sql-driver/mysql \
-	github.com/lib/pq \
-	golang.org/x/net/html \
-	github.com/aquilax/tripcode \
-	golang.org/x/crypto/bcrypt \
-	github.com/frustra/bbcode \
-	github.com/mattn/go-sqlite3
-make debug
+./build.sh dependencies
 
 rm -f $GOCHAN_PATH/gochan
 rm -f $GOCHAN_PATH/initdb*.sql
