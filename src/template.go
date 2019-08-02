@@ -305,9 +305,6 @@ var (
 )
 
 func loadTemplate(files ...string) (*template.Template, error) {
-	if len(files) == 0 {
-		return nil, fmt.Errorf("No files named in call to loadTemplate")
-	}
 	var templates []string
 	for i, file := range files {
 		templates = append(templates, file)

@@ -354,6 +354,18 @@ func getThumbnailPath(thumbType string, img string) string {
 	return img[0:index] + thumbSuffix
 }
 
+// findResource searches for a file in the given paths and returns the first one it finds
+// or a blank string if none of the paths exist
+func findResource(paths ...string) string {
+	var err error
+	for _, filepath := range paths {
+		if _, err = os.Stat(filepath); err == nil {
+			return filepath
+		}
+	}
+	return ""
+}
+
 // paginate returns a 2d array of a specified interface from a 1d array passed in,
 // with a specified number of values per array in the 2d array.
 // interfaceLength is the number of interfaces per array in the 2d array (e.g, threads per page)

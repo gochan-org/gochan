@@ -280,13 +280,11 @@ type Style struct {
 
 // GochanConfig stores crucial info and is read from/written to gochan.json
 type GochanConfig struct {
-	ListenIP     string
-	Port         int
-	FirstPage    []string
-	Error404Path string
-	Error500Path string
-	Username     string
-	UseFastCGI   bool
+	ListenIP   string
+	Port       int
+	FirstPage  []string
+	Username   string
+	UseFastCGI bool
 
 	DocumentRoot string
 	TemplateDir  string
@@ -359,10 +357,16 @@ type GochanConfig struct {
 }
 
 func initConfig() {
-	jfile, err := ioutil.ReadFile("gochan.json")
+	cfgPath := findResource("gochan.json", "/etc/gochan/gochan.json")
+	if cfgPath == "" {
+		println(0, "gochan.json not found")
+		os.Exit(1)
+	}
+
+	jfile, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		printf(0, "Error reading \"gochan.json\": %s\n", err.Error())
-		os.Exit(2)
+		printf(0, "Error reading 'gochan.json': %s\n", err.Error())
+		os.Exit(1)
 	}
 
 	if err = json.Unmarshal(jfile, &config); err != nil {
@@ -382,12 +386,12 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 			printf(0, "Error parsing \"gochan.json\": %s\n", err.Error())
 		}
 
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.ListenIP == "" {
 		println(0, "ListenIP not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.Port == 0 {
@@ -398,23 +402,13 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 		config.FirstPage = []string{"index.html", "board.html"}
 	}
 
-	if config.Error404Path == "" {
-		println(0, "Error404Path not set in gochan.json, halting.")
-		os.Exit(2)
-	}
-
-	if config.Error500Path == "" {
-		println(0, "Error500Path not set in gochan.json, halting.")
-		os.Exit(2)
-	}
-
 	if config.Username == "" {
 		config.Username = "gochan"
 	}
 
 	if config.DocumentRoot == "" {
 		println(0, "DocumentRoot not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	wd, wderr := os.Getwd()
@@ -425,14 +419,16 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 		}
 	}
 
+	config.TemplateDir = findResource(config.TemplateDir, "templates", "/usr/local/share/gochan/templates/", "/usr/share/gochan/templates/")
 	if config.TemplateDir == "" {
-		println(0, "TemplateDir not set in gochan.json, halting.")
-		os.Exit(2)
+		println(0, "Unable to locate template directory, halting.")
+		os.Exit(1)
 	}
 
+	config.LogDir = findResource(config.LogDir, "log", "/var/log/gochan/")
 	if config.LogDir == "" {
-		println(0, "LogDir not set in gochan.json, halting.")
-		os.Exit(2)
+		println(0, "Unable to locate log dirLogDir not set in gochan.json, halting.")
+		os.Exit(1)
 	}
 
 	accessLogFile, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
@@ -461,12 +457,12 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 
 	if config.DBtype == "" {
 		println(0, "DBtype not set in gochan.json, halting (currently supported values: mysql).")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.DBhost == "" {
 		println(0, "DBhost not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.DBname == "" {
@@ -479,7 +475,7 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 
 	if config.DBpassword == "" {
 		println(0, "DBpassword not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.LockdownMessage == "" {
@@ -496,7 +492,7 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 
 	if config.SiteDomain == "" {
 		println(0, "SiteDomain not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.SiteWebfolder == "" {
@@ -511,13 +507,13 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 	if config.DomainRegex == "" {
 		println(0, "DomainRegex not set in gochan.json, consider using (https|http):\\/\\/("+config.SiteDomain+")\\/(.*)")
 		println(0, "This should work in most cases. Halting")
-		os.Exit(2)
+		os.Exit(1)
 		//config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
 	}
 
 	if config.Styles == nil {
 		println(0, "Styles not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 
 	if config.DefaultStyle == "" {
@@ -604,7 +600,7 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 
 	if config.RandomSeed == "" {
 		println(0, "RandomSeed not set in gochan.json, halting.")
-		os.Exit(2)
+		os.Exit(1)
 	}
 	bbcompiler = bbcode.NewCompiler(true, true)
 	bbcompiler.SetTag("center", nil)

@@ -5,7 +5,7 @@ server {
 	listen			80;
 	listen[::]:80;
 	server_name		localhost;
-	client_max_body_size	5M;
+	client_max_body_size	12M;
 
 	location / {
 		proxy_pass	http://127.0.0.1:8080;

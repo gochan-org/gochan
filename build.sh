@@ -1,7 +1,9 @@
 #!/bin/bash
 
 set -eo pipefail
-
+if [ -e "version" ]; then version="v`cat version` "; fi
+echo "Gochan ${version}build script"
+echo ""
 BIN=gochan
 VERSION=`cat version`
 BUILDTIME=`date +%y%m%d.%H%M`
@@ -17,18 +19,89 @@ if [ -z "$GOPATH" ]; then
 fi
 
 function usage {
-	echo "usage: $0 [command or valid \$GOOS]"
-	echo "commands:"
-	echo "  clean"
-	echo "  dependencies      install necessary dependencies"
-	echo "  docker-image      create Docker image (not yet implemented)"
-	echo "  help              show this message and exit"
-	echo "  release [GOOS]    create release archives for Linux, macOS, and Windows"
-	echo "                    or a specific platform, if specified"
-	echo ""
-	echo "Any other \"command\" will be treated as a GOOS to build gochan"
-	echo "If no arguments are given, gochan will be built for the current OS"
-	exit 0
+	if [ -z "$2" ]; then
+		cat - << EOF
+Usage:
+	$0 [command or valid GOOS] [command arguments]
+
+Commands:
+	clean		remove any built binaries and releases
+	dependencies	install necessary gochan dependencies
+	docker-image	create Docker image (not yet implemented)
+	help		show this help message
+	install		install gochan to the system or specified location
+	release		create release archives for deployment
+	sass		use Sass to transpile the sass source files
+
+Any other "command" will be treated as a GOOS to build gochan. If no commands
+are given, gochan will be built for the current OS
+EOF
+		exit
+	fi
+	case "$2" in
+		clean)
+			cat - <<- EOF
+				Usage: $0 clean
+				remove any built binaries and releases
+			EOF
+			;;
+		dependencies)
+			cat - <<- EOF
+				Usage: $0 dependencies
+				install necessary gochan dependencies
+			EOF
+			;;
+		docker-image)
+			cat - <<- EOF
+				Usage: $0 docker-image
+				create a Docker image (not yet implemented)
+			EOF
+			;;
+		help)
+			cat - <<- EOF
+				Usage: $0 help
+				show the help message and quits
+			EOF
+			;;
+		install)
+			cat - << EOF
+Usage:
+$0 install [--document-root /path/to/html] [--symlinks] [destination]
+Installs gochan on the current system
+Arguments:
+	--document-root|--html /path/to/html
+		install document root resources to specified path, otherwise
+		they are installed to ./html/
+	--symlinks|-s
+		create symbolic links instead of copying, useful for testing
+
+Install locations if no destination is provided:
+	./gochan		=>	/usr/local/bin/gochan
+	./gochan[.example].json	=>	/etc/gochan/gochan.json
+	./templates/		=>	/usr/share/gochan/templates/
+	./log =>		=>	/var/log/gochan/
+/etc/gochan/gochan.json will only be created if it doesn't already exist
+EOF
+			;;
+		release)
+			cat - <<- EOF
+				Usage: $0 release [GOOS]
+				create release archives for Linux, macOS, and Windows or the specified platform
+				for deployment
+			EOF
+			;;
+		sass)
+			cat - <<- EOF
+			Usage: $0 sass [/path/to/html]
+			use sass to transpile the sass source files to ./html/css or the specified
+			document root
+			EOF
+			;;
+		*)
+			echo "Invalid command"
+			;;
+	esac
+	exit
 }
 
 function build {
@@ -66,6 +139,7 @@ function release {
 
 	cp $BIN $DIRNAME
 	if [ "$GCOS" = "linux" ]; then
+		strip $DIRNAME/$BIN
 		cp gochan.service $DIRNAME
 	fi
 	mkdir -p $DIRNAME/html
@@ -98,43 +172,143 @@ if [ $# = 0 ]; then
 	exit 0
 fi
 
-case "$1" in
-	clean)
-		rm -f $BIN
-		rm -f $BIN.exe
-		rm -rf releases
-		;;
-	dependencies)
-		go get -v \
-			github.com/disintegration/imaging \
-			github.com/nranchev/go-libGeoIP \
-			github.com/go-sql-driver/mysql \
-			github.com/lib/pq \
-			golang.org/x/net/html \
-			github.com/aquilax/tripcode \
-			golang.org/x/crypto/bcrypt \
-			github.com/frustra/bbcode \
-			github.com/mattn/go-sqlite3
-		;;
-	docker-image)
-		echo "Docker image creation not yet implemented"
-		exit 1
-		# docker build . -t="eggbertx/gochan"
-		;;
-	help)
-		usage
-		;;
-	release)
-		if [ -n "$2" ]; then
-			release $2
+while [ -n "$1" ]; do 
+	case "$1" in
+		clean)
+			rm -f $BIN
+			rm -f $BIN.exe
+			rm -rf releases
+			;;
+		dependencies)
+			go get -v \
+				github.com/disintegration/imaging \
+				github.com/nranchev/go-libGeoIP \
+				github.com/go-sql-driver/mysql \
+				github.com/lib/pq \
+				golang.org/x/net/html \
+				github.com/aquilax/tripcode \
+				golang.org/x/crypto/bcrypt \
+				github.com/frustra/bbcode \
+				github.com/mattn/go-sqlite3
+			;;
+		docker-image)
+			echo "Docker image creation not yet implemented"
 			exit 1
-		else
-			release linux
-			release macos
-			release windows
-		fi
-		;;
-	*)
-		build $1
-		;;
-esac
+			# docker build . -t="eggbertx/gochan"
+			;;
+		help|-h|--help)
+			usage $@
+			;;
+		install)
+			shift
+			symarg=""
+			documentroot=""
+			installdir=""
+			configpath=""
+			while [ -n "$1" ]; do
+				case "$1" in
+					--symlinks|-s)
+						symarg="-s"
+						;;
+					--document-root|--html)
+						if [ -n "$2" ] && [ "$2" != "--symlinks" ] && [ "$2" != "-s" ]; then
+							shift
+							documentroot="$1"
+						fi
+						;;
+					*)
+						installdir="$1"
+						;;
+				esac
+				shift
+			done
+			if [ "$symarg" = "-s" ]; then
+				echo "Creating symlinks"
+			fi
+		
+			if [ -n "$installdir" ]; then
+				echo "Install location: '$installdir'"
+				if [ -z "$documentroot" ]; then
+					documentroot=$installdir/html
+				fi
+				
+				cp $symarg $PWD/gochan $installdir/gochan
+				cp $symarg $PWD/*.sql $installdir/
+				cp $symarg -r $PWD/templates $installdir/templates/
+
+				cp gochan.example.json $installdir/
+				if [ -f gochan.json ]; then
+					echo "Copying config file to $installdir/gochan.json"
+					cp $symarg $PWD/gochan.json $installdir/gochan.json
+				fi
+				mkdir -p $installdir/log
+
+			else
+				echo "Installing gochan globally"
+				if [ -z "$documentroot" ]; then
+					documentroot=/srv/gochan
+				fi
+				cp $symarg $PWD/gochan /usr/local/bin/gochan
+				mkdir -p /usr/local/share/gochan
+				cp $symarg $PWD/*.sql /usr/local/share/gochan/
+				cp $symarg -r $PWD/templates /usr/local/share/gochan/templates/
+				
+				echo "Creating /etc/gochan/ (if it doesn't already exist)"
+				mkdir -p /etc/gochan
+				cp gochan.example.json /etc/gochan/
+				if [ ! -f /etc/gochan/gochan.json ] && [ -f gochan.json ]; then
+					echo "Copying gochan.json to /etc/gochan/gochan.json"
+					cp $symarg $PWD/gochan.json /etc/gochan/gochan.json
+				fi
+				echo "Creating /var/log/gochan (if it doesn't already exist)"
+				mkdir -p /var/log/gochan
+			fi
+
+			echo "Installing document root files and directories"
+			mkdir -p $documentroot
+			cp -r $symarg -f $PWD/html/css/ $documentroot/css/
+			cp -r $symarg -f $PWD/html/javascript/ $documentroot/javascript/
+			files=$PWD/html/*
+			for f in $files; do
+				if [ -f $f ]; then
+					destfile=$documentroot/$(basename $f)
+					echo "Installing $f to $destfile"
+					# rm -f $destfile
+					cp $symarg -f $f $destfile
+				fi
+			done
+
+			echo "Installation complete. Make sure to set the following values in gochan.json:"
+			echo "DocumentRoot => $documentroot"
+			echo "TemplateDir => /usr/local/share/gochan/templates"
+
+			echo "LogDir => /var/log/gochan"
+			exit 0
+			;;
+		release)
+			if [ -n "$2" ]; then
+				release $2
+			else
+				release linux
+				release macos
+				release windows
+			fi
+			;;
+		sass)
+			if [ -z `which sass` ]; then 
+				echo "Sass is not installed, exiting."
+				exit 1
+			fi
+			shift
+			sassdir="html"
+			if [ -n "$1" ]; then sassdir=$1; fi
+			mkdir -p $sassdir
+			sass --style expanded --no-source-map  sass:$sassdir/css
+			;;
+		*)
+			build $1
+			shift
+			;;
+	esac
+	shift
+done

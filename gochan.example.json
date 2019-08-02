@@ -2,8 +2,6 @@
 	"ListenIP": "127.0.0.1",
 	"Port": 8080,
 	"FirstPage": ["index.html","board.html","firstrun.html"],
-	"Error404Path": "/error/404.html",
-	"Error500Path": "/error/500.html",
 	"Username": "gochan",
 	"UseFastCGI": false,
 

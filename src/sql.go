@@ -119,11 +119,12 @@ func connectToSQLServer() {
 
 func initDB(initFile string) error {
 	var err error
-	if _, err = os.Stat(initFile); err != nil {
+	filePath := findResource(initFile, "/usr/local/share/gochan/"+initFile, "/usr/share/gochan/"+initFile)
+	if filePath == "" {
 		return fmt.Errorf("SQL database initialization file (%s) missing. Please reinstall gochan", initFile)
 	}
 
-	sqlBytes, err := ioutil.ReadFile(initFile)
+	sqlBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
