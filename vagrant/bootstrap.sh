@@ -101,17 +101,11 @@ fi
 EOF
 
 chmod +x /home/vagrant/dbconnect.sh
-chmod +x /home/vagrant/buildgochan.sh
 
 ./build.sh dependencies
 ./build.sh
 ./build.sh install -s
 echo "Done installing"
-
-if [ -d /lib/systemd ]; then
-	ln -s /vagrant/gochan.service /lib/systemd/system/gochan.service
-	systemctl enable gochan.service
-fi
 
 cp gochan.example.json /etc/gochan/gochan.json
 
@@ -134,6 +128,12 @@ elif [ "$DBTYPE" = "sqlite3" ]; then
 	sed -i /etc/gochan/gochan.json \
 		-e 's/"DBtype": ".*"/"DBtype": "sqlite3"/' \
 		-e 's/"DBhost": ".*"/"DBhost": "gochan.db"/'
+fi
+
+if [ -d /lib/systemd ]; then
+	ln -s /vagrant/gochan.service /lib/systemd/system/gochan.service
+	systemctl enable gochan.service
+	systemctl start gochan.service
 fi
 
 echo

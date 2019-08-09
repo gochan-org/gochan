@@ -232,14 +232,14 @@ while [ -n "$1" ]; do
 					documentroot=$installdir/html
 				fi
 				
-				cp $symarg $PWD/gochan $installdir/gochan
-				cp $symarg $PWD/*.sql $installdir/
-				cp $symarg -r $PWD/templates $installdir/templates/
+				cp $symarg -f $PWD/gochan $installdir/gochan
+				cp $symarg -f $PWD/*.sql $installdir/
+				cp $symarg -rf $PWD/templates $installdir/templates/
 
-				cp gochan.example.json $installdir/
+				cp -f gochan.example.json $installdir/
 				if [ -f gochan.json ]; then
 					echo "Copying config file to $installdir/gochan.json"
-					cp $symarg $PWD/gochan.json $installdir/gochan.json
+					cp $symarg -f $PWD/gochan.json $installdir/gochan.json
 				fi
 				mkdir -p $installdir/log
 
@@ -248,17 +248,17 @@ while [ -n "$1" ]; do
 				if [ -z "$documentroot" ]; then
 					documentroot=/srv/gochan
 				fi
-				cp $symarg $PWD/gochan /usr/local/bin/gochan
+				cp $symarg -f $PWD/gochan /usr/local/bin/gochan
 				mkdir -p /usr/local/share/gochan
-				cp $symarg $PWD/*.sql /usr/local/share/gochan/
-				cp $symarg -r $PWD/templates /usr/local/share/gochan/templates/
+				cp $symarg -f $PWD/*.sql /usr/local/share/gochan/
+				cp $symarg -rf $PWD/templates /usr/local/share/gochan/templates/
 				
 				echo "Creating /etc/gochan/ (if it doesn't already exist)"
 				mkdir -p /etc/gochan
-				cp gochan.example.json /etc/gochan/
+				cp -f gochan.example.json /etc/gochan/
 				if [ ! -f /etc/gochan/gochan.json ] && [ -f gochan.json ]; then
 					echo "Copying gochan.json to /etc/gochan/gochan.json"
-					cp $symarg $PWD/gochan.json /etc/gochan/gochan.json
+					cp $symarg -f $PWD/gochan.json /etc/gochan/gochan.json
 				fi
 				echo "Creating /var/log/gochan (if it doesn't already exist)"
 				mkdir -p /var/log/gochan
@@ -266,14 +266,13 @@ while [ -n "$1" ]; do
 
 			echo "Installing document root files and directories"
 			mkdir -p $documentroot
-			cp -r $symarg -f $PWD/html/css/ $documentroot/css/
-			cp -r $symarg -f $PWD/html/javascript/ $documentroot/javascript/
+			cp $symarg -rf $PWD/html/css/ $documentroot/css/
+			cp $symarg -rf $PWD/html/javascript/ $documentroot/javascript/
 			files=$PWD/html/*
 			for f in $files; do
 				if [ -f $f ]; then
 					destfile=$documentroot/$(basename $f)
 					echo "Installing $f to $destfile"
-					# rm -f $destfile
 					cp $symarg -f $f $destfile
 				fi
 			done

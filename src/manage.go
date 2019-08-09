@@ -471,11 +471,16 @@ var manage_functions = map[string]ManageFunction{
 					return
 				}
 			}
+
 			truncateSQL := "TRUNCATE " + config.DBprefix + "posts"
-			if config.DBtype == "postgres" {
+			var values []interface{} // only used for SQLite since it doesn't have a proper TRUNCATE
+			if config.DBtype == "sqlite3" {
+				truncateSQL = "DELETE FROM " + config.DBprefix + "posts; DELETE FROM sqlite_sequence WHERE name = ?;"
+				values = append(values, config.DBprefix+"posts")
+			} else if config.DBtype == "postgres" {
 				truncateSQL += " RESTART IDENTITY"
 			}
-			if _, err = execSQL(truncateSQL); err != nil {
+			if _, err = execSQL(truncateSQL, values...); err != nil {
 				html += handleError(0, err.Error()) + "<br />\n"
 				return
 			}

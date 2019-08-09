@@ -126,21 +126,6 @@ func buildBoardPages(board *Board) (html string) {
 	var stickied_threads []interface{}
 	var nonstickied_threads []interface{}
 
-	// Check that the board's configured directory is indeed a directory
-	results, err := os.Stat(path.Join(config.DocumentRoot, board.Dir))
-	if err != nil {
-		// Try creating the board's configured directory if it doesn't exist
-		err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0777)
-		if err != nil {
-			html += handleError(1, "Failed creating /"+board.Dir+"/: "+err.Error())
-			return
-		}
-	} else if !results.IsDir() {
-		// If the file exists, but is not a folder, notify the user
-		html += handleError(1, "Error: /"+board.Dir+"/ exists, but is not a folder.")
-		return
-	}
-
 	// Get all top level posts for the board.
 	op_posts, err := getPostArr(map[string]interface{}{
 		"boardid":           board.ID,
@@ -363,11 +348,17 @@ func buildBoards(which ...int) (html string) {
 	}
 	for _, board := range boards {
 		boardPath := path.Join(config.DocumentRoot, board.Dir)
-		if _, err := os.Stat(boardPath); err != nil {
-			// Board was most likely just recently created
-			if err = os.Mkdir(boardPath, 0666); err != nil {
-				html += handleError(0, "Error creating board directory: %s\n", err.Error()) + "<br />\n"
-			}
+		if err := os.Mkdir(boardPath, 0666); err != nil && !os.IsExist(err) {
+			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
+		}
+		if err := os.Mkdir(path.Join(boardPath, "res"), 0666); err != nil && !os.IsExist(err) {
+			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
+		}
+		if err := os.Mkdir(path.Join(boardPath, "src"), 0666); err != nil && !os.IsExist(err) {
+			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
+		}
+		if err := os.Mkdir(path.Join(boardPath, "thumb"), 0666); err != nil && !os.IsExist(err) {
+			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
 		}
 
 		if board.EnableCatalog {

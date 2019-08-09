@@ -4,26 +4,39 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 )
 
 var versionStr string
-var buildtimeString string // set in Makefile, format: YRMMDD.HHMM
+var buildtimeString string // set with build command, format: YRMMDD.HHMM
 
 func main() {
-	defer closeHandle(db)
+	defer func() {
+		if db != nil {
+			println(0, "Cleaning up")
+			execSQL("DROP TABLE " + config.DBprefix + "sessions")
+			db.Close()
+		}
+	}()
 	initConfig()
+	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", versionStr, buildtimeString, config.Verbosity)
 	connectToSQLServer()
 	parseCommandLine()
 
-	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", versionStr, buildtimeString, config.Verbosity)
 	println(0, "Loading and parsing templates...")
 	if err := initTemplates("all"); err != nil {
 		handleError(0, customError(err))
 		os.Exit(2)
 	}
 
-	initServer()
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	go func() {
+		initServer()
+	}()
+	<-sc
 }
 
 func parseCommandLine() {

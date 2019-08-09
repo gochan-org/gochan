@@ -44,10 +44,11 @@ func connectToSQLServer() {
 			config.DBusername, config.DBpassword, config.DBhost, config.DBname)
 		nilTimestamp = "0001-01-01 00:00:00"
 	case "sqlite3":
-		connStr = config.DBhost
+		connStr = fmt.Sprintf("file:%s?mode=rwc&_auth&auth_user=%s&_auth_pass=%s&_journal_mode=WAL",
+			config.DBhost, config.DBusername, config.DBpassword)
 		nilTimestamp = "0001-01-01 00:00:00+00:00"
 	default:
-		handleError(0, "Invalid DBtype '%s' in gochan.json, valid values are 'mysql' and 'postgres'", config.DBtype)
+		handleError(0, "Invalid DBtype '%s' in gochan.json, valid values are 'mysql', 'postgres', and 'sqlite3'", config.DBtype)
 		os.Exit(2)
 	}
 

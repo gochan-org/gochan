@@ -3,7 +3,7 @@ Description=gochan Daemon
 After=network.target
 
 [Service]
-ExecStart=/home/vagrant/gochan/gochan
+ExecStart=/usr/local/bin/gochan
 
 [Install]
 WantedBy=multi-user.target
