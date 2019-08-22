@@ -2,7 +2,9 @@ Gochan
 =======
 A semi-standalone imageboard server written in Go
 
-http://gochan.org
+Gochan works in a manner similar to Kusaba X, Tinyboard and others. As such, Gochan generates static HTML files which can optionally be served by a separate web server.
+
+Demo installation: https://gochan.org
 
 
 # Installation
