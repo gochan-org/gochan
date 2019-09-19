@@ -26,18 +26,30 @@ if [ "$DBTYPE" == "mysql" ]; then
 	wait
 elif [ "$DBTYPE" == "postgresql" ]; then
 	# using PostgreSQL (mostly stable)
-	apt-get -y install postgresql postgresql-contrib
+	apt-get -y install postgresql postgresql-contrib sudo
 
+	# if [ -n "$FROMDOCKER" ]; then
+	# 	su -s /bin/sh postgres
+	# fi
+	if [ -n "$FROMDOCKER" ]; then
+		service postgresql start
+	else
+		systemctl start postgresql
+	fi
 	sudo -u postgres psql -f - <<- EOF
 	CREATE USER gochan PASSWORD 'gochan';
 	CREATE DATABASE gochan;
 	GRANT ALL PRIVILEGES ON DATABASE gochan TO gochan;
 	EOF
-	echo "127.0.0.1:5432:gochan:gochan:gochan" > /home/vagrant/.pgpass
-	chown vagrant:vagrant /home/vagrant/.pgpass
-	chmod 0600 /home/vagrant/.pgpass
-	systemctl enable postgresql
-	systemctl start postgresql &
+	if [ -z "$FROMDOCKER" ]; then
+		echo "127.0.0.1:5432:gochan:gochan:gochan" > /home/vagrant/.pgpass
+		chown vagrant:vagrant /home/vagrant/.pgpass
+		chmod 0600 /home/vagrant/.pgpass
+		systemctl enable postgresql
+		systemctl start postgresql &
+	else
+		update-rc.d postgresql enable
+	fi
 	wait
 elif [ "$DBTYPE" == "sqlite3" ]; then
 	# using SQLite (mostly stable)
@@ -51,7 +63,10 @@ else
 	exit 1
 fi
 
-apt-get -y install git subversion mercurial golang-1.10 nginx ffmpeg
+apt-get -y install git subversion mercurial nginx ffmpeg
+if [ -z "$FROMDOCKER" ]; then
+	apt-get -y install golang-1.10
+fi
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
@@ -61,32 +76,33 @@ ln -sf /etc/nginx/sites-available/gochan.nginx /etc/nginx/sites-enabled/
 sed -e 's/sendfile on;/sendfile off;/' -i /etc/nginx/nginx.conf
 
 # Make sure our shared directories are mounted before nginx starts
-systemctl disable nginx
+# service nginx disable
+update-rc.d nginx enable
 sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/system/nginx.service
-systemctl daemon-reload
-systemctl enable nginx
-systemctl restart nginx &
+# systemctl daemon-reload
+# service nginx enable
+# service nginx restart &
 wait
 
 mkdir -p /vagrant/lib
-cd /vagrant
-export GOPATH=/vagrant/lib
-mkdir /home/vagrant/bin
-ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
-export PATH="$PATH:/home/vagrant/bin"
+cd /opt/gochan
+export GOPATH=/opt/gochan/lib
+# mkdir /home/vagrant/bin
+# ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
+# export PATH="$PATH:/home/vagrant/bin"
 
 function changePerms {
 	chmod -R 755 $1 
 	chown -R vagrant:vagrant $1
 }
 
-cat << EOF >>/home/vagrant/.bashrc
+cat << EOF >>/root/.bashrc
 export GOPATH=$GOPATH
 export DBTYPE=$DBTYPE
 EOF
 
 # a couple convenience shell scripts, since they're nice to have
-cat << EOF >/home/vagrant/dbconnect.sh
+cat << EOF >/root/dbconnect.sh
 #!/usr/bin/env bash
 
 if [ "$DBTYPE" = "mysql" ] || [ -z "$DBTYPE" ]; then
@@ -100,7 +116,7 @@ else
 fi
 EOF
 
-chmod +x /home/vagrant/dbconnect.sh
+chmod +x /root/dbconnect.sh
 
 ./build.sh dependencies
 ./build.sh
@@ -130,11 +146,12 @@ elif [ "$DBTYPE" = "sqlite3" ]; then
 		-e 's/"DBhost": ".*"/"DBhost": "gochan.db"/'
 fi
 
-if [ -d /lib/systemd ]; then
-	ln -s /vagrant/gochan.service /lib/systemd/system/gochan.service
-	systemctl enable gochan.service
-	systemctl start gochan.service
-fi
+# if [ -d /lib/systemd ]; then
+# 	cp gochan.service /lib/systemd/system/gochan.service
+# 	systemctl daemon-reload
+# 	systemctl enable gochan.service
+# 	systemctl start gochan.service
+# fi
 
 echo
 echo "Server set up, please run \"vagrant ssh\" on your host machine."

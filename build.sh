@@ -192,9 +192,9 @@ while [ -n "$1" ]; do
 				github.com/mattn/go-sqlite3
 			;;
 		docker-image)
-			echo "Docker image creation not yet implemented"
-			exit 1
-			# docker build . -t="eggbertx/gochan"
+			# echo "Docker image creation not yet implemented"
+			# exit 1
+			docker build . -t="eggbertx/gochan"
 			;;
 		help|-h|--help)
 			usage $@
@@ -276,6 +276,12 @@ while [ -n "$1" ]; do
 					cp $symarg -f $f $destfile
 				fi
 			done
+
+			# if [ -d /lib/systemd/system ]; then
+				# echo "Installing systemd service file"
+				# cp gochan.service /lib/systemd/system/gochan.service
+				# systemctl daemon-reload
+			# fi
 
 			echo "Installation complete. Make sure to set the following values in gochan.json:"
 			echo "DocumentRoot => $documentroot"
