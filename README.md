@@ -30,5 +30,8 @@ Demo installation: https://gochan.org
 2. From the command line, cd into vagrant/ and run `vagrant up`
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 
+## For developers (using Docker)
+Docker support is very unstable and doesn't fully work yet. After it is in a usable state, I'll merge the `docker-image` branch with the `master` branch.
+
 # Theme development
 See [`sass/README.md`](sass/README.md) for information on working with Sass and stylesheets.
