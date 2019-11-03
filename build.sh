@@ -11,6 +11,7 @@ BUILDTIME=`date +%y%m%d.%H%M`
 GCFLAGS=-trimpath=$PWD
 ASMFLAGS=-trimpath=$PWD
 LDFLAGS="-X main.versionStr=$VERSION -w -s"
+export CGO_ENABLED=1
 
 
 if [ -z "$GOPATH" ]; then
@@ -110,7 +111,19 @@ function build {
 		if [ "$1" = "macos" ]; then GCOS="darwin"; else GCOS=$1; fi
 	fi
 
-	if [ "$GCOS" = "windows" ]; then BIN=$BIN.exe; fi
+	if [ "$GCOS" = "windows" ]; then
+		BIN=$BIN.exe
+	fi
+	
+	if [ "$GCOS" = "darwin" ]; then
+		echo "Cross-compilation to macOS has been temporarily disabled because of a cgo issue."
+		echo "If you really need macOS support, build gochan from a macOS system."
+		exit 1
+	fi
+
+	if [ -z "$GCOS" ]; then
+		GCOS=`go env GOOS`
+	fi
 
 	buildCmd="GOOS=$GCOS go build -v -gcflags=$GCFLAGS -asmflags=$ASMFLAGS -ldflags \"$LDFLAGS\" -o $BIN ./src"
 
@@ -175,8 +188,10 @@ fi
 while [ -n "$1" ]; do 
 	case "$1" in
 		clean)
+			echo "Deleting $BIN(.exe)"
 			rm -f $BIN
 			rm -f $BIN.exe
+			echo "Deleting release builds"
 			rm -rf releases
 			;;
 		dependencies)
@@ -295,7 +310,7 @@ while [ -n "$1" ]; do
 				release $2
 			else
 				release linux
-				release macos
+				#release macos
 				release windows
 			fi
 			;;

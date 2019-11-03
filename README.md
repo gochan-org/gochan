@@ -6,6 +6,7 @@ Gochan works in a manner similar to Kusaba X, Tinyboard and others. As such, Goc
 
 Demo installation: https://gochan.org
 
+**Note:** Cross-compilation to macOS has been temporarily (hopefully) disabled. If you need macOS support, build gochan from a macOS system.
 
 # Installation
 
