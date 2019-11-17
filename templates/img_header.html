@@ -6,7 +6,8 @@
 	{{with .board}}
 		{{with $.op}}
 			{{if ne $.op.Subject ""}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.Subject 20 true}}</title>
-			{{else if ne $.op.MessageHTML ""}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>{{end}}
+			{{else if ne $.op.MessageHTML ""}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
+			{{else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
 		{{else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
 	{{else}}<title>{{.config.SiteName}}</title>{{end}}
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
