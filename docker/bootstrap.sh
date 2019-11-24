@@ -20,7 +20,7 @@ fi
 
 COMMUNITY_REPO=`grep -Eo '[^#]+community' -m 1 /etc/apk/repositories`
 
-echo COMMUNITY_REPO >> /etc/apk/repositories
+echo $COMMUNITY_REPO >> /etc/apk/repositories
 GCURL="https://github.com/Eggbertx/gochan/releases/download/$GCVERSION/gochan-${GCVERSION}_linux64.tar.gz"
 
 apk update && apk upgrade
@@ -28,7 +28,7 @@ apk update && apk upgrade
 if [ "$DBTYPE" == "postgresql" ]; then
 	# using PostgreSQL (mostly stable)
 	apk add postgresql postgresql-contrib sudo
-	rc-update add postgresql
+	rc-update add postgresql default
 	/etc/init.d/postgresql start
 	echo "127.0.0.1:5432:gochan:gochan:gochan" > /root/.pgpass
 	chmod 0600 /root/.pgpass
