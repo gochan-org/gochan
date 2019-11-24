@@ -73,6 +73,10 @@
 
 	"DateTimeFormat": "Mon, January 02, 2006 15:04 PM",
 	"AkismetAPIKey": "",
+	"UseCaptcha": false,
+	"CaptchaWidth": 240,
+	"CaptchaHeight": 80,
+	"CaptchaMinutesTimeout": 15,
 	"EnableGeoIP": true,
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",

@@ -1115,4 +1115,17 @@ var manage_functions = map[string]ManageFunction{
 				"\t\t</form>"
 			return
 		}},
+	"tempposts": {
+		Permissions: 3,
+		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+			html += "<h1 class=\"manage-header\">Temporary posts</h1>"
+			if len(tempPosts) == 0 {
+				html += "No temporary posts<br />\n"
+				return
+			}
+			for p, post := range tempPosts {
+				html += fmt.Sprintf("Post[%d]: %#v<br />\n", p, post)
+			}
+			return
+		}},
 }

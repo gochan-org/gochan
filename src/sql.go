@@ -63,6 +63,11 @@ func connectToSQLServer() {
 		os.Exit(2)
 	}
 
+	if _, err = execSQL("TRUNCATE TABLE " + config.DBprefix + "sessions"); err != nil {
+		handleError(0, "failed: %s\n", customError(err))
+		os.Exit(2)
+	}
+
 	var sqlVersionStr string
 	err = queryRowSQL("SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
 		[]interface{}{}, []interface{}{&sqlVersionStr})

@@ -76,20 +76,21 @@ ln -sf /etc/nginx/sites-available/gochan.nginx /etc/nginx/sites-enabled/
 sed -e 's/sendfile on;/sendfile off;/' -i /etc/nginx/nginx.conf
 
 # Make sure our shared directories are mounted before nginx starts
-# service nginx disable
-update-rc.d nginx enable
+systemctl disable nginx
 sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/system/nginx.service
-# systemctl daemon-reload
-# service nginx enable
-# service nginx restart &
+systemctl daemon-reload
+systemctl enable nginx
+systemctl restart nginx &
 wait
 
 mkdir -p /vagrant/lib
-cd /opt/gochan
-export GOPATH=/opt/gochan/lib
-# mkdir /home/vagrant/bin
-# ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
-# export PATH="$PATH:/home/vagrant/bin"
+cd /vagrant
+export GOPATH=/vagrant/lib
+echo "export GOPATH=/vagrant/lib" >> /home/vagrant/.bashrc
+mkdir /home/vagrant/bin
+ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
+export PATH="$PATH:/home/vagrant/bin"
+echo 'export PATH="$$PATH:/home/vagrant/bin"'
 
 function changePerms {
 	chmod -R 755 $1 
@@ -153,6 +154,5 @@ fi
 # 	systemctl start gochan.service
 # fi
 
-echo
-echo "Server set up, please run \"vagrant ssh\" on your host machine."
-echo "Then browse to http://172.27.0.3/manage to complete installation."
+echo "Server set up. You can access it from a browser at http://172.27.0.3/"
+echo "The first time gochan is run, it will create a simple /test/ board."

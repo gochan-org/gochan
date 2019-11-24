@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Gochan CAPTCHA</title>
+</head>
+<body>
+{{with .Result}}{{$.Result}}{{end}}
+<form action="/captcha" method="POST">
+	<img src="{{.Base64String}}" /><br />
+	<input type="text" name="captchaanswer" autocomplete="off" />
+	<input type="hidden" name="captchaid" value="{{.CaptchaID}}" />
+	{{with .EmailCmd}}<input type="hidden" name="emailcmd" value="{{$.EmailCmd}}" />{{end}}
+	{{with .TempPostIndex}}<input type="hidden" name="temppostindex" value="{{$.TempPostIndex}}" />{{end}}
+	<input type="submit" value="Submit" /><br />
+	<input type="submit" name="reload" value="Reload" />
+</form>
+</body>
+</html>

@@ -341,8 +341,12 @@ type GochanConfig struct {
 	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
 	EnableQuickReply         bool     `description:"If checked, an optional quick reply box is used. This may end up being removed." default:"checked"`
 
-	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
+	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info." default:"Mon, January 02, 2006 15:04 PM"`
 	AkismetAPIKey         string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+	UseCaptcha            bool   `description:"If checked, a captcha will be generated"`
+	CaptchaWidth          int    `description:"Width of the generated captcha image" default:"240"`
+	CaptchaHeight         int    `description:"Height of the generated captcha image" default:"80"`
+	CaptchaMinutesExpire  int    `description:"Number of minutes before a user has to enter a new CAPTCHA before posting. If <1 they have to submit one for every post." default:"15"`
 	EnableGeoIP           bool   `description:"If checked, this enables the usage of GeoIP for posts." default:"checked"`
 	GeoIPDBlocation       string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information." default:"/usr/share/GeoIP/GeoIP.dat"`
 	MaxRecentPosts        int    `description:"The maximum number of posts to show on the Recent Posts list on the front page." default:"3"`
@@ -585,6 +589,14 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 
 	if config.DateTimeFormat == "" {
 		config.DateTimeFormat = "Mon, January 02, 2006 15:04 PM"
+	}
+
+	if config.CaptchaWidth == 0 {
+		config.CaptchaWidth = 240
+	}
+
+	if config.CaptchaHeight == 0 {
+		config.CaptchaHeight = 80
 	}
 
 	if config.EnableGeoIP {

@@ -292,11 +292,11 @@ while [ -n "$1" ]; do
 				fi
 			done
 
-			# if [ -d /lib/systemd/system ]; then
-				# echo "Installing systemd service file"
-				# cp gochan.service /lib/systemd/system/gochan.service
-				# systemctl daemon-reload
-			# fi
+			if [ -d /lib/systemd/system ]; then
+				echo "Installing systemd service file"
+				cp $symarg $PWD/gochan.service /lib/systemd/system/gochan.service
+				systemctl daemon-reload
+			fi
 
 			echo "Installation complete. Make sure to set the following values in gochan.json:"
 			echo "DocumentRoot => $documentroot"

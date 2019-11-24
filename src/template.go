@@ -291,6 +291,7 @@ var funcMap = template.FuncMap{
 
 var (
 	banpage_tmpl        *template.Template
+	captcha_tmpl        *template.Template
 	catalog_tmpl        *template.Template
 	errorpage_tmpl      *template.Template
 	front_page_tmpl     *template.Template
@@ -328,12 +329,18 @@ func templateError(name string, err error) error {
 func initTemplates(which ...string) error {
 	var err error
 	buildAll := len(which) == 0 || which[0] == "all"
-
+	resetBoardSectionArrays()
 	for _, t := range which {
 		if buildAll || t == "banpage" {
 			banpage_tmpl, err = loadTemplate("banpage.html", "global_footer.html")
 			if err != nil {
 				return templateError("banpage.html", err)
+			}
+		}
+		if buildAll || t == "captcha" {
+			captcha_tmpl, err = loadTemplate("captcha.html")
+			if err != nil {
+				return templateError("captcha.html", err)
 			}
 		}
 		if buildAll || t == "catalog" {

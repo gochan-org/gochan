@@ -536,6 +536,11 @@ func marshalJSON(tag string, data interface{}, indent bool) (string, error) {
 	return string(jsonBytes), err
 }
 
+func jsonError(err string) string {
+	errJSON, _ := marshalJSON("error", err, false)
+	return errJSON
+}
+
 func limitArraySize(arr []string, maxSize int) []string {
 	if maxSize > len(arr)-1 || maxSize < 0 {
 		return arr

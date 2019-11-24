@@ -142,6 +142,7 @@ func initServer() {
 	referrerRegex = regexp.MustCompile(config.DomainRegex)
 
 	server.AddNamespace("banned", banHandler)
+	server.AddNamespace("captcha", serveCaptcha)
 	server.AddNamespace("manage", callManageFunction)
 	server.AddNamespace("post", makePost)
 	server.AddNamespace("util", utilHandler)

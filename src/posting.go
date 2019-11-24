@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -28,14 +27,16 @@ import (
 )
 
 const (
-	whitespaceMatch = "[\000-\040]"
-	gt              = "&gt;"
-	yearInSeconds   = 31536000
+	gt            = "&gt;"
+	yearInSeconds = 31536000
 )
 
 var (
-	allSections []BoardSection
-	allBoards   []Board
+	allSections       []BoardSection
+	allBoards         []Board
+	tempPosts         []Post
+	tempCleanerTicker *time.Ticker
+	tempCleanerQuit   = make(chan struct{})
 )
 
 // bumps the given thread on the given board and returns true if there were no errors
@@ -282,14 +283,18 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	startTime := benchmarkTimer("makePost", time.Now(), true)
 	var maxMessageLength int
 	var post Post
-	domain := request.Host
+	// domain := request.Host
 	var formName string
 	var nameCookie string
 	var formEmail string
 
+	if request.Method == "GET" {
+		http.Redirect(writer, request, config.SiteWebfolder, http.StatusFound)
+		return
+	}
 	// fix new cookie domain for when you use a port number
-	chopPortNumRegex := regexp.MustCompile(`(.+|\w+):(\d+)$`)
-	domain = chopPortNumRegex.Split(domain, -1)[0]
+	// chopPortNumRegex := regexp.MustCompile(`(.+|\w+):(\d+)$`)
+	// domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
@@ -301,7 +306,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	post.Tripcode = parsedName["tripcode"]
 
 	formEmail = request.FormValue("postemail")
-	http.SetCookie(writer, &http.Cookie{Name: "email", Value: formEmail, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
+
+	http.SetCookie(writer, &http.Cookie{Name: "email", Value: formEmail, MaxAge: yearInSeconds})
 
 	if !strings.Contains(formEmail, "noko") && !strings.Contains(formEmail, "sage") {
 		post.Email = formEmail
@@ -345,8 +351,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	nameCookie = strings.Replace(url.QueryEscape(nameCookie), "+", "%20", -1)
 
 	// add name and email cookies that will expire in a year (31536000 seconds)
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
-	http.SetCookie(writer, &http.Cookie{Name: "password", Value: password, Path: "/", Domain: domain, RawExpires: getSpecificSQLDateTime(time.Now().Add(time.Duration(yearInSeconds))), MaxAge: yearInSeconds})
+	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, MaxAge: yearInSeconds})
+	http.SetCookie(writer, &http.Cookie{Name: "password", Value: password, MaxAge: yearInSeconds})
 
 	post.IP = getRealIP(request)
 	post.Timestamp = time.Now()
@@ -383,12 +389,12 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	if err != nil || handler.Size == 0 {
 		// no file was uploaded
 		post.Filename = ""
-		accessLog.Print("Receiving post from " + post.IP + ", referred from: " + request.Referer())
 		accessLog.Printf("Receiving post from %s, referred from: %s", post.IP, request.Referer())
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
 			serveErrorPage(writer, handleError(1, "Couldn't read file: "+err.Error()))
+			return
 		} else {
 			post.FilenameOriginal = html.EscapeString(handler.Filename)
 			filetype := getFileExtension(post.FilenameOriginal)
@@ -410,7 +416,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 			catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
 			if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
-				handleError(0, "Couldn't write file \""+post.Filename+"\""+err.Error())
+				handleError(0, "Couldn't write file '%s': %s\n", post.Filename, err.Error())
 				serveErrorPage(writer, "Couldn't write file \""+post.FilenameOriginal+"\"")
 				return
 			}
@@ -434,16 +440,14 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 					return
 				}
 
-				accessLog.Print("Receiving post with video: " + handler.Filename + " from " + post.IP + ", referrer: " + request.Referer())
+				accessLog.Printf("Receiving post with video: %s from %s, referrer: %s", handler.Filename, post.IP, request.Referer())
 				if post.ParentID == 0 {
-					err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth)
-					if err != nil {
+					if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth); err != nil {
 						serveErrorPage(writer, handleError(1, err.Error()))
 						return
 					}
 				} else {
-					err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth_reply)
-					if err != nil {
+					if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth_reply); err != nil {
 						serveErrorPage(writer, handleError(1, err.Error()))
 						return
 					}
@@ -489,6 +493,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 				if err != nil {
 					os.Remove(filePath)
 					handleError(1, "Couldn't open uploaded file \""+post.Filename+"\""+err.Error())
+					handleError(1, "Couldn't open uploaded file \"%s\": %s\n", post.Filename, err.Error())
 					serveErrorPage(writer, "Upload filetype not supported")
 					return
 				} else {
@@ -517,12 +522,10 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 						if _, err := os.Stat(path.Join(config.DocumentRoot, "spoiler.png")); err != nil {
 							serveErrorPage(writer, "missing /spoiler.png")
 							return
-						} else {
-							err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumbPath)
-							if err != nil {
-								serveErrorPage(writer, err.Error())
-								return
-							}
+						}
+						if err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
+							serveErrorPage(writer, err.Error())
+							return
 						}
 					} else if config.ThumbWidth >= post.ImageW && config.ThumbHeight >= post.ImageH {
 						// If image fits in thumbnail size, symlink thumbnail to original
@@ -596,6 +599,20 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	post.Sanitize()
+
+	if config.UseCaptcha {
+		captchaID := request.FormValue("captchaid")
+		captchaAnswer := request.FormValue("captchaanswer")
+		if captchaID == "" && captchaAnswer == "" {
+			// browser isn't using JS, save post data to tempPosts and show captcha
+			request.Form.Add("temppostindex", strconv.Itoa(len(tempPosts)))
+			request.Form.Add("emailcmd", emailCommand)
+			tempPosts = append(tempPosts, post)
+			serveCaptcha(writer, request)
+			return
+		}
+	}
+
 	if err = insertPost(&post, emailCommand != "sage"); err != nil {
 		serveErrorPage(writer, handleError(1, err.Error()))
 		return
@@ -615,6 +632,46 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/", http.StatusFound)
 	}
 	benchmarkTimer("makePost", startTime, false)
+}
+
+func tempCleaner() {
+	for {
+		select {
+		case <-tempCleanerTicker.C:
+			for p, post := range tempPosts {
+				if !time.Now().After(post.Timestamp.Add(time.Minute * 5)) {
+					continue
+				}
+				// temporary post is >= 5 minutes, time to prune it
+				tempPosts[p] = tempPosts[len(tempPosts)-1]
+				tempPosts = tempPosts[:len(tempPosts)-1]
+				if post.FilenameOriginal == "" {
+					continue
+				}
+				board, err := getBoardFromID(post.BoardID)
+				if err != nil {
+					continue
+				}
+
+				fileSrc := path.Join(config.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
+				if err = os.Remove(fileSrc); err != nil {
+					printf(0, "Error pruning temporary upload for %s: %s", fileSrc, err.Error())
+				}
+
+				thumbSrc := getThumbnailPath("thread", fileSrc)
+				if err = os.Remove(thumbSrc); err != nil {
+					printf(0, "Error pruning temporary upload for %s: %s", thumbSrc, err.Error())
+				}
+
+				if post.ParentID == 0 {
+					catalogSrc := getThumbnailPath("catalog", fileSrc)
+					if err = os.Remove(catalogSrc); err != nil {
+						printf(0, "Error pruning temporary upload for %s: %s", catalogSrc, err.Error())
+					}
+				}
+			}
+		}
+	}
 }
 
 func formatMessage(message string) string {

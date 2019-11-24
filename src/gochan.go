@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var versionStr string
@@ -30,6 +31,9 @@ func main() {
 		handleError(0, customError(err))
 		os.Exit(2)
 	}
+	initCaptcha()
+	tempCleanerTicker = time.NewTicker(time.Minute * 5)
+	go tempCleaner()
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
