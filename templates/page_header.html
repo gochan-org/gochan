@@ -10,13 +10,13 @@
 			{{else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
 		{{else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
 	{{else}}<title>{{.config.SiteName}}</title>{{end}}
-	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/consts.js"></script>
-	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/gochan.js"></script>
-	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/manage.js"></script>
 	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />
 	<link id="theme" rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{.config.DefaultStyle}}" />
 	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png">
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/consts.js"></script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/gochan.js"></script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/manage.js"></script>
 </head>
 <body>
 	<div id="topbar">
