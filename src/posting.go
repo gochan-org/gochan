@@ -395,165 +395,162 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			serveErrorPage(writer, handleError(1, "Couldn't read file: "+err.Error()))
 			return
-		} else {
-			post.FilenameOriginal = html.EscapeString(handler.Filename)
-			filetype := getFileExtension(post.FilenameOriginal)
-			thumbFiletype := strings.ToLower(filetype)
-			if thumbFiletype == "gif" || thumbFiletype == "webm" {
-				thumbFiletype = "jpg"
-			}
+		}
 
-			post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
-			boardArr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
-			if len(boardArr) == 0 {
-				serveErrorPage(writer, "No boards have been created yet")
+		post.FilenameOriginal = html.EscapeString(handler.Filename)
+		filetype := getFileExtension(post.FilenameOriginal)
+		thumbFiletype := strings.ToLower(filetype)
+		if thumbFiletype == "gif" || thumbFiletype == "webm" {
+			thumbFiletype = "jpg"
+		}
+
+		post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
+		boardArr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
+		if len(boardArr) == 0 {
+			serveErrorPage(writer, "No boards have been created yet")
+			return
+		}
+		_boardDir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
+		boardDir := _boardDir[0].Dir
+		filePath := path.Join(config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
+		thumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
+		catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
+
+		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
+			handleError(0, "Couldn't write file '%s': %s\n", post.Filename, err.Error())
+			serveErrorPage(writer, "Couldn't write file \""+post.FilenameOriginal+"\"")
+			return
+		}
+
+		// Calculate image checksum
+		post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
+
+		var allowsVids bool
+		if err = queryRowSQL("SELECT embeds_allowed FROM "+config.DBprefix+"boards WHERE id = ? LIMIT 1",
+			[]interface{}{post.BoardID},
+			[]interface{}{&allowsVids},
+		); err != nil {
+			serveErrorPage(writer, handleError(1, "Couldn't get board info: "+err.Error()))
+			return
+		}
+
+		if filetype == "webm" {
+			if !allowsVids || !config.AllowVideoUploads {
+				serveErrorPage(writer, "Video uploading is not currently enabled for this board.")
+				os.Remove(filePath)
 				return
 			}
-			_boardDir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
-			boardDir := _boardDir[0].Dir
-			filePath := path.Join(config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
-			thumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
-			catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
-			if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
-				handleError(0, "Couldn't write file '%s': %s\n", post.Filename, err.Error())
-				serveErrorPage(writer, "Couldn't write file \""+post.FilenameOriginal+"\"")
-				return
-			}
-
-			// Calculate image checksum
-			post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
-
-			var allowsVids bool
-			if err = queryRowSQL("SELECT embeds_allowed FROM "+config.DBprefix+"boards WHERE id = ? LIMIT 1",
-				[]interface{}{post.BoardID},
-				[]interface{}{&allowsVids},
-			); err != nil {
-				serveErrorPage(writer, handleError(1, "Couldn't get board info: "+err.Error()))
-				return
-			}
-
-			if filetype == "webm" {
-				if !allowsVids || !config.AllowVideoUploads {
-					serveErrorPage(writer, "Video uploading is not currently enabled for this board.")
-					os.Remove(filePath)
-					return
-				}
-
-				accessLog.Printf("Receiving post with video: %s from %s, referrer: %s", handler.Filename, post.IP, request.Referer())
-				if post.ParentID == 0 {
-					if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth); err != nil {
-						serveErrorPage(writer, handleError(1, err.Error()))
-						return
-					}
-				} else {
-					if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth_reply); err != nil {
-						serveErrorPage(writer, handleError(1, err.Error()))
-						return
-					}
-				}
-
-				if err := createVideoThumbnail(filePath, catalogThumbPath, config.ThumbWidth_catalog); err != nil {
+			accessLog.Printf("Receiving post with video: %s from %s, referrer: %s", handler.Filename, post.IP, request.Referer())
+			if post.ParentID == 0 {
+				if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth); err != nil {
 					serveErrorPage(writer, handleError(1, err.Error()))
 					return
 				}
-
-				outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
-				if err != nil {
-					serveErrorPage(writer, handleError(1, "Error getting video info: "+err.Error()))
-					return
-				}
-				if outputBytes != nil {
-					outputStringArr := strings.Split(string(outputBytes), "\n")
-					for _, line := range outputStringArr {
-						lineArr := strings.Split(line, "=")
-						if len(lineArr) < 2 {
-							continue
-						}
-						value, _ := strconv.Atoi(lineArr[1])
-						switch lineArr[0] {
-						case "width":
-							post.ImageW = value
-						case "height":
-							post.ImageH = value
-						case "size":
-							post.Filesize = value
-						}
-					}
-					if post.ParentID == 0 {
-						post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "op")
-					} else {
-						post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
-					}
-				}
-
 			} else {
-				// Attempt to load uploaded file with imaging library
-				img, err := imaging.Open(filePath)
-				if err != nil {
-					os.Remove(filePath)
-					handleError(1, "Couldn't open uploaded file \""+post.Filename+"\""+err.Error())
-					handleError(1, "Couldn't open uploaded file \"%s\": %s\n", post.Filename, err.Error())
-					serveErrorPage(writer, "Upload filetype not supported")
+				if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth_reply); err != nil {
+					serveErrorPage(writer, handleError(1, err.Error()))
 					return
+				}
+			}
+
+			if err := createVideoThumbnail(filePath, catalogThumbPath, config.ThumbWidth_catalog); err != nil {
+				serveErrorPage(writer, handleError(1, err.Error()))
+				return
+			}
+
+			outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
+			if err != nil {
+				serveErrorPage(writer, handleError(1, "Error getting video info: "+err.Error()))
+				return
+			}
+			if outputBytes != nil {
+				outputStringArr := strings.Split(string(outputBytes), "\n")
+				for _, line := range outputStringArr {
+					lineArr := strings.Split(line, "=")
+					if len(lineArr) < 2 {
+						continue
+					}
+					value, _ := strconv.Atoi(lineArr[1])
+					switch lineArr[0] {
+					case "width":
+						post.ImageW = value
+					case "height":
+						post.ImageH = value
+					case "size":
+						post.Filesize = value
+					}
+				}
+				if post.ParentID == 0 {
+					post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "op")
 				} else {
-					// Get image filesize
-					stat, err := os.Stat(filePath)
-					if err != nil {
-						serveErrorPage(writer, handleError(1, "Couldn't get image filesize: "+err.Error()))
+					post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
+				}
+			}
+		} else {
+			// Attempt to load uploaded file with imaging library
+			img, err := imaging.Open(filePath)
+			if err != nil {
+				os.Remove(filePath)
+				handleError(1, "Couldn't open uploaded file \""+post.Filename+"\""+err.Error())
+				handleError(1, "Couldn't open uploaded file \"%s\": %s\n", post.Filename, err.Error())
+				serveErrorPage(writer, "Upload filetype not supported")
+				return
+			}
+			// Get image filesize
+			stat, err := os.Stat(filePath)
+			if err != nil {
+				serveErrorPage(writer, handleError(1, "Couldn't get image filesize: "+err.Error()))
+				return
+			}
+			post.Filesize = int(stat.Size())
+
+			// Get image width and height, as well as thumbnail width and height
+			post.ImageW = img.Bounds().Max.X
+			post.ImageH = img.Bounds().Max.Y
+			if post.ParentID == 0 {
+				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "op")
+			} else {
+				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
+			}
+
+			accessLog.Print("Receiving post with image: " + handler.Filename + " from " + post.IP + ", referrer: " + request.Referer())
+
+			if request.FormValue("spoiler") == "on" {
+				// If spoiler is enabled, symlink thumbnail to spoiler image
+				if _, err := os.Stat(path.Join(config.DocumentRoot, "spoiler.png")); err != nil {
+					serveErrorPage(writer, "missing /spoiler.png")
+					return
+				}
+				if err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
+					serveErrorPage(writer, err.Error())
+					return
+				}
+			} else if config.ThumbWidth >= post.ImageW && config.ThumbHeight >= post.ImageH {
+				// If image fits in thumbnail size, symlink thumbnail to original
+				post.ThumbW = img.Bounds().Max.X
+				post.ThumbH = img.Bounds().Max.Y
+				if err := syscall.Symlink(filePath, thumbPath); err != nil {
+					serveErrorPage(writer, err.Error())
+					return
+				}
+			} else {
+				var thumbnail image.Image
+				var catalogThumbnail image.Image
+				if post.ParentID == 0 {
+					// If this is a new thread, generate thumbnail and catalog thumbnail
+					thumbnail = createImageThumbnail(img, "op")
+					catalogThumbnail = createImageThumbnail(img, "catalog")
+					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
+						serveErrorPage(writer, handleError(1, "Couldn't generate catalog thumbnail: "+err.Error()))
 						return
-					} else {
-						post.Filesize = int(stat.Size())
 					}
-
-					// Get image width and height, as well as thumbnail width and height
-					post.ImageW = img.Bounds().Max.X
-					post.ImageH = img.Bounds().Max.Y
-					if post.ParentID == 0 {
-						post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "op")
-					} else {
-						post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
-					}
-
-					accessLog.Print("Receiving post with image: " + handler.Filename + " from " + post.IP + ", referrer: " + request.Referer())
-
-					if request.FormValue("spoiler") == "on" {
-						// If spoiler is enabled, symlink thumbnail to spoiler image
-						if _, err := os.Stat(path.Join(config.DocumentRoot, "spoiler.png")); err != nil {
-							serveErrorPage(writer, "missing /spoiler.png")
-							return
-						}
-						if err = syscall.Symlink(path.Join(config.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
-							serveErrorPage(writer, err.Error())
-							return
-						}
-					} else if config.ThumbWidth >= post.ImageW && config.ThumbHeight >= post.ImageH {
-						// If image fits in thumbnail size, symlink thumbnail to original
-						post.ThumbW = img.Bounds().Max.X
-						post.ThumbH = img.Bounds().Max.Y
-						if err := syscall.Symlink(filePath, thumbPath); err != nil {
-							serveErrorPage(writer, err.Error())
-							return
-						}
-					} else {
-						var thumbnail image.Image
-						var catalogThumbnail image.Image
-						if post.ParentID == 0 {
-							// If this is a new thread, generate thumbnail and catalog thumbnail
-							thumbnail = createImageThumbnail(img, "op")
-							catalogThumbnail = createImageThumbnail(img, "catalog")
-							if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-								serveErrorPage(writer, handleError(1, "Couldn't generate catalog thumbnail: "+err.Error()))
-								return
-							}
-						} else {
-							thumbnail = createImageThumbnail(img, "reply")
-						}
-						if err = imaging.Save(thumbnail, thumbPath); err != nil {
-							serveErrorPage(writer, handleError(1, "Couldn't save thumbnail: "+err.Error()))
-							return
-						}
-					}
+				} else {
+					thumbnail = createImageThumbnail(img, "reply")
+				}
+				if err = imaging.Save(thumbnail, thumbPath); err != nil {
+					serveErrorPage(writer, handleError(1, "Couldn't save thumbnail: "+err.Error()))
+					return
 				}
 			}
 		}
@@ -588,7 +585,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		var banpageBuffer bytes.Buffer
 
 		banpageBuffer.Write([]byte(""))
-		if err = banpage_tmpl.Execute(&banpageBuffer, map[string]interface{}{
+		if err = banpageTmpl.Execute(&banpageBuffer, map[string]interface{}{
 			"config": config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
 		}); err != nil {
 			fmt.Fprintf(writer, handleError(1, err.Error()))
@@ -755,7 +752,7 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 	var banpageBuffer bytes.Buffer
 
 	banpageBuffer.Write([]byte(""))
-	if err = banpage_tmpl.Execute(&banpageBuffer, map[string]interface{}{
+	if err = banpageTmpl.Execute(&banpageBuffer, map[string]interface{}{
 		"config": config, "ban": banStatus, "banBoards": banStatus.Boards, "post": Post{},
 	}); err != nil {
 		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")

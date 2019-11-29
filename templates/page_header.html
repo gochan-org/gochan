@@ -11,16 +11,7 @@
 		{{else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
 	{{else}}<title>{{.config.SiteName}}</title>{{end}}
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript">
-		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
-		var defaultStyle = "{{$.config.DefaultStyle}}";
-		var webroot = "{{$.config.SiteWebfolder}}";
-		var thread_type = "thread";
-		
-		function changePage(sel) {
-			window.location = webroot+"{{$.board.Dir}}/res/{{$.op.ID}}p"+sel.value+".html";
-		}
-	</script>
+	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/consts.js"></script>
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/gochan.js"></script>
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/manage.js"></script>
 	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />

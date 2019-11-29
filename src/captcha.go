@@ -93,7 +93,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 			captchaStruct.Result = "Incorrect CAPTCHA"
 		}
 	}
-	if err = captcha_tmpl.Execute(writer, captchaStruct); err != nil {
+	if err = captchaTmpl.Execute(writer, captchaStruct); err != nil {
 		handleError(0, customError(err))
 		fmt.Fprintf(writer, "Error executing captcha template")
 	}

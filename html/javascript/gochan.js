@@ -10,9 +10,9 @@ var settings = [];
 var current_staff;
 var dropdown_div_created = false;
 var $qr;
-
 var movable_postpreviews = true;
 var expandable_postrefs = true;
+var opRegex = /(\d)+(p(\d)+)?.html$/;
 
 function preparePostPreviews(is_inline) {
 	var m_type = "mousemove";
@@ -336,15 +336,36 @@ $jq(document).keydown(function(e) {
 	}
 });
 
-function getPageThread() {
-	var pathArr = window.location.pathname.split("/");
-	if(pathArr.length < 3) {
-		return {board: "", boardID: -1, thread: 0};
-	} else if(pathArr.length == 3) {
-		return {board: pathArr[1], boardID: $jq("form#postform input[name=boardid]").val() -1, thread: 0};
-	} else if(pathArr.length > 3) {
-		return {board: pathArr[1], boardID: $jq("form#postform input[name=boardid]").val() -1, thread: parseInt(pathArr[3].replace(".html",""))};
+function getBoard() {
+	var rootIndex = window.location.pathname.indexOf(webroot);
+	var board = window.location.pathname.substring(rootIndex+webroot.length);
+	if(board.length > 0 && board.indexOf("/") > -1) {
+		board = board.split("/")[0];
+	} else {
+		board = "";
 	}
+	return board;
+}
+
+function getPageThread() {
+	var arr = opRegex.exec(window.location.pathname);
+	var info = {
+		board: getBoard(),
+		boardID: -1,
+		op: -1,
+		page: 0
+	};
+	if(arr != null && arr.length > 1) info.op = arr[1];
+	if(arr != null && arr.length > 3) info.page = arr[3];
+	if(arr.board != "") info.boardID = $jq("form#postform input[name=boardid]").val() -1;
+	return info;
+}
+
+function changePage(sel) {
+	var info = getPageThread();
+	if(info.board == "" || info.op == -1) return;
+	if(sel.value != "")
+		window.location = webroot + info.board + "/res/" + info.op + "p" + sel.value + ".html";
 }
 
 function getSetting(id) {
@@ -465,7 +486,7 @@ function initQR(pageThread) {
 			method:"POST",
 			enctype:"multipart/form-data"
 		}).append(
-			"<input type=\"hidden\" name=\"threadid\" value=\"" + pageThread.thread +"\" />" +
+			"<input type=\"hidden\" name=\"threadid\" value=\"" + pageThread.op +"\" />" +
 			"<input type=\"hidden\" name=\"boardid\" value=\"1\" />" +
 			"<div id=\"qrpostname\"><input id=\"qrpostname\" type=\"text\" name=\"postname\" value=\"" + getCookie("name","") + "\" placeholder=\"Name\"/></div>" +
 			"<div id=\"qrpostemail\"><input id=\"qrpostemail\" type=\"text\" name=\"postemail\" value=\"" + getCookie("email","") + "\" placeholder=\"Email\"/></div>" +

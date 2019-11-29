@@ -31,6 +31,7 @@ func main() {
 		handleError(0, customError(err))
 		os.Exit(2)
 	}
+	println(1, buildJSConstants())
 	initCaptcha()
 	tempCleanerTicker = time.NewTicker(time.Minute * 5)
 	go tempCleaner()

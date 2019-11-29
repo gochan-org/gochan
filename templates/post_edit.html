@@ -1,4 +1,4 @@
-{{template "img_header.html" .}}
+{{template "page_header.html" .}}
 	<header>
 		<h1>Edit post</h1><br />
 		<div class="subtitle"><a href="{{.referrer}}">Return</a></div>
@@ -17,4 +17,4 @@
 			<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="editmsg" id="editmsg">{{.post.MessageText}}</textarea></td></tr>
 		</table>
 	</form><br />
-{{template "global_footer.html" .}}
+{{template "page_footer.html" .}}

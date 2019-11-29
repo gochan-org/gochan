@@ -47,7 +47,7 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 
 	if action != "getstaffjquery" && action != "postinfo" {
 		managePageBuffer.WriteString("<!DOCTYPE html>\n<html>\n<head>\n")
-		if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
+		if err = manageHeaderTmpl.Execute(&managePageBuffer, config); err != nil {
 			handleError(0, customError(err))
 			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
 			return
@@ -419,11 +419,12 @@ var manage_functions = map[string]ManageFunction{
 						status = "Error writing gochan.json: %s\n" + err.Error()
 					} else {
 						status = "Wrote gochan.json successfully <br />"
+						buildJSConstants()
 					}
 				}
 			}
 			manageConfigBuffer := bytes.NewBufferString("")
-			if err := manage_config_tmpl.Execute(manageConfigBuffer,
+			if err := manageConfigTmpl.Execute(manageConfigBuffer,
 				map[string]interface{}{"config": config, "status": status},
 			); err != nil {
 				html += handleError(1, err.Error())
@@ -668,7 +669,7 @@ var manage_functions = map[string]ManageFunction{
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
-			if err := manage_bans_tmpl.Execute(manageBansBuffer,
+			if err := manageBansTmpl.Execute(manageBansBuffer,
 				map[string]interface{}{"config": config, "banlist": banlist, "post": post},
 			); err != nil {
 				pageHTML += handleError(1, err.Error())
@@ -880,7 +881,7 @@ var manage_functions = map[string]ManageFunction{
 				}
 				allSections, _ = getSectionArr("")
 
-				if err := manage_boards_tmpl.Execute(manageBoardsBuffer, map[string]interface{}{
+				if err := manageBoardsTmpl.Execute(manageBoardsBuffer, map[string]interface{}{
 					"config":      config,
 					"board":       board,
 					"section_arr": allSections,
@@ -937,7 +938,8 @@ var manage_functions = map[string]ManageFunction{
 			resetBoardSectionArrays()
 			return buildFrontPage() + "<hr />\n" +
 				buildBoardListJSON() + "<hr />\n" +
-				buildBoards() + "<hr />\n"
+				buildBoards() + "<hr />\n" +
+				buildJSConstants() + "<hr />\n"
 		}},
 	"rebuildboards": {
 		Permissions: 3,

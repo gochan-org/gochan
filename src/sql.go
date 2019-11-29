@@ -145,6 +145,7 @@ func initDB(initFile string) error {
 	for _, statement := range sqlArr {
 		if statement != "" && statement != " " {
 			if _, err := db.Exec(statement + ";"); err != nil {
+				panic("Error with SQL statement:" + statement)
 				return err
 			}
 		}

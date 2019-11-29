@@ -103,7 +103,7 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 }
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
-	errorpage_tmpl.Execute(writer, map[string]interface{}{
+	errorpageTmpl.Execute(writer, map[string]interface{}{
 		"config":     config,
 		"ErrorTitle": "Error :c",
 		// "ErrorImage":  "/error/lol 404.gif",
@@ -241,7 +241,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				return
 			}
 
-			if err = post_edit_tmpl.Execute(writer, map[string]interface{}{
+			if err = postEditTmpl.Execute(writer, map[string]interface{}{
 				"config":   config,
 				"post":     post,
 				"referrer": request.Referer(),

@@ -9,4 +9,6 @@ vagrant/*.log
 html/boards.json
 html/index.html
 html/test*
+html/javascript/consts.js
+templates/override
 **/*.bak

@@ -71,7 +71,7 @@ func buildFrontPage() string {
 		}
 	}
 
-	if err = front_page_tmpl.Execute(front_file, map[string]interface{}{
+	if err = frontPageTmpl.Execute(front_file, map[string]interface{}{
 		"config":       config,
 		"sections":     allSections,
 		"boards":       allBoards,
@@ -237,7 +237,7 @@ func buildBoardPages(board *Board) (html string) {
 
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
-		if err = img_boardpage_tmpl.Execute(board_page_file, map[string]interface{}{
+		if err = boardpageTmpl.Execute(board_page_file, map[string]interface{}{
 			"config":   config,
 			"boards":   allBoards,
 			"sections": allSections,
@@ -280,7 +280,7 @@ func buildBoardPages(board *Board) (html string) {
 			}
 
 			// Render the boardpage template, don't forget config
-			if err = img_boardpage_tmpl.Execute(current_page_file, map[string]interface{}{
+			if err = boardpageTmpl.Execute(current_page_file, map[string]interface{}{
 				"config":   config,
 				"boards":   allBoards,
 				"sections": allSections,
@@ -370,6 +370,23 @@ func buildBoards(which ...int) (html string) {
 	return
 }
 
+func buildJSConstants() string {
+	err := initTemplates("js")
+	if err != nil {
+		return err.Error()
+	}
+	jsPath := path.Join(config.DocumentRoot, "javascript", "consts.js")
+	jsFile, err := os.OpenFile(jsPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return handleError(1, "Error opening '"+jsPath+"' for writing: "+err.Error())
+	}
+
+	if err = jsTmpl.Execute(jsFile, config); err != nil {
+		return handleError(1, "Error building '"+jsPath+"': "+err.Error())
+	}
+	return "Built '" + jsPath + "' successfully."
+}
+
 func buildCatalog(which int) string {
 	err := initTemplates("catalog")
 	if err != nil {
@@ -398,7 +415,7 @@ func buildCatalog(which int) string {
 	}
 	threadPages := paginate(config.PostsPerThreadPage, threadInterfaces)
 
-	if err = catalog_tmpl.Execute(catalogFile, map[string]interface{}{
+	if err = catalogTmpl.Execute(catalogFile, map[string]interface{}{
 		"boards":      allBoards,
 		"config":      config,
 		"board":       board,
@@ -453,7 +470,7 @@ func buildThreadPages(op *Post) (html string) {
 	}
 
 	// render main page
-	if err = img_threadpage_tmpl.Execute(current_page_file, map[string]interface{}{
+	if err = threadpageTmpl.Execute(current_page_file, map[string]interface{}{
 		"config":   config,
 		"boards":   allBoards,
 		"board":    board,
@@ -504,7 +521,7 @@ func buildThreadPages(op *Post) (html string) {
 			return
 		}
 
-		if err = img_threadpage_tmpl.Execute(current_page_file, map[string]interface{}{
+		if err = threadpageTmpl.Execute(current_page_file, map[string]interface{}{
 			"config":   config,
 			"boards":   allBoards,
 			"board":    board,

@@ -1,4 +1,4 @@
-{{template "img_header.html" .}}
+{{template "page_header.html" .}}
 	<div id="top-pane">
 		<span id="site-title">{{.config.SiteName}}</span><br />
 		<span id="site-slogan">{{.config.SiteSlogan}}</span>
@@ -34,4 +34,4 @@
 					{{truncateMessage (stripHTML $post.Message) 40 4}}</div>{{end}}</div>
 			</div>{{end}}</div>
 	</div>
-{{template "global_footer.html" .}}
+{{template "page_footer.html" .}}
