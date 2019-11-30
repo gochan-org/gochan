@@ -355,8 +355,9 @@ function getPageThread() {
 		op: -1,
 		page: 0
 	};
-	if(arr != null && arr.length > 1) info.op = arr[1];
-	if(arr != null && arr.length > 3) info.page = arr[3];
+	if(arr == null) return info;
+	if(arr.length > 1) info.op = arr[1];
+	if(arr.length > 3) info.page = arr[3];
 	if(arr.board != "") info.boardID = $jq("form#postform input[name=boardid]").val() -1;
 	return info;
 }
