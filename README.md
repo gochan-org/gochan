@@ -6,7 +6,7 @@ Gochan works in a manner similar to Kusaba X, Tinyboard and others. As such, Goc
 
 Demo installation: https://gochan.org
 
-**Note:** Cross-compilation to macOS has been temporarily (hopefully) disabled. If you need macOS support, build gochan from a macOS system.
+**Note:** Cross-compilation to macOS has been temporarily disabled. If you need macOS support, build gochan from a macOS system.
 
 # Installation
 
@@ -32,7 +32,7 @@ Demo installation: https://gochan.org
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 
 ## For developers (using Docker)
-Docker support is very unstable and doesn't fully work yet. After it is in a usable state, I'll merge the `docker-image` branch with the `master` branch.
+Docker support is very unstable and doesn't fully work yet.
 
 # Theme development
 See [`sass/README.md`](sass/README.md) for information on working with Sass and stylesheets.
