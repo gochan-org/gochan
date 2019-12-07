@@ -36,7 +36,6 @@ var (
 	allBoards         []Board
 	tempPosts         []Post
 	tempCleanerTicker *time.Ticker
-	tempCleanerQuit   = make(chan struct{})
 )
 
 // bumps the given thread on the given board and returns true if there were no errors
@@ -130,7 +129,7 @@ func sinceLastPost(post *Post) int {
 	return int(time.Since(lastPostTime).Seconds())
 }
 
-func createImageThumbnail(image_obj image.Image, size string) image.Image {
+func createImageThumbnail(imageObj image.Image, size string) image.Image {
 	var thumbWidth int
 	var thumbHeight int
 
@@ -145,14 +144,14 @@ func createImageThumbnail(image_obj image.Image, size string) image.Image {
 		thumbWidth = config.ThumbWidth_catalog
 		thumbHeight = config.ThumbHeight_catalog
 	}
-	old_rect := image_obj.Bounds()
-	if thumbWidth >= old_rect.Max.X && thumbHeight >= old_rect.Max.Y {
-		return image_obj
+	oldRect := imageObj.Bounds()
+	if thumbWidth >= oldRect.Max.X && thumbHeight >= oldRect.Max.Y {
+		return imageObj
 	}
 
-	thumbW, thumbH := getThumbnailSize(old_rect.Max.X, old_rect.Max.Y, size)
-	image_obj = imaging.Resize(image_obj, thumbW, thumbH, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
-	return image_obj
+	thumbW, thumbH := getThumbnailSize(oldRect.Max.X, oldRect.Max.Y, size)
+	imageObj = imaging.Resize(imageObj, thumbW, thumbH, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
+	return imageObj
 }
 
 func createVideoThumbnail(video, thumb string, size int) error {
@@ -588,10 +587,10 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		if err = banpageTmpl.Execute(&banpageBuffer, map[string]interface{}{
 			"config": config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
 		}); err != nil {
-			fmt.Fprintf(writer, handleError(1, err.Error()))
+			writer.Write([]byte(handleError(1, err.Error())))
 			return
 		}
-		fmt.Fprintf(writer, banpageBuffer.String())
+		writer.Write(banpageBuffer.Bytes())
 		return
 	}
 
@@ -758,5 +757,5 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")
 		return
 	}
-	fmt.Fprintf(writer, banpageBuffer.String())
+	writer.Write(banpageBuffer.Bytes())
 }

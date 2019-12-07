@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -61,10 +62,10 @@ var funcMap = template.FuncMap{
 	"escapeString": func(a string) string {
 		return html.EscapeString(a)
 	},
-	"formatFilesize": func(size_int int) string {
-		size := float32(size_int)
+	"formatFilesize": func(sizeInt int) string {
+		size := float32(sizeInt)
 		if size < 1000 {
-			return fmt.Sprintf("%d B", size_int)
+			return fmt.Sprintf("%d B", sizeInt)
 		} else if size <= 100000 {
 			return fmt.Sprintf("%0.1f KB", size/1024)
 		} else if size <= 100000000 {
@@ -88,12 +89,12 @@ var funcMap = template.FuncMap{
 		}
 		return appended
 	},
-	"truncateMessage": func(msg string, limit int, max_lines int) string {
+	"truncateMessage": func(msg string, limit int, maxLines int) string {
 		var truncated bool
 		split := strings.SplitN(msg, "<br />", -1)
 
-		if len(split) > max_lines {
-			split = split[:max_lines]
+		if len(split) > maxLines {
+			split = split[:maxLines]
 			msg = strings.Join(split, "<br />")
 			truncated = true
 		}
@@ -143,8 +144,8 @@ var funcMap = template.FuncMap{
 	"getCatalogThumbnail": func(img string) string {
 		return getThumbnailPath("catalog", img)
 	},
-	"getThreadID": func(post_i interface{}) (thread int) {
-		post, ok := post_i.(Post)
+	"getThreadID": func(postInterface interface{}) (thread int) {
+		post, ok := postInterface.(Post)
 		if !ok {
 			thread = 0
 		} else if post.ParentID == 0 {
@@ -154,20 +155,20 @@ var funcMap = template.FuncMap{
 		}
 		return
 	},
-	"getPostURL": func(post_i interface{}, typeOf string, withDomain bool) (postURL string) {
+	"getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
 		if withDomain {
 			postURL = config.SiteDomain
 		}
 		postURL += config.SiteWebfolder
 
 		if typeOf == "recent" {
-			post, ok := post_i.(*RecentPost)
+			post, ok := postInterface.(*RecentPost)
 			if !ok {
 				return
 			}
 			postURL = post.GetURL(withDomain)
 		} else {
-			post, ok := post_i.(*Post)
+			post, ok := postInterface.(*Post)
 			if !ok {
 				return
 			}
@@ -297,7 +298,6 @@ var (
 	frontPageTmpl    *template.Template
 	boardpageTmpl    *template.Template
 	threadpageTmpl   *template.Template
-	postFormTmpl     *template.Template
 	postEditTmpl     *template.Template
 	manageBansTmpl   *template.Template
 	manageBoardsTmpl *template.Template
@@ -310,10 +310,12 @@ func loadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
 	for i, file := range files {
 		templates = append(templates, file)
-		if _, err := os.Stat(config.TemplateDir + "/override/" + file); !os.IsNotExist(err) {
-			files[i] = config.TemplateDir + "/override/" + files[i]
+		tmplPath := path.Join(config.TemplateDir, "override", file)
+
+		if _, err := os.Stat(tmplPath); !os.IsNotExist(err) {
+			files[i] = tmplPath
 		} else {
-			files[i] = config.TemplateDir + "/" + files[i]
+			files[i] = path.Join(config.TemplateDir, file)
 		}
 	}
 

@@ -54,13 +54,13 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if _, ok := manage_functions[action]; ok {
-		if staffRank >= manage_functions[action].Permissions {
-			managePageBuffer.Write([]byte(manage_functions[action].Callback(writer, request)))
-		} else if staffRank == 0 && manage_functions[action].Permissions == 0 {
-			managePageBuffer.Write([]byte(manage_functions[action].Callback(writer, request)))
+	if _, ok := manageFunctions[action]; ok {
+		if staffRank >= manageFunctions[action].Permissions {
+			managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
+		} else if staffRank == 0 && manageFunctions[action].Permissions == 0 {
+			managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
 		} else if staffRank == 0 {
-			managePageBuffer.Write([]byte(manage_functions["login"].Callback(writer, request)))
+			managePageBuffer.Write([]byte(manageFunctions["login"].Callback(writer, request)))
 		} else {
 			managePageBuffer.Write([]byte(action + " is undefined."))
 		}
@@ -71,11 +71,7 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 		managePageBuffer.Write([]byte("\n</body>\n</html>"))
 	}
 
-	/* extension := getFileExtension(request.URL.Path)
-	if extension == "" {
-		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-	} */
-	fmt.Fprintf(writer, managePageBuffer.String())
+	writer.Write(managePageBuffer.Bytes())
 }
 
 func getCurrentStaff(request *http.Request) (string, error) {
@@ -148,40 +144,40 @@ func createSession(key string, username string, password string, request *http.R
 	if err != nil {
 		handleError(1, customError(err))
 		return 1
-	} else {
-		success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
-		if success == bcrypt.ErrMismatchedHashAndPassword {
-			// password mismatch
-			modLog.Print("Failed login (password mismatch) from " + request.RemoteAddr + " at " + getSQLDateTime())
-			return 1
-		} else {
-			// successful login, add cookie that expires in one month
-			http.SetCookie(writer, &http.Cookie{
-				Name:   "sessiondata",
-				Value:  key,
-				Path:   "/",
-				Domain: domain,
-				MaxAge: 60 * 60 * 24 * 7,
-			})
-
-			if _, err = execSQL(
-				"INSERT INTO "+config.DBprefix+"sessions (name,sessiondata,expires) VALUES(?,?,?)",
-				key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730)))); err != nil {
-				handleError(0, customError(err))
-				return 2
-			}
-
-			if _, err = execSQL(
-				"UPDATE "+config.DBprefix+"staff SET last_active = ? WHERE username = ?", getSQLDateTime(), username,
-			); err != nil {
-				handleError(1, customError(err))
-			}
-			return 0
-		}
 	}
+
+	success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
+	if success == bcrypt.ErrMismatchedHashAndPassword {
+		// password mismatch
+		modLog.Print("Failed login (password mismatch) from " + request.RemoteAddr + " at " + getSQLDateTime())
+		return 1
+	}
+
+	// successful login, add cookie that expires in one month
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "sessiondata",
+		Value:  key,
+		Path:   "/",
+		Domain: domain,
+		MaxAge: 60 * 60 * 24 * 7,
+	})
+
+	if _, err = execSQL(
+		"INSERT INTO "+config.DBprefix+"sessions (name,sessiondata,expires) VALUES(?,?,?)",
+		key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730)))); err != nil {
+		handleError(0, customError(err))
+		return 2
+	}
+
+	if _, err = execSQL(
+		"UPDATE "+config.DBprefix+"staff SET last_active = ? WHERE username = ?", getSQLDateTime(), username,
+	); err != nil {
+		handleError(1, customError(err))
+	}
+	return 0
 }
 
-var manage_functions = map[string]ManageFunction{
+var manageFunctions = map[string]ManageFunction{
 	"cleanup": {
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
@@ -433,68 +429,68 @@ var manage_functions = map[string]ManageFunction{
 			html += manageConfigBuffer.String()
 			return
 		}},
-	"purgeeverything": {
-		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html = "<img src=\"/css/purge.jpg\" />"
-			rows, err := querySQL("SELECT dir FROM " + config.DBprefix + "boards")
-			defer closeHandle(rows)
-			if err != nil {
+	/*"purgeeverything": {
+	Permissions: 3,
+	Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		html = "<img src=\"/css/purge.jpg\" />"
+		rows, err := querySQL("SELECT dir FROM " + config.DBprefix + "boards")
+		defer closeHandle(rows)
+		if err != nil {
+			html += err.Error()
+			handleError(1, customError(err))
+			return
+		}
+		var board string
+		for rows.Next() {
+			if err = rows.Scan(&board); err != nil {
 				html += err.Error()
 				handleError(1, customError(err))
 				return
 			}
-			var board string
-			for rows.Next() {
-				if err = rows.Scan(&board); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board), ".html"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), ".*"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), ".*"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), ".*"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-			}
-
-			truncateSQL := "TRUNCATE " + config.DBprefix + "posts"
-			var values []interface{} // only used for SQLite since it doesn't have a proper TRUNCATE
-			if config.DBtype == "sqlite3" {
-				truncateSQL = "DELETE FROM " + config.DBprefix + "posts; DELETE FROM sqlite_sequence WHERE name = ?;"
-				values = append(values, config.DBprefix+"posts")
-			} else if config.DBtype == "postgres" {
-				truncateSQL += " RESTART IDENTITY"
-			}
-			if _, err = execSQL(truncateSQL, values...); err != nil {
-				html += handleError(0, err.Error()) + "<br />\n"
+			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board), ".html"); err != nil {
+				html += err.Error()
+				handleError(1, customError(err))
 				return
 			}
-
-			if _, err = execSQL("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1"); err != nil {
-				html += handleError(0, err.Error()) + "<br />\n"
+			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), ".*"); err != nil {
+				html += err.Error()
+				handleError(1, customError(err))
 				return
 			}
-			html += "<br />Everything purged, rebuilding all<br />" +
-				buildBoards() + "<hr />\n" +
-				buildFrontPage()
+			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), ".*"); err != nil {
+				html += err.Error()
+				handleError(1, customError(err))
+				return
+			}
+			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), ".*"); err != nil {
+				html += err.Error()
+				handleError(1, customError(err))
+				return
+			}
+		}
+
+		truncateSQL := "TRUNCATE " + config.DBprefix + "posts"
+		var values []interface{} // only used for SQLite since it doesn't have a proper TRUNCATE
+		if config.DBtype == "sqlite3" {
+			truncateSQL = "DELETE FROM " + config.DBprefix + "posts; DELETE FROM sqlite_sequence WHERE name = ?;"
+			values = append(values, config.DBprefix+"posts")
+		} else if config.DBtype == "postgres" {
+			truncateSQL += " RESTART IDENTITY"
+		}
+		if _, err = execSQL(truncateSQL, values...); err != nil {
+			html += handleError(0, err.Error()) + "<br />\n"
 			return
-		}},
+		}
+
+		if _, err = execSQL("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1"); err != nil {
+			html += handleError(0, err.Error()) + "<br />\n"
+			return
+		}
+		html += "<br />Everything purged, rebuilding all<br />" +
+			buildBoards() + "<hr />\n" +
+			buildFrontPage()
+		return
+	}},*/
 	"executesql": {
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
@@ -837,7 +833,6 @@ var manage_functions = map[string]ManageFunction{
 						println(2, "Boards rebuilt successfully")
 						done = true
 					}
-					break
 				case do == "del":
 					// resetBoardSectionArrays()
 				case do == "edit":
@@ -877,7 +872,11 @@ var manage_functions = map[string]ManageFunction{
 				manageBoardsBuffer := bytes.NewBufferString("")
 				allSections, _ = getSectionArr("")
 				if len(allSections) == 0 {
-					execSQL("INSERT INTO " + config.DBprefix + "sections (hidden,name,abbreviation) VALUES(0,'Main','main')")
+					if _, err = execSQL(
+						"INSERT INTO " + config.DBprefix + "sections (hidden,name,abbreviation) VALUES(0,'Main','main')",
+					); err != nil {
+						html += handleError(1, err.Error())
+					}
 				}
 				allSections, _ = getSectionArr("")
 

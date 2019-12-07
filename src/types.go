@@ -85,9 +85,7 @@ type BanAppeal struct {
 
 func (a *BanAppeal) GetBan() (BanInfo, error) {
 	var ban BanInfo
-	var err error
-
-	err = queryRowSQL("SELECT * FROM "+config.DBprefix+"banlist WHERE id = ? LIMIT 1",
+	err := queryRowSQL("SELECT * FROM "+config.DBprefix+"banlist WHERE id = ? LIMIT 1",
 		[]interface{}{a.ID}, []interface{}{
 			&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
 			&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,

@@ -3,13 +3,13 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	{{with .board}}
-		{{with $.op}}
-			{{if ne $.op.Subject ""}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.Subject 20 true}}</title>
-			{{else if ne $.op.MessageHTML ""}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
-			{{else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
-		{{else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
-	{{else}}<title>{{.config.SiteName}}</title>{{end}}
+	{{with .board -}}
+		{{with $.op -}}
+			{{if ne $.op.Subject "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.Subject 20 true}}</title>
+			{{- else if ne $.op.MessageHTML "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
+			{{- else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
+		{{- else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
+	{{- else}}<title>{{.config.SiteName}}</title>{{end}}
 	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />
 	<link id="theme" rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{.config.DefaultStyle}}" />
 	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png">
@@ -19,6 +19,6 @@
 	<script type="text/javascript" src="{{$.config.SiteWebfolder}}javascript/manage.js"></script>
 </head>
 <body>
-	<div id="topbar">
-		{{range $i, $board := .boards}}<a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
-	</div>
+<div id="topbar">
+	{{range $i, $board := .boards}}<a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
+</div>

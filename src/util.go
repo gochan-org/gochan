@@ -25,7 +25,6 @@ import (
 )
 
 var (
-	nullTime                 time.Time
 	errEmptyDurationString   = errors.New("Empty Duration string")
 	errInvalidDurationString = errors.New("Invalid Duration string")
 	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
@@ -409,9 +408,7 @@ func resetBoardSectionArrays() {
 	allSections = nil
 
 	allBoardsArr, _ := getBoardArr(nil, "")
-	for _, b := range allBoardsArr {
-		allBoards = append(allBoards, b)
-	}
+	allBoards = append(allBoards, allBoardsArr...)
 
 	allSectionsArr, _ := getSectionArr("")
 	allSections = append(allSections, allSectionsArr...)
@@ -424,20 +421,6 @@ func searchStrings(item string, arr []string, permissive bool) int {
 		}
 	}
 	return -1
-}
-
-func bToI(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func bToA(b bool) string {
-	if b {
-		return "1"
-	}
-	return "0"
 }
 
 // Checks the validity of the Akismet API key given in the config file.
@@ -536,11 +519,6 @@ func marshalJSON(tag string, data interface{}, indent bool) (string, error) {
 	return string(jsonBytes), err
 }
 
-func jsonError(err string) string {
-	errJSON, _ := marshalJSON("error", err, false)
-	return errJSON
-}
-
 func limitArraySize(arr []string, maxSize int) []string {
 	if maxSize > len(arr)-1 || maxSize < 0 {
 		return arr
@@ -557,26 +535,6 @@ func numReplies(boardid, threadid int) int {
 		return 0
 	}
 	return num
-}
-
-func ipMatch(newIP, existingIP string) bool {
-	if newIP == existingIP {
-		// both are single IPs and are the same
-		return true
-	}
-	wildcardIndex := strings.Index(existingIP, "*")
-	if wildcardIndex < 0 {
-		// single (or invalid) and they don't match
-		return false
-	}
-	ipRegexStr := existingIP[0:wildcardIndex]
-	ipRegexStr = strings.Replace(ipRegexStr, ".", "\\.", -1) + ".*"
-	ipRegex, err := regexp.Compile(ipRegexStr)
-	if err != nil {
-		// this shouldn't happen unless you enter an invalid IP in the db
-		return false
-	}
-	return ipRegex.MatchString(newIP)
 }
 
 // based on TinyBoard's parse_time function

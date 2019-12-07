@@ -1,10 +1,13 @@
 {{define "postbox.html"}}
 	<div id="postbox-area">
 		<form id="postform" name="postform" action="/post" method="POST" enctype="multipart/form-data">
-			{{with .op}}<input type="hidden" name="threadid" value="{{$.op.ID}}" />
+		{{- with .op}}
+			<input type="hidden" name="threadid" value="{{$.op.ID}}" />
 			<input type="hidden" name="boardid" value="{{$.board.ID}}" />
-			{{else}}<input type="hidden" name="threadid" value="0" />
-			<input type="hidden" name="boardid" value="{{$.board.ID}}" />{{end}}
+		{{- else -}}
+			<input type="hidden" name="threadid" value="0" />
+			<input type="hidden" name="boardid" value="{{$.board.ID}}" />
+		{{- end}}
 			<table id="postbox-static">
 				<tr><th class="postblock">Name</th><td><input type="text" name="postname" maxlength="100" size="28" /></td></tr>
 				<tr><th class="postblock">Email</th><td><input type="text" name="postemail" maxlength="100" size="28" /></td></tr>
@@ -13,8 +16,7 @@
 					<input type="submit" value="{{with .op}}Reply{{else}}Post{{end}}"/></td></tr>
 				<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="postmsg" id="postmsg"></textarea></td></tr>
 				<tr><th class="postblock">File</th><td><input name="imagefile" type="file"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
-				<input type="password" name="dummy2" style="display:none"/>
 				<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
-			</table>
+			</table><input type="password" name="dummy2" style="display:none"/>
 		</form>
 	</div>{{end}}

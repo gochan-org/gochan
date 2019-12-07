@@ -52,7 +52,6 @@ func connectToSQLServer() {
 		os.Exit(2)
 	}
 
-	nullTime, _ = time.Parse("2006-01-02 15:04:05", nilTimestamp)
 	if db, err = sql.Open(config.DBtype, connStr); err != nil {
 		handleError(0, "Failed to connect to the database: %s\n", customError(err))
 		os.Exit(2)
@@ -69,8 +68,11 @@ func connectToSQLServer() {
 	}
 
 	var sqlVersionStr string
-	err = queryRowSQL("SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
-		[]interface{}{}, []interface{}{&sqlVersionStr})
+	if err = queryRowSQL("SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
+		[]interface{}{}, []interface{}{&sqlVersionStr}); err != nil {
+		handleError(0, "failed: %s\n", customError(err))
+		os.Exit(2)
+	}
 	var numBoards, numStaff int
 	rows, err := querySQL("SELECT COUNT(*) FROM " + config.DBprefix + "boards UNION ALL SELECT COUNT(*) FROM " + config.DBprefix + "staff")
 	if err != nil {
@@ -106,7 +108,11 @@ func connectToSQLServer() {
 		buildFrontPage()
 		buildBoardListJSON()
 		buildBoards()
-		_, err = execSQL("INSERT INTO "+config.DBprefix+"info (name,value) VALUES('version',?)", versionStr)
+		if _, err = execSQL(
+			"INSERT INTO "+config.DBprefix+"info (name,value) VALUES('version',?)",
+			versionStr); err != nil {
+			handleError(0, "failed: %s\n", err.Error())
+		}
 		return
 	} else if err != nil {
 		handleError(0, "failed: %s\n", customError(err))
@@ -146,7 +152,6 @@ func initDB(initFile string) error {
 		if statement != "" && statement != " " {
 			if _, err := db.Exec(statement + ";"); err != nil {
 				panic("Error with SQL statement:" + statement)
-				return err
 			}
 		}
 	}
@@ -184,7 +189,6 @@ func prepareSQL(query string) (*sql.Stmt, error) {
 		fallthrough
 	case "sqlite3":
 		preparedStr = query
-		break
 	case "postgres":
 		arr := strings.Split(query, "?")
 		for i := range arr {
@@ -194,7 +198,6 @@ func prepareSQL(query string) (*sql.Stmt, error) {
 			arr[i] += fmt.Sprintf("$%d", i+1)
 		}
 		preparedStr = strings.Join(arr, "")
-		break
 	}
 	stmt, err := db.Prepare(preparedStr)
 	return stmt, sqlVersionErr(err)
