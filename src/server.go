@@ -38,19 +38,26 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	}
 
 	//the file exists, or there is a folder here
+	var extension string
 	if results.IsDir() {
 		//check to see if one of the specified index pages exists
+		var found bool
 		for _, value := range config.FirstPage {
 			newPath := path.Join(filePath, value)
 			_, err := os.Stat(newPath)
 			if err == nil {
 				filePath = newPath
+				found = true
 				break
 			}
 		}
+		if !found {
+			serveNotFound(writer, request)
+			return
+		}
 	} else {
 		//the file exists, and is not a folder
-		extension := strings.ToLower(getFileExtension(request.URL.Path))
+		extension = strings.ToLower(getFileExtension(request.URL.Path))
 		switch extension {
 		case "png":
 			writer.Header().Add("Content-Type", "image/png")
@@ -88,7 +95,15 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	fileBytes, _ = ioutil.ReadFile(filePath)
 	writer.Header().Add("Cache-Control", "max-age=86400")
-	writer.Write(fileBytes)
+	if extension == "html" {
+		minifyWriter(writer, fileBytes, "text/html")
+	} else if extension == "js" {
+		minifyWriter(writer, fileBytes, "text/javascript")
+	} else if extension == "json" {
+		minifyWriter(writer, fileBytes, "application/json")
+	} else {
+		writer.Write(fileBytes)
+	}
 }
 
 func serveNotFound(writer http.ResponseWriter, request *http.Request) {
@@ -96,21 +111,21 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(404)
 	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
 	if err != nil {
-		_, _ = writer.Write([]byte("Requested page not found, and 404 error page not found"))
+		writer.Write([]byte("Requested page not found, and 404 error page not found"))
 	} else {
-		_, _ = writer.Write(errorPage)
+		minifyWriter(writer, errorPage, "text/html")
 	}
 	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.URL.Path)
 }
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
-	errorpageTmpl.Execute(writer, map[string]interface{}{
+	minifyTemplate(errorpageTmpl, map[string]interface{}{
 		"config":     config,
 		"ErrorTitle": "Error :c",
 		// "ErrorImage":  "/error/lol 404.gif",
 		"ErrorHeader": "Error",
 		"ErrorText":   err,
-	})
+	}, writer, "text/html")
 }
 
 func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {

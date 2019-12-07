@@ -373,7 +373,8 @@ var manageFunctions = map[string]ManageFunction{
 					config.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
 					config.MakeURLsHyperlinked = (request.PostFormValue("MakeURLsHyperlinked") == "on")
 					config.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
-					config.EnableQuickReply = (request.PostFormValue("EnableQuickReply") == "on")
+					config.MinifyHTML = (request.PostFormValue("MinifyHTML") == "on")
+					config.MinifyJS = (request.PostFormValue("MinifyJS") == "on")
 					config.DateTimeFormat = request.PostFormValue("DateTimeFormat")
 					AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
 
@@ -381,6 +382,20 @@ var manageFunctions = map[string]ManageFunction{
 						status += err.Error() + "<br />"
 					} else {
 						config.AkismetAPIKey = AkismetAPIKey
+					}
+
+					config.UseCaptcha = (request.PostFormValue("UseCaptcha") == "on")
+					CaptchaWidth, err := strconv.Atoi(request.PostFormValue("CaptchaWidth"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.CaptchaWidth = CaptchaWidth
+					}
+					CaptchaHeight, err := strconv.Atoi(request.PostFormValue("CaptchaHeight"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.CaptchaHeight = CaptchaHeight
 					}
 
 					config.EnableGeoIP = (request.PostFormValue("EnableGeoIP") == "on")

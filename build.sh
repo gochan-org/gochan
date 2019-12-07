@@ -204,7 +204,8 @@ while [ -n "$1" ]; do
 				github.com/aquilax/tripcode \
 				golang.org/x/crypto/bcrypt \
 				github.com/frustra/bbcode \
-				github.com/mattn/go-sqlite3
+				github.com/mattn/go-sqlite3 \
+				github.com/tdewolff/minify
 			;;
 		docker-image)
 			# echo "Docker image creation not yet implemented"

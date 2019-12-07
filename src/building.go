@@ -5,12 +5,59 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strconv"
 	"syscall"
+	"text/template"
 	"time"
+
+	"github.com/tdewolff/minify"
+	minifyHTML "github.com/tdewolff/minify/html"
+	minifyJS "github.com/tdewolff/minify/js"
+	minifyJSON "github.com/tdewolff/minify/json"
 )
+
+var minifier *minify.M
+
+func initMinifier() {
+	if !config.MinifyHTML && !config.MinifyJS {
+		return
+	}
+	minifier = minify.New()
+	if config.MinifyHTML {
+		minifier.AddFunc("text/html", minifyHTML.Minify)
+	}
+	if config.MinifyJS {
+		minifier.AddFunc("text/javascript", minifyJS.Minify)
+		minifier.AddFunc("application/json", minifyJSON.Minify)
+	}
+}
+
+func canMinify(mediaType string) bool {
+	return (mediaType == "text/html" && config.MinifyHTML) || ((mediaType == "application/json" || mediaType == "text/javascript") && config.MinifyJS)
+}
+
+func minifyTemplate(tmpl *template.Template, data interface{}, writer io.Writer, mediaType string) error {
+	if !canMinify(mediaType) {
+		return tmpl.Execute(writer, data)
+	}
+
+	minWriter := minifier.Writer(mediaType, writer)
+	defer minWriter.Close()
+	return tmpl.Execute(minWriter, data)
+}
+
+func minifyWriter(writer io.Writer, data []byte, mediaType string) (int, error) {
+	if !canMinify(mediaType) {
+		return writer.Write(data)
+	}
+
+	minWriter := minifier.Writer(mediaType, writer)
+	defer minWriter.Close()
+	return minWriter.Write(data)
+}
 
 // build front page using templates/front.html
 func buildFrontPage() string {
@@ -71,12 +118,12 @@ func buildFrontPage() string {
 		}
 	}
 
-	if err = frontPageTmpl.Execute(frontFile, map[string]interface{}{
+	if err = minifyTemplate(frontPageTmpl, map[string]interface{}{
 		"config":       config,
 		"sections":     allSections,
 		"boards":       allBoards,
 		"recent_posts": recentPostsArr,
-	}); err != nil {
+	}, frontFile, "text/html"); err != nil {
 		return handleError(1, "Failed executing front page template: "+err.Error())
 	}
 	return "Front page rebuilt successfully."
@@ -105,7 +152,8 @@ func buildBoardListJSON() (html string) {
 	if err != nil {
 		return handleError(1, "Failed marshal to JSON: "+err.Error()) + "<br />\n"
 	}
-	if _, err = boardListFile.Write(boardJSON); err != nil {
+
+	if _, err = minifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
 		return handleError(1, "Failed writing boards.json file: "+err.Error()) + "<br />\n"
 	}
 	return "Board list JSON rebuilt successfully.<br />"
@@ -237,13 +285,13 @@ func buildBoardPages(board *Board) (html string) {
 
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
-		if err = boardpageTmpl.Execute(boardPageFile, map[string]interface{}{
+		if err = minifyTemplate(boardpageTmpl, map[string]interface{}{
 			"config":   config,
 			"boards":   allBoards,
 			"sections": allSections,
 			"threads":  threads,
 			"board":    board,
-		}); err != nil {
+		}, boardPageFile, "text/html"); err != nil {
 			html += handleError(1, "Failed building /"+board.Dir+"/: "+err.Error()) + "<br />"
 			return
 		}
@@ -280,8 +328,8 @@ func buildBoardPages(board *Board) (html string) {
 			continue
 		}
 
-		// Render the boardpage template, don't forget config
-		if err = boardpageTmpl.Execute(currentPageFile, map[string]interface{}{
+		// Render the boardpage template
+		if err = minifyTemplate(boardpageTmpl, map[string]interface{}{
 			"config":   config,
 			"boards":   allBoards,
 			"sections": allSections,
@@ -290,7 +338,7 @@ func buildBoardPages(board *Board) (html string) {
 			"posts": []interface{}{
 				Post{BoardID: board.ID},
 			},
-		}); err != nil {
+		}, currentPageFile, "text/html"); err != nil {
 			html += handleError(1, "Failed building /"+board.Dir+"/ boardpage: "+err.Error()) + "<br />"
 			return
 		}
@@ -382,7 +430,7 @@ func buildJSConstants() string {
 		return handleError(1, "Error opening '"+jsPath+"' for writing: "+err.Error())
 	}
 
-	if err = jsTmpl.Execute(jsFile, config); err != nil {
+	if err = minifyTemplate(jsTmpl, config, jsFile, "text/javascript"); err != nil {
 		return handleError(1, "Error building '"+jsPath+"': "+err.Error())
 	}
 	return "Built '" + jsPath + "' successfully."
@@ -416,13 +464,13 @@ func buildCatalog(which int) string {
 	}
 	threadPages := paginate(config.PostsPerThreadPage, threadInterfaces)
 
-	if err = catalogTmpl.Execute(catalogFile, map[string]interface{}{
+	if err = minifyTemplate(catalogTmpl, map[string]interface{}{
 		"boards":      allBoards,
 		"config":      config,
 		"board":       board,
 		"sections":    allSections,
 		"threadPages": threadPages,
-	}); err != nil {
+	}, catalogFile, "text/html"); err != nil {
 		return handleError(1, "Error building catalog for /%s/: %s", board.Dir, err.Error())
 	}
 	return fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
@@ -471,14 +519,14 @@ func buildThreadPages(op *Post) (html string) {
 	}
 
 	// render main page
-	if err = threadpageTmpl.Execute(currentPageFile, map[string]interface{}{
+	if err = minifyTemplate(threadpageTmpl, map[string]interface{}{
 		"config":   config,
 		"boards":   allBoards,
 		"board":    board,
 		"sections": allSections,
 		"posts":    replies,
 		"op":       op,
-	}); err != nil {
+	}, currentPageFile, "text/html"); err != nil {
 		html += handleError(1, "Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error()) + "<br />\n"
 		return
 	}
@@ -520,14 +568,14 @@ func buildThreadPages(op *Post) (html string) {
 			return
 		}
 
-		if err = threadpageTmpl.Execute(currentPageFile, map[string]interface{}{
+		if err = minifyTemplate(threadpageTmpl, map[string]interface{}{
 			"config":   config,
 			"boards":   allBoards,
 			"board":    board,
 			"sections": allSections,
 			"posts":    pagePosts,
 			"op":       op,
-		}); err != nil {
+		}, currentPageFile, "text/html"); err != nil {
 			html += handleError(1, "<br />Failed building /%s/%d: %s", board.Dir, op.ID, err.Error())
 			return
 		}

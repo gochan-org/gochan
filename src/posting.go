@@ -583,10 +583,9 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	if isBanned(banStatus, boards[post.BoardID-1].Dir) {
 		var banpageBuffer bytes.Buffer
 
-		banpageBuffer.Write([]byte(""))
-		if err = banpageTmpl.Execute(&banpageBuffer, map[string]interface{}{
+		if err = minifyTemplate(banpageTmpl, map[string]interface{}{
 			"config": config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
-		}); err != nil {
+		}, writer, "text/html"); err != nil {
 			writer.Write([]byte(handleError(1, err.Error())))
 			return
 		}
@@ -748,14 +747,10 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var banpageBuffer bytes.Buffer
-
-	banpageBuffer.Write([]byte(""))
-	if err = banpageTmpl.Execute(&banpageBuffer, map[string]interface{}{
+	if err = minifyTemplate(banpageTmpl, map[string]interface{}{
 		"config": config, "ban": banStatus, "banBoards": banStatus.Boards, "post": Post{},
-	}); err != nil {
+	}, writer, "text/html"); err != nil {
 		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")
 		return
 	}
-	writer.Write(banpageBuffer.Bytes())
 }

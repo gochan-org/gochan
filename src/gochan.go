@@ -22,6 +22,7 @@ func main() {
 		}
 	}()
 	initConfig()
+	initMinifier()
 	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", versionStr, buildtimeString, config.Verbosity)
 	connectToSQLServer()
 	parseCommandLine()

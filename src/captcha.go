@@ -59,7 +59,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 	if useJSON {
 		writer.Header().Add("Content-Type", "application/json")
 		str, _ := marshalJSON("", captchaStruct, false)
-		writer.Write([]byte(str))
+		minifyWriter(writer, []byte(str), "application/json")
 		return
 	}
 	if request.FormValue("reload") == "Reload" {
@@ -93,7 +93,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 			captchaStruct.Result = "Incorrect CAPTCHA"
 		}
 	}
-	if err = captchaTmpl.Execute(writer, captchaStruct); err != nil {
+	if err = minifyTemplate(captchaTmpl, captchaStruct, writer, "text/html"); err != nil {
 		handleError(0, customError(err))
 		fmt.Fprintf(writer, "Error executing captcha template")
 	}
