@@ -12,7 +12,7 @@ var dropdown_div_created = false;
 var $qr;
 var movable_postpreviews = true;
 var expandable_postrefs = true;
-var opRegex = /(\d)+(p(\d)+)?.html$/;
+var opRegex = /(\d+)(p(\d)+)?.html$/;
 
 var Staff = function(name,rank,boards) {
 	this.name = name;
