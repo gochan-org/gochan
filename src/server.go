@@ -95,15 +95,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	fileBytes, _ = ioutil.ReadFile(filePath)
 	writer.Header().Add("Cache-Control", "max-age=86400")
-	if extension == "html" {
-		minifyWriter(writer, fileBytes, "text/html")
-	} else if extension == "js" {
-		minifyWriter(writer, fileBytes, "text/javascript")
-	} else if extension == "json" {
-		minifyWriter(writer, fileBytes, "application/json")
-	} else {
-		writer.Write(fileBytes)
-	}
+	writer.Write(fileBytes)
 }
 
 func serveNotFound(writer http.ResponseWriter, request *http.Request) {
@@ -111,7 +103,7 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(404)
 	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
 	if err != nil {
-		writer.Write([]byte("Requested page not found, and 404 error page not found"))
+		writer.Write([]byte("Requested page not found, and /error/404.html not found"))
 	} else {
 		minifyWriter(writer, errorPage, "text/html")
 	}

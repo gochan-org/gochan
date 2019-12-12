@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -419,21 +420,41 @@ func buildBoards(which ...int) (html string) {
 	return
 }
 
-func buildJSConstants() string {
-	err := initTemplates("js")
+func buildJS() string {
+	// minify gochan.js (if enabled)
+	gochanMinJSPath := path.Join(config.DocumentRoot, "javascript", "gochan.min.js")
+	gochanMinJSFile, err := os.OpenFile(gochanMinJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	defer closeHandle(gochanMinJSFile)
 	if err != nil {
+		return handleError(1, "Error opening '"+gochanMinJSPath+"' for writing: "+err.Error())
+	}
+	gochanJSPath := path.Join(config.DocumentRoot, "javascript", "gochan.js")
+	gochanJSBytes, err := ioutil.ReadFile(gochanJSPath)
+	if err != nil {
+		return handleError(1, "Error reading '"+gochanJSPath+": "+err.Error())
+	}
+	if _, err := minifyWriter(gochanMinJSFile, gochanJSBytes, "text/javascript"); err != nil {
+		config.UseMinifiedGochanJS = false
+		return handleError(1, "Error minifying '"+gochanMinJSPath+"': "+err.Error())
+	}
+	config.UseMinifiedGochanJS = true
+
+	// build consts.js from template
+	if err = initTemplates("js"); err != nil {
 		return err.Error()
 	}
-	jsPath := path.Join(config.DocumentRoot, "javascript", "consts.js")
-	jsFile, err := os.OpenFile(jsPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	constsJSPath := path.Join(config.DocumentRoot, "javascript", "consts.js")
+	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	defer closeHandle(constsJSFile)
 	if err != nil {
-		return handleError(1, "Error opening '"+jsPath+"' for writing: "+err.Error())
+		return handleError(1, "Error opening '"+constsJSPath+"' for writing: "+err.Error())
 	}
 
-	if err = minifyTemplate(jsTmpl, config, jsFile, "text/javascript"); err != nil {
-		return handleError(1, "Error building '"+jsPath+"': "+err.Error())
+	if err = minifyTemplate(jsTmpl, config, constsJSFile, "text/javascript"); err != nil {
+		return handleError(1, "Error building '"+constsJSPath+"': "+err.Error())
 	}
-	return "Built '" + jsPath + "' successfully."
+
+	return "Built gochan.min.js and consts.js successfully."
 }
 
 func buildCatalog(which int) string {

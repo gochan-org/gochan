@@ -20,10 +20,16 @@ import (
 )
 
 // ManageFunction represents the functions accessed by staff members at /manage?action=<functionname>.
-// Eventually a plugin system might allow you to add more
 type ManageFunction struct {
+	Title       string
 	Permissions int                                                            // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	Callback    func(writer http.ResponseWriter, request *http.Request) string //return string of html output
+	Callback    func(writer http.ResponseWriter, request *http.Request) string `json:"-"` //return string of html output
+}
+
+func getManageFunctionsJSON() string {
+	var jsonStr string
+
+	return jsonStr
 }
 
 func callManageFunction(writer http.ResponseWriter, request *http.Request) {
@@ -179,6 +185,7 @@ func createSession(key string, username string, password string, request *http.R
 
 var manageFunctions = map[string]ManageFunction{
 	"cleanup": {
+		Title:       "Cleanup",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h2 class=\"manage-header\">Cleanup</h2><br />"
@@ -219,6 +226,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"config": {
+		Title:       "Configuration",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
@@ -430,7 +438,7 @@ var manageFunctions = map[string]ManageFunction{
 						status = "Error writing gochan.json: %s\n" + err.Error()
 					} else {
 						status = "Wrote gochan.json successfully <br />"
-						buildJSConstants()
+						buildJS()
 					}
 				}
 			}
@@ -444,84 +452,8 @@ var manageFunctions = map[string]ManageFunction{
 			html += manageConfigBuffer.String()
 			return
 		}},
-	/*"purgeeverything": {
-	Permissions: 3,
-	Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-		html = "<img src=\"/css/purge.jpg\" />"
-		rows, err := querySQL("SELECT dir FROM " + config.DBprefix + "boards")
-		defer closeHandle(rows)
-		if err != nil {
-			html += err.Error()
-			handleError(1, customError(err))
-			return
-		}
-		var board string
-		for rows.Next() {
-			if err = rows.Scan(&board); err != nil {
-				html += err.Error()
-				handleError(1, customError(err))
-				return
-			}
-			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board), ".html"); err != nil {
-				html += err.Error()
-				handleError(1, customError(err))
-				return
-			}
-			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), ".*"); err != nil {
-				html += err.Error()
-				handleError(1, customError(err))
-				return
-			}
-			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), ".*"); err != nil {
-				html += err.Error()
-				handleError(1, customError(err))
-				return
-			}
-			if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), ".*"); err != nil {
-				html += err.Error()
-				handleError(1, customError(err))
-				return
-			}
-		}
-
-		truncateSQL := "TRUNCATE " + config.DBprefix + "posts"
-		var values []interface{} // only used for SQLite since it doesn't have a proper TRUNCATE
-		if config.DBtype == "sqlite3" {
-			truncateSQL = "DELETE FROM " + config.DBprefix + "posts; DELETE FROM sqlite_sequence WHERE name = ?;"
-			values = append(values, config.DBprefix+"posts")
-		} else if config.DBtype == "postgres" {
-			truncateSQL += " RESTART IDENTITY"
-		}
-		if _, err = execSQL(truncateSQL, values...); err != nil {
-			html += handleError(0, err.Error()) + "<br />\n"
-			return
-		}
-
-		if _, err = execSQL("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1"); err != nil {
-			html += handleError(0, err.Error()) + "<br />\n"
-			return
-		}
-		html += "<br />Everything purged, rebuilding all<br />" +
-			buildBoards() + "<hr />\n" +
-			buildFrontPage()
-		return
-	}},*/
-	"executesql": {
-		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			statement := request.FormValue("sql")
-			html = "<h1 class=\"manage-header\">Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">" + statement + "</textarea>\n<input type=\"submit\" />\n</form>"
-			if statement != "" {
-				html += "<hr />"
-				if _, sqlerr := execSQL(statement); sqlerr != nil {
-					html += handleError(1, sqlerr.Error())
-				} else {
-					html += "Statement esecuted successfully."
-				}
-			}
-			return
-		}},
 	"login": {
+		Title:       "Login",
 		Permissions: 0,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			if getStaffRank(request) > 0 {
@@ -549,6 +481,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"logout": {
+		Title:       "Logout",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			cookie, _ := request.Cookie("sessiondata")
@@ -558,6 +491,7 @@ var manageFunctions = map[string]ManageFunction{
 			return "Logged out successfully"
 		}},
 	"announcements": {
+		Title:       "Announcements",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
@@ -588,6 +522,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"bans": {
+		Title:       "Bans",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) {
 			var post Post
@@ -714,6 +649,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"boards": {
+		Title:       "Boards",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
@@ -910,6 +846,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"staffmenu": {
+		Title:       "Staff menu",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			rank := getStaffRank(request)
@@ -940,12 +877,14 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"rebuildfront": {
+		Title:       "Rebuild front page",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildFrontPage()
 		}},
 	"rebuildall": {
+		Title:       "Rebuild everything",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
@@ -953,15 +892,17 @@ var manageFunctions = map[string]ManageFunction{
 			return buildFrontPage() + "<hr />\n" +
 				buildBoardListJSON() + "<hr />\n" +
 				buildBoards() + "<hr />\n" +
-				buildJSConstants() + "<hr />\n"
+				buildJS() + "<hr />\n"
 		}},
 	"rebuildboards": {
+		Title:       "Rebuild boards",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildBoards()
 		}},
 	"reparsehtml": {
+		Title:       "Reparse HTML",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			posts, err := getPostArr(map[string]interface{}{
@@ -988,6 +929,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"recentposts": {
+		Title:       "Recent posts",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			limit := request.FormValue("limit")
@@ -1033,13 +975,8 @@ var manageFunctions = map[string]ManageFunction{
 			html += "</table>"
 			return
 		}},
-	"killserver": {
-		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			os.Exit(0)
-			return
-		}},
 	"postinfo": {
+		Title:       "Post info",
 		Permissions: 2,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			boardDir := request.FormValue("dir")
@@ -1071,6 +1008,7 @@ var manageFunctions = map[string]ManageFunction{
 			return jsonStr
 		}},
 	"staff": {
+		Title:       "Staff",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
@@ -1132,6 +1070,7 @@ var manageFunctions = map[string]ManageFunction{
 			return
 		}},
 	"tempposts": {
+		Title:       "Temporary posts lists",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html += "<h1 class=\"manage-header\">Temporary posts</h1>"

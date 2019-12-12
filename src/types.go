@@ -338,8 +338,9 @@ type GochanConfig struct {
 	MakeURLsHyperlinked      bool     `description:"If checked, URLs in posts will be turned into a hyperlink. If unchecked, ExpandButton and NewTabOnOutlinks are ignored." default:"checked"`
 	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
 
-	MinifyHTML bool `description:"If checked, gochan will minify html files when building" default:"checked"`
-	MinifyJS   bool `description:"If checked, gochan will minify js and json files when building" default:"checked"`
+	MinifyHTML          bool `description:"If checked, gochan will minify html files when building" default:"checked"`
+	MinifyJS            bool `description:"If checked, gochan will minify js and json files when building" default:"checked"`
+	UseMinifiedGochanJS bool `json:"-"`
 
 	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info." default:"Mon, January 02, 2006 15:04 PM"`
 	AkismetAPIKey         string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
