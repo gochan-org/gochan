@@ -250,10 +250,10 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 
 // TODO: replace where with a map[string]interface{} like getBoardsArr()
 func getSectionArr(where string) (sections []BoardSection, err error) {
-	if where == "" {
-		where = "1 = 1"
+	if where != "" {
+		where = "WHERE " + where
 	}
-	rows, err := querySQL("SELECT * FROM " + config.DBprefix + "sections WHERE " + where + " ORDER BY list_order")
+	rows, err := querySQL("SELECT * FROM " + config.DBprefix + "sections " + where + " ORDER BY list_order")
 	defer closeHandle(rows)
 	if err != nil {
 		handleError(0, err.Error())

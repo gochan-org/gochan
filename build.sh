@@ -205,7 +205,9 @@ while [ -n "$1" ]; do
 				golang.org/x/crypto/bcrypt \
 				github.com/frustra/bbcode \
 				github.com/mattn/go-sqlite3 \
-				github.com/tdewolff/minify
+				github.com/tdewolff/minify \
+				gopkg.in/mojocn/base64Captcha.v1
+				# github.com/mojocn/base64Captcha
 			;;
 		docker-image)
 			# echo "Docker image creation not yet implemented"

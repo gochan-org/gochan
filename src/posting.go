@@ -618,7 +618,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	buildFrontPage()
 
 	if emailCommand == "noko" {
-		if post.ParentID == 0 {
+		if post.ParentID < 1 {
 			http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
 			http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)

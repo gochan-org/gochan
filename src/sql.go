@@ -68,11 +68,17 @@ func connectToSQLServer() {
 	}
 
 	var sqlVersionStr string
-	if err = queryRowSQL("SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
-		[]interface{}{}, []interface{}{&sqlVersionStr}); err != nil {
+	isNewInstall := false
+	if err = queryRowSQL(
+		"SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
+		[]interface{}{}, []interface{}{&sqlVersionStr},
+	); err == sql.ErrNoRows {
+		isNewInstall = true
+	} else if err != nil {
 		handleError(0, "failed: %s\n", customError(err))
 		os.Exit(2)
 	}
+
 	var numBoards, numStaff int
 	rows, err := querySQL("SELECT COUNT(*) FROM " + config.DBprefix + "boards UNION ALL SELECT COUNT(*) FROM " + config.DBprefix + "staff")
 	if err != nil {
@@ -108,6 +114,10 @@ func connectToSQLServer() {
 		buildFrontPage()
 		buildBoardListJSON()
 		buildBoards()
+		if !isNewInstall {
+			return
+		}
+
 		if _, err = execSQL(
 			"INSERT INTO "+config.DBprefix+"info (name,value) VALUES('version',?)",
 			versionStr); err != nil {
@@ -150,8 +160,8 @@ func initDB(initFile string) error {
 
 	for _, statement := range sqlArr {
 		if statement != "" && statement != " " {
-			if _, err := db.Exec(statement + ";"); err != nil {
-				panic("Error with SQL statement:" + statement)
+			if _, err = db.Exec(statement + ";"); err != nil {
+				return err
 			}
 		}
 	}

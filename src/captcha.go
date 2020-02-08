@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"net/http"
 	"strconv"
 
-	"github.com/mojocn/base64Captcha"
+	//"github.com/mojocn/base64Captcha"
+	"gopkg.in/mojocn/base64Captcha.v1"
 )
 
 var (
-	charCaptchaCfg base64Captcha.ConfigCharacter
+	captchaString *base64Captcha.DriverString
+	driver        *base64Captcha.DriverString
 )
 
 type captchaJSON struct {
@@ -21,23 +24,19 @@ type captchaJSON struct {
 }
 
 func initCaptcha() {
-	charCaptchaCfg = base64Captcha.ConfigCharacter{
-		Height:             config.CaptchaHeight, // originally 60
-		Width:              config.CaptchaWidth,  // originally 240
-		Mode:               base64Captcha.CaptchaModeNumberAlphabet,
-		ComplexOfNoiseText: base64Captcha.CaptchaComplexLower,
-		ComplexOfNoiseDot:  base64Captcha.CaptchaComplexLower,
-		IsUseSimpleFont:    true,
-		IsShowHollowLine:   false,
-		IsShowNoiseDot:     true,
-		IsShowNoiseText:    false,
-		IsShowSlimeLine:    true,
-		IsShowSineLine:     false,
-		CaptchaLen:         8,
+	if !config.UseCaptcha {
+		return
 	}
+	driver = base64Captcha.NewDriverString(
+		config.CaptchaHeight, config.CaptchaWidth, 0, 0, 6,
+		"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+		&color.RGBA{0, 0, 0, 0}, nil).ConvertFonts()
 }
 
 func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
+	if !config.UseCaptcha {
+		return
+	}
 	var err error
 	if err = request.ParseForm(); err != nil {
 		serveErrorPage(writer, err.Error())
@@ -72,7 +71,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 	captchaID := request.FormValue("captchaid")
 	captchaAnswer := request.FormValue("captchaanswer")
 	if captchaID != "" && request.FormValue("didreload") != "1" {
-		goodAnswer := base64Captcha.VerifyCaptcha(captchaID, captchaAnswer)
+		goodAnswer := base64Captcha.DefaultMemStore.Verify(captchaID, captchaAnswer, true)
 		if goodAnswer {
 			if tempPostIndex > -1 && tempPostIndex < len(tempPosts) {
 				// came from a /post redirect, insert the specified temporary post
@@ -100,8 +99,10 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 }
 
 func getCaptchaImage() (captchaID string, chaptchaB64 string) {
-	var captchaInstance base64Captcha.CaptchaInterface
-	captchaID, captchaInstance = base64Captcha.GenerateCaptcha("", charCaptchaCfg)
-	chaptchaB64 = base64Captcha.CaptchaWriteToBase64Encoding(captchaInstance)
+	if !config.UseCaptcha {
+		return
+	}
+	captcha := base64Captcha.NewCaptcha(driver, base64Captcha.DefaultMemStore)
+	captchaID, chaptchaB64, _ = captcha.Generate()
 	return
 }
