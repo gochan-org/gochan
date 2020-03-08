@@ -77,23 +77,23 @@ func buildFrontPage() string {
 
 	// get recent posts
 	recentQueryStr := "SELECT " +
-		config.DBprefix + "posts.id, " +
-		config.DBprefix + "posts.parentid, " +
-		config.DBprefix + "boards.dir as boardname, " +
-		config.DBprefix + "posts.boardid as boardid, " +
-		config.DBprefix + "posts.name, " +
-		config.DBprefix + "posts.tripcode, " +
-		config.DBprefix + "posts.message, " +
-		config.DBprefix + "posts.filename, " +
-		config.DBprefix + "posts.thumb_w, " +
-		config.DBprefix + "posts.thumb_h " +
-		"FROM " + config.DBprefix + "posts, " + config.DBprefix + "boards " +
-		"WHERE " + config.DBprefix + "posts.deleted_timestamp = ? "
+		"DBPREFIXposts.id, " +
+		"DBPREFIXposts.parentid, " +
+		"DBPREFIXboards.dir as boardname, " +
+		"DBPREFIXposts.boardid as boardid, " +
+		"DBPREFIXposts.name, " +
+		"DBPREFIXposts.tripcode, " +
+		"DBPREFIXposts.message, " +
+		"DBPREFIXposts.filename, " +
+		"DBPREFIXposts.thumb_w, " +
+		"DBPREFIXposts.thumb_h " +
+		"FROM  DBPREFIXposts, DBPREFIXboards " +
+		"WHERE DBPREFIXposts.deleted_timestamp = ? "
 
 	if !config.RecentPostsWithNoFile {
-		recentQueryStr += "AND " + config.DBprefix + "posts.filename != '' AND " + config.DBprefix + "posts.filename != 'deleted' "
+		recentQueryStr += "AND DBPREFIXposts.filename != '' AND DBPREFIXposts.filename != 'deleted' "
 	}
-	recentQueryStr += "AND boardid = " + config.DBprefix + "boards.id " +
+	recentQueryStr += "AND boardid = DBPREFIXboards.id " +
 		"ORDER BY timestamp DESC LIMIT ?"
 
 	rows, err := querySQL(recentQueryStr, nilTimestamp, config.MaxRecentPosts)
@@ -194,7 +194,7 @@ func buildBoardPages(board *Board) (html string) {
 		var postsInThread []Post
 
 		// Get the number of replies to this thread.
-		queryStr := "SELECT COUNT(*) FROM " + config.DBprefix + "posts WHERE boardid = ? AND parentid = ? AND deleted_timestamp = ?"
+		queryStr := "SELECT COUNT(*) FROM DBPREFIXposts WHERE boardid = ? AND parentid = ? AND deleted_timestamp = ?"
 
 		if err = queryRowSQL(queryStr,
 			[]interface{}{board.ID, op.ID, nilTimestamp},
@@ -297,7 +297,7 @@ func buildBoardPages(board *Board) (html string) {
 			return
 		}
 
-		html += "/" + board.Dir + "/ built successfully, no threads to build.\n"
+		html += "/" + board.Dir + "/ built successfully.\n"
 		benchmarkTimer("buildBoard"+strconv.Itoa(board.ID), startTime, false)
 		return
 	}
@@ -379,43 +379,26 @@ func buildBoardPages(board *Board) (html string) {
 // The return value is a string of HTML with debug information produced by the build process.
 func buildBoards(which ...int) (html string) {
 	var boards []Board
-
+	var err error
 	if which == nil {
 		boards = allBoards
 	} else {
-		for _, b := range which {
-			board, err := getBoardFromID(b)
-			if err != nil {
-				html += handleError(0, err.Error()) + "<br />\n"
-				continue
+		for b, id := range which {
+			boards = append(boards, Board{})
+			if err = boards[b].PopulateData(id, ""); err != nil {
+				return handleError(0, err.Error()) + "<br />\n"
 			}
-			boards = append(boards, *board)
 		}
 	}
-
 	if len(boards) == 0 {
-		return html + "No boards to build.<br />\n"
+		return "No boards to build.<br />\n"
 	}
-	for _, board := range boards {
-		boardPath := path.Join(config.DocumentRoot, board.Dir)
-		if err := os.Mkdir(boardPath, 0666); err != nil && !os.IsExist(err) {
-			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
-		}
-		if err := os.Mkdir(path.Join(boardPath, "res"), 0666); err != nil && !os.IsExist(err) {
-			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
-		}
-		if err := os.Mkdir(path.Join(boardPath, "src"), 0666); err != nil && !os.IsExist(err) {
-			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
-		}
-		if err := os.Mkdir(path.Join(boardPath, "thumb"), 0666); err != nil && !os.IsExist(err) {
-			html += handleError(0, "Error creating board directories: %s\n", err.Error()) + "<br />\n"
-		}
 
-		if board.EnableCatalog {
-			html += buildCatalog(board.ID) + "<br />\n"
+	for _, board := range boards {
+		if err = board.Build(false, true); err != nil {
+			return handleError(0, err.Error()) + "<br />\n"
 		}
-		html += buildBoardPages(&board) + "<br />\n" +
-			buildThreads(true, board.ID, 0) + "<br />\n"
+		html += "Built /" + board.Dir + "/ successfully<br />\n"
 	}
 	return
 }
@@ -462,8 +445,8 @@ func buildCatalog(which int) string {
 	if err != nil {
 		return err.Error()
 	}
-	board, err := getBoardFromID(which)
-	if err != nil {
+	var board Board
+	if err = board.PopulateData(which, ""); err != nil {
 		return handleError(1, err.Error())
 	}
 	catalogPath := path.Join(config.DocumentRoot, board.Dir, "catalog.html")
@@ -506,8 +489,8 @@ func buildThreadPages(op *Post) (html string) {
 
 	var replies []Post
 	var currentPageFile *os.File
-	var board *Board
-	if board, err = getBoardFromID(op.BoardID); err != nil {
+	var board Board
+	if err = board.PopulateData(op.BoardID, ""); err != nil {
 		html += handleError(1, err.Error())
 	}
 

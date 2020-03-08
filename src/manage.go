@@ -88,7 +88,7 @@ func getCurrentStaff(request *http.Request) (string, error) {
 	key := sessionCookie.Value
 	currentSession := new(LoginSession)
 	if err := queryRowSQL(
-		"SELECT sessiondata FROM "+config.DBprefix+"sessions WHERE name = ?",
+		"SELECT sessiondata FROM DBPREFIXsessions WHERE name = ?",
 		[]interface{}{key},
 		[]interface{}{&currentSession.Data},
 	); err != nil {
@@ -99,9 +99,9 @@ func getCurrentStaff(request *http.Request) (string, error) {
 
 func getStaff(name string) (*Staff, error) {
 	staff := new(Staff)
-	err := queryRowSQL("SELECT * FROM "+config.DBprefix+"staff WHERE username = ?",
+	err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
 		[]interface{}{name},
-		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Salt, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
+		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
 	)
 	return staff, err
 }
@@ -125,13 +125,13 @@ func getStaffRank(request *http.Request) int {
 }
 
 func newStaff(username string, password string, rank int) error {
-	_, err := execSQL("INSERT INTO `"+config.DBprefix+"staff` (username, password_checksum, rank) VALUES(?,?,?)",
+	_, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
 		&username, bcryptSum(password), &rank)
 	return err
 }
 
 func deleteStaff(username string) error {
-	_, err := execSQL("DELETE FROM "+config.DBprefix+"staff WHERE username = ?", username)
+	_, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
 	return err
 }
 
@@ -169,14 +169,14 @@ func createSession(key string, username string, password string, request *http.R
 	})
 
 	if _, err = execSQL(
-		"INSERT INTO "+config.DBprefix+"sessions (name,sessiondata,expires) VALUES(?,?,?)",
+		"INSERT INTO DBPREFIXsessions (name,sessiondata,expires) VALUES(?,?,?)",
 		key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730)))); err != nil {
 		handleError(0, customError(err))
 		return 2
 	}
 
 	if _, err = execSQL(
-		"UPDATE "+config.DBprefix+"staff SET last_active = ? WHERE username = ?", getSQLDateTime(), username,
+		"UPDATE DBPREFIXstaff SET last_active = ? WHERE username = ?", getSQLDateTime(), username,
 	); err != nil {
 		handleError(1, customError(err))
 	}
@@ -193,7 +193,7 @@ var manageFunctions = map[string]ManageFunction{
 			if request.FormValue("run") == "Run Cleanup" {
 				html += "Removing deleted posts from the database.<hr />"
 				if _, err = execSQL(
-					"DELETE FROM `"+config.DBprefix+"posts` WHERE `deleted_timestamp` = ?", nilTimestamp,
+					"DELETE FROM DBPREFIXposts WHERE deleted_timestamp = ?", nilTimestamp,
 				); err != nil {
 					html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
 					return
@@ -211,7 +211,7 @@ var manageFunctions = map[string]ManageFunction{
 				for tableRows.Next() {
 					var table string
 					tableRows.Scan(&table)
-					if _, err := execSQL("OPTIMIZE TABLE `" + table + "`"); err != nil {
+					if _, err := execSQL("OPTIMIZE TABLE " + table); err != nil {
 						html += handleError(1, err.Error()) + "<br />"
 						return
 					}
@@ -474,7 +474,7 @@ var manageFunctions = map[string]ManageFunction{
 					"\t\t<input type=\"submit\" value=\"Login\" />\n" +
 					"\t</form>"
 			} else {
-				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + generateSalt())[0:10]
+				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + randomString(3))[0:10]
 				createSession(key, username, password, request, writer)
 				http.Redirect(writer, request, path.Join(config.SiteWebfolder, "manage?action="+request.FormValue("redirect")), http.StatusFound)
 			}
@@ -496,7 +496,7 @@ var manageFunctions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
-			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM " + config.DBprefix + "announcements ORDER BY id DESC")
+			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
 			defer closeHandle(rows)
 			if err != nil {
 				html += handleError(1, err.Error())
@@ -558,7 +558,7 @@ var manageFunctions = map[string]ManageFunction{
 				reason := html.EscapeString(request.FormValue("reason"))
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
 				currentStaff, _ := getCurrentStaff(request)
-				sqlStr := "INSERT INTO " + config.DBprefix + "banlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
+				sqlStr := "INSERT INTO DBPREFIXbanlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
 				for i := 1; i <= 12; i++ {
 					sqlStr += "?"
 					if i < 12 {
@@ -600,7 +600,7 @@ var manageFunctions = map[string]ManageFunction{
 				}
 				post = posts[0]
 			}
-			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM " + config.DBprefix + "banlist")
+			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM DBPREFIXbanlist")
 			defer closeHandle(rows)
 			if err != nil {
 				pageHTML += handleError(1, err.Error())
@@ -638,7 +638,7 @@ var manageFunctions = map[string]ManageFunction{
 				return
 			}
 			staff := new(Staff)
-			if err := queryRowSQL("SELECT rank,boards FROM "+config.DBprefix+"staff WHERE username = ?",
+			if err := queryRowSQL("SELECT rank,boards FROM DBPREFIXstaff WHERE username = ?",
 				[]interface{}{current_staff},
 				[]interface{}{&staff.Rank, &staff.Boards},
 			); err != nil {
@@ -760,7 +760,7 @@ var manageFunctions = map[string]ManageFunction{
 					}
 					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
 					if _, err := execSQL(
-						"INSERT INTO "+config.DBprefix+"boards (list_order,dir,type,upload_type,title,subtitle,"+
+						"INSERT INTO DBPREFIXboards (list_order,dir,type,upload_type,title,subtitle,"+
 							"description,section,max_file_size,max_pages,default_style,locked,created_on,"+
 							"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,embeds_allowed,"+
 							"redirect_to_thread,require_file,enable_catalog) "+
@@ -804,7 +804,7 @@ var manageFunctions = map[string]ManageFunction{
 				}
 
 				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-				rows, err = querySQL("SELECT dir FROM " + config.DBprefix + "boards")
+				rows, err = querySQL("SELECT dir FROM DBPREFIXboards")
 				defer closeHandle(rows)
 				if err != nil {
 					html += handleError(1, err.Error())
@@ -824,7 +824,7 @@ var manageFunctions = map[string]ManageFunction{
 				allSections, _ = getSectionArr("")
 				if len(allSections) == 0 {
 					if _, err = execSQL(
-						"INSERT INTO " + config.DBprefix + "sections (hidden,name,abbreviation) VALUES(0,'Main','main')",
+						"INSERT INTO DBPREFIXsections (hidden,name,abbreviation) VALUES(0,'Main','main')",
 					); err != nil {
 						html += handleError(1, err.Error())
 					}
@@ -914,7 +914,8 @@ var manageFunctions = map[string]ManageFunction{
 			}
 
 			for _, post := range posts {
-				_, err = execSQL("UPDATE `"+config.DBprefix+"posts` SET `message` = ? WHERE `id` = ? AND `boardid` = ?",
+				_, err = execSQL(
+					"UPDATE DBPREFIXposts SET message = ? WHERE id = ? AND boardid = ?",
 					formatMessage(post.MessageText), post.ID, post.BoardID,
 				)
 				if err != nil {
@@ -937,25 +938,20 @@ var manageFunctions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1 class=\"manage-header\">Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-			rows, err := querySQL(
-				"SELECT `"+config.DBprefix+"boards`.`dir` AS `boardname`, "+
-					"`"+config.DBprefix+"posts`.`boardid` AS boardid, "+
-					"`"+config.DBprefix+"posts`.`id` AS id, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`parentid` AS parentid, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`message` AS message, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`ip` AS ip, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`timestamp` AS timestamp "+
-					"FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` "+
-					"WHERE `reviewed` = 0 "+
-					"AND `"+config.DBprefix+"posts`.`deleted_timestamp` = ? "+
-					"AND `boardid` = `"+config.DBprefix+"boards`.`id` "+
-					"ORDER BY `timestamp` DESC LIMIT ?",
-				nilTimestamp, limit,
-			)
+			rows, err := querySQL("SELECT "+
+				"DBPREFIXboards.dir AS boardname, "+
+				"DBPREFIXposts.boardid AS boardid, "+
+				"DBPREFIXposts.id AS id, "+
+				"DBPREFIXposts.parentid AS parentid, "+
+				"DBPREFIXposts.message AS message, "+
+				"DBPREFIXposts.ip AS ip, "+
+				"DBPREFIXposts.timestamp AS timestamp "+
+				"FROM DBPREFIXposts, DBPREFIXboards "+
+				"WHERE reviewed = 0 "+
+				"AND DBPREFIXposts.deleted_timestamp = ? "+
+				"AND boardid = DBPREFIXboards.id "+
+				"ORDER BY timestamp DESC LIMIT ?",
+				nilTimestamp, limit)
 			defer closeHandle(rows)
 			if err != nil {
 				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
@@ -1015,7 +1011,7 @@ var manageFunctions = map[string]ManageFunction{
 			html = "<h1 class=\"manage-header\">Staff</h1><br />\n" +
 				"<table id=\"stafftable\" border=\"1\">\n" +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
-			rows, err := querySQL("SELECT `username`,`rank`,`boards`,`added_on` FROM `" + config.DBprefix + "staff`")
+			rows, err := querySQL("SELECT username,rank,boards,added_on FROM DBPREFIXstaff")
 			defer closeHandle(rows)
 			if err != nil {
 				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"

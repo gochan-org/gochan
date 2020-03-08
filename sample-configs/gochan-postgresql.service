@@ -1,6 +1,7 @@
 [Unit]
 Description=gochan Daemon
-After=network.target
+Wants=postgresql.service
+After=postgresql.service
 
 [Service]
 ExecStart=/usr/local/bin/gochan

@@ -1,0 +1,10 @@
+[Unit]
+Description=gochan Daemon
+After=network.target
+
+
+[Service]
+ExecStart=/usr/local/bin/gochan
+
+[Install]
+WantedBy=multi-user.target

@@ -28,7 +28,7 @@ Demo installation: https://gochan.org
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
-2. From the command line, cd into vagrant/ and run `vagrant up`
+2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MySQL/MariaDB is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql, postgresql, or sqlite3.
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 
 ## For developers (using Docker)

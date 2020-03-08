@@ -1,0 +1,10 @@
+[Unit]
+Description=gochan Daemon
+Wants=mysql.service
+After=mysql.service
+
+[Service]
+ExecStart=/usr/local/bin/gochan
+
+[Install]
+WantedBy=multi-user.target

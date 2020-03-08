@@ -1,7 +1,11 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-DBTYPE = "mysql" # must be "mysql", "postgresql", or "sqlite3"
+DBTYPE = ENV.fetch("GC_DBTYPE", "mysql")
+if DBTYPE != "mysql" && DBTYPE != "postgresql" && DBTYPE != "sqlite3"
+	puts "Invalid GC_DBTYPE environment variable, must be mysql, postgresql, or sqlite3, got #{DBTYPE}"
+	abort
+end
 
 Vagrant.configure("2") do |config|
 	config.ssh.username = "vagrant"
@@ -17,6 +21,7 @@ Vagrant.configure("2") do |config|
 
 	config.vm.provision :shell, path: "bootstrap.sh", env: {
 		:DBTYPE => DBTYPE,
+		:GOPATH => "/vagrant/lib",
 		:FROMDOCKER => ""
 	}, args: "install"
 end

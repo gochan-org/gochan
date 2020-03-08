@@ -17,13 +17,13 @@ func main() {
 	defer func() {
 		if db != nil {
 			println(0, "Cleaning up")
-			execSQL("DROP TABLE " + config.DBprefix + "sessions")
+			execSQL("DROP TABLE DBPREFIXsessions")
 			db.Close()
 		}
 	}()
 	initConfig()
 	initMinifier()
-	printf(0, "Starting gochan v%s.%s, using verbosity level %d\n", versionStr, buildtimeString, config.Verbosity)
+	printf(0, "Starting gochan v%s using verbosity level %d\n", versionStr, config.Verbosity)
 	connectToSQLServer()
 	parseCommandLine()
 

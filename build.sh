@@ -151,9 +151,12 @@ function release {
 	if [ "$GCOS" = "darwin" ]; then GCOS="macos"; fi
 
 	cp $BIN $DIRNAME
+	mkdir -p $DIRNAME/sample-configs
 	if [ "$GCOS" = "linux" ]; then
 		strip $DIRNAME/$BIN
-		cp gochan.service $DIRNAME
+		cp sample-configs/gochan-mysql.service $DIRNAME/sample-configs
+		cp sample-configs/gochan-postgresql.service $DIRNAME/sample-configs
+		cp sample-configs/gochan-sqlite3.service $DIRNAME/sample-configs
 	fi
 	mkdir -p $DIRNAME/html
 	cp -r sass $DIRNAME
@@ -165,10 +168,10 @@ function release {
 	mkdir -p $DIRNAME/log
 	cp -r templates $DIRNAME
 	cp initdb_*.sql $DIRNAME
-	cp *.nginx $DIRNAME
+	cp sample-configs/*.nginx $DIRNAME/sample-configs/
 	cp README.md $DIRNAME
 	cp LICENSE $DIRNAME
-	cp gochan.example.json $DIRNAME
+	cp sample-configs/gochan.example.json $DIRNAME/sample-configs/
 
 
 	cd releases
@@ -254,7 +257,7 @@ while [ -n "$1" ]; do
 				cp $symarg -f $PWD/*.sql $installdir/
 				cp $symarg -rf $PWD/templates $installdir/templates/
 
-				cp -f gochan.example.json $installdir/
+				# cp -f gochan.example.json $installdir/
 				if [ -f gochan.json ]; then
 					echo "Copying config file to $installdir/gochan.json"
 					cp $symarg -f $PWD/gochan.json $installdir/gochan.json
@@ -273,11 +276,12 @@ while [ -n "$1" ]; do
 				
 				echo "Creating /etc/gochan/ (if it doesn't already exist)"
 				mkdir -p /etc/gochan
-				cp -f gochan.example.json /etc/gochan/
-				if [ ! -f /etc/gochan/gochan.json ] && [ -f gochan.json ]; then
-					echo "Copying gochan.json to /etc/gochan/gochan.json"
-					cp $symarg -f $PWD/gochan.json /etc/gochan/gochan.json
-				fi
+				echo "/etc/gochan created, you should run 'cp sample-configs/gochan.example.json /etc/gochan/gochan.json'"
+				# cp -f gochan.example.json /etc/gochan/
+				# if [ ! -f /etc/gochan/gochan.json ] && [ -f gochan.json ]; then
+				# 	echo "Copying gochan.json to /etc/gochan/gochan.json"
+				# 	cp $symarg -f $PWD/gochan.json /etc/gochan/gochan.json
+				# fi
 				echo "Creating /var/log/gochan (if it doesn't already exist)"
 				mkdir -p /var/log/gochan
 			fi
@@ -296,9 +300,17 @@ while [ -n "$1" ]; do
 			done
 
 			if [ -d /lib/systemd/system ]; then
-				echo "Installing systemd service file"
-				cp $symarg $PWD/gochan.service /lib/systemd/system/gochan.service
-				systemctl daemon-reload
+				cat - <<-EOF
+					It looks like your distribution has systemd. Gochan no longer automatically installs
+					the service for you, but you can install it yourself by copying one of the following:
+					sample-configs/gochan-mysql.service
+					sample-configs/gochan-postgresql.service
+					sample-configs/gochan-sqlite3.service
+					to /lib/systemd/system/gochan.service then running the following commands
+					systemctl daemon-reload
+					systemctl enable gochan.service
+					systemctl start gochan.service
+				EOF
 			fi
 
 			echo "Installation complete. Make sure to set the following values in gochan.json:"

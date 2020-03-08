@@ -1,16 +1,26 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"html"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
 	"time"
 
 	"github.com/frustra/bbcode"
+)
+
+const (
+	dirIsAFileStr = "unable to create \"%s\", path exists and is a file"
+	pathExistsStr = "unable to create \"%s\", path already exists"
+	genericErrStr = "unable to create \"%s\": %s"
 )
 
 var (
@@ -85,7 +95,7 @@ type BanAppeal struct {
 
 func (a *BanAppeal) GetBan() (BanInfo, error) {
 	var ban BanInfo
-	err := queryRowSQL("SELECT * FROM "+config.DBprefix+"banlist WHERE id = ? LIMIT 1",
+	err := queryRowSQL("SELECT * FROM DBPREFIXbanlist WHERE id = ? LIMIT 1",
 		[]interface{}{a.ID}, []interface{}{
 			&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
 			&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,
@@ -155,6 +165,180 @@ type Board struct {
 	ThreadsPerPage         int            `json:"per_page"`
 }
 
+// AbsolutePath returns the full filepath of the board directory
+func (board *Board) AbsolutePath(subpath ...string) string {
+	return path.Join(config.DocumentRoot, board.Dir, path.Join(subpath...))
+}
+
+// Build builds the board and its thread files
+// if newBoard is true, it adds a row to DBPREFIXboards and fails if it exists
+// if force is true, it doesn't fail if the directories exist but does fail if it is a file
+func (board *Board) Build(newBoard bool, force bool) error {
+	var err error
+	if board.Dir == "" {
+		return errors.New("board must have a directory before it is built")
+	}
+	if board.Title == "" {
+		return errors.New("board must have a title before it is built")
+	}
+
+	dirPath := board.AbsolutePath()
+	resPath := board.AbsolutePath("res")
+	srcPath := board.AbsolutePath("src")
+	thumbPath := board.AbsolutePath("thumb")
+	dirInfo, _ := os.Stat(dirPath)
+	resInfo, _ := os.Stat(resPath)
+	srcInfo, _ := os.Stat(srcPath)
+	thumbInfo, _ := os.Stat(thumbPath)
+	if dirInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, dirPath)
+		}
+		if !dirInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, dirPath)
+		}
+	} else {
+		if err = os.Mkdir(dirPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, dirPath, err.Error())
+		}
+	}
+
+	if resInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, resPath)
+		}
+		if !resInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, resPath)
+		}
+	} else {
+		if err = os.Mkdir(resPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, resPath, err.Error())
+		}
+	}
+
+	if srcInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, srcPath)
+		}
+		if !srcInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, srcPath)
+		}
+	} else {
+		if err = os.Mkdir(srcPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, srcPath, err.Error())
+		}
+	}
+
+	if thumbInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, thumbPath)
+		}
+		if !thumbInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, thumbPath)
+		}
+	} else {
+		if err = os.Mkdir(thumbPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, thumbPath, err.Error())
+		}
+	}
+
+	if newBoard {
+		var numRows int
+		queryRowSQL("SELECT COUNT(*) FROM DBPREFIXboards WHERE `dir` = ?",
+			[]interface{}{board.Dir},
+			[]interface{}{&numRows},
+		)
+		if numRows > 0 {
+			return errors.New("board already exists in database")
+		}
+		board.CreatedOn = time.Now()
+		var result sql.Result
+		if result, err = execSQL("INSERT INTO DBPREFIXboards "+
+			"(list_order,dir,type,upload_type,title,subtitle,description,"+
+			"section,max_file_size,max_pages,default_style,locked,created_on,"+
+			"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,"+
+			"embeds_allowed,redirect_to_thread,require_file,enable_catalog) "+
+			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			board.ListOrder, board.Dir, board.Type, board.UploadType,
+			board.Title, board.Subtitle, board.Description, board.Section,
+			board.MaxFilesize, board.MaxPages, board.DefaultStyle,
+			board.Locked, getSpecificSQLDateTime(board.CreatedOn), board.Anonymous,
+			board.ForcedAnon, board.MaxAge, board.AutosageAfter,
+			board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
+			board.RedirectToThread, board.RequireFile, board.EnableCatalog,
+		); err != nil {
+			return err
+		}
+		boardID, _ := result.LastInsertId()
+		board.ID = int(boardID)
+	} else {
+		if err = board.UpdateID(); err != nil {
+			return err
+		}
+	}
+	buildBoardPages(board)
+	buildThreads(true, board.ID, 0)
+	resetBoardSectionArrays()
+	buildFrontPage()
+	if board.EnableCatalog {
+		buildCatalog(board.ID)
+	}
+	buildBoardListJSON()
+	return nil
+}
+
+// PopulateData gets the board data from the database and sets the respective properties.
+// if id > -1, the ID will be used to search the database. Otherwise dir will be used
+func (board *Board) PopulateData(id int, dir string) error {
+	queryStr := "SELECT * FROM DBPREFIXboards WHERE id = ?"
+	var values []interface{}
+	if id > -1 {
+		values = append(values, id)
+	} else {
+		queryStr = "SELECT * FROM DBPREFIXboards WHERE dir = ?"
+		values = append(values, dir)
+	}
+
+	return queryRowSQL(queryStr, values, []interface{}{
+		&board.ID, &board.ListOrder, &board.Dir, &board.Type, &board.UploadType,
+		&board.Title, &board.Subtitle, &board.Description, &board.Section,
+		&board.MaxFilesize, &board.MaxPages, &board.DefaultStyle, &board.Locked,
+		&board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge,
+		&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
+		&board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile,
+		&board.EnableCatalog})
+}
+
+func (board *Board) SetDefaults() {
+	board.ListOrder = 0
+	board.Section = 0
+	board.MaxFilesize = 4096
+	board.MaxPages = 11
+	board.DefaultStyle = config.DefaultStyle
+	board.Locked = false
+	board.Anonymous = "Anonymous"
+	board.ForcedAnon = false
+	board.MaxAge = 0
+	board.AutosageAfter = 200
+	board.NoImagesAfter = 0
+	board.MaxMessageLength = 8192
+	board.EmbedsAllowed = true
+	board.RedirectToThread = false
+	board.ShowID = false
+	board.RequireFile = false
+	board.EnableCatalog = true
+	board.EnableSpoileredImages = true
+	board.EnableSpoileredThreads = true
+	board.Worksafe = true
+	board.ThreadsPerPage = 10
+}
+
+func (board *Board) UpdateID() error {
+	return queryRowSQL("SELECT id FROM DBPREFIXboards WHERE dir = ?",
+		[]interface{}{board.Dir},
+		[]interface{}{&board.ID})
+}
+
 type BoardSection struct {
 	ID           int
 	ListOrder    int
@@ -202,9 +386,8 @@ func (p *Post) GetURL(includeDomain bool) string {
 	if includeDomain {
 		postURL += config.SiteDomain
 	}
-
-	board, err := getBoardFromID(p.BoardID)
-	if err != nil {
+	var board Board
+	if err := board.PopulateData(p.BoardID, ""); err != nil {
 		return postURL
 	}
 
@@ -250,7 +433,6 @@ type Staff struct {
 	ID               int
 	Username         string
 	PasswordChecksum string
-	Salt             string
 	Rank             int
 	Boards           string
 	AddedOn          time.Time
@@ -612,8 +794,16 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 	}
 
 	if config.RandomSeed == "" {
-		println(0, "RandomSeed not set in gochan.json, halting.")
-		os.Exit(1)
+		println(0, "RandomSeed not set in gochan.json, Generating a random one.")
+		for i := 0; i < 8; i++ {
+			num := rand.Intn(127-32) + 32
+			config.RandomSeed += fmt.Sprintf("%c", num)
+		}
+		configJSON, _ := json.MarshalIndent(config, "", "\t")
+		if err = ioutil.WriteFile(cfgPath, configJSON, 0777); err != nil {
+			printf(0, "Unable to write %s with randomly generated seed: %s\n", configJSON, err.Error())
+			os.Exit(1)
+		}
 	}
 	bbcompiler = bbcode.NewCompiler(true, true)
 	bbcompiler.SetTag("center", nil)

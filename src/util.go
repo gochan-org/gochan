@@ -30,10 +30,6 @@ var (
 	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
 )
 
-const (
-	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
-)
-
 func arrToString(arr []string) string {
 	var out string
 	for i, val := range arr {
@@ -118,7 +114,7 @@ func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 // getBoardArr performs a query against the database, and returns an array of Boards along with an error value.
 // If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
 func getBoardArr(parameterList map[string]interface{}, extra string) (boards []Board, err error) {
-	queryString := "SELECT * FROM " + config.DBprefix + "boards "
+	queryString := "SELECT * FROM DBPREFIXboards "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
 	if numKeys > 0 {
@@ -182,12 +178,12 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	return
 }
 
-func getBoardFromID(id int) (*Board, error) {
+/* func getBoardFromID(id int) (*Board, error) {
 	board := new(Board)
 	err := queryRowSQL("SELECT list_order,dir,type,upload_type,title,subtitle,description,section,"+
 		"max_file_size,max_pages,default_style,locked,created_on,anonymous,forced_anon,max_age,"+
 		"autosage_after,no_images_after,max_message_length,embeds_allowed,redirect_to_thread,require_file,"+
-		"enable_catalog FROM "+config.DBprefix+"boards WHERE id = ?",
+		"enable_catalog FROM DBPREFIXboards WHERE id = ?",
 		[]interface{}{id},
 		[]interface{}{
 			&board.ListOrder, &board.Dir, &board.Type, &board.UploadType, &board.Title,
@@ -200,11 +196,11 @@ func getBoardFromID(id int) (*Board, error) {
 	)
 	board.ID = id
 	return board, err
-}
+} */
 
 // if parameterList is nil, ignore it and treat extra like a whole SQL query
 func getPostArr(parameterList map[string]interface{}, extra string) (posts []Post, err error) {
-	queryString := "SELECT * FROM " + config.DBprefix + "posts "
+	queryString := "SELECT * FROM DBPREFIXposts "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
 	if numKeys > 0 {
@@ -221,7 +217,7 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 		queryString = queryString[:len(queryString)-4]
 	}
 
-	queryString += " " + extra // " ORDER BY `order`"
+	queryString += " " + extra
 	rows, err := querySQL(queryString, parameterValues...)
 	defer closeHandle(rows)
 	if err != nil {
@@ -253,7 +249,7 @@ func getSectionArr(where string) (sections []BoardSection, err error) {
 	if where != "" {
 		where = "WHERE " + where
 	}
-	rows, err := querySQL("SELECT * FROM " + config.DBprefix + "sections " + where + " ORDER BY list_order")
+	rows, err := querySQL("SELECT * FROM DBPREFIXsections " + where + " ORDER BY list_order")
 	defer closeHandle(rows)
 	if err != nil {
 		handleError(0, err.Error())
@@ -282,12 +278,16 @@ func getCountryCode(ip string) (string, error) {
 	return "", nil
 }
 
-func generateSalt() string {
-	salt := make([]byte, 3)
-	salt[0] = chars[rand.Intn(86)]
-	salt[1] = chars[rand.Intn(86)]
-	salt[2] = chars[rand.Intn(86)]
-	return string(salt)
+func randomString(length int) string {
+	var str string
+	for i := 0; i < length; i++ {
+		num := rand.Intn(127)
+		if num < 32 {
+			num += 32
+		}
+		str += string(num)
+	}
+	return str
 }
 
 func getFileExtension(filename string) (extension string) {
@@ -426,7 +426,7 @@ func searchStrings(item string, arr []string, permissive bool) int {
 // Checks the validity of the Akismet API key given in the config file.
 func checkAkismetAPIKey(key string) error {
 	if key == "" {
-		return fmt.Errorf("Blank key given, Akismet spam checking won't be used.")
+		return errors.New("blank key given, Akismet spam checking won't be used")
 	}
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.SiteDomain}})
 	defer func() {
@@ -530,7 +530,7 @@ func numReplies(boardid, threadid int) int {
 	var num int
 
 	if err := queryRowSQL(
-		"SELECT COUNT(*) FROM "+config.DBprefix+"posts WHERE boardid = ? AND parentid = ?",
+		"SELECT COUNT(*) FROM DBPREFIXposts WHERE boardid = ? AND parentid = ?",
 		[]interface{}{boardid, threadid}, []interface{}{&num}); err != nil {
 		return 0
 	}

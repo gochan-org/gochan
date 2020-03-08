@@ -40,7 +40,7 @@ var (
 
 // bumps the given thread on the given board and returns true if there were no errors
 func bumpThread(postID, boardID int) error {
-	_, err := execSQL("UPDATE "+config.DBprefix+"posts SET bumped = ? WHERE id = ? AND boardid = ?",
+	_, err := execSQL("UPDATE DBPREFIXposts SET bumped = ? WHERE id = ? AND boardid = ?",
 		time.Now(), postID, boardID,
 	)
 
@@ -79,7 +79,7 @@ func getBannedStatus(request *http.Request) (BanInfo, error) {
 	}
 
 	in := []interface{}{ip}
-	query := "SELECT id,ip,name,boards,timestamp,expires,permaban,reason,type,appeal_at,can_appeal FROM " + config.DBprefix + "banlist WHERE ip = ? "
+	query := "SELECT id,ip,name,boards,timestamp,expires,permaban,reason,type,appeal_at,can_appeal FROM DBPREFIXbanlist WHERE ip = ? "
 
 	if tripcode != "" {
 		in = append(in, tripcode)
@@ -119,7 +119,7 @@ func isBanned(ban BanInfo, board string) bool {
 
 func sinceLastPost(post *Post) int {
 	var lastPostTime time.Time
-	if err := queryRowSQL("SELECT timestamp FROM "+config.DBprefix+"posts WHERE ip = ? ORDER BY timestamp DESC LIMIT 1",
+	if err := queryRowSQL("SELECT timestamp FROM DBPREFIXposts WHERE ip = ? ORDER BY timestamp DESC LIMIT 1",
 		[]interface{}{post.IP},
 		[]interface{}{&lastPostTime},
 	); err == sql.ErrNoRows {
@@ -244,7 +244,7 @@ func parseName(name string) map[string]string {
 
 // inserts prepared post object into the SQL table so that it can be rendered
 func insertPost(post *Post, bump bool) error {
-	queryStr := "INSERT INTO " + config.DBprefix + "posts " +
+	queryStr := "INSERT INTO DBPREFIXposts " +
 		"(boardid,parentid,name,tripcode,email,subject,message,message_raw,password,filename,filename_original,file_checksum,filesize,image_w,image_h,thumb_w,thumb_h,ip,tag,timestamp,autosage,deleted_timestamp,bumped,stickied,locked,reviewed)" +
 		"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 
@@ -265,7 +265,7 @@ func insertPost(post *Post, bump bool) error {
 		postID, err = result.LastInsertId()
 		post.ID = int(postID)
 	case "postgres":
-		err = queryRowSQL("SELECT currval(pg_get_serial_sequence('"+config.DBprefix+"posts','id'))", nil, []interface{}{&post.ID})
+		err = queryRowSQL("SELECT currval(pg_get_serial_sequence('DBPREFIXposts','id'))", nil, []interface{}{&post.ID})
 	case "sqlite3":
 		err = queryRowSQL("SELECT LAST_INSERT_ROWID()", nil, []interface{}{&post.ID})
 	}
@@ -322,7 +322,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	post.Subject = request.FormValue("postsubject")
 	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
 
-	if err := queryRowSQL("SELECT max_message_length from "+config.DBprefix+"boards WHERE id = ?",
+	if err := queryRowSQL("SELECT max_message_length from DBPREFIXboards WHERE id = ?",
 		[]interface{}{post.BoardID},
 		[]interface{}{&maxMessageLength},
 	); err != nil {
@@ -337,10 +337,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	post.MessageHTML = formatMessage(post.MessageText)
 	password := request.FormValue("postpassword")
 	if password == "" {
-		rand.Shuffle(len(chars), func(i, j int) {
-			password += fmt.Sprintf("%c", chars[j])
-		})
-		password = password[:8]
+		password = randomString(8)
 	}
 	post.Password = md5Sum(password)
 
@@ -425,7 +422,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
 		var allowsVids bool
-		if err = queryRowSQL("SELECT embeds_allowed FROM "+config.DBprefix+"boards WHERE id = ? LIMIT 1",
+		if err = queryRowSQL("SELECT embeds_allowed FROM DBPREFIXboards WHERE id = ? LIMIT 1",
 			[]interface{}{post.BoardID},
 			[]interface{}{&allowsVids},
 		); err != nil {
@@ -643,7 +640,8 @@ func tempCleaner() {
 				if post.FilenameOriginal == "" {
 					continue
 				}
-				board, err := getBoardFromID(post.BoardID)
+				var board Board
+				err := board.PopulateData(post.BoardID, "")
 				if err != nil {
 					continue
 				}
@@ -685,7 +683,7 @@ func formatMessage(message string) string {
 					var boardDir string
 					var linkParent int
 
-					if err = queryRowSQL("SELECT dir,parentid FROM "+config.DBprefix+"posts,"+config.DBprefix+"boards WHERE "+config.DBprefix+"posts.id = ?",
+					if err = queryRowSQL("SELECT dir,parentid FROM DBPREFIXposts,DBPREFIXboards WHERE DBPREFIXposts.id = ?",
 						[]interface{}{word[8:]},
 						[]interface{}{&boardDir, &linkParent},
 					); err != nil {
@@ -730,7 +728,7 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		escapedMsg := html.EscapeString(appealMsg)
-		if _, err = execSQL("INSERT INTO "+config.DBprefix+"appeals (ban,message) VALUES(?,?)",
+		if _, err = execSQL("INSERT INTO DBPREFIXappeals (ban,message) VALUES(?,?)",
 			banStatus.ID, escapedMsg,
 		); err != nil {
 			serveErrorPage(writer, err.Error())

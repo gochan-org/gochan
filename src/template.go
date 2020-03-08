@@ -213,8 +213,8 @@ var funcMap = template.FuncMap{
 	"isBanned":   isBanned,
 	"numReplies": numReplies,
 	"getBoardDir": func(id int) string {
-		board, err := getBoardFromID(id)
-		if err != nil {
+		var board Board
+		if err := board.PopulateData(id, ""); err != nil {
 			return ""
 		}
 		return board.Dir
