@@ -195,6 +195,10 @@ input[type=file] {
 	width: 275px;
 }
 
+input[type=password] {
+	filter: none;
+}
+
 table#postbox-static {
 	border: none;
 	tr, td {
@@ -204,7 +208,7 @@ table#postbox-static {
 }
 
 .greentext {
-  color: #789922;
+	color: #789922;
 }
 
 div.postprev {

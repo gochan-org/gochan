@@ -51,7 +51,12 @@ div#topbar {
 	height: 30px;
 }
 
-div#topbar, .topbar-item, .topbar-item:visited, .dropdown-button, .dropdown-menu, .dropdown-menu a {
+div#topbar,
+.topbar-item,
+.topbar-item:visited,
+.dropdown-button,
+.dropdown-menu,
+.dropdown-menu a {
 	background-color:#000A89;
 	color:$bgcol!important;
 }

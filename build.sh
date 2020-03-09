@@ -14,11 +14,6 @@ LDFLAGS="-X main.versionStr=$VERSION -w -s"
 export CGO_ENABLED=1
 
 
-if [ -z "$GOPATH" ]; then
-	echo "GOPATH not set. Please run 'export GOPATH=$PWD/lib' (or wherever you prefer) and run this again."
-	exit 1
-fi
-
 function usage {
 	if [ -z "$2" ]; then
 		cat - << EOF
@@ -106,6 +101,10 @@ EOF
 }
 
 function build {
+	if [ -z "$GOPATH" ]; then
+		echo "GOPATH not set. Please run 'export GOPATH=$PWD/lib' (or wherever you prefer) and run this again."
+		exit 1
+	fi
 	GCOS=$GOOS
 	if [ -n "$1" ]; then
 		if [ "$1" = "macos" ]; then GCOS="darwin"; else GCOS=$1; fi
@@ -288,7 +287,7 @@ while [ -n "$1" ]; do
 
 			echo "Installing document root files and directories"
 			mkdir -p $documentroot
-			cp $symarg -rf $PWD/html/css/ $documentroot/css/
+			cp $symarg -rf $PWD/html/css/ $documentroot/
 			cp $symarg -rf $PWD/html/javascript/ $documentroot/javascript/
 			files=$PWD/html/*
 			for f in $files; do
@@ -338,7 +337,8 @@ while [ -n "$1" ]; do
 			sassdir="html"
 			if [ -n "$1" ]; then sassdir=$1; fi
 			mkdir -p $sassdir
-			sass --style expanded --no-source-map  sass:$sassdir/css
+			echo "Transpiling Sass files into destination directory `realpath $sassdir/css`"
+			sass --style compressed --no-source-map  sass:$sassdir/css
 			;;
 		*)
 			build $1
