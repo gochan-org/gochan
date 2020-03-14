@@ -2,8 +2,8 @@
 
 set -eo pipefail
 if [ -e "version" ]; then version="v`cat version` "; fi
-echo "Gochan ${version}build script"
-echo ""
+echo -e "Gochan ${version}build script\n"
+
 BIN=gochan
 VERSION=`cat version`
 BUILDTIME=`date +%y%m%d.%H%M`
@@ -114,14 +114,15 @@ function build {
 		BIN=$BIN.exe
 	fi
 	
-	if [ "$GCOS" = "darwin" ]; then
+	NATIVE_GOOS=`go env GOOS`
+	if [ "$GCOS" = "darwin" ] && [ "$NATIVE_GOOS" != "darwin" ]; then
 		echo "Cross-compilation to macOS has been temporarily disabled because of a cgo issue."
 		echo "If you really need macOS support, build gochan from a macOS system."
 		exit 1
 	fi
 
 	if [ -z "$GCOS" ]; then
-		GCOS=`go env GOOS`
+		GCOS=$NATIVE_GOOS
 	fi
 
 	buildCmd="GOOS=$GCOS go build -v -gcflags=$GCFLAGS -asmflags=$ASMFLAGS -ldflags \"$LDFLAGS\" -o $BIN ./src"
@@ -300,12 +301,11 @@ while [ -n "$1" ]; do
 
 			if [ -d /lib/systemd/system ]; then
 				cat - <<-EOF
-					It looks like your distribution has systemd. Gochan no longer automatically installs
-					the service for you, but you can install it yourself by copying one of the following:
-					sample-configs/gochan-mysql.service
-					sample-configs/gochan-postgresql.service
-					sample-configs/gochan-sqlite3.service
-					to /lib/systemd/system/gochan.service then running the following commands
+					It looks like your distribution has systemd. build.sh no longer automatically
+					installs the service for you, but you can install it yourself by copying the
+					appropriate .service file in $PWD/sample-configs/ that corresponds to your
+					SQL database to /lib/systemd/system/gochan.service then running the
+					following commands
 					systemctl daemon-reload
 					systemctl enable gochan.service
 					systemctl start gochan.service
@@ -315,7 +315,6 @@ while [ -n "$1" ]; do
 			echo "Installation complete. Make sure to set the following values in gochan.json:"
 			echo "DocumentRoot => $documentroot"
 			echo "TemplateDir => /usr/local/share/gochan/templates"
-
 			echo "LogDir => /var/log/gochan"
 			exit 0
 			;;
