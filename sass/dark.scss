@@ -1,0 +1,37 @@
+@import 'dark/colors';
+@import 'dark/front';
+@import 'dark/img';
+@import 'util';
+
+body {
+	background: $bgcol;
+	color: $color;
+	font-family: $font-family;
+	font-size: 70%;
+}
+
+header {
+	color: #663E11;
+}
+
+hr {
+	color: #117743;
+}
+
+a, a:visited {
+	color: $topborder;
+	text-decoration: none;
+}
+
+div#staff, div.thread-ddown-menu {
+	background: $topbarbg;
+	border: 1px solid $topborder;
+}
+
+div#topbar,
+div#topbar a,
+div#topbar a:visited
+div#threadlinks-top {
+	background: $topbarbg;
+	border-bottom: 1px solid $topborder;
+}

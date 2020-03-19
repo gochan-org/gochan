@@ -29,11 +29,12 @@
 	"SiteDomain": "127.0.0.1",
 	"SiteHeaderURL": "",
 	"SiteWebfolder": "/",
-	"DomainRegex": "(https|http):\\/\\/(gochan\\.lunachan\\.net|gochan\\.org)\\/(.*)",
+	"DomainRegex": "(https|http):\\/\\/(gochan\\.org)\\/(.*)",
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
 		{ "Name": "Burichan", "Filename": "burichan.css" },
+		{ "Name": "Dark", "Filename": "dark.css" },
 		{ "Name": "Photon", "Filename": "photon.css" }
 	],
 	"DefaultStyle": "pipes.css",

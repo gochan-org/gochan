@@ -1,0 +1,28 @@
+@import 'colors';
+
+%formstyle {
+	background: $inputbg!important;
+	border: 1px double $inputborder;
+	color: $color;
+}
+
+
+div.reply, th.postblock {
+	background: #282A2E;
+	border: 1px solid #117743;
+	border-radius: 5px;
+}
+
+table#postbox-static, div#report-delbox {
+	input, select, textarea {
+		border-radius: 5px;
+		@extend %formstyle;
+	}
+	button, input[type=submit] {
+		background:#16171A;
+	}
+}
+
+select#changepage {
+	@extend %formstyle;
+}
