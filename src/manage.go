@@ -979,12 +979,18 @@ var manageFunctions = map[string]ManageFunction{
 			boards, err := getBoardArr(map[string]interface{}{
 				"dir": boardDir,
 			}, "")
+			errMap := map[string]interface{}{
+				"action":  "postInfo",
+				"success": false,
+			}
 			if err != nil {
-				jsonErr, _ := marshalJSON("error", err.Error(), false)
+				errMap["message"] = err.Error()
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
 			if len(boards) < 1 {
-				jsonErr, _ := marshalJSON("error", "Board doesn't exist.", false)
+				errMap["message"] = "Board doesn't exist"
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
 
@@ -993,14 +999,16 @@ var manageFunctions = map[string]ManageFunction{
 				"boardid": boards[0].ID,
 			}, "")
 			if err != nil {
-				jsonErr, _ := marshalJSON("error", err.Error(), false)
+				errMap["message"] = err.Error()
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
 			if len(posts) < 1 {
-				jsonErr, _ := marshalJSON("eror", "Post doesn't exist.", false)
+				errMap["message"] = "Post doesn't exist"
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
-			jsonStr, _ := marshalJSON("", posts[0], false)
+			jsonStr, _ := marshalJSON(posts[0], false)
 			return jsonStr
 		}},
 	"staff": {

@@ -57,7 +57,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 	useJSON := request.FormValue("json") == "1"
 	if useJSON {
 		writer.Header().Add("Content-Type", "application/json")
-		str, _ := marshalJSON("", captchaStruct, false)
+		str, _ := marshalJSON(captchaStruct, false)
 		minifyWriter(writer, []byte(str), "application/json")
 		return
 	}

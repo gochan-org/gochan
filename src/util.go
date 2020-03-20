@@ -498,15 +498,10 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 	return "other_failure"
 }
 
-func marshalJSON(tag string, data interface{}, indent bool) (string, error) {
+func marshalJSON(data interface{}, indent bool) (string, error) {
 	var jsonBytes []byte
 	var err error
 
-	if tag != "" {
-		data = map[string]interface{}{
-			tag: data,
-		}
-	}
 	if indent {
 		jsonBytes, err = json.MarshalIndent(data, "", "	")
 	} else {
