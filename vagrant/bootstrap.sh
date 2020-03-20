@@ -64,6 +64,10 @@ else
 fi
 
 apt-get -y install git subversion mercurial nginx ffmpeg golang-1.10
+mkdir -p /root/bin
+ln -s /usr/lib/go-1.10/bin/* /root/bin/
+export PATH=$PATH:/root/bin
+echo "export PATH=$PATH:/root/bin" >> /root/.bashrc
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/sample-configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
@@ -138,10 +142,10 @@ mkdir -p /vagrant/lib
 source /home/vagrant/.bashrc
 export GOPATH=/vagrant/lib
 cd /vagrant
-./build.sh dependencies
-./build.sh
+make dependencies
+make
 EOF
-./build.sh install
+make install
 
 # if [ -d /lib/systemd ]; then
 # 	systemctl start gochan.service
