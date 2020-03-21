@@ -82,6 +82,24 @@ func connectToSQLServer() {
 		os.Exit(2)
 	}
 
+	// Create generic "Main" section if one doesn't already exist
+	var sectionCount int
+	if err = queryRowSQL(
+		"SELECT COUNT(*) FROM DBPREFIXsections",
+		[]interface{}{}, []interface{}{&sectionCount},
+	); err != nil {
+		handleError(0, "failed: %s\n", customError(err))
+		os.Exit(2)
+	}
+	if sectionCount == 0 {
+		if _, err = execSQL(
+			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')", nil,
+		); err != nil {
+			handleError(0, "failed: %s\n", customError(err))
+			os.Exit(2)
+		}
+	}
+
 	var sqlVersionStr string
 	isNewInstall := false
 	if err = queryRowSQL(
@@ -120,7 +138,8 @@ func connectToSQLServer() {
 			Dir:         "test",
 			Title:       "Testing board",
 			Subtitle:    "Board for testing",
-			Description: "Board for testing"}
+			Description: "Board for testing",
+			Section:     1}
 		firstBoard.SetDefaults()
 		firstBoard.Build(true, true)
 		if !isNewInstall {

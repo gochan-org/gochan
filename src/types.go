@@ -311,7 +311,7 @@ func (board *Board) PopulateData(id int, dir string) error {
 
 func (board *Board) SetDefaults() {
 	board.ListOrder = 0
-	board.Section = 0
+	board.Section = 1
 	board.MaxFilesize = 4096
 	board.MaxPages = 11
 	board.DefaultStyle = config.DefaultStyle
