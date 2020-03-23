@@ -39,8 +39,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 	}
 	var err error
 	if err = request.ParseForm(); err != nil {
-		serveErrorPage(writer, err.Error())
-		errorLog.Println(customError(err))
+		serveErrorPage(writer, gclog.Print(lErrorLog, "Error parsing request form: ", err.Error()))
 		return
 	}
 
@@ -93,8 +92,9 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	if err = minifyTemplate(captchaTmpl, captchaStruct, writer, "text/html"); err != nil {
-		handleError(0, customError(err))
-		fmt.Fprintf(writer, "Error executing captcha template")
+		fmt.Fprintf(writer,
+			gclog.Print(lErrorLog, "Error executing captcha template: ", err.Error()),
+		)
 	}
 }
 

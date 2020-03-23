@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -36,7 +35,7 @@ func connectToSQLServer() {
 		"DBNAME", config.DBname,
 		"DBPREFIX", config.DBprefix,
 		"\n", " ")
-	println(0, "Initializing server...")
+	gclog.Print(lStdLog|lErrorLog, "Initializing server...")
 
 	switch config.DBtype {
 	case "mysql":
@@ -48,23 +47,21 @@ func connectToSQLServer() {
 			config.DBusername, config.DBpassword, config.DBhost, config.DBname)
 		nilTimestamp = "0001-01-01 00:00:00"
 	case "sqlite3":
-		println(0, "sqlite3 support is still flaky, consider using mysql or postgres")
+		gclog.Print(lErrorLog|lStdLog, "sqlite3 support is still flaky, consider using mysql or postgres")
 		connStr = fmt.Sprintf("file:%s?mode=rwc&_auth&_auth_user=%s&_auth_pass=%s&cache=shared",
 			config.DBhost, config.DBusername, config.DBpassword)
 		nilTimestamp = "0001-01-01 00:00:00+00:00"
 	default:
-		handleError(0, "Invalid DBtype '%s' in gochan.json, valid values are 'mysql', 'postgres', and 'sqlite3'", config.DBtype)
-		os.Exit(2)
+		gclog.Printf(lErrorLog|lStdLog|lFatal,
+			`Invalid DBtype %q in gochan.json, valid values are "mysql", "postgres", and "sqlite3"`, config.DBtype)
 	}
 
 	if db, err = sql.Open(config.DBtype, connStr); err != nil {
-		handleError(0, "Failed to connect to the database: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed to connect to the database: ", err.Error())
 	}
 
 	if err = initDB("initdb_" + config.DBtype + ".sql"); err != nil {
-		println(0, "Failed initializing DB:", err)
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 
 	var truncateStr string
@@ -78,8 +75,7 @@ func connectToSQLServer() {
 	}
 
 	if _, err = execSQL(truncateStr); err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 
 	// Create generic "Main" section if one doesn't already exist
@@ -88,35 +84,30 @@ func connectToSQLServer() {
 		"SELECT COUNT(*) FROM DBPREFIXsections",
 		[]interface{}{}, []interface{}{&sectionCount},
 	); err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 	if sectionCount == 0 {
 		if _, err = execSQL(
 			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')", nil,
 		); err != nil {
-			handleError(0, "failed: %s\n", customError(err))
-			os.Exit(2)
+			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 		}
 	}
 
 	var sqlVersionStr string
 	isNewInstall := false
-	if err = queryRowSQL(
-		"SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
+	if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
 		[]interface{}{}, []interface{}{&sqlVersionStr},
 	); err == sql.ErrNoRows {
 		isNewInstall = true
 	} else if err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 
 	var numBoards, numStaff int
 	rows, err := querySQL("SELECT COUNT(*) FROM DBPREFIXboards UNION ALL SELECT COUNT(*) FROM DBPREFIXstaff")
 	if err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed checking board list: ", err.Error())
 	}
 	rows.Next()
 	rows.Scan(&numBoards)
@@ -124,14 +115,14 @@ func connectToSQLServer() {
 	rows.Scan(&numStaff)
 
 	if numBoards == 0 && numStaff == 0 {
-		println(0, "This looks like a new installation. Creating /test/ and a new staff member.\nUsername: admin\nPassword: password")
+		gclog.Println(lErrorLog|lStdLog,
+			"This looks like a new installation. Creating /test/ and a new staff member.\nUsername: admin\nPassword: password")
 
 		if _, err = execSQL(
 			"INSERT INTO DBPREFIXstaff (username,password_checksum,rank) VALUES(?,?,?)",
 			"admin", bcryptSum("password"), 3,
 		); err != nil {
-			handleError(0, "Failed creating admin user with error: %s\n", customError(err))
-			os.Exit(2)
+			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating admin user with error: ", err.Error())
 		}
 
 		firstBoard := Board{
@@ -147,24 +138,21 @@ func connectToSQLServer() {
 		}
 
 		if _, err = execSQL(
-			"INSERT INTO DBPREFIXinfo (name,value) VALUES('version',?)",
-			versionStr); err != nil {
-			handleError(0, "failed: %s\n", err.Error())
+			"INSERT INTO DBPREFIXinfo (name,value) VALUES('version',?)", versionStr,
+		); err != nil {
+			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating first board: ", err.Error())
 		}
 		return
 	} else if err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 	if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
-		handleError(0, "failed with error: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 	if version.CompareString(sqlVersionStr) > 0 {
-		printf(0, "Updating version in database from %s to %s\n", sqlVersionStr, version.String())
+		gclog.Printf(lErrorLog|lStdLog, "Updating version in database from %s to %s", sqlVersionStr, version.String())
 		execSQL("UPDATE DBPREFIXinfo SET value = ? WHERE name = 'version'", versionStr)
 	}
-
 }
 
 func initDB(initFile string) error {
@@ -248,7 +236,7 @@ func prepareSQL(query string) (*sql.Stmt, error) {
  */
 func execSQL(query string, values ...interface{}) (sql.Result, error) {
 	stmt, err := prepareSQL(query)
-	defer closeHandle(stmt)
+	defer stmt.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -269,8 +257,7 @@ func execSQL(query string, values ...interface{}) (sql.Result, error) {
  */
 func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	stmt, err := prepareSQL(query)
-
-	defer closeHandle(stmt)
+	defer stmt.Close()
 	if err != nil {
 		return err
 	}
@@ -293,7 +280,7 @@ func queryRowSQL(query string, values []interface{}, out []interface{}) error {
  */
 func querySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	stmt, err := prepareSQL(query)
-	defer closeHandle(stmt)
+	defer stmt.Close()
 	if err != nil {
 		return nil, err
 	}

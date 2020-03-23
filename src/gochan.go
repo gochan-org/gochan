@@ -15,24 +15,22 @@ var buildtimeString string // set with build command, format: YRMMDD.HHMM
 
 func main() {
 	defer func() {
-		if db != nil {
-			println(0, "Cleaning up")
-			execSQL("DROP TABLE DBPREFIXsessions")
-			db.Close()
-		}
+		gclog.Print(lErrorLog|lStdLog, "Cleaning up")
+		execSQL("DROP TABLE DBPREFIXsessions")
+		db.Close()
 	}()
 	initConfig()
 	initMinifier()
-	printf(0, "Starting gochan v%s using verbosity level %d\n", versionStr, config.Verbosity)
+
+	gclog.Printf(lErrorLog|lStdLog, "Starting gochan v%s", versionStr)
 	connectToSQLServer()
 	parseCommandLine()
 
-	println(0, "Loading and parsing templates...")
+	gclog.Print(lErrorLog|lStdLog, "Loading and parsing templates")
 	if err := initTemplates("all"); err != nil {
-		handleError(0, customError(err))
-		os.Exit(2)
+		gclog.Printf(lErrorLog|lStdLog|lFatal, err.Error())
 	}
-	println(1, buildJS())
+	gclog.Print(lErrorLog|lStdLog, buildJS())
 	initCaptcha()
 	tempCleanerTicker = time.NewTicker(time.Minute * 5)
 	go tempCleaner()
@@ -59,32 +57,29 @@ func parseCommandLine() {
 		arr := strings.Split(newstaff, ":")
 		if len(arr) < 2 || delstaff != "" {
 			flag.Usage()
-			os.Exit(2)
+			os.Exit(1)
 		}
-		printf(0, "Creating new staff: '%s', with password: '%s' and rank: %d\n", arr[0], arr[1], rank)
+		gclog.Printf(lStdLog|lErrorLog, "Creating new staff: %q, with password: %q and rank: %d", arr[0], arr[1], rank)
 		if err = newStaff(arr[0], arr[1], rank); err != nil {
-			handleError(0, err.Error())
-			os.Exit(2)
+			gclog.Print(lStdLog|lFatal, err.Error())
 		}
 		os.Exit(0)
 	}
 	if delstaff != "" {
 		if newstaff != "" {
 			flag.Usage()
-			os.Exit(2)
+			os.Exit(1)
 		}
-		printf(0, "Are you sure you want to delete the staff account '%s'?[y/N]: ", delstaff)
+		gclog.Print(lStdLog, "Are you sure you want to delete the staff account %q?[y/N]: ", delstaff)
 		var answer string
 		fmt.Scanln(&answer)
 		answer = strings.ToLower(answer)
 		if answer == "y" || answer == "yes" {
 			if err = deleteStaff(delstaff); err != nil {
-				printf(0, "Error deleting '%s': %s\n", delstaff, err.Error())
-				os.Exit(2)
+				gclog.Print(lStdLog|lFatal, "Error deleting %q: %s", delstaff, err.Error())
 			}
 		} else {
-			println(0, "Not deleting.")
+			gclog.Print(lStdLog|lFatal, "Not deleting.")
 		}
-		os.Exit(0)
 	}
 }

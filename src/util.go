@@ -13,9 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -39,20 +37,6 @@ func arrToString(arr []string) string {
 		}
 	}
 	return out
-}
-
-func benchmarkTimer(name string, givenTime time.Time, starting bool) (returnTime time.Time) {
-	if starting {
-		// starting benchmark test
-		println(2, "Starting benchmark \""+name+"\"")
-		returnTime = givenTime
-	} else {
-		// benchmark is finished, print the duration
-		// convert nanoseconds to a decimal seconds
-		printf(2, "benchmark %s completed in %f seconds\n", name, time.Since(givenTime).Seconds())
-		returnTime = time.Now() // we don't really need this, but we have to return something
-	}
-	return
 }
 
 func md5Sum(str string) string {
@@ -83,13 +67,6 @@ func byteByByteReplace(input, from, to string) string {
 		input = strings.Replace(input, from[i:i+1], to[i:i+1], -1)
 	}
 	return input
-}
-
-// for easier defer cleaning
-func closeHandle(handle io.Closer) {
-	if handle != nil && !reflect.ValueOf(handle).IsNil() {
-		handle.Close()
-	}
 }
 
 /*
@@ -134,9 +111,8 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	queryString += fmt.Sprintf(" %s ORDER BY list_order", extra)
 
 	rows, err := querySQL(queryString, parameterValues...)
-	defer closeHandle(rows)
+	defer rows.Close()
 	if err != nil {
-		handleError(0, "error getting board list: %s", customError(err))
 		return
 	}
 
@@ -170,7 +146,6 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 			&board.RequireFile,
 			&board.EnableCatalog,
 		); err != nil {
-			handleError(0, customError(err))
 			return
 		}
 		boards = append(boards, *board)
@@ -219,9 +194,8 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 
 	queryString += " " + extra
 	rows, err := querySQL(queryString, parameterValues...)
-	defer closeHandle(rows)
+	defer rows.Close()
 	if err != nil {
-		handleError(1, customError(err))
 		return
 	}
 
@@ -236,7 +210,6 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Capcode, &post.Timestamp,
 			&post.Autosage, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed,
 		); err != nil {
-			handleError(0, customError(err))
 			return
 		}
 		posts = append(posts, post)
@@ -250,16 +223,16 @@ func getSectionArr(where string) (sections []BoardSection, err error) {
 		where = "WHERE " + where
 	}
 	rows, err := querySQL("SELECT * FROM DBPREFIXsections " + where + " ORDER BY list_order")
-	defer closeHandle(rows)
+	defer rows.Close()
 	if err != nil {
-		handleError(0, err.Error())
+		gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
 		return
 	}
 
 	for rows.Next() {
 		var section BoardSection
 		if err = rows.Scan(&section.ID, &section.ListOrder, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
-			handleError(1, customError(err))
+			gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
 			return
 		}
 		sections = append(sections, section)
@@ -308,29 +281,6 @@ func getFormattedFilesize(size float64) string {
 		return fmt.Sprintf("%fMB", size/1024.0/1024.0)
 	}
 	return fmt.Sprintf("%0.2fGB", size/1024.0/1024.0/1024.0)
-}
-
-// returns the filename, line number, and function where getMetaInfo() is called
-// stackOffset increases/decreases which item on the stack is referenced.
-//	see documentation for runtime.Caller() for more info
-func getMetaInfo(stackOffset int) (string, int, string) {
-	pc, file, line, _ := runtime.Caller(1 + stackOffset)
-	return file, line, runtime.FuncForPC(pc).Name()
-}
-
-func customError(err error) string {
-	if err != nil {
-		file, line, _ := getMetaInfo(2)
-		return fmt.Sprintf("[ERROR] %s:%d: %s\n", file, line, err.Error())
-	}
-	return ""
-}
-
-func handleError(verbosity int, format string, a ...interface{}) string {
-	out := fmt.Sprintf(format, a...)
-	println(verbosity, out)
-	errorLog.Print(out)
-	return out
 }
 
 func humanReadableTime(t time.Time) string {
@@ -390,18 +340,6 @@ func paginate(interfaceLength int, interf []interface{}) [][]interface{} {
 	return paginatedInterfaces
 }
 
-func printf(v int, format string, a ...interface{}) {
-	if config.Verbosity >= v {
-		fmt.Printf(format, a...)
-	}
-}
-
-func println(v int, a ...interface{}) {
-	if config.Verbosity >= v {
-		fmt.Println(a...)
-	}
-}
-
 func resetBoardSectionArrays() {
 	// run when the board list needs to be changed (board/section is added, deleted, etc)
 	allBoards = nil
@@ -429,11 +367,7 @@ func checkAkismetAPIKey(key string) error {
 		return errors.New("blank key given, Akismet spam checking won't be used")
 	}
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.SiteDomain}})
-	defer func() {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
-	}()
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -445,7 +379,8 @@ func checkAkismetAPIKey(key string) error {
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
 		errmsg := "Akismet API key is invalid, Akismet spam protection will be disabled."
-		return fmt.Errorf(errmsg)
+		gclog.Print(lErrorLog, errmsg)
+		return errors.New(errmsg)
 	}
 	return nil
 }
@@ -462,27 +397,23 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		req, err := http.NewRequest("POST", "https://"+config.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(data.Encode()))
 		if err != nil {
-			handleError(1, err.Error())
+			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"
 		}
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
-		defer func() {
-			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
-			}
-		}()
+		defer resp.Body.Close()
 		if err != nil {
-			handleError(1, err.Error())
+			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			handleError(1, err.Error())
+			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"
 		}
-		errorLog.Print("Response from Akismet: " + string(body))
+		gclog.Print(lErrorLog, "Response from Akismet: ", string(body))
 
 		if string(body) == "true" {
 			if proTip, ok := resp.Header["X-akismet-pro-tip"]; ok && proTip[0] == "discard" {

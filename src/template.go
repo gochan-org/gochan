@@ -74,12 +74,12 @@ var funcMap = template.FuncMap{
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
 	"formatTimestamp": humanReadableTime,
-	"printf": func(v int, format string, a ...interface{}) string {
-		printf(v, format, a...)
+	"errorf": func(format string, a ...interface{}) string {
+		gclog.Printf(lErrorLog, format, a...)
 		return ""
 	},
-	"println": func(v int, i ...interface{}) string {
-		println(v, i...)
+	"print": func(v int, i ...interface{}) string {
+		gclog.Print(lErrorLog, i...)
 		return ""
 	},
 	"stringAppend": func(strings ...string) string {

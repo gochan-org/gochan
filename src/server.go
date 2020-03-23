@@ -88,7 +88,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 			writer.Header().Add("Content-Type", "text/html")
 			writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 		}
-		accessLog.Print("Success: 200 from " + getRealIP(request) + " @ " + request.URL.Path)
+		gclog.Printf(lAccessLog, "Success: 200 from %s @ %s", getRealIP(request), request.URL.Path)
 	}
 
 	// serve the index page
@@ -107,7 +107,7 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		minifyWriter(writer, errorPage, "text/html")
 	}
-	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.URL.Path)
+	gclog.Printf(lAccessLog, "Error: 404 Not Found from %s @ %s", getRealIP(request), request.URL.Path)
 }
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
@@ -134,8 +134,8 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 func initServer() {
 	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
 	if err != nil {
-		handleError(0, "Failed listening on %s:%d: %s", config.ListenIP, config.Port, customError(err))
-		os.Exit(2)
+		gclog.Printf(lErrorLog|lStdLog|lFatal,
+			"Failed listening on %s:%d: %s", config.ListenIP, config.Port, err.Error())
 	}
 	server = new(GochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
@@ -143,7 +143,6 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	if err = checkAkismetAPIKey(config.AkismetAPIKey); err != nil {
 		config.AkismetAPIKey = ""
-		// handleError(0, err.Error())
 	}
 
 	// Compile regex for checking referrers.
@@ -168,8 +167,8 @@ func initServer() {
 	}
 
 	if err != nil {
-		handleError(0, customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal,
+			"Error initializing server: ", err.Error())
 	}
 }
 
@@ -240,7 +239,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					&post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject,
 					&post.Password, &post.MessageText},
 			); err != nil {
-				serveErrorPage(writer, handleError(0, err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Error getting post information: ", err.Error()))
 				return
 			}
 
@@ -254,23 +254,24 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				"post":     post,
 				"referrer": request.Referer(),
 			}); err != nil {
-				serveErrorPage(writer, handleError(0, err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Error executing edit post template: ", err.Error()))
 				return
 			}
-
 		}
 	}
 	if doEdit == "1" {
 		var postPassword string
-
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
 			return
 		}
 		boardid, err := strconv.Atoi(request.FormValue("boardid"))
 		if err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
 			return
 		}
 
@@ -278,7 +279,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			[]interface{}{postid, boardid},
 			[]interface{}{&postPassword},
 		); err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
+			return
 		}
 
 		rank := getStaffRank(request)
@@ -289,7 +292,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 
 		var board Board
 		if err = board.PopulateData(boardid, ""); err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
 			return
 		}
 
@@ -298,7 +302,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			request.FormValue("editemail"), request.FormValue("editsubject"), formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg"),
 			postid, boardid,
 		); err != nil {
-			serveErrorPage(writer, handleError(0, "editing post: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog, "Unable to edit post: ", err.Error()))
 			return
 		}
 
@@ -341,7 +345,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n", post.ID)
 				continue
 			} else if err != nil {
-				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
+				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
 				return
 			}
 
@@ -350,7 +354,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				[]interface{}{board},
 				[]interface{}{&post.BoardID},
 			); err != nil {
-				serveErrorPage(writer, err.Error())
+				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
 				return
 			}
 
@@ -364,6 +368,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				if fileName != "" && fileName != "deleted" {
 					fileName = fileName[:strings.Index(fileName, ".")]
 					fileType = fileName[strings.Index(fileName, ".")+1:]
+					panic(post.Filename + "/" + fileName + "/" + fileType)
 					if fileType == "gif" || fileType == "webm" {
 						thumbType = "jpg"
 					}

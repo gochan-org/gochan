@@ -49,7 +49,7 @@ func bumpThread(postID, boardID int) error {
 
 // Checks check poster's name/tripcode/file checksum (from Post post) for banned status
 // returns ban table if the user is banned or errNotBanned if they aren't
-func getBannedStatus(request *http.Request) (BanInfo, error) {
+func getBannedStatus(request *http.Request) (*BanInfo, error) {
 	var banEntry BanInfo
 
 	formName := request.FormValue("postname")
@@ -100,10 +100,10 @@ func getBannedStatus(request *http.Request) (BanInfo, error) {
 		&banEntry.Expires, &banEntry.Permaban, &banEntry.Reason, &banEntry.Type,
 		&banEntry.AppealAt, &banEntry.CanAppeal},
 	)
-	return banEntry, err
+	return &banEntry, err
 }
 
-func isBanned(ban BanInfo, board string) bool {
+func isBanned(ban *BanInfo, board string) bool {
 	if ban.Boards == "" && (ban.Expires.After(time.Now()) || ban.Permaban) {
 		return true
 	}
@@ -157,7 +157,6 @@ func createImageThumbnail(imageObj image.Image, size string) image.Image {
 func createVideoThumbnail(video, thumb string, size int) error {
 	sizeStr := strconv.Itoa(size)
 	outputBytes, err := exec.Command("ffmpeg", "-y", "-itsoffset", "-1", "-i", video, "-vframes", "1", "-filter:v", "scale='min("+sizeStr+"\\, "+sizeStr+"):-1'", thumb).CombinedOutput()
-	println(2, "ffmpeg output: \n"+string(outputBytes))
 	if err != nil {
 		outputStringArr := strings.Split(string(outputBytes), "\n")
 		if len(outputStringArr) > 1 {
@@ -279,7 +278,6 @@ func insertPost(post *Post, bump bool) error {
 
 // called when a user accesses /post. Parse form data, then insert and build
 func makePost(writer http.ResponseWriter, request *http.Request) {
-	startTime := benchmarkTimer("makePost", time.Now(), true)
 	var maxMessageLength int
 	var post Post
 	// domain := request.Host
@@ -292,7 +290,6 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	// fix new cookie domain for when you use a port number
-	// chopPortNumRegex := regexp.MustCompile(`(.+|\w+):(\d+)$`)
 	// domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
@@ -326,8 +323,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		[]interface{}{post.BoardID},
 		[]interface{}{&maxMessageLength},
 	); err != nil {
-		serveErrorPage(writer, handleError(0, "Error getting board info: "+err.Error()))
-		return
+		serveErrorPage(writer, gclog.Print(lErrorLog,
+			"Error getting board info: ", err.Error()))
 	}
 
 	if len(post.MessageText) > maxMessageLength {
@@ -359,7 +356,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
 	if !validReferrer(request) {
-		accessLog.Print("Rejected post from possible spambot @ " + post.IP)
+		gclog.Print(lAccessLog, "Rejected post from possible spambot @ "+post.IP)
 		return
 	}
 
@@ -367,11 +364,11 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		post.Name, post.Email, post.MessageText) {
 	case "discard":
 		serveErrorPage(writer, "Your post looks like spam.")
-		accessLog.Print("Akismet recommended discarding post from: " + post.IP)
+		gclog.Print(lAccessLog, "Akismet recommended discarding post from: "+post.IP)
 		return
 	case "spam":
 		serveErrorPage(writer, "Your post looks like spam.")
-		accessLog.Print("Akismet suggested post is spam from " + post.IP)
+		gclog.Print(lAccessLog, "Akismet suggested post is spam from "+post.IP)
 		return
 	default:
 	}
@@ -385,11 +382,11 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	if err != nil || handler.Size == 0 {
 		// no file was uploaded
 		post.Filename = ""
-		accessLog.Printf("Receiving post from %s, referred from: %s", post.IP, request.Referer())
+		gclog.Printf(lAccessLog, "Receiving post from %s, referred from: %s", post.IP, request.Referer())
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			serveErrorPage(writer, handleError(1, "Couldn't read file: "+err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog, "Error while trying to read file: ", err.Error()))
 			return
 		}
 
@@ -413,8 +410,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
 		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
-			handleError(0, "Couldn't write file '%s': %s\n", post.Filename, err.Error())
-			serveErrorPage(writer, "Couldn't write file \""+post.FilenameOriginal+"\"")
+			gclog.Printf(lErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
+			serveErrorPage(writer, `Couldn't write file "`+post.FilenameOriginal+`"`)
 			return
 		}
 
@@ -426,38 +423,45 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 			[]interface{}{post.BoardID},
 			[]interface{}{&allowsVids},
 		); err != nil {
-			serveErrorPage(writer, handleError(1, "Couldn't get board info: "+err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Couldn't get board info: ", err.Error()))
 			return
 		}
 
 		if filetype == "webm" {
 			if !allowsVids || !config.AllowVideoUploads {
-				serveErrorPage(writer, "Video uploading is not currently enabled for this board.")
+				serveErrorPage(writer, gclog.Print(lAccessLog,
+					"Video uploading is not currently enabled for this board."))
 				os.Remove(filePath)
 				return
 			}
 
-			accessLog.Printf("Receiving post with video: %s from %s, referrer: %s", handler.Filename, post.IP, request.Referer())
+			gclog.Printf(lAccessLog, "Receiving post with video: %s from %s, referrer: %s",
+				handler.Filename, post.IP, request.Referer())
 			if post.ParentID == 0 {
 				if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth); err != nil {
-					serveErrorPage(writer, handleError(1, err.Error()))
+					serveErrorPage(writer, gclog.Print(lErrorLog,
+						"Error creating video thumbnail: ", err.Error()))
 					return
 				}
 			} else {
 				if err := createVideoThumbnail(filePath, thumbPath, config.ThumbWidth_reply); err != nil {
-					serveErrorPage(writer, handleError(1, err.Error()))
+					serveErrorPage(writer, gclog.Print(lErrorLog,
+						"Error creating video thumbnail: ", err.Error()))
 					return
 				}
 			}
 
 			if err := createVideoThumbnail(filePath, catalogThumbPath, config.ThumbWidth_catalog); err != nil {
-				serveErrorPage(writer, handleError(1, err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Error creating video thumbnail: ", err.Error()))
 				return
 			}
 
 			outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
 			if err != nil {
-				serveErrorPage(writer, handleError(1, "Error getting video info: "+err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Error getting video info: ", err.Error()))
 				return
 			}
 			if outputBytes != nil {
@@ -488,15 +492,15 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 			img, err := imaging.Open(filePath)
 			if err != nil {
 				os.Remove(filePath)
-				handleError(1, "Couldn't open uploaded file \""+post.Filename+"\""+err.Error())
-				handleError(1, "Couldn't open uploaded file \"%s\": %s\n", post.Filename, err.Error())
+				gclog.Printf(lErrorLog, "Couldn't open uploaded file %q: %s", post.Filename, err.Error())
 				serveErrorPage(writer, "Upload filetype not supported")
 				return
 			}
 			// Get image filesize
 			stat, err := os.Stat(filePath)
 			if err != nil {
-				serveErrorPage(writer, handleError(1, "Couldn't get image filesize: "+err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Couldn't get image filesize: "+err.Error()))
 				return
 			}
 			post.Filesize = int(stat.Size())
@@ -510,7 +514,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
 			}
 
-			accessLog.Print("Receiving post with image: " + handler.Filename + " from " + post.IP + ", referrer: " + request.Referer())
+			gclog.Print(lAccessLog, "Receiving post with image: %q from %s, referrer: %s",
+				handler.Filename, post.IP, request.Referer())
 
 			if request.FormValue("spoiler") == "on" {
 				// If spoiler is enabled, symlink thumbnail to spoiler image
@@ -538,14 +543,16 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 					thumbnail = createImageThumbnail(img, "op")
 					catalogThumbnail = createImageThumbnail(img, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						serveErrorPage(writer, handleError(1, "Couldn't generate catalog thumbnail: "+err.Error()))
+						serveErrorPage(writer, gclog.Print(lErrorLog,
+							"Couldn't generate catalog thumbnail: ", err.Error()))
 						return
 					}
 				} else {
 					thumbnail = createImageThumbnail(img, "reply")
 				}
 				if err = imaging.Save(thumbnail, thumbPath); err != nil {
-					serveErrorPage(writer, handleError(1, "Couldn't save thumbnail: "+err.Error()))
+					serveErrorPage(writer, gclog.Print(lErrorLog,
+						"Couldn't save thumbnail: ", err.Error()))
 					return
 				}
 			}
@@ -570,8 +577,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	banStatus, err := getBannedStatus(request)
 	if err != nil && err != sql.ErrNoRows {
-		handleError(1, "Error in getBannedStatus: "+err.Error())
-		serveErrorPage(writer, err.Error())
+		serveErrorPage(writer, gclog.Print(lErrorLog,
+			"Error getting banned status: ", err.Error()))
 		return
 	}
 
@@ -583,7 +590,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		if err = minifyTemplate(banpageTmpl, map[string]interface{}{
 			"config": config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
 		}, writer, "text/html"); err != nil {
-			writer.Write([]byte(handleError(1, err.Error())))
+			serveErrorPage(writer, gclog.Print(lErrorLog, "Error minifying page: ", err.Error()))
 			return
 		}
 		writer.Write(banpageBuffer.Bytes())
@@ -606,7 +613,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err = insertPost(&post, emailCommand != "sage"); err != nil {
-		serveErrorPage(writer, handleError(1, err.Error()))
+		serveErrorPage(writer, gclog.Print(lErrorLog, "Error inserting post: ", err.Error()))
 		return
 	}
 
@@ -623,7 +630,6 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/", http.StatusFound)
 	}
-	benchmarkTimer("makePost", startTime, false)
 }
 
 func tempCleaner() {
@@ -648,18 +654,21 @@ func tempCleaner() {
 
 				fileSrc := path.Join(config.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
 				if err = os.Remove(fileSrc); err != nil {
-					printf(0, "Error pruning temporary upload for %s: %s", fileSrc, err.Error())
+					gclog.Printf(lErrorLog|lStdLog,
+						"Error pruning temporary upload for %q: %s", fileSrc, err.Error())
 				}
 
 				thumbSrc := getThumbnailPath("thread", fileSrc)
 				if err = os.Remove(thumbSrc); err != nil {
-					printf(0, "Error pruning temporary upload for %s: %s", thumbSrc, err.Error())
+					gclog.Printf(lErrorLog|lStdLog,
+						"Error pruning temporary upload for %q: %s", thumbSrc, err.Error())
 				}
 
 				if post.ParentID == 0 {
 					catalogSrc := getThumbnailPath("catalog", fileSrc)
 					if err = os.Remove(catalogSrc); err != nil {
-						printf(0, "Error pruning temporary upload for %s: %s", catalogSrc, err.Error())
+						gclog.Printf(lErrorLog|lStdLog,
+							"Error pruning temporary upload for %s: %s", catalogSrc, err.Error())
 					}
 				}
 			}
@@ -687,7 +696,7 @@ func formatMessage(message string) string {
 						[]interface{}{word[8:]},
 						[]interface{}{&boardDir, &linkParent},
 					); err != nil {
-						handleError(1, customError(err))
+						gclog.Print(lErrorLog, "Error getting board information for backlink: ", err.Error())
 					}
 
 					// get post board dir
@@ -714,7 +723,7 @@ func formatMessage(message string) string {
 	return strings.Join(postLines, "<br />")
 }
 
-func bannedForever(ban BanInfo) bool {
+func bannedForever(ban *BanInfo) bool {
 	return ban.Permaban && !ban.CanAppeal && ban.Type == 3 && ban.Boards == ""
 }
 
@@ -740,15 +749,16 @@ func banHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err != nil && err != sql.ErrNoRows {
-		handleError(1, "Error in getBannedStatus: "+err.Error())
-		serveErrorPage(writer, err.Error())
+		serveErrorPage(writer, gclog.Print(lErrorLog,
+			"Error getting banned status:", err.Error()))
 		return
 	}
 
 	if err = minifyTemplate(banpageTmpl, map[string]interface{}{
 		"config": config, "ban": banStatus, "banBoards": banStatus.Boards, "post": Post{},
 	}, writer, "text/html"); err != nil {
-		fmt.Fprintf(writer, handleError(1, err.Error())+"\n</body>\n</html>")
+		serveErrorPage(writer, gclog.Print(lErrorLog,
+			"Error minifying page template: ", err.Error()))
 		return
 	}
 }
