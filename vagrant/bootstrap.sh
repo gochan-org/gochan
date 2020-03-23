@@ -134,10 +134,9 @@ export GOPATH=/vagrant/lib
 EOF
 export GOPATH=/vagrant/lib
 
+ln -s /usr/lib/go-1.10/bin/* /usr/local/bin/
 cd /vagrant
 su - vagrant <<EOF
-mkdir /home/vagrant/bin
-ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
 mkdir -p /vagrant/lib
 source /home/vagrant/.bashrc
 export GOPATH=/vagrant/lib

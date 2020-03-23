@@ -578,7 +578,7 @@ func initConfig() {
 	}
 
 	config.LogDir = findResource(config.LogDir, "log", "/var/log/gochan/")
-	initLogs(
+	gclog = initLogs(
 		path.Join(config.LogDir, "access.log"),
 		path.Join(config.LogDir, "error.log"),
 		path.Join(config.LogDir, "staff.log"),
