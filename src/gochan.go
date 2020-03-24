@@ -30,7 +30,7 @@ func main() {
 	if err := initTemplates("all"); err != nil {
 		gclog.Printf(lErrorLog|lStdLog|lFatal, err.Error())
 	}
-	gclog.Print(lErrorLog|lStdLog, buildJS())
+	buildJS()
 	initCaptcha()
 	tempCleanerTicker = time.NewTicker(time.Minute * 5)
 	go tempCleaner()

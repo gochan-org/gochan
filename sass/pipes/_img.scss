@@ -6,7 +6,7 @@
 }
 
 .dropdown-menu {
-	background-color: $bgcol;
+	background-color: $topbarcol;
 	@include box-shadow(2px 2px 2px 3px $shadowcol);
 	z-index: 0;
 }

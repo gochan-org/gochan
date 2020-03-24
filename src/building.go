@@ -384,7 +384,7 @@ func buildBoards(which ...int) (html string) {
 		}
 	}
 	if len(boards) == 0 {
-		return "No boards to build.<br />"
+		return "No boards to build."
 	}
 
 	for _, board := range boards {
@@ -392,7 +392,7 @@ func buildBoards(which ...int) (html string) {
 			return gclog.Printf(lErrorLog,
 				"Error building /%s/: %s", board.Dir, err.Error()) + "<br />"
 		}
-		html += "Built /" + board.Dir + "/ successfully<br />"
+		html += "Built /" + board.Dir + "/ successfully."
 	}
 	return
 }

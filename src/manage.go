@@ -109,11 +109,10 @@ func getStaff(name string) (*Staff, error) {
 
 func getStaffRank(request *http.Request) int {
 	staffname, err := getCurrentStaff(request)
-	if err != nil {
-		gclog.Print(lErrorLog, "Error getting current staff: ", err.Error())
+	if err == sql.ErrNoRows {
 		return 0
-	}
-	if staffname == "" {
+	} else if err != nil {
+		gclog.Print(lErrorLog, "Error getting current staff: ", err.Error())
 		return 0
 	}
 	staff, err := getStaff(staffname)
@@ -880,10 +879,10 @@ var manageFunctions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			resetBoardSectionArrays()
-			return buildFrontPage() + "<hr />\n" +
-				buildBoardListJSON() + "<hr />\n" +
-				buildBoards() + "<hr />\n" +
-				buildJS() + "<hr />\n"
+			return buildFrontPage() + "<hr />" +
+				buildBoardListJSON() + "<hr />" +
+				buildBoards() + "<hr />" +
+				buildJS() + "<hr />"
 		}},
 	"rebuildboards": {
 		Title:       "Rebuild boards",
