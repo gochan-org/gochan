@@ -56,7 +56,7 @@ docker-image:
 install:
 	mkdir -p \
 		${PREFIX}/share/gochan \
-		${DOCUMENT_ROOT}/html \
+		${DOCUMENT_ROOT} \
 		/etc/gochan \
 		/var/log/gochan
 	cp ${DO_SYMLINKS} -f ./gochan ${PREFIX}/bin/${BINEXE}
