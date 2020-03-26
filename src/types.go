@@ -166,6 +166,46 @@ func (board *Board) AbsolutePath(subpath ...string) string {
 	return path.Join(config.DocumentRoot, board.Dir, path.Join(subpath...))
 }
 
+// WebPath returns a string that represents the file's path as accessible by a browser
+// fileType should be "boardPage", "threadPage", "upload", or "thumb"
+func (board *Board) WebPath(fileName string, fileType string) string {
+	var filePath string
+	switch fileType {
+	case "":
+		fallthrough
+	case "boardPage":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, fileName)
+	case "threadPage":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, "res", fileName)
+	case "upload":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, "src", fileName)
+	case "thumb":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, "thumb", fileName)
+	}
+	return filePath
+}
+
+func (board *Board) PagePath(pageNum interface{}) string {
+	var page string
+	pageNumStr := fmt.Sprintf("%v", pageNum)
+	if pageNumStr == "prev" {
+		if board.CurrentPage < 2 {
+			page = "1"
+		} else {
+			page = strconv.Itoa(board.CurrentPage - 1)
+		}
+	} else if pageNumStr == "next" {
+		if board.CurrentPage >= board.NumPages {
+			page = strconv.Itoa(board.NumPages)
+		} else {
+			page = strconv.Itoa(board.CurrentPage + 1)
+		}
+	} else {
+		page = pageNumStr
+	}
+	return board.WebPath(page+".html", "boardPage")
+}
+
 // Build builds the board and its thread files
 // if newBoard is true, it adds a row to DBPREFIXboards and fails if it exists
 // if force is true, it doesn't fail if the directories exist but does fail if it is a file
@@ -348,7 +388,6 @@ type Post struct {
 	ID               int       `json:"no"`
 	ParentID         int       `json:"resto"`
 	CurrentPage      int       `json:"-"`
-	NumPages         int       `json:"-"`
 	BoardID          int       `json:"-"`
 	Name             string    `json:"name"`
 	Tripcode         string    `json:"trip"`
@@ -504,7 +543,6 @@ type GochanConfig struct {
 	ThumbHeight_catalog int `description:"Same as ThumbWidth and ThumbHeight but for catalog images." default:"50"`
 
 	ThreadsPerPage           int      `default:"15"`
-	PostsPerThreadPage       int      `description:"Max number of replies to a thread to show on each thread page." default:"50"`
 	RepliesOnBoardPage       int      `description:"Number of replies to a thread to show on the board page." default:"3"`
 	StickyRepliesOnBoardPage int      `description:"Same as above for stickied threads." default:"1"`
 	BanColors                []string `description:"Colors to be used for public ban messages (e.g. USER WAS BANNED FOR THIS POST).<br />Each entry should be on its own line, and should look something like this:<br />username1:#FF0000<br />username2:#FAF00F<br />username3:blue<br />Invalid entries/nonexistent usernames will show a warning and use the default red."`
@@ -533,6 +571,7 @@ type GochanConfig struct {
 	EnableAppeals         bool   `description:"If checked, allow banned users to appeal their bans.<br />This will likely be removed (permanently allowing appeals) or made board-specific in the future." default:"checked"`
 	MaxLogDays            int    `description:"The maximum number of days to keep messages in the moderation/staff log file."`
 	RandomSeed            string `critical:"true"`
+	TimeZone              int    `json:"-"`
 }
 
 func (cfg *GochanConfig) CheckString(val, defaultVal string, critical bool, msg string) string {
@@ -568,7 +607,7 @@ func initConfig() {
 
 	jfile, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		fmt.Println("Error reading %s: %s gochan.json: %s\n", cfgPath, err.Error())
+		fmt.Printf("Error reading %s: %s\n", cfgPath, err.Error())
 		os.Exit(1)
 	}
 
@@ -578,11 +617,14 @@ func initConfig() {
 	}
 
 	config.LogDir = findResource(config.LogDir, "log", "/var/log/gochan/")
-	gclog = initLogs(
+	if gclog, err = initLogs(
 		path.Join(config.LogDir, "access.log"),
 		path.Join(config.LogDir, "error.log"),
 		path.Join(config.LogDir, "staff.log"),
-	)
+	); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	config.CheckString(config.ListenIP, "", true, "ListenIP not set in gochan.json, halting.")
 
@@ -652,7 +694,6 @@ func initConfig() {
 	config.ThumbHeight_catalog = config.CheckInt(config.ThumbHeight_catalog, 50, false, "")
 
 	config.ThreadsPerPage = config.CheckInt(config.ThreadsPerPage, 10, false, "")
-	config.PostsPerThreadPage = config.CheckInt(config.PostsPerThreadPage, 4, false, "")
 	config.RepliesOnBoardPage = config.CheckInt(config.RepliesOnBoardPage, 3, false, "")
 	config.StickyRepliesOnBoardPage = config.CheckInt(config.StickyRepliesOnBoardPage, 1, false, "")
 
@@ -689,6 +730,10 @@ func initConfig() {
 			gclog.Printf(lErrorLog|lStdLog|lFatal, "Unable to write %s with randomly generated seed: %s", cfgPath, err.Error())
 		}
 	}
+
+	_, zoneOffset := time.Now().Zone()
+	config.TimeZone = zoneOffset / 60 / 60
+
 	bbcompiler = bbcode.NewCompiler(true, true)
 	bbcompiler.SetTag("center", nil)
 	bbcompiler.SetTag("code", nil)

@@ -514,7 +514,7 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
 			}
 
-			gclog.Print(lAccessLog, "Receiving post with image: %q from %s, referrer: %s",
+			gclog.Printf(lAccessLog, "Receiving post with image: %q from %s, referrer: %s",
 				handler.Filename, post.IP, request.Referer())
 
 			if request.FormValue("spoiler") == "on" {

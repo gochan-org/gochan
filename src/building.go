@@ -296,7 +296,7 @@ func buildBoardPages(board *Board) (html string) {
 
 	// Create the archive pages.
 	threadPages = paginate(config.ThreadsPerPage, threads)
-	board.NumPages = len(threadPages) - 1
+	board.NumPages = len(threadPages)
 
 	// Create array of page wrapper objects, and open the file.
 	pagesArr := make([]map[string]interface{}, board.NumPages)
@@ -361,7 +361,7 @@ func buildBoardPages(board *Board) (html string) {
 		return html + gclog.Print(lErrorLog, "Failed to marshal to JSON: ", err.Error()) + "<br />"
 	}
 	if _, err = catalogJSONFile.Write(catalogJSON); err != nil {
-		return html + gclog.Print(lErrorLog,
+		return html + gclog.Printf(lErrorLog,
 			"Failed writing /%s/catalog.json: %s", board.Dir, err.Error()) + "<br />"
 	}
 	html += "/" + board.Dir + "/ built successfully."
@@ -470,14 +470,12 @@ func buildCatalog(which int) string {
 	for _, thread := range threadOPs {
 		threadInterfaces = append(threadInterfaces, thread)
 	}
-	threadPages := paginate(config.PostsPerThreadPage, threadInterfaces)
 
 	if err = minifyTemplate(catalogTmpl, map[string]interface{}{
-		"boards":      allBoards,
-		"config":      config,
-		"board":       board,
-		"sections":    allSections,
-		"threadPages": threadPages,
+		"boards":   allBoards,
+		"config":   config,
+		"board":    board,
+		"sections": allSections,
 	}, catalogFile, "text/html"); err != nil {
 		return gclog.Printf(lErrorLog,
 			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
@@ -493,7 +491,7 @@ func buildThreadPages(op *Post) error {
 	}
 
 	var replies []Post
-	var currentPageFile *os.File
+	var threadPageFile *os.File
 	var board Board
 	if err = board.PopulateData(op.BoardID, ""); err != nil {
 		return err
@@ -514,18 +512,13 @@ func buildThreadPages(op *Post) error {
 		repliesInterface = append(repliesInterface, reply)
 	}
 
-	threadPages := paginate(config.PostsPerThreadPage, repliesInterface)
-	deleteMatchingFiles(path.Join(config.DocumentRoot, board.Dir, "res"), "^"+strconv.Itoa(op.ID)+"p")
-
-	op.NumPages = len(threadPages)
-
-	currentPageFilepath := path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
-	currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	threadPageFilepath := path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
+	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return fmt.Errorf("Failed opening /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
 
-	// render main page
+	// render thread page
 	if err = minifyTemplate(threadpageTmpl, map[string]interface{}{
 		"config":   config,
 		"boards":   allBoards,
@@ -533,7 +526,7 @@ func buildThreadPages(op *Post) error {
 		"sections": allSections,
 		"posts":    replies,
 		"op":       op,
-	}, currentPageFile, "text/html"); err != nil {
+	}, threadPageFile, "text/html"); err != nil {
 		return fmt.Errorf("Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error())
 	}
 
@@ -560,25 +553,6 @@ func buildThreadPages(op *Post) error {
 		return fmt.Errorf("Failed writing /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
 	}
 
-	for pageNum, pagePosts := range threadPages {
-		op.CurrentPage = pageNum + 1
-		currentPageFilepath := path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+"p"+strconv.Itoa(op.CurrentPage)+".html")
-		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-		if err != nil {
-			return fmt.Errorf("Failed opening /%s/res/%dp%d.html: %s", board.Dir, op.ID, op.CurrentPage, err.Error())
-		}
-
-		if err = minifyTemplate(threadpageTmpl, map[string]interface{}{
-			"config":   config,
-			"boards":   allBoards,
-			"board":    board,
-			"sections": allSections,
-			"posts":    pagePosts,
-			"op":       op,
-		}, currentPageFile, "text/html"); err != nil {
-			return fmt.Errorf("Failed building /%s/%d: %s", board.Dir, op.ID, err.Error())
-		}
-	}
 	return nil
 }
 

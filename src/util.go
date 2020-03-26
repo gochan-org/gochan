@@ -505,3 +505,8 @@ func parseDurationString(str string) (time.Duration, error) {
 	}
 	return time.ParseDuration(strconv.Itoa(expire) + "s")
 }
+
+func timezone() int {
+	_, offset := time.Now().Zone()
+	return offset / 60 / 60
+}

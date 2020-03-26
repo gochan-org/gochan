@@ -5,13 +5,6 @@
 	</header><hr />
 	<div id="threadlinks-top">
 		<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/board.html" >Return</a><br />
-		<select id="changepage" onchange="changePage(this)">
-			<option value="">Select page...</option>
-			<option value="1">Page 1</option>
-			<option value="2">Page 2</option>
-			<option value="3">Page 3</option>
-			<option value="4">Page 4</option>
-		</select>
 	</div>
 	<div id="right-sidelinks">
 		<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/catalog.html">Board catalog</a><br />
@@ -60,27 +53,7 @@
 		</div>
 	</form>
 	<div id="left-bottom-content">
-		<table id="pages">
-			<tr>
-				<td><a href="{{.config.SiteWebfolder}}{{.board.Dir}}/">Return</a></td>
-				<td>{{- if gt .op.CurrentPage 1 -}}
-					<form method="GET" action="{{.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}p{{subtract .op.CurrentPage 1}}.html">
-						<input type="submit" value="Previous" />
-					</form>
-					{{- else}}Previous{{end -}}
-				</td>
-			<td>[<a href="{{.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}.html">All</a>]
-				{{- range $i,$_ := makeLoop .op.NumPages 0 -}}
-					[{{if eq $i (subtract $.op.CurrentPage 1)}}<b>{{end}}
-						<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$.op.ID}}p{{add $i 1}}.html">{{add $i 1}}</a>
-					{{if eq $i (subtract $.op.CurrentPage 1)}}</b>{{end}}]
-				{{end}}</td>
-			<td>{{if lt .op.CurrentPage .op.NumPages}}
-			<form method="GET" action="{{.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}p{{add .op.CurrentPage 1}}.html">
-				<input type="submit" value="Next" />
-			</form>
-			{{else}}Next{{end}}</td></tr>
-		</table>
+		<a href="{{.config.SiteWebfolder}}{{.board.Dir}}/">Return</a><br /><br />
 		<span id="boardmenu-bottom">
 			[{{range $i, $boardlink := .boards -}}
 				{{if gt $i 0}}/{{end -}} <a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,10 +33,10 @@ func (gcl *GcLogger) selectLogs(flags int) []*os.File {
 		logs = append(logs, gcl.accessFile)
 	}
 	if flags&lErrorLog > 0 {
-		logs = append(logs, gcl.accessFile)
+		logs = append(logs, gcl.errorFile)
 	}
 	if flags&lStaffLog > 0 {
-		logs = append(logs, gcl.accessFile)
+		logs = append(logs, gcl.staffFile)
 	}
 	if flags&lStdLog > 0 {
 		logs = append(logs, os.Stdout)
@@ -60,9 +61,9 @@ func (gcl *GcLogger) Print(flags int, v ...interface{}) string {
 		} else {
 			io.WriteString(l, gcl.getPrefix()+str+"\n")
 		}
-		if flags&lFatal > 0 {
-			os.Exit(1)
-		}
+	}
+	if flags&lFatal > 0 {
+		os.Exit(1)
 	}
 	return str
 }
@@ -76,9 +77,9 @@ func (gcl *GcLogger) Printf(flags int, format string, v ...interface{}) string {
 		} else {
 			io.WriteString(l, gcl.getPrefix()+str+"\n")
 		}
-		if flags&lFatal > 0 {
-			os.Exit(1)
-		}
+	}
+	if flags&lFatal > 0 {
+		os.Exit(1)
 	}
 	return str
 }
@@ -92,9 +93,9 @@ func (gcl *GcLogger) Println(flags int, v ...interface{}) string {
 		} else {
 			io.WriteString(l, gcl.getPrefix()+str+"\n")
 		}
-		if flags&lFatal > 0 {
-			defer os.Exit(1)
-		}
+	}
+	if flags&lFatal > 0 {
+		os.Exit(1)
 	}
 	return str
 }
@@ -105,20 +106,18 @@ func (gcl *GcLogger) Close() {
 	gcl.staffFile.Close()
 }
 
-func initLogs(accessLogPath, errorLogPath, staffLogPath string) *GcLogger {
+func initLogs(accessLogPath, errorLogPath, staffLogPath string) (*GcLogger, error) {
 	var gcl GcLogger
 	var err error
 	if gcl.accessFile, err = os.OpenFile(accessLogPath, logFileFlags, 0777); err != nil {
-		fmt.Println("Error loading " + accessLogPath + ": " + err.Error())
-		os.Exit(1)
+		return nil, errors.New("Error loading " + accessLogPath + ": " + err.Error())
 	}
 	if gcl.errorFile, err = os.OpenFile(errorLogPath, logFileFlags, 0777); err != nil {
-		fmt.Println("Error loading " + errorLogPath + ": " + err.Error())
-		os.Exit(1)
+		return nil, errors.New("Error loading " + errorLogPath + ": " + err.Error())
 	}
 	if gcl.staffFile, err = os.OpenFile(staffLogPath, logFileFlags, 0777); err != nil {
-		fmt.Println("Error loading " + staffLogPath + ": " + err.Error())
-		os.Exit(1)
+		return nil, errors.New("Error loading " + staffLogPath + ": " + err.Error())
+
 	}
-	return &gcl
+	return &gcl, nil
 }

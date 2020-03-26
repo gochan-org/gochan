@@ -25,7 +25,7 @@ $VERSION = Get-Content version
 $RELEASE_NAME = "$BIN-v${VERSION}_$GCOS_NAME"
 $RELEASE_DIR = "releases/${RELEASE_NAME}"
 
-$LDFLAGS = "-X main.versionStr=${VERSION} -w -s"
+$LDFLAGS = "-X main.versionStr=${VERSION} -s"
 $DOCUMENT_ROOT_FILES = @"
 banned.jpg
 notbanned.png

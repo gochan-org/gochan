@@ -335,13 +335,6 @@ var manageFunctions = map[string]ManageFunction{
 						config.ThumbHeight_catalog = ThumbHeight_catalog
 					}
 
-					PostsPerThreadPage, err := strconv.Atoi(request.PostFormValue("PostsPerThreadPage"))
-					if err != nil {
-						status += err.Error() + "<br />\n"
-					} else {
-						config.PostsPerThreadPage = PostsPerThreadPage
-					}
-
 					RepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("RepliesOnBoardPage"))
 					if err != nil {
 						status += err.Error() + "<br />\n"
@@ -958,7 +951,7 @@ var manageFunctions = map[string]ManageFunction{
 						err.Error())
 				}
 				html += fmt.Sprintf(
-					`<tr><td><b>Post:</b> <a href="%s/res/%d.html#%d">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
+					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
 					path.Join(config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
 					recentpost.BoardName, recentpost.PostID, recentpost.IP, recentpost.Message,
 					recentpost.Timestamp.Format("01/02/06, 15:04"),
@@ -1033,8 +1026,8 @@ var manageFunctions = map[string]ManageFunction{
 				rankI, _ := strconv.Atoi(rank)
 				if do == "add" {
 					if err := newStaff(username, password, rankI); err != nil {
-						serveErrorPage(writer, gclog.Print(lErrorLog,
-							"Error creating new staff account %q: ", username, err.Error()))
+						serveErrorPage(writer, gclog.Printf(lErrorLog,
+							"Error creating new staff account %q: %s", username, err.Error()))
 						return
 					}
 				} else if do == "del" && username != "" {

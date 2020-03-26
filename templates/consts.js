@@ -10,3 +10,4 @@ var styles = [
 ];
 var defaultStyle = "{{.DefaultStyle}}";
 var webroot = "{{.SiteWebfolder}}";
+var serverTZ = {{.TimeZone}};

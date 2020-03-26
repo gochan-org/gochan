@@ -70,13 +70,13 @@ func parseCommandLine() {
 			flag.Usage()
 			os.Exit(1)
 		}
-		gclog.Print(lStdLog, "Are you sure you want to delete the staff account %q?[y/N]: ", delstaff)
+		gclog.Printf(lStdLog, "Are you sure you want to delete the staff account %q? [y/N]: ", delstaff)
 		var answer string
 		fmt.Scanln(&answer)
 		answer = strings.ToLower(answer)
 		if answer == "y" || answer == "yes" {
 			if err = deleteStaff(delstaff); err != nil {
-				gclog.Print(lStdLog|lFatal, "Error deleting %q: %s", delstaff, err.Error())
+				gclog.Printf(lStdLog|lFatal, "Error deleting %q: %s", delstaff, err.Error())
 			}
 		} else {
 			gclog.Print(lStdLog|lFatal, "Not deleting.")
