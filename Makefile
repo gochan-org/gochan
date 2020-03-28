@@ -14,7 +14,7 @@ VERSION=$(shell cat version)
 
 GCFLAGS=-trimpath=${PWD}
 ASMFLAGS=-trimpath=${PWD}
-LDFLAGS=-X main.versionStr=${VERSION} -w -s
+LDFLAGS=-X main.versionStr=${VERSION}
 MINGW_PREFIX=GOARCH=amd64 CC='x86_64-w64-mingw32-gcc -fno-stack-protector -D_FORTIFY_SOURCE=0 -lssp
 
 DOCUMENT_ROOT_FILES= \
@@ -97,6 +97,7 @@ release:
 	cp sample-configs/*.nginx ${RELEASE_DIR}/sample-configs/
 	cp sample-configs/gochan.example.json ${RELEASE_DIR}/sample-configs/
 	make build
+	strip ${BINEXE}
 	make sass-minified
 	mv ${BINEXE} ${RELEASE_DIR}/
 ifeq (${GCOS_NAME},macos)
