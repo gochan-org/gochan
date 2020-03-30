@@ -97,7 +97,7 @@ release:
 	cp sample-configs/*.nginx ${RELEASE_DIR}/sample-configs/
 	cp sample-configs/gochan.example.json ${RELEASE_DIR}/sample-configs/
 	make build
-	strip ${BINEXE}
+	-strip ${BINEXE}
 	make sass-minified
 	mv ${BINEXE} ${RELEASE_DIR}/
 ifeq (${GCOS_NAME},macos)
