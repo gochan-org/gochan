@@ -15,7 +15,8 @@ VERSION=$(shell cat version)
 GCFLAGS=-trimpath=${PWD}
 ASMFLAGS=-trimpath=${PWD}
 LDFLAGS=-X main.versionStr=${VERSION}
-MINGW_PREFIX=GOARCH=amd64 CC='x86_64-w64-mingw32-gcc -fno-stack-protector -D_FORTIFY_SOURCE=0 -lssp
+GO_CMD=go build -o ${BINEXE} -v -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS}
+NPM_CMD=npm --prefix frontend/ run 
 
 DOCUMENT_ROOT_FILES= \
 	css \
@@ -29,7 +30,10 @@ DOCUMENT_ROOT_FILES= \
 	hittheroad*
 
 build:
-	GOOS=${GCOS} go build -v -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS}" -o ${BINEXE} ./src
+	GOOS=${GCOS} ${GO_CMD} -ldflags="${LDFLAGS}" ./src
+
+build-stripped:
+	GOOS=${GCOS} ${GO_CMD} -ldflags="${LDFLAGS} -w -s" ./src
 
 clean:
 	rm -f ${BIN}*
@@ -77,7 +81,17 @@ install-symlinks:
 	DO_SYMLINKS=-s make install
 
 js:
-	$(error Frontend transpilation coming soon)
+	$(error This doesn't work quite yet. It's coming very soon though.)
+	${NPM_CMD} build
+js-minify:
+	$(error This doesn't work quite yet. It's coming very soon though.)
+	${NPM_CMD} build-minify
+js-watch:
+	$(error This doesn't work quite yet. It's coming very soon though.)
+	${NPM_CMD} build-watch
+js-minify-watch:
+	$(error This doesn't work quite yet. It's coming very soon though.)
+	${NPM_CMD} build-minify-watch
 
 release-all: 
 	GOOS=darwin make release
@@ -91,13 +105,13 @@ release:
 		${RELEASE_DIR}/sample-configs
 	cp LICENSE ${RELEASE_DIR}/
 	cp README.md ${RELEASE_DIR}/
+	# make js-minify
 	cp -rt ${RELEASE_DIR}/html/ $(foreach file,${DOCUMENT_ROOT_FILES},html/${file})
 	cp -r templates ${RELEASE_DIR}/
 	cp initdb_*.sql ${RELEASE_DIR}/
 	cp sample-configs/*.nginx ${RELEASE_DIR}/sample-configs/
 	cp sample-configs/gochan.example.json ${RELEASE_DIR}/sample-configs/
-	make build
-	-strip ${BINEXE}
+	make build-stripped
 	make sass-minified
 	mv ${BINEXE} ${RELEASE_DIR}/
 ifeq (${GCOS_NAME},macos)
