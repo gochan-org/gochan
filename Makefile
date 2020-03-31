@@ -36,7 +36,8 @@ build-stripped:
 	GOOS=${GCOS} ${GO_CMD} -ldflags="${LDFLAGS} -w -s" ./src
 
 clean:
-	rm -f ${BIN}*
+	rm -f ${BIN}
+	rm -f ${BIN}.exe
 	rm -rf releases/
 
 dependencies:
