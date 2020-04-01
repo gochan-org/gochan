@@ -88,7 +88,7 @@ func connectToSQLServer() {
 	}
 	if sectionCount == 0 {
 		if _, err = execSQL(
-			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')", nil,
+			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')",
 		); err != nil {
 			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 		}
