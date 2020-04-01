@@ -10,3 +10,5 @@ html/test*
 html/javascript/consts.js
 templates/override
 **/*.bak
+*.log
+__debug_bin
