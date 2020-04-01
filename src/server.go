@@ -188,6 +188,9 @@ func getRealIP(request *http.Request) string {
 }
 
 func validReferrer(request *http.Request) bool {
+	if config.DebugMode {
+		return true
+	}
 	return referrerRegex.MatchString(request.Referer())
 }
 

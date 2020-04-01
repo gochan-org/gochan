@@ -500,6 +500,7 @@ type GochanConfig struct {
 	FirstPage  []string
 	Username   string
 	UseFastCGI bool
+	DebugMode  bool `description:"Disables several spam/browser checks that can cause problems when hosting an instance locally."`
 
 	DocumentRoot string
 	TemplateDir  string

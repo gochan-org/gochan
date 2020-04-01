@@ -4,6 +4,7 @@
 	"FirstPage": ["index.html","board.html","firstrun.html"],
 	"Username": "gochan",
 	"UseFastCGI": false,
+	"DebugMode": false,
 
 	"DocumentRoot": "html",
 	"TemplateDir": "templates",
