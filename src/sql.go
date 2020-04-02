@@ -43,7 +43,7 @@ func connectToSQLServer() {
 			config.DBusername, config.DBpassword, config.DBhost, config.DBname)
 		nilTimestamp = "0000-00-00 00:00:00"
 	case "postgres":
-		connStr = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=verify-ca",
+		connStr = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 			config.DBusername, config.DBpassword, config.DBhost, config.DBname)
 		nilTimestamp = "0001-01-01 00:00:00"
 	case "sqlite3":
@@ -88,7 +88,7 @@ func connectToSQLServer() {
 	}
 	if sectionCount == 0 {
 		if _, err = execSQL(
-			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')", nil,
+			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')",
 		); err != nil {
 			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 		}

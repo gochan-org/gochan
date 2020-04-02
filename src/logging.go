@@ -38,7 +38,7 @@ func (gcl *GcLogger) selectLogs(flags int) []*os.File {
 	if flags&lStaffLog > 0 {
 		logs = append(logs, gcl.staffFile)
 	}
-	if flags&lStdLog > 0 {
+	if (flags&lStdLog > 0) || (config.DebugMode) {
 		logs = append(logs, os.Stdout)
 	}
 	return logs
