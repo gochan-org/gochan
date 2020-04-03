@@ -4,6 +4,7 @@
 	"FirstPage": ["index.html","board.html","firstrun.html"],
 	"Username": "gochan",
 	"UseFastCGI": false,
+	"DebugMode": false,
 
 	"DocumentRoot": "html",
 	"TemplateDir": "templates",
@@ -29,11 +30,12 @@
 	"SiteDomain": "127.0.0.1",
 	"SiteHeaderURL": "",
 	"SiteWebfolder": "/",
-	"DomainRegex": "(https|http):\\/\\/(gochan\\.lunachan\\.net|gochan\\.org)\\/(.*)",
+	"DomainRegex": "(https|http):\\/\\/(gochan\\.org)\\/(.*)",
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
 		{ "Name": "Burichan", "Filename": "burichan.css" },
+		{ "Name": "Dark", "Filename": "dark.css" },
 		{ "Name": "Photon", "Filename": "photon.css" }
 	],
 	"DefaultStyle": "pipes.css",
@@ -70,6 +72,9 @@
 	"ImagesOpenNewTab": true,
 	"MakeURLsHyperlinked": true,
 	"NewTabOnOutlinks": true,
+
+	"MinifyHTML": true,
+	"MinifyJS": true,
 
 	"DateTimeFormat": "Mon, January 02, 2006 15:04 PM",
 	"AkismetAPIKey": "",

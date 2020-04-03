@@ -1,10 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"html"
 	"io/ioutil"
-	"log"
+	"math/rand"
 	"os"
 	"path"
 	"strconv"
@@ -13,14 +16,17 @@ import (
 	"github.com/frustra/bbcode"
 )
 
+const (
+	dirIsAFileStr = "unable to create \"%s\", path exists and is a file"
+	pathExistsStr = "unable to create \"%s\", path already exists"
+	genericErrStr = "unable to create \"%s\": %s"
+)
+
 var (
 	config        GochanConfig
-	accessLog     *log.Logger
-	errorLog      *log.Logger
-	modLog        *log.Logger
 	readBannedIPs []string
 	bbcompiler    bbcode.Compiler
-	version       GochanVersion
+	version       *GochanVersion
 )
 
 type RecentPost struct {
@@ -83,17 +89,15 @@ type BanAppeal struct {
 	StaffResponse string
 }
 
-func (a *BanAppeal) GetBan() (BanInfo, error) {
+func (a *BanAppeal) GetBan() (*BanInfo, error) {
 	var ban BanInfo
-	var err error
-
-	err = queryRowSQL("SELECT * FROM "+config.DBprefix+"banlist WHERE id = ? LIMIT 1",
+	err := queryRowSQL("SELECT * FROM DBPREFIXbanlist WHERE id = ? LIMIT 1",
 		[]interface{}{a.ID}, []interface{}{
 			&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
 			&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,
 			&ban.StaffNote, &ban.AppealAt},
 	)
-	return ban, err
+	return &ban, err
 }
 
 type BanInfo struct {
@@ -157,6 +161,220 @@ type Board struct {
 	ThreadsPerPage         int            `json:"per_page"`
 }
 
+// AbsolutePath returns the full filepath of the board directory
+func (board *Board) AbsolutePath(subpath ...string) string {
+	return path.Join(config.DocumentRoot, board.Dir, path.Join(subpath...))
+}
+
+// WebPath returns a string that represents the file's path as accessible by a browser
+// fileType should be "boardPage", "threadPage", "upload", or "thumb"
+func (board *Board) WebPath(fileName string, fileType string) string {
+	var filePath string
+	switch fileType {
+	case "":
+		fallthrough
+	case "boardPage":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, fileName)
+	case "threadPage":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, "res", fileName)
+	case "upload":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, "src", fileName)
+	case "thumb":
+		filePath = path.Join(config.SiteWebfolder, board.Dir, "thumb", fileName)
+	}
+	return filePath
+}
+
+func (board *Board) PagePath(pageNum interface{}) string {
+	var page string
+	pageNumStr := fmt.Sprintf("%v", pageNum)
+	if pageNumStr == "prev" {
+		if board.CurrentPage < 2 {
+			page = "1"
+		} else {
+			page = strconv.Itoa(board.CurrentPage - 1)
+		}
+	} else if pageNumStr == "next" {
+		if board.CurrentPage >= board.NumPages {
+			page = strconv.Itoa(board.NumPages)
+		} else {
+			page = strconv.Itoa(board.CurrentPage + 1)
+		}
+	} else {
+		page = pageNumStr
+	}
+	return board.WebPath(page+".html", "boardPage")
+}
+
+// Build builds the board and its thread files
+// if newBoard is true, it adds a row to DBPREFIXboards and fails if it exists
+// if force is true, it doesn't fail if the directories exist but does fail if it is a file
+func (board *Board) Build(newBoard bool, force bool) error {
+	var err error
+	if board.Dir == "" {
+		return errors.New("board must have a directory before it is built")
+	}
+	if board.Title == "" {
+		return errors.New("board must have a title before it is built")
+	}
+
+	dirPath := board.AbsolutePath()
+	resPath := board.AbsolutePath("res")
+	srcPath := board.AbsolutePath("src")
+	thumbPath := board.AbsolutePath("thumb")
+	dirInfo, _ := os.Stat(dirPath)
+	resInfo, _ := os.Stat(resPath)
+	srcInfo, _ := os.Stat(srcPath)
+	thumbInfo, _ := os.Stat(thumbPath)
+	if dirInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, dirPath)
+		}
+		if !dirInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, dirPath)
+		}
+	} else {
+		if err = os.Mkdir(dirPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, dirPath, err.Error())
+		}
+	}
+
+	if resInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, resPath)
+		}
+		if !resInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, resPath)
+		}
+	} else {
+		if err = os.Mkdir(resPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, resPath, err.Error())
+		}
+	}
+
+	if srcInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, srcPath)
+		}
+		if !srcInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, srcPath)
+		}
+	} else {
+		if err = os.Mkdir(srcPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, srcPath, err.Error())
+		}
+	}
+
+	if thumbInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, thumbPath)
+		}
+		if !thumbInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, thumbPath)
+		}
+	} else {
+		if err = os.Mkdir(thumbPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, thumbPath, err.Error())
+		}
+	}
+
+	if newBoard {
+		var numRows int
+		queryRowSQL("SELECT COUNT(*) FROM DBPREFIXboards WHERE `dir` = ?",
+			[]interface{}{board.Dir},
+			[]interface{}{&numRows},
+		)
+		if numRows > 0 {
+			return errors.New("board already exists in database")
+		}
+		board.CreatedOn = time.Now()
+		var result sql.Result
+		if result, err = execSQL("INSERT INTO DBPREFIXboards "+
+			"(list_order,dir,type,upload_type,title,subtitle,description,"+
+			"section,max_file_size,max_pages,default_style,locked,created_on,"+
+			"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,"+
+			"embeds_allowed,redirect_to_thread,require_file,enable_catalog) "+
+			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+			board.ListOrder, board.Dir, board.Type, board.UploadType,
+			board.Title, board.Subtitle, board.Description, board.Section,
+			board.MaxFilesize, board.MaxPages, board.DefaultStyle,
+			board.Locked, getSpecificSQLDateTime(board.CreatedOn), board.Anonymous,
+			board.ForcedAnon, board.MaxAge, board.AutosageAfter,
+			board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
+			board.RedirectToThread, board.RequireFile, board.EnableCatalog,
+		); err != nil {
+			return err
+		}
+		boardID, _ := result.LastInsertId()
+		board.ID = int(boardID)
+	} else {
+		if err = board.UpdateID(); err != nil {
+			return err
+		}
+	}
+	buildBoardPages(board)
+	buildThreads(true, board.ID, 0)
+	resetBoardSectionArrays()
+	buildFrontPage()
+	if board.EnableCatalog {
+		buildCatalog(board.ID)
+	}
+	buildBoardListJSON()
+	return nil
+}
+
+// PopulateData gets the board data from the database and sets the respective properties.
+// if id > -1, the ID will be used to search the database. Otherwise dir will be used
+func (board *Board) PopulateData(id int, dir string) error {
+	queryStr := "SELECT * FROM DBPREFIXboards WHERE id = ?"
+	var values []interface{}
+	if id > -1 {
+		values = append(values, id)
+	} else {
+		queryStr = "SELECT * FROM DBPREFIXboards WHERE dir = ?"
+		values = append(values, dir)
+	}
+
+	return queryRowSQL(queryStr, values, []interface{}{
+		&board.ID, &board.ListOrder, &board.Dir, &board.Type, &board.UploadType,
+		&board.Title, &board.Subtitle, &board.Description, &board.Section,
+		&board.MaxFilesize, &board.MaxPages, &board.DefaultStyle, &board.Locked,
+		&board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge,
+		&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
+		&board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile,
+		&board.EnableCatalog})
+}
+
+func (board *Board) SetDefaults() {
+	board.ListOrder = 0
+	board.Section = 1
+	board.MaxFilesize = 4096
+	board.MaxPages = 11
+	board.DefaultStyle = config.DefaultStyle
+	board.Locked = false
+	board.Anonymous = "Anonymous"
+	board.ForcedAnon = false
+	board.MaxAge = 0
+	board.AutosageAfter = 200
+	board.NoImagesAfter = 0
+	board.MaxMessageLength = 8192
+	board.EmbedsAllowed = true
+	board.RedirectToThread = false
+	board.ShowID = false
+	board.RequireFile = false
+	board.EnableCatalog = true
+	board.EnableSpoileredImages = true
+	board.EnableSpoileredThreads = true
+	board.Worksafe = true
+	board.ThreadsPerPage = 10
+}
+
+func (board *Board) UpdateID() error {
+	return queryRowSQL("SELECT id FROM DBPREFIXboards WHERE dir = ?",
+		[]interface{}{board.Dir},
+		[]interface{}{&board.ID})
+}
+
 type BoardSection struct {
 	ID           int
 	ListOrder    int
@@ -170,7 +388,6 @@ type Post struct {
 	ID               int       `json:"no"`
 	ParentID         int       `json:"resto"`
 	CurrentPage      int       `json:"-"`
-	NumPages         int       `json:"-"`
 	BoardID          int       `json:"-"`
 	Name             string    `json:"name"`
 	Tripcode         string    `json:"trip"`
@@ -204,9 +421,8 @@ func (p *Post) GetURL(includeDomain bool) string {
 	if includeDomain {
 		postURL += config.SiteDomain
 	}
-
-	board, err := getBoardFromID(p.BoardID)
-	if err != nil {
+	var board Board
+	if err := board.PopulateData(p.BoardID, ""); err != nil {
 		return postURL
 	}
 
@@ -252,7 +468,6 @@ type Staff struct {
 	ID               int
 	Username         string
 	PasswordChecksum string
-	Salt             string
 	Rank             int
 	Boards           string
 	AddedOn          time.Time
@@ -285,6 +500,7 @@ type GochanConfig struct {
 	FirstPage  []string
 	Username   string
 	UseFastCGI bool
+	DebugMode  bool `description:"Disables several spam/browser checks that can cause problems when hosting an instance locally."`
 
 	DocumentRoot string
 	TemplateDir  string
@@ -328,7 +544,6 @@ type GochanConfig struct {
 	ThumbHeight_catalog int `description:"Same as ThumbWidth and ThumbHeight but for catalog images." default:"50"`
 
 	ThreadsPerPage           int      `default:"15"`
-	PostsPerThreadPage       int      `description:"Max number of replies to a thread to show on each thread page." default:"50"`
 	RepliesOnBoardPage       int      `description:"Number of replies to a thread to show on the board page." default:"3"`
 	StickyRepliesOnBoardPage int      `description:"Same as above for stickied threads." default:"1"`
 	BanColors                []string `description:"Colors to be used for public ban messages (e.g. USER WAS BANNED FOR THIS POST).<br />Each entry should be on its own line, and should look something like this:<br />username1:#FF0000<br />username2:#FAF00F<br />username3:blue<br />Invalid entries/nonexistent usernames will show a warning and use the default red."`
@@ -339,7 +554,10 @@ type GochanConfig struct {
 	ImagesOpenNewTab         bool     `description:"If checked, thumbnails will open the respective image/video in a new tab instead of expanding them." default:"unchecked"`
 	MakeURLsHyperlinked      bool     `description:"If checked, URLs in posts will be turned into a hyperlink. If unchecked, ExpandButton and NewTabOnOutlinks are ignored." default:"checked"`
 	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
-	EnableQuickReply         bool     `description:"If checked, an optional quick reply box is used. This may end up being removed." default:"checked"`
+
+	MinifyHTML          bool `description:"If checked, gochan will minify html files when building" default:"checked"`
+	MinifyJS            bool `description:"If checked, gochan will minify js and json files when building" default:"checked"`
+	UseMinifiedGochanJS bool `json:"-"`
 
 	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info." default:"Mon, January 02, 2006 15:04 PM"`
 	AkismetAPIKey         string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
@@ -351,69 +569,76 @@ type GochanConfig struct {
 	GeoIPDBlocation       string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information." default:"/usr/share/GeoIP/GeoIP.dat"`
 	MaxRecentPosts        int    `description:"The maximum number of posts to show on the Recent Posts list on the front page." default:"3"`
 	RecentPostsWithNoFile bool   `description:"If checked, recent posts with no image/upload are shown on the front page (as well as those with images" default:"unchecked"`
-	// Verbosity = 0 for no debugging info. Critical errors and general output only
-	// Verbosity = 1 for non-critical warnings and important info
-	// Verbosity = 2 for all debugging/benchmarks/warnings
-	Verbosity     int    `description:"The level of verbosity to use in error/warning messages. 0 = critical errors/startup messages, 1 = warnings, 2 = benchmarks/notices." default:"0"`
-	EnableAppeals bool   `description:"If checked, allow banned users to appeal their bans.<br />This will likely be removed (permanently allowing appeals) or made board-specific in the future." default:"checked"`
-	MaxLogDays    int    `description:"The maximum number of days to keep messages in the moderation/staff log file."`
-	RandomSeed    string `critical:"true"`
+	EnableAppeals         bool   `description:"If checked, allow banned users to appeal their bans.<br />This will likely be removed (permanently allowing appeals) or made board-specific in the future." default:"checked"`
+	MaxLogDays            int    `description:"The maximum number of days to keep messages in the moderation/staff log file."`
+	RandomSeed            string `critical:"true"`
+	TimeZone              int    `json:"-"`
+}
+
+func (cfg *GochanConfig) CheckString(val, defaultVal string, critical bool, msg string) string {
+	if val == "" {
+		val = defaultVal
+		flags := lStdLog | lErrorLog
+		if critical {
+			flags |= lFatal
+		}
+		gclog.Print(flags, msg)
+	}
+	return val
+}
+
+func (cfg *GochanConfig) CheckInt(val, defaultVal int, critical bool, msg string) int {
+	if val == 0 {
+		val = defaultVal
+		flags := lStdLog | lErrorLog
+		if critical {
+			flags |= lFatal
+		}
+		gclog.Print(flags, msg)
+	}
+	return val
 }
 
 func initConfig() {
 	cfgPath := findResource("gochan.json", "/etc/gochan/gochan.json")
 	if cfgPath == "" {
-		println(0, "gochan.json not found")
+		fmt.Println("gochan.json not found")
 		os.Exit(1)
 	}
 
 	jfile, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		printf(0, "Error reading 'gochan.json': %s\n", err.Error())
+		fmt.Printf("Error reading %s: %s\n", cfgPath, err.Error())
 		os.Exit(1)
 	}
 
 	if err = json.Unmarshal(jfile, &config); err != nil {
-		switch err.Error() {
-		case "json: cannot unmarshal string into Go struct field GochanConfig.Styles of type main.Style":
-			printf(0, `Error parsing gochan.json. config.Styles has been changed from a string array to an object.
-Each Style in gochan.json must have a Name field that will appear in the style dropdowns and a Filename field. For example
-{
-	"Styles": [
-		{"Name": "Pipes", "Filename": "pipes.css"},
-		{"Name": "Burichan", "Filename": "burichan.css"}
-	],
-}
-DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does not appear in gochan.json, the first element in Styles will be used.
-`)
-		default:
-			printf(0, "Error parsing \"gochan.json\": %s\n", err.Error())
-		}
-
+		fmt.Printf("Error parsing %s: %s\n", cfgPath, err.Error())
 		os.Exit(1)
 	}
 
-	if config.ListenIP == "" {
-		println(0, "ListenIP not set in gochan.json, halting.")
+	config.LogDir = findResource(config.LogDir, "log", "/var/log/gochan/")
+	if gclog, err = initLogs(
+		path.Join(config.LogDir, "access.log"),
+		path.Join(config.LogDir, "error.log"),
+		path.Join(config.LogDir, "staff.log"),
+	); err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+
+	config.CheckString(config.ListenIP, "", true, "ListenIP not set in gochan.json, halting.")
 
 	if config.Port == 0 {
 		config.Port = 80
 	}
 
 	if len(config.FirstPage) == 0 {
-		config.FirstPage = []string{"index.html", "board.html"}
+		config.FirstPage = []string{"index.html", "board.html", "firstrun.html"}
 	}
 
-	if config.Username == "" {
-		config.Username = "gochan"
-	}
-
-	if config.DocumentRoot == "" {
-		println(0, "DocumentRoot not set in gochan.json, halting.")
-		os.Exit(1)
-	}
+	config.Username = config.CheckString(config.Username, "gochan", false, "Username not set in gochan.json, using 'gochan' as default")
+	config.DocumentRoot = config.CheckString(config.DocumentRoot, "gochan", true, "DocumentRoot not set in gochan.json, halting.")
 
 	wd, wderr := os.Getwd()
 	if wderr == nil {
@@ -423,185 +648,70 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 		}
 	}
 
-	config.TemplateDir = findResource(config.TemplateDir, "templates", "/usr/local/share/gochan/templates/", "/usr/share/gochan/templates/")
-	if config.TemplateDir == "" {
-		println(0, "Unable to locate template directory, halting.")
-		os.Exit(1)
-	}
+	config.TemplateDir = config.CheckString(
+		findResource(config.TemplateDir, "templates", "/usr/local/share/gochan/templates/", "/usr/share/gochan/templates/"),
+		"", true, "Unable to locate template directory, halting.")
 
-	config.LogDir = findResource(config.LogDir, "log", "/var/log/gochan/")
-	if config.LogDir == "" {
-		println(0, "Unable to locate log dirLogDir not set in gochan.json, halting.")
-		os.Exit(1)
-	}
+	config.CheckString(config.DBtype, "", true, "DBtype not set in gochan.json, halting (currently supported values: mysql,postgresql,sqlite3)")
+	config.CheckString(config.DBhost, "", true, "DBhost not set in gochan.json, halting.")
+	config.DBname = config.CheckString(config.DBname, "gochan", false,
+		"DBname not set in gochan.json, setting to 'gochan'")
 
-	accessLogFile, err := os.OpenFile(path.Join(config.LogDir, "access.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
-	if err != nil {
-		println(0, "Couldn't open access log. Returned error: "+err.Error())
-		os.Exit(1)
-	} else {
-		accessLog = log.New(accessLogFile, "", log.Ltime|log.Ldate)
+	config.CheckString(config.DBusername, "", true, "DBusername not set in gochan, halting.")
+	config.CheckString(config.DBpassword, "", true, "DBpassword not set in gochan, halting.")
+	config.LockdownMessage = config.CheckString(config.LockdownMessage,
+		"The administrator has temporarily disabled posting. We apologize for the inconvenience", false, "")
 
-	}
-
-	errorLogFile, err := os.OpenFile(path.Join(config.LogDir, "error.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
-	if err != nil {
-		println(0, "Couldn't open error log. Returned error: "+err.Error())
-		os.Exit(1)
-	} else {
-		errorLog = log.New(errorLogFile, "", log.Ltime|log.Ldate)
-	}
-
-	modLogFile, err := os.OpenFile(path.Join(config.LogDir, "mod.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
-	if err != nil {
-		println(0, "Couldn't open mod log. Returned error: "+err.Error())
-	} else {
-		modLog = log.New(modLogFile, "", log.Ltime|log.Ldate)
-	}
-
-	if config.DBtype == "" {
-		println(0, "DBtype not set in gochan.json, halting (currently supported values: mysql).")
-		os.Exit(1)
-	}
-
-	if config.DBhost == "" {
-		println(0, "DBhost not set in gochan.json, halting.")
-		os.Exit(1)
-	}
-
-	if config.DBname == "" {
-		config.DBname = "gochan"
-	}
-
-	if config.DBusername == "" {
-		config.DBusername = "gochan"
-	}
-
-	if config.DBpassword == "" {
-		println(0, "DBpassword not set in gochan.json, halting.")
-		os.Exit(1)
-	}
-
-	if config.LockdownMessage == "" {
-		config.LockdownMessage = "This imageboard has temporarily disabled posting. We apologize for the inconvenience"
-	}
-
-	if config.Modboard == "" {
-		config.Modboard = "staff"
-	}
-
-	if config.SiteName == "" {
-		config.SiteName = "An unnamed imageboard"
-	}
-
-	if config.SiteDomain == "" {
-		println(0, "SiteDomain not set in gochan.json, halting.")
-		os.Exit(1)
-	}
+	config.CheckString(config.SiteName, "", true, "SiteName not set in gochan.json, halting.")
+	config.CheckString(config.SiteDomain, "", true, "SiteName not set in gochan.json, halting.")
 
 	if config.SiteWebfolder == "" {
-		println(0, "SiteWebFolder not set in gochan.json, using / as default.")
+		gclog.Print(lErrorLog|lStdLog, "SiteWebFolder not set in gochan.json, using / as default.")
 	} else if string(config.SiteWebfolder[0]) != "/" {
 		config.SiteWebfolder = "/" + config.SiteWebfolder
 	}
 	if config.SiteWebfolder[len(config.SiteWebfolder)-1:] != "/" {
 		config.SiteWebfolder += "/"
 	}
-
-	if config.DomainRegex == "" {
-		println(0, "DomainRegex not set in gochan.json, consider using (https|http):\\/\\/("+config.SiteDomain+")\\/(.*)")
-		println(0, "This should work in most cases. Halting")
-		os.Exit(1)
-		//config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
-	}
+	config.CheckString(config.DomainRegex, "", true, `DomainRegex not set in gochan.json. Consider using something like "(https|http):\\/\\/(gochan\\.org)\\/(.*)"`)
+	//config.DomainRegex = "(https|http):\\/\\/(" + config.SiteDomain + ")\\/(.*)"
 
 	if config.Styles == nil {
-		println(0, "Styles not set in gochan.json, halting.")
-		os.Exit(1)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Styles not set in gochan.json, halting.")
 	}
 
-	if config.DefaultStyle == "" {
-		config.DefaultStyle = config.Styles[0].Filename
-	}
+	config.DefaultStyle = config.CheckString(config.DefaultStyle, config.Styles[0].Filename, false, "")
 
-	if config.NewThreadDelay == 0 {
-		config.NewThreadDelay = 30
-	}
-
-	if config.ReplyDelay == 0 {
-		config.ReplyDelay = 7
-	}
-
-	if config.MaxLineLength == 0 {
-		config.MaxLineLength = 150
-	}
-
+	config.NewThreadDelay = config.CheckInt(config.NewThreadDelay, 30, false, "")
+	config.ReplyDelay = config.CheckInt(config.ReplyDelay, 7, false, "")
+	config.MaxLineLength = config.CheckInt(config.MaxLineLength, 150, false, "")
 	//ReservedTrips string //eventually this will be map[string]string
 
-	if config.ThumbWidth == 0 {
-		config.ThumbWidth = 200
-	}
+	config.ThumbWidth = config.CheckInt(config.ThumbWidth, 200, false, "")
+	config.ThumbHeight = config.CheckInt(config.ThumbHeight, 200, false, "")
+	config.ThumbWidth_reply = config.CheckInt(config.ThumbWidth_reply, 125, false, "")
+	config.ThumbHeight_reply = config.CheckInt(config.ThumbHeight_reply, 125, false, "")
+	config.ThumbWidth_catalog = config.CheckInt(config.ThumbWidth_catalog, 50, false, "")
+	config.ThumbHeight_catalog = config.CheckInt(config.ThumbHeight_catalog, 50, false, "")
 
-	if config.ThumbHeight == 0 {
-		config.ThumbHeight = 200
-	}
-
-	if config.ThumbWidth_reply == 0 {
-		config.ThumbWidth_reply = 125
-	}
-
-	if config.ThumbHeight_reply == 0 {
-		config.ThumbHeight_reply = 125
-	}
-
-	if config.ThumbWidth_catalog == 0 {
-		config.ThumbWidth_catalog = 50
-	}
-
-	if config.ThumbHeight_catalog == 0 {
-		config.ThumbHeight_catalog = 50
-	}
-
-	if config.ThreadsPerPage == 0 {
-		config.ThreadsPerPage = 10
-	}
-
-	if config.PostsPerThreadPage == 0 {
-		config.PostsPerThreadPage = 4
-	}
-
-	if config.RepliesOnBoardPage == 0 {
-		config.PostsPerThreadPage = 3
-	}
-
-	if config.StickyRepliesOnBoardPage == 0 {
-		config.StickyRepliesOnBoardPage = 1
-	}
+	config.ThreadsPerPage = config.CheckInt(config.ThreadsPerPage, 10, false, "")
+	config.RepliesOnBoardPage = config.CheckInt(config.RepliesOnBoardPage, 3, false, "")
+	config.StickyRepliesOnBoardPage = config.CheckInt(config.StickyRepliesOnBoardPage, 1, false, "")
 
 	/*config.BanColors, err = c.GetString("threads", "ban_colors") //eventually this will be map[string] string
 	if err != nil {
 		config.BanColors = "admin:#CC0000"
 	}*/
 
-	if config.BanMsg == "" {
-		config.BanMsg = "(USER WAS BANNED FOR THIS POST)"
-	}
+	config.BanMsg = config.CheckString(config.BanMsg, "(USER WAS BANNED FOR THIS POST)", false, "")
+	config.DateTimeFormat = config.CheckString(config.DateTimeFormat, "Mon, January 02, 2006 15:04 PM", false, "")
 
-	if config.DateTimeFormat == "" {
-		config.DateTimeFormat = "Mon, January 02, 2006 15:04 PM"
-	}
-
-	if config.CaptchaWidth == 0 {
-		config.CaptchaWidth = 240
-	}
-
-	if config.CaptchaHeight == 0 {
-		config.CaptchaHeight = 80
-	}
+	config.CaptchaWidth = config.CheckInt(config.CaptchaWidth, 240, false, "")
+	config.CaptchaHeight = config.CheckInt(config.CaptchaHeight, 80, false, "")
 
 	if config.EnableGeoIP {
 		if config.GeoIPDBlocation == "" {
-			println(0, "GeoIPDBlocation not set in gochan.json, disabling EnableGeoIP.")
+			gclog.Print(lErrorLog|lStdLog, "GeoIPDBlocation not set in gochan.json, disabling EnableGeoIP")
 			config.EnableGeoIP = false
 		}
 	}
@@ -611,9 +721,20 @@ DefaultStyle must refer to a given Style's Filename field. If DefaultStyle does 
 	}
 
 	if config.RandomSeed == "" {
-		println(0, "RandomSeed not set in gochan.json, halting.")
-		os.Exit(1)
+		gclog.Print(lErrorLog|lStdLog, "RandomSeed not set in gochan.json, Generating a random one.")
+		for i := 0; i < 8; i++ {
+			num := rand.Intn(127-32) + 32
+			config.RandomSeed += fmt.Sprintf("%c", num)
+		}
+		configJSON, _ := json.MarshalIndent(config, "", "\t")
+		if err = ioutil.WriteFile(cfgPath, configJSON, 0777); err != nil {
+			gclog.Printf(lErrorLog|lStdLog|lFatal, "Unable to write %s with randomly generated seed: %s", cfgPath, err.Error())
+		}
 	}
+
+	_, zoneOffset := time.Now().Zone()
+	config.TimeZone = zoneOffset / 60 / 60
+
 	bbcompiler = bbcode.NewCompiler(true, true)
 	bbcompiler.SetTag("center", nil)
 	bbcompiler.SetTag("code", nil)

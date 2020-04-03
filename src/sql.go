@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -27,12 +25,17 @@ Error text: %s
 var (
 	db           *sql.DB
 	nilTimestamp string
+	sqlReplacer  *strings.Replacer // used during SQL string preparation
 )
 
 func connectToSQLServer() {
 	var err error
 	var connStr string
-	println(0, "Initializing server...")
+	sqlReplacer = strings.NewReplacer(
+		"DBNAME", config.DBname,
+		"DBPREFIX", config.DBprefix,
+		"\n", " ")
+	gclog.Print(lStdLog|lErrorLog, "Initializing server...")
 
 	switch config.DBtype {
 	case "mysql":
@@ -40,42 +43,71 @@ func connectToSQLServer() {
 			config.DBusername, config.DBpassword, config.DBhost, config.DBname)
 		nilTimestamp = "0000-00-00 00:00:00"
 	case "postgres":
-		connStr = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=verify-ca",
+		connStr = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 			config.DBusername, config.DBpassword, config.DBhost, config.DBname)
 		nilTimestamp = "0001-01-01 00:00:00"
 	case "sqlite3":
-		connStr = fmt.Sprintf("file:%s?mode=rwc&_auth&auth_user=%s&_auth_pass=%s&_journal_mode=WAL",
+		gclog.Print(lErrorLog|lStdLog, "sqlite3 support is still flaky, consider using mysql or postgres")
+		connStr = fmt.Sprintf("file:%s?mode=rwc&_auth&_auth_user=%s&_auth_pass=%s&cache=shared",
 			config.DBhost, config.DBusername, config.DBpassword)
 		nilTimestamp = "0001-01-01 00:00:00+00:00"
 	default:
-		handleError(0, "Invalid DBtype '%s' in gochan.json, valid values are 'mysql', 'postgres', and 'sqlite3'", config.DBtype)
-		os.Exit(2)
+		gclog.Printf(lErrorLog|lStdLog|lFatal,
+			`Invalid DBtype %q in gochan.json, valid values are "mysql", "postgres", and "sqlite3"`, config.DBtype)
 	}
 
-	nullTime, _ = time.Parse("2006-01-02 15:04:05", nilTimestamp)
 	if db, err = sql.Open(config.DBtype, connStr); err != nil {
-		handleError(0, "Failed to connect to the database: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed to connect to the database: ", err.Error())
 	}
 
 	if err = initDB("initdb_" + config.DBtype + ".sql"); err != nil {
-		println(0, "Failed initializing DB:", sqlVersionErr(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 
-	if _, err = execSQL("TRUNCATE TABLE " + config.DBprefix + "sessions"); err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+	var truncateStr string
+	switch config.DBtype {
+	case "mysql":
+		fallthrough
+	case "postgres":
+		truncateStr = "TRUNCATE TABLE DBPREFIXsessions"
+	case "sqlite3":
+		truncateStr = "DELETE FROM DBPREFIXsessions"
+	}
+
+	if _, err = execSQL(truncateStr); err != nil {
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+	}
+
+	// Create generic "Main" section if one doesn't already exist
+	var sectionCount int
+	if err = queryRowSQL(
+		"SELECT COUNT(*) FROM DBPREFIXsections",
+		[]interface{}{}, []interface{}{&sectionCount},
+	); err != nil {
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+	}
+	if sectionCount == 0 {
+		if _, err = execSQL(
+			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')",
+		); err != nil {
+			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+		}
 	}
 
 	var sqlVersionStr string
-	err = queryRowSQL("SELECT value FROM "+config.DBprefix+"info WHERE name = 'version'",
-		[]interface{}{}, []interface{}{&sqlVersionStr})
+	isNewInstall := false
+	if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
+		[]interface{}{}, []interface{}{&sqlVersionStr},
+	); err == sql.ErrNoRows {
+		isNewInstall = true
+	} else if err != nil {
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+	}
+
 	var numBoards, numStaff int
-	rows, err := querySQL("SELECT COUNT(*) FROM " + config.DBprefix + "boards UNION ALL SELECT COUNT(*) FROM " + config.DBprefix + "staff")
+	rows, err := querySQL("SELECT COUNT(*) FROM DBPREFIXboards UNION ALL SELECT COUNT(*) FROM DBPREFIXstaff")
 	if err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed checking board list: ", err.Error())
 	}
 	rows.Next()
 	rows.Scan(&numBoards)
@@ -83,49 +115,51 @@ func connectToSQLServer() {
 	rows.Scan(&numStaff)
 
 	if numBoards == 0 && numStaff == 0 {
-		println(0, "This looks like a new installation. Creating /test/ and a new staff member.\nUsername: admin\nPassword: password")
+		gclog.Println(lErrorLog|lStdLog,
+			"This looks like a new installation. Creating /test/ and a new staff member.\nUsername: admin\nPassword: password")
 
 		if _, err = execSQL(
-			"INSERT INTO "+config.DBprefix+"staff (username,password_checksum,salt,rank) VALUES(?,?,?,?)", "admin",
-			bcryptSum("password"), "abc", 3,
+			"INSERT INTO DBPREFIXstaff (username,password_checksum,rank) VALUES(?,?,?)",
+			"admin", bcryptSum("password"), 3,
 		); err != nil {
-			handleError(0, "Failed creating admin user with error: %s\n", customError(err))
-			os.Exit(2)
+			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating admin user with error: ", err.Error())
 		}
 
-		boardPath := path.Join(config.DocumentRoot, "/test/")
-		if _, err = os.Stat(boardPath); err == nil {
-			printf(0, "Can't create /test/, '%s' already exists\nYou must create a board manually\n", boardPath)
-		} else if _, err = execSQL(
-			"INSERT INTO "+config.DBprefix+"boards (dir,title,subtitle,description) VALUES(?,?,?,?)",
-			"test", "Testing board", "Board for testing", "Board for testing",
-		); err != nil {
-			handleError(0, "Failed creating /test/ with error: %s\n", customError(err))
+		firstBoard := Board{
+			Dir:         "test",
+			Title:       "Testing board",
+			Subtitle:    "Board for testing",
+			Description: "Board for testing",
+			Section:     1}
+		firstBoard.SetDefaults()
+		firstBoard.Build(true, true)
+		if !isNewInstall {
+			return
 		}
-		resetBoardSectionArrays()
-		buildFrontPage()
-		buildBoardListJSON()
-		buildBoards()
-		_, err = execSQL("INSERT INTO "+config.DBprefix+"info (name,value) VALUES('version',?)", versionStr)
+
+		if _, err = execSQL(
+			"INSERT INTO DBPREFIXinfo (name,value) VALUES('version',?)", versionStr,
+		); err != nil {
+			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating first board: ", err.Error())
+		}
 		return
 	} else if err != nil {
-		handleError(0, "failed: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 	if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
-		handleError(0, "failed with error: %s\n", customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 	if version.CompareString(sqlVersionStr) > 0 {
-		printf(0, "Updating version in database from %s to %s\n", sqlVersionStr, version.String())
-		execSQL("UPDATE "+config.DBprefix+"info SET value = ? WHERE name = 'version'", versionStr)
+		gclog.Printf(lErrorLog|lStdLog, "Updating version in database from %s to %s", sqlVersionStr, version.String())
+		execSQL("UPDATE DBPREFIXinfo SET value = ? WHERE name = 'version'", versionStr)
 	}
-
 }
 
 func initDB(initFile string) error {
 	var err error
-	filePath := findResource(initFile, "/usr/local/share/gochan/"+initFile, "/usr/share/gochan/"+initFile)
+	filePath := findResource(initFile,
+		"/usr/local/share/gochan/"+initFile,
+		"/usr/share/gochan/"+initFile)
 	if filePath == "" {
 		return fmt.Errorf("SQL database initialization file (%s) missing. Please reinstall gochan", initFile)
 	}
@@ -136,15 +170,11 @@ func initDB(initFile string) error {
 	}
 
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
-	sqlStr = strings.NewReplacer(
-		"DBNAME", config.DBname,
-		"DBPREFIX", config.DBprefix,
-		"\n", " ").Replace(sqlStr)
-	sqlArr := strings.Split(sqlStr, ";")
+	sqlArr := strings.Split(sqlReplacer.Replace(sqlStr), ";")
 
 	for _, statement := range sqlArr {
 		if statement != "" && statement != " " {
-			if _, err := db.Exec(statement + ";"); err != nil {
+			if _, err = db.Exec(statement); err != nil {
 				return err
 			}
 		}
@@ -183,7 +213,6 @@ func prepareSQL(query string) (*sql.Stmt, error) {
 		fallthrough
 	case "sqlite3":
 		preparedStr = query
-		break
 	case "postgres":
 		arr := strings.Split(query, "?")
 		for i := range arr {
@@ -193,9 +222,8 @@ func prepareSQL(query string) (*sql.Stmt, error) {
 			arr[i] += fmt.Sprintf("$%d", i+1)
 		}
 		preparedStr = strings.Join(arr, "")
-		break
 	}
-	stmt, err := db.Prepare(preparedStr)
+	stmt, err := db.Prepare(sqlReplacer.Replace(preparedStr))
 	return stmt, sqlVersionErr(err)
 }
 
@@ -208,7 +236,7 @@ func prepareSQL(query string) (*sql.Stmt, error) {
  */
 func execSQL(query string, values ...interface{}) (sql.Result, error) {
 	stmt, err := prepareSQL(query)
-	defer closeHandle(stmt)
+	defer stmt.Close()
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +257,7 @@ func execSQL(query string, values ...interface{}) (sql.Result, error) {
  */
 func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	stmt, err := prepareSQL(query)
-	defer closeHandle(stmt)
+	defer stmt.Close()
 	if err != nil {
 		return err
 	}
@@ -252,7 +280,7 @@ func queryRowSQL(query string, values []interface{}, out []interface{}) error {
  */
 func querySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	stmt, err := prepareSQL(query)
-	defer closeHandle(stmt)
+	defer stmt.Close()
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,4 @@
-gochan.json
-gochan
-gochan.exe
+gochan*
 lib/
 log/
 releases/
@@ -9,4 +7,8 @@ vagrant/*.log
 html/boards.json
 html/index.html
 html/test*
+html/javascript/consts.js
+templates/override
 **/*.bak
+*.log
+__debug_bin

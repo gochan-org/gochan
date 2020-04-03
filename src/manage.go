@@ -19,25 +19,33 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var (
+	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
+)
+
 // ManageFunction represents the functions accessed by staff members at /manage?action=<functionname>.
-// Eventually a plugin system might allow you to add more
 type ManageFunction struct {
+	Title       string
 	Permissions int                                                            // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	Callback    func(writer http.ResponseWriter, request *http.Request) string //return string of html output
+	Callback    func(writer http.ResponseWriter, request *http.Request) string `json:"-"` //return string of html output
+}
+
+func getManageFunctionsJSON() string {
+	var jsonStr string
+
+	return jsonStr
 }
 
 func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 	var err error
 	if err = request.ParseForm(); err != nil {
-		serveErrorPage(writer, err.Error())
-		errorLog.Println(customError(err))
+		serveErrorPage(writer,
+			gclog.Print(lErrorLog, "Error parsing form data: ", err.Error()))
 	}
 
 	action := request.FormValue("action")
 	staffRank := getStaffRank(request)
 	var managePageBuffer bytes.Buffer
-	mangePageHTML := ""
-
 	if action == "" {
 		action = "announcements"
 	} else if action == "postinfo" {
@@ -46,21 +54,21 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if action != "getstaffjquery" && action != "postinfo" {
-		managePageBuffer.WriteString("<!DOCTYPE html>\n<html>\n<head>\n")
-		if err = manage_header_tmpl.Execute(&managePageBuffer, config); err != nil {
-			handleError(0, customError(err))
-			fmt.Fprintf(writer, mangePageHTML+err.Error()+"\n</body>\n</html>")
+		managePageBuffer.WriteString("<!DOCTYPE html><html><head>")
+		if err = manageHeaderTmpl.Execute(&managePageBuffer, config); err != nil {
+			serveErrorPage(writer, gclog.Print(lErrorLog|lStaffLog,
+				"Error executing manage page header template: ", err.Error()))
 			return
 		}
 	}
 
-	if _, ok := manage_functions[action]; ok {
-		if staffRank >= manage_functions[action].Permissions {
-			managePageBuffer.Write([]byte(manage_functions[action].Callback(writer, request)))
-		} else if staffRank == 0 && manage_functions[action].Permissions == 0 {
-			managePageBuffer.Write([]byte(manage_functions[action].Callback(writer, request)))
+	if _, ok := manageFunctions[action]; ok {
+		if staffRank >= manageFunctions[action].Permissions {
+			managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
+		} else if staffRank == 0 && manageFunctions[action].Permissions == 0 {
+			managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
 		} else if staffRank == 0 {
-			managePageBuffer.Write([]byte(manage_functions["login"].Callback(writer, request)))
+			managePageBuffer.Write([]byte(manageFunctions["login"].Callback(writer, request)))
 		} else {
 			managePageBuffer.Write([]byte(action + " is undefined."))
 		}
@@ -68,14 +76,10 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 		managePageBuffer.Write([]byte(action + " is undefined."))
 	}
 	if action != "getstaffjquery" && action != "postinfo" {
-		managePageBuffer.Write([]byte("\n</body>\n</html>"))
+		managePageBuffer.Write([]byte("</body></html>"))
 	}
 
-	/* extension := getFileExtension(request.URL.Path)
-	if extension == "" {
-		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-	} */
-	fmt.Fprintf(writer, managePageBuffer.String())
+	writer.Write(managePageBuffer.Bytes())
 }
 
 func getCurrentStaff(request *http.Request) (string, error) {
@@ -85,8 +89,7 @@ func getCurrentStaff(request *http.Request) (string, error) {
 	}
 	key := sessionCookie.Value
 	currentSession := new(LoginSession)
-	if err := queryRowSQL(
-		"SELECT sessiondata FROM "+config.DBprefix+"sessions WHERE name = ?",
+	if err := queryRowSQL("SELECT sessiondata FROM DBPREFIXsessions WHERE name = ?",
 		[]interface{}{key},
 		[]interface{}{&currentSession.Data},
 	); err != nil {
@@ -97,39 +100,37 @@ func getCurrentStaff(request *http.Request) (string, error) {
 
 func getStaff(name string) (*Staff, error) {
 	staff := new(Staff)
-	err := queryRowSQL("SELECT * FROM "+config.DBprefix+"staff WHERE username = ?",
+	err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
 		[]interface{}{name},
-		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Salt, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
+		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
 	)
 	return staff, err
 }
 
 func getStaffRank(request *http.Request) int {
 	staffname, err := getCurrentStaff(request)
-	if staffname == "" {
+	if err == sql.ErrNoRows {
+		return 0
+	} else if err != nil {
+		gclog.Print(lErrorLog, "Error getting current staff: ", err.Error())
 		return 0
 	}
-	if err != nil {
-		handleError(1, customError(err))
-		return 0
-	}
-
 	staff, err := getStaff(staffname)
 	if err != nil {
-		handleError(1, customError(err))
+		gclog.Print(lErrorLog, "Error getting current staff: ", err.Error())
 		return 0
 	}
 	return staff.Rank
 }
 
 func newStaff(username string, password string, rank int) error {
-	_, err := execSQL("INSERT INTO `"+config.DBprefix+"staff` (username, password_checksum, rank) VALUES(?,?,?)",
+	_, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
 		&username, bcryptSum(password), &rank)
 	return err
 }
 
 func deleteStaff(username string) error {
-	_, err := execSQL("DELETE FROM "+config.DBprefix+"staff WHERE username = ?", username)
+	_, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
 	return err
 }
 
@@ -137,52 +138,53 @@ func createSession(key string, username string, password string, request *http.R
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
 	var err error
-	chopPortNumRegex := regexp.MustCompile(`(.+|\w+):(\d+)$`)
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !validReferrer(request) {
-		modLog.Print("Rejected login from possible spambot @ : " + request.RemoteAddr)
+		gclog.Print(lStaffLog, "Rejected login from possible spambot @ "+request.RemoteAddr)
 		return 2
 	}
 	staff, err := getStaff(username)
 	if err != nil {
-		handleError(1, customError(err))
+		gclog.Print(lErrorLog, err.Error())
 		return 1
-	} else {
-		success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
-		if success == bcrypt.ErrMismatchedHashAndPassword {
-			// password mismatch
-			modLog.Print("Failed login (password mismatch) from " + request.RemoteAddr + " at " + getSQLDateTime())
-			return 1
-		} else {
-			// successful login, add cookie that expires in one month
-			http.SetCookie(writer, &http.Cookie{
-				Name:   "sessiondata",
-				Value:  key,
-				Path:   "/",
-				Domain: domain,
-				MaxAge: 60 * 60 * 24 * 7,
-			})
-
-			if _, err = execSQL(
-				"INSERT INTO "+config.DBprefix+"sessions (name,sessiondata,expires) VALUES(?,?,?)",
-				key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730)))); err != nil {
-				handleError(0, customError(err))
-				return 2
-			}
-
-			if _, err = execSQL(
-				"UPDATE "+config.DBprefix+"staff SET last_active = ? WHERE username = ?", getSQLDateTime(), username,
-			); err != nil {
-				handleError(1, customError(err))
-			}
-			return 0
-		}
 	}
+
+	success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
+	if success == bcrypt.ErrMismatchedHashAndPassword {
+		// password mismatch
+		gclog.Print(lStaffLog, "Failed login (password mismatch) from "+request.RemoteAddr+" at "+getSQLDateTime())
+		return 1
+	}
+
+	// successful login, add cookie that expires in one month
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "sessiondata",
+		Value:  key,
+		Path:   "/",
+		Domain: domain,
+		MaxAge: 60 * 60 * 24 * 7,
+	})
+
+	if _, err = execSQL("INSERT INTO DBPREFIXsessions (name,sessiondata,expires) VALUES(?,?,?)",
+		key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
+	); err != nil {
+		gclog.Print(lErrorLog, "Error creating new staff session: ", err.Error())
+		return 2
+	}
+
+	if _, err = execSQL("UPDATE DBPREFIXstaff SET last_active = ? WHERE username = ?",
+		getSQLDateTime(), username,
+	); err != nil {
+		gclog.Print(lErrorLog, "Error creating new staff session: ", err.Error())
+		return 2
+	}
+	return 0
 }
 
-var manage_functions = map[string]ManageFunction{
+var manageFunctions = map[string]ManageFunction{
 	"cleanup": {
+		Title:       "Cleanup",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h2 class=\"manage-header\">Cleanup</h2><br />"
@@ -190,27 +192,30 @@ var manage_functions = map[string]ManageFunction{
 			if request.FormValue("run") == "Run Cleanup" {
 				html += "Removing deleted posts from the database.<hr />"
 				if _, err = execSQL(
-					"DELETE FROM `"+config.DBprefix+"posts` WHERE `deleted_timestamp` = ?", nilTimestamp,
+					"DELETE FROM DBPREFIXposts WHERE deleted_timestamp = ?", nilTimestamp,
 				); err != nil {
-					html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
-					return
+					return html + "<tr><td>" +
+						gclog.Print(lErrorLog, "Error removing deleted posts from database: ", err.Error()) +
+						"</td></tr></table>"
 				}
 				// TODO: remove orphaned replies and uploads
 
 				html += "Optimizing all tables in database.<hr />"
 				tableRows, tablesErr := querySQL("SHOW TABLES")
-				defer closeHandle(tableRows)
-				if tablesErr != nil {
-					html += "<tr><td>" + tablesErr.Error() + "</td></tr></table>"
-					return
-				}
+				defer tableRows.Close()
 
+				if tablesErr != nil && tablesErr != sql.ErrNoRows {
+					return html + "<tr><td>" +
+						gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
+						"</td></tr></table>"
+				}
 				for tableRows.Next() {
 					var table string
 					tableRows.Scan(&table)
-					if _, err := execSQL("OPTIMIZE TABLE `" + table + "`"); err != nil {
-						html += handleError(1, err.Error()) + "<br />"
-						return
+					if _, err := execSQL("OPTIMIZE TABLE " + table); err != nil {
+						return html + "<tr><td>" +
+							gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
+							"</td></tr></table>"
 					}
 				}
 
@@ -223,6 +228,7 @@ var manage_functions = map[string]ManageFunction{
 			return
 		}},
 	"config": {
+		Title:       "Configuration",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
@@ -329,13 +335,6 @@ var manage_functions = map[string]ManageFunction{
 						config.ThumbHeight_catalog = ThumbHeight_catalog
 					}
 
-					PostsPerThreadPage, err := strconv.Atoi(request.PostFormValue("PostsPerThreadPage"))
-					if err != nil {
-						status += err.Error() + "<br />\n"
-					} else {
-						config.PostsPerThreadPage = PostsPerThreadPage
-					}
-
 					RepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("RepliesOnBoardPage"))
 					if err != nil {
 						status += err.Error() + "<br />\n"
@@ -377,7 +376,8 @@ var manage_functions = map[string]ManageFunction{
 					config.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
 					config.MakeURLsHyperlinked = (request.PostFormValue("MakeURLsHyperlinked") == "on")
 					config.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
-					config.EnableQuickReply = (request.PostFormValue("EnableQuickReply") == "on")
+					config.MinifyHTML = (request.PostFormValue("MinifyHTML") == "on")
+					config.MinifyJS = (request.PostFormValue("MinifyJS") == "on")
 					config.DateTimeFormat = request.PostFormValue("DateTimeFormat")
 					AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
 
@@ -385,6 +385,20 @@ var manage_functions = map[string]ManageFunction{
 						status += err.Error() + "<br />"
 					} else {
 						config.AkismetAPIKey = AkismetAPIKey
+					}
+
+					config.UseCaptcha = (request.PostFormValue("UseCaptcha") == "on")
+					CaptchaWidth, err := strconv.Atoi(request.PostFormValue("CaptchaWidth"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.CaptchaWidth = CaptchaWidth
+					}
+					CaptchaHeight, err := strconv.Atoi(request.PostFormValue("CaptchaHeight"))
+					if err != nil {
+						status += err.Error() + "<br />\n"
+					} else {
+						config.CaptchaHeight = CaptchaHeight
 					}
 
 					config.EnableGeoIP = (request.PostFormValue("EnableGeoIP") == "on")
@@ -395,13 +409,6 @@ var manage_functions = map[string]ManageFunction{
 						status += err.Error() + "<br />\n"
 					} else {
 						config.MaxRecentPosts = MaxRecentPosts
-					}
-
-					Verbosity, err := strconv.Atoi(request.PostFormValue("Verbosity"))
-					if err != nil {
-						status += err.Error() + "<br />\n"
-					} else {
-						config.Verbosity = Verbosity
 					}
 
 					config.EnableAppeals = (request.PostFormValue("EnableAppeals") == "on")
@@ -419,97 +426,21 @@ var manage_functions = map[string]ManageFunction{
 						status = "Error writing gochan.json: %s\n" + err.Error()
 					} else {
 						status = "Wrote gochan.json successfully <br />"
+						buildJS()
 					}
 				}
 			}
 			manageConfigBuffer := bytes.NewBufferString("")
-			if err := manage_config_tmpl.Execute(manageConfigBuffer,
+			if err := manageConfigTmpl.Execute(manageConfigBuffer,
 				map[string]interface{}{"config": config, "status": status},
 			); err != nil {
-				html += handleError(1, err.Error())
-				return
+				return html + gclog.Print(lErrorLog, "Error executing config management page: ", err.Error())
 			}
 			html += manageConfigBuffer.String()
 			return
 		}},
-	"purgeeverything": {
-		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html = "<img src=\"/css/purge.jpg\" />"
-			rows, err := querySQL("SELECT dir FROM " + config.DBprefix + "boards")
-			defer closeHandle(rows)
-			if err != nil {
-				html += err.Error()
-				handleError(1, customError(err))
-				return
-			}
-			var board string
-			for rows.Next() {
-				if err = rows.Scan(&board); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board), ".html"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "res"), ".*"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "src"), ".*"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-				if _, err = deleteMatchingFiles(path.Join(config.DocumentRoot, board, "thumb"), ".*"); err != nil {
-					html += err.Error()
-					handleError(1, customError(err))
-					return
-				}
-			}
-
-			truncateSQL := "TRUNCATE " + config.DBprefix + "posts"
-			var values []interface{} // only used for SQLite since it doesn't have a proper TRUNCATE
-			if config.DBtype == "sqlite3" {
-				truncateSQL = "DELETE FROM " + config.DBprefix + "posts; DELETE FROM sqlite_sequence WHERE name = ?;"
-				values = append(values, config.DBprefix+"posts")
-			} else if config.DBtype == "postgres" {
-				truncateSQL += " RESTART IDENTITY"
-			}
-			if _, err = execSQL(truncateSQL, values...); err != nil {
-				html += handleError(0, err.Error()) + "<br />\n"
-				return
-			}
-
-			if _, err = execSQL("ALTER TABLE `" + config.DBprefix + "posts` AUTO_INCREMENT = 1"); err != nil {
-				html += handleError(0, err.Error()) + "<br />\n"
-				return
-			}
-			html += "<br />Everything purged, rebuilding all<br />" +
-				buildBoards() + "<hr />\n" +
-				buildFrontPage()
-			return
-		}},
-	"executesql": {
-		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			statement := request.FormValue("sql")
-			html = "<h1 class=\"manage-header\">Execute SQL statement(s)</h1><form method = \"POST\" action=\"/manage?action=executesql\">\n<textarea name=\"sql\" id=\"sql-statement\">" + statement + "</textarea>\n<input type=\"submit\" />\n</form>"
-			if statement != "" {
-				html += "<hr />"
-				if _, sqlerr := execSQL(statement); sqlerr != nil {
-					html += handleError(1, sqlerr.Error())
-				} else {
-					html += "Statement esecuted successfully."
-				}
-			}
-			return
-		}},
 	"login": {
+		Title:       "Login",
 		Permissions: 0,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			if getStaffRank(request) > 0 {
@@ -530,13 +461,14 @@ var manage_functions = map[string]ManageFunction{
 					"\t\t<input type=\"submit\" value=\"Login\" />\n" +
 					"\t</form>"
 			} else {
-				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + generateSalt())[0:10]
+				key := md5Sum(request.RemoteAddr + username + password + config.RandomSeed + randomString(3))[0:10]
 				createSession(key, username, password, request, writer)
 				http.Redirect(writer, request, path.Join(config.SiteWebfolder, "manage?action="+request.FormValue("redirect")), http.StatusFound)
 			}
 			return
 		}},
 	"logout": {
+		Title:       "Logout",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			cookie, _ := request.Cookie("sessiondata")
@@ -546,22 +478,22 @@ var manage_functions = map[string]ManageFunction{
 			return "Logged out successfully"
 		}},
 	"announcements": {
+		Title:       "Announcements",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
-			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM " + config.DBprefix + "announcements ORDER BY id DESC")
-			defer closeHandle(rows)
+			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
+			defer rows.Close()
 			if err != nil {
-				html += handleError(1, err.Error())
-				return
+				return html + gclog.Print(lErrorLog, "Error getting announcements: ", err.Error())
 			}
 			iterations := 0
 			for rows.Next() {
 				announcement := new(Announcement)
 				err = rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
 				if err != nil {
-					html += handleError(1, err.Error())
+					html += gclog.Print(lErrorLog, "Error getting announcements: ", err.Error())
 				} else {
 					html += "<div class=\"section-block\">\n" +
 						"<div class=\"section-title-block\"><b>" + announcement.Subject + "</b> by " + announcement.Poster + " at " + humanReadableTime(announcement.Timestamp) + "</div>\n" +
@@ -576,6 +508,7 @@ var manage_functions = map[string]ManageFunction{
 			return
 		}},
 	"bans": {
+		Title:       "Bans",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) {
 			var post Post
@@ -611,7 +544,7 @@ var manage_functions = map[string]ManageFunction{
 				reason := html.EscapeString(request.FormValue("reason"))
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
 				currentStaff, _ := getCurrentStaff(request)
-				sqlStr := "INSERT INTO " + config.DBprefix + "banlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
+				sqlStr := "INSERT INTO DBPREFIXbanlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
 				for i := 1; i <= 12; i++ {
 					sqlStr += "?"
 					if i < 12 {
@@ -619,7 +552,6 @@ var manage_functions = map[string]ManageFunction{
 					}
 				}
 				sqlStr += ")"
-				println(1, sqlStr)
 				if _, err := execSQL(sqlStr,
 					ip.String(), name, nameIsRegex, filename, checksum, boards, currentStaff, expires, permaban, reason, bantype, staffNote,
 				); err != nil {
@@ -633,10 +565,11 @@ var manage_functions = map[string]ManageFunction{
 					"dir": boardDir,
 				}, "")
 				if err != nil {
-					pageHTML += handleError(1, err.Error())
+					return pageHTML + gclog.Print(lErrorLog,
+						"Error getting board list: ", err.Error())
 				}
 				if len(boards) < 1 {
-					pageHTML += handleError(1, "Board doesn't exist")
+					return pageHTML + gclog.Print(lStaffLog, "Board doesn't exist")
 				}
 
 				posts, err := getPostArr(map[string]interface{}{
@@ -644,20 +577,17 @@ var manage_functions = map[string]ManageFunction{
 					"boardid": boards[0].ID,
 				}, "")
 				if err != nil {
-					pageHTML += handleError(1, err.Error())
-					return
+					return pageHTML + gclog.Print(lErrorLog, "Error getting post list: ", err.Error())
 				}
 				if len(posts) < 1 {
-					pageHTML += handleError(1, "Post doesn't exist")
-					return
+					return pageHTML + gclog.Print(lStaffLog|lErrorLog, "Post doesn't exist")
 				}
 				post = posts[0]
 			}
-			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM " + config.DBprefix + "banlist")
-			defer closeHandle(rows)
+			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM DBPREFIXbanlist")
+			defer rows.Close()
 			if err != nil {
-				pageHTML += handleError(1, err.Error())
-				return
+				return pageHTML + gclog.Print(lErrorLog, "Error getting ban list: ", err.Error())
 			}
 
 			var banlist []BanInfo
@@ -668,11 +598,10 @@ var manage_functions = map[string]ManageFunction{
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
-			if err := manage_bans_tmpl.Execute(manageBansBuffer,
+			if err := manageBansTmpl.Execute(manageBansBuffer,
 				map[string]interface{}{"config": config, "banlist": banlist, "post": post},
 			); err != nil {
-				pageHTML += handleError(1, err.Error())
-				return
+				return pageHTML + gclog.Print(lErrorLog, "Error executing ban management page template: ", err.Error())
 			}
 			pageHTML += manageBansBuffer.String()
 			return
@@ -691,17 +620,17 @@ var manage_functions = map[string]ManageFunction{
 				return
 			}
 			staff := new(Staff)
-			if err := queryRowSQL("SELECT rank,boards FROM "+config.DBprefix+"staff WHERE username = ?",
+			if err := queryRowSQL("SELECT rank,boards FROM DBPREFIXstaff WHERE username = ?",
 				[]interface{}{current_staff},
 				[]interface{}{&staff.Rank, &staff.Boards},
 			); err != nil {
-				html += handleError(1, "Error getting staff list: "+err.Error())
-				return
+				return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
 			}
 			html = current_staff + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
 			return
 		}},
 	"boards": {
+		Title:       "Boards",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
@@ -715,7 +644,7 @@ var manage_functions = map[string]ManageFunction{
 				case do == "add":
 					board.Dir = request.FormValue("dir")
 					if board.Dir == "" {
-						boardCreationStatus = "Error: \"Directory\" cannot be blank"
+						boardCreationStatus = `Error: "Directory" cannot be blank`
 						do = ""
 						continue
 					}
@@ -726,7 +655,7 @@ var manage_functions = map[string]ManageFunction{
 					}
 					board.Title = request.FormValue("title")
 					if board.Title == "" {
-						boardCreationStatus = "Error: \"Title\" cannot be blank"
+						boardCreationStatus = `Error: "Title" cannot be blank`
 						do = ""
 						continue
 					}
@@ -789,30 +718,35 @@ var manage_functions = map[string]ManageFunction{
 					//actually start generating stuff
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir), 0666); err != nil {
 						do = ""
-						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/ already exists!")
+						boardCreationStatus = gclog.Printf(lStaffLog|lErrorLog, "Directory %s/%s/ already exists.",
+							config.DocumentRoot, board.Dir)
 						break
 					}
 
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "res"), 0666); err != nil {
 						do = ""
-						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/res/ already exists!")
-						break
-					}
-
-					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
-						do = ""
-						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/thumb/ already exists!")
+						boardCreationStatus = gclog.Printf(lStaffLog|lErrorLog, "Directory %s/%s/res/ already exists.",
+							config.DocumentRoot, board.Dir)
 						break
 					}
 
 					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "src"), 0666); err != nil {
 						do = ""
-						boardCreationStatus = handleError(1, "ERROR: directory /"+config.DocumentRoot+"/"+board.Dir+"/src/ already exists!")
+						boardCreationStatus = gclog.Printf(lStaffLog|lErrorLog, "Directory %s/%s/src/ already exists.",
+							config.DocumentRoot, board.Dir)
 						break
 					}
+
+					if err = os.Mkdir(path.Join(config.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
+						do = ""
+						boardCreationStatus = gclog.Printf(lStaffLog|lErrorLog, "Directory %s/%s/thumb/ already exists.",
+							config.DocumentRoot, board.Dir)
+						break
+					}
+
 					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
 					if _, err := execSQL(
-						"INSERT INTO "+config.DBprefix+"boards (list_order,dir,type,upload_type,title,subtitle,"+
+						"INSERT INTO DBPREFIXboards (list_order,dir,type,upload_type,title,subtitle,"+
 							"description,section,max_file_size,max_pages,default_style,locked,created_on,"+
 							"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,embeds_allowed,"+
 							"redirect_to_thread,require_file,enable_catalog) "+
@@ -826,17 +760,15 @@ var manage_functions = map[string]ManageFunction{
 						board.RedirectToThread, board.RequireFile, board.EnableCatalog,
 					); err != nil {
 						do = ""
-						boardCreationStatus = handleError(1, "Error creating board: "+customError(err))
+						boardCreationStatus = gclog.Print(lErrorLog, "Error creating board: ", err.Error())
 						break
 					} else {
 						boardCreationStatus = "Board created successfully"
-						println(2, boardCreationStatus)
 						buildBoards()
 						resetBoardSectionArrays()
-						println(2, "Boards rebuilt successfully")
+						gclog.Print(lStaffLog, "Boards rebuilt successfully")
 						done = true
 					}
-					break
 				case do == "del":
 					// resetBoardSectionArrays()
 				case do == "edit":
@@ -857,17 +789,16 @@ var manage_functions = map[string]ManageFunction{
 				}
 
 				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-				rows, err = querySQL("SELECT dir FROM " + config.DBprefix + "boards")
-				defer closeHandle(rows)
+				rows, err = querySQL("SELECT dir FROM DBPREFIXboards")
+				defer rows.Close()
 				if err != nil {
-					html += handleError(1, err.Error())
-					return
+					return html + gclog.Print(lErrorLog, "Error getting board list: ", err.Error())
 				}
 
 				for rows.Next() {
 					var boardDir string
 					rows.Scan(&boardDir)
-					html += "<option>" + boardDir + "</option>\n"
+					html += "<option>" + boardDir + "</option>"
 				}
 
 				html += "</select> <input type=\"submit\" value=\"Edit\" /> <input type=\"submit\" value=\"Delete\" /></form><hr />" +
@@ -876,17 +807,20 @@ var manage_functions = map[string]ManageFunction{
 				manageBoardsBuffer := bytes.NewBufferString("")
 				allSections, _ = getSectionArr("")
 				if len(allSections) == 0 {
-					execSQL("INSERT INTO " + config.DBprefix + "sections (hidden,name,abbreviation) VALUES(0,'Main','main')")
+					if _, err = execSQL(
+						"INSERT INTO DBPREFIXsections (hidden,name,abbreviation) VALUES(0,'Main','main')",
+					); err != nil {
+						gclog.Print(lErrorLog, "Error creating new board section: ", err.Error())
+					}
 				}
 				allSections, _ = getSectionArr("")
 
-				if err := manage_boards_tmpl.Execute(manageBoardsBuffer, map[string]interface{}{
+				if err := manageBoardsTmpl.Execute(manageBoardsBuffer, map[string]interface{}{
 					"config":      config,
 					"board":       board,
 					"section_arr": allSections,
 				}); err != nil {
-					html += handleError(1, err.Error())
-					return
+					return html + gclog.Print(lErrorLog, "Error executing board management page template: ", err.Error())
 				}
 				html += manageBoardsBuffer.String()
 				return
@@ -895,6 +829,7 @@ var manage_functions = map[string]ManageFunction{
 			return
 		}},
 	"staffmenu": {
+		Title:       "Staff menu",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			rank := getStaffRank(request)
@@ -925,27 +860,32 @@ var manage_functions = map[string]ManageFunction{
 			return
 		}},
 	"rebuildfront": {
+		Title:       "Rebuild front page",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildFrontPage()
 		}},
 	"rebuildall": {
+		Title:       "Rebuild everything",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			resetBoardSectionArrays()
-			return buildFrontPage() + "<hr />\n" +
-				buildBoardListJSON() + "<hr />\n" +
-				buildBoards() + "<hr />\n"
+			return buildFrontPage() + "<hr />" +
+				buildBoardListJSON() + "<hr />" +
+				buildBoards() + "<hr />" +
+				buildJS() + "<hr />"
 		}},
 	"rebuildboards": {
+		Title:       "Rebuild boards",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			initTemplates()
 			return buildBoards()
 		}},
 	"reparsehtml": {
+		Title:       "Reparse HTML",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			posts, err := getPostArr(map[string]interface{}{
@@ -957,21 +897,23 @@ var manage_functions = map[string]ManageFunction{
 			}
 
 			for _, post := range posts {
-				_, err = execSQL("UPDATE `"+config.DBprefix+"posts` SET `message` = ? WHERE `id` = ? AND `boardid` = ?",
+				_, err = execSQL(
+					"UPDATE DBPREFIXposts SET message = ? WHERE id = ? AND boardid = ?",
 					formatMessage(post.MessageText), post.ID, post.BoardID,
 				)
 				if err != nil {
-					html += handleError(1, err.Error()) + "<br />"
-					return
+					return html + gclog.Printf(lErrorLog, "Error reparsing post (post ID: %d, board ID: %d)",
+						post.ID, post.BoardID)
 				}
 			}
 			html += "Done reparsing HTML<hr />" +
-				buildFrontPage() + "<hr />\n" +
-				buildBoardListJSON() + "<hr />\n" +
-				buildBoards() + "<hr />\n"
+				buildFrontPage() + "<hr />" +
+				buildBoardListJSON() + "<hr />" +
+				buildBoards() + "<hr />"
 			return
 		}},
 	"recentposts": {
+		Title:       "Recent posts",
 		Permissions: 1,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			limit := request.FormValue("limit")
@@ -979,29 +921,24 @@ var manage_functions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1 class=\"manage-header\">Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-			rows, err := querySQL(
-				"SELECT `"+config.DBprefix+"boards`.`dir` AS `boardname`, "+
-					"`"+config.DBprefix+"posts`.`boardid` AS boardid, "+
-					"`"+config.DBprefix+"posts`.`id` AS id, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`parentid` AS parentid, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`message` AS message, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`ip` AS ip, "+
-					"`"+config.DBprefix+"posts`. "+
-					"`timestamp` AS timestamp "+
-					"FROM `"+config.DBprefix+"posts`, `"+config.DBprefix+"boards` "+
-					"WHERE `reviewed` = 0 "+
-					"AND `"+config.DBprefix+"posts`.`deleted_timestamp` = ? "+
-					"AND `boardid` = `"+config.DBprefix+"boards`.`id` "+
-					"ORDER BY `timestamp` DESC LIMIT ?",
-				nilTimestamp, limit,
-			)
-			defer closeHandle(rows)
+			rows, err := querySQL("SELECT "+
+				"DBPREFIXboards.dir AS boardname, "+
+				"DBPREFIXposts.boardid AS boardid, "+
+				"DBPREFIXposts.id AS id, "+
+				"DBPREFIXposts.parentid AS parentid, "+
+				"DBPREFIXposts.message AS message, "+
+				"DBPREFIXposts.ip AS ip, "+
+				"DBPREFIXposts.timestamp AS timestamp "+
+				"FROM DBPREFIXposts, DBPREFIXboards "+
+				"WHERE reviewed = 0 "+
+				"AND DBPREFIXposts.deleted_timestamp = ? "+
+				"AND boardid = DBPREFIXboards.id "+
+				"ORDER BY timestamp DESC LIMIT ?",
+				nilTimestamp, limit)
+			defer rows.Close()
 			if err != nil {
-				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
-				return
+				return html + "<tr><td>" + gclog.Print(lErrorLog, "Error getting recent posts: ",
+					err.Error()) + "</td></tr></table>"
 			}
 
 			for rows.Next() {
@@ -1010,32 +947,39 @@ var manage_functions = map[string]ManageFunction{
 					&recentpost.PostID, &recentpost.ParentID, &recentpost.Message,
 					&recentpost.IP, &recentpost.Timestamp,
 				); err != nil {
-					return handleError(1, err.Error())
+					return html + gclog.Print(lErrorLog, "Error getting recent posts: ",
+						err.Error())
 				}
-				html += "<tr><td><b>Post:</b> <a href=\"" + path.Join(config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)) + "\">" + recentpost.BoardName + "/" + strconv.Itoa(recentpost.PostID) + "</a><br /><b>IP:</b> " + recentpost.IP + "</td><td>" + recentpost.Message + "</td><td>" + recentpost.Timestamp.Format("01/02/06, 15:04") + "</td></tr>"
+				html += fmt.Sprintf(
+					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
+					path.Join(config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
+					recentpost.BoardName, recentpost.PostID, recentpost.IP, recentpost.Message,
+					recentpost.Timestamp.Format("01/02/06, 15:04"),
+				)
 			}
 			html += "</table>"
 			return
 		}},
-	"killserver": {
-		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			os.Exit(0)
-			return
-		}},
 	"postinfo": {
+		Title:       "Post info",
 		Permissions: 2,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			boardDir := request.FormValue("dir")
 			boards, err := getBoardArr(map[string]interface{}{
 				"dir": boardDir,
 			}, "")
+			errMap := map[string]interface{}{
+				"action":  "postInfo",
+				"success": false,
+			}
 			if err != nil {
-				jsonErr, _ := marshalJSON("error", err.Error(), false)
+				errMap["message"] = err.Error()
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
 			if len(boards) < 1 {
-				jsonErr, _ := marshalJSON("error", "Board doesn't exist.", false)
+				errMap["message"] = "Board doesn't exist"
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
 
@@ -1044,52 +988,56 @@ var manage_functions = map[string]ManageFunction{
 				"boardid": boards[0].ID,
 			}, "")
 			if err != nil {
-				jsonErr, _ := marshalJSON("error", err.Error(), false)
+				errMap["message"] = err.Error()
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
 			if len(posts) < 1 {
-				jsonErr, _ := marshalJSON("eror", "Post doesn't exist.", false)
+				errMap["message"] = "Post doesn't exist"
+				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
-			jsonStr, _ := marshalJSON("", posts[0], false)
+			jsonStr, _ := marshalJSON(posts[0], false)
 			return jsonStr
 		}},
 	"staff": {
+		Title:       "Staff",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			do := request.FormValue("do")
-			html = "<h1 class=\"manage-header\">Staff</h1><br />\n" +
-				"<table id=\"stafftable\" border=\"1\">\n" +
-				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>\n"
-			rows, err := querySQL("SELECT `username`,`rank`,`boards`,`added_on` FROM `" + config.DBprefix + "staff`")
-			defer closeHandle(rows)
+			html = `<h1 class="manage-header">Staff</h1><br />` +
+				`<table id="stafftable" border="1">` +
+				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>"
+			rows, err := querySQL("SELECT username,rank,boards,added_on FROM DBPREFIXstaff")
+			defer rows.Close()
 			if err != nil {
-				html += "<tr><td>" + handleError(1, err.Error()) + "</td></tr></table>"
-				return
+				return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
 			}
 
 			iter := 1
 			for rows.Next() {
 				staff := new(Staff)
 				if err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn); err != nil {
-					handleError(1, err.Error())
-					return err.Error()
+					return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
 				}
-
+				username := request.FormValue("username")
+				password := request.FormValue("password")
+				rank := request.FormValue("rank")
+				rankI, _ := strconv.Atoi(rank)
 				if do == "add" {
-					newUsername := request.FormValue("username")
-					newPassword := request.FormValue("password")
-					newRank, _ := strconv.Atoi(request.FormValue("rank"))
-					if err := newStaff(newUsername, newPassword, newRank); err != nil {
-						serveErrorPage(writer, handleError(1, err.Error()))
+					if err := newStaff(username, password, rankI); err != nil {
+						serveErrorPage(writer, gclog.Printf(lErrorLog,
+							"Error creating new staff account %q: %s", username, err.Error()))
+						return
 					}
-				} else if do == "del" && request.FormValue("username") != "" {
+				} else if do == "del" && username != "" {
 					if err = deleteStaff(request.FormValue("username")); err != nil {
-						serveErrorPage(writer, handleError(1, err.Error()))
+						serveErrorPage(writer, gclog.Printf(lErrorLog,
+							"Error deleting staff account %q : %s", username, err.Error()))
+						return
 					}
 				}
 
-				var rank string
 				switch {
 				case staff.Rank == 3:
 					rank = "admin"
@@ -1098,7 +1046,9 @@ var manage_functions = map[string]ManageFunction{
 				case staff.Rank == 1:
 					rank = "janitor"
 				}
-				html += "<tr><td>" + staff.Username + "</td><td>" + rank + "</td><td>" + staff.Boards + "</td><td>" + humanReadableTime(staff.AddedOn) + "</td><td><a href=\"/manage?action=staff&amp;do=del&amp;username=" + staff.Username + "\" style=\"float:right;color:red;\">X</a></td></tr>\n"
+				html += fmt.Sprintf(
+					`<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
+					staff.Username, rank, staff.Boards, humanReadableTime(staff.AddedOn), staff.Username)
 				iter++
 			}
 			html += "</table>\n\n<hr />\n<h2 class=\"manage-header\">Add new staff</h2>\n\n" +
@@ -1116,6 +1066,7 @@ var manage_functions = map[string]ManageFunction{
 			return
 		}},
 	"tempposts": {
+		Title:       "Temporary posts lists",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html += "<h1 class=\"manage-header\">Temporary posts</h1>"

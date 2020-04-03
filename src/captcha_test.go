@@ -6,7 +6,10 @@ import (
 )
 
 func TestGetCaptchaImage(t *testing.T) {
+	config.UseCaptcha = true
+	config.CaptchaWidth = 240
+	config.CaptchaHeight = 80
 	initCaptcha()
 	captchaID, captchaB64 := getCaptchaImage()
-	fmt.Println("captchaID:", captchaID, "\ncaptchaB64:", captchaB64)
+	fmt.Printf("captchaID: %s\ncaptchaB64: %s\n", captchaID, captchaB64)
 }

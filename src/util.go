@@ -13,9 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -25,14 +23,9 @@ import (
 )
 
 var (
-	nullTime                 time.Time
 	errEmptyDurationString   = errors.New("Empty Duration string")
 	errInvalidDurationString = errors.New("Invalid Duration string")
 	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
-)
-
-const (
-	chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 abcdefghijklmnopqrstuvwxyz~!@#$%%^&*()_+{}[]-=:\"\\/?.>,<;:'"
 )
 
 func arrToString(arr []string) string {
@@ -44,20 +37,6 @@ func arrToString(arr []string) string {
 		}
 	}
 	return out
-}
-
-func benchmarkTimer(name string, givenTime time.Time, starting bool) (returnTime time.Time) {
-	if starting {
-		// starting benchmark test
-		println(2, "Starting benchmark \""+name+"\"")
-		returnTime = givenTime
-	} else {
-		// benchmark is finished, print the duration
-		// convert nanoseconds to a decimal seconds
-		printf(2, "benchmark %s completed in %f seconds\n", name, time.Since(givenTime).Seconds())
-		returnTime = time.Now() // we don't really need this, but we have to return something
-	}
-	return
 }
 
 func md5Sum(str string) string {
@@ -90,13 +69,6 @@ func byteByByteReplace(input, from, to string) string {
 	return input
 }
 
-// for easier defer cleaning
-func closeHandle(handle io.Closer) {
-	if handle != nil && !reflect.ValueOf(handle).IsNil() {
-		handle.Close()
-	}
-}
-
 /*
  * Deletes files in a folder (root) that match a given regular expression.
  * Returns the number of files that were deleted, and any error encountered.
@@ -119,7 +91,7 @@ func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 // getBoardArr performs a query against the database, and returns an array of Boards along with an error value.
 // If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
 func getBoardArr(parameterList map[string]interface{}, extra string) (boards []Board, err error) {
-	queryString := "SELECT * FROM " + config.DBprefix + "boards "
+	queryString := "SELECT * FROM DBPREFIXboards "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
 	if numKeys > 0 {
@@ -139,9 +111,8 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	queryString += fmt.Sprintf(" %s ORDER BY list_order", extra)
 
 	rows, err := querySQL(queryString, parameterValues...)
-	defer closeHandle(rows)
+	defer rows.Close()
 	if err != nil {
-		handleError(0, "error getting board list: %s", customError(err))
 		return
 	}
 
@@ -175,7 +146,6 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 			&board.RequireFile,
 			&board.EnableCatalog,
 		); err != nil {
-			handleError(0, customError(err))
 			return
 		}
 		boards = append(boards, *board)
@@ -183,12 +153,12 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	return
 }
 
-func getBoardFromID(id int) (*Board, error) {
+/* func getBoardFromID(id int) (*Board, error) {
 	board := new(Board)
 	err := queryRowSQL("SELECT list_order,dir,type,upload_type,title,subtitle,description,section,"+
 		"max_file_size,max_pages,default_style,locked,created_on,anonymous,forced_anon,max_age,"+
 		"autosage_after,no_images_after,max_message_length,embeds_allowed,redirect_to_thread,require_file,"+
-		"enable_catalog FROM "+config.DBprefix+"boards WHERE id = ?",
+		"enable_catalog FROM DBPREFIXboards WHERE id = ?",
 		[]interface{}{id},
 		[]interface{}{
 			&board.ListOrder, &board.Dir, &board.Type, &board.UploadType, &board.Title,
@@ -201,11 +171,11 @@ func getBoardFromID(id int) (*Board, error) {
 	)
 	board.ID = id
 	return board, err
-}
+} */
 
 // if parameterList is nil, ignore it and treat extra like a whole SQL query
 func getPostArr(parameterList map[string]interface{}, extra string) (posts []Post, err error) {
-	queryString := "SELECT * FROM " + config.DBprefix + "posts "
+	queryString := "SELECT * FROM DBPREFIXposts "
 	numKeys := len(parameterList)
 	var parameterValues []interface{}
 	if numKeys > 0 {
@@ -222,11 +192,10 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 		queryString = queryString[:len(queryString)-4]
 	}
 
-	queryString += " " + extra // " ORDER BY `order`"
+	queryString += " " + extra
 	rows, err := querySQL(queryString, parameterValues...)
-	defer closeHandle(rows)
+	defer rows.Close()
 	if err != nil {
-		handleError(1, customError(err))
 		return
 	}
 
@@ -241,7 +210,6 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 			&post.ImageH, &post.ThumbW, &post.ThumbH, &post.IP, &post.Capcode, &post.Timestamp,
 			&post.Autosage, &post.DeletedTimestamp, &post.Bumped, &post.Stickied, &post.Locked, &post.Reviewed,
 		); err != nil {
-			handleError(0, customError(err))
 			return
 		}
 		posts = append(posts, post)
@@ -251,20 +219,20 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 
 // TODO: replace where with a map[string]interface{} like getBoardsArr()
 func getSectionArr(where string) (sections []BoardSection, err error) {
-	if where == "" {
-		where = "1 = 1"
+	if where != "" {
+		where = "WHERE " + where
 	}
-	rows, err := querySQL("SELECT * FROM " + config.DBprefix + "sections WHERE " + where + " ORDER BY list_order")
-	defer closeHandle(rows)
+	rows, err := querySQL("SELECT * FROM DBPREFIXsections " + where + " ORDER BY list_order")
+	defer rows.Close()
 	if err != nil {
-		handleError(0, err.Error())
+		gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
 		return
 	}
 
 	for rows.Next() {
 		var section BoardSection
 		if err = rows.Scan(&section.ID, &section.ListOrder, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
-			handleError(1, customError(err))
+			gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
 			return
 		}
 		sections = append(sections, section)
@@ -283,12 +251,16 @@ func getCountryCode(ip string) (string, error) {
 	return "", nil
 }
 
-func generateSalt() string {
-	salt := make([]byte, 3)
-	salt[0] = chars[rand.Intn(86)]
-	salt[1] = chars[rand.Intn(86)]
-	salt[2] = chars[rand.Intn(86)]
-	return string(salt)
+func randomString(length int) string {
+	var str string
+	for i := 0; i < length; i++ {
+		num := rand.Intn(127)
+		if num < 32 {
+			num += 32
+		}
+		str += string(num)
+	}
+	return str
 }
 
 func getFileExtension(filename string) (extension string) {
@@ -309,29 +281,6 @@ func getFormattedFilesize(size float64) string {
 		return fmt.Sprintf("%fMB", size/1024.0/1024.0)
 	}
 	return fmt.Sprintf("%0.2fGB", size/1024.0/1024.0/1024.0)
-}
-
-// returns the filename, line number, and function where getMetaInfo() is called
-// stackOffset increases/decreases which item on the stack is referenced.
-//	see documentation for runtime.Caller() for more info
-func getMetaInfo(stackOffset int) (string, int, string) {
-	pc, file, line, _ := runtime.Caller(1 + stackOffset)
-	return file, line, runtime.FuncForPC(pc).Name()
-}
-
-func customError(err error) string {
-	if err != nil {
-		file, line, _ := getMetaInfo(2)
-		return fmt.Sprintf("[ERROR] %s:%d: %s\n", file, line, err.Error())
-	}
-	return ""
-}
-
-func handleError(verbosity int, format string, a ...interface{}) string {
-	out := fmt.Sprintf(format, a...)
-	println(verbosity, out)
-	errorLog.Print(out)
-	return out
 }
 
 func humanReadableTime(t time.Time) string {
@@ -391,27 +340,13 @@ func paginate(interfaceLength int, interf []interface{}) [][]interface{} {
 	return paginatedInterfaces
 }
 
-func printf(v int, format string, a ...interface{}) {
-	if config.Verbosity >= v {
-		fmt.Printf(format, a...)
-	}
-}
-
-func println(v int, a ...interface{}) {
-	if config.Verbosity >= v {
-		fmt.Println(a...)
-	}
-}
-
 func resetBoardSectionArrays() {
 	// run when the board list needs to be changed (board/section is added, deleted, etc)
 	allBoards = nil
 	allSections = nil
 
 	allBoardsArr, _ := getBoardArr(nil, "")
-	for _, b := range allBoardsArr {
-		allBoards = append(allBoards, b)
-	}
+	allBoards = append(allBoards, allBoardsArr...)
 
 	allSectionsArr, _ := getSectionArr("")
 	allSections = append(allSections, allSectionsArr...)
@@ -426,31 +361,13 @@ func searchStrings(item string, arr []string, permissive bool) int {
 	return -1
 }
 
-func bToI(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func bToA(b bool) string {
-	if b {
-		return "1"
-	}
-	return "0"
-}
-
 // Checks the validity of the Akismet API key given in the config file.
 func checkAkismetAPIKey(key string) error {
 	if key == "" {
-		return fmt.Errorf("Blank key given, Akismet spam checking won't be used.")
+		return errors.New("blank key given, Akismet spam checking won't be used")
 	}
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.SiteDomain}})
-	defer func() {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
-	}()
+	defer resp.Body.Close()
 	if err != nil {
 		return err
 	}
@@ -462,7 +379,8 @@ func checkAkismetAPIKey(key string) error {
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
 		errmsg := "Akismet API key is invalid, Akismet spam protection will be disabled."
-		return fmt.Errorf(errmsg)
+		gclog.Print(lErrorLog, errmsg)
+		return errors.New(errmsg)
 	}
 	return nil
 }
@@ -479,27 +397,23 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		req, err := http.NewRequest("POST", "https://"+config.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(data.Encode()))
 		if err != nil {
-			handleError(1, err.Error())
+			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"
 		}
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
-		defer func() {
-			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
-			}
-		}()
+		defer resp.Body.Close()
 		if err != nil {
-			handleError(1, err.Error())
+			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			handleError(1, err.Error())
+			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"
 		}
-		errorLog.Print("Response from Akismet: " + string(body))
+		gclog.Print(lErrorLog, "Response from Akismet: ", string(body))
 
 		if string(body) == "true" {
 			if proTip, ok := resp.Header["X-akismet-pro-tip"]; ok && proTip[0] == "discard" {
@@ -515,15 +429,10 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 	return "other_failure"
 }
 
-func marshalJSON(tag string, data interface{}, indent bool) (string, error) {
+func marshalJSON(data interface{}, indent bool) (string, error) {
 	var jsonBytes []byte
 	var err error
 
-	if tag != "" {
-		data = map[string]interface{}{
-			tag: data,
-		}
-	}
 	if indent {
 		jsonBytes, err = json.MarshalIndent(data, "", "	")
 	} else {
@@ -534,11 +443,6 @@ func marshalJSON(tag string, data interface{}, indent bool) (string, error) {
 		jsonBytes, _ = json.Marshal(map[string]string{"error": err.Error()})
 	}
 	return string(jsonBytes), err
-}
-
-func jsonError(err string) string {
-	errJSON, _ := marshalJSON("error", err, false)
-	return errJSON
 }
 
 func limitArraySize(arr []string, maxSize int) []string {
@@ -552,31 +456,11 @@ func numReplies(boardid, threadid int) int {
 	var num int
 
 	if err := queryRowSQL(
-		"SELECT COUNT(*) FROM "+config.DBprefix+"posts WHERE boardid = ? AND parentid = ?",
+		"SELECT COUNT(*) FROM DBPREFIXposts WHERE boardid = ? AND parentid = ?",
 		[]interface{}{boardid, threadid}, []interface{}{&num}); err != nil {
 		return 0
 	}
 	return num
-}
-
-func ipMatch(newIP, existingIP string) bool {
-	if newIP == existingIP {
-		// both are single IPs and are the same
-		return true
-	}
-	wildcardIndex := strings.Index(existingIP, "*")
-	if wildcardIndex < 0 {
-		// single (or invalid) and they don't match
-		return false
-	}
-	ipRegexStr := existingIP[0:wildcardIndex]
-	ipRegexStr = strings.Replace(ipRegexStr, ".", "\\.", -1) + ".*"
-	ipRegex, err := regexp.Compile(ipRegexStr)
-	if err != nil {
-		// this shouldn't happen unless you enter an invalid IP in the db
-		return false
-	}
-	return ipRegex.MatchString(newIP)
 }
 
 // based on TinyBoard's parse_time function
@@ -620,4 +504,9 @@ func parseDurationString(str string) (time.Duration, error) {
 		expire += seconds
 	}
 	return time.ParseDuration(strconv.Itoa(expire) + "s")
+}
+
+func timezone() int {
+	_, offset := time.Now().Zone()
+	return offset / 60 / 60
 }

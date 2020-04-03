@@ -35,59 +35,67 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 		// the requested path isn't a file or directory, 404
 		serveNotFound(writer, request)
 		return
-	} else {
-		//the file exists, or there is a folder here
-		if results.IsDir() {
-			//check to see if one of the specified index pages exists
-			for _, value := range config.FirstPage {
-				newPath := path.Join(filePath, value)
-				_, err := os.Stat(newPath)
-				if err == nil {
-					filePath = newPath
-					break
-				}
-			}
-		} else {
-			//the file exists, and is not a folder
-			extension := strings.ToLower(getFileExtension(request.URL.Path))
-			switch extension {
-			case "png":
-				writer.Header().Add("Content-Type", "image/png")
-				writer.Header().Add("Cache-Control", "max-age=86400")
-			case "gif":
-				writer.Header().Add("Content-Type", "image/gif")
-				writer.Header().Add("Cache-Control", "max-age=86400")
-			case "jpg":
-				fallthrough
-			case "jpeg":
-				writer.Header().Add("Content-Type", "image/jpeg")
-				writer.Header().Add("Cache-Control", "max-age=86400")
-			case "css":
-				writer.Header().Add("Content-Type", "text/css")
-				writer.Header().Add("Cache-Control", "max-age=43200")
-			case "js":
-				writer.Header().Add("Content-Type", "text/javascript")
-				writer.Header().Add("Cache-Control", "max-age=43200")
-			case "json":
-				writer.Header().Add("Content-Type", "application/json")
-				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-			case "webm":
-				writer.Header().Add("Content-Type", "video/webm")
-				writer.Header().Add("Cache-Control", "max-age=86400")
-			case "htm":
-				fallthrough
-			case "html":
-				writer.Header().Add("Content-Type", "text/html")
-				writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-			}
-			accessLog.Print("Success: 200 from " + getRealIP(request) + " @ " + request.URL.Path)
-		}
 	}
+
+	//the file exists, or there is a folder here
+	var extension string
+	if results.IsDir() {
+		//check to see if one of the specified index pages exists
+		var found bool
+		for _, value := range config.FirstPage {
+			newPath := path.Join(filePath, value)
+			_, err := os.Stat(newPath)
+			if err == nil {
+				filePath = newPath
+				found = true
+				break
+			}
+		}
+		if !found {
+			serveNotFound(writer, request)
+			return
+		}
+	} else {
+		//the file exists, and is not a folder
+		extension = strings.ToLower(getFileExtension(request.URL.Path))
+		switch extension {
+		case "png":
+			writer.Header().Add("Content-Type", "image/png")
+			writer.Header().Add("Cache-Control", "max-age=86400")
+		case "gif":
+			writer.Header().Add("Content-Type", "image/gif")
+			writer.Header().Add("Cache-Control", "max-age=86400")
+		case "jpg":
+			fallthrough
+		case "jpeg":
+			writer.Header().Add("Content-Type", "image/jpeg")
+			writer.Header().Add("Cache-Control", "max-age=86400")
+		case "css":
+			writer.Header().Add("Content-Type", "text/css")
+			writer.Header().Add("Cache-Control", "max-age=43200")
+		case "js":
+			writer.Header().Add("Content-Type", "text/javascript")
+			writer.Header().Add("Cache-Control", "max-age=43200")
+		case "json":
+			writer.Header().Add("Content-Type", "application/json")
+			writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+		case "webm":
+			writer.Header().Add("Content-Type", "video/webm")
+			writer.Header().Add("Cache-Control", "max-age=86400")
+		case "htm":
+			fallthrough
+		case "html":
+			writer.Header().Add("Content-Type", "text/html")
+			writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
+		}
+		gclog.Printf(lAccessLog, "Success: 200 from %s @ %s", getRealIP(request), request.URL.Path)
+	}
+
 	// serve the index page
 	writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	fileBytes, _ = ioutil.ReadFile(filePath)
 	writer.Header().Add("Cache-Control", "max-age=86400")
-	_, _ = writer.Write(fileBytes)
+	writer.Write(fileBytes)
 }
 
 func serveNotFound(writer http.ResponseWriter, request *http.Request) {
@@ -95,21 +103,21 @@ func serveNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.WriteHeader(404)
 	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
 	if err != nil {
-		_, _ = writer.Write([]byte("Requested page not found, and 404 error page not found"))
+		writer.Write([]byte("Requested page not found, and /error/404.html not found"))
 	} else {
-		_, _ = writer.Write(errorPage)
+		minifyWriter(writer, errorPage, "text/html")
 	}
-	errorLog.Print("Error: 404 Not Found from " + getRealIP(request) + " @ " + request.URL.Path)
+	gclog.Printf(lAccessLog, "Error: 404 Not Found from %s @ %s", getRealIP(request), request.URL.Path)
 }
 
 func serveErrorPage(writer http.ResponseWriter, err string) {
-	errorpage_tmpl.Execute(writer, map[string]interface{}{
+	minifyTemplate(errorpageTmpl, map[string]interface{}{
 		"config":     config,
 		"ErrorTitle": "Error :c",
 		// "ErrorImage":  "/error/lol 404.gif",
 		"ErrorHeader": "Error",
 		"ErrorText":   err,
-	})
+	}, writer, "text/html")
 }
 
 func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -126,8 +134,8 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 func initServer() {
 	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
 	if err != nil {
-		handleError(0, "Failed listening on %s:%d: %s", config.ListenIP, config.Port, customError(err))
-		os.Exit(2)
+		gclog.Printf(lErrorLog|lStdLog|lFatal,
+			"Failed listening on %s:%d: %s", config.ListenIP, config.Port, err.Error())
 	}
 	server = new(GochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
@@ -135,7 +143,6 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	if err = checkAkismetAPIKey(config.AkismetAPIKey); err != nil {
 		config.AkismetAPIKey = ""
-		// handleError(0, err.Error())
 	}
 
 	// Compile regex for checking referrers.
@@ -160,8 +167,8 @@ func initServer() {
 	}
 
 	if err != nil {
-		handleError(0, customError(err))
-		os.Exit(2)
+		gclog.Print(lErrorLog|lStdLog|lFatal,
+			"Error initializing server: ", err.Error())
 	}
 }
 
@@ -181,6 +188,9 @@ func getRealIP(request *http.Request) string {
 }
 
 func validReferrer(request *http.Request) bool {
+	if config.DebugMode {
+		return true
+	}
 	return referrerRegex.MatchString(request.Referer())
 }
 
@@ -226,13 +236,14 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			var post Post
 			post.ID, _ = strconv.Atoi(postsArr[0])
 			post.BoardID, _ = strconv.Atoi(boardid)
-			if err = queryRowSQL("SELECT parentid,name,tripcode,email,subject,password,message_raw FROM "+config.DBprefix+"posts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
+			if err = queryRowSQL("SELECT parentid,name,tripcode,email,subject,password,message_raw FROM DBPREFIXposts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
 				[]interface{}{post.ID, post.BoardID, nilTimestamp},
 				[]interface{}{
 					&post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject,
 					&post.Password, &post.MessageText},
 			); err != nil {
-				serveErrorPage(writer, handleError(0, err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Error getting post information: ", err.Error()))
 				return
 			}
 
@@ -241,36 +252,39 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				return
 			}
 
-			if err = post_edit_tmpl.Execute(writer, map[string]interface{}{
+			if err = postEditTmpl.Execute(writer, map[string]interface{}{
 				"config":   config,
 				"post":     post,
 				"referrer": request.Referer(),
 			}); err != nil {
-				serveErrorPage(writer, handleError(0, err.Error()))
+				serveErrorPage(writer, gclog.Print(lErrorLog,
+					"Error executing edit post template: ", err.Error()))
 				return
 			}
-
 		}
 	}
 	if doEdit == "1" {
 		var postPassword string
-
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
 			return
 		}
 		boardid, err := strconv.Atoi(request.FormValue("boardid"))
 		if err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
 			return
 		}
 
-		if err = queryRowSQL("SELECT password FROM "+config.DBprefix+"posts WHERE id = ? AND boardid = ?",
+		if err = queryRowSQL("SELECT password FROM DBPREFIXposts WHERE id = ? AND boardid = ?",
 			[]interface{}{postid, boardid},
 			[]interface{}{&postPassword},
 		); err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
+			return
 		}
 
 		rank := getStaffRank(request)
@@ -279,18 +293,19 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		board, err := getBoardFromID(boardid)
-		if err != nil {
-			serveErrorPage(writer, handleError(0, "Invalid form data: %s", err.Error()))
+		var board Board
+		if err = board.PopulateData(boardid, ""); err != nil {
+			serveErrorPage(writer, gclog.Print(lErrorLog,
+				"Invalid form data: ", err.Error()))
 			return
 		}
 
-		if _, err = execSQL("UPDATE "+config.DBprefix+"posts SET "+
+		if _, err = execSQL("UPDATE DBPREFIXposts SET "+
 			"email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ? AND boardid = ?",
 			request.FormValue("editemail"), request.FormValue("editsubject"), formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg"),
 			postid, boardid,
 		); err != nil {
-			serveErrorPage(writer, handleError(0, "editing post: %s", err.Error()))
+			serveErrorPage(writer, gclog.Print(lErrorLog, "Unable to edit post: ", err.Error()))
 			return
 		}
 
@@ -324,7 +339,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			post.BoardID, _ = strconv.Atoi(boardid)
 
 			if err = queryRowSQL(
-				"SELECT parentid, filename,password FROM "+config.DBprefix+"posts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
+				"SELECT parentid, filename,password FROM DBPREFIXposts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
 				[]interface{}{post.ID, post.BoardID, nilTimestamp},
 				[]interface{}{&post.ParentID, &post.Filename, &post.Password},
 			); err == sql.ErrNoRows {
@@ -333,16 +348,16 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n", post.ID)
 				continue
 			} else if err != nil {
-				serveErrorPage(writer, handleError(1, err.Error()+"\n"))
+				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
 				return
 			}
 
 			if err = queryRowSQL(
-				"SELECT id FROM "+config.DBprefix+"boards WHERE dir = ?",
+				"SELECT id FROM DBPREFIXboards WHERE dir = ?",
 				[]interface{}{board},
 				[]interface{}{&post.BoardID},
 			); err != nil {
-				serveErrorPage(writer, err.Error())
+				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
 				return
 			}
 
@@ -356,6 +371,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				if fileName != "" && fileName != "deleted" {
 					fileName = fileName[:strings.Index(fileName, ".")]
 					fileType = fileName[strings.Index(fileName, ".")+1:]
+					panic(post.Filename + "/" + fileName + "/" + fileType)
 					if fileType == "gif" || fileType == "webm" {
 						thumbType = "jpg"
 					}
@@ -365,7 +381,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
 
 					if _, err = execSQL(
-						"UPDATE "+config.DBprefix+"posts SET filename = deleted WHERE id = ? AND boardid = ?",
+						"UPDATE DBPREFIXposts SET filename = deleted WHERE id = ? AND boardid = ?",
 						post.ID, post.BoardID,
 					); err != nil {
 						serveErrorPage(writer, err.Error())
@@ -383,7 +399,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			} else {
 				// delete the post
 				if _, err = execSQL(
-					"UPDATE "+config.DBprefix+"posts SET deleted_timestamp = ? WHERE id = ?",
+					"UPDATE DBPREFIXposts SET deleted_timestamp = ? WHERE id = ?",
 					getSQLDateTime(), post.ID,
 				); err != nil {
 					serveErrorPage(writer, err.Error())
@@ -391,12 +407,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				if post.ParentID == 0 {
 					os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
-					_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "") // getBoardArr("`id` = " + strconv.Itoa(boardid))
+					_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
 					buildBoardPages(&_board[0])
 				}
 
 				// if the deleted post is actually a thread, delete its posts
-				if _, err = execSQL("UPDATE "+config.DBprefix+"posts SET deleted_timestamp = ? WHERE parentID = ?",
+				if _, err = execSQL("UPDATE DBPREFIXposts SET deleted_timestamp = ? WHERE parentID = ?",
 					getSQLDateTime(), post.ID,
 				); err != nil {
 					serveErrorPage(writer, err.Error())
@@ -406,7 +422,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				// delete the file
 				var deletedFilename string
 				if err = queryRowSQL(
-					"SELECT filename FROM "+config.DBprefix+"posts WHERE id = ? AND filename != ''",
+					"SELECT filename FROM DBPREFIXposts WHERE id = ? AND filename != ''",
 					[]interface{}{post.ID},
 					[]interface{}{&deletedFilename},
 				); err == nil {
@@ -416,7 +432,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 
 				if err = queryRowSQL(
-					"SELECT filename FROM "+config.DBprefix+"posts WHERE parentID = ? AND filename != ''",
+					"SELECT filename FROM DBPREFIXposts WHERE parentID = ? AND filename != ''",
 					[]interface{}{post.ID},
 					[]interface{}{&deletedFilename},
 				); err == nil {

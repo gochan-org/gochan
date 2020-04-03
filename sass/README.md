@@ -4,6 +4,6 @@ If you want, you can install [Sass](https://sass-lang.com/install) to streamline
 To use sass, run `sass --style expanded --no-source-map  sass:html/css`.
 To have sass watch the input directory for changes as you edit and save the files, run `sass --style expanded --no-source-map --watch sass:html/css`
 
-In either case, `--style expanded` is optional. Run `sass -h` for more info about it.
+In either case, `--style expanded` is optional. If you replace expanded with compressed, it will minify the generated CSS files. Run `sass -h` for more info about it.
 
 If you are upgading from gochan 2.2, delete your html/css directory unless you have made themes that you want to keep. Then rebuild the pages. (/manage?action=rebuildall)

@@ -9,7 +9,7 @@
 }
 
 body {
-	background-color: #363942;
+	background-color: $bgcol;
 	background-image: url(res/pipes_bg.png);
 	color: #d8d0b9;
 	font: $font;
@@ -39,7 +39,7 @@ div#footer, div#footer * {
 }
 
 div#topbar {
-	background-color: $bgcol;
+	background-color: $topbarcol;
 	@include box-shadow(0px 2px 2px 3px $shadowcol);
 	z-index: 9001;
 

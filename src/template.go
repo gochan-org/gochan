@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -42,14 +43,14 @@ var funcMap = template.FuncMap{
 	},
 
 	// Array functions
-	"getSlice": func(arr []interface{}, start, end int) []interface{} {
-		slice := arr[start:end]
-		defer func() {
-			if r := recover(); r != nil {
-				slice = make([]interface{}, 1)
-			}
-		}()
-		return slice
+	"getSlice": func(arr []interface{}, start, length int) []interface{} {
+		if start < 0 {
+			start = 0
+		}
+		if length > len(arr) {
+			length = len(arr)
+		}
+		return arr[start:length]
 	},
 	"len": func(arr []interface{}) int {
 		return len(arr)
@@ -61,10 +62,10 @@ var funcMap = template.FuncMap{
 	"escapeString": func(a string) string {
 		return html.EscapeString(a)
 	},
-	"formatFilesize": func(size_int int) string {
-		size := float32(size_int)
+	"formatFilesize": func(sizeInt int) string {
+		size := float32(sizeInt)
 		if size < 1000 {
-			return fmt.Sprintf("%d B", size_int)
+			return fmt.Sprintf("%d B", sizeInt)
 		} else if size <= 100000 {
 			return fmt.Sprintf("%0.1f KB", size/1024)
 		} else if size <= 100000000 {
@@ -73,14 +74,6 @@ var funcMap = template.FuncMap{
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
 	"formatTimestamp": humanReadableTime,
-	"printf": func(v int, format string, a ...interface{}) string {
-		printf(v, format, a...)
-		return ""
-	},
-	"println": func(v int, i ...interface{}) string {
-		println(v, i...)
-		return ""
-	},
 	"stringAppend": func(strings ...string) string {
 		var appended string
 		for _, str := range strings {
@@ -88,12 +81,12 @@ var funcMap = template.FuncMap{
 		}
 		return appended
 	},
-	"truncateMessage": func(msg string, limit int, max_lines int) string {
+	"truncateMessage": func(msg string, limit int, maxLines int) string {
 		var truncated bool
 		split := strings.SplitN(msg, "<br />", -1)
 
-		if len(split) > max_lines {
-			split = split[:max_lines]
+		if len(split) > maxLines {
+			split = split[:maxLines]
 			msg = strings.Join(split, "<br />")
 			truncated = true
 		}
@@ -143,8 +136,8 @@ var funcMap = template.FuncMap{
 	"getCatalogThumbnail": func(img string) string {
 		return getThumbnailPath("catalog", img)
 	},
-	"getThreadID": func(post_i interface{}) (thread int) {
-		post, ok := post_i.(Post)
+	"getThreadID": func(postInterface interface{}) (thread int) {
+		post, ok := postInterface.(Post)
 		if !ok {
 			thread = 0
 		} else if post.ParentID == 0 {
@@ -154,20 +147,20 @@ var funcMap = template.FuncMap{
 		}
 		return
 	},
-	"getPostURL": func(post_i interface{}, typeOf string, withDomain bool) (postURL string) {
+	"getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
 		if withDomain {
 			postURL = config.SiteDomain
 		}
 		postURL += config.SiteWebfolder
 
 		if typeOf == "recent" {
-			post, ok := post_i.(*RecentPost)
+			post, ok := postInterface.(*RecentPost)
 			if !ok {
 				return
 			}
 			postURL = post.GetURL(withDomain)
 		} else {
-			post, ok := post_i.(*Post)
+			post, ok := postInterface.(*Post)
 			if !ok {
 				return
 			}
@@ -183,10 +176,15 @@ var funcMap = template.FuncMap{
 		var uploadType string
 		switch extension {
 		case "":
+			fallthrough
 		case "deleted":
 			uploadType = ""
 		case "webm":
+			fallthrough
 		case "jpg":
+			fallthrough
+		case "jpeg":
+			fallthrough
 		case "gif":
 			uploadType = "jpg"
 		case "png":
@@ -212,8 +210,8 @@ var funcMap = template.FuncMap{
 	"isBanned":   isBanned,
 	"numReplies": numReplies,
 	"getBoardDir": func(id int) string {
-		board, err := getBoardFromID(id)
-		if err != nil {
+		var board Board
+		if err := board.PopulateData(id, ""); err != nil {
 			return ""
 		}
 		return board.Dir
@@ -290,29 +288,31 @@ var funcMap = template.FuncMap{
 }
 
 var (
-	banpage_tmpl        *template.Template
-	captcha_tmpl        *template.Template
-	catalog_tmpl        *template.Template
-	errorpage_tmpl      *template.Template
-	front_page_tmpl     *template.Template
-	img_boardpage_tmpl  *template.Template
-	img_threadpage_tmpl *template.Template
-	img_post_form_tmpl  *template.Template
-	manage_bans_tmpl    *template.Template
-	manage_boards_tmpl  *template.Template
-	manage_config_tmpl  *template.Template
-	manage_header_tmpl  *template.Template
-	post_edit_tmpl      *template.Template
+	banpageTmpl      *template.Template
+	captchaTmpl      *template.Template
+	catalogTmpl      *template.Template
+	errorpageTmpl    *template.Template
+	frontPageTmpl    *template.Template
+	boardpageTmpl    *template.Template
+	threadpageTmpl   *template.Template
+	postEditTmpl     *template.Template
+	manageBansTmpl   *template.Template
+	manageBoardsTmpl *template.Template
+	manageConfigTmpl *template.Template
+	manageHeaderTmpl *template.Template
+	jsTmpl           *template.Template
 )
 
 func loadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
 	for i, file := range files {
 		templates = append(templates, file)
-		if _, err := os.Stat(config.TemplateDir + "/override/" + file); !os.IsNotExist(err) {
-			files[i] = config.TemplateDir + "/override/" + files[i]
+		tmplPath := path.Join(config.TemplateDir, "override", file)
+
+		if _, err := os.Stat(tmplPath); !os.IsNotExist(err) {
+			files[i] = tmplPath
 		} else {
-			files[i] = config.TemplateDir + "/" + files[i]
+			files[i] = path.Join(config.TemplateDir, file)
 		}
 	}
 
@@ -332,75 +332,81 @@ func initTemplates(which ...string) error {
 	resetBoardSectionArrays()
 	for _, t := range which {
 		if buildAll || t == "banpage" {
-			banpage_tmpl, err = loadTemplate("banpage.html", "global_footer.html")
+			banpageTmpl, err = loadTemplate("banpage.html", "page_footer.html")
 			if err != nil {
 				return templateError("banpage.html", err)
 			}
 		}
 		if buildAll || t == "captcha" {
-			captcha_tmpl, err = loadTemplate("captcha.html")
+			captchaTmpl, err = loadTemplate("captcha.html")
 			if err != nil {
 				return templateError("captcha.html", err)
 			}
 		}
 		if buildAll || t == "catalog" {
-			catalog_tmpl, err = loadTemplate("catalog.html", "img_header.html", "global_footer.html")
+			catalogTmpl, err = loadTemplate("catalog.html", "page_header.html", "page_footer.html")
 			if err != nil {
 				return templateError("catalog.html", err)
 			}
 		}
 		if buildAll || t == "error" {
-			errorpage_tmpl, err = loadTemplate("error.html")
+			errorpageTmpl, err = loadTemplate("error.html")
 			if err != nil {
 				return templateError("error.html", err)
 			}
 		}
 		if buildAll || t == "front" {
-			front_page_tmpl, err = loadTemplate("front.html", "front_intro.html", "img_header.html", "global_footer.html")
+			frontPageTmpl, err = loadTemplate("front.html", "front_intro.html", "page_header.html", "page_footer.html")
 			if err != nil {
 				return templateError("front.html", err)
 			}
 		}
 		if buildAll || t == "boardpage" {
-			img_boardpage_tmpl, err = loadTemplate("img_boardpage.html", "img_header.html", "postbox.html", "global_footer.html")
+			boardpageTmpl, err = loadTemplate("boardpage.html", "page_header.html", "postbox.html", "page_footer.html")
 			if err != nil {
-				return templateError("img_boardpage.html", err)
+				return templateError("boardpage.html", err)
 			}
 		}
 		if buildAll || t == "threadpage" {
-			img_threadpage_tmpl, err = loadTemplate("img_threadpage.html", "img_header.html", "postbox.html", "global_footer.html")
+			threadpageTmpl, err = loadTemplate("threadpage.html", "page_header.html", "postbox.html", "page_footer.html")
 			if err != nil {
-				return templateError("img_threadpage.html", err)
+				return templateError("threadpage.html", err)
 			}
 		}
 		if buildAll || t == "postedit" {
-			post_edit_tmpl, err = loadTemplate("post_edit.html", "img_header.html", "global_footer.html")
+			postEditTmpl, err = loadTemplate("post_edit.html", "page_header.html", "page_footer.html")
 			if err != nil {
-				return templateError("img_threadpage.html", err)
+				return templateError("threadpage.html", err)
 			}
 		}
 		if buildAll || t == "managebans" {
-			manage_bans_tmpl, err = loadTemplate("manage_bans.html")
+			manageBansTmpl, err = loadTemplate("manage_bans.html")
 			if err != nil {
 				return templateError("manage_bans.html", err)
 			}
 		}
 		if buildAll || t == "manageboards" {
-			manage_boards_tmpl, err = loadTemplate("manage_boards.html")
+			manageBoardsTmpl, err = loadTemplate("manage_boards.html")
 			if err != nil {
 				return templateError("manage_boards.html", err)
 			}
 		}
 		if buildAll || t == "manageconfig" {
-			manage_config_tmpl, err = loadTemplate("manage_config.html")
+			manageConfigTmpl, err = loadTemplate("manage_config.html")
 			if err != nil {
 				return templateError("manage_config.html", err)
 			}
 		}
 		if buildAll || t == "manageheader" {
-			manage_header_tmpl, err = loadTemplate("manage_header.html")
+			manageHeaderTmpl, err = loadTemplate("manage_header.html")
 			if err != nil {
 				return templateError("manage_header.html", err)
+			}
+		}
+		if buildAll || t == "js" {
+			jsTmpl, err = loadTemplate("consts.js")
+			if err != nil {
+				return templateError("consts.js", err)
 			}
 		}
 	}

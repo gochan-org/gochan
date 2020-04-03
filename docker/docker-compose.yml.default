@@ -1,0 +1,17 @@
+version: '3.2'
+services:
+  gochan:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "80"
+    volumes:
+      - ../:/opt/gochan # note: this doesn't work too well in MacOS. 
+    environment:
+      - DBTYPE=mysql # change this to 'postgresql' if needed
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=gochan
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=root

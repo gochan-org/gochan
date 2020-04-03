@@ -1,0 +1,87 @@
+{{template "page_header.html" .}}
+<header>
+	<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
+	<span id="board-subtitle">{{$.board.Subtitle}}</span>
+</header><hr />
+<div id="right-sidelinks">
+	<a href="{{.config.SiteWebfolder}}{{.board.Dir}}/catalog.html">Board catalog</a><br />
+</div>
+{{- template "postbox.html" .}}
+<hr />
+<div id="content">
+	<form action="/util" method="POST" id="main-form">
+	{{- range $t, $thread := .threads}}{{$op := $thread.OP}}
+		<div class="thread">
+			<div class="op-post" id="op{{$op.ID}}">
+			{{- if ne $op.Filename "" -}}
+				{{- if ne $op.Filename "deleted"}}
+					<div class="file-info">File: <a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$op.Filename}}" target="_blank">{{$op.Filename}}</a> - ({{formatFilesize $op.Filesize}} , {{$op.ImageW}}x{{$op.ImageH}}, {{$op.FilenameOriginal}})</div>
+					<a class="upload-container" href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$op.Filename}}"><img src="{{$.config.SiteWebfolder}}{{$.board.Dir}}/thumb/{{getThreadThumbnail $op.Filename}}" alt="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$op.Filename}}" width="{{$op.ThumbW}}" height="{{$op.ThumbH}}" class="upload" /></a>
+				{{else}}
+					<div class="file-deleted-box" style="text-align:center;">File removed</div>
+				{{end}}
+			{{end}}
+			<input type="checkbox" id="check{{$op.ID}}" name="check{{$op.ID}}" /><label class="post-info" for="check{{$op.ID}}"> <span class="subject">{{$op.Subject}}</span> <span class="postername">{{if ne $op.Email ""}}<a href="mailto:{{$op.Email}}">{{end}}{{if ne $op.Name ""}}{{$op.Name}}{{else}}{{if eq $op.Tripcode ""}}{{$.board.Anonymous}}{{end}}{{end}}{{if ne $op.Email ""}}</a>{{end}}</span>{{if ne $op.Tripcode ""}}<span class="tripcode">!{{$op.Tripcode}}</span>{{end}} {{formatTimestamp $op.Timestamp}} </label><a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$op.ID}}.html#{{$op.ID}}">No.</a> <a href="javascript:quote({{$op.ID}})" class="backlink-click">{{$op.ID}}</a> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span> <span>[<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$op.ID}}.html">View</a>]</span></span><br />
+			<div class="post-text">{{truncateMessage $op.MessageHTML 2222 18}}</div>
+			{{- if gt $thread.NumReplies 3}}
+				<b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b>
+			{{end}}
+			</div>
+		{{- range $reply_num,$reply := $thread.BoardReplies}}
+			<div class="reply-container" id="replycontainer{{$reply.ID}}">
+				<a class="anchor" id="{{$reply.ID}}"></a>
+				<div class="reply" id="reply{{$reply.ID}}">
+					<input type="checkbox" id="check{{$reply.ID}}" name="check{{$reply.ID}}" /> <label class="post-info" for="check{{$reply.ID}}"> <span class="subject">{{$reply.Subject}}</span> <span class="postername">{{if ne $reply.Email ""}}<a href="mailto:{{$reply.Email}}">{{end}}{{if ne $reply.Name ""}}{{$reply.Name}}{{else}}{{if eq $reply.Tripcode ""}}{{$.board.Anonymous}}{{end}}{{end}}{{if ne $reply.Email ""}}</a>{{end}}</span>{{if ne $reply.Tripcode ""}}<span class="tripcode">!{{$reply.Tripcode}}</span>{{end}} {{formatTimestamp $reply.Timestamp}} </label><a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$op.ID}}.html#{{$reply.ID}}">No.</a> <a href="javascript:quote({{$reply.ID}})" class="backlink-click">{{$reply.ID}}</a> <span class="post-links"><span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
+					{{if ne $reply.Filename ""}}
+						{{if ne $reply.Filename "deleted" -}}
+							<span class="file-info">File: <a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$reply.Filename}}" target="_blank">{{$reply.Filename}}</a> - ({{formatFilesize $reply.Filesize}} , {{$reply.ImageW}}x{{$reply.ImageH}}, {{$reply.FilenameOriginal}})</span><br />
+							<a class="upload-container" href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$reply.Filename}}"><img src="{{$.config.SiteWebfolder}}{{$.board.Dir}}/thumb/{{getThreadThumbnail $reply.Filename}}" alt="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{$reply.Filename}}" width="{{$reply.ThumbW}}" height="{{$reply.ThumbH}}" class="upload" /></a>
+						{{else}}
+							<div class="file-deleted-box" style="text-align:center;">File removed</div>
+						{{end}}
+					{{end -}}
+					<div class="post-text">{{$reply.MessageHTML}}</div>
+				</div>
+			</div>
+		{{end -}}
+		</div><hr />
+	{{- end}}
+		<div id="right-bottom-content">
+			<div id="report-delbox">
+				<input type="hidden" name="board" value="{{.board.Dir}}" />
+				<input type="hidden" name="boardid" value="{{.board.ID}}" />
+				<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
+				Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" name="report_btn" value="Report" /><br />
+				Edit post <input type="submit" name="edit_btn" value="Edit" />
+			</div>
+		</div>
+	</form>
+	<div id="left-bottom-content">
+		<table id="pages">
+			<tr>
+				<td>{{if gt .board.CurrentPage 1}}
+					<form method="GET" action='{{.board.PagePath "prev"}}'>
+						<input type="submit" value="Previous" />
+					</form>
+				{{else}}Previous{{end}}</td>
+				<td>{{range $_,$i := makeLoop .board.NumPages 1}}
+					{{if eq $.board.CurrentPage $i}}
+						[<b>{{$i}}</b>]
+					{{else}}
+						[<a href="{{$.board.PagePath $i }}">{{$i}}</a>]
+					{{end}}
+				{{end}}</td>
+				<td>{{if lt .board.CurrentPage .board.NumPages}}
+					<form method="GET" action="{{.board.PagePath `next` }}">
+						<input type="submit" value="Next" />
+					</form>
+				{{else}}Next{{end}}</td>
+			</tr>
+		</table>
+		
+		<span id="boardmenu-bottom">
+			[{{range $i, $boardlink := $.boards}}{{if gt $i 0}}/{{end}} <a href="{{$boardlink.WebPath `` `boardPage`}}/">{{$boardlink.Dir}}</a> {{end}}]
+		</span>
+	</div>
+</div>
+{{template "page_footer.html" .}}

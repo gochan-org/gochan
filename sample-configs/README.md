@@ -1,0 +1,2 @@
+# Sample configuration files
+This directory contains sample configuration files that you can adapt to your setup and needs. From the beginning, I've tried to focus on compatibility and out of the box support, but as things get more complex, this has caused development to slow down, but gochan is still pretty easy to set up and most of it is fairly self explanatory.

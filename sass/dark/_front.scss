@@ -1,0 +1,20 @@
+@import 'colors';
+
+div.section-title-block {
+	background: $topbarbg;
+	border: 1px solid $topborder;
+	border-radius: 5px 5px 0px 0px;
+}
+
+div.front-intro {
+	border-radius: 0px!important;
+	border-width: 1px!important;
+}
+
+div.section-body {
+	border-width: 0px 1px 1px 1px;
+	border-style: solid;
+	border-color: #117743;
+	border-radius: 0px 0px 5px 5px;
+	background: #282A2E;
+}

@@ -13,11 +13,11 @@ type GochanVersion struct {
 	Extra    string
 }
 
-func ParseVersion(vStr string) GochanVersion {
+func ParseVersion(vStr string) *GochanVersion {
 	var v GochanVersion
 	fmt.Sscanf(vStr, "%d.%d.%d-%s", &v.Major, &v.Minor, &v.Revision, &v.Extra)
 	v.Normalize()
-	return v
+	return &v
 }
 
 func (v *GochanVersion) Normalize() bool {
@@ -36,7 +36,7 @@ func (v *GochanVersion) Normalize() bool {
 	return valid
 }
 
-func (v *GochanVersion) Compare(v2 GochanVersion) int {
+func (v *GochanVersion) Compare(v2 *GochanVersion) int {
 	v.Normalize()
 	v2.Normalize()
 	if v.Major > v2.Major {

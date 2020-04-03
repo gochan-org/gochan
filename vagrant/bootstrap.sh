@@ -24,33 +24,33 @@ if [ "$DBTYPE" == "mysql" ]; then
 	systemctl enable mysql
 	systemctl start mysql &
 	wait
+	if [ -d /lib/systemd ]; then
+		cp /vagrant/sample-configs/gochan-mysql.service /lib/systemd/system/gochan.service
+		systemctl daemon-reload
+		systemctl enable gochan.service
+	fi
 elif [ "$DBTYPE" == "postgresql" ]; then
 	# using PostgreSQL (mostly stable)
 	apt-get -y install postgresql postgresql-contrib sudo
 
-	# if [ -n "$FROMDOCKER" ]; then
-	# 	su -s /bin/sh postgres
-	# fi
-	if [ -n "$FROMDOCKER" ]; then
-		service postgresql start
-	else
-		systemctl start postgresql
-	fi
+	systemctl start postgresql
 	sudo -u postgres psql -f - <<- EOF
 	CREATE USER gochan PASSWORD 'gochan';
 	CREATE DATABASE gochan;
 	GRANT ALL PRIVILEGES ON DATABASE gochan TO gochan;
 	EOF
-	if [ -z "$FROMDOCKER" ]; then
-		echo "127.0.0.1:5432:gochan:gochan:gochan" > /home/vagrant/.pgpass
-		chown vagrant:vagrant /home/vagrant/.pgpass
-		chmod 0600 /home/vagrant/.pgpass
-		systemctl enable postgresql
-		systemctl start postgresql &
-	else
-		update-rc.d postgresql enable
-	fi
+
+	echo "127.0.0.1:5432:gochan:gochan:gochan" > /home/vagrant/.pgpass
+	chown vagrant:vagrant /home/vagrant/.pgpass
+	chmod 0600 /home/vagrant/.pgpass
+	systemctl enable postgresql
+	systemctl start postgresql &
 	wait
+	if [ -d /lib/systemd ]; then
+		cp /vagrant/sample-configs/gochan-postgresql.service /lib/systemd/system/gochan.service
+		systemctl daemon-reload
+		systemctl enable gochan.service
+	fi
 elif [ "$DBTYPE" == "sqlite3" ]; then
 	# using SQLite (mostly stable)
 	apt-get -y install sqlite3
@@ -63,13 +63,14 @@ else
 	exit 1
 fi
 
-apt-get -y install git subversion mercurial nginx ffmpeg
-if [ -z "$FROMDOCKER" ]; then
-	apt-get -y install golang-1.10
-fi
+apt-get -y install git subversion mercurial nginx ffmpeg golang-1.10
+mkdir -p /root/bin
+ln -s /usr/lib/go-1.10/bin/* /root/bin/
+export PATH=$PATH:/root/bin
+echo "export PATH=$PATH:/root/bin" >> /root/.bashrc
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
-ln -sf /vagrant/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
+ln -sf /vagrant/sample-configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
 ln -sf /etc/nginx/sites-available/gochan.nginx /etc/nginx/sites-enabled/
 
 # VirtualBox shared folders don't play nicely with sendfile.
@@ -83,48 +84,8 @@ systemctl enable nginx
 systemctl restart nginx &
 wait
 
-mkdir -p /vagrant/lib
-cd /vagrant
-export GOPATH=/vagrant/lib
-echo "export GOPATH=/vagrant/lib" >> /home/vagrant/.bashrc
-mkdir /home/vagrant/bin
-ln -s /usr/lib/go-1.10/bin/* /home/vagrant/bin/ 
-export PATH="$PATH:/home/vagrant/bin"
-echo 'export PATH="$$PATH:/home/vagrant/bin"'
-
-function changePerms {
-	chmod -R 755 $1 
-	chown -R vagrant:vagrant $1
-}
-
-cat << EOF >>/root/.bashrc
-export GOPATH=$GOPATH
-export DBTYPE=$DBTYPE
-EOF
-
-# a couple convenience shell scripts, since they're nice to have
-cat << EOF >/root/dbconnect.sh
-#!/usr/bin/env bash
-
-if [ "$DBTYPE" = "mysql" ] || [ -z "$DBTYPE" ]; then
-	mysql -stu gochan -D gochan -pgochan
-elif [ "$DBTYPE" = "postgresql" ]; then
-	psql -U gochan -h 127.0.0.1 gochan
-elif [ "$DBTYPE" = "sqlite3" ]; then
-	sqlite3 ~/gochan/gochan.db
-else
-	echo "DB type '$DBTYPE' not supported"
-fi
-EOF
-
-chmod +x /root/dbconnect.sh
-
-./build.sh dependencies
-./build.sh
-./build.sh install -s
-echo "Done installing"
-
-cp gochan.example.json /etc/gochan/gochan.json
+mkdir -p /etc/gochan
+cp /vagrant/sample-configs/gochan.example.json /etc/gochan/gochan.json
 
 sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
@@ -134,7 +95,6 @@ sed -i /etc/gochan/gochan.json \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/local/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
-	-e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/'
 
 if [ "$DBTYPE" = "postgresql" ]; then
@@ -147,12 +107,52 @@ elif [ "$DBTYPE" = "sqlite3" ]; then
 		-e 's/"DBhost": ".*"/"DBhost": "gochan.db"/'
 fi
 
+# a convenient script for connecting to the db, whichever type we're using
+cat << EOF >/home/vagrant/dbconnect.sh
+#!/usr/bin/env bash
+
+if [ "$DBTYPE" = "mysql" ] || [ -z "$DBTYPE" ]; then
+	mysql -stu gochan -D gochan -pgochan
+elif [ "$DBTYPE" = "postgresql" ]; then
+	psql -U gochan -h 127.0.0.1 gochan
+elif [ "$DBTYPE" = "sqlite3" ]; then
+	sqlite3 ~/gochan/gochan.db
+else
+	echo "DB type '$DBTYPE' not supported"
+fi
+EOF
+chmod +x /home/vagrant/dbconnect.sh
+
+cat <<EOF >>/home/vagrant/.bashrc
+export PATH=$PATH:/home/vagrant/bin
+export DBTYPE=$DBTYPE
+export GOPATH=/vagrant/lib
+EOF
+
+cat <<EOF >>/root.bashrc
+export GOPATH=/vagrant/lib
+EOF
+export GOPATH=/vagrant/lib
+
+ln -s /usr/lib/go-1.10/bin/* /usr/local/bin/
+cd /vagrant
+su - vagrant <<EOF
+mkdir -p /vagrant/lib
+source /home/vagrant/.bashrc
+export GOPATH=/vagrant/lib
+cd /vagrant
+make dependencies
+make
+EOF
+make install
+
 # if [ -d /lib/systemd ]; then
-# 	cp gochan.service /lib/systemd/system/gochan.service
-# 	systemctl daemon-reload
-# 	systemctl enable gochan.service
 # 	systemctl start gochan.service
 # fi
 
-echo "Server set up. You can access it from a browser at http://172.27.0.3/"
-echo "The first time gochan is run, it will create a simple /test/ board."
+cat - <<EOF
+Server set up. To access the virtual machine, run 'vagrant ssh'. Then, to start the gochan server,
+run 'sudo systemctl start gochan.service'. The virtual machine is set to run gochan on startup, so you
+will not need to do this every time you start it. You can access it from a browser at http://172.27.0.3/
+The first time gochan is run, it will create a simple /test/ board.
+EOF

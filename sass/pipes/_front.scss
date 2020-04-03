@@ -5,19 +5,13 @@
 	background-color: $bglight;
 }
 
-.dropdown-menu {
-	background-color: $bgcol;
-	box-shadow: 2px 2px 2px 3px $shadowcol;
-	z-index: 0;
-}
-
 .section-body {
 	background-color: #606060;
 }
 
 .section-title-block {
-	background-color: $bgcol;
-	border-radius: 4px 8px 4px 8px;
+	background-color: $topbarcol;
+	border-radius: 4px 4px 0px 0px;
 }
 
 .tab {

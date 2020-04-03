@@ -5,14 +5,9 @@
 	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png">
 	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />
 	<link id="theme" rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{.config.DefaultStyle}}" />
-	<script type="text/javascript">
-		var styles = [{{range $ii, $style := .config.Styles}}{{if gt $ii 0}}, {{end}}{Name: "{{$style.Name}}", Filename: "{{$style.Filename}}"}{{end}}];
-		var defaultStyle = "{{.config.DefaultStyle}}";
-		var webroot = "{{.config.SiteWebfolder}}"
-	</script>
-	<script type="text/javascript" src="/javascript/jquery-3.3.1.min.js"></script>
-	<script type="text/javascript" src="/javascript/gochan.js"></script>
-	<script type="text/javascript" src="/javascript/manage.js"></script>
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/consts.js"></script>
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/jquery-3.3.1.min.js"></script>
+	<script type="text/javascript" src="{{.config.SiteWebfolder}}javascript/gochan.js"></script>
 </head>
 <body>
 	<div id="top-pane">
@@ -51,4 +46,4 @@
 				<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />{{end}}
 			{{end}}</div>
 		</div>
-	{{template "global_footer.html" .}}
+	{{template "page_footer.html" .}}

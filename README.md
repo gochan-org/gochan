@@ -6,8 +6,6 @@ Gochan works in a manner similar to Kusaba X, Tinyboard and others. As such, Goc
 
 Demo installation: https://gochan.org
 
-**Note:** Cross-compilation to macOS has been temporarily (hopefully) disabled. If you need macOS support, build gochan from a macOS system.
-
 # Installation
 
 ## Basic installation (from a release)
@@ -28,11 +26,11 @@ Demo installation: https://gochan.org
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
-2. From the command line, cd into vagrant/ and run `vagrant up`
+2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MySQL/MariaDB is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql, postgresql, or sqlite3.
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 
 ## For developers (using Docker)
-Docker support is very unstable and doesn't fully work yet. After it is in a usable state, I'll merge the `docker-image` branch with the `master` branch.
+Docker support is very unstable and doesn't fully work yet.
 
 # Theme development
 See [`sass/README.md`](sass/README.md) for information on working with Sass and stylesheets.

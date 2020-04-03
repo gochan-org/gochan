@@ -1,39 +1,31 @@
-{{template "img_header.html" .}}
+{{template "page_header.html" .}}
 	<header>
 		<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
 		<span id="board-subtitle">{{$.board.Subtitle}}</span>
-	</header>
-	<hr />
+	</header><hr />
 	<div id="threadlinks-top">
 		<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/board.html" >Return</a><br />
-		<select id="changepage" onchange="changePage(this)">
-			<option value="">Select page...</option>
-			<option value="1">Page 1</option>
-			<option value="2">Page 2</option>
-			<option value="3">Page 3</option>
-			<option value="4">Page 4</option>
-		</select>
 	</div>
 	<div id="right-sidelinks">
 		<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/catalog.html">Board catalog</a><br />
 	</div>
-	{{template "postbox.html" .}}
-	<hr />
+	{{template "postbox.html" .}}<hr />
 	<div id="content">
 		<form action="/util" method="POST" id="main-form">
 		<div class="thread" id="{{$.op.ID}}">
 			<div class="op-post" id="op{{.op.ID}}">
 				{{if ne $.op.Filename ""}}
-					{{if ne $.op.Filename "deleted"}}
+					{{- if ne $.op.Filename "deleted" -}}
 						<div class="file-info">File: <a href="../src/{{.op.Filename}}" target="_blank">{{$.op.Filename}}</a> - ({{formatFilesize $.op.Filesize}} , {{$.op.ImageW}}x{{$.op.ImageH}}, {{$.op.FilenameOriginal}})</div>
 						<a class="upload-container" href="{{.config.SiteWebfolder}}{{.board.Dir}}/src/{{.op.Filename}}"><img src="{{.config.SiteWebfolder}}{{.board.Dir}}/thumb/{{getThreadThumbnail .op.Filename}}" alt="{{$.config.SiteWebfolder}}{{$.board.Dir}}/src/{{.op.Filename}}" width="{{.op.ThumbW}}" height="{{.op.ThumbH}}" class="upload" /></a>
-					{{else}}
+					{{- else}}
 						<div class="file-deleted-box" style="text-align:center;">File removed</div>
-					{{end}}{{end}}
+					{{end}}
+				{{end -}}
 				<input type="checkbox" id="check{{.op.ID}}" name="check{{.op.ID}}" /><label class="post-info" for="check{{.op.ID}}"> <span class="subject">{{.op.Subject}}</span> <span class="postername">{{if ne .op.Email ""}}<a href="mailto:{{.op.Email}}">{{end}}{{if ne .op.Name ""}}{{.op.Name}}{{else}}{{if eq .op.Tripcode ""}}{{.board.Anonymous}}{{end}}{{end}}{{if ne .op.Email ""}}</a>{{end}}</span>{{if ne .op.Tripcode ""}}<span class="tripcode">!{{.op.Tripcode}}</span>{{end}} {{formatTimestamp .op.Timestamp}} </label><a href="{{$.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}.html#{{.op.ID}}">No.</a> <a href="javascript:quote({{.op.ID}})" class="backlink-click">{{.op.ID}}</a> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span></span><br />
 				<div class="post-text">{{.op.MessageHTML}}</div>
 			</div>
-			{{range $reply_num,$reply := .posts}}
+			{{range $reply_num,$reply := .posts -}}
 				<div class="reply-container" id="replycontainer{{$reply.ID}}">
 					<a class="anchor" id="{{$reply.ID}}"></a>
 					<div class="reply" id="reply{{$reply.ID}}">
@@ -47,9 +39,9 @@
 							{{end}}{{end}}
 						<div class="post-text">{{$reply.MessageHTML}}</div>
 					</div>
-				</div>{{end}}
-		</div>
-		<hr />
+				</div>
+			{{end}}
+		</div><hr />
 		<div id="right-bottom-content">
 			<div id="report-delbox">
 				<input type="hidden" name="board" value="{{.board.Dir}}" />
@@ -61,27 +53,12 @@
 		</div>
 	</form>
 	<div id="left-bottom-content">
-		<table id="pages">
-			<tr>
-				<td><a href="{{.config.SiteWebfolder}}{{.board.Dir}}/">Return</a></td>
-				<td>{{if gt .op.CurrentPage 1}}
-					<form method="GET" action="{{.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}p{{subtract .op.CurrentPage 1}}.html">
-						<input type="submit" value="Previous" />
-					</form>
-					{{else}}Previous{{end}}
-				</td>
-			<td>[<a href="{{.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}.html">All</a>]
-				{{range $i,$_ := makeLoop .op.NumPages 0}}
-					[{{if eq $i (subtract $.op.CurrentPage 1)}}<b>{{end}}<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$.op.ID}}p{{add $i 1}}.html">{{add $i 1}}</a>{{if eq $i (subtract $.op.CurrentPage 1)}}</b>{{end}}]{{end}}</td>
-			<td>{{if lt .op.CurrentPage .op.NumPages}}
-			<form method="GET" action="{{.config.SiteWebfolder}}{{.board.Dir}}/res/{{.op.ID}}p{{add .op.CurrentPage 1}}.html">
-				<input type="submit" value="Next" />
-			</form>
-			{{else}}Next{{end}}</td></tr>
-		</table>
+		<a href="{{.config.SiteWebfolder}}{{.board.Dir}}/">Return</a><br /><br />
 		<span id="boardmenu-bottom">
-			[{{range $i, $boardlink := .boards}}  {{if gt $i 0}}/{{end}} <a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a> {{end}}]
+			[{{range $i, $boardlink := .boards -}}
+				{{if gt $i 0}}/{{end -}} <a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a>
+			{{- end}}]
 		</span>
 	</div>
 	</div>
-	{{template "global_footer.html" .}}
+	{{template "page_footer.html" .}}
