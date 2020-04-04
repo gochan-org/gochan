@@ -1,0 +1,16 @@
+version = 1
+
+test_patterns = [
+    "src/*.go",
+    "html/javascript/gochan.js",
+    "frontend/src/*.js"
+]
+
+exclude_patterns = ["src/*_test.go"]
+
+[[analyzers]]
+name = "go"
+enabled = true
+
+  [analyzers.meta]
+  import_path = "./src"
