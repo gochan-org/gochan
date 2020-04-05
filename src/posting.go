@@ -66,11 +66,7 @@ func getBannedStatus(request *http.Request) (*BanInfo, error) {
 	var filename string
 	var checksum string
 	file, fileHandler, err := request.FormFile("imagefile")
-	defer func() {
-		if file != nil {
-			file.Close()
-		}
-	}()
+	defer closeHandle(file)
 	if err == nil {
 		html.EscapeString(fileHandler.Filename)
 		if data, err2 := ioutil.ReadAll(file); err2 == nil {
@@ -374,11 +370,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	file, handler, err := request.FormFile("imagefile")
-	defer func() {
-		if file != nil {
-			file.Close()
-		}
-	}()
+	defer closeHandle(file)
+
 	if err != nil || handler.Size == 0 {
 		// no file was uploaded
 		post.Filename = ""
@@ -677,7 +670,7 @@ func tempCleaner() {
 }
 
 func formatMessage(message string) string {
-	message = bbcompiler.Compile(message)
+	message = msgfmtr.Compile(message)
 	// prepare each line to be formatted
 	postLines := strings.Split(message, "<br>")
 	for i, line := range postLines {

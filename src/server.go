@@ -371,7 +371,6 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				if fileName != "" && fileName != "deleted" {
 					fileName = fileName[:strings.Index(fileName, ".")]
 					fileType = fileName[strings.Index(fileName, ".")+1:]
-					panic(post.Filename + "/" + fileName + "/" + fileType)
 					if fileType == "gif" || fileType == "webm" {
 						thumbType = "jpg"
 					}

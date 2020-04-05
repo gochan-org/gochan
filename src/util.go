@@ -69,6 +69,12 @@ func byteByByteReplace(input, from, to string) string {
 	return input
 }
 
+func closeHandle(handle io.Closer) {
+	if handle != nil {
+		handle.Close()
+	}
+}
+
 /*
  * Deletes files in a folder (root) that match a given regular expression.
  * Returns the number of files that were deleted, and any error encountered.
@@ -111,7 +117,7 @@ func getBoardArr(parameterList map[string]interface{}, extra string) (boards []B
 	queryString += fmt.Sprintf(" %s ORDER BY list_order", extra)
 
 	rows, err := querySQL(queryString, parameterValues...)
-	defer rows.Close()
+	defer closeHandle(rows)
 	if err != nil {
 		return
 	}
@@ -194,7 +200,7 @@ func getPostArr(parameterList map[string]interface{}, extra string) (posts []Pos
 
 	queryString += " " + extra
 	rows, err := querySQL(queryString, parameterValues...)
-	defer rows.Close()
+	defer closeHandle(rows)
 	if err != nil {
 		return
 	}
@@ -223,7 +229,7 @@ func getSectionArr(where string) (sections []BoardSection, err error) {
 		where = "WHERE " + where
 	}
 	rows, err := querySQL("SELECT * FROM DBPREFIXsections " + where + " ORDER BY list_order")
-	defer rows.Close()
+	defer closeHandle(rows)
 	if err != nil {
 		gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
 		return
@@ -367,7 +373,9 @@ func checkAkismetAPIKey(key string) error {
 		return errors.New("blank key given, Akismet spam checking won't be used")
 	}
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.SiteDomain}})
-	defer resp.Body.Close()
+	if resp != nil {
+		defer closeHandle(resp.Body)
+	}
 	if err != nil {
 		return err
 	}
@@ -403,7 +411,9 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
-		defer resp.Body.Close()
+		if resp != nil {
+			closeHandle(resp.Body)
+		}
 		if err != nil {
 			gclog.Print(lErrorLog, err.Error())
 			return "other_failure"

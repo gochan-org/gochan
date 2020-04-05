@@ -101,9 +101,9 @@ func (gcl *GcLogger) Println(flags int, v ...interface{}) string {
 }
 
 func (gcl *GcLogger) Close() {
-	gcl.accessFile.Close()
-	gcl.errorFile.Close()
-	gcl.staffFile.Close()
+	closeHandle(gcl.accessFile)
+	closeHandle(gcl.errorFile)
+	closeHandle(gcl.staffFile)
 }
 
 func initLogs(accessLogPath, errorLogPath, staffLogPath string) (*GcLogger, error) {

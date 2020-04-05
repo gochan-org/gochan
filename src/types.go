@@ -25,9 +25,36 @@ const (
 var (
 	config        GochanConfig
 	readBannedIPs []string
-	bbcompiler    bbcode.Compiler
+	msgfmtr       MsgFormatter
 	version       *GochanVersion
 )
+
+type MsgFormatter struct {
+	// Go's garbage collection does weird things with bbcode's internal tag map.
+	// Moving the bbcode compiler isntance (and eventually a Markdown compiler) to a struct
+	// appears to fix this
+	bbCompiler bbcode.Compiler
+}
+
+func (mf *MsgFormatter) InitBBcode() {
+	if config.DisableBBcode {
+		return
+	}
+	mf.bbCompiler = bbcode.NewCompiler(true, true)
+	mf.bbCompiler.SetTag("center", nil)
+	mf.bbCompiler.SetTag("code", nil)
+	mf.bbCompiler.SetTag("color", nil)
+	mf.bbCompiler.SetTag("img", nil)
+	mf.bbCompiler.SetTag("quote", nil)
+	mf.bbCompiler.SetTag("size", nil)
+}
+
+func (mf *MsgFormatter) Compile(msg string) string {
+	if config.DisableBBcode {
+		return msg
+	}
+	return mf.bbCompiler.Compile(msg)
+}
 
 type RecentPost struct {
 	BoardName string
@@ -554,6 +581,7 @@ type GochanConfig struct {
 	ImagesOpenNewTab         bool     `description:"If checked, thumbnails will open the respective image/video in a new tab instead of expanding them." default:"unchecked"`
 	MakeURLsHyperlinked      bool     `description:"If checked, URLs in posts will be turned into a hyperlink. If unchecked, ExpandButton and NewTabOnOutlinks are ignored." default:"checked"`
 	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
+	DisableBBcode            bool     `description:"If checked, gochan will not compile bbcode into HTML" default:"unchecked"`
 
 	MinifyHTML          bool `description:"If checked, gochan will minify html files when building" default:"checked"`
 	MinifyJS            bool `description:"If checked, gochan will minify js and json files when building" default:"checked"`
@@ -735,13 +763,7 @@ func initConfig() {
 	_, zoneOffset := time.Now().Zone()
 	config.TimeZone = zoneOffset / 60 / 60
 
-	bbcompiler = bbcode.NewCompiler(true, true)
-	bbcompiler.SetTag("center", nil)
-	bbcompiler.SetTag("code", nil)
-	bbcompiler.SetTag("color", nil)
-	bbcompiler.SetTag("img", nil)
-	bbcompiler.SetTag("quote", nil)
-	bbcompiler.SetTag("size", nil)
+	msgfmtr.InitBBcode()
 
 	version = ParseVersion(versionStr)
 	version.Normalize()

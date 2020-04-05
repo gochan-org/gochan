@@ -17,7 +17,7 @@ func main() {
 	defer func() {
 		gclog.Print(lErrorLog|lStdLog, "Cleaning up")
 		execSQL("DROP TABLE DBPREFIXsessions")
-		db.Close()
+		closeHandle(db)
 	}()
 	initConfig()
 	initMinifier()

@@ -45,7 +45,7 @@ func minifyTemplate(tmpl *template.Template, data interface{}, writer io.Writer,
 	}
 
 	minWriter := minifier.Writer(mediaType, writer)
-	defer minWriter.Close()
+	defer closeHandle(minWriter)
 	return tmpl.Execute(minWriter, data)
 }
 
@@ -55,7 +55,7 @@ func minifyWriter(writer io.Writer, data []byte, mediaType string) (int, error) 
 	}
 
 	minWriter := minifier.Writer(mediaType, writer)
-	defer minWriter.Close()
+	defer closeHandle(minWriter)
 	return minWriter.Write(data)
 }
 
@@ -68,7 +68,7 @@ func buildFrontPage() string {
 	var recentPostsArr []interface{}
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	frontFile, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer frontFile.Close()
+	defer closeHandle(frontFile)
 	if err != nil {
 		return gclog.Print(lErrorLog, "Failed opening front page for writing: ", err.Error()) + "<br />"
 	}
@@ -94,7 +94,7 @@ func buildFrontPage() string {
 	recentQueryStr += "AND boardid = DBPREFIXboards.id ORDER BY timestamp DESC LIMIT ?"
 
 	rows, err := querySQL(recentQueryStr, nilTimestamp, config.MaxRecentPosts)
-	defer rows.Close()
+	defer closeHandle(rows)
 	if err != nil {
 		return gclog.Print(lErrorLog, err.Error())
 	}
@@ -129,7 +129,7 @@ func buildFrontPage() string {
 
 func buildBoardListJSON() (html string) {
 	boardListFile, err := os.OpenFile(path.Join(config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer boardListFile.Close()
+	defer closeHandle(boardListFile)
 	if err != nil {
 		return gclog.Print(lErrorLog, "Failed opening boards.json for writing: ", err.Error()) + "<br />"
 	}
@@ -302,7 +302,7 @@ func buildBoardPages(board *Board) (html string) {
 	pagesArr := make([]map[string]interface{}, board.NumPages)
 
 	catalogJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer catalogJSONFile.Close()
+	defer closeHandle(catalogJSONFile)
 	if err != nil {
 		return gclog.Printf(lErrorLog,
 			"Failed opening /%s/catalog.json: %s",
@@ -316,7 +316,7 @@ func buildBoardPages(board *Board) (html string) {
 		pageFilename := strconv.Itoa(board.CurrentPage) + ".html"
 		currentPageFilepath = path.Join(config.DocumentRoot, board.Dir, pageFilename)
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-		defer currentPageFile.Close()
+		defer closeHandle(currentPageFile)
 		if err != nil {
 			html += gclog.Printf(lErrorLog,
 				"Failed opening /%s/%s: %s",
@@ -401,7 +401,7 @@ func buildJS() string {
 	// minify gochan.js (if enabled)
 	gochanMinJSPath := path.Join(config.DocumentRoot, "javascript", "gochan.min.js")
 	gochanMinJSFile, err := os.OpenFile(gochanMinJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	defer gochanMinJSFile.Close()
+	defer closeHandle(gochanMinJSFile)
 	if err != nil {
 		return gclog.Printf(lErrorLog, "Error opening %q for writing: %s",
 			gochanMinJSPath, err.Error()) + "<br />"
@@ -425,7 +425,7 @@ func buildJS() string {
 	}
 	constsJSPath := path.Join(config.DocumentRoot, "javascript", "consts.js")
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	defer constsJSFile.Close()
+	defer closeHandle(constsJSFile)
 	if err != nil {
 		return gclog.Printf(lErrorLog, "Error opening %q for writing: %s",
 			constsJSPath, err.Error()) + "<br />"
@@ -532,7 +532,7 @@ func buildThreadPages(op *Post) error {
 
 	// Put together the thread JSON
 	threadJSONFile, err := os.OpenFile(path.Join(config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	defer threadJSONFile.Close()
+	defer closeHandle(threadJSONFile)
 	if err != nil {
 		return fmt.Errorf("Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
 	}

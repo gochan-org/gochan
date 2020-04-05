@@ -202,7 +202,7 @@ var manageFunctions = map[string]ManageFunction{
 
 				html += "Optimizing all tables in database.<hr />"
 				tableRows, tablesErr := querySQL("SHOW TABLES")
-				defer tableRows.Close()
+				defer closeHandle(tableRows)
 
 				if tablesErr != nil && tablesErr != sql.ErrNoRows {
 					return html + "<tr><td>" +
@@ -484,7 +484,7 @@ var manageFunctions = map[string]ManageFunction{
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
 			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
-			defer rows.Close()
+			defer closeHandle(rows)
 			if err != nil {
 				return html + gclog.Print(lErrorLog, "Error getting announcements: ", err.Error())
 			}
@@ -585,7 +585,7 @@ var manageFunctions = map[string]ManageFunction{
 				post = posts[0]
 			}
 			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM DBPREFIXbanlist")
-			defer rows.Close()
+			defer closeHandle(rows)
 			if err != nil {
 				return pageHTML + gclog.Print(lErrorLog, "Error getting ban list: ", err.Error())
 			}
@@ -790,7 +790,7 @@ var manageFunctions = map[string]ManageFunction{
 
 				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
 				rows, err = querySQL("SELECT dir FROM DBPREFIXboards")
-				defer rows.Close()
+				defer closeHandle(rows)
 				if err != nil {
 					return html + gclog.Print(lErrorLog, "Error getting board list: ", err.Error())
 				}
@@ -935,7 +935,7 @@ var manageFunctions = map[string]ManageFunction{
 				"AND boardid = DBPREFIXboards.id "+
 				"ORDER BY timestamp DESC LIMIT ?",
 				nilTimestamp, limit)
-			defer rows.Close()
+			defer closeHandle(rows)
 			if err != nil {
 				return html + "<tr><td>" + gclog.Print(lErrorLog, "Error getting recent posts: ",
 					err.Error()) + "</td></tr></table>"
@@ -1009,7 +1009,7 @@ var manageFunctions = map[string]ManageFunction{
 				`<table id="stafftable" border="1">` +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>"
 			rows, err := querySQL("SELECT username,rank,boards,added_on FROM DBPREFIXstaff")
-			defer rows.Close()
+			defer closeHandle(rows)
 			if err != nil {
 				return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
 			}

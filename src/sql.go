@@ -236,7 +236,7 @@ func prepareSQL(query string) (*sql.Stmt, error) {
  */
 func execSQL(query string, values ...interface{}) (sql.Result, error) {
 	stmt, err := prepareSQL(query)
-	defer stmt.Close()
+	defer closeHandle(stmt)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func execSQL(query string, values ...interface{}) (sql.Result, error) {
  */
 func queryRowSQL(query string, values []interface{}, out []interface{}) error {
 	stmt, err := prepareSQL(query)
-	defer stmt.Close()
+	defer closeHandle(stmt)
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func queryRowSQL(query string, values []interface{}, out []interface{}) error {
  */
 func querySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	stmt, err := prepareSQL(query)
-	defer stmt.Close()
+	defer closeHandle(stmt)
 	if err != nil {
 		return nil, err
 	}

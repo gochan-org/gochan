@@ -24,13 +24,13 @@ Demo installation: https://gochan.org
 2. Set `DomainRegex`,`SiteDomain`, since these are necessary in order to post and log in as a staff member.
 3. If you want to see debugging info/noncritical warnings, set verbosity to 1.
 
+## Installation using Docker
+See [`docker/README.md`](docker/README.md)
+
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
 2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MySQL/MariaDB is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql, postgresql, or sqlite3.
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
-
-## For developers (using Docker)
-Docker support is very unstable and doesn't fully work yet.
 
 # Theme development
 See [`sass/README.md`](sass/README.md) for information on working with Sass and stylesheets.

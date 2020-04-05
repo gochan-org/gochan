@@ -15,7 +15,7 @@ VERSION=$(shell cat version)
 GCFLAGS=-trimpath=${PWD}
 ASMFLAGS=-trimpath=${PWD}
 LDFLAGS=-X main.versionStr=${VERSION}
-GO_CMD=go build -o ${BINEXE} -v -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS}
+GO_CMD=go build -o ${BINEXE} -v 
 NPM_CMD=npm --prefix frontend/ run 
 
 DOCUMENT_ROOT_FILES= \
@@ -30,10 +30,10 @@ DOCUMENT_ROOT_FILES= \
 	hittheroad*
 
 build:
-	GOOS=${GCOS} ${GO_CMD} -ldflags="${LDFLAGS}" ./src
+	GOOS=${GCOS} ${GO_CMD} -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS} -w -s" ./src
 
-build-stripped:
-	GOOS=${GCOS} ${GO_CMD} -ldflags="${LDFLAGS} -w -s" ./src
+build-debug:
+	GOOS=${GCOS} ${GO_CMD} -gcflags="${GCFLAGS} -l -N" -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS}" ./src
 
 clean:
 	rm -f ${BIN}
@@ -53,10 +53,6 @@ dependencies:
 		github.com/mattn/go-sqlite3 \
 		github.com/tdewolff/minify \
 		gopkg.in/mojocn/base64Captcha.v1
-
-docker-image:
-	$(error Docker image creation not yet implemented)
-	docker build . -t="eggbertx/gochan"
 
 install:
 	mkdir -p \
@@ -108,11 +104,13 @@ release:
 	cp README.md ${RELEASE_DIR}/
 	# make js-minify
 	cp -rt ${RELEASE_DIR}/html/ $(foreach file,${DOCUMENT_ROOT_FILES},html/${file})
+	cp -r docker ${RELEASE_DIR}/
+	cp -r sass ${RELEASE_DIR}/
 	cp -r templates ${RELEASE_DIR}/
 	cp initdb_*.sql ${RELEASE_DIR}/
 	cp sample-configs/*.nginx ${RELEASE_DIR}/sample-configs/
 	cp sample-configs/gochan.example.json ${RELEASE_DIR}/sample-configs/
-	make build-stripped
+	make build
 	make sass-minified
 	mv ${BINEXE} ${RELEASE_DIR}/
 ifeq (${GCOS_NAME},macos)
