@@ -1,0 +1,4 @@
+FROM alpine:3.9
+RUN apk --no-cache add rsync lsyncd
+# Declared in docker-compose
+#CMD  lsyncd -delay 1 -nodaemon -rsync /source /cache

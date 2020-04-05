@@ -1,0 +1,37 @@
+# Reading host files from a docker container on MacOS is really slow. This is set up as a workaround.
+version: '3.2'
+services:
+  gochan:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "80"
+    environment:
+      - DBTYPE=mysql # change this to 'postgresql' if needed
+      - DATABASE_HOST=host.docker.internal
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=gochan
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=root
+    volumes:
+      - type: volume
+        source: api_volume
+        target: /opt/gochan
+        consistency: cached
+  sync:
+    build:
+      context: ..
+      dockerfile: SyncForMac
+    volumes:
+      - type: bind
+        source: ../
+        target: /source
+        consistency: cached
+      - type: volume
+        source: api_volume
+        target: /cache
+        consistency: cached
+    command: "lsyncd -delay 1 -nodaemon -rsync /source /cache"
+volumes:
+  api_volume:

@@ -67,7 +67,7 @@ install:
 	cp ${DO_SYMLINKS} -f ./gochan ${PREFIX}/bin/${BINEXE}
 	cp ${DO_SYMLINKS} -f ./*.sql ${PREFIX}/share/gochan/
 	cp ${DO_SYMLINKS} -rf ./templates ${PREFIX}/share/gochan/
-	cd html && cp -rft ${DOCUMENT_ROOT} $(foreach file,${DOCUMENT_ROOT_FILES},${file})
+	cd html $(foreach file,${DOCUMENT_ROOT_FILES}, && cp -rf ${file} ${DOCUMENT_ROOT})
 	$(info gochan successfully installed. If you haven't already, you should run)
 	$(info cp sample-configs/gochan.example.json /etc/gochan/gochan.json)
 ifeq (${GCOS_NAME},linux)
