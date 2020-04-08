@@ -577,7 +577,12 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	boards, _ := getBoardArr(nil, "")
 
-	if isBanned(banStatus, boards[post.BoardID-1].Dir) {
+	postBoardArr, _ := getBoardArr(map[string]interface{}{
+		"id": post.BoardID}, "")
+
+	postBoard := postBoardArr[0]
+
+	if isBanned(banStatus, postBoard.Dir) {
 		var banpageBuffer bytes.Buffer
 
 		if err = minifyTemplate(banpageTmpl, map[string]interface{}{
@@ -616,12 +621,12 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	if emailCommand == "noko" {
 		if post.ParentID < 1 {
-			http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
+			http.Redirect(writer, request, config.SiteWebfolder+postBoard.Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
-			http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
+			http.Redirect(writer, request, config.SiteWebfolder+postBoard.Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
 		}
 	} else {
-		http.Redirect(writer, request, config.SiteWebfolder+boards[post.BoardID-1].Dir+"/", http.StatusFound)
+		http.Redirect(writer, request, config.SiteWebfolder+postBoard.Dir+"/", http.StatusFound)
 	}
 }
 
