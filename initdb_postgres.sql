@@ -64,9 +64,12 @@ create table threads(
 	FOREIGN KEY(board_id) REFERENCES boards(id)
 );
 
+CREATE INDEX thread_deleted_index ON threads(is_deleted);
+
 create table posts(
 	id serial,
 	thread_id int NOT NULL,
+	is_top_post bool NOT NULL,
 	ip int NOT NULL,
 	created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	name VARCHAR(50) NOT NULL,
@@ -83,6 +86,8 @@ create table posts(
 	PRIMARY KEY(id),
 	FOREIGN KEY(thread_id) REFERENCES threads(id)
 );
+
+CREATE INDEX top_post_index ON posts(is_top_post);
 
 create table files(
 	id serial,
