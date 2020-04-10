@@ -1,181 +1,272 @@
--- Gochan PostgreSQL/SQLite startup/update script
--- DO NOT DELETE
+-- Gochan postgresql new database script
+-- Versioning numbering goes by whole numbers. Upgrade script migrate existing databases between versions
+-- Database version: 1
 
-CREATE TABLE IF NOT EXISTS DBPREFIXannouncements (
-	id SERIAL,
-	subject VARCHAR(45) NOT NULL DEFAULT '',
-	message TEXT NOT NULL CHECK (message <> ''),
-	poster VARCHAR(45) NOT NULL CHECK (poster <> ''),
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (id)
+CREATE TABLE database_version(
+	version int NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS DBPREFIXappeals (
-	id SERIAL,
-	ban INT NOT NULL CHECK (ban <> 0),
-	message TEXT NOT NULL CHECK (message <> ''),
-	timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	denied BOOLEAN DEFAULT FALSE,
-	staff_response TEXT NOT NULL,
-	PRIMARY KEY (id)
+INSERT INTO database_version(version)
+VALUES(1);
+
+CREATE TABLE sections(
+	id serial,
+	name TEXT NOT NULL,
+	abbreviation TEXT NOT NULL,
+	position SMALLINT NOT NULL,
+	hidden BOOL NOT NULL,
+	PRIMARY KEY(id),
+	UNIQUE(position)
 );
 
-CREATE TABLE IF NOT EXISTS DBPREFIXbanlist (
-	id SERIAL,
-	allow_read BOOLEAN DEFAULT TRUE,
-	ip VARCHAR(45) NOT NULL DEFAULT '',
-	name VARCHAR(255) NOT NULL DEFAULT '',
-	name_is_regex BOOLEAN DEFAULT FALSE,
-	filename VARCHAR(255) NOT NULL DEFAULT '',
-	file_checksum VARCHAR(255) NOT NULL DEFAULT '',
-	boards VARCHAR(255) NOT NULL DEFAULT '*',
-	staff VARCHAR(50) NOT NULL DEFAULT '',
-	timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	expires TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	permaban BOOLEAN NOT NULL DEFAULT TRUE,
-	reason VARCHAR(255) NOT NULL DEFAULT '',
-	type SMALLINT NOT NULL DEFAULT 3,
-	staff_note VARCHAR(255) NOT NULL DEFAULT '',
-	appeal_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	can_appeal BOOLEAN NOT NULL DEFAULT true,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS DBPREFIXboards (
-	id SERIAL,
-	list_order SMALLINT NOT NULL DEFAULT 0,
-	dir VARCHAR(45) NOT NULL CHECK (dir <> ''),
-	type SMALLINT NOT NULL DEFAULT 0,
-	upload_type SMALLINT NOT NULL DEFAULT 0,
-	title VARCHAR(45) NOT NULL CHECK (title <> ''),
-	subtitle VARCHAR(64) NOT NULL DEFAULT '',
-	description VARCHAR(64) NOT NULL DEFAULT '',
-	section INT NOT NULL DEFAULT 1,
-	max_file_size INT NOT NULL DEFAULT 4718592,
-	max_pages SMALLINT NOT NULL DEFAULT 11,
-	default_style VARCHAR(45) NOT NULL DEFAULT '',
-	locked BOOLEAN NOT NULL DEFAULT FALSE,
-	created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	anonymous VARCHAR(45) NOT NULL DEFAULT 'Anonymous',
-	forced_anon BOOLEAN NOT NULL DEFAULT FALSE,
-	max_age INT NOT NULL DEFAULT 0,
-	autosage_after INT NOT NULL DEFAULT 200,
-	no_images_after INT NOT NULL DEFAULT 0,
-	max_message_length INT NOT NULL DEFAULT 8192,
-	embeds_allowed BOOLEAN NOT NULL DEFAULT TRUE,
-	redirect_to_thread BOOLEAN NOT NULL DEFAULT TRUE,
-	require_file BOOLEAN NOT NULL DEFAULT FALSE,
-	enable_catalog BOOLEAN NOT NULL DEFAULT TRUE,
-	PRIMARY KEY (id),
-	UNIQUE (dir)
-);
-ALTER TABLE DBPREFIXboards
-	ALTER COLUMN default_style TYPE VARCHAR(45),
-	ALTER COLUMN default_style SET DEFAULT '';
-
-CREATE TABLE IF NOT EXISTS DBPREFIXembeds (
-	id SERIAL,
-	filetype VARCHAR(3) NOT NULL,
-	name VARCHAR(45) NOT NULL,
-	video_url VARCHAR(255) NOT NULL,
-	width SMALLINT NOT NULL,
-	height SMALLINT NOT NULL,
-	embed_code TEXT NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS DBPREFIXinfo (
-	name VARCHAR(45) NOT NULL,
-	value TEXT NOT NULL,
-	PRIMARY KEY (name)
-);
-
-CREATE TABLE IF NOT EXISTS DBPREFIXlinks (
-	id SERIAL,
+create table boards(
+	id serial,
+	section_id int NOT NULL,
+	uri text NOT NULL,
+	dir varchar(45) NOT NULL,
+	navbar_position SMALLINT NOT NULL,
 	title VARCHAR(45) NOT NULL,
-	url VARCHAR(255) NOT NULL,
-	PRIMARY KEY (id)
+	subtitle VARCHAR(64) NOT NULL,
+	description VARCHAR(64) NOT NULL,
+	max_file_size SMALLINT NOT NULL,
+	max_threads SMALLINT NOT NULL,
+	default_style VARCHAR(45) NOT NULL,
+	locked bool NOT NULL,
+	created_at timestamp NOT NULL,
+	anonymous_name VARCHAR(45) NOT NULL DEFAULT 'Anonymous',
+	force_anonymous bool NOT NULL,
+	autosage_after SMALLINT NOT NULL,
+	no_images_after SMALLINT NOT NULL,
+	max_message_length SMALLINT NOT NULL,
+	min_message_length SMALLINT NOT NULL,
+	allow_embeds bool NOT NULL,
+	redictect_to_thread bool NOT NULL,
+	require_file bool NOT NULL,
+	enable_catalog bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(section_id) REFERENCES sections(id),
+	UNIQUE(dir),
+	UNIQUE(uri),
+	UNIQUE(navbar_position)
 );
 
-CREATE TABLE IF NOT EXISTS DBPREFIXposts (
-	id SERIAL,
-	boardid INT NOT NULL,
-	parentid INT NOT NULL DEFAULT '0',
+create table threads(
+	id serial,
+	board_id int NOT NULL,
+	locked bool NOT NULL,
+	stickied bool NOT NULL,
+	anchored bool NOT NULL,
+	cyclical bool NOT NULL,
+	last_bump timestamp NOT NULL,
+	deleted_at timestamp NOT NULL,
+	is_deleted bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(board_id) REFERENCES boards(id)
+);
+
+create table posts(
+	id serial,
+	thread_id int NOT NULL,
+	ip int NOT NULL,
+	created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	name VARCHAR(50) NOT NULL,
 	tripcode VARCHAR(10) NOT NULL,
+	is_role_signature bool NOT NULL DEFAULT FALSE,
 	email VARCHAR(50) NOT NULL,
 	subject VARCHAR(100) NOT NULL,
-	message TEXT NOT NULL,
-	message_raw TEXT NOT NULL,
-	password VARCHAR(45) NOT NULL,
-	filename VARCHAR(45) NOT NULL DEFAULT '',
-	filename_original VARCHAR(255) NOT NULL DEFAULT '',
-	file_checksum VARCHAR(45) NOT NULL DEFAULT '',
-	filesize INT NOT NULL DEFAULT 0,
-	image_w SMALLINT NOT NULL DEFAULT 0,
-	image_h SMALLINT NOT NULL DEFAULT 0,
-	thumb_w SMALLINT NOT NULL DEFAULT 0,
-	thumb_h SMALLINT NOT NULL DEFAULT 0,
-	ip VARCHAR(45) NOT NULL DEFAULT '',
-	tag VARCHAR(5) NOT NULL DEFAULT '',
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	autosage BOOLEAN NOT NULL DEFAULT FALSE,
-	deleted_timestamp TIMESTAMP,
-	bumped TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	stickied BOOLEAN NOT NULL DEFAULT FALSE,
-	locked BOOLEAN NOT NULL DEFAULT FALSE,
-	reviewed BOOLEAN NOT NULL DEFAULT FALSE,
-	PRIMARY KEY (boardid,id)
+	message text NOT NULL,
+	message_raw text NOT NULL,
+	password text NOT NULL,
+	deleted_at timestamp NOT NULL,
+	is_deleted bool NOT NULL,
+	banned_message text,
+	PRIMARY KEY(id),
+	FOREIGN KEY(thread_id) REFERENCES threads(id)
 );
 
-CREATE TABLE IF NOT EXISTS DBPREFIXreports (
-	id SERIAL,
-	board VARCHAR(45) NOT NULL,
-	postid INT NOT NULL,
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	ip VARCHAR(45) NOT NULL,
-	reason VARCHAR(255) NOT NULL,
-	cleared BOOLEAN NOT NULL DEFAULT FALSE,
-	istemp BOOLEAN NOT NULL DEFAULT FALSE,
-	PRIMARY KEY (id)
+create table files(
+	id serial,
+	post_id int NOT NULL,
+	file_order int NOT NULL,
+	original_filename VARCHAR(255) NOT NULL,
+	filename VARCHAR(45) NOT NULL,
+	checksum int NOT NULL,
+	file_size int NOT NULL,
+	is_spoilered bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(post_id) REFERENCES posts(id),
+	UNIQUE(post_id, file_order)
 );
 
-CREATE TABLE IF NOT EXISTS DBPREFIXsections (
-	id SERIAL,
-	list_order SMALLINT NOT NULL DEFAULT 0,
-	hidden SMALLINT DEFAULT 0,
-	name VARCHAR(45) NOT NULL,
-	abbreviation VARCHAR(10) NOT NULL,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS DBPREFIXsessions (
-	id SERIAL,
-	name CHAR(16) NOT NULL,
-	sessiondata VARCHAR(45) NOT NULL,
-	expires TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (id)
-);
-
-CREATE TABLE IF NOT EXISTS DBPREFIXstaff (
-	id SERIAL,
+create table staff(
+	id serial,
 	username VARCHAR(45) NOT NULL,
 	password_checksum VARCHAR(120) NOT NULL,
-	rank SMALLINT NOT NULL,
-	boards VARCHAR(128) NOT NULL DEFAULT '*',
+	global_rank int,
 	added_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	last_active TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (id),
-	UNIQUE (username)
+	last_login TIMESTAMP NOT NULL,
+	is_active bool NOT NULL DEFAULT TRUE,
+	PRIMARY KEY(id),
+	UNIQUE(username)
 );
-ALTER TABLE DBPREFIXstaff
-	DROP COLUMN IF EXISTS salt;
 
-CREATE TABLE IF NOT EXISTS DBPREFIXwordfilters (
-	id SERIAL,
+create table sessions(
+	id serial,
+	staff_id int NOT NULL,
+	expires TIMESTAMP NOT NULL,
+	data varchar(45) NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table board_staff(
+	board_id int NOT NULL,
+	staff_id int NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table announcements(
+	id serial,
+	staff_id int NOT NULL,
+	subject VARCHAR(45) NOT NULL,
+	message text NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table ip_ban(
+	id serial,
+	staff_id int NOT NULL,
+	board_id int NOT NULL,
+	banned_for_post_id int NOT NULL,
+	copy_post_text text NOT NULL,
+	is_active bool NOT NULL,
+	ip int NOT NULL,
+	issued_at TIMESTAMP NOT NULL,
+	appeal_at TIMESTAMP NOT NULL,
+	expires_at TIMESTAMP NOT NULL,
+	permanent bool NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	message text NOT NULL,
+	can_appeal bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id),
+	FOREIGN KEY(banned_for_post_id) REFERENCES posts(id)
+);
+
+create table ip_ban_audit(
+	ip_ban_id int NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	staff_id int NOT NULL,
+	board_id int NOT NULL,
+	is_active bool NOT NULL,
+	expires_at TIMESTAMP NOT NULL,
+	appeal_at TIMESTAMP NOT NULL,
+	permanent bool NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	message text NOT NULL,
+	can_appeal bool NOT NULL,
+	PRIMARY KEY(ip_ban_id, timestamp),
+	FOREIGN KEY(ip_ban_id) REFERENCES ip_ban(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table ip_ban_appeals(
+	id serial,
+	staff_id int,
+	ip_ban_id int NOT NULL,
+	appeal_text text NOT NULL,
+	staff_response text,
+	is_denied bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id),
+	FOREIGN KEY(ip_ban_id) REFERENCES ip_ban(id)
+);
+
+create table ip_ban_appeals_audit(
+	appeal_id int NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	staff_id int,
+	appeal_text text NOT NULL,
+	staff_response text,
+	is_denied bool NOT NULL,
+	PRIMARY KEY(appeal_id, timestamp),
+	FOREIGN KEY(staff_id) REFERENCES staff(id),
+	FOREIGN KEY(appeal_id) REFERENCES ip_ban_appeals(id)
+);
+
+create table reports(
+	id serial, 
+	handled_by_staff_id int,
+	post_id int NOT NULL,
+	ip int NOT NULL,
+	reason text NOT NULL,
+	is_cleared bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
+	FOREIGN KEY(post_id) REFERENCES posts(id)
+);
+
+create table reports_audit(
+	report_id int NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	handled_by_staff_id int,
+	is_cleared bool NOT NULL,
+	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
+	FOREIGN KEY(report_id) REFERENCES reports(id)
+);
+
+create table filename_ban(
+	id serial,
+	board_id int,
+	staff_id int NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	filename VARCHAR(255) NOT NULL,
+	is_regex bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table username_ban(
+	id serial,
+	board_id int,
+	staff_id int NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	username VARCHAR(255) NOT NULL,
+	is_regex bool NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table file_ban(
+	id serial,
+	board_id int,
+	staff_id int NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	checksum int NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table wordfilters(
+	id serial,
+	board_id int,
+	staff_id int NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	search VARCHAR(75) NOT NULL CHECK (search <> ''),
-	change_to VARCHAR(75) NOT NULL DEFAULT '',
-	boards VARCHAR(128) NOT NULL DEFAULT '*',
-	regex BOOLEAN NOT NULL DEFAULT FALSE,
-	PRIMARY KEY (id)
+	is_regex bool NOT NULL,
+	change_to VARCHAR(75) NOT NULL,
+	PRIMARY KEY(id),
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
 );
