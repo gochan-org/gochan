@@ -1,215 +1,263 @@
--- Gochan MySQL startup/update script
--- DO NOT DELETE
+-- Gochan master template for new database script
+-- Contains macros in the form [curlybrace open]macro text[curlybrace close]
+-- Macros are substituted by build_initdb.py to the supported database files. Must not contain extra spaces
+-- Versioning numbering goes by whole numbers. Upgrade script migrate existing databases between versions
+-- Database version: 1
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXannouncements` (
-	`id` SERIAL,
-	`subject` VARCHAR(45) NOT NULL DEFAULT '',
-	`message` TEXT NOT NULL CHECK (message <> ''),
-	`poster` VARCHAR(45) NOT NULL CHECK (poster <> ''),
-	`timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+CREATE TABLE database_version(
+	version int NOT NULL
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXappeals` (
-	`id` SERIAL,
-	`ban` INT(11) UNSIGNED NOT NULL CHECK (ban <> 0),
-	`message` TEXT NOT NULL CHECK (message <> ''),
-	`timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	`denied` BOOLEAN DEFAULT false,
-	`staff_response` TEXT NOT NULL DEFAULT '',
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+INSERT INTO database_version(version)
+VALUES(1);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXbanlist` (
-	`id` SERIAL,
-	`allow_read` BOOLEAN DEFAULT TRUE,
-	`ip` VARCHAR(45) NOT NULL DEFAULT '',
-	`name` VARCHAR(255) NOT NULL DEFAULT '',
-	`name_is_regex` BOOLEAN DEFAULT FALSE,
-	`filename` VARCHAR(255) NOT NULL DEFAULT '',
-	`file_checksum` VARCHAR(255) NOT NULL DEFAULT '',
-	`boards` VARCHAR(255) NOT NULL DEFAULT '*',
-	`staff` VARCHAR(50) NOT NULL DEFAULT '',
-	`timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	`expires` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`permaban` BOOLEAN NOT NULL DEFAULT TRUE,
-	`reason` VARCHAR(255) NOT NULL DEFAULT '',
-	`type` SMALLINT NOT NULL DEFAULT 3,
-	`staff_note` VARCHAR(255) NOT NULL DEFAULT '',
-	`appeal_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`can_appeal` BOOLEAN NOT NULL DEFAULT true,
-	PRIMARY KEY (id)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
-ALTER TABLE `DBPREFIXbanlist`
-	CHANGE IF EXISTS `banned_by` `staff` VARCHAR(50) NOT NULL DEFAULT '',
-	CHANGE IF EXISTS `id` `id` SERIAL,
-	CHANGE IF EXISTS `expires` `expires` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CHANGE IF EXISTS `boards` `boards` VARCHAR(255) NOT NULL DEFAULT '*',
-	ADD COLUMN IF NOT EXISTS `type` TINYINT UNSIGNED NOT NULL DEFAULT 3,
-	ADD COLUMN IF NOT EXISTS `name_is_regex` BOOLEAN DEFAULT FALSE,
-	ADD COLUMN IF NOT EXISTS `filename` VARCHAR(255) NOT NULL DEFAULT '',
-	ADD COLUMN IF NOT EXISTS `file_checksum` VARCHAR(255) NOT NULL DEFAULT '',
-	ADD COLUMN IF NOT EXISTS `permaban` BOOLEAN DEFAULT FALSE,
-	ADD COLUMN IF NOT EXISTS `can_appeal` BOOLEAN DEFAULT TRUE,
-	DROP COLUMN IF EXISTS `message`;
+CREATE TABLE sections(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	name TEXT NOT NULL,
+	abbreviation TEXT NOT NULL,
+	position SMALLINT NOT NULL,
+	hidden BOOL NOT NULL,
+	UNIQUE(position)
+);
 
-DROP TABLE IF EXISTS `DBPREFIXbannedhashes`;
+create table boards(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	section_id bigint NOT NULL,
+	uri text NOT NULL,
+	dir varchar(45) NOT NULL,
+	navbar_position SMALLINT NOT NULL,
+	title VARCHAR(45) NOT NULL,
+	subtitle VARCHAR(64) NOT NULL,
+	description VARCHAR(64) NOT NULL,
+	max_file_size SMALLINT NOT NULL,
+	max_threads SMALLINT NOT NULL,
+	default_style VARCHAR(45) NOT NULL,
+	locked bool NOT NULL,
+	created_at timestamp NOT NULL,
+	anonymous_name VARCHAR(45) NOT NULL DEFAULT 'Anonymous',
+	force_anonymous bool NOT NULL,
+	autosage_after SMALLINT NOT NULL,
+	no_images_after SMALLINT NOT NULL,
+	max_message_length SMALLINT NOT NULL,
+	min_message_length SMALLINT NOT NULL,
+	allow_embeds bool NOT NULL,
+	redictect_to_thread bool NOT NULL,
+	require_file bool NOT NULL,
+	enable_catalog bool NOT NULL,
+	FOREIGN KEY(section_id) REFERENCES sections(id),
+	UNIQUE(dir),
+	UNIQUE(uri),
+	UNIQUE(navbar_position)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXboards` (
-	`id` SERIAL,
-	`list_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
-	`dir` VARCHAR(45) NOT NULL CHECK (dir <> ''),
-	`type` TINYINT UNSIGNED NOT NULL DEFAULT 0,
-	`upload_type` TINYINT UNSIGNED NOT NULL DEFAULT 0,
-	`title` VARCHAR(45) NOT NULL CHECK (title <> ''),
-	`subtitle` VARCHAR(64) NOT NULL DEFAULT '',
-	`description` VARCHAR(64) NOT NULL DEFAULT '',
-	`section` INT NOT NULL DEFAULT 1,
-	`max_file_size` INT UNSIGNED NOT NULL DEFAULT 4718592,
-	`max_pages` TINYINT UNSIGNED NOT NULL DEFAULT 11,
-	`default_style` VARCHAR(45) NOT NULL DEFAULT '',
-	`locked` BOOLEAN NOT NULL DEFAULT FALSE,
-	`created_on` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`anonymous` VARCHAR(45) NOT NULL DEFAULT 'Anonymous',
-	`forced_anon` BOOLEAN NOT NULL DEFAULT FALSE,
-	`max_age` INT(20) UNSIGNED NOT NULL DEFAULT 0,
-	`autosage_after` INT(5) UNSIGNED NOT NULL DEFAULT 200,
-	`no_images_after` INT(5) UNSIGNED NOT NULL DEFAULT 0,
-	`max_message_length` INT(10) UNSIGNED NOT NULL DEFAULT 8192,
-	`embeds_allowed` BOOLEAN NOT NULL DEFAULT TRUE,
-	`redirect_to_thread` BOOLEAN NOT NULL DEFAULT TRUE,
-	`require_file` BOOLEAN NOT NULL DEFAULT FALSE,
-	`enable_catalog` BOOLEAN NOT NULL DEFAULT TRUE,
-	PRIMARY KEY (`id`),
-	UNIQUE (`dir`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
-ALTER TABLE `DBPREFIXboards`
-	CHANGE COLUMN IF EXISTS `order` `list_order` INT UNSIGNED NOT NULL DEFAULT 0,
-	CHANGE COLUMN IF EXISTS `max_image_size` `max_file_size` INT UNSIGNED NOT NULL DEFAULT 4718592,
-	CHANGE COLUMN IF EXISTS `default_style` `default_style` VARCHAR(45) NOT NULL DEFAULT '',
-	DROP COLUMN IF EXISTS `locale`;
+create table threads(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	board_id bigint NOT NULL,
+	locked bool NOT NULL,
+	stickied bool NOT NULL,
+	anchored bool NOT NULL,
+	cyclical bool NOT NULL,
+	last_bump timestamp NOT NULL,
+	deleted_at timestamp NOT NULL,
+	is_deleted bool NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXembeds` (
-	`id` SERIAL,
-	`filetype` VARCHAR(3) NOT NULL,
-	`name` VARCHAR(45) NOT NULL,
-	`video_url` VARCHAR(255) NOT NULL,
-	`width` SMALLINT UNSIGNED NOT NULL,
-	`height` SMALLINT UNSIGNED NOT NULL,
-	`embed_code` TEXT NOT NULL,
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+CREATE INDEX thread_deleted_index ON threads(is_deleted);
 
-DROP TABLE IF EXISTS `DBPREFIXfrontpage`;
+create table posts(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	thread_id bigint NOT NULL,
+	is_top_post bool NOT NULL,
+	ip int NOT NULL,
+	created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	name VARCHAR(50) NOT NULL,
+	tripcode VARCHAR(10) NOT NULL,
+	is_role_signature bool NOT NULL DEFAULT FALSE,
+	email VARCHAR(50) NOT NULL,
+	subject VARCHAR(100) NOT NULL,
+	message text NOT NULL,
+	message_raw text NOT NULL,
+	password text NOT NULL,
+	deleted_at timestamp NOT NULL,
+	is_deleted bool NOT NULL,
+	banned_message text,
+	FOREIGN KEY(thread_id) REFERENCES threads(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXinfo` (
-	`name` VARCHAR(45) NOT NULL,
-	`value` TEXT NOT NULL,
-	PRIMARY KEY (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+CREATE INDEX top_post_index ON posts(is_top_post);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXlinks` (
-	`id` SERIAL,
-	`title` VARCHAR(45) NOT NULL,
-	`url` VARCHAR(255) NOT NULL,
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+create table files(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	post_id bigint NOT NULL,
+	file_order int NOT NULL,
+	original_filename VARCHAR(255) NOT NULL,
+	filename VARCHAR(45) NOT NULL,
+	checksum int NOT NULL,
+	file_size int NOT NULL,
+	is_spoilered bool NOT NULL,
+	FOREIGN KEY(post_id) REFERENCES posts(id),
+	UNIQUE(post_id, file_order)
+);
 
-DROP TABLE IF EXISTS `DBPREFIXloginattempts`;
-DROP TABLE IF EXISTS `DBPREFIXpluginsettings`;
+create table staff(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	username VARCHAR(45) NOT NULL,
+	password_checksum VARCHAR(120) NOT NULL,
+	global_rank int,
+	added_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	last_login TIMESTAMP NOT NULL,
+	is_active bool NOT NULL DEFAULT TRUE,
+	UNIQUE(username)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXposts` (
-	`id` SERIAL,
-	`boardid` INT NOT NULL,
-	`parentid` INT(10) UNSIGNED NOT NULL DEFAULT '0',
-	`name` VARCHAR(50) NOT NULL,
-	`tripcode` VARCHAR(10) NOT NULL,
-	`email` VARCHAR(50) NOT NULL,
-	`subject` VARCHAR(100) NOT NULL,
-	`message` TEXT NOT NULL,
-	`message_raw` TEXT NOT NULL,
-	`password` VARCHAR(45) NOT NULL,
-	`filename` VARCHAR(45) NOT NULL DEFAULT '',
-	`filename_original` VARCHAR(255) NOT NULL DEFAULT '',
-	`file_checksum` VARCHAR(45) NOT NULL DEFAULT '',
-	`filesize` INT(20) UNSIGNED NOT NULL DEFAULT 0,
-	`image_w` SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
-	`image_h` SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
-	`thumb_w` SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
-	`thumb_h` SMALLINT(5) UNSIGNED NOT NULL DEFAULT 0,
-	`ip` VARCHAR(45) NOT NULL DEFAULT '',
-	`tag` VARCHAR(5) NOT NULL DEFAULT '',
-	`timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`autosage` BOOLEAN NOT NULL DEFAULT FALSE,
-	`deleted_timestamp` TIMESTAMP,
-	`bumped` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`stickied` BOOLEAN NOT NULL DEFAULT FALSE,
-	`locked` BOOLEAN NOT NULL DEFAULT FALSE,
-	`reviewed` BOOLEAN NOT NULL DEFAULT FALSE,
-	PRIMARY KEY  (`boardid`,`id`),
-	KEY `parentid` (`parentid`),
-	KEY `bumped` (`bumped`),
-	KEY `file_checksum` (`file_checksum`),
-	KEY `stickied` (`stickied`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
-ALTER TABLE `DBPREFIXposts`
-	DROP COLUMN IF EXISTS `sillytag`,
-	DROP COLUMN IF EXISTS `poster_authority`;
+create table sessions(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	staff_id bigint NOT NULL,
+	expires TIMESTAMP NOT NULL,
+	data varchar(45) NOT NULL,
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXreports` (
-	`id` SERIAL,
-	`board` VARCHAR(45) NOT NULL,
-	`postid` INT(10) UNSIGNED NOT NULL,
-	`timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`ip` VARCHAR(45) NOT NULL,
-	`reason` VARCHAR(255) NOT NULL,
-	`cleared` BOOLEAN NOT NULL DEFAULT FALSE,
-	`istemp` BOOLEAN NOT NULL DEFAULT FALSE,
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+create table board_staff(
+	board_id bigint NOT NULL,
+	staff_id bigint NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXsections` (
-	`id` SERIAL,
-	`list_order` INT UNSIGNED NOT NULL DEFAULT 0,
-	`hidden` BOOLEAN NOT NULL DEFAULT FALSE,
-	`name` VARCHAR(45) NOT NULL,
-	`abbreviation` VARCHAR(10) NOT NULL,
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
-ALTER TABLE `DBPREFIXsections`
-	CHANGE COLUMN IF EXISTS `order` `list_order` INT UNSIGNED NOT NULL DEFAULT 0;
+create table announcements(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	staff_id bigint NOT NULL,
+	subject VARCHAR(45) NOT NULL,
+	message text NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXsessions` (
-	`id` SERIAL,
-	`name` CHAR(16) NOT NULL,
-	`sessiondata` VARCHAR(45) NOT NULL,
-	`expires` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (`id`)
-) ENGINE=MEMORY DEFAULT CHARSET=utf8mb4;
-ALTER TABLE `DBPREFIXsessions`
-	CHANGE IF EXISTS `key` `name` CHAR(16) NOT NULL,
-	CHANGE IF EXISTS `data` `sessiondata` VARCHAR(45) NOT NULL;
+create table ip_ban(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	staff_id bigint NOT NULL,
+	board_id bigint NOT NULL,
+	banned_for_post_id bigint NOT NULL,
+	copy_post_text text NOT NULL,
+	is_active bool NOT NULL,
+	ip int NOT NULL,
+	issued_at TIMESTAMP NOT NULL,
+	appeal_at TIMESTAMP NOT NULL,
+	expires_at TIMESTAMP NOT NULL,
+	permanent bool NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	message text NOT NULL,
+	can_appeal bool NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id),
+	FOREIGN KEY(banned_for_post_id) REFERENCES posts(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXstaff` (
-	`id` SERIAL,
-	`username` VARCHAR(45) NOT NULL,
-	`password_checksum` VARCHAR(120) NOT NULL,
-	`rank` TINYINT(1) UNSIGNED NOT NULL DEFAULT 2,
-	`boards` VARCHAR(128) NOT NULL DEFAULT '*',
-	`added_on` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`last_active` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	PRIMARY KEY (`id`),
-	UNIQUE (`username`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
-ALTER TABLE `DBPREFIXstaff`
-	CHANGE IF EXISTS `boards` `boards` VARCHAR(128) NOT NULL DEFAULT '*',
-	DROP COLUMN IF EXISTS `salt`;
+create table ip_ban_audit(
+	ip_ban_id bigint NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	staff_id bigint NOT NULL,
+	is_active bool NOT NULL,
+	expires_at TIMESTAMP NOT NULL,
+	appeal_at TIMESTAMP NOT NULL,
+	permanent bool NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	message text NOT NULL,
+	can_appeal bool NOT NULL,
+	PRIMARY KEY(ip_ban_id, timestamp),
+	FOREIGN KEY(ip_ban_id) REFERENCES ip_ban(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
 
-CREATE TABLE IF NOT EXISTS `DBPREFIXwordfilters` (
-	`id` SERIAL,
-	`search` VARCHAR(75) NOT NULL CHECK (search <> ''),
-	`change_to` VARCHAR(75) NOT NULL DEFAULT '',
-	`boards` VARCHAR(128) NOT NULL DEFAULT '*',
-	`regex` BOOLEAN NOT NULL DEFAULT FALSE,
-	PRIMARY KEY (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
+create table ip_ban_appeals(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	staff_id bigint,
+	ip_ban_id bigint NOT NULL,
+	appeal_text text NOT NULL,
+	staff_response text,
+	is_denied bool NOT NULL,
+	FOREIGN KEY(staff_id) REFERENCES staff(id),
+	FOREIGN KEY(ip_ban_id) REFERENCES ip_ban(id)
+);
+
+create table ip_ban_appeals_audit(
+	appeal_id bigint NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	staff_id bigint,
+	appeal_text text NOT NULL,
+	staff_response text,
+	is_denied bool NOT NULL,
+	PRIMARY KEY(appeal_id, timestamp),
+	FOREIGN KEY(staff_id) REFERENCES staff(id),
+	FOREIGN KEY(appeal_id) REFERENCES ip_ban_appeals(id)
+);
+
+create table reports(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY, 
+	handled_by_staff_id bigint,
+	post_id bigint NOT NULL,
+	ip int NOT NULL,
+	reason text NOT NULL,
+	is_cleared bool NOT NULL,
+	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
+	FOREIGN KEY(post_id) REFERENCES posts(id)
+);
+
+create table reports_audit(
+	report_id bigint NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	handled_by_staff_id bigint,
+	is_cleared bool NOT NULL,
+	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
+	FOREIGN KEY(report_id) REFERENCES reports(id)
+);
+
+create table filename_ban(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	board_id bigint,
+	staff_id bigint NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	filename VARCHAR(255) NOT NULL,
+	is_regex bool NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table username_ban(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	board_id bigint,
+	staff_id bigint NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	username VARCHAR(255) NOT NULL,
+	is_regex bool NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table file_ban(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	board_id bigint,
+	staff_id bigint NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	checksum int NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);
+
+create table wordfilters(
+	id bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
+	board_id bigint,
+	staff_id bigint NOT NULL,
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	search VARCHAR(75) NOT NULL CHECK (search <> ''),
+	is_regex bool NOT NULL,
+	change_to VARCHAR(75) NOT NULL,
+	FOREIGN KEY(board_id) REFERENCES boards(id),
+	FOREIGN KEY(staff_id) REFERENCES staff(id)
+);

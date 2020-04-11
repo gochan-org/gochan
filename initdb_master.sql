@@ -12,7 +12,7 @@ INSERT INTO database_version(version)
 VALUES(1);
 
 CREATE TABLE sections(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	id {serial pk},
 	name TEXT NOT NULL,
 	abbreviation TEXT NOT NULL,
 	position SMALLINT NOT NULL,
@@ -21,8 +21,8 @@ CREATE TABLE sections(
 );
 
 create table boards(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	section_id INTEGER NOT NULL,
+	id {serial pk},
+	section_id {fk to serial} NOT NULL,
 	uri text NOT NULL,
 	dir varchar(45) NOT NULL,
 	navbar_position SMALLINT NOT NULL,
@@ -51,8 +51,8 @@ create table boards(
 );
 
 create table threads(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	board_id INTEGER NOT NULL,
+	id {serial pk},
+	board_id {fk to serial} NOT NULL,
 	locked bool NOT NULL,
 	stickied bool NOT NULL,
 	anchored bool NOT NULL,
@@ -66,8 +66,8 @@ create table threads(
 CREATE INDEX thread_deleted_index ON threads(is_deleted);
 
 create table posts(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	thread_id INTEGER NOT NULL,
+	id {serial pk},
+	thread_id {fk to serial} NOT NULL,
 	is_top_post bool NOT NULL,
 	ip int NOT NULL,
 	created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -88,8 +88,8 @@ create table posts(
 CREATE INDEX top_post_index ON posts(is_top_post);
 
 create table files(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	post_id INTEGER NOT NULL,
+	id {serial pk},
+	post_id {fk to serial} NOT NULL,
 	file_order int NOT NULL,
 	original_filename VARCHAR(255) NOT NULL,
 	filename VARCHAR(45) NOT NULL,
@@ -101,7 +101,7 @@ create table files(
 );
 
 create table staff(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	id {serial pk},
 	username VARCHAR(45) NOT NULL,
 	password_checksum VARCHAR(120) NOT NULL,
 	global_rank int,
@@ -112,23 +112,23 @@ create table staff(
 );
 
 create table sessions(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	staff_id INTEGER NOT NULL,
+	id {serial pk},
+	staff_id {fk to serial} NOT NULL,
 	expires TIMESTAMP NOT NULL,
 	data varchar(45) NOT NULL,
 	FOREIGN KEY(staff_id) REFERENCES staff(id)
 );
 
 create table board_staff(
-	board_id INTEGER NOT NULL,
-	staff_id INTEGER NOT NULL,
+	board_id {fk to serial} NOT NULL,
+	staff_id {fk to serial} NOT NULL,
 	FOREIGN KEY(board_id) REFERENCES boards(id),
 	FOREIGN KEY(staff_id) REFERENCES staff(id)
 );
 
 create table announcements(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	staff_id INTEGER NOT NULL,
+	id {serial pk},
+	staff_id {fk to serial} NOT NULL,
 	subject VARCHAR(45) NOT NULL,
 	message text NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -136,10 +136,10 @@ create table announcements(
 );
 
 create table ip_ban(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	staff_id INTEGER NOT NULL,
-	board_id INTEGER NOT NULL,
-	banned_for_post_id INTEGER NOT NULL,
+	id {serial pk},
+	staff_id {fk to serial} NOT NULL,
+	board_id {fk to serial} NOT NULL,
+	banned_for_post_id {fk to serial} NOT NULL,
 	copy_post_text text NOT NULL,
 	is_active bool NOT NULL,
 	ip int NOT NULL,
@@ -156,9 +156,9 @@ create table ip_ban(
 );
 
 create table ip_ban_audit(
-	ip_ban_id INTEGER NOT NULL,
+	ip_ban_id {fk to serial} NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	staff_id INTEGER NOT NULL,
+	staff_id {fk to serial} NOT NULL,
 	is_active bool NOT NULL,
 	expires_at TIMESTAMP NOT NULL,
 	appeal_at TIMESTAMP NOT NULL,
@@ -172,9 +172,9 @@ create table ip_ban_audit(
 );
 
 create table ip_ban_appeals(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	staff_id INTEGER,
-	ip_ban_id INTEGER NOT NULL,
+	id {serial pk},
+	staff_id {fk to serial},
+	ip_ban_id {fk to serial} NOT NULL,
 	appeal_text text NOT NULL,
 	staff_response text,
 	is_denied bool NOT NULL,
@@ -183,9 +183,9 @@ create table ip_ban_appeals(
 );
 
 create table ip_ban_appeals_audit(
-	appeal_id INTEGER NOT NULL,
+	appeal_id {fk to serial} NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	staff_id INTEGER,
+	staff_id {fk to serial},
 	appeal_text text NOT NULL,
 	staff_response text,
 	is_denied bool NOT NULL,
@@ -195,9 +195,9 @@ create table ip_ban_appeals_audit(
 );
 
 create table reports(
-	id INTEGER PRIMARY KEY AUTOINCREMENT, 
-	handled_by_staff_id INTEGER,
-	post_id INTEGER NOT NULL,
+	id {serial pk}, 
+	handled_by_staff_id {fk to serial},
+	post_id {fk to serial} NOT NULL,
 	ip int NOT NULL,
 	reason text NOT NULL,
 	is_cleared bool NOT NULL,
@@ -206,18 +206,18 @@ create table reports(
 );
 
 create table reports_audit(
-	report_id INTEGER NOT NULL,
+	report_id {fk to serial} NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	handled_by_staff_id INTEGER,
+	handled_by_staff_id {fk to serial},
 	is_cleared bool NOT NULL,
 	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
 	FOREIGN KEY(report_id) REFERENCES reports(id)
 );
 
 create table filename_ban(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	board_id INTEGER,
-	staff_id INTEGER NOT NULL,
+	id {serial pk},
+	board_id {fk to serial},
+	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	filename VARCHAR(255) NOT NULL,
@@ -227,9 +227,9 @@ create table filename_ban(
 );
 
 create table username_ban(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	board_id INTEGER,
-	staff_id INTEGER NOT NULL,
+	id {serial pk},
+	board_id {fk to serial},
+	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	username VARCHAR(255) NOT NULL,
@@ -239,9 +239,9 @@ create table username_ban(
 );
 
 create table file_ban(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	board_id INTEGER,
-	staff_id INTEGER NOT NULL,
+	id {serial pk},
+	board_id {fk to serial},
+	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	checksum int NOT NULL,
@@ -250,9 +250,9 @@ create table file_ban(
 );
 
 create table wordfilters(
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	board_id INTEGER,
-	staff_id INTEGER NOT NULL,
+	id {serial pk},
+	board_id {fk to serial},
+	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	search VARCHAR(75) NOT NULL CHECK (search <> ''),
