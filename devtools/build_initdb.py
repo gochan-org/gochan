@@ -1,3 +1,5 @@
+from os import path
+
 class macro():
 	def __init__(self, macroname, postgres, sqlite, mysql):
 		self.macroname = macroname
@@ -7,10 +9,12 @@ class macro():
 	
 # macros
 macros = [
-	macro("serial pk", "bigserial PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT", "bigint NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
-	macro("fk to serial", "bigint", "INTEGER", "bigint")
+	macro("serial pk", "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT", "BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
+	macro("fk to serial", "BIGINT", "INTEGER", "BIGINT")
 ]
-masterfile = open("initdb_master.sql").read()
+masterfileIn = open(path.join("..", "initdb_master.sql"), 'r')
+masterfile = masterfileIn.read()
+masterfileIn.close()
 
 postgresProcessed = masterfile
 sqliteProcessed = masterfile
@@ -30,9 +34,17 @@ error = hasError(postgresProcessed)
 error = error or hasError(mysqlProcessed)
 error = error or hasError(sqliteProcessed)
 
-open("initdb_postgres.sql", 'w').write(postgresProcessed)
-open("initdb_mysql.sql", 'w').write(mysqlProcessed)
-open("initdb_sqlite3.sql", 'w').write(sqliteProcessed)
+i = open(path.join("..", "initdb_postgres.sql"), 'w')
+i.write(postgresProcessed)
+i.close()
+
+i = open(path.join("..", "initdb_mysql.sql"), 'w')
+i.write(mysqlProcessed)
+i.close()
+
+i = open(path.join("..", "initdb_sqlite3.sql"), 'w')
+i.write(sqliteProcessed)
+i.close()
 	
 if error:
 	input("Error processing macros, files still contain curly braces (might be in comments?), press any key to continue")
