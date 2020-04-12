@@ -73,27 +73,70 @@ func buildFrontPage() string {
 		return gclog.Print(lErrorLog, "Failed opening front page for writing: ", err.Error()) + "<br />"
 	}
 
-	// get recent posts
-	recentQueryStr := "SELECT " +
-		"DBPREFIXposts.id, " +
-		"DBPREFIXposts.parentid, " +
-		"DBPREFIXboards.dir as boardname, " +
-		"DBPREFIXposts.boardid as boardid, " +
-		"DBPREFIXposts.name, " +
-		"DBPREFIXposts.tripcode, " +
-		"DBPREFIXposts.message, " +
-		"DBPREFIXposts.filename, " +
-		"DBPREFIXposts.thumb_w, " +
-		"DBPREFIXposts.thumb_h " +
-		"FROM  DBPREFIXposts, DBPREFIXboards " +
-		"WHERE DBPREFIXposts.deleted_timestamp = ? "
-
+	//TODO: rework so it uses all features/better sql
+	//get recent posts
+	recentQueryStr := `
+	/*
+	recentposts = join all non-deleted posts with the post id of their thread and the board it belongs on, sort by date and grab top x posts
+	singlefiles = the top file per post id
+	
+	Left join singlefiles on recentposts where recentposts.selfid = singlefiles.post_id
+	Coalesce filenames to "" (if filename = null -> "" else filename)
+	
+	Query might benefit from [filter on posts with at least one file -> ] filter N most recent -> manually loop N results for file/board/parentthreadid
+	*/
+	
+	Select 
+		recentposts.selfid AS id,
+		recentposts.toppostid AS parentid,
+		recentposts.boardid,
+		recentposts.boardname,
+		recentposts.name,
+		recentposts.tripcode,
+		recentposts.message,
+		COALESCE(singlefiles.filename, '') as filename,
+		singlefiles.thumbnail_width as thumb_w,
+		singlefiles.thumbnail_height as thumb_h
+	FROM
+		(SELECT 
+			posts.id AS selfid,
+			topposts.id AS toppostid,
+			boards.dir AS boardname,
+			boards.id AS boardid,
+			posts.name,
+			posts.tripcode,
+			posts.message,
+			posts.email,
+			 posts.created_on
+		FROM
+			DBPREFIXposts AS posts
+		JOIN DBPREFIXthreads AS threads 
+			ON threads.id = posts.thread_id
+		JOIN DBPREFIXposts AS topposts 
+			ON threads.id = topposts.thread_id
+		JOIN DBPREFIXboards AS boards
+			ON threads.board_id = boards.id
+		WHERE 
+			topposts.is_top_post = TRUE AND posts.is_deleted = FALSE
+		
+		) as recentposts
+	LEFT JOIN 
+		(SELECT files.post_id, filename, files.thumbnail_width, files.thumbnail_height
+		FROM DBPREFIXfiles as files
+		JOIN 
+			(SELECT post_id, min(file_order) as file_order
+			FROM DBPREFIXfiles
+			GROUP BY post_id) as topfiles 
+			ON files.post_id = topfiles.post_id AND files.file_order = topfiles.file_order
+		) AS singlefiles 
+		
+		ON recentposts.selfid = singlefiles.post_id`
 	if !config.RecentPostsWithNoFile {
-		recentQueryStr += "AND DBPREFIXposts.filename != '' AND DBPREFIXposts.filename != 'deleted' "
+		recentQueryStr += "WHERE singlefiles.filename IS NOT NULL"
 	}
-	recentQueryStr += "AND boardid = DBPREFIXboards.id ORDER BY timestamp DESC LIMIT ?"
+	recentQueryStr += "ORDER BY recentposts.created_on DESC LIMIT ?"
 
-	rows, err := querySQL(recentQueryStr, nilTimestamp, config.MaxRecentPosts)
+	rows, err := querySQL(recentQueryStr, config.MaxRecentPosts)
 	defer closeHandle(rows)
 	if err != nil {
 		return gclog.Print(lErrorLog, err.Error())
