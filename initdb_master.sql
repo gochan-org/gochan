@@ -4,14 +4,14 @@
 -- Versioning numbering goes by whole numbers. Upgrade script migrate existing databases between versions
 -- Database version: 1
 
-CREATE TABLE database_version(
+CREATE TABLE DBPREFIXdatabase_version(
 	version INT NOT NULL
 );
 
-INSERT INTO database_version(version)
+INSERT INTO DBPREFIXdatabase_version(version)
 VALUES(1);
 
-CREATE TABLE sections(
+CREATE TABLE DBPREFIXsections(
 	id {serial pk},
 	name TEXT NOT NULL,
 	abbreviation TEXT NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE sections(
 	UNIQUE(position)
 );
 
-CREATE TABLE boards(
+CREATE TABLE DBPREFIXboards(
 	id {serial pk},
 	section_id {fk to serial} NOT NULL,
 	uri TEXT NOT NULL,
@@ -44,13 +44,13 @@ CREATE TABLE boards(
 	redictect_to_thread BOOL NOT NULL,
 	require_file BOOL NOT NULL,
 	enable_catalog BOOL NOT NULL,
-	FOREIGN KEY(section_id) REFERENCES sections(id),
+	FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
 	UNIQUE(dir),
 	UNIQUE(uri),
 	UNIQUE(navbar_position)
 );
 
-CREATE TABLE threads(
+CREATE TABLE DBPREFIXthreads(
 	id {serial pk},
 	board_id {fk to serial} NOT NULL,
 	locked BOOL NOT NULL,
@@ -60,12 +60,12 @@ CREATE TABLE threads(
 	last_bump TIMESTAMP NOT NULL,
 	deleted_at TIMESTAMP NOT NULL,
 	is_deleted BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
 );
 
-CREATE INDEX thread_deleted_index ON threads(is_deleted);
+CREATE INDEX thread_deleted_index ON DBPREFIXthreads(is_deleted);
 
-CREATE TABLE posts(
+CREATE TABLE DBPREFIXposts(
 	id {serial pk},
 	thread_id {fk to serial} NOT NULL,
 	is_top_post BOOL NOT NULL,
@@ -82,12 +82,12 @@ CREATE TABLE posts(
 	deleted_at TIMESTAMP NOT NULL,
 	is_deleted BOOL NOT NULL,
 	banned_message TEXT,
-	FOREIGN KEY(thread_id) REFERENCES threads(id)
+	FOREIGN KEY(thread_id) REFERENCES DBPREFIXthreads(id)
 );
 
-CREATE INDEX top_post_index ON posts(is_top_post);
+CREATE INDEX top_post_index ON DBPREFIXposts(is_top_post);
 
-CREATE TABLE files(
+CREATE TABLE DBPREFIXfiles(
 	id {serial pk},
 	post_id {fk to serial} NOT NULL,
 	file_order INT NOT NULL,
@@ -96,11 +96,11 @@ CREATE TABLE files(
 	checksum INT NOT NULL,
 	file_size INT NOT NULL,
 	is_spoilered BOOL NOT NULL,
-	FOREIGN KEY(post_id) REFERENCES posts(id),
+	FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id),
 	UNIQUE(post_id, file_order)
 );
 
-CREATE TABLE staff(
+CREATE TABLE DBPREFIXstaff(
 	id {serial pk},
 	username VARCHAR(45) NOT NULL,
 	password_checksum VARCHAR(120) NOT NULL,
@@ -111,31 +111,31 @@ CREATE TABLE staff(
 	UNIQUE(username)
 );
 
-CREATE TABLE sessions(
+CREATE TABLE DBPREFIXsessions(
 	id {serial pk},
 	staff_id {fk to serial} NOT NULL,
 	expires TIMESTAMP NOT NULL,
 	data VARCHAR(45) NOT NULL,
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE board_staff(
+CREATE TABLE DBPREFIXboard_staff(
 	board_id {fk to serial} NOT NULL,
 	staff_id {fk to serial} NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE announcements(
+CREATE TABLE DBPREFIXannouncements(
 	id {serial pk},
 	staff_id {fk to serial} NOT NULL,
 	subject VARCHAR(45) NOT NULL,
 	message TEXT NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE ip_ban(
+CREATE TABLE DBPREFIXip_ban(
 	id {serial pk},
 	staff_id {fk to serial} NOT NULL,
 	board_id {fk to serial} NOT NULL,
@@ -150,12 +150,12 @@ CREATE TABLE ip_ban(
 	staff_note VARCHAR(255) NOT NULL,
 	message TEXT NOT NULL,
 	can_appeal BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id),
-	FOREIGN KEY(banned_for_post_id) REFERENCES posts(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	FOREIGN KEY(banned_for_post_id) REFERENCES DBPREFIXposts(id)
 );
 
-CREATE TABLE ip_ban_audit(
+CREATE TABLE DBPREFIXip_ban_audit(
 	ip_ban_id {fk to serial} NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	staff_id {fk to serial} NOT NULL,
@@ -167,22 +167,22 @@ CREATE TABLE ip_ban_audit(
 	message TEXT NOT NULL,
 	can_appeal BOOL NOT NULL,
 	PRIMARY KEY(ip_ban_id, timestamp),
-	FOREIGN KEY(ip_ban_id) REFERENCES ip_ban(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE ip_ban_appeals(
+CREATE TABLE DBPREFIXip_ban_appeals(
 	id {serial pk},
 	staff_id {fk to serial},
 	ip_ban_id {fk to serial} NOT NULL,
 	appeal_text TEXT NOT NULL,
 	staff_response TEXT,
 	is_denied BOOL NOT NULL,
-	FOREIGN KEY(staff_id) REFERENCES staff(id),
-	FOREIGN KEY(ip_ban_id) REFERENCES ip_ban(id)
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id)
 );
 
-CREATE TABLE ip_ban_appeals_audit(
+CREATE TABLE DBPREFIXip_ban_appeals_audit(
 	appeal_id {fk to serial} NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	staff_id {fk to serial},
@@ -190,31 +190,31 @@ CREATE TABLE ip_ban_appeals_audit(
 	staff_response TEXT,
 	is_denied BOOL NOT NULL,
 	PRIMARY KEY(appeal_id, timestamp),
-	FOREIGN KEY(staff_id) REFERENCES staff(id),
-	FOREIGN KEY(appeal_id) REFERENCES ip_ban_appeals(id)
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id)
 );
 
-CREATE TABLE reports(
+CREATE TABLE DBPREFIXreports(
 	id {serial pk}, 
 	handled_by_staff_id {fk to serial},
 	post_id {fk to serial} NOT NULL,
 	ip INT NOT NULL,
 	reason TEXT NOT NULL,
 	is_cleared BOOL NOT NULL,
-	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
-	FOREIGN KEY(post_id) REFERENCES posts(id)
+	FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
+	FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id)
 );
 
-CREATE TABLE reports_audit(
+CREATE TABLE DBPREFIXreports_audit(
 	report_id {fk to serial} NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	handled_by_staff_id {fk to serial},
 	is_cleared BOOL NOT NULL,
-	FOREIGN KEY(handled_by_staff_id) REFERENCES staff(id),
-	FOREIGN KEY(report_id) REFERENCES reports(id)
+	FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
+	FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id)
 );
 
-CREATE TABLE filename_ban(
+CREATE TABLE DBPREFIXfilename_ban(
 	id {serial pk},
 	board_id {fk to serial},
 	staff_id {fk to serial} NOT NULL,
@@ -222,11 +222,11 @@ CREATE TABLE filename_ban(
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	filename VARCHAR(255) NOT NULL,
 	is_regex BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE username_ban(
+CREATE TABLE DBPREFIXusername_ban(
 	id {serial pk},
 	board_id {fk to serial},
 	staff_id {fk to serial} NOT NULL,
@@ -234,22 +234,22 @@ CREATE TABLE username_ban(
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	username VARCHAR(255) NOT NULL,
 	is_regex BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE file_ban(
+CREATE TABLE DBPREFIXfile_ban(
 	id {serial pk},
 	board_id {fk to serial},
 	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	checksum INT NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE wordfilters(
+CREATE TABLE DBPREFIXwordfilters(
 	id {serial pk},
 	board_id {fk to serial},
 	staff_id {fk to serial} NOT NULL,
@@ -258,6 +258,6 @@ CREATE TABLE wordfilters(
 	search VARCHAR(75) NOT NULL CHECK (search <> ''),
 	is_regex BOOL NOT NULL,
 	change_to VARCHAR(75) NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES boards(id),
-	FOREIGN KEY(staff_id) REFERENCES staff(id)
+	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
