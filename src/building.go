@@ -89,8 +89,8 @@ func buildFrontPage() string {
 	Select 
 		recentposts.selfid AS id,
 		recentposts.toppostid AS parentid,
-		recentposts.boardid,
 		recentposts.boardname,
+		recentposts.boardid,
 		recentposts.name,
 		recentposts.tripcode,
 		recentposts.message,
