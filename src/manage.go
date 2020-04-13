@@ -87,24 +87,12 @@ func getCurrentStaff(request *http.Request) (string, error) {
 	if err != nil {
 		return "", nil
 	}
-	key := sessionCookie.Value
-	currentSession := new(LoginSession)
-	if err := queryRowSQL("SELECT sessiondata FROM DBPREFIXsessions WHERE name = ?",
-		[]interface{}{key},
-		[]interface{}{&currentSession.Data},
-	); err != nil {
+	var data string
+	data, err = GetStaffData(sessionCookie.Value)
+	if err == nil {
 		return "", err
 	}
-	return currentSession.Data, nil
-}
-
-func getStaff(name string) (*Staff, error) {
-	staff := new(Staff)
-	err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
-		[]interface{}{name},
-		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
-	)
-	return staff, err
+	return data, nil
 }
 
 func getStaffRank(request *http.Request) int {
@@ -121,17 +109,6 @@ func getStaffRank(request *http.Request) int {
 		return 0
 	}
 	return staff.Rank
-}
-
-func newStaff(username string, password string, rank int) error {
-	_, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
-		&username, bcryptSum(password), &rank)
-	return err
-}
-
-func deleteStaff(username string) error {
-	_, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
-	return err
 }
 
 func createSession(key string, username string, password string, request *http.Request, writer http.ResponseWriter) int {
@@ -166,19 +143,11 @@ func createSession(key string, username string, password string, request *http.R
 		MaxAge: 60 * 60 * 24 * 7,
 	})
 
-	if _, err = execSQL("INSERT INTO DBPREFIXsessions (name,sessiondata,expires) VALUES(?,?,?)",
-		key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
-	); err != nil {
+	if err = CreateSession(key, username); err != nil {
 		gclog.Print(lErrorLog, "Error creating new staff session: ", err.Error())
 		return 2
 	}
 
-	if _, err = execSQL("UPDATE DBPREFIXstaff SET last_active = ? WHERE username = ?",
-		getSQLDateTime(), username,
-	); err != nil {
-		gclog.Print(lErrorLog, "Error creating new staff session: ", err.Error())
-		return 2
-	}
 	return 0
 }
 
@@ -191,9 +160,7 @@ var manageFunctions = map[string]ManageFunction{
 			var err error
 			if request.FormValue("run") == "Run Cleanup" {
 				html += "Removing deleted posts from the database.<hr />"
-				if _, err = execSQL(
-					"DELETE FROM DBPREFIXposts WHERE deleted_timestamp = ?", nilTimestamp,
-				); err != nil {
+				if err = PermanentlyRemoveDeletedPosts(); err != nil {
 					return html + "<tr><td>" +
 						gclog.Print(lErrorLog, "Error removing deleted posts from database: ", err.Error()) +
 						"</td></tr></table>"
@@ -201,22 +168,11 @@ var manageFunctions = map[string]ManageFunction{
 				// TODO: remove orphaned replies and uploads
 
 				html += "Optimizing all tables in database.<hr />"
-				tableRows, tablesErr := querySQL("SHOW TABLES")
-				defer closeHandle(tableRows)
-
-				if tablesErr != nil && tablesErr != sql.ErrNoRows {
+				err = OptimizeDatabase()
+				if err != nil {
 					return html + "<tr><td>" +
 						gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
 						"</td></tr></table>"
-				}
-				for tableRows.Next() {
-					var table string
-					tableRows.Scan(&table)
-					if _, err := execSQL("OPTIMIZE TABLE " + table); err != nil {
-						return html + "<tr><td>" +
-							gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
-							"</td></tr></table>"
-					}
 				}
 
 				html += "Cleanup finished"
@@ -525,7 +481,6 @@ var manageFunctions = map[string]ManageFunction{
 					serveErrorPage(writer, err.Error())
 				}
 				expires := time.Now().Add(duration)
-				var bantype int
 				if request.FormValue("fullban") == "on" {
 					bantype = 3
 				} else {
@@ -543,7 +498,7 @@ var manageFunctions = map[string]ManageFunction{
 				boards := request.FormValue("boards")
 				reason := html.EscapeString(request.FormValue("reason"))
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
-				currentStaff, _ := getCurrentStaff(request)
+				currentStaff, _ := getCurrentStaff(request) //TODO start here refactor
 				sqlStr := "INSERT INTO DBPREFIXbanlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
 				for i := 1; i <= 12; i++ {
 					sqlStr += "?"

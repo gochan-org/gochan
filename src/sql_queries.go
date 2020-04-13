@@ -133,7 +133,7 @@ func GetRecentPosts(amount int, onlyWithFile bool) (recentPosts []RecentPost) {
 	rows, err := querySQL(recentQueryStr, amount)
 	defer closeHandle(rows)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var recentPostsArr []RecentPost
@@ -144,12 +144,12 @@ func GetRecentPosts(amount int, onlyWithFile bool) (recentPosts []RecentPost) {
 			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
 			&recentPost.Name, &recentPost.Tripcode, &recentPost.Message, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
 		); err != nil {
-			return err
+			return nil, err
 		}
 		recentPostsArr = append(recentPostsArr, recentPost)
 	}
 
-	return recentPostsArr
+	return recentPostsArr, nil
 }
 
 // GetReplyCount gets the total amount non-deleted of replies in a thread
@@ -159,5 +159,80 @@ func GetReplyCount(postID int) (replyCount int, err error) {
 
 // GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
 func GetReplyFileCount(postID int) (fileCount int, err error) {
+
+}
+
+// GetStaffData returns the data associated with a given username
+func GetStaffData(staffName string) (data string, err error) {
+	//("SELECT sessiondata FROM DBPREFIXsessions WHERE name = ?",
+}
+func GetStaff(name string) (*Staff, error) { //TODO not upt to date with old db yet
+	staff := new(Staff)
+	err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
+		[]interface{}{name},
+		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
+	)
+	return staff, err
+}
+
+func newStaff(username string, password string, rank int) error { //TODO not up to date with old db yet
+	_, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
+		&username, bcryptSum(password), &rank)
+	return err
+}
+
+func deleteStaff(username string) error { //TODO not up to date with old db yet
+	_, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
+	return err
+}
+
+func CreateSession(key string, username string) error { //TODO not up to date with old db yet
+	//TODO move amount of time to config file
+	//TODO also set last login
+	return execSQL("INSERT INTO DBPREFIXsessions (name,sessiondata,expires) VALUES(?,?,?)",
+		key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
+	)
+}
+
+func PermanentlyRemoveDeletedPosts() error {
+	//Remove all deleted posts
+	//Remove orphaned threads
+	//Make sure cascades are set up properly
+}
+
+func OptimizeDatabase() error { //TODO FIX, try to do it entirely within one SQL transaction
+
+	html += "Optimizing all tables in database.<hr />"
+	tableRows, tablesErr := querySQL("SHOW TABLES")
+	defer closeHandle(tableRows)
+
+	if tablesErr != nil && tablesErr != sql.ErrNoRows {
+		return html + "<tr><td>" +
+			gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
+			"</td></tr></table>"
+	}
+	for tableRows.Next() {
+		var table string
+		tableRows.Scan(&table)
+		if _, err := execSQL("OPTIMIZE TABLE " + table); err != nil {
+			return html + "<tr><td>" +
+				gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
+				"</td></tr></table>"
+		}
+	}
+}
+
+// FileBan creates a new ban on a file. If boards = nil, the ban is global.
+func FileBan(fileChecksum string, staffName string, expires Time, permaban bool, staffNote string, boardURI string) error {
+
+}
+
+// FileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
+func FileNameBan(fileName string, isRegex bool, staffName string, expires Time, permaban bool, staffNote string, boardURI string) error {
+
+}
+
+// UserNameBan creates a new ban on a username. If boards = nil, the ban is global.
+func UserNameBan(userName string, isRegex bool, staffName string, expires Time, permaban bool, staffNote string, boardURI string) error {
 
 }
