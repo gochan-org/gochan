@@ -216,11 +216,7 @@ func buildBoardPages(board *Board) (html string) {
 	var opPosts []Post
 
 	// Get all top level posts for the board.
-	if opPosts, err = getPostArr(map[string]interface{}{
-		"boardid":           board.ID,
-		"parentid":          0,
-		"deleted_timestamp": nilTimestamp,
-	}, " ORDER BY bumped DESC"); err != nil {
+	if opPosts, err = GetTopPosts(board.ID); err != nil {
 		return html + gclog.Printf(lErrorLog, "Error getting OP posts for /%s/: %s", board.Dir, err.Error()) + "<br />"
 	}
 
@@ -230,7 +226,7 @@ func buildBoardPages(board *Board) (html string) {
 		var postsInThread []Post
 
 		// Get the number of replies to this thread.
-		queryStr := "SELECT COUNT(*) FROM DBPREFIXposts WHERE boardid = ? AND parentid = ? AND deleted_timestamp = ?"
+		queryStr := "SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ? AND parentid = ? AND deleted_timestamp = ?"
 
 		if err = queryRowSQL(queryStr,
 			[]interface{}{board.ID, op.ID, nilTimestamp},
@@ -265,11 +261,7 @@ func buildBoardPages(board *Board) (html string) {
 			numRepliesOnBoardPage = config.RepliesOnBoardPage
 		}
 
-		postsInThread, err = getPostArr(map[string]interface{}{
-			"boardid":           board.ID,
-			"parentid":          op.ID,
-			"deleted_timestamp": nilTimestamp,
-		}, fmt.Sprintf(" ORDER BY id DESC LIMIT %d", numRepliesOnBoardPage))
+		postsInThread, err = GetExistingRepliesLimitedRev(op.id, numRepliesOnBoardPage)
 		if err != nil {
 			return html + gclog.Printf(lErrorLog,
 				"Error getting posts in /%s/%d: %s",
@@ -499,11 +491,7 @@ func buildCatalog(which int) string {
 			"Failed opening /%s/catalog.html: %s", board.Dir, err.Error()) + "<br />"
 	}
 
-	threadOPs, err := getPostArr(map[string]interface{}{
-		"boardid":           which,
-		"parentid":          0,
-		"deleted_timestamp": nilTimestamp,
-	}, "ORDER BY bumped ASC")
+	threadOPs, err := GetTopPosts(which, false)
 	if err != nil {
 		return gclog.Printf(lErrorLog,
 			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
@@ -540,11 +528,7 @@ func buildThreadPages(op *Post) error {
 		return err
 	}
 
-	replies, err = getPostArr(map[string]interface{}{
-		"boardid":           op.BoardID,
-		"parentid":          op.ID,
-		"deleted_timestamp": nilTimestamp,
-	}, "ORDER BY id ASC")
+	replies, err = GetExistingReplies(op.ID)
 	if err != nil {
 		return fmt.Errorf("Error building thread %d: %s", op.ID, err.Error())
 	}
@@ -605,16 +589,12 @@ func buildThreadPages(op *Post) error {
 func buildThreads(all bool, boardid, threadid int) error {
 	var threads []Post
 	var err error
-
-	queryMap := map[string]interface{}{
-		"boardid":           boardid,
-		"parentid":          0,
-		"deleted_timestamp": nilTimestamp,
+	if all {
+		threads, err = getTopPosts(boardid, 0, false, false)
+	} else {
+		threads, err = GetSpecificTopPost(threadid)
 	}
-	if !all {
-		queryMap["id"] = threadid
-	}
-	if threads, err = getPostArr(queryMap, ""); err != nil {
+	if err != nil {
 		return err
 	}
 

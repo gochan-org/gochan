@@ -389,7 +389,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 				_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
 				buildBoardPages(&_board[0])
-				_post, _ := getPostArr(map[string]interface{}{"id": post.ID, "boardid": post.BoardID}, "")
+				_post, _ := GetSpecificPost(post.ID)
 				postBoard := _post[0]
 				buildThreadPages(&postBoard)
 

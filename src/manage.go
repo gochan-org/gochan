@@ -572,10 +572,7 @@ var manageFunctions = map[string]ManageFunction{
 					return pageHTML + gclog.Print(lStaffLog, "Board doesn't exist")
 				}
 
-				posts, err := getPostArr(map[string]interface{}{
-					"id":      request.FormValue("postid"),
-					"boardid": boards[0].ID,
-				}, "")
+				posts, err := GetSpecificPost(request.FormValue("postid"))
 				if err != nil {
 					return pageHTML + gclog.Print(lErrorLog, "Error getting post list: ", err.Error())
 				}
@@ -888,23 +885,19 @@ var manageFunctions = map[string]ManageFunction{
 		Title:       "Reparse HTML",
 		Permissions: 3,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			posts, err := getPostArr(map[string]interface{}{
-				"deleted_timestamp": nilTimestamp,
-			}, "")
+			messages, err := GetAllNondeletedMessageRaw()
 			if err != nil {
 				html += err.Error() + "<br />"
 				return
 			}
 
-			for _, post := range posts {
-				_, err = execSQL(
-					"UPDATE DBPREFIXposts SET message = ? WHERE id = ? AND boardid = ?",
-					formatMessage(post.MessageText), post.ID, post.BoardID,
-				)
-				if err != nil {
-					return html + gclog.Printf(lErrorLog, "Error reparsing post (post ID: %d, board ID: %d)",
-						post.ID, post.BoardID)
-				}
+			for _, message := range messages {
+				message.Message = formatMessage(message.MessageRaw)
+			}
+			err = SetMessage(messages)
+
+			if err != nil {
+				return html + gclog.Printf(lErrorLog, err)
 			}
 			html += "Done reparsing HTML<hr />" +
 				buildFrontPage() + "<hr />" +
@@ -983,10 +976,7 @@ var manageFunctions = map[string]ManageFunction{
 				return jsonErr
 			}
 
-			posts, err := getPostArr(map[string]interface{}{
-				"id":      request.FormValue("postid"),
-				"boardid": boards[0].ID,
-			}, "")
+			posts, err := GetSpecificPost(request.FormValue("postid"))
 			if err != nil {
 				errMap["message"] = err.Error()
 				jsonErr, _ := marshalJSON(errMap, false)

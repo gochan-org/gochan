@@ -603,6 +603,12 @@ type GochanConfig struct {
 	TimeZone              int    `json:"-"`
 }
 
+type MessagePostContainer struct {
+	ID         int
+	MessageRaw string
+	Message
+}
+
 func (cfg *GochanConfig) CheckString(val, defaultVal string, critical bool, msg string) string {
 	if val == "" {
 		val = defaultVal
