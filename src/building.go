@@ -65,7 +65,6 @@ func buildFrontPage() string {
 	if err != nil {
 		return gclog.Print(lErrorLog, "Error loading front page template: ", err.Error())
 	}
-	var recentPostsArr []interface{}
 	os.Remove(path.Join(config.DocumentRoot, "index.html"))
 	frontFile, err := os.OpenFile(path.Join(config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	defer closeHandle(frontFile)
@@ -73,84 +72,10 @@ func buildFrontPage() string {
 		return gclog.Print(lErrorLog, "Failed opening front page for writing: ", err.Error()) + "<br />"
 	}
 
-	//TODO: rework so it uses all features/better sql
-	//get recent posts
-	recentQueryStr := `
-	/*
-	recentposts = join all non-deleted posts with the post id of their thread and the board it belongs on, sort by date and grab top x posts
-	singlefiles = the top file per post id
-	
-	Left join singlefiles on recentposts where recentposts.selfid = singlefiles.post_id
-	Coalesce filenames to "" (if filename = null -> "" else filename)
-	
-	Query might benefit from [filter on posts with at least one file -> ] filter N most recent -> manually loop N results for file/board/parentthreadid
-	*/
-	
-	Select 
-		recentposts.selfid AS id,
-		recentposts.toppostid AS parentid,
-		recentposts.boardname,
-		recentposts.boardid,
-		recentposts.name,
-		recentposts.tripcode,
-		recentposts.message,
-		COALESCE(singlefiles.filename, '') as filename,
-		singlefiles.thumbnail_width as thumb_w,
-		singlefiles.thumbnail_height as thumb_h
-	FROM
-		(SELECT 
-			posts.id AS selfid,
-			topposts.id AS toppostid,
-			boards.dir AS boardname,
-			boards.id AS boardid,
-			posts.name,
-			posts.tripcode,
-			posts.message,
-			posts.email,
-			 posts.created_on
-		FROM
-			DBPREFIXposts AS posts
-		JOIN DBPREFIXthreads AS threads 
-			ON threads.id = posts.thread_id
-		JOIN DBPREFIXposts AS topposts 
-			ON threads.id = topposts.thread_id
-		JOIN DBPREFIXboards AS boards
-			ON threads.board_id = boards.id
-		WHERE 
-			topposts.is_top_post = TRUE AND posts.is_deleted = FALSE
-		
-		) as recentposts
-	LEFT JOIN 
-		(SELECT files.post_id, filename, files.thumbnail_width, files.thumbnail_height
-		FROM DBPREFIXfiles as files
-		JOIN 
-			(SELECT post_id, min(file_order) as file_order
-			FROM DBPREFIXfiles
-			GROUP BY post_id) as topfiles 
-			ON files.post_id = topfiles.post_id AND files.file_order = topfiles.file_order
-		) AS singlefiles 
-		
-		ON recentposts.selfid = singlefiles.post_id`
-	if !config.RecentPostsWithNoFile {
-		recentQueryStr += "WHERE singlefiles.filename IS NOT NULL"
-	}
-	recentQueryStr += "ORDER BY recentposts.created_on DESC LIMIT ?"
-
-	rows, err := querySQL(recentQueryStr, config.MaxRecentPosts)
-	defer closeHandle(rows)
-	if err != nil {
-		return gclog.Print(lErrorLog, err.Error())
-	}
-
-	for rows.Next() {
-		recentPost := new(RecentPost)
-		if err = rows.Scan(
-			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
-			&recentPost.Name, &recentPost.Tripcode, &recentPost.Message, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
-		); err != nil {
-			return gclog.Print(lErrorLog, "Failed getting list of recent posts for front page: ", err.Error()) + "<br />"
-		}
-		recentPostsArr = append(recentPostsArr, recentPost)
+	var recentPostsArr []RecentPost
+	recentPostsArr, err = GetRecentPosts(config.MaxRecentPosts, !config.RecentPostsWithNoFile)
+	if err == nil {
+		return gclog.Print(lErrorLog, "Failed loading recent posts: "+err.Error()) + "<br />"
 	}
 
 	for _, board := range allBoards {
@@ -216,7 +141,7 @@ func buildBoardPages(board *Board) (html string) {
 	var opPosts []Post
 
 	// Get all top level posts for the board.
-	if opPosts, err = GetTopPosts(board.ID); err != nil {
+	if opPosts, err = GetTopPosts(board.ID, true); err != nil {
 		return html + gclog.Printf(lErrorLog, "Error getting OP posts for /%s/: %s", board.Dir, err.Error()) + "<br />"
 	}
 
@@ -590,7 +515,7 @@ func buildThreads(all bool, boardid, threadid int) error {
 	var threads []Post
 	var err error
 	if all {
-		threads, err = getTopPosts(boardid, 0, false, false)
+		threads, err = GetTopPostsNoSort(boardid)
 	} else {
 		threads, err = GetSpecificTopPost(threadid)
 	}
