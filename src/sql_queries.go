@@ -151,3 +151,13 @@ func GetRecentPosts(amount int, onlyWithFile bool) (recentPosts []RecentPost) {
 
 	return recentPostsArr
 }
+
+// GetReplyCount gets the total amount non-deleted of replies in a thread
+func GetReplyCount(postID int) (replyCount int, err error) {
+
+}
+
+// GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
+func GetReplyFileCount(postID int) (fileCount int, err error) {
+
+}

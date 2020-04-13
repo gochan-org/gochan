@@ -150,28 +150,21 @@ func buildBoardPages(board *Board) (html string) {
 		var thread Thread
 		var postsInThread []Post
 
-		// Get the number of replies to this thread.
-		queryStr := "SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ? AND parentid = ? AND deleted_timestamp = ?"
-
-		if err = queryRowSQL(queryStr,
-			[]interface{}{board.ID, op.ID, nilTimestamp},
-			[]interface{}{&thread.NumReplies},
-		); err != nil {
+		var replyCount, err = GetReplyCount(op.ID)
+		if err == nil {
 			return html + gclog.Printf(lErrorLog,
 				"Error getting replies to /%s/%d: %s",
 				board.Dir, op.ID, err.Error()) + "<br />"
 		}
+		thread.NumReplies = replycount
 
-		// Get the number of image replies in this thread
-		queryStr += " AND filesize <> 0"
-		if err = queryRowSQL(queryStr,
-			[]interface{}{board.ID, op.ID, op.DeletedTimestamp},
-			[]interface{}{&thread.NumImages},
-		); err != nil {
+		var fileCount, err = GetReplyFileCount(op.ID)
+		if err == nil {
 			return html + gclog.Printf(lErrorLog,
-				"Error getting number of image replies to /%s/%d: %s",
+				"Error getting file count to /%s/%d: %s",
 				board.Dir, op.ID, err.Error()) + "<br />"
 		}
+		thread.NumImages = fileCount
 
 		thread.OP = op
 
