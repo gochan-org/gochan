@@ -98,6 +98,8 @@ CREATE TABLE DBPREFIXfiles(
 	is_spoilered BOOL NOT NULL,
 	thumbnail_width INT NOT NULL,
 	thumbnail_height INT NOT NULL,
+	width INT NOT NULL,
+	height INT NOT NULL,
 	FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id),
 	UNIQUE(post_id, file_order)
 );
