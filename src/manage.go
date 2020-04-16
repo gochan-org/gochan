@@ -82,28 +82,29 @@ func callManageFunction(writer http.ResponseWriter, request *http.Request) {
 	writer.Write(managePageBuffer.Bytes())
 }
 
-func getCurrentStaff(request *http.Request) (string, error) {
+func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	var data string
-	data, err = GetStaffData(sessionCookie.Value)
+	name, err = GetStaffName(sessionCookie.Value)
 	if err == nil {
 		return "", err
 	}
-	return data, nil
+	return name, nil
+}
+
+func getCurrentFullStaff(request *http.Request) (*Staff, error) {
+	sessionCookie, err := request.Cookie("sessiondata")
+	if err != nil {
+		return "", err
+	}
+	return GetStaffBySession(sessionCookie.Value)
 }
 
 func getStaffRank(request *http.Request) int {
-	staffname, err := getCurrentStaff(request)
-	if err == sql.ErrNoRows {
-		return 0
-	} else if err != nil {
-		gclog.Print(lErrorLog, "Error getting current staff: ", err.Error())
-		return 0
-	}
-	staff, err := getStaff(staffname)
+	staff, err := getCurrentFullStaff(request)
 	if err != nil {
 		gclog.Print(lErrorLog, "Error getting current staff: ", err.Error())
 		return 0
@@ -121,7 +122,7 @@ func createSession(key string, username string, password string, request *http.R
 		gclog.Print(lStaffLog, "Rejected login from possible spambot @ "+request.RemoteAddr)
 		return 2
 	}
-	staff, err := getStaff(username)
+	staff, err := getStaffByName(username)
 	if err != nil {
 		gclog.Print(lErrorLog, err.Error())
 		return 1
@@ -439,34 +440,24 @@ var manageFunctions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
 			html = "<h1 class=\"manage-header\">Announcements</h1><br />"
 
-			rows, err := querySQL("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
-			defer closeHandle(rows)
-			if err != nil {
-				return html + gclog.Print(lErrorLog, "Error getting announcements: ", err.Error())
-			}
-			iterations := 0
-			for rows.Next() {
-				announcement := new(Announcement)
-				err = rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
-				if err != nil {
-					html += gclog.Print(lErrorLog, "Error getting announcements: ", err.Error())
-				} else {
+			//get all announcements to announcement list
+			//loop to html if exist, no announcement if empty
+			announcements, err := GetAllAccouncements()
+			if len(announcements) == 0 {
+				html += "No announcements"
+			} else {
+				for _, announcement := range announcements {
 					html += "<div class=\"section-block\">\n" +
 						"<div class=\"section-title-block\"><b>" + announcement.Subject + "</b> by " + announcement.Poster + " at " + humanReadableTime(announcement.Timestamp) + "</div>\n" +
 						"<div class=\"section-body\">" + announcement.Message + "\n</div></div>\n"
 				}
-				iterations++
 			}
-
-			if iterations == 0 {
-				html += "No announcements"
-			}
-			return
+			return html
 		}},
 	"bans": {
 		Title:       "Bans",
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) { //TODO whatever this does idk man
 			var post Post
 			if request.FormValue("do") == "add" {
 				ip := net.ParseIP(request.FormValue("ip"))
@@ -498,7 +489,7 @@ var manageFunctions = map[string]ManageFunction{
 				boards := request.FormValue("boards")
 				reason := html.EscapeString(request.FormValue("reason"))
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
-				currentStaff, _ := getCurrentStaff(request) //TODO start here refactor
+				currentStaff, _ := GetStaff(request) //TODO start here refactor
 				sqlStr := "INSERT INTO DBPREFIXbanlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
 				for i := 1; i <= 12; i++ {
 					sqlStr += "?"
@@ -561,24 +552,12 @@ var manageFunctions = map[string]ManageFunction{
 	"getstaffjquery": {
 		Permissions: 0,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			current_staff, err := getCurrentStaff(request)
+			staff, err := getCurrentFullStaff(request)
 			if err != nil {
 				html = "nobody;0;"
 				return
 			}
-			staff_rank := getStaffRank(request)
-			if staff_rank == 0 {
-				html = "nobody;0;"
-				return
-			}
-			staff := new(Staff)
-			if err := queryRowSQL("SELECT rank,boards FROM DBPREFIXstaff WHERE username = ?",
-				[]interface{}{current_staff},
-				[]interface{}{&staff.Rank, &staff.Boards},
-			); err != nil {
-				return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
-			}
-			html = current_staff + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
+			html = current_staff.Username + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
 			return
 		}},
 	"boards": {

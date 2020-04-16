@@ -166,7 +166,22 @@ func GetReplyFileCount(postID int) (fileCount int, err error) {
 func GetStaffData(staffName string) (data string, err error) {
 	//("SELECT sessiondata FROM DBPREFIXsessions WHERE name = ?",
 }
-func GetStaff(name string) (*Staff, error) { //TODO not upt to date with old db yet
+
+// GetStaffName returns the name associated with a session
+func GetStaffName(session string) (name string, err error) {
+	//after refactor, check if still used
+}
+
+func GetStaffBySession(session string) (*Staff, error) { //TODO not upt to date with old db yet
+	staff := new(Staff)
+	err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
+		[]interface{}{name},
+		[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
+	)
+	return staff, err
+}
+
+func GetStaffByName(name string) (*Staff, error) { //TODO not upt to date with old db yet
 	staff := new(Staff)
 	err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
 		[]interface{}{name},
@@ -235,4 +250,19 @@ func FileNameBan(fileName string, isRegex bool, staffName string, expires Time, 
 // UserNameBan creates a new ban on a username. If boards = nil, the ban is global.
 func UserNameBan(userName string, isRegex bool, staffName string, expires Time, permaban bool, staffNote string, boardURI string) error {
 
+}
+
+func UserBan(threadBan bool, staffName string, boardURI string, postID int, expires Time, permaban bool,
+	staffNote string, message string, canAppeal bool, appealAt Time) error {
+
+}
+
+func GetStaffRankAndBoards(username string) (rank int, boardUris []string, err error) {
+
+}
+
+//GetAllAccouncements gets all announcements, newest first
+func GetAllAccouncements() ([]Announcement, error) {
+	//("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
+	//rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
 }
