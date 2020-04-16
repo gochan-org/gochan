@@ -73,7 +73,7 @@ func buildFrontPage() string {
 	}
 
 	var recentPostsArr []RecentPost
-	recentPostsArr, err = GetRecentPosts(config.MaxRecentPosts, !config.RecentPostsWithNoFile)
+	recentPostsArr, err = GetRecentPostsGlobal(config.MaxRecentPosts, !config.RecentPostsWithNoFile)
 	if err == nil {
 		return gclog.Print(lErrorLog, "Failed loading recent posts: "+err.Error()) + "<br />"
 	}
@@ -156,9 +156,9 @@ func buildBoardPages(board *Board) (html string) {
 				"Error getting replies to /%s/%d: %s",
 				board.Dir, op.ID, err.Error()) + "<br />"
 		}
-		thread.NumReplies = replycount
+		thread.NumReplies = replyCount
 
-		var fileCount, err = GetReplyFileCount(op.ID)
+		fileCount, err := GetReplyFileCount(op.ID)
 		if err == nil {
 			return html + gclog.Printf(lErrorLog,
 				"Error getting file count to /%s/%d: %s",
@@ -179,7 +179,7 @@ func buildBoardPages(board *Board) (html string) {
 			numRepliesOnBoardPage = config.RepliesOnBoardPage
 		}
 
-		postsInThread, err = GetExistingRepliesLimitedRev(op.id, numRepliesOnBoardPage)
+		postsInThread, err = GetExistingRepliesLimitedRev(op.ID, numRepliesOnBoardPage)
 		if err != nil {
 			return html + gclog.Printf(lErrorLog,
 				"Error getting posts in /%s/%d: %s",
@@ -510,7 +510,9 @@ func buildThreads(all bool, boardid, threadid int) error {
 	if all {
 		threads, err = GetTopPostsNoSort(boardid)
 	} else {
-		threads, err = GetSpecificTopPost(threadid)
+		var post Post
+		post, err = GetSpecificTopPost(threadid)
+		threads = []Post{post}
 	}
 	if err != nil {
 		return err

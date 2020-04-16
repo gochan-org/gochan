@@ -389,8 +389,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 				_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
 				buildBoardPages(&_board[0])
-				_post, _ := GetSpecificPost(post.ID)
-				postBoard := _post[0]
+				postBoard, _ := GetSpecificPost(post.ID)
 				buildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())

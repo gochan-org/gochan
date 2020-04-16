@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -87,8 +86,7 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 	if err != nil {
 		return "", err
 	}
-	var data string
-	name, err = GetStaffName(sessionCookie.Value)
+	name, err := GetStaffName(sessionCookie.Value)
 	if err == nil {
 		return "", err
 	}
@@ -98,7 +96,7 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 func getCurrentFullStaff(request *http.Request) (*Staff, error) {
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return GetStaffBySession(sessionCookie.Value)
 }
@@ -122,7 +120,7 @@ func createSession(key string, username string, password string, request *http.R
 		gclog.Print(lStaffLog, "Rejected login from possible spambot @ "+request.RemoteAddr)
 		return 2
 	}
-	staff, err := getStaffByName(username)
+	staff, err := GetStaffByName(username)
 	if err != nil {
 		gclog.Print(lErrorLog, err.Error())
 		return 1
@@ -172,7 +170,7 @@ var manageFunctions = map[string]ManageFunction{
 				err = OptimizeDatabase()
 				if err != nil {
 					return html + "<tr><td>" +
-						gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
+						gclog.Print(lErrorLog, "Error optimizing SQL tables: ", err.Error()) +
 						"</td></tr></table>"
 				}
 
@@ -443,6 +441,9 @@ var manageFunctions = map[string]ManageFunction{
 			//get all announcements to announcement list
 			//loop to html if exist, no announcement if empty
 			announcements, err := GetAllAccouncements()
+			if err != nil {
+				return html + gclog.Print(lErrorLog, "Error getting announcements: ", err.Error())
+			}
 			if len(announcements) == 0 {
 				html += "No announcements"
 			} else {
@@ -472,36 +473,49 @@ var manageFunctions = map[string]ManageFunction{
 					serveErrorPage(writer, err.Error())
 				}
 				expires := time.Now().Add(duration)
-				if request.FormValue("fullban") == "on" {
-					bantype = 3
-				} else {
-					if request.FormValue("threadban") == "on" {
-						bantype++
-					}
-					if request.FormValue("imageban") == "on" {
-						bantype += 2
-					}
-				}
-				if bantype == 0 {
-					bantype = 3
-				}
 
 				boards := request.FormValue("boards")
 				reason := html.EscapeString(request.FormValue("reason"))
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
-				currentStaff, _ := GetStaff(request) //TODO start here refactor
-				sqlStr := "INSERT INTO DBPREFIXbanlist (ip,name,name_is_regex,filename,file_checksum,boards,staff,expires,permaban,reason,type,staff_note) VALUES("
-				for i := 1; i <= 12; i++ {
-					sqlStr += "?"
-					if i < 12 {
-						sqlStr += ","
-					}
+				currentStaff, _ := getCurrentStaff(request)
+
+				err = nil
+				if filename != "" {
+					err = FileNameBan(filename, nameIsRegex, currentStaff, expires, permaban, staffNote, boards)
 				}
-				sqlStr += ")"
-				if _, err := execSQL(sqlStr,
-					ip.String(), name, nameIsRegex, filename, checksum, boards, currentStaff, expires, permaban, reason, bantype, staffNote,
-				); err != nil {
+				if err != nil {
 					pageHTML += err.Error()
+					err = nil
+				}
+				if name != "" {
+					err = UserNameBan(name, nameIsRegex, currentStaff, expires, permaban, staffNote, boards)
+				}
+				if err != nil {
+					pageHTML += err.Error()
+					err = nil
+				}
+
+				if request.FormValue("fullban") == "on" {
+					err = UserBan(ip, false, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
+					if err != nil {
+						pageHTML += err.Error()
+						err = nil
+					}
+				} else {
+					if request.FormValue("threadban") == "on" {
+						err = UserBan(ip, true, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
+						if err != nil {
+							pageHTML += err.Error()
+							err = nil
+						}
+					}
+					if request.FormValue("imageban") == "on" {
+						err = FileBan(checksum, currentStaff, expires, permaban, staffNote, boards)
+						if err != nil {
+							pageHTML += err.Error()
+							err = nil
+						}
+					}
 				}
 			}
 
@@ -517,27 +531,15 @@ var manageFunctions = map[string]ManageFunction{
 				if len(boards) < 1 {
 					return pageHTML + gclog.Print(lStaffLog, "Board doesn't exist")
 				}
-
-				posts, err := GetSpecificPost(request.FormValue("postid"))
+				post, err = GetSpecificPostByString(request.FormValue("postid"))
 				if err != nil {
-					return pageHTML + gclog.Print(lErrorLog, "Error getting post list: ", err.Error())
+					return pageHTML + gclog.Print(lErrorLog, "Error getting post: ", err.Error())
 				}
-				if len(posts) < 1 {
-					return pageHTML + gclog.Print(lStaffLog|lErrorLog, "Post doesn't exist")
-				}
-				post = posts[0]
 			}
-			rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM DBPREFIXbanlist")
-			defer closeHandle(rows)
+
+			banlist, err := GetAllBans()
 			if err != nil {
 				return pageHTML + gclog.Print(lErrorLog, "Error getting ban list: ", err.Error())
-			}
-
-			var banlist []BanInfo
-			for rows.Next() {
-				var ban BanInfo
-				rows.Scan(&ban.IP, &ban.Name, &ban.Reason, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.CanAppeal)
-				banlist = append(banlist, ban)
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
@@ -557,7 +559,7 @@ var manageFunctions = map[string]ManageFunction{
 				html = "nobody;0;"
 				return
 			}
-			html = current_staff.Username + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
+			html = staff.Username + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
 			return
 		}},
 	"boards": {
@@ -569,7 +571,6 @@ var manageFunctions = map[string]ManageFunction{
 			board := new(Board)
 			var boardCreationStatus string
 			var err error
-			var rows *sql.Rows
 			for !done {
 				switch {
 				case do == "add":
@@ -675,21 +676,7 @@ var manageFunctions = map[string]ManageFunction{
 						break
 					}
 
-					boardCreationTimestamp := getSpecificSQLDateTime(board.CreatedOn)
-					if _, err := execSQL(
-						"INSERT INTO DBPREFIXboards (list_order,dir,type,upload_type,title,subtitle,"+
-							"description,section,max_file_size,max_pages,default_style,locked,created_on,"+
-							"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,embeds_allowed,"+
-							"redirect_to_thread,require_file,enable_catalog) "+
-							"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-						board.ListOrder, board.Dir, board.Type, board.UploadType,
-						board.Title, board.Subtitle, board.Description, board.Section,
-						board.MaxFilesize, board.MaxPages, board.DefaultStyle,
-						board.Locked, boardCreationTimestamp, board.Anonymous,
-						board.ForcedAnon, board.MaxAge, board.AutosageAfter,
-						board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
-						board.RedirectToThread, board.RequireFile, board.EnableCatalog,
-					); err != nil {
+					if err := CreateBoard(*board); err != nil {
 						do = ""
 						boardCreationStatus = gclog.Print(lErrorLog, "Error creating board: ", err.Error())
 						break
@@ -720,15 +707,11 @@ var manageFunctions = map[string]ManageFunction{
 				}
 
 				html = "<h1 class=\"manage-header\">Manage boards</h1>\n<form action=\"/manage?action=boards\" method=\"POST\">\n<input type=\"hidden\" name=\"do\" value=\"existing\" /><select name=\"boardselect\">\n<option>Select board...</option>\n"
-				rows, err = querySQL("SELECT dir FROM DBPREFIXboards")
-				defer closeHandle(rows)
+				boards, err := GetBoardUris()
 				if err != nil {
 					return html + gclog.Print(lErrorLog, "Error getting board list: ", err.Error())
 				}
-
-				for rows.Next() {
-					var boardDir string
-					rows.Scan(&boardDir)
+				for _, boardDir := range boards {
 					html += "<option>" + boardDir + "</option>"
 				}
 
@@ -736,15 +719,7 @@ var manageFunctions = map[string]ManageFunction{
 					"<h2 class=\"manage-header\">Create new board</h2>\n<span id=\"board-creation-message\">" + boardCreationStatus + "</span><br />"
 
 				manageBoardsBuffer := bytes.NewBufferString("")
-				allSections, _ = getSectionArr("")
-				if len(allSections) == 0 {
-					if _, err = execSQL(
-						"INSERT INTO DBPREFIXsections (hidden,name,abbreviation) VALUES(0,'Main','main')",
-					); err != nil {
-						gclog.Print(lErrorLog, "Error creating new board section: ", err.Error())
-					}
-				}
-				allSections, _ = getSectionArr("")
+				allSections, _ = GetAllSectionsOrCreateDefault()
 
 				if err := manageBoardsTmpl.Execute(manageBoardsBuffer, map[string]interface{}{
 					"config":      config,
@@ -828,10 +803,10 @@ var manageFunctions = map[string]ManageFunction{
 			for _, message := range messages {
 				message.Message = formatMessage(message.MessageRaw)
 			}
-			err = SetMessage(messages)
+			err = SetMessages(messages)
 
 			if err != nil {
-				return html + gclog.Printf(lErrorLog, err)
+				return html + gclog.Printf(lErrorLog, err.Error())
 			}
 			html += "Done reparsing HTML<hr />" +
 				buildFrontPage() + "<hr />" +
@@ -848,35 +823,14 @@ var manageFunctions = map[string]ManageFunction{
 				limit = "50"
 			}
 			html = "<h1 class=\"manage-header\">Recent posts</h1>\nLimit by: <select id=\"limit\"><option>25</option><option>50</option><option>100</option><option>200</option></select>\n<br />\n<table width=\"100%%d\" border=\"1\">\n<colgroup><col width=\"25%%\" /><col width=\"50%%\" /><col width=\"17%%\" /></colgroup><tr><th></th><th>Message</th><th>Time</th></tr>"
-			rows, err := querySQL("SELECT "+
-				"DBPREFIXboards.dir AS boardname, "+
-				"DBPREFIXposts.boardid AS boardid, "+
-				"DBPREFIXposts.id AS id, "+
-				"DBPREFIXposts.parentid AS parentid, "+
-				"DBPREFIXposts.message AS message, "+
-				"DBPREFIXposts.ip AS ip, "+
-				"DBPREFIXposts.timestamp AS timestamp "+
-				"FROM DBPREFIXposts, DBPREFIXboards "+
-				"WHERE reviewed = 0 "+
-				"AND DBPREFIXposts.deleted_timestamp = ? "+
-				"AND boardid = DBPREFIXboards.id "+
-				"ORDER BY timestamp DESC LIMIT ?",
-				nilTimestamp, limit)
-			defer closeHandle(rows)
+			recentposts, err := GetRecentPostsGlobal(HackyStringToInt(limit), false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
+
 			if err != nil {
 				return html + "<tr><td>" + gclog.Print(lErrorLog, "Error getting recent posts: ",
 					err.Error()) + "</td></tr></table>"
 			}
 
-			for rows.Next() {
-				recentpost := new(RecentPost)
-				if err = rows.Scan(&recentpost.BoardName, &recentpost.BoardID,
-					&recentpost.PostID, &recentpost.ParentID, &recentpost.Message,
-					&recentpost.IP, &recentpost.Timestamp,
-				); err != nil {
-					return html + gclog.Print(lErrorLog, "Error getting recent posts: ",
-						err.Error())
-				}
+			for _, recentpost := range recentposts {
 				html += fmt.Sprintf(
 					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
 					path.Join(config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
@@ -910,18 +864,13 @@ var manageFunctions = map[string]ManageFunction{
 				return jsonErr
 			}
 
-			posts, err := GetSpecificPost(request.FormValue("postid"))
+			post, err := GetSpecificPost(HackyStringToInt(request.FormValue("postid")))
 			if err != nil {
 				errMap["message"] = err.Error()
 				jsonErr, _ := marshalJSON(errMap, false)
 				return jsonErr
 			}
-			if len(posts) < 1 {
-				errMap["message"] = "Post doesn't exist"
-				jsonErr, _ := marshalJSON(errMap, false)
-				return jsonErr
-			}
-			jsonStr, _ := marshalJSON(posts[0], false)
+			jsonStr, _ := marshalJSON(post, false)
 			return jsonStr
 		}},
 	"staff": {
@@ -932,18 +881,12 @@ var manageFunctions = map[string]ManageFunction{
 			html = `<h1 class="manage-header">Staff</h1><br />` +
 				`<table id="stafftable" border="1">` +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>"
-			rows, err := querySQL("SELECT username,rank,boards,added_on FROM DBPREFIXstaff")
-			defer closeHandle(rows)
+			allStaff, err := GetAllStaffNopass()
 			if err != nil {
 				return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
 			}
 
-			iter := 1
-			for rows.Next() {
-				staff := new(Staff)
-				if err = rows.Scan(&staff.Username, &staff.Rank, &staff.Boards, &staff.AddedOn); err != nil {
-					return html + gclog.Print(lErrorLog, "Error getting staff list: ", err.Error())
-				}
+			for _, staff := range allStaff {
 				username := request.FormValue("username")
 				password := request.FormValue("password")
 				rank := request.FormValue("rank")
@@ -973,7 +916,6 @@ var manageFunctions = map[string]ManageFunction{
 				html += fmt.Sprintf(
 					`<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
 					staff.Username, rank, staff.Boards, humanReadableTime(staff.AddedOn), staff.Username)
-				iter++
 			}
 			html += "</table>\n\n<hr />\n<h2 class=\"manage-header\">Add new staff</h2>\n\n" +
 				"<form action=\"/manage?action=staff\" onsubmit=\"return makeNewStaff();\" method=\"POST\">\n" +

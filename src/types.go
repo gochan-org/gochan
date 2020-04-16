@@ -606,7 +606,7 @@ type GochanConfig struct {
 type MessagePostContainer struct {
 	ID         int
 	MessageRaw string
-	Message
+	Message    string
 }
 
 func (cfg *GochanConfig) CheckString(val, defaultVal string, critical bool, msg string) string {
