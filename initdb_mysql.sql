@@ -143,7 +143,7 @@ CREATE TABLE DBPREFIXip_ban(
 	id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
 	staff_id BIGINT NOT NULL,
 	board_id BIGINT NOT NULL,
-	banned_for_post_id BIGINT NOT NULL,
+	banned_for_post_id BIGINT,
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
 	is_active BOOL NOT NULL,

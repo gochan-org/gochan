@@ -143,7 +143,7 @@ CREATE TABLE DBPREFIXip_ban(
 	id {serial pk},
 	staff_id {fk to serial} NOT NULL,
 	board_id {fk to serial} NOT NULL,
-	banned_for_post_id {fk to serial} NOT NULL,
+	banned_for_post_id {fk to serial},
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
 	is_active BOOL NOT NULL,
