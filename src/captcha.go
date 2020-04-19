@@ -75,7 +75,7 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 			if tempPostIndex > -1 && tempPostIndex < len(tempPosts) {
 				// came from a /post redirect, insert the specified temporary post
 				// and redirect to the thread
-				insertPost(&tempPosts[tempPostIndex], emailCommand == "noko")
+				InsertPost(&tempPosts[tempPostIndex], emailCommand == "noko")
 				buildBoards(tempPosts[tempPostIndex].BoardID)
 				buildFrontPage()
 				url := tempPosts[tempPostIndex].GetURL(false)

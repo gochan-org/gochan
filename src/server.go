@@ -234,14 +234,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			passwordMD5 := md5Sum(password)
 
 			var post Post
-			post.ID, _ = strconv.Atoi(postsArr[0])
-			post.BoardID, _ = strconv.Atoi(boardid)
-			if err = queryRowSQL("SELECT parentid,name,tripcode,email,subject,password,message_raw FROM DBPREFIXposts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
-				[]interface{}{post.ID, post.BoardID, nilTimestamp},
-				[]interface{}{
-					&post.ParentID, &post.Name, &post.Tripcode, &post.Email, &post.Subject,
-					&post.Password, &post.MessageText},
-			); err != nil {
+			postid, _ := strconv.Atoi(postsArr[0])
+			post, err = GetSpecificPost(postid, true)
+			if err != nil {
 				serveErrorPage(writer, gclog.Print(lErrorLog,
 					"Error getting post information: ", err.Error()))
 				return
@@ -264,7 +259,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	if doEdit == "1" {
-		var postPassword string
+		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
 			serveErrorPage(writer, gclog.Print(lErrorLog,
@@ -277,11 +272,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				"Invalid form data: ", err.Error()))
 			return
 		}
-
-		if err = queryRowSQL("SELECT password FROM DBPREFIXposts WHERE id = ? AND boardid = ?",
-			[]interface{}{postid, boardid},
-			[]interface{}{&postPassword},
-		); err != nil {
+		password, err = GetPostPassword(postid)
+		if err != nil {
 			serveErrorPage(writer, gclog.Print(lErrorLog,
 				"Invalid form data: ", err.Error()))
 			return
@@ -300,11 +292,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if _, err = execSQL("UPDATE DBPREFIXposts SET "+
-			"email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ? AND boardid = ?",
-			request.FormValue("editemail"), request.FormValue("editsubject"), formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg"),
-			postid, boardid,
-		); err != nil {
+		if err = UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
+			formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg")); err != nil {
 			serveErrorPage(writer, gclog.Print(lErrorLog, "Unable to edit post: ", err.Error()))
 			return
 		}
@@ -331,32 +320,17 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		for _, checkedPostID := range postsArr {
-			var fileType string
-			var thumbType string
 			var post Post
 			var err error
 			post.ID, _ = strconv.Atoi(checkedPostID)
 			post.BoardID, _ = strconv.Atoi(boardid)
 
-			if err = queryRowSQL(
-				"SELECT parentid, filename,password FROM DBPREFIXposts WHERE id = ? AND boardid = ? AND deleted_timestamp = ?",
-				[]interface{}{post.ID, post.BoardID, nilTimestamp},
-				[]interface{}{&post.ParentID, &post.Filename, &post.Password},
-			); err == sql.ErrNoRows {
+			if post, err = GetSpecificPost(post.ID, true); err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n", post.ID)
 				continue
 			} else if err != nil {
-				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
-				return
-			}
-
-			if err = queryRowSQL(
-				"SELECT id FROM DBPREFIXboards WHERE dir = ?",
-				[]interface{}{board},
-				[]interface{}{&post.BoardID},
-			); err != nil {
 				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
 				return
 			}
@@ -369,37 +343,21 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			if fileOnly {
 				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
-					fileName = fileName[:strings.Index(fileName, ".")]
-					fileType = fileName[strings.Index(fileName, ".")+1:]
-					if fileType == "gif" || fileType == "webm" {
-						thumbType = "jpg"
-					}
-
-					os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
-
-					if _, err = execSQL(
-						"UPDATE DBPREFIXposts SET filename = deleted WHERE id = ? AND boardid = ?",
-						post.ID, post.BoardID,
-					); err != nil {
+					if err = DeleteFilesFromPost(post.ID); err != nil {
 						serveErrorPage(writer, err.Error())
 						return
 					}
 				}
 				_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
 				buildBoardPages(&_board[0])
-				postBoard, _ := GetSpecificPost(post.ID)
+				postBoard, _ := GetSpecificPost(post.ID, true)
 				buildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID)
 			} else {
 				// delete the post
-				if _, err = execSQL(
-					"UPDATE DBPREFIXposts SET deleted_timestamp = ? WHERE id = ?",
-					getSQLDateTime(), post.ID,
-				); err != nil {
+				if err = DeletePost(post.ID); err != nil {
 					serveErrorPage(writer, err.Error())
 				}
 				if post.ParentID == 0 {
@@ -408,37 +366,6 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
 					buildBoardPages(&_board[0])
 				}
-
-				// if the deleted post is actually a thread, delete its posts
-				if _, err = execSQL("UPDATE DBPREFIXposts SET deleted_timestamp = ? WHERE parentID = ?",
-					getSQLDateTime(), post.ID,
-				); err != nil {
-					serveErrorPage(writer, err.Error())
-					return
-				}
-
-				// delete the file
-				var deletedFilename string
-				if err = queryRowSQL(
-					"SELECT filename FROM DBPREFIXposts WHERE id = ? AND filename != ''",
-					[]interface{}{post.ID},
-					[]interface{}{&deletedFilename},
-				); err == nil {
-					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
-				}
-
-				if err = queryRowSQL(
-					"SELECT filename FROM DBPREFIXposts WHERE parentID = ? AND filename != ''",
-					[]interface{}{post.ID},
-					[]interface{}{&deletedFilename},
-				); err == nil {
-					os.Remove(path.Join(config.DocumentRoot, board, "/src/", deletedFilename))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "t.", -1)))
-					os.Remove(path.Join(config.DocumentRoot, board, "/thumb/", strings.Replace(deletedFilename, ".", "c.", -1)))
-				}
-
 				buildBoards(post.BoardID)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())

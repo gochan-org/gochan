@@ -864,7 +864,7 @@ var manageFunctions = map[string]ManageFunction{
 				return jsonErr
 			}
 
-			post, err := GetSpecificPost(HackyStringToInt(request.FormValue("postid")))
+			post, err := GetSpecificPost(HackyStringToInt(request.FormValue("postid")), false)
 			if err != nil {
 				errMap["message"] = err.Error()
 				jsonErr, _ := marshalJSON(errMap, false)

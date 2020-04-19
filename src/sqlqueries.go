@@ -40,7 +40,7 @@ func GetExistingRepliesLimitedRev(topPost int, limit int) (posts []Post, err err
 // GetSpecificTopPost gets the information for the top post for a given id.
 func GetSpecificTopPost(ID int) (posts Post, err error) {
 	//Currently implemented as GetSpecificPost because getSpecificPost can also be a top post.
-	return GetSpecificPost(ID)
+	return GetSpecificPost(ID, false)
 }
 
 // GetSpecificPostByString gets a specific post for a given string id.
@@ -50,7 +50,8 @@ func GetSpecificPostByString(ID string) (post Post, err error) {
 }
 
 // GetSpecificPost gets a specific post for a given id.
-func GetSpecificPost(ID int) (post Post, err error) {
+// returns SQL.ErrNoRows if no post could be found
+func GetSpecificPost(ID int, onlyNotDeleted bool) (post Post, err error) {
 	//TODO
 	return Post{}, ErrNotImplemented
 }
@@ -496,5 +497,33 @@ func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
 }
 
 func AddBanAppeal(banID uint, message string) error {
+	return ErrNotImplemented
+}
+
+func GetPostPassword(postID int) (password string, err error) {
+	return "", ErrNotImplemented
+}
+
+func UpdatePost(postID int, email string, subject string, message string, message_raw string) error {
+	return ErrNotImplemented
+}
+
+func DeleteFilesFromPost(postID int) error {
+
+	// fileName = fileName[:strings.Index(fileName, ".")]
+	// fileType = fileName[strings.Index(fileName, ".")+1:]
+	// if fileType == "gif" || fileType == "webm" {
+	// 	thumbType = "jpg"
+	// }
+
+	// os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
+	// os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
+	// os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
+	return ErrNotImplemented
+}
+
+func DeletePost(postID int) error {
+	DeleteFilesFromPost(postID)
+	//Also delete child posts if its a top post
 	return ErrNotImplemented
 }

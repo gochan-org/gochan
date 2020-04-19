@@ -233,8 +233,8 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 
 	post.Subject = request.FormValue("postsubject")
 	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
-
-	if maxMessageLength, err := GetMaxMessageLength(post.BoardID); err != nil {
+	var err error
+	if maxMessageLength, err = GetMaxMessageLength(post.BoardID); err != nil {
 		serveErrorPage(writer, gclog.Print(lErrorLog,
 			"Error getting board info: ", err.Error()))
 	}
