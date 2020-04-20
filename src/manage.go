@@ -519,18 +519,8 @@ var manageFunctions = map[string]ManageFunction{
 				}
 			}
 
-			if request.FormValue("dir") != "" && request.FormValue("postid") != "" {
-				boardDir := request.FormValue("dir")
-				boards, err := getBoardArr(map[string]interface{}{
-					"dir": boardDir,
-				}, "")
-				if err != nil {
-					return pageHTML + gclog.Print(lErrorLog,
-						"Error getting board list: ", err.Error())
-				}
-				if len(boards) < 1 {
-					return pageHTML + gclog.Print(lStaffLog, "Board doesn't exist")
-				}
+			if request.FormValue("postid") != "" {
+				var err error
 				post, err = GetSpecificPostByString(request.FormValue("postid"))
 				if err != nil {
 					return pageHTML + gclog.Print(lErrorLog, "Error getting post: ", err.Error())
@@ -845,25 +835,10 @@ var manageFunctions = map[string]ManageFunction{
 		Title:       "Post info",
 		Permissions: 2,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			boardDir := request.FormValue("dir")
-			boards, err := getBoardArr(map[string]interface{}{
-				"dir": boardDir,
-			}, "")
 			errMap := map[string]interface{}{
 				"action":  "postInfo",
 				"success": false,
 			}
-			if err != nil {
-				errMap["message"] = err.Error()
-				jsonErr, _ := marshalJSON(errMap, false)
-				return jsonErr
-			}
-			if len(boards) < 1 {
-				errMap["message"] = "Board doesn't exist"
-				jsonErr, _ := marshalJSON(errMap, false)
-				return jsonErr
-			}
-
 			post, err := GetSpecificPost(HackyStringToInt(request.FormValue("postid")), false)
 			if err != nil {
 				errMap["message"] = err.Error()

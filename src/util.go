@@ -94,94 +94,6 @@ func deleteMatchingFiles(root, match string) (filesDeleted int, err error) {
 	return filesDeleted, err
 }
 
-// getBoardArr performs a query against the database, and returns an array of Boards along with an error value.
-// If specified, the string where is added to the query, prefaced by WHERE. An example valid value is where = "id = 1".
-func getBoardArr(parameterList map[string]interface{}, extra string) (boards []Board, err error) {
-	queryString := "SELECT * FROM DBPREFIXboards "
-	numKeys := len(parameterList)
-	var parameterValues []interface{}
-	if numKeys > 0 {
-		queryString += "WHERE "
-	}
-
-	for key, value := range parameterList {
-		queryString += fmt.Sprintf("%s = ? AND ", key)
-		parameterValues = append(parameterValues, value)
-	}
-
-	// Find and remove any trailing instances of "AND "
-	if numKeys > 0 {
-		queryString = queryString[:len(queryString)-4]
-	}
-
-	queryString += fmt.Sprintf(" %s ORDER BY list_order", extra)
-
-	rows, err := querySQL(queryString, parameterValues...)
-	defer closeHandle(rows)
-	if err != nil {
-		return
-	}
-
-	// For each row in the results from the database, populate a new Board instance,
-	// 	then append it to the boards array we are going to return
-	for rows.Next() {
-		board := new(Board)
-		if err = rows.Scan(
-			&board.ID,
-			&board.ListOrder,
-			&board.Dir,
-			&board.Type,
-			&board.UploadType,
-			&board.Title,
-			&board.Subtitle,
-			&board.Description,
-			&board.Section,
-			&board.MaxFilesize,
-			&board.MaxPages,
-			&board.DefaultStyle,
-			&board.Locked,
-			&board.CreatedOn,
-			&board.Anonymous,
-			&board.ForcedAnon,
-			&board.MaxAge,
-			&board.AutosageAfter,
-			&board.NoImagesAfter,
-			&board.MaxMessageLength,
-			&board.EmbedsAllowed,
-			&board.RedirectToThread,
-			&board.RequireFile,
-			&board.EnableCatalog,
-		); err != nil {
-			return
-		}
-		boards = append(boards, *board)
-	}
-	return
-}
-
-// TODO: replace where with a map[string]interface{} like getBoardsArr()
-func getSectionArr(where string) (sections []BoardSection, err error) {
-	if where != "" {
-		where = "WHERE " + where
-	}
-	rows, err := querySQL("SELECT * FROM DBPREFIXsections " + where + " ORDER BY list_order")
-	defer closeHandle(rows)
-	if err != nil {
-		gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
-		return
-	}
-
-	for rows.Next() {
-		var section BoardSection
-		if err = rows.Scan(&section.ID, &section.ListOrder, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
-			gclog.Print(lErrorLog, "Error getting section list: ", err.Error())
-			return
-		}
-		sections = append(sections, section)
-	}
-	return
-}
-
 func getCountryCode(ip string) (string, error) {
 	if config.EnableGeoIP && config.GeoIPDBlocation != "" {
 		gi, err := libgeo.Load(config.GeoIPDBlocation)
@@ -287,10 +199,10 @@ func resetBoardSectionArrays() {
 	allBoards = nil
 	allSections = nil
 
-	allBoardsArr, _ := getBoardArr(nil, "")
+	allBoardsArr, _ := GetAllBoards()
 	allBoards = append(allBoards, allBoardsArr...)
 
-	allSectionsArr, _ := getSectionArr("")
+	allSectionsArr, _ := GetAllSections()
 	allSections = append(allSections, allSectionsArr...)
 }
 
@@ -399,11 +311,8 @@ func limitArraySize(arr []string, maxSize int) []string {
 }
 
 func numReplies(boardid, threadid int) int {
-	var num int
-
-	if err := queryRowSQL(
-		"SELECT COUNT(*) FROM DBPREFIXposts WHERE boardid = ? AND parentid = ?",
-		[]interface{}{boardid, threadid}, []interface{}{&num}); err != nil {
+	num, err := GetReplyCount(threadid)
+	if err != nil {
 		return 0
 	}
 	return num

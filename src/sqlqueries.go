@@ -349,6 +349,10 @@ func GetBoardUris() (URIS []string, err error) {
 	return nil, ErrNotImplemented
 }
 
+func GetAllSections() (sections []BoardSection, err error) {
+	return nil, ErrNotImplemented
+}
+
 // GetAllSectionsOrCreateDefault gets all sections in the database, creates default if none exist
 func GetAllSectionsOrCreateDefault() (sections []BoardSection, err error) {
 	// allSections, _ = getSectionArr("")
@@ -595,4 +599,16 @@ func (a *BanAppeal) GetBan() (*BanInfo, error) {
 	// )
 	// return &ban, err
 	return nil, ErrNotImplemented
+}
+
+func DoesBoardExistByID(ID int) (bool, error) {
+	return false, ErrNotImplemented
+}
+
+func GetAllBoards() ([]Board, error) {
+	return nil, ErrNotImplemented
+}
+
+func GetBoardFromID(boardID int) (Board, error) {
+	return Board{}, ErrNotImplemented
 }

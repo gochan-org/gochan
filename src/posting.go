@@ -307,13 +307,22 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		post.Filename = getNewFilename() + "." + getFileExtension(post.FilenameOriginal)
-		boardArr, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
-		if len(boardArr) == 0 {
+		boardExists, err := DoesBoardExistByID(HackyStringToInt(request.FormValue("boardid")))
+		if err != nil {
+			serveErrorPage(writer, "Server error: "+err.Error())
+			return
+		}
+		if !boardExists {
 			serveErrorPage(writer, "No boards have been created yet")
 			return
 		}
-		_boardDir, _ := getBoardArr(map[string]interface{}{"id": request.FormValue("boardid")}, "")
-		boardDir := _boardDir[0].Dir
+		var _board = Board{}
+		err = _board.PopulateData(HackyStringToInt(request.FormValue("boardid")))
+		if err != nil {
+			serveErrorPage(writer, "Server error: "+err.Error())
+			return
+		}
+		boardDir := _board.Dir
 		filePath := path.Join(config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
 		thumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
 		catalogThumbPath := path.Join(config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
@@ -488,12 +497,9 @@ func makePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	boards, _ := getBoardArr(nil, "")
+	boards, _ := GetAllBoards()
 
-	postBoardArr, _ := getBoardArr(map[string]interface{}{
-		"id": post.BoardID}, "")
-
-	postBoard := postBoardArr[0]
+	postBoard, _ := GetBoardFromID(post.BoardID)
 
 	if isBanned(banStatus, postBoard.Dir) {
 		var banpageBuffer bytes.Buffer

@@ -348,8 +348,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 						return
 					}
 				}
-				_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
-				buildBoardPages(&_board[0])
+				_board, _ := GetBoardFromID(post.BoardID)
+				buildBoardPages(&_board)
 				postBoard, _ := GetSpecificPost(post.ID, true)
 				buildThreadPages(&postBoard)
 
@@ -363,8 +363,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				if post.ParentID == 0 {
 					os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
-					_board, _ := getBoardArr(map[string]interface{}{"id": post.BoardID}, "")
-					buildBoardPages(&_board[0])
+					_board, _ := GetBoardFromID(post.BoardID)
+					buildBoardPages(&_board)
 				}
 				buildBoards(post.BoardID)
 
