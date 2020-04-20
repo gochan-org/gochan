@@ -676,7 +676,7 @@ var manageFunctions = map[string]ManageFunction{
 						break
 					}
 
-					if err := CreateBoard(*board); err != nil {
+					if err := CreateBoard(board); err != nil {
 						do = ""
 						boardCreationStatus = gclog.Print(lErrorLog, "Error creating board: ", err.Error())
 						break

@@ -558,7 +558,7 @@ func tempCleaner() {
 					continue
 				}
 				var board Board
-				err := board.PopulateData(post.BoardID, "")
+				err := board.PopulateData(post.BoardID)
 				if err != nil {
 					continue
 				}

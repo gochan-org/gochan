@@ -286,7 +286,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		var board Board
-		if err = board.PopulateData(boardid, ""); err != nil {
+		if err = board.PopulateData(boardid); err != nil {
 			serveErrorPage(writer, gclog.Print(lErrorLog,
 				"Invalid form data: ", err.Error()))
 			return

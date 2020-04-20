@@ -312,7 +312,8 @@ func GetAllAccouncements() ([]Announcement, error) {
 	return nil, ErrNotImplemented
 }
 
-func CreateBoard(values Board) error {
+//CreateBoard creates this board in the database if it doesnt exist already, also sets ID to correct value
+func CreateBoard(values *Board) error {
 	/*
 		"INSERT INTO DBPREFIXboards (list_order,dir,type,upload_type,title,subtitle,"+
 			"description,section,max_file_size,max_pages,default_style,locked,created_on,"+
@@ -327,6 +328,8 @@ func CreateBoard(values Board) error {
 		board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
 		board.RedirectToThread, board.RequireFile, board.EnableCatalog,*/
 	return ErrNotImplemented
+	//set id to created id
+	//errors.New("board already exists in database")
 }
 
 func GetBoardUris() (URIS []string, err error) {
@@ -359,6 +362,10 @@ func GetAllSectionsOrCreateDefault() (sections []BoardSection, err error) {
 	// allSections, _ = getSectionArr("")
 	// return allSections
 	return nil, ErrNotImplemented
+}
+
+func CreateDefaultSectionIfNotExist() error {
+	return ErrNotImplemented
 }
 
 func GetAllStaffNopass() ([]Staff, error) {
@@ -526,4 +533,66 @@ func DeletePost(postID int) error {
 	DeleteFilesFromPost(postID)
 	//Also delete child posts if its a top post
 	return ErrNotImplemented
+}
+
+func CreateDefaultBoardIfNoneExist() error {
+	return ErrNotImplemented
+	// firstBoard := Board{
+	// 	Dir:         "test",
+	// 	Title:       "Testing board",
+	// 	Subtitle:    "Board for testing",
+	// 	Description: "Board for testing",
+	// 	Section:     1}
+	// firstBoard.SetDefaults()
+	// firstBoard.Build(true, true)
+}
+
+func CreateDefaultAdminIfNoStaff() error {
+	return ErrNotImplemented
+	// if _, err = execSQL(
+	// 	"INSERT INTO DBPREFIXstaff (username,password_checksum,rank) VALUES(?,?,?)",
+	// 	"admin", bcryptSum("password"), 3,
+	// ); err != nil {
+	// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating admin user with error: ", err.Error())
+	// }
+}
+
+func (board *Board) UpdateID() error {
+	return ErrNotImplemented
+	// return queryRowSQL("SELECT id FROM DBPREFIXboards WHERE dir = ?",
+	// 	[]interface{}{board.Dir},
+	// 	[]interface{}{&board.ID})
+}
+
+// PopulateData gets the board data from the database and sets the respective properties.
+func (board *Board) PopulateData(id int) error {
+	// queryStr := "SELECT * FROM DBPREFIXboards WHERE id = ?"
+	// var values []interface{}
+	// values = append(values, id)
+
+	// return queryRowSQL(queryStr, values, []interface{}{
+	// 	&board.ID, &board.ListOrder, &board.Dir, &board.Type, &board.UploadType,
+	// 	&board.Title, &board.Subtitle, &board.Description, &board.Section,
+	// 	&board.MaxFilesize, &board.MaxPages, &board.DefaultStyle, &board.Locked,
+	// 	&board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge,
+	// 	&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
+	// 	&board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile,
+	// 	&board.EnableCatalog})
+	return ErrNotImplemented
+}
+
+func DoesBoardExist(dir string) (bool, error) {
+	return false, ErrNotImplemented
+}
+
+func (a *BanAppeal) GetBan() (*BanInfo, error) {
+	// var ban BanInfo
+	// err := queryRowSQL("SELECT * FROM DBPREFIXbanlist WHERE id = ? LIMIT 1",
+	// 	[]interface{}{a.ID}, []interface{}{
+	// 		&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
+	// 		&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,
+	// 		&ban.StaffNote, &ban.AppealAt},
+	// )
+	// return &ban, err
+	return nil, ErrNotImplemented
 }

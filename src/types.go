@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,17 +113,6 @@ type BanAppeal struct {
 	Message       string
 	Denied        bool
 	StaffResponse string
-}
-
-func (a *BanAppeal) GetBan() (*BanInfo, error) {
-	var ban BanInfo
-	err := queryRowSQL("SELECT * FROM DBPREFIXbanlist WHERE id = ? LIMIT 1",
-		[]interface{}{a.ID}, []interface{}{
-			&ban.ID, &ban.AllowRead, &ban.IP, &ban.Name, &ban.NameIsRegex, &ban.SilentBan,
-			&ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason,
-			&ban.StaffNote, &ban.AppealAt},
-	)
-	return &ban, err
 }
 
 type BanInfo struct {
@@ -306,34 +294,11 @@ func (board *Board) Build(newBoard bool, force bool) error {
 	}
 
 	if newBoard {
-		var numRows int
-		queryRowSQL("SELECT COUNT(*) FROM DBPREFIXboards WHERE `dir` = ?",
-			[]interface{}{board.Dir},
-			[]interface{}{&numRows},
-		)
-		if numRows > 0 {
-			return errors.New("board already exists in database")
-		}
 		board.CreatedOn = time.Now()
-		var result sql.Result
-		if result, err = execSQL("INSERT INTO DBPREFIXboards "+
-			"(list_order,dir,type,upload_type,title,subtitle,description,"+
-			"section,max_file_size,max_pages,default_style,locked,created_on,"+
-			"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,"+
-			"embeds_allowed,redirect_to_thread,require_file,enable_catalog) "+
-			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-			board.ListOrder, board.Dir, board.Type, board.UploadType,
-			board.Title, board.Subtitle, board.Description, board.Section,
-			board.MaxFilesize, board.MaxPages, board.DefaultStyle,
-			board.Locked, getSpecificSQLDateTime(board.CreatedOn), board.Anonymous,
-			board.ForcedAnon, board.MaxAge, board.AutosageAfter,
-			board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
-			board.RedirectToThread, board.RequireFile, board.EnableCatalog,
-		); err != nil {
+		err := CreateBoard(board)
+		if err != nil {
 			return err
 		}
-		boardID, _ := result.LastInsertId()
-		board.ID = int(boardID)
 	} else {
 		if err = board.UpdateID(); err != nil {
 			return err
@@ -348,28 +313,6 @@ func (board *Board) Build(newBoard bool, force bool) error {
 	}
 	buildBoardListJSON()
 	return nil
-}
-
-// PopulateData gets the board data from the database and sets the respective properties.
-// if id > -1, the ID will be used to search the database. Otherwise dir will be used
-func (board *Board) PopulateData(id int, dir string) error {
-	queryStr := "SELECT * FROM DBPREFIXboards WHERE id = ?"
-	var values []interface{}
-	if id > -1 {
-		values = append(values, id)
-	} else {
-		queryStr = "SELECT * FROM DBPREFIXboards WHERE dir = ?"
-		values = append(values, dir)
-	}
-
-	return queryRowSQL(queryStr, values, []interface{}{
-		&board.ID, &board.ListOrder, &board.Dir, &board.Type, &board.UploadType,
-		&board.Title, &board.Subtitle, &board.Description, &board.Section,
-		&board.MaxFilesize, &board.MaxPages, &board.DefaultStyle, &board.Locked,
-		&board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge,
-		&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
-		&board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile,
-		&board.EnableCatalog})
 }
 
 func (board *Board) SetDefaults() {
@@ -394,12 +337,6 @@ func (board *Board) SetDefaults() {
 	board.EnableSpoileredThreads = true
 	board.Worksafe = true
 	board.ThreadsPerPage = 10
-}
-
-func (board *Board) UpdateID() error {
-	return queryRowSQL("SELECT id FROM DBPREFIXboards WHERE dir = ?",
-		[]interface{}{board.Dir},
-		[]interface{}{&board.ID})
 }
 
 type BoardSection struct {
@@ -449,7 +386,7 @@ func (p *Post) GetURL(includeDomain bool) string {
 		postURL += config.SiteDomain
 	}
 	var board Board
-	if err := board.PopulateData(p.BoardID, ""); err != nil {
+	if err := board.PopulateData(p.BoardID); err != nil {
 		return postURL
 	}
 

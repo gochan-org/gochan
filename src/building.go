@@ -331,7 +331,7 @@ func buildBoards(which ...int) (html string) {
 	} else {
 		for b, id := range which {
 			boards = append(boards, Board{})
-			if err = boards[b].PopulateData(id, ""); err != nil {
+			if err = boards[b].PopulateData(id); err != nil {
 				return gclog.Printf(lErrorLog, "Error getting board information (ID: %d)", id)
 			}
 		}
@@ -398,7 +398,7 @@ func buildCatalog(which int) string {
 	}
 
 	var board Board
-	if err = board.PopulateData(which, ""); err != nil {
+	if err = board.PopulateData(which); err != nil {
 		return gclog.Printf(lErrorLog, "Error getting board information (ID: %d)", which)
 	}
 
@@ -442,7 +442,7 @@ func buildThreadPages(op *Post) error {
 	var replies []Post
 	var threadPageFile *os.File
 	var board Board
-	if err = board.PopulateData(op.BoardID, ""); err != nil {
+	if err = board.PopulateData(op.BoardID); err != nil {
 		return err
 	}
 

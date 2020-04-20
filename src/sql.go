@@ -64,95 +64,45 @@ func connectToSQLServer() {
 		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 
-	var truncateStr string
-	switch config.DBtype {
-	case "mysql":
-		fallthrough
-	case "postgres":
-		truncateStr = "TRUNCATE TABLE DBPREFIXsessions"
-	case "sqlite3":
-		truncateStr = "DELETE FROM DBPREFIXsessions"
-	}
+	//Not needed anymore
+	// var truncateStr string
+	// switch config.DBtype {
+	// case "mysql":
+	// 	fallthrough
+	// case "postgres":
+	// 	truncateStr = "TRUNCATE TABLE DBPREFIXsessions"
+	// case "sqlite3":
+	// 	truncateStr = "DELETE FROM DBPREFIXsessions"
+	// }
 
-	if _, err = execSQL(truncateStr); err != nil {
-		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
-	}
+	// if _, err = execSQL(truncateStr); err != nil {
+	// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+	// }
 
 	// Create generic "Main" section if one doesn't already exist
-	var sectionCount int
-	if err = queryRowSQL(
-		"SELECT COUNT(*) FROM DBPREFIXsections",
-		[]interface{}{}, []interface{}{&sectionCount},
-	); err != nil {
-		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
-	}
-	if sectionCount == 0 {
-		if _, err = execSQL(
-			"INSERT INTO DBPREFIXsections (name,abbreviation) VALUES('Main','main')",
-		); err != nil {
-			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
-		}
-	}
-
-	var sqlVersionStr string
-	isNewInstall := false
-	if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
-		[]interface{}{}, []interface{}{&sqlVersionStr},
-	); err == sql.ErrNoRows {
-		isNewInstall = true
-	} else if err != nil {
+	if err = CreateDefaultSectionIfNotExist(); err != nil {
 		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
 	}
 
-	var numBoards, numStaff int
-	rows, err := querySQL("SELECT COUNT(*) FROM DBPREFIXboards UNION ALL SELECT COUNT(*) FROM DBPREFIXstaff")
+	//TODO fix new install thing once it works with existing database
+	// var sqlVersionStr string
+	// isNewInstall := false
+	// if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
+	// 	[]interface{}{}, []interface{}{&sqlVersionStr},
+	// ); err == sql.ErrNoRows {
+	// 	isNewInstall = true
+	// } else if err != nil {
+	// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+	// }
+	err = CreateDefaultBoardIfNoneExist()
 	if err != nil {
-		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed checking board list: ", err.Error())
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating default board: ", err.Error())
 	}
-	rows.Next()
-	rows.Scan(&numBoards)
-	rows.Next()
-	rows.Scan(&numStaff)
-
-	if numBoards == 0 && numStaff == 0 {
-		gclog.Println(lErrorLog|lStdLog,
-			"This looks like a new installation. Creating /test/ and a new staff member.\nUsername: admin\nPassword: password")
-
-		if _, err = execSQL(
-			"INSERT INTO DBPREFIXstaff (username,password_checksum,rank) VALUES(?,?,?)",
-			"admin", bcryptSum("password"), 3,
-		); err != nil {
-			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating admin user with error: ", err.Error())
-		}
-
-		firstBoard := Board{
-			Dir:         "test",
-			Title:       "Testing board",
-			Subtitle:    "Board for testing",
-			Description: "Board for testing",
-			Section:     1}
-		firstBoard.SetDefaults()
-		firstBoard.Build(true, true)
-		if !isNewInstall {
-			return
-		}
-
-		if _, err = execSQL(
-			"INSERT INTO DBPREFIXinfo (name,value) VALUES('version',?)", versionStr,
-		); err != nil {
-			gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating first board: ", err.Error())
-		}
-		return
-	} else if err != nil {
-		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+	err = CreateDefaultAdminIfNoStaff()
+	if err != nil {
+		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating default admin account: ", err.Error())
 	}
-	if err != nil && !strings.Contains(err.Error(), "Duplicate entry") {
-		gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
-	}
-	if version.CompareString(sqlVersionStr) > 0 {
-		gclog.Printf(lErrorLog|lStdLog, "Updating version in database from %s to %s", sqlVersionStr, version.String())
-		execSQL("UPDATE DBPREFIXinfo SET value = ? WHERE name = 'version'", versionStr)
-	}
+	//fix versioning thing
 }
 
 func initDB(initFile string) error {

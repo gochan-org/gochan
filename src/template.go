@@ -211,7 +211,7 @@ var funcMap = template.FuncMap{
 	"numReplies": numReplies,
 	"getBoardDir": func(id int) string {
 		var board Board
-		if err := board.PopulateData(id, ""); err != nil {
+		if err := board.PopulateData(id); err != nil {
 			return ""
 		}
 		return board.Dir
