@@ -1,6 +1,6 @@
 // used for version parsing, printing, and comparison
 
-package main
+package config
 
 import (
 	"fmt"

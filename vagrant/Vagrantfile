@@ -21,7 +21,7 @@ Vagrant.configure("2") do |config|
 
 	config.vm.provision :shell, path: "bootstrap.sh", env: {
 		:DBTYPE => DBTYPE,
-		:GOPATH => "/vagrant/lib",
+		:GOPATH => "/home/vagrant/go",
 		:FROMDOCKER => ""
 	}, args: "install"
 end

@@ -6,6 +6,7 @@ ifeq (${GCOS_NAME},darwin)
 	GCOS_NAME=macos
 endif
 
+GOCHAN_PKG=github.com/gochan-org/gochan
 DOCUMENT_ROOT=/srv/gochan
 RELEASE_NAME=${BIN}-v${VERSION}_${GCOS_NAME}
 RELEASE_DIR=releases/${RELEASE_NAME}
@@ -30,15 +31,16 @@ DOCUMENT_ROOT_FILES= \
 	hittheroad*
 
 build:
-	GOOS=${GCOS} ${GO_CMD} -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS} -w -s" ./src
+	GOOS=${GCOS} ${GO_CMD} -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS} -w -s" ./cmd/gochan
 
 build-debug:
-	GOOS=${GCOS} ${GO_CMD} -gcflags="${GCFLAGS} -l -N" -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS}" ./src
+	GOOS=${GCOS} ${GO_CMD} -gcflags="${GCFLAGS} -l -N" -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS}" ./cmd/gochan
 
 clean:
 	rm -f ${BIN}
 	rm -f ${BIN}.exe
 	rm -rf releases/
+	rm -rf ~/go/src/${GOCHAN_PKG}
 
 dependencies:
 	go get -v \
@@ -52,7 +54,7 @@ dependencies:
 		github.com/frustra/bbcode \
 		github.com/mattn/go-sqlite3 \
 		github.com/tdewolff/minify \
-		gopkg.in/mojocn/base64Captcha.v1
+		github.com/mojocn/base64Captcha
 
 install:
 	mkdir -p \
@@ -124,7 +126,6 @@ else
 	tar -C releases -zcvf ${RELEASE_DIR}.tar.gz ${RELEASE_NAME}
 endif
 
-.PHONY: sass
 sass:
 	sass --no-source-map sass:html/css
 
@@ -133,3 +134,5 @@ sass-minified:
 
 test:
 	go test -v ./src
+
+.PHONY: subpackages ${INTERNALS} sass

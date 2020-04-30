@@ -46,7 +46,7 @@ html/javascript
 "@
 
 function build {
-	$cmd = "& go build -v -gcflags=-trimpath=$PWD -asmflags=-trimpath=$PWD -ldflags=`"$LDFLAGS`" -o $BINEXE ./src "
+	$cmd = "& go build -v -gcflags=-trimpath=$PWD -asmflags=-trimpath=$PWD -ldflags=`"$LDFLAGS`" -o $BINEXE ./cmd/gochan "
 	$env:GOOS=$platform; Invoke-Expression $cmd
 }
 
@@ -67,7 +67,7 @@ function dependencies {
 		github.com/frustra/bbcode `
 		github.com/mattn/go-sqlite3 `
 		github.com/tdewolff/minify `
-		gopkg.in/mojocn/base64Captcha.v1
+		github.com/mojocn/base64Captcha
 }
 
 function dockerImage {

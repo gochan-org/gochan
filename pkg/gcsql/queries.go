@@ -1,11 +1,17 @@
-package main
+package gcsql
 
 import (
+	"crypto/md5"
 	"database/sql"
 	"errors"
+	"fmt"
+	"html"
+	"io/ioutil"
 	"net"
-	"strconv"
+	"net/http"
 	"time"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 //ErrNotImplemented is a not implemented exception
@@ -139,28 +145,27 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 	if onlyWithFile && onSpecificBoard {
 		recentQueryStr += `\nWHERE singlefiles.filename IS NOT NULL AND recentposts.boardid = ?
 		ORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = querySQL(recentQueryStr, boardID, amount)
+		rows, err = QuerySQL(recentQueryStr, boardID, amount)
 	}
 	if onlyWithFile && !onSpecificBoard {
 		recentQueryStr += `\nWHERE singlefiles.filename IS NOT NULL
 		ORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = querySQL(recentQueryStr, amount)
+		rows, err = QuerySQL(recentQueryStr, amount)
 	}
 	if !onlyWithFile && onSpecificBoard {
 		recentQueryStr += `\nWHERE recentposts.boardid = ?
 		ORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = querySQL(recentQueryStr, boardID, amount)
+		rows, err = QuerySQL(recentQueryStr, boardID, amount)
 	}
 	if !onlyWithFile && !onSpecificBoard {
 		recentQueryStr += `\nORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = querySQL(recentQueryStr, amount)
+		rows, err = QuerySQL(recentQueryStr, amount)
 	}
 
-	defer closeHandle(rows)
 	if err != nil {
 		return nil, err
 	}
-
+	defer rows.Close()
 	var recentPostsArr []RecentPost
 
 	for rows.Next() {
@@ -226,14 +231,14 @@ func GetStaffByName(name string) (*Staff, error) { //TODO not upt to date with o
 	return nil, ErrNotImplemented
 }
 
-func newStaff(username string, password string, rank int) error { //TODO not up to date with old db yet
+func NewStaff(username string, password string, rank int) error { //TODO not up to date with old db yet
 	// _, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
 	// 	&username, bcryptSum(password), &rank)
 	// return err
 	return ErrNotImplemented
 }
 
-func deleteStaff(username string) error { //TODO not up to date with old db yet
+func DeleteStaff(username string) error { //TODO not up to date with old db yet
 	// _, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
 	// return err
 	return ErrNotImplemented
@@ -297,6 +302,33 @@ func UserNameBan(userName string, isRegex bool, staffName string, expires time.T
 func UserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
 	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
 	return ErrNotImplemented
+}
+
+// GetBannedStatus checks check poster's name/tripcode/file checksum (from Post post) for banned status
+// returns ban table if the user is banned or sql.ErrNoRows if they aren't
+func GetBannedStatus(request *http.Request) (*BanInfo, error) {
+	formName := request.FormValue("postname")
+	var tripcode string
+	if formName != "" {
+		parsedName := gcutil.ParseName(formName)
+		tripcode += parsedName["name"]
+		if tc, ok := parsedName["tripcode"]; ok {
+			tripcode += "!" + tc
+		}
+	}
+	ip := gcutil.GetRealIP(request)
+
+	var filename string
+	var checksum string
+	file, fileHandler, err := request.FormFile("imagefile")
+	if err == nil {
+		html.EscapeString(fileHandler.Filename)
+		if data, err2 := ioutil.ReadAll(file); err2 == nil {
+			checksum = fmt.Sprintf("%x", md5.Sum(data))
+		}
+	}
+	defer file.Close()
+	return CheckBan(ip, tripcode, filename, checksum)
 }
 
 func GetStaffRankAndBoards(username string) (rank int, boardUris []string, err error) {
@@ -391,12 +423,6 @@ func GetAllBans() ([]BanInfo, error) {
 	// 	banlist = append(banlist, ban)
 	// }
 	return nil, ErrNotImplemented
-}
-
-//HackyStringToInt parses a string to an int, or 0 if error
-func HackyStringToInt(text string) int {
-	value, _ := strconv.Atoi(text)
-	return value
 }
 
 // BumpThread the given thread on the given board and returns true if there were no errors

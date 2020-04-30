@@ -1,4 +1,4 @@
-package main
+package gcutil
 
 import (
 	"errors"
@@ -6,13 +6,13 @@ import (
 )
 
 func TestAPI(t *testing.T) {
-	failedPost, _ := marshalJSON(map[string]interface{}{
+	failedPost, _ := MarshalJSON(map[string]interface{}{
 		"action":  "post",
 		"success": false,
 		"message": errors.New("Post failed").Error(),
 	}, true)
 
-	madePost, _ := marshalJSON(map[string]interface{}{
+	madePost, _ := MarshalJSON(map[string]interface{}{
 		"action":  "post",
 		"success": true,
 		"board":   "test",
@@ -21,6 +21,5 @@ func TestAPI(t *testing.T) {
 
 	t.Log(
 		"failedPost:", failedPost,
-		"\nmadePost:", madePost,
-	)
+		"\nmadePost:", madePost)
 }

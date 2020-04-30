@@ -9,6 +9,7 @@ if [ -z "$DBTYPE" ]; then
 	exit 1
 fi
 
+add-apt-repository -y ppa:gophers/archive
 apt-get -y update && apt-get -y upgrade
 
 if [ "$DBTYPE" == "mysql" ]; then
@@ -63,11 +64,9 @@ else
 	exit 1
 fi
 
-apt-get -y install git subversion mercurial nginx ffmpeg golang-1.10
-mkdir -p /root/bin
-ln -s /usr/lib/go-1.10/bin/* /root/bin/
-export PATH=$PATH:/root/bin
-echo "export PATH=$PATH:/root/bin" >> /root/.bashrc
+apt-get -y install git subversion mercurial nginx ffmpeg make golang-1.11
+
+ln -s /usr/lib/go-1.11/bin/* /usr/local/bin/
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/sample-configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
@@ -90,7 +89,6 @@ cp /vagrant/sample-configs/gochan.example.json /etc/gochan/gochan.json
 sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
-	-e 's/"DomainRegex": ".*"/"DomainRegex": "(https|http):\\\/\\\/(.*)\\\/(.*)"/' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/local/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
@@ -124,27 +122,22 @@ EOF
 chmod +x /home/vagrant/dbconnect.sh
 
 cat <<EOF >>/home/vagrant/.bashrc
-export PATH=$PATH:/home/vagrant/bin
 export DBTYPE=$DBTYPE
-export GOPATH=/vagrant/lib
+export GOPATH=/home/vagrant/go
 EOF
 
-cat <<EOF >>/root.bashrc
-export GOPATH=/vagrant/lib
-EOF
-export GOPATH=/vagrant/lib
-
-ln -s /usr/lib/go-1.10/bin/* /usr/local/bin/
-cd /vagrant
 su - vagrant <<EOF
-mkdir -p /vagrant/lib
+mkdir -p /home/vagrant/go
 source /home/vagrant/.bashrc
-export GOPATH=/vagrant/lib
-cd /vagrant
+cd /vagrant/devtools
+python build_initdb.py
+cd ..
+mkdir -p $GOPATH/src/github.com/gochan-org/gochan
+cp -r pkg $GOPATH/src/github.com/gochan-org/gochan
 make dependencies
 make
 EOF
-make install
+# make install
 
 # if [ -d /lib/systemd ]; then
 # 	systemctl start gochan.service

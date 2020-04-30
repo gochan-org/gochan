@@ -1,4 +1,4 @@
-package main
+package posting
 
 import (
 	"fmt"
@@ -6,8 +6,14 @@ import (
 	"net/http"
 	"strconv"
 
-	//"github.com/mojocn/base64Captcha"
-	"gopkg.in/mojocn/base64Captcha.v1"
+	"github.com/gochan-org/gochan/pkg/building"
+	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
+	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/mojocn/base64Captcha"
 )
 
 var (
@@ -23,23 +29,25 @@ type captchaJSON struct {
 	EmailCmd      string `json:"-"`
 }
 
-func initCaptcha() {
-	if !config.UseCaptcha {
+// InitCaptcha prepares the captcha driver for use
+func InitCaptcha() {
+	if !config.Config.UseCaptcha {
 		return
 	}
 	driver = base64Captcha.NewDriverString(
-		config.CaptchaHeight, config.CaptchaWidth, 0, 0, 6,
+		config.Config.CaptchaHeight, config.Config.CaptchaWidth, 0, 0, 6,
 		"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		&color.RGBA{0, 0, 0, 0}, nil).ConvertFonts()
 }
 
-func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
-	if !config.UseCaptcha {
+// ServeCaptcha handles requests to /captcha if UseCaptcha is enabled in gochan.json
+func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
+	if !config.Config.UseCaptcha {
 		return
 	}
 	var err error
 	if err = request.ParseForm(); err != nil {
-		serveErrorPage(writer, gclog.Print(lErrorLog, "Error parsing request form: ", err.Error()))
+		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog, "Error parsing request form: ", err.Error()))
 		return
 	}
 
@@ -56,14 +64,15 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 	useJSON := request.FormValue("json") == "1"
 	if useJSON {
 		writer.Header().Add("Content-Type", "application/json")
-		str, _ := marshalJSON(captchaStruct, false)
-		minifyWriter(writer, []byte(str), "application/json")
+
+		str, _ := gcutil.MarshalJSON(captchaStruct, false)
+		gcutil.MinifyWriter(writer, []byte(str), "application/json")
 		return
 	}
 	if request.FormValue("reload") == "Reload" {
 		request.Form.Del("reload")
 		request.Form.Add("didreload", "1")
-		serveCaptcha(writer, request)
+		ServeCaptcha(writer, request)
 		return
 	}
 	writer.Header().Add("Content-Type", "text/html")
@@ -72,18 +81,20 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 	if captchaID != "" && request.FormValue("didreload") != "1" {
 		goodAnswer := base64Captcha.DefaultMemStore.Verify(captchaID, captchaAnswer, true)
 		if goodAnswer {
-			if tempPostIndex > -1 && tempPostIndex < len(tempPosts) {
+			if tempPostIndex > -1 && tempPostIndex < len(gcsql.TempPosts) {
 				// came from a /post redirect, insert the specified temporary post
 				// and redirect to the thread
-				InsertPost(&tempPosts[tempPostIndex], emailCommand == "noko")
-				buildBoards(tempPosts[tempPostIndex].BoardID)
-				buildFrontPage()
-				url := tempPosts[tempPostIndex].GetURL(false)
+
+				gcsql.InsertPost(&gcsql.TempPosts[tempPostIndex], emailCommand == "noko")
+				building.BuildBoards(gcsql.TempPosts[tempPostIndex].BoardID)
+				building.BuildFrontPage()
+
+				url := gcsql.TempPosts[tempPostIndex].GetURL(false)
 
 				// move the end Post to the current index and remove the old end Post. We don't
 				// really care about order as long as tempPost validation doesn't get jumbled up
-				tempPosts[tempPostIndex] = tempPosts[len(tempPosts)-1]
-				tempPosts = tempPosts[:len(tempPosts)-1]
+				gcsql.TempPosts[tempPostIndex] = gcsql.TempPosts[len(gcsql.TempPosts)-1]
+				gcsql.TempPosts = gcsql.TempPosts[:len(gcsql.TempPosts)-1]
 				http.Redirect(writer, request, url, http.StatusFound)
 				return
 			}
@@ -91,15 +102,14 @@ func serveCaptcha(writer http.ResponseWriter, request *http.Request) {
 			captchaStruct.Result = "Incorrect CAPTCHA"
 		}
 	}
-	if err = minifyTemplate(captchaTmpl, captchaStruct, writer, "text/html"); err != nil {
+	if err = gcutil.MinifyTemplate(gctemplates.Captcha, captchaStruct, writer, "text/html"); err != nil {
 		fmt.Fprintf(writer,
-			gclog.Print(lErrorLog, "Error executing captcha template: ", err.Error()),
-		)
+			gclog.Print(gclog.LErrorLog, "Error executing captcha template: ", err.Error()))
 	}
 }
 
 func getCaptchaImage() (captchaID string, chaptchaB64 string) {
-	if !config.UseCaptcha {
+	if !config.Config.UseCaptcha {
 		return
 	}
 	captcha := base64Captcha.NewCaptcha(driver, base64Captcha.DefaultMemStore)

@@ -9,31 +9,35 @@ import (
 	"net/http/fcgi"
 	"os"
 	"path"
-	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/gochan-org/gochan/pkg/building"
+	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
+	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/posting"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
 var (
-	server        *GochanServer
-	referrerRegex *regexp.Regexp
+	server *gochanServer
 )
 
-type GochanServer struct {
+type gochanServer struct {
 	namespaces map[string]func(http.ResponseWriter, *http.Request)
 }
 
-func (s GochanServer) AddNamespace(basePath string, namespaceFunction func(http.ResponseWriter, *http.Request)) {
-	s.namespaces[basePath] = namespaceFunction
-}
-
-func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Request) {
-	filePath := path.Join(config.DocumentRoot, request.URL.Path)
+func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Request) {
+	filePath := path.Join(config.Config.DocumentRoot, request.URL.Path)
 	var fileBytes []byte
 	results, err := os.Stat(filePath)
 	if err != nil {
 		// the requested path isn't a file or directory, 404
-		serveNotFound(writer, request)
+		serverutil.ServeNotFound(writer, request)
 		return
 	}
 
@@ -42,7 +46,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	if results.IsDir() {
 		//check to see if one of the specified index pages exists
 		var found bool
-		for _, value := range config.FirstPage {
+		for _, value := range config.Config.FirstPage {
 			newPath := path.Join(filePath, value)
 			_, err := os.Stat(newPath)
 			if err == nil {
@@ -52,12 +56,12 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 			}
 		}
 		if !found {
-			serveNotFound(writer, request)
+			serverutil.ServeNotFound(writer, request)
 			return
 		}
 	} else {
 		//the file exists, and is not a folder
-		extension = strings.ToLower(getFileExtension(request.URL.Path))
+		extension = strings.ToLower(gcutil.GetFileExtension(request.URL.Path))
 		switch extension {
 		case "png":
 			writer.Header().Add("Content-Type", "image/png")
@@ -88,7 +92,7 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 			writer.Header().Add("Content-Type", "text/html")
 			writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 		}
-		gclog.Printf(lAccessLog, "Success: 200 from %s @ %s", getRealIP(request), request.URL.Path)
+		gclog.Printf(gclog.LAccessLog, "Success: 200 from %s @ %s", gcutil.GetRealIP(request), request.URL.Path)
 	}
 
 	// serve the index page
@@ -98,31 +102,9 @@ func (s GochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	writer.Write(fileBytes)
 }
 
-func serveNotFound(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(404)
-	errorPage, err := ioutil.ReadFile(config.DocumentRoot + "/error/404.html")
-	if err != nil {
-		writer.Write([]byte("Requested page not found, and /error/404.html not found"))
-	} else {
-		minifyWriter(writer, errorPage, "text/html")
-	}
-	gclog.Printf(lAccessLog, "Error: 404 Not Found from %s @ %s", getRealIP(request), request.URL.Path)
-}
-
-func serveErrorPage(writer http.ResponseWriter, err string) {
-	minifyTemplate(errorpageTmpl, map[string]interface{}{
-		"config":     config,
-		"ErrorTitle": "Error :c",
-		// "ErrorImage":  "/error/lol 404.gif",
-		"ErrorHeader": "Error",
-		"ErrorText":   err,
-	}, writer, "text/html")
-}
-
-func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (s gochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	for name, namespaceFunction := range s.namespaces {
-		if request.URL.Path == config.SiteWebfolder+name {
+		if request.URL.Path == config.Config.SiteWebfolder+name {
 			// writer.WriteHeader(200)
 			namespaceFunction(writer, request)
 			return
@@ -132,69 +114,45 @@ func (s GochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 }
 
 func initServer() {
-	listener, err := net.Listen("tcp", config.ListenIP+":"+strconv.Itoa(config.Port))
+	listener, err := net.Listen("tcp", config.Config.ListenIP+":"+strconv.Itoa(config.Config.Port))
 	if err != nil {
-		gclog.Printf(lErrorLog|lStdLog|lFatal,
-			"Failed listening on %s:%d: %s", config.ListenIP, config.Port, err.Error())
+		gclog.Printf(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal,
+			"Failed listening on %s:%d: %s", config.Config.ListenIP, config.Config.Port, err.Error())
 	}
-	server = new(GochanServer)
+	server = new(gochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
 
 	// Check if Akismet API key is usable at startup.
-	if err = checkAkismetAPIKey(config.AkismetAPIKey); err != nil {
-		config.AkismetAPIKey = ""
+	if err = serverutil.CheckAkismetAPIKey(config.Config.AkismetAPIKey); err != nil {
+		config.Config.AkismetAPIKey = ""
 	}
 
-	// Compile regex for checking referrers.
-	referrerRegex = regexp.MustCompile(config.DomainRegex)
-
-	server.AddNamespace("banned", banHandler)
-	server.AddNamespace("captcha", serveCaptcha)
-	server.AddNamespace("manage", callManageFunction)
-	server.AddNamespace("post", makePost)
-	server.AddNamespace("util", utilHandler)
-	server.AddNamespace("example", func(writer http.ResponseWriter, request *http.Request) {
+	server.namespaces["banned"] = posting.BanHandler
+	server.namespaces["captcha"] = posting.ServeCaptcha
+	server.namespaces["manage"] = manage.CallManageFunction
+	server.namespaces["post"] = posting.MakePost
+	server.namespaces["util"] = utilHandler
+	server.namespaces["example"] = func(writer http.ResponseWriter, request *http.Request) {
 		if writer != nil {
 			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
 		}
-	})
-	// eventually plugins will be able to register new namespaces. Or they will be restricted to something like /plugin
+	}
+	// Eventually plugins will be able to register new namespaces (assuming they ever get it working on Windows or macOS)
+	// or they will be restricted to something like /plugin
 
-	if config.UseFastCGI {
+	if config.Config.UseFastCGI {
 		err = fcgi.Serve(listener, server)
 	} else {
 		err = http.Serve(listener, server)
 	}
 
 	if err != nil {
-		gclog.Print(lErrorLog|lStdLog|lFatal,
+		gclog.Print(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal,
 			"Error initializing server: ", err.Error())
 	}
 }
 
-func getRealIP(request *http.Request) string {
-	// HTTP_CF_CONNECTING_IP > X-Forwarded-For > RemoteAddr
-	if request.Header.Get("HTTP_CF_CONNECTING_IP") != "" {
-		return request.Header.Get("HTTP_CF_CONNECTING_IP")
-	}
-	if request.Header.Get("X-Forwarded-For") != "" {
-		return request.Header.Get("X-Forwarded-For")
-	}
-	remoteHost, _, err := net.SplitHostPort(request.RemoteAddr)
-	if err != nil {
-		return request.RemoteAddr
-	}
-	return remoteHost
-}
-
-func validReferrer(request *http.Request) bool {
-	if config.DebugMode {
-		return true
-	}
-	return referrerRegex.MatchString(request.Referer())
-}
-
-// register /util handler
+// handles requests to /util
 func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	action := request.FormValue("action")
 	password := request.FormValue("password")
@@ -207,7 +165,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	doEdit := request.PostFormValue("doedit")
 
 	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
-		http.Redirect(writer, request, path.Join(config.SiteWebfolder, "/"), http.StatusFound)
+		gclog.Printf(gclog.LAccessLog, "Received invalid /util request from %q", request.Host)
+		http.Redirect(writer, request, path.Join(config.Config.SiteWebfolder, "/"), http.StatusFound)
 		return
 	}
 	var postsArr []string
@@ -220,39 +179,39 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	if editBtn == "Edit" {
 		var err error
 		if len(postsArr) == 0 {
-			serveErrorPage(writer, "You need to select one post to edit.")
+			serverutil.ServeErrorPage(writer, "You need to select one post to edit.")
 			return
 		} else if len(postsArr) > 1 {
-			serveErrorPage(writer, "You can only edit one post at a time.")
+			serverutil.ServeErrorPage(writer, "You can only edit one post at a time.")
 			return
 		} else {
-			rank := getStaffRank(request)
+			rank := manage.GetStaffRank(request)
 			if password == "" && rank == 0 {
-				serveErrorPage(writer, "Password required for post editing")
+				serverutil.ServeErrorPage(writer, "Password required for post editing")
 				return
 			}
-			passwordMD5 := md5Sum(password)
+			passwordMD5 := gcutil.Md5Sum(password)
 
-			var post Post
+			var post gcsql.Post
 			postid, _ := strconv.Atoi(postsArr[0])
-			post, err = GetSpecificPost(postid, true)
+			post, err = gcsql.GetSpecificPost(postid, true)
 			if err != nil {
-				serveErrorPage(writer, gclog.Print(lErrorLog,
+				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 					"Error getting post information: ", err.Error()))
 				return
 			}
 
 			if post.Password != passwordMD5 && rank == 0 {
-				serveErrorPage(writer, "Wrong password")
+				serverutil.ServeErrorPage(writer, "Wrong password")
 				return
 			}
 
-			if err = postEditTmpl.Execute(writer, map[string]interface{}{
-				"config":   config,
+			if err = gctemplates.PostEdit.Execute(writer, map[string]interface{}{
+				"config":   config.Config,
 				"post":     post,
 				"referrer": request.Referer(),
 			}); err != nil {
-				serveErrorPage(writer, gclog.Print(lErrorLog,
+				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 					"Error executing edit post template: ", err.Error()))
 				return
 			}
@@ -262,43 +221,44 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
-			serveErrorPage(writer, gclog.Print(lErrorLog,
+			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 				"Invalid form data: ", err.Error()))
 			return
 		}
 		boardid, err := strconv.Atoi(request.FormValue("boardid"))
 		if err != nil {
-			serveErrorPage(writer, gclog.Print(lErrorLog,
+			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 				"Invalid form data: ", err.Error()))
 			return
 		}
-		password, err = GetPostPassword(postid)
+		password, err = gcsql.GetPostPassword(postid)
 		if err != nil {
-			serveErrorPage(writer, gclog.Print(lErrorLog,
+			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 				"Invalid form data: ", err.Error()))
 			return
 		}
 
-		rank := getStaffRank(request)
+		rank := manage.GetStaffRank(request)
 		if request.FormValue("password") != password && rank == 0 {
-			serveErrorPage(writer, "Wrong password")
+			serverutil.ServeErrorPage(writer, "Wrong password")
 			return
 		}
 
-		var board Board
+		var board gcsql.Board
 		if err = board.PopulateData(boardid); err != nil {
-			serveErrorPage(writer, gclog.Print(lErrorLog,
+			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 				"Invalid form data: ", err.Error()))
 			return
 		}
 
-		if err = UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
-			formatMessage(request.FormValue("editmsg")), request.FormValue("editmsg")); err != nil {
-			serveErrorPage(writer, gclog.Print(lErrorLog, "Unable to edit post: ", err.Error()))
+		if err = gcsql.UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
+			posting.FormatMessage(request.FormValue("editmsg")), request.FormValue("editmsg")); err != nil {
+			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+				"Unable to edit post: ", err.Error()))
 			return
 		}
 
-		buildBoards(boardid)
+		building.BuildBoards(boardid)
 		if request.FormValue("parentid") == "0" {
 			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
 		} else {
@@ -311,27 +271,28 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	if deleteBtn == "Delete" {
 		// Delete a post or thread
 		writer.Header().Add("Content-Type", "text/plain")
-		passwordMD5 := md5Sum(password)
-		rank := getStaffRank(request)
+		passwordMD5 := gcutil.Md5Sum(password)
+		rank := manage.GetStaffRank(request)
 
 		if passwordMD5 == "" && rank == 0 {
-			serveErrorPage(writer, "Password required for post deletion")
+			serverutil.ServeErrorPage(writer, "Password required for post deletion")
 			return
 		}
 
 		for _, checkedPostID := range postsArr {
-			var post Post
+			var post gcsql.Post
 			var err error
 			post.ID, _ = strconv.Atoi(checkedPostID)
 			post.BoardID, _ = strconv.Atoi(boardid)
 
-			if post, err = GetSpecificPost(post.ID, true); err == sql.ErrNoRows {
+			if post, err = gcsql.GetSpecificPost(post.ID, true); err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n", post.ID)
 				continue
 			} else if err != nil {
-				serveErrorPage(writer, gclog.Print(lErrorLog, "Error deleting post: ", err.Error()))
+				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+					"Error deleting post: ", err.Error()))
 				return
 			}
 
@@ -343,30 +304,33 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			if fileOnly {
 				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
-					if err = DeleteFilesFromPost(post.ID); err != nil {
-						serveErrorPage(writer, err.Error())
+					if err = gcsql.DeleteFilesFromPost(post.ID); err != nil {
+						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+							"Error deleting files from post: ", err.Error()))
 						return
 					}
 				}
-				_board, _ := GetBoardFromID(post.BoardID)
-				buildBoardPages(&_board)
-				postBoard, _ := GetSpecificPost(post.ID, true)
-				buildThreadPages(&postBoard)
+				_board, _ := gcsql.GetBoardFromID(post.BoardID)
+				building.BuildBoardPages(&_board)
+				postBoard, _ := gcsql.GetSpecificPost(post.ID, true)
+				building.BuildThreadPages(&postBoard)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID)
 			} else {
 				// delete the post
-				if err = DeletePost(post.ID); err != nil {
-					serveErrorPage(writer, err.Error())
+				if err = gcsql.DeletePost(post.ID); err != nil {
+					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+						"Error deleting post: ", err.Error()))
 				}
 				if post.ParentID == 0 {
-					os.Remove(path.Join(config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
+					os.Remove(path.Join(
+						config.Config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
-					_board, _ := GetBoardFromID(post.BoardID)
-					buildBoardPages(&_board)
+					_board, _ := gcsql.GetBoardFromID(post.BoardID)
+					building.BuildBoardPages(&_board)
 				}
-				buildBoards(post.BoardID)
+				building.BuildBoards(post.BoardID)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "%d deleted successfully\n", post.ID)

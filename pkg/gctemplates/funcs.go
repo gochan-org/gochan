@@ -1,15 +1,17 @@
-package main
+package gctemplates
 
 import (
 	"fmt"
 	"html"
-	"os"
-	"path"
+	"html/template"
 	"reflect"
 	"strconv"
 	"strings"
-	"text/template"
+	"time"
 
+	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	x_html "golang.org/x/net/html"
 )
 
@@ -57,7 +59,7 @@ var funcMap = template.FuncMap{
 	},
 
 	// String functions
-	"arrToString": arrToString,
+	// "arrToString": arrToString,
 	"intToString": strconv.Itoa,
 	"escapeString": func(a string) string {
 		return html.EscapeString(a)
@@ -73,7 +75,9 @@ var funcMap = template.FuncMap{
 		}
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
-	"formatTimestamp": humanReadableTime,
+	"formatTimestamp": func(t time.Time) string {
+		return t.Format(config.Config.DateTimeFormat)
+	},
 	"stringAppend": func(strings ...string) string {
 		var appended string
 		for _, str := range strings {
@@ -96,10 +100,9 @@ var funcMap = template.FuncMap{
 				msg = msg + "..."
 			}
 			return msg
-		} else {
-			msg = msg[:limit]
-			truncated = true
 		}
+		msg = msg[:limit]
+		truncated = true
 
 		if truncated {
 			msg = msg + "..."
@@ -132,12 +135,11 @@ var funcMap = template.FuncMap{
 	},
 
 	// Imageboard functions
-	"bannedForever": bannedForever,
 	"getCatalogThumbnail": func(img string) string {
-		return getThumbnailPath("catalog", img)
+		return gcutil.GetThumbnailPath("catalog", img)
 	},
 	"getThreadID": func(postInterface interface{}) (thread int) {
-		post, ok := postInterface.(Post)
+		post, ok := postInterface.(gcsql.Post)
 		if !ok {
 			thread = 0
 		} else if post.ParentID == 0 {
@@ -149,18 +151,18 @@ var funcMap = template.FuncMap{
 	},
 	"getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
 		if withDomain {
-			postURL = config.SiteDomain
+			postURL = config.Config.SiteDomain
 		}
-		postURL += config.SiteWebfolder
+		postURL += config.Config.SiteWebfolder
 
 		if typeOf == "recent" {
-			post, ok := postInterface.(*RecentPost)
+			post, ok := postInterface.(*gcsql.RecentPost)
 			if !ok {
 				return
 			}
 			postURL = post.GetURL(withDomain)
 		} else {
-			post, ok := postInterface.(*Post)
+			post, ok := postInterface.(*gcsql.Post)
 			if !ok {
 				return
 			}
@@ -169,10 +171,10 @@ var funcMap = template.FuncMap{
 		return
 	},
 	"getThreadThumbnail": func(img string) string {
-		return getThumbnailPath("thread", img)
+		return gcutil.GetThumbnailPath("thread", img)
 	},
 	"getUploadType": func(name string) string {
-		extension := getFileExtension(name)
+		extension := gcutil.GetFileExtension(name)
 		var uploadType string
 		switch extension {
 		case "":
@@ -207,10 +209,15 @@ var funcMap = template.FuncMap{
 		}
 		return img[0:index] + thumbSuffix
 	},
-	"isBanned":   isBanned,
-	"numReplies": numReplies,
+	"numReplies": func(boardid, threadid int) int {
+		num, err := gcsql.GetReplyCount(threadid)
+		if err != nil {
+			return 0
+		}
+		return num
+	},
 	"getBoardDir": func(id int) string {
-		var board Board
+		var board gcsql.Board
 		if err := board.PopulateData(id); err != nil {
 			return ""
 		}
@@ -226,8 +233,8 @@ var funcMap = template.FuncMap{
 		return loopArr
 	},
 	"generateConfigTable": func() string {
-		configType := reflect.TypeOf(config)
-		tableOut := "<table style=\"border-collapse: collapse;\" id=\"config\"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>\n"
+		configType := reflect.TypeOf(config.Config)
+		tableOut := `<table style="border-collapse: collapse;" id="config"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>`
 		numFields := configType.NumField()
 		for f := 17; f < numFields-2; f++ {
 			// starting at Lockdown because the earlier fields can't be safely edited from a web interface
@@ -237,22 +244,22 @@ var funcMap = template.FuncMap{
 			}
 			name := field.Name
 			tableOut += "<tr><th>" + name + "</th><td>"
-			f := reflect.Indirect(reflect.ValueOf(config)).FieldByName(name)
+			f := reflect.Indirect(reflect.ValueOf(config.Config)).FieldByName(name)
 
 			kind := f.Kind()
 			switch kind {
 			case reflect.Int:
-				tableOut += "<input name=\"" + name + "\" type=\"number\" value=\"" + html.EscapeString(fmt.Sprintf("%v", f)) + "\" class=\"config-text\"/>"
+				tableOut += `<input name="` + name + `" type="number" value="` + html.EscapeString(fmt.Sprintf("%v", f)) + `" class="config-text"/>`
 			case reflect.String:
-				tableOut += "<input name=\"" + name + "\" type=\"text\" value=\"" + html.EscapeString(fmt.Sprintf("%v", f)) + "\" class=\"config-text\"/>"
+				tableOut += `<input name="` + name + `" type="text" value="` + html.EscapeString(fmt.Sprintf("%v", f)) + `" class="config-text"/>`
 			case reflect.Bool:
 				checked := ""
 				if f.Bool() {
 					checked = "checked"
 				}
-				tableOut += "<input name=\"" + name + "\" type=\"checkbox\" " + checked + " />"
+				tableOut += `<input name="` + name + `" type="checkbox" ` + checked + " />"
 			case reflect.Slice:
-				tableOut += "<textarea name=\"" + name + "\" rows=\"4\" cols=\"28\">"
+				tableOut += `<textarea name="` + name + `" rows="4" cols="28">`
 				arrLength := f.Len()
 				for s := 0; s < arrLength; s++ {
 					newLine := "\n"
@@ -272,143 +279,15 @@ var funcMap = template.FuncMap{
 				defaultTagHTML = " <b>Default: " + defaultTag + "</b>"
 			}
 			tableOut += field.Tag.Get("description") + defaultTagHTML + "</td>"
-			tableOut += "</tr>\n"
+			tableOut += "</tr>"
 		}
-		tableOut += "</table>\n"
+		tableOut += "</table>"
 		return tableOut
 	},
 	"isStyleDefault": func(style string) bool {
-		return style == config.DefaultStyle
+		return style == config.Config.DefaultStyle
 	},
-
-	// Version functions
 	"version": func() string {
-		return version.String()
+		return config.Config.Version.String()
 	},
-}
-
-var (
-	banpageTmpl      *template.Template
-	captchaTmpl      *template.Template
-	catalogTmpl      *template.Template
-	errorpageTmpl    *template.Template
-	frontPageTmpl    *template.Template
-	boardpageTmpl    *template.Template
-	threadpageTmpl   *template.Template
-	postEditTmpl     *template.Template
-	manageBansTmpl   *template.Template
-	manageBoardsTmpl *template.Template
-	manageConfigTmpl *template.Template
-	manageHeaderTmpl *template.Template
-	jsTmpl           *template.Template
-)
-
-func loadTemplate(files ...string) (*template.Template, error) {
-	var templates []string
-	for i, file := range files {
-		templates = append(templates, file)
-		tmplPath := path.Join(config.TemplateDir, "override", file)
-
-		if _, err := os.Stat(tmplPath); !os.IsNotExist(err) {
-			files[i] = tmplPath
-		} else {
-			files[i] = path.Join(config.TemplateDir, file)
-		}
-	}
-
-	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
-}
-
-func templateError(name string, err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("Failed loading template '%s/%s': %s", config.TemplateDir, name, err.Error())
-}
-
-func initTemplates(which ...string) error {
-	var err error
-	buildAll := len(which) == 0 || which[0] == "all"
-	resetBoardSectionArrays()
-	for _, t := range which {
-		if buildAll || t == "banpage" {
-			banpageTmpl, err = loadTemplate("banpage.html", "page_footer.html")
-			if err != nil {
-				return templateError("banpage.html", err)
-			}
-		}
-		if buildAll || t == "captcha" {
-			captchaTmpl, err = loadTemplate("captcha.html")
-			if err != nil {
-				return templateError("captcha.html", err)
-			}
-		}
-		if buildAll || t == "catalog" {
-			catalogTmpl, err = loadTemplate("catalog.html", "page_header.html", "page_footer.html")
-			if err != nil {
-				return templateError("catalog.html", err)
-			}
-		}
-		if buildAll || t == "error" {
-			errorpageTmpl, err = loadTemplate("error.html")
-			if err != nil {
-				return templateError("error.html", err)
-			}
-		}
-		if buildAll || t == "front" {
-			frontPageTmpl, err = loadTemplate("front.html", "front_intro.html", "page_header.html", "page_footer.html")
-			if err != nil {
-				return templateError("front.html", err)
-			}
-		}
-		if buildAll || t == "boardpage" {
-			boardpageTmpl, err = loadTemplate("boardpage.html", "page_header.html", "postbox.html", "page_footer.html")
-			if err != nil {
-				return templateError("boardpage.html", err)
-			}
-		}
-		if buildAll || t == "threadpage" {
-			threadpageTmpl, err = loadTemplate("threadpage.html", "page_header.html", "postbox.html", "page_footer.html")
-			if err != nil {
-				return templateError("threadpage.html", err)
-			}
-		}
-		if buildAll || t == "postedit" {
-			postEditTmpl, err = loadTemplate("post_edit.html", "page_header.html", "page_footer.html")
-			if err != nil {
-				return templateError("threadpage.html", err)
-			}
-		}
-		if buildAll || t == "managebans" {
-			manageBansTmpl, err = loadTemplate("manage_bans.html")
-			if err != nil {
-				return templateError("manage_bans.html", err)
-			}
-		}
-		if buildAll || t == "manageboards" {
-			manageBoardsTmpl, err = loadTemplate("manage_boards.html")
-			if err != nil {
-				return templateError("manage_boards.html", err)
-			}
-		}
-		if buildAll || t == "manageconfig" {
-			manageConfigTmpl, err = loadTemplate("manage_config.html")
-			if err != nil {
-				return templateError("manage_config.html", err)
-			}
-		}
-		if buildAll || t == "manageheader" {
-			manageHeaderTmpl, err = loadTemplate("manage_header.html")
-			if err != nil {
-				return templateError("manage_header.html", err)
-			}
-		}
-		if buildAll || t == "js" {
-			jsTmpl, err = loadTemplate("consts.js")
-			if err != nil {
-				return templateError("consts.js", err)
-			}
-		}
-	}
-	return nil
 }

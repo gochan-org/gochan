@@ -30,7 +30,6 @@
 	"SiteDomain": "127.0.0.1",
 	"SiteHeaderURL": "",
 	"SiteWebfolder": "/",
-	"DomainRegex": "(https|http):\\/\\/(gochan\\.org)\\/(.*)",
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
