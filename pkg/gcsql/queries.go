@@ -6,9 +6,6 @@ import (
 	"time"
 )
 
-//ErrNotImplemented is a not implemented exception
-var ErrNotImplemented = errors.New("Not implemented")
-
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
@@ -18,27 +15,25 @@ func GetAllNondeletedMessageRaw() (messages []MessagePostContainer, err error) {
 }
 
 // SetMessages sets all the non-raw text for a given array of items.
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
 func SetMessages(messages []MessagePostContainer) (err error) {
 	//TODO
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // GetReplyCount gets the total amount non-deleted of replies in a thread
 func GetReplyCount(postID int) (replyCount int, err error) {
-	return 420, ErrNotImplemented
+	return 420, errors.New("Not implemented")
 }
 
 // GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
 func GetReplyFileCount(postID int) (fileCount int, err error) {
-	return 420, ErrNotImplemented
+	return 420, errors.New("Not implemented")
 }
 
 // GetStaffName returns the name associated with a session
 func GetStaffName(session string) (name string, err error) {
 	//after refactor, check if still used
-	return "DUMMY", ErrNotImplemented
+	return "DUMMY", errors.New("Not implemented")
 }
 
 // GetStaffBySession gets the staff that is logged in in the given session
@@ -52,7 +47,7 @@ func GetStaffBySession(session string) (*Staff, error) { //TODO not upt to date 
 	// )
 	// return staff, err
 
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 // GetStaffByName gets the staff with a given name
@@ -66,7 +61,7 @@ func GetStaffByName(name string) (*Staff, error) { //TODO not upt to date with o
 	// )
 	// return staff, err
 
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 // NewStaff creates a new staff account from a given username, password and rank
@@ -74,14 +69,14 @@ func NewStaff(username string, password string, rank int) error { //TODO not up 
 	// _, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
 	// 	&username, bcryptSum(password), &rank)
 	// return err
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // DeleteStaff deletes the staff with a given name.
 func DeleteStaff(username string) error { //TODO not up to date with old db yet
 	// _, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
 	// return err
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // CreateSession inserts a session for a given key and username into the database
@@ -91,7 +86,7 @@ func CreateSession(key string, username string) error { //TODO not up to date wi
 	// return execSQL("INSERT INTO DBPREFIXsessions (name,sessiondata,expires) VALUES(?,?,?)",
 	// 	key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
 	// )
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
@@ -99,7 +94,7 @@ func PermanentlyRemoveDeletedPosts() error {
 	//Remove all deleted posts
 	//Remove orphaned threads
 	//Make sure cascades are set up properly
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // OptimizeDatabase peforms a database optimisation
@@ -123,22 +118,22 @@ func OptimizeDatabase() error { //TODO FIX, try to do it entirely within one SQL
 	// 			"</td></tr></table>"
 	// 	}
 	// }
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // FileBan creates a new ban on a file. If boards = nil, the ban is global.
 func FileBan(fileChecksum string, staffName string, expires time.Time, permaban bool, staffNote string, boardURI string) error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // FileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
 func FileNameBan(fileName string, isRegex bool, staffName string, expires time.Time, permaban bool, staffNote string, boardURI string) error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // UserNameBan creates a new ban on a username. If boards = nil, the ban is global.
 func UserNameBan(userName string, isRegex bool, staffName string, expires time.Time, permaban bool, staffNote string, boardURI string) error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 // UserBan creates either a full ip ban, or an ip ban for threads only, for a given IP.
@@ -146,7 +141,7 @@ func UserNameBan(userName string, isRegex bool, staffName string, expires time.T
 // The code should be changed to reflect the new database design
 func UserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
 	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //GetAllAccouncements gets all announcements, newest first
@@ -156,7 +151,7 @@ func GetAllAccouncements() ([]Announcement, error) {
 	//("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
 	//rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
 
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //CreateBoard creates this board in the database if it doesnt exist already, also sets ID to correct value
@@ -176,7 +171,7 @@ func CreateBoard(values *Board) error {
 		board.ForcedAnon, board.MaxAge, board.AutosageAfter,
 		board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
 		board.RedirectToThread, board.RequireFile, board.EnableCatalog,*/
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 	//set id to created id
 	//errors.New("board already exists in database")
 }
@@ -196,14 +191,14 @@ func GetBoardUris() (URIS []string, err error) {
 						html += "<option>" + boardDir + "</option>"
 					}
 	*/
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //GetAllSections gets a list of all existing sections
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllSections() (sections []BoardSection, err error) {
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 // GetAllSectionsOrCreateDefault gets all sections in the database, creates default if none exist
@@ -220,12 +215,12 @@ func GetAllSectionsOrCreateDefault() (sections []BoardSection, err error) {
 	// }
 	// allSections, _ = getSectionArr("")
 	// return allSections
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //CreateDefaultSectionIfNotExist creates the default section if it does not exist yet
 func CreateDefaultSectionIfNotExist() error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //GetAllStaffNopass gets all staff accounts without their password
@@ -233,7 +228,7 @@ func CreateDefaultSectionIfNotExist() error {
 // The code should be changed to reflect the new database design
 func GetAllStaffNopass() ([]Staff, error) {
 
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //GetAllBans gets a list of all bans
@@ -252,7 +247,7 @@ func GetAllBans() ([]BanInfo, error) {
 	// 	rows.Scan(&ban.IP, &ban.Name, &ban.Reason, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.CanAppeal)
 	// 	banlist = append(banlist, ban)
 	// }
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //CheckBan returns banentry if a ban was found or a sql.ErrNoRows if not banned
@@ -285,7 +280,7 @@ func CheckBan(ip string, name string, filename string, checksum string) (*BanInf
 	// 	&banEntry.AppealAt, &banEntry.CanAppeal},
 	// )
 	// return &banEntry, err
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //SinceLastPost returns the seconds since the last post by the ip address that made this post
@@ -338,48 +333,48 @@ func InsertPost(post *Post, bump bool) error {
 	// 	err = BumpThread(post.ParentID, post.BoardID)
 	// }
 	// return err
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //GetMaxMessageLength returns the max message length on a board
 func GetMaxMessageLength(boardID int) (int, error) {
 
-	return 0, ErrNotImplemented
+	return 0, errors.New("Not implemented")
 }
 
 //GetEmbedsAllowed returns if embeds are allowed on a given board
 func GetEmbedsAllowed(boardID int) (bool, error) {
 
-	return false, ErrNotImplemented
+	return false, errors.New("Not implemented")
 }
 
 //GetBoardFromPostID gets the boardURI that a given postid exists on
 func GetBoardFromPostID(postID int) (boardURI string, err error) {
-	return "", ErrNotImplemented
+	return "", errors.New("Not implemented")
 }
 
 //GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Posts do not directly reference their post post anymore.
 func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
-	return 0, ErrNotImplemented
+	return 0, errors.New("Not implemented")
 }
 
 //AddBanAppeal adds a given appeal to a given ban
 func AddBanAppeal(banID uint, message string) error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //GetPostPassword gets the password associated with a given post
 func GetPostPassword(postID int) (password string, err error) {
-	return "", ErrNotImplemented
+	return "", errors.New("Not implemented")
 }
 
 //UpdatePost updates a post with new information
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func UpdatePost(postID int, email string, subject string, message string, messageRaw string) error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //DeleteFilesFromPost deletes all files belonging to a given post
@@ -396,19 +391,19 @@ func DeleteFilesFromPost(postID int) error {
 	// os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
 	// os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
 	// os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //DeletePost deletes a post with a given ID
 func DeletePost(postID int) error {
 	DeleteFilesFromPost(postID)
 	//Also delete child posts if its a top post
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //CreateDefaultBoardIfNoneExist creates a default board if no boards exist yet
 func CreateDefaultBoardIfNoneExist() error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 	// firstBoard := Board{
 	// 	Dir:         "test",
 	// 	Title:       "Testing board",
@@ -421,7 +416,7 @@ func CreateDefaultBoardIfNoneExist() error {
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
 func CreateDefaultAdminIfNoStaff() error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 	// if _, err = execSQL(
 	// 	"INSERT INTO DBPREFIXstaff (username,password_checksum,rank) VALUES(?,?,?)",
 	// 	"admin", bcryptSum("password"), 3,
@@ -434,7 +429,7 @@ func CreateDefaultAdminIfNoStaff() error {
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. (Just bad design in general, try to avoid directly mutating state like this)
 func (board *Board) UpdateID() error {
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 	// return queryRowSQL("SELECT id FROM DBPREFIXboards WHERE dir = ?",
 	// 	[]interface{}{board.Dir},
 	// 	[]interface{}{&board.ID})
@@ -456,24 +451,24 @@ func (board *Board) PopulateData(id int) error {
 	// 	&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
 	// 	&board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile,
 	// 	&board.EnableCatalog})
-	return ErrNotImplemented
+	return errors.New("Not implemented")
 }
 
 //DoesBoardExistByID returns a bool indicating whether a board with a given id exists
 func DoesBoardExistByID(ID int) (bool, error) {
-	return false, ErrNotImplemented
+	return false, errors.New("Not implemented")
 }
 
 //GetAllBoards gets a list of all existing boards
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllBoards() ([]Board, error) {
-	return nil, ErrNotImplemented
+	return nil, errors.New("Not implemented")
 }
 
 //GetBoardFromID returns the board corresponding to a given id
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetBoardFromID(boardID int) (Board, error) {
-	return Board{}, ErrNotImplemented
+	return Board{}, errors.New("Not implemented")
 }
