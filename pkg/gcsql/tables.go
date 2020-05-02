@@ -317,6 +317,8 @@ type BoardSection struct {
 }
 
 // Post represents each post in the database
+// Deprecated. Struct was made for use with old database, deprecated since refactor of april 2020.
+// Please refactor all code that uses this struct to use a struct that alligns with the new database structure and functions.
 type Post struct {
 	ID               int       `json:"no"`
 	ParentID         int       `json:"resto"`
@@ -426,6 +428,8 @@ type MessagePostContainer struct {
 	Message    string
 }
 
+// Deprecated. Struct was made for use with old database, deprecated since refactor of april 2020.
+// Please refactor all code that uses this struct to use a struct that alligns with the new database structure and functions.
 type RecentPost struct {
 	BoardName string
 	BoardID   int
