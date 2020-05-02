@@ -1,8 +1,8 @@
 --dummy data for postgres
 
 INSERT INTO public.dbprefixsections (
-name, abbreviation, "position", hidden) VALUES (
-'ssss'::text, 'sss'::text, '0'::smallint, false::boolean)
+name, abbreviation, "position", hidden, id) VALUES (
+'ssss'::text, 'sss'::text, '0'::smallint, false::boolean, 1)
  returning id;
 
 INSERT INTO public.dbprefixboards (
@@ -40,26 +40,26 @@ thread_id, ip, message, message_raw, password, created_on) VALUES (
  returning id;
 
  INSERT INTO public.dbprefixfiles (
-post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height) VALUES (
-'2'::bigint, '0'::integer, '2a'::character varying(255), '2a'::character varying(45), '1'::integer, '1'::integer, false::boolean, '5'::integer, '5'::integer)
+post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height) VALUES (
+'2'::bigint, '0'::integer, '2a'::character varying(255), '2a'::character varying(45), '1'::integer, '1'::integer, false::boolean, '5'::integer, '5'::integer, '10'::integer, '10'::integer)
  returning id;
 
  INSERT INTO public.dbprefixfiles (
-post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height) VALUES (
-'1'::bigint, '0'::integer, '1a'::character varying(255), '1a'::character varying(45), '2'::integer, '2'::integer, false::boolean, '5'::integer, '5'::integer)
+post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height) VALUES (
+'1'::bigint, '0'::integer, '1a'::character varying(255), '1a'::character varying(45), '2'::integer, '2'::integer, false::boolean, '5'::integer, '5'::integer, '10'::integer, '10'::integer)
  returning id;
 
  INSERT INTO public.dbprefixfiles (
-post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height) VALUES (
-'3'::bigint, '0'::integer, '3a'::character varying(255), '3a'::character varying(45), '3'::integer, '3'::integer, false::boolean, '5'::integer, '5'::integer)
+post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height) VALUES (
+'3'::bigint, '0'::integer, '3a'::character varying(255), '3a'::character varying(45), '3'::integer, '3'::integer, false::boolean, '5'::integer, '5'::integer, '10'::integer, '10'::integer)
  returning id;
 
  INSERT INTO public.dbprefixfiles (
-post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height) VALUES (
-'2'::bigint, '1'::integer, '2b'::character varying(255), '2b'::character varying(45), '4'::integer, '4'::integer, false::boolean, '5'::integer, '5'::integer)
+post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height) VALUES (
+'2'::bigint, '1'::integer, '2b'::character varying(255), '2b'::character varying(45), '4'::integer, '4'::integer, false::boolean, '5'::integer, '5'::integer, '10'::integer, '10'::integer)
  returning id;
 
  INSERT INTO public.dbprefixfiles (
-post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height) VALUES (
-'3'::bigint, '1'::integer, '3b'::character varying(255), '3b'::character varying(45), '5'::integer, '5'::integer, false::boolean, '55'::integer, '5'::integer)
+post_id, file_order, original_filename, filename, checksum, file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height) VALUES (
+'3'::bigint, '1'::integer, '3b'::character varying(255), '3b'::character varying(45), '5'::integer, '5'::integer, false::boolean, '55'::integer, '5'::integer, '10'::integer, '10'::integer)
  returning id;
