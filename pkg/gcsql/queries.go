@@ -1,7 +1,6 @@
 package gcsql
 
 import (
-	"database/sql"
 	"errors"
 	"net"
 	"time"
@@ -9,65 +8,6 @@ import (
 
 //ErrNotImplemented is a not implemented exception
 var ErrNotImplemented = errors.New("Not implemented")
-
-// GetTopPostsNoSort gets the thread ops for a given board.
-// Results are unsorted
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetTopPostsNoSort(boardID int) (posts []Post, err error) {
-	//TODO
-	return nil, ErrNotImplemented
-}
-
-// GetTopPosts gets the thread ops for a given board.
-// newestFirst sorts the ops by the newest first if true, by newest last if false
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetTopPosts(boardID int, newestFirst bool) (posts []Post, err error) {
-	//TODO sort by bump
-	return nil, ErrNotImplemented
-}
-
-// GetExistingReplies gets all the reply posts to a given thread, ordered by oldest first.
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetExistingReplies(topPost int) (posts []Post, err error) {
-	//TODO sort by number/date
-	return nil, ErrNotImplemented
-}
-
-// GetExistingRepliesLimitedRev gets N amount of reply posts to a given thread, ordered by newest first.
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetExistingRepliesLimitedRev(topPost int, limit int) (posts []Post, err error) {
-	//TODO
-	return nil, ErrNotImplemented
-}
-
-// GetSpecificTopPost gets the information for the top post for a given id.
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetSpecificTopPost(ID int) (posts Post, err error) {
-	//Currently implemented as GetSpecificPost because getSpecificPost can also be a top post.
-	return GetSpecificPost(ID, false)
-}
-
-// GetSpecificPostByString gets a specific post for a given string id.
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetSpecificPostByString(ID string) (post Post, err error) {
-	//TODO
-	return Post{}, ErrNotImplemented
-}
-
-// GetSpecificPost gets a specific post for a given id.
-// returns SQL.ErrNoRows if no post could be found
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetSpecificPost(ID int, onlyNotDeleted bool) (post Post, err error) {
-	//TODO
-	return Post{}, ErrNotImplemented
-}
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
@@ -83,118 +23,6 @@ func GetAllNondeletedMessageRaw() (messages []MessagePostContainer, err error) {
 func SetMessages(messages []MessagePostContainer) (err error) {
 	//TODO
 	return ErrNotImplemented
-}
-
-// getRecentPostsInternal returns the most recent N posts, on a specific board if specified, only with files if specified
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecificBoard bool) ([]RecentPost, error) {
-	//TODO: rework so it uses all features/better sql
-	//get recent posts
-	recentQueryStr := `
-	/*
-	recentposts = join all non-deleted posts with the post id of their thread and the board it belongs on, sort by date and grab top x posts
-	singlefiles = the top file per post id
-	
-	Left join singlefiles on recentposts where recentposts.selfid = singlefiles.post_id
-	Coalesce filenames to "" (if filename = null -> "" else filename)
-	
-	Query might benefit from [filter on posts with at least one file -> ] filter N most recent -> manually loop N results for file/board/parentthreadid
-	*/
-	
-	Select 
-		recentposts.selfid AS id,
-		recentposts.toppostid AS parentid,
-		recentposts.boardname,
-		recentposts.boardid,
-		recentposts.name,
-		recentposts.tripcode,
-		recentposts.message,
-		COALESCE(singlefiles.filename, '') as filename,
-		singlefiles.thumbnail_width as thumb_w,
-		singlefiles.thumbnail_height as thumb_h
-	FROM
-		(SELECT 
-			posts.id AS selfid,
-			topposts.id AS toppostid,
-			boards.dir AS boardname,
-			boards.id AS boardid,
-			posts.name,
-			posts.tripcode,
-			posts.message,
-			posts.email,
-			 posts.created_on
-		FROM
-			DBPREFIXposts AS posts
-		JOIN DBPREFIXthreads AS threads 
-			ON threads.id = posts.thread_id
-		JOIN DBPREFIXposts AS topposts 
-			ON threads.id = topposts.thread_id
-		JOIN DBPREFIXboards AS boards
-			ON threads.board_id = boards.id
-		WHERE 
-			topposts.is_top_post = TRUE AND posts.is_deleted = FALSE
-		
-		) as recentposts
-	LEFT JOIN 
-		(SELECT files.post_id, filename, files.thumbnail_width, files.thumbnail_height
-		FROM DBPREFIXfiles as files
-		JOIN 
-			(SELECT post_id, min(file_order) as file_order
-			FROM DBPREFIXfiles
-			GROUP BY post_id) as topfiles 
-			ON files.post_id = topfiles.post_id AND files.file_order = topfiles.file_order
-		) AS singlefiles 
-		
-		ON recentposts.selfid = singlefiles.post_id`
-	var rows *sql.Rows
-	var err error
-
-	if onlyWithFile && onSpecificBoard {
-		recentQueryStr += `\nWHERE singlefiles.filename IS NOT NULL AND recentposts.boardid = ?
-		ORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = QuerySQL(recentQueryStr, boardID, amount)
-	}
-	if onlyWithFile && !onSpecificBoard {
-		recentQueryStr += `\nWHERE singlefiles.filename IS NOT NULL
-		ORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = QuerySQL(recentQueryStr, amount)
-	}
-	if !onlyWithFile && onSpecificBoard {
-		recentQueryStr += `\nWHERE recentposts.boardid = ?
-		ORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = QuerySQL(recentQueryStr, boardID, amount)
-	}
-	if !onlyWithFile && !onSpecificBoard {
-		recentQueryStr += `\nORDER BY recentposts.created_on DESC LIMIT ?`
-		rows, err = QuerySQL(recentQueryStr, amount)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var recentPostsArr []RecentPost
-
-	for rows.Next() {
-		recentPost := new(RecentPost)
-		if err = rows.Scan(
-			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
-			&recentPost.Name, &recentPost.Tripcode, &recentPost.Message, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
-		); err != nil {
-			return nil, err
-		}
-		recentPostsArr = append(recentPostsArr, *recentPost)
-	}
-
-	return recentPostsArr, nil
-}
-
-// GetRecentPostsGlobal returns the global N most recent posts from the database.
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetRecentPostsGlobal(amount int, onlyWithFile bool) ([]RecentPost, error) {
-	return getRecentPostsInternal(amount, onlyWithFile, 0, false)
 }
 
 // GetReplyCount gets the total amount non-deleted of replies in a thread

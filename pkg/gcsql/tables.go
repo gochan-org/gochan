@@ -342,7 +342,6 @@ type Post struct {
 	Capcode          string    `json:"capcode"`
 	Timestamp        time.Time `json:"time"`
 	Autosage         bool      `json:"-"`
-	DeletedTimestamp time.Time `json:"-"`
 	Bumped           time.Time `json:"last_modified"`
 	Stickied         bool      `json:"-"`
 	Locked           bool      `json:"-"`
