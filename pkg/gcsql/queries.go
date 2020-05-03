@@ -80,23 +80,34 @@ func GetReplyFileCount(postID int) (int, error) {
 }
 
 // GetStaffName returns the name associated with a session
-func GetStaffName(session string) (name string, err error) {
-	//after refactor, check if still used
-	return "DUMMY", errors.New("Not implemented")
+func GetStaffName(session string) (string, error) {
+	const sql = `SELECT staff.username from DBPREFIXstaff as staff
+	JOIN DBPREFIXsessions as sessions
+	ON sessions.staff_id = staff.id
+	WHERE sessions.data = ?`
+	var username string
+	err := QueryRowSQL(sql, InterfaceSlice(session), InterfaceSlice(&username))
+	return username, err
 }
 
 // GetStaffBySession gets the staff that is logged in in the given session
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetStaffBySession(session string) (*Staff, error) { //TODO not upt to date with old db yet
-	// staff := new(Staff)
-	// err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
-	// 	[]interface{}{name},
-	// 	[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
-	// )
-	// return staff, err
-
-	return nil, errors.New("Not implemented")
+	const sql = `SELECT 
+		staff.id, 
+		staff.username, 
+		staff.password_checksum, 
+		staff.global_rank,
+		staff.added_on,
+		staff.last_login 
+	FROM DBPREFIXstaff as staff
+	JOIN DBPREFIXsessions as sessions
+	ON sessions.staff_id = staff.id
+	WHERE sessions.data = ?`
+	staff := new(Staff)
+	err := QueryRowSQL(sql, InterfaceSlice(session), InterfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	return staff, err
 }
 
 // GetStaffByName gets the staff with a given name
