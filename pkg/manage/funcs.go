@@ -682,7 +682,7 @@ var manageFunctions = map[string]ManageFunction{
 			for _, message := range messages {
 				message.Message = posting.FormatMessage(message.MessageRaw)
 			}
-			err = gcsql.SetMessages(messages)
+			err = gcsql.SetFormattedInDatabase(messages)
 
 			if err != nil {
 				return html + gclog.Printf(gclog.LErrorLog, err.Error())

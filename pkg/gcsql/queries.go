@@ -3,21 +3,46 @@ package gcsql
 import (
 	"errors"
 	"net"
+	"strings"
 	"time"
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetAllNondeletedMessageRaw() (messages []MessagePostContainer, err error) {
-	//TODO
-	return nil, ErrNotImplemented
+func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
+	const sql = `select posts.id, posts.message, posts.message_raw from DBPREFIXposts as posts
+	WHERE posts.is_deleted = FALSE`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var messages []MessagePostContainer
+	for rows.Next() {
+		var message MessagePostContainer
+		err = rows.Scan(message.ID, message.Message, message.MessageRaw)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, message)
+	}
+	return messages, nil
 }
 
-// SetMessages sets all the non-raw text for a given array of items.
-func SetMessages(messages []MessagePostContainer) (err error) {
-	//TODO
-	return errors.New("Not implemented")
+// SetFormattedInDatabase sets all the non-raw text for a given array of items.
+func SetFormattedInDatabase(messages []MessagePostContainer) error {
+	const sql = `UPDATE DBPREFIXposts
+	SET message = ?
+	WHERE id = ? ;
+	`
+	updateCount := len(messages)
+	sqlToRun := strings.Repeat(sql, updateCount)
+
+	interfaceSlice := make([]interface{}, 2*updateCount) //put all ids + message in one array, in pairs
+	for _, message := range messages {
+		interfaceSlice = append(interfaceSlice, message.Message, message.ID)
+	}
+
+	_, err := ExecSQL(sqlToRun, interfaceSlice...) //TODO disable cache on this execution
+	return err
 }
 
 // GetReplyCount gets the total amount non-deleted of replies in a thread
