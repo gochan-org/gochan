@@ -3,7 +3,6 @@ package gcsql
 import (
 	"errors"
 	"net"
-	"strings"
 	"time"
 )
 
@@ -33,15 +32,17 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 	SET message = ?
 	WHERE id = ? ;
 	`
-	updateCount := len(messages)
-	sqlToRun := strings.Repeat(sql, updateCount)
-
-	interfaceSlice := make([]interface{}, 2*updateCount) //put all ids + message in one array, in pairs
-	for _, message := range messages {
-		interfaceSlice = append(interfaceSlice, message.Message, message.ID)
+	stmt, err := PrepareSQL(sql)
+	defer stmt.Close()
+	if err != nil {
+		return err
 	}
-
-	_, err := ExecSQL(sqlToRun, interfaceSlice...) //TODO disable cache on this execution
+	for _, message := range messages {
+		_, err = stmt.Exec(message.Message, message.ID)
+		if err != nil {
+			return err
+		}
+	}
 	return err
 }
 

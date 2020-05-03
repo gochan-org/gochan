@@ -36,8 +36,8 @@ func sqlVersionErr(err error) error {
 	return fmt.Errorf(unsupportedSQLVersionMsg, errText)
 }
 
-// used for generating a prepared SQL statement formatted according to config.DBtype
-func prepareSQL(query string) (*sql.Stmt, error) {
+// PrepareSQL is used for generating a prepared SQL statement formatted according to config.DBtype
+func PrepareSQL(query string) (*sql.Stmt, error) {
 	var preparedStr string
 	switch dbDriver {
 	case "mysql":
@@ -74,7 +74,7 @@ Example:
 		"INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
 */
 func ExecSQL(query string, values ...interface{}) (sql.Result, error) {
-	stmt, err := prepareSQL(query)
+	stmt, err := PrepareSQL(query)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ Example:
 		[]interface{}{&intVal, &stringVal})
 */
 func QueryRowSQL(query string, values []interface{}, out []interface{}) error {
-	stmt, err := prepareSQL(query)
+	stmt, err := PrepareSQL(query)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ Example:
 	}
 */
 func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
-	stmt, err := prepareSQL(query)
+	stmt, err := PrepareSQL(query)
 	if err != nil {
 		return nil, err
 	}
