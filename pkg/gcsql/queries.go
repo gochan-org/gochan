@@ -93,7 +93,7 @@ func GetStaffName(session string) (string, error) {
 // GetStaffBySession gets the staff that is logged in in the given session
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetStaffBySession(session string) (*Staff, error) { //TODO not upt to date with old db yet
+func GetStaffBySession(session string) (*Staff, error) {
 	const sql = `SELECT 
 		staff.id, 
 		staff.username, 
@@ -113,15 +113,19 @@ func GetStaffBySession(session string) (*Staff, error) { //TODO not upt to date 
 // GetStaffByName gets the staff with a given name
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetStaffByName(name string) (*Staff, error) { //TODO not upt to date with old db yet
-	// staff := new(Staff)
-	// err := queryRowSQL("SELECT * FROM DBPREFIXstaff WHERE username = ?",
-	// 	[]interface{}{name},
-	// 	[]interface{}{&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Boards, &staff.AddedOn, &staff.LastActive},
-	// )
-	// return staff, err
-
-	return nil, errors.New("Not implemented")
+func GetStaffByName(name string) (*Staff, error) {
+	const sql = `SELECT 
+		staff.id, 
+		staff.username, 
+		staff.password_checksum, 
+		staff.global_rank,
+		staff.added_on,
+		staff.last_login 
+	FROM DBPREFIXstaff as staff
+	WHERE staff.username = ?`
+	staff := new(Staff)
+	err := QueryRowSQL(sql, InterfaceSlice(name), InterfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	return staff, err
 }
 
 // NewStaff creates a new staff account from a given username, password and rank
