@@ -151,17 +151,13 @@ func GetSpecificTopPost(ID int) (Post, error) {
 		SELECT threads.id from DBPREFIXthreads as threads
 		JOIN DBPREFIXposts as posts
 		ON posts.thread_id = threads.id
-		WHERE posts.id = 2
+		WHERE posts.id = ?
 	) as thread
 	ON posts.thread_id = thread.id
 	WHERE posts.is_top_post`
 	//get top post of item with given id
 	var FoundID int
-	var out []interface{}
-	out = append(out, &FoundID)
-	var vars []interface{}
-	vars = append(out, ID)
-	err := QueryRowSQL(topPostIDQuery, vars, out)
+	err := QueryRowSQL(topPostIDQuery, InterfaceSlice(ID), InterfaceSlice(&FoundID))
 	if err != nil {
 		return Post{}, err
 	}

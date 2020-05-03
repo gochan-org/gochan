@@ -137,3 +137,8 @@ func ResetBoardSectionArrays() {
 	allSectionsArr, _ := GetAllSections()
 	AllSections = append(AllSections, allSectionsArr...)
 }
+
+// InterfaceSlice creates a new interface slice from an arbitrary collection of values
+func InterfaceSlice(args ...interface{}) []interface{} {
+	return args
+}

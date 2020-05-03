@@ -46,8 +46,19 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 }
 
 // GetReplyCount gets the total amount non-deleted of replies in a thread
-func GetReplyCount(postID int) (replyCount int, err error) {
-	return 420, errors.New("Not implemented")
+func GetReplyCount(postID int) (int, error) {
+	const sql = `SELECT COUNT(posts.id) FROM DBPREFIXposts as posts
+	JOIN (
+		SELECT threads.id FROM DBPREFIXthreads as threads
+		JOIN DBPREFIXposts as posts
+		ON posts.thread_id = threads.id
+		WHERE posts.id = ?
+	) as thread
+	ON posts.thread_id = thread.id
+	WHERE posts.is_deleted = FALSE`
+	var count int
+	err := QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&count))
+	return count, err
 }
 
 // GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
