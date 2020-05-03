@@ -62,8 +62,21 @@ func GetReplyCount(postID int) (int, error) {
 }
 
 // GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
-func GetReplyFileCount(postID int) (fileCount int, err error) {
-	return 420, errors.New("Not implemented")
+func GetReplyFileCount(postID int) (int, error) {
+	const sql = `SELECT COUNT(files.id) from DBPREFIXfiles as files
+	JOIN (SELECT posts.id FROM DBPREFIXposts as posts
+		JOIN (
+			SELECT threads.id FROM DBPREFIXthreads as threads
+			JOIN DBPREFIXposts as posts
+			ON posts.thread_id = threads.id
+			WHERE posts.id = ?
+		) as thread
+		ON posts.thread_id = thread.id
+		WHERE posts.is_deleted = FALSE) as posts
+	ON posts.id = files.post_id`
+	var count int
+	err := QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&count))
+	return count, err
 }
 
 // GetStaffName returns the name associated with a session
