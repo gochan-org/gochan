@@ -437,7 +437,7 @@ var manageFunctions = map[string]ManageFunction{
 				html = "nobody;0;"
 				return
 			}
-			html = staff.Username + ";" + strconv.Itoa(staff.Rank) + ";" + staff.Boards
+			html = staff.Username + ";" + strconv.Itoa(staff.Rank)
 			return
 		}},
 	"boards": {
@@ -783,8 +783,8 @@ var manageFunctions = map[string]ManageFunction{
 					rank = "janitor"
 				}
 				html += fmt.Sprintf(
-					`<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
-					staff.Username, rank, staff.Boards, staff.AddedOn.Format(config.Config.DateTimeFormat), staff.Username)
+					`<tr><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
+					staff.Username, rank, staff.AddedOn.Format(config.Config.DateTimeFormat), staff.Username)
 
 			}
 			html += `</table><hr /><h2 class="manage-header">Add new staff</h2>` +

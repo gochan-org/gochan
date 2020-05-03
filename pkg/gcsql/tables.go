@@ -403,7 +403,6 @@ type Staff struct {
 	Username         string
 	PasswordChecksum string
 	Rank             int
-	Boards           string
 	AddedOn          time.Time
 	LastActive       time.Time
 }
