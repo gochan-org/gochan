@@ -398,7 +398,7 @@ var manageFunctions = map[string]ManageFunction{
 						}
 					}
 					if request.FormValue("imageban") == "on" {
-						err = gcsql.FileBan(checksum, currentStaff, expires, permaban, staffNote, boards)
+						err = gcsql.FileBan(checksum, currentStaff, permaban, staffNote, boards)
 						if err != nil {
 							pageHTML += err.Error()
 							err = nil

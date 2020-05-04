@@ -147,15 +147,23 @@ func DeleteStaff(username string) error {
 	return err
 }
 
+func getStaffID(username string) (int, error) {
+	staff, err := GetStaffByName(username)
+	if err != nil {
+		return -1, err
+	}
+	return staff.ID, nil
+}
+
 // CreateSession inserts a session for a given key and username into the database
 func CreateSession(key string, username string) error {
 	const sql = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?); 
 	UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?;`
-	staff, err := GetStaffByName(username)
+	staffID, err := getStaffID(username)
 	if err != nil {
 		return err
 	}
-	_, err = ExecSQL(sql, staff.ID, key, time.Now().Add(time.Duration(time.Hour*730)), staff.ID) //TODO move amount of time to config file
+	_, err = ExecSQL(sql, staffID, key, time.Now().Add(time.Duration(time.Hour*730)), staffID) //TODO move amount of time to config file
 	return err
 }
 
@@ -184,8 +192,18 @@ func OptimizeDatabase() error {
 }
 
 // FileBan creates a new ban on a file. If boards = nil, the ban is global.
-func FileBan(fileChecksum string, staffName string, expires time.Time, permaban bool, staffNote string, boardURI string) error {
-	return errors.New("Not implemented")
+func FileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) error {
+	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
+	staffID, err := getStaffID(staffName)
+	if err != nil {
+		return err
+	}
+	boardID, err := getBoardIDFromURI(boardURI)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileChecksum)
+	return err
 }
 
 // FileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
@@ -533,4 +551,8 @@ func GetAllBoards() ([]Board, error) {
 // The code should be changed to reflect the new database design
 func GetBoardFromID(boardID int) (Board, error) {
 	return Board{}, errors.New("Not implemented")
+}
+
+func getBoardIDFromURI(URI string) (int, error) {
+	return -1, errors.New("Not implemented")
 }
