@@ -285,20 +285,21 @@ func CreateBoard(values *Board) error {
 
 //GetBoardUris gets a list of all existing board URIs
 func GetBoardUris() (URIS []string, err error) {
-	/*
-		rows, err = querySQL("SELECT dir FROM DBPREFIXboards")
-					defer closeHandle(rows)
-					if err != nil {
-						return html + gclog.Print(lErrorLog, "Error getting board list: ", err.Error())
-					}
-
-					for rows.Next() {
-						var boardDir string
-						rows.Scan(&boardDir)
-						html += "<option>" + boardDir + "</option>"
-					}
-	*/
-	return nil, errors.New("Not implemented")
+	const sql = `SELECT uri FROM DBPREFIXboards`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var uris []string
+	for rows.Next() {
+		var uri string
+		err = rows.Scan(&uri)
+		if err != nil {
+			return nil, err
+		}
+		uris = append(uris, uri)
+	}
+	return uris, nil
 }
 
 //GetAllSections gets a list of all existing sections
@@ -311,18 +312,12 @@ func GetAllSections() (sections []BoardSection, err error) {
 // GetAllSectionsOrCreateDefault gets all sections in the database, creates default if none exist
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllSectionsOrCreateDefault() (sections []BoardSection, err error) {
-	// allSections, _ = getSectionArr("")
-	// if len(allSections) == 0 {
-	// 	if _, err = execSQL(
-	// 		"INSERT INTO DBPREFIXsections (hidden,name,abbreviation) VALUES(0,'Main','main')",
-	// 	); err != nil {
-	// 		gclog.Print(lErrorLog, "Error creating new board section: ", err.Error())
-	// 	}
-	// }
-	// allSections, _ = getSectionArr("")
-	// return allSections
-	return nil, errors.New("Not implemented")
+func GetAllSectionsOrCreateDefault() ([]BoardSection, error) {
+	err := CreateDefaultSectionIfNotExist()
+	if err != nil {
+		return nil, err
+	}
+	return GetAllSections()
 }
 
 //CreateDefaultSectionIfNotExist creates the default section if it does not exist yet
