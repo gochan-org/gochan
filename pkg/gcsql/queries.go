@@ -161,34 +161,26 @@ func CreateSession(key string, username string) error {
 
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
 func PermanentlyRemoveDeletedPosts() error {
-	//Remove all deleted posts
-	//Remove orphaned threads
-	//Make sure cascades are set up properly
-	return errors.New("Not implemented")
+	const sql = `DELETE FROM DBPREFIXposts WHERE is_deleted;
+	DELETE FROM DBPREFIXthreads WHERE is_deleted;`
+	_, err := ExecSQL(sql)
+	return err
 }
 
 // OptimizeDatabase peforms a database optimisation
-func OptimizeDatabase() error { //TODO FIX, try to do it entirely within one SQL transaction
-
-	// html += "Optimizing all tables in database.<hr />"
-	// tableRows, tablesErr := querySQL("SHOW TABLES")
-	// defer closeHandle(tableRows)
-
-	// if tablesErr != nil && tablesErr != sql.ErrNoRows {
-	// 	return html + "<tr><td>" +
-	// 		gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
-	// 		"</td></tr></table>"
-	// }
-	// for tableRows.Next() {
-	// 	var table string
-	// 	tableRows.Scan(&table)
-	// 	if _, err := execSQL("OPTIMIZE TABLE " + table); err != nil {
-	// 		return html + "<tr><td>" +
-	// 			gclog.Print(lErrorLog, "Error optimizing SQL tables: ", tablesErr.Error()) +
-	// 			"</td></tr></table>"
-	// 	}
-	// }
-	return errors.New("Not implemented")
+func OptimizeDatabase() error {
+	tableRows, tablesErr := QuerySQL("SHOW TABLES")
+	if tablesErr != nil {
+		return tablesErr
+	}
+	for tableRows.Next() {
+		var table string
+		tableRows.Scan(&table)
+		if _, err := ExecSQL("OPTIMIZE TABLE " + table); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // FileBan creates a new ban on a file. If boards = nil, the ban is global.
