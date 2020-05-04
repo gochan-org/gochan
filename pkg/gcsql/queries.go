@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net"
 	"time"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
@@ -130,28 +132,31 @@ func GetStaffByName(name string) (*Staff, error) {
 }
 
 // NewStaff creates a new staff account from a given username, password and rank
-func NewStaff(username string, password string, rank int) error { //TODO not up to date with old db yet
-	// _, err := execSQL("INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES(?,?,?)",
-	// 	&username, bcryptSum(password), &rank)
-	// return err
-	return errors.New("Not implemented")
+func NewStaff(username string, password string, rank int) error {
+	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank)
+	VALUES (?, ?, ?);`
+	_, err := ExecSQL(sql, username, gcutil.BcryptSum(password), rank)
+	return err
 }
 
 // DeleteStaff deletes the staff with a given name.
-func DeleteStaff(username string) error { //TODO not up to date with old db yet
-	// _, err := execSQL("DELETE FROM DBPREFIXstaff WHERE username = ?", username)
-	// return err
-	return errors.New("Not implemented")
+// Implemented to change the account name to a random string and set it to inactive
+func DeleteStaff(username string) error {
+	const sql = `UPDATE DBPREFIXstaff SET username = ?, is_active = FALSE WHERE username = ?`
+	_, err := ExecSQL(sql, gcutil.RandomString(45), username)
+	return err
 }
 
 // CreateSession inserts a session for a given key and username into the database
-func CreateSession(key string, username string) error { //TODO not up to date with old db yet
-	//TODO move amount of time to config file
-	//TODO also set last login
-	// return execSQL("INSERT INTO DBPREFIXsessions (name,sessiondata,expires) VALUES(?,?,?)",
-	// 	key, username, getSpecificSQLDateTime(time.Now().Add(time.Duration(time.Hour*730))),
-	// )
-	return errors.New("Not implemented")
+func CreateSession(key string, username string) error {
+	const sql = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?); 
+	UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?;`
+	staff, err := GetStaffByName(username)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql, staff.ID, key, time.Now().Add(time.Duration(time.Hour*730)), staff.ID) //TODO move amount of time to config file
+	return err
 }
 
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
