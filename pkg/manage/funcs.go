@@ -369,14 +369,14 @@ var manageFunctions = map[string]ManageFunction{
 
 				err = nil
 				if filename != "" {
-					err = gcsql.FileNameBan(filename, nameIsRegex, currentStaff, expires, permaban, staffNote, boards)
+					err = gcsql.FileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
 				}
 				if err != nil {
 					pageHTML += err.Error()
 					err = nil
 				}
 				if name != "" {
-					err = gcsql.UserNameBan(name, nameIsRegex, currentStaff, expires, permaban, staffNote, boards)
+					err = gcsql.UserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards)
 				}
 				if err != nil {
 					pageHTML += err.Error()

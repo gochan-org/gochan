@@ -191,6 +191,14 @@ func OptimizeDatabase() error {
 	return nil
 }
 
+func getBoardIDFromURIOrNil(URI string) *int {
+	ID, err := getBoardIDFromURI(URI)
+	if err != nil {
+		return nil
+	}
+	return &ID
+}
+
 // FileBan creates a new ban on a file. If boards = nil, the ban is global.
 func FileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
@@ -198,22 +206,33 @@ func FileBan(fileChecksum string, staffName string, permaban bool, staffNote str
 	if err != nil {
 		return err
 	}
-	boardID, err := getBoardIDFromURI(boardURI)
-	if err != nil {
-		return err
-	}
+	boardID := getBoardIDFromURIOrNil(boardURI)
 	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileChecksum)
 	return err
 }
 
 // FileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
-func FileNameBan(fileName string, isRegex bool, staffName string, expires time.Time, permaban bool, staffNote string, boardURI string) error {
-	return errors.New("Not implemented")
+func FileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, filename = ?, is_regex = ?`
+	staffID, err := getStaffID(staffName)
+	if err != nil {
+		return err
+	}
+	boardID := getBoardIDFromURIOrNil(boardURI)
+	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileName, isRegex)
+	return err
 }
 
 // UserNameBan creates a new ban on a username. If boards = nil, the ban is global.
-func UserNameBan(userName string, isRegex bool, staffName string, expires time.Time, permaban bool, staffNote string, boardURI string) error {
-	return errors.New("Not implemented")
+func UserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+	const sql = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, username = ?, is_regex = ?`
+	staffID, err := getStaffID(staffName)
+	if err != nil {
+		return err
+	}
+	boardID := getBoardIDFromURIOrNil(boardURI)
+	_, err = ExecSQL(sql, boardID, staffID, staffNote, userName, isRegex)
+	return err
 }
 
 // UserBan creates either a full ip ban, or an ip ban for threads only, for a given IP.
@@ -221,7 +240,15 @@ func UserNameBan(userName string, isRegex bool, staffName string, expires time.T
 // The code should be changed to reflect the new database design
 func UserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
 	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
-	return errors.New("Not implemented")
+	const sql = `INSERT INTO DBPREFIXip_ban (board_id, staff_id, staff_note, is_thread_ban, ip, appeal_at, expires_at, permanent, message, can_appeal, issued_at, copy_posted_text, is_active)
+	VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'OLD SYSTEM BAN, NO TEXT AVAILABLE',TRUE)`
+	staffID, err := getStaffID(staffName)
+	if err != nil {
+		return err
+	}
+	boardID := getBoardIDFromURIOrNil(boardURI)
+	_, err = ExecSQL(sql, boardID, staffID, staffNote, threadBan, IP, appealAt, expires, permaban, message, canAppeal)
+	return err
 }
 
 //GetAllAccouncements gets all announcements, newest first
