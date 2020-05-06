@@ -41,7 +41,7 @@ CREATE TABLE DBPREFIXboards(
 	max_message_length SMALLINT NOT NULL,
 	min_message_length SMALLINT NOT NULL,
 	allow_embeds BOOL NOT NULL,
-	redictect_to_thread BOOL NOT NULL,
+	redirect_to_thread BOOL NOT NULL,
 	require_file BOOL NOT NULL,
 	enable_catalog BOOL NOT NULL,
 	FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
