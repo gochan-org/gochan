@@ -255,32 +255,41 @@ func UserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expir
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllAccouncements() ([]Announcement, error) {
-	//("SELECT subject,message,poster,timestamp FROM DBPREFIXannouncements ORDER BY id DESC")
-	//rows.Scan(&announcement.Subject, &announcement.Message, &announcement.Poster, &announcement.Timestamp)
-
-	return nil, errors.New("Not implemented")
+	const sql = `SELECT s.username, a.timestamp, a.subject, a.message FROM DBPREFIXannouncements AS a
+	JOIN DBPREFIXstaff AS s
+	ON a.staff_id = s.id
+	ORDER BY a.id DESC`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var announcements []Announcement
+	for rows.Next() {
+		var announcement Announcement
+		err = rows.Scan(&announcement.Poster, &announcement.Timestamp, &announcement.Subject, &announcement.Message)
+		if err != nil {
+			return nil, err
+		}
+		announcements = append(announcements, announcement)
+	}
+	return announcements, nil
 }
 
 //CreateBoard creates this board in the database if it doesnt exist already, also sets ID to correct value
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func CreateBoard(values *Board) error {
-	/*
-		"INSERT INTO DBPREFIXboards (list_order,dir,type,upload_type,title,subtitle,"+
-			"description,section,max_file_size,max_pages,default_style,locked,created_on,"+
-			"anonymous,forced_anon,max_age,autosage_after,no_images_after,max_message_length,embeds_allowed,"+
-			"redirect_to_thread,require_file,enable_catalog) "+
-			"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-		board.ListOrder, board.Dir, board.Type, board.UploadType,
-		board.Title, board.Subtitle, board.Description, board.Section,
-		board.MaxFilesize, board.MaxPages, board.DefaultStyle,
-		board.Locked, getSpecificSQLDateTime(board.CreatedOn), board.Anonymous,
-		board.ForcedAnon, board.MaxAge, board.AutosageAfter,
-		board.NoImagesAfter, board.MaxMessageLength, board.EmbedsAllowed,
-		board.RedirectToThread, board.RequireFile, board.EnableCatalog,*/
-	return errors.New("Not implemented")
-	//set id to created id
-	//errors.New("board already exists in database")
+	const maxThreads = 300
+	const sql = `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	RETURNING id`
+	if values == nil {
+		return errors.New("Board is nil")
+	}
+	return QueryRowSQL(
+		sql,
+		InterfaceSlice(values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section),
+		InterfaceSlice(&values.ID))
 }
 
 //GetBoardUris gets a list of all existing board URIs
