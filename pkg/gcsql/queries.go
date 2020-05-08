@@ -312,10 +312,22 @@ func GetBoardUris() (URIS []string, err error) {
 }
 
 //GetAllSections gets a list of all existing sections
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetAllSections() (sections []BoardSection, err error) {
-	return nil, errors.New("Not implemented")
+func GetAllSections() ([]BoardSection, error) {
+	const sql = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var sections []BoardSection
+	for rows.Next() {
+		var section BoardSection
+		err = rows.Scan(&section.ID, &section.Name, &section.Abbreviation, &section.ListOrder, &section.Hidden)
+		if err != nil {
+			return nil, err
+		}
+		sections = append(sections, section)
+	}
+	return sections, nil
 }
 
 // GetAllSectionsOrCreateDefault gets all sections in the database, creates default if none exist
@@ -331,34 +343,85 @@ func GetAllSectionsOrCreateDefault() ([]BoardSection, error) {
 
 //CreateDefaultSectionIfNotExist creates the default section if it does not exist yet
 func CreateDefaultSectionIfNotExist() error {
-	return errors.New("Not implemented")
+	const sql = `SELECT COUNT(id) FROM DBPREFIXsections`
+	var count int
+	err := QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return CreateSection(&BoardSection{Name: "Main", Abbreviation: "Main", Hidden: false, ListOrder: 0})
+	}
+	return nil
+}
+
+//CreateSection creates a section, setting the newly created id in the given struct
+func CreateSection(section *BoardSection) error {
+	const sql = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)
+	RETURNING id`
+	return QueryRowSQL(
+		sql,
+		InterfaceSlice(section.Name, section.Abbreviation, section.Hidden, section.ListOrder),
+		InterfaceSlice(&section.ID))
 }
 
 //GetAllStaffNopass gets all staff accounts without their password
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllStaffNopass() ([]Staff, error) {
-
-	return nil, errors.New("Not implemented")
+	const sql = `SELECT id, username, global_rank, added_on, last_login FROM DBPREFIXstaff`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var staffs []Staff
+	for rows.Next() {
+		var staff Staff
+		err = rows.Scan(&staff.ID, &staff.Username, &staff.Rank, &staff.AddedOn, &staff.LastActive)
+		if err != nil {
+			return nil, err
+		}
+		staffs = append(staffs, staff)
+	}
+	return staffs, nil
 }
 
 //GetAllBans gets a list of all bans
+//Warning, currently only gets ip bans, not other types of bans, as the ban functionality needs a major revamp anyway
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllBans() ([]BanInfo, error) {
-	// rows, err := querySQL("SELECT ip,name,reason,boards,staff,timestamp,expires,permaban,can_appeal FROM DBPREFIXbanlist")
-	// defer closeHandle(rows)
-	// if err != nil {
-	// 	return pageHTML + gclog.Print(lErrorLog, "Error getting ban list: ", err.Error())
-	// }
-
-	// var banlist []BanInfo
-	// for rows.Next() {
-	// 	var ban BanInfo
-	// 	rows.Scan(&ban.IP, &ban.Name, &ban.Reason, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.CanAppeal)
-	// 	banlist = append(banlist, ban)
-	// }
-	return nil, errors.New("Not implemented")
+	const sql = `SELECT 
+	ban.id, 
+	ban.ip, 
+	COALESCE(board.title, '') as boardname,
+	staff.username as staff,
+	ban.issued_at,
+	ban.expires_at,
+	ban.permanent,
+	ban.message,
+	ban.staff_note,
+	ban.appeal_at,
+	ban.can_appeal
+FROM DBPREFIXip_ban as ban
+JOIN DBPREFIXstaff as staff
+ON ban.staff_id = staff.id
+JOIN DBPREFIXboards as board
+ON ban.board_id = board.id`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var bans []BanInfo
+	for rows.Next() {
+		var ban BanInfo
+		err = rows.Scan(&ban.ID, &ban.IP, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason, &ban.StaffNote, &ban.AppealAt, &ban.CanAppeal)
+		if err != nil {
+			return nil, err
+		}
+		bans = append(bans, ban)
+	}
+	return bans, nil
 }
 
 //CheckBan returns banentry if a ban was found or a sql.ErrNoRows if not banned
@@ -397,16 +460,17 @@ func CheckBan(ip string, name string, filename string, checksum string) (*BanInf
 //SinceLastPost returns the seconds since the last post by the ip address that made this post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func SinceLastPost(post *Post) int {
-	// var lastPostTime time.Time
-	// if err := queryRowSQL("SELECT timestamp FROM DBPREFIXposts WHERE ip = ? ORDER BY timestamp DESC LIMIT 1",
-	// 	[]interface{}{post.IP},
-	// 	[]interface{}{&lastPostTime},
-	// ); err == sql.ErrNoRows {
-	// 	// no posts by that IP.
-	// 	return -1
-	// }
-	return -1 //int(time.Since(lastPostTime).Seconds())
+func SinceLastPost(postID int) (int, error) {
+	const sql = `SELECT MAX(created_on) FROM DBPREFIXposts as posts
+	JOIN (SELECT ip FROM DBPREFIXposts as sp
+		 WHERE sp.id = ?) as ip
+	ON posts.ip = ip.ip`
+	var when time.Time
+	err := QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&when))
+	if err != nil {
+		return -1, err
+	}
+	return int(time.Now().Sub(when).Seconds()), nil
 }
 
 // InsertPost insersts prepared post object into the SQL table so that it can be rendered

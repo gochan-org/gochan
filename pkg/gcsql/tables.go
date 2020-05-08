@@ -51,11 +51,9 @@ type BanAppeal struct {
 
 type BanInfo struct {
 	ID          uint
-	AllowRead   bool
 	IP          string
 	Name        string
 	NameIsRegex bool
-	SilentBan   uint8
 	Boards      string
 	Staff       string
 	Timestamp   time.Time
