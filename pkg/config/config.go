@@ -111,6 +111,9 @@ func (cfg *GochanConfig) checkString(val, defaultVal string, critical bool, msg 
 		if critical {
 			flags |= gclog.LFatal
 		}
+		if msg != "" {
+			gclog.Print(flags, msg)
+		}
 	}
 	return val
 }
@@ -122,10 +125,14 @@ func (cfg *GochanConfig) checkInt(val, defaultVal int, critical bool, msg string
 		if critical {
 			flags |= gclog.LFatal
 		}
+		if msg != "" {
+			gclog.Print(flags, msg)
+		}
 	}
 	return val
 }
 
+// InitConfig loads and parses gochan.json and verifies its contents
 func InitConfig(versionStr string) {
 	cfgPath := findResource("gochan.json", "/etc/gochan/gochan.json")
 	if cfgPath == "" {
@@ -154,7 +161,8 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	Config.checkString(Config.ListenIP, "", true, "ListenIP not set in gochan.json, halting.")
+	Config.checkString(Config.ListenIP, "", true,
+		"ListenIP not set in gochan.json, halting.")
 
 	if Config.Port == 0 {
 		Config.Port = 80
@@ -164,8 +172,10 @@ func InitConfig(versionStr string) {
 		Config.FirstPage = []string{"index.html", "board.html", "firstrun.html"}
 	}
 
-	Config.Username = Config.checkString(Config.Username, "gochan", false, "Username not set in gochan.json, using 'gochan' as default")
-	Config.DocumentRoot = Config.checkString(Config.DocumentRoot, "gochan", true, "DocumentRoot not set in gochan.json, halting.")
+	Config.Username = Config.checkString(Config.Username, "gochan", false,
+		"Username not set in gochan.json, using 'gochan' as default")
+	Config.DocumentRoot = Config.checkString(Config.DocumentRoot, "gochan", true,
+		"DocumentRoot not set in gochan.json, halting.")
 
 	wd, wderr := os.Getwd()
 	if wderr == nil {
@@ -176,21 +186,27 @@ func InitConfig(versionStr string) {
 	}
 
 	Config.TemplateDir = Config.checkString(
-		findResource(Config.TemplateDir, "templates", "/usr/local/share/gochan/templates/", "/usr/share/gochan/templates/"),
-		"", true, "Unable to locate template directory, halting.")
+		findResource(Config.TemplateDir, "templates", "/usr/local/share/gochan/templates/", "/usr/share/gochan/templates/"), "", true,
+		"TemplateDir not set in gochan.json or unable to locate template directory, halting.")
 
-	Config.checkString(Config.DBtype, "", true, "DBtype not set in gochan.json, halting (currently supported values: mysql,postgresql,sqlite3)")
-	Config.checkString(Config.DBhost, "", true, "DBhost not set in gochan.json, halting.")
+	Config.checkString(Config.DBtype, "", true,
+		"DBtype not set in gochan.json, halting (currently supported values: mysql,postgresql,sqlite3)")
+	Config.checkString(Config.DBhost, "", true,
+		"DBhost not set in gochan.json, halting.")
 	Config.DBname = Config.checkString(Config.DBname, "gochan", false,
 		"DBname not set in gochan.json, setting to 'gochan'")
 
-	Config.checkString(Config.DBusername, "", true, "DBusername not set in gochan, halting.")
-	Config.checkString(Config.DBpassword, "", true, "DBpassword not set in gochan, halting.")
+	Config.checkString(Config.DBusername, "", true,
+		"DBusername not set in gochan, halting.")
+	Config.checkString(Config.DBpassword, "", true,
+		"DBpassword not set in gochan, halting.")
 	Config.LockdownMessage = Config.checkString(Config.LockdownMessage,
 		"The administrator has temporarily disabled posting. We apologize for the inconvenience", false, "")
 
-	Config.checkString(Config.SiteName, "", true, "SiteName not set in gochan.json, halting.")
-	Config.checkString(Config.SiteDomain, "", true, "SiteName not set in gochan.json, halting.")
+	Config.checkString(Config.SiteName, "", true,
+		"SiteName not set in gochan.json, halting.")
+	Config.checkString(Config.SiteDomain, "", true,
+		"SiteName not set in gochan.json, halting.")
 
 	if Config.SiteWebfolder == "" {
 		gclog.Print(gclog.LErrorLog|gclog.LStdLog, "SiteWebFolder not set in gochan.json, using / as default.")
