@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"database/sql"
 	"errors"
 	"net"
 	"time"
@@ -131,6 +132,21 @@ func GetStaffByName(name string) (*Staff, error) {
 	return staff, err
 }
 
+func getStaffByID(id int) (*Staff, error) {
+	const sql = `SELECT 
+		staff.id, 
+		staff.username, 
+		staff.password_checksum, 
+		staff.global_rank,
+		staff.added_on,
+		staff.last_login 
+	FROM DBPREFIXstaff as staff
+	WHERE staff.id = ?`
+	staff := new(Staff)
+	err := QueryRowSQL(sql, InterfaceSlice(id), InterfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	return staff, err
+}
+
 // NewStaff creates a new staff account from a given username, password and rank
 func NewStaff(username string, password string, rank int) error {
 	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank)
@@ -199,8 +215,8 @@ func getBoardIDFromURIOrNil(URI string) *int {
 	return &ID
 }
 
-// FileBan creates a new ban on a file. If boards = nil, the ban is global.
-func FileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) error {
+// CreateFileBan creates a new ban on a file. If boards = nil, the ban is global.
+func CreateFileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -211,8 +227,8 @@ func FileBan(fileChecksum string, staffName string, permaban bool, staffNote str
 	return err
 }
 
-// FileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
-func FileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+// CreateFileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
+func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, filename = ?, is_regex = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -223,8 +239,8 @@ func FileNameBan(fileName string, isRegex bool, staffName string, permaban bool,
 	return err
 }
 
-// UserNameBan creates a new ban on a username. If boards = nil, the ban is global.
-func UserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+// CreateUserNameBan creates a new ban on a username. If boards = nil, the ban is global.
+func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, username = ?, is_regex = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -235,10 +251,10 @@ func UserNameBan(userName string, isRegex bool, staffName string, permaban bool,
 	return err
 }
 
-// UserBan creates either a full ip ban, or an ip ban for threads only, for a given IP.
+// CreateUserBan creates either a full ip ban, or an ip ban for threads only, for a given IP.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func UserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
+func CreateUserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
 	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
 	const sql = `INSERT INTO DBPREFIXip_ban (board_id, staff_id, staff_note, is_thread_ban, ip, appeal_at, expires_at, permanent, message, can_appeal, issued_at, copy_posted_text, is_active)
 	VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'OLD SYSTEM BAN, NO TEXT AVAILABLE',TRUE)`
@@ -425,36 +441,81 @@ ON ban.board_id = board.id`
 }
 
 //CheckBan returns banentry if a ban was found or a sql.ErrNoRows if not banned
-// name, filename and checksum may be empty strings and will be treated as not requested is done so
+// name, filename and checksum may be empty strings and will be treated as not requested if done so
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func CheckBan(ip string, name string, filename string, checksum string) (*BanInfo, error) {
-	//Note to coder, extremely shoddy code uses this function, tread carefully
+	ban := new(BanInfo)
+	ipban, err1 := checkIPBan(ip)
+	_, err2 := checkFileBan(checksum)
+	_, err3 := checkFilenameBan(filename)
+	_, err4 := checkUsernameBan(name)
 
-	// in := []interface{}{ip}
-	// query := "SELECT id,ip,name,boards,timestamp,expires,permaban,reason,type,appeal_at,can_appeal FROM DBPREFIXbanlist WHERE ip = ? "
+	if err1 == sql.ErrNoRows && err2 == sql.ErrNoRows && err3 == sql.ErrNoRows && err4 == sql.ErrNoRows {
+		return nil, sql.ErrNoRows
+	}
+	if err1 != nil && err1 != sql.ErrNoRows {
+		return nil, err1
+	}
+	if err2 != nil && err2 != sql.ErrNoRows {
+		return nil, err2
+	}
+	if err3 != nil && err3 != sql.ErrNoRows {
+		return nil, err3
+	}
+	if err4 != nil && err4 != sql.ErrNoRows {
+		return nil, err4
+	}
 
-	// if tripcode != "" {
-	// 	in = append(in, tripcode)
-	// 	query += "OR name = ? "
-	// }
-	// if filename != "" {
-	// 	in = append(in, filename)
-	// 	query += "OR filename = ? "
-	// }
-	// if checksum != "" {
-	// 	in = append(in, checksum)
-	// 	query += "OR file_checksum = ? "
-	// }
-	// query += " ORDER BY id DESC LIMIT 1"
+	if ipban != nil {
+		ban.ID = 0
+		ban.IP = string(ipban.IP)
+		staff, _ := getStaffByID(ipban.StaffID)
+		ban.Staff = staff.Username
+		ban.Timestamp = ipban.IssuedAt
+		ban.Expires = ipban.ExpiresAt
+		ban.Permaban = ipban.Permanent
+		ban.Reason = ipban.Message
+		ban.StaffNote = ipban.StaffNote
+		ban.AppealAt = ipban.AppealAt
+		ban.CanAppeal = ipban.CanAppeal
+		return ban, nil
+	}
 
-	// err = queryRowSQL(query, in, []interface{}{
-	// 	&banEntry.ID, &banEntry.IP, &banEntry.Name, &banEntry.Boards, &banEntry.Timestamp,
-	// 	&banEntry.Expires, &banEntry.Permaban, &banEntry.Reason, &banEntry.Type,
-	// 	&banEntry.AppealAt, &banEntry.CanAppeal},
-	// )
-	// return &banEntry, err
+	//TODO implement other types of bans or refactor banning code
 	return nil, errors.New("Not implemented")
+}
+
+func checkIPBan(ip string) (*IPBan, error) {
+	const sql = `SELECT id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note, message, can_appeal
+	FROM DBPREFIXusername_ban WHERE username = ?`
+	var ban = new(IPBan)
+	err := QueryRowSQL(sql, InterfaceSlice(ip), InterfaceSlice(&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan, &ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal))
+	return ban, err
+}
+
+func checkUsernameBan(name string) (*UsernameBan, error) {
+	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, username, is_regex 
+	FROM DBPREFIXusername_ban WHERE username = ?`
+	var ban = new(UsernameBan)
+	err := QueryRowSQL(sql, InterfaceSlice(name), InterfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username, &ban.IsRegex))
+	return ban, err
+}
+
+func checkFilenameBan(filename string) (*FilenameBan, error) {
+	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, filename, is_regex 
+	FROM DBPREFIXfilename_ban WHERE filename = ?`
+	var ban = new(FilenameBan)
+	err := QueryRowSQL(sql, InterfaceSlice(filename), InterfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex))
+	return ban, err
+}
+
+func checkFileBan(checksum string) (*FileBan, error) {
+	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, checksum 
+	FROM DBPREFIXfile_ban WHERE checksum = ?`
+	var ban = new(FileBan)
+	err := QueryRowSQL(sql, InterfaceSlice(checksum), InterfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum))
+	return ban, err
 }
 
 //SinceLastPost returns the seconds since the last post by the ip address that made this post

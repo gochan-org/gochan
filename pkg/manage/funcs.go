@@ -369,14 +369,14 @@ var manageFunctions = map[string]ManageFunction{
 
 				err = nil
 				if filename != "" {
-					err = gcsql.FileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
+					err = gcsql.CreateFileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
 				}
 				if err != nil {
 					pageHTML += err.Error()
 					err = nil
 				}
 				if name != "" {
-					err = gcsql.UserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards)
+					err = gcsql.CreateUserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards)
 				}
 				if err != nil {
 					pageHTML += err.Error()
@@ -384,21 +384,21 @@ var manageFunctions = map[string]ManageFunction{
 				}
 
 				if request.FormValue("fullban") == "on" {
-					err = gcsql.UserBan(ip, false, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
+					err = gcsql.CreateUserBan(ip, false, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
 					if err != nil {
 						pageHTML += err.Error()
 						err = nil
 					}
 				} else {
 					if request.FormValue("threadban") == "on" {
-						err = gcsql.UserBan(ip, true, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
+						err = gcsql.CreateUserBan(ip, true, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
 						if err != nil {
 							pageHTML += err.Error()
 							err = nil
 						}
 					}
 					if request.FormValue("imageban") == "on" {
-						err = gcsql.FileBan(checksum, currentStaff, permaban, staffNote, boards)
+						err = gcsql.CreateFileBan(checksum, currentStaff, permaban, staffNote, boards)
 						if err != nil {
 							pageHTML += err.Error()
 							err = nil

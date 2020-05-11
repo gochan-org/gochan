@@ -1,3 +1,5 @@
 In old database:
     if filename == "" then no filename
     if filename == "deleted" it is deleted
+
+Split tripcode from username during migration

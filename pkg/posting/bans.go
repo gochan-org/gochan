@@ -26,7 +26,7 @@ const (
 // BanHandler is used for serving ban pages
 func BanHandler(writer http.ResponseWriter, request *http.Request) {
 	appealMsg := request.FormValue("appealmsg")
-	// banStatus, err := getBannedStatus(request)
+	// banStatus, err := getBannedStatus(request) TODO refactor to use ipban
 	var banStatus gcsql.BanInfo
 	var err error
 

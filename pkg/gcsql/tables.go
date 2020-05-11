@@ -405,14 +405,6 @@ type Staff struct {
 	LastActive       time.Time
 }
 
-type WordFilter struct {
-	ID     int
-	From   string
-	To     string
-	Boards string
-	RegEx  bool
-}
-
 type BoardCooldowns struct {
 	NewThread  int `json:"threads"`
 	Reply      int `json:"replies"`
@@ -468,4 +460,67 @@ type Thread struct {
 	Sticky        int    `json:"sticky"`
 	Locked        int    `json:"locked"`
 	ThreadPage    int    `json:"-"`
+}
+
+//FileBan contains the information associated with a specific file ban
+type FileBan struct {
+	ID        int       `json:id`
+	BoardID   *int      `json:"board"`
+	StaffID   int       `json:"staff_id"`
+	StaffNote string    `json:"staff_note"`
+	IssuedAt  time.Time `json:"issued_at"`
+	Checksum  string    `json:"checksum"`
+}
+
+//FilenameBan contains the information associated with a specific filename ban
+type FilenameBan struct {
+	ID        int       `json:id`
+	BoardID   *int      `json:"board"`
+	StaffID   int       `json:"staff_id"`
+	StaffNote string    `json:"staff_note"`
+	IssuedAt  time.Time `json:"issued_at"`
+	Filename  string    `json:"filename"`
+	IsRegex   bool      `json:"is_regex"`
+}
+
+//UsernameBan contains the information associated with a specific username ban
+type UsernameBan struct {
+	ID        int       `json:id`
+	BoardID   *int      `json:"board"`
+	StaffID   int       `json:"staff_id"`
+	StaffNote string    `json:"staff_note"`
+	IssuedAt  time.Time `json:"issued_at"`
+	Username  string    `json:"username"`
+	IsRegex   bool      `json:"is_regex"`
+}
+
+//WordFilter contains the information associated with a specific wordfilter
+type WordFilter struct {
+	ID        int       `json:id`
+	BoardID   *int      `json:"board"`
+	StaffID   int       `json:"staff_id"`
+	StaffNote string    `json:"staff_note"`
+	IssuedAt  time.Time `json:"issued_at"`
+	Search    string    `json:"search"`
+	IsRegex   bool      `json:"is_regex"`
+	ChangeTo  string    `json:"change_to"`
+}
+
+//IPBan contains the information association with a specific ip ban
+type IPBan struct {
+	ID              int       `json:id`
+	BoardID         *int      `json:"board"`
+	StaffID         int       `json:"staff_id"`
+	BannedForPostID *int      `json:"banned_for_post_id"`
+	CopyPostText    string    `json:"copy_post_text"`
+	IsThreadBan     bool      `json:"is_thread_ban"`
+	IsActive        bool      `json:"is_active"`
+	IP              int       `json:"ip"`
+	IssuedAt        time.Time `json:"issued_at"`
+	AppealAt        time.Time `json:"appeal_at"`
+	ExpiresAt       time.Time `json:"expires_at"`
+	Permanent       bool      `json:"permanent"`
+	StaffNote       string    `json:"staff_note"`
+	Message         string    `json:"message"`
+	CanAppeal       bool      `json:"can_appeal"`
 }
