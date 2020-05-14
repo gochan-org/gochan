@@ -4,8 +4,12 @@ import (
 	"database/sql"
 	"errors"
 	"net"
+	"os"
+	"path"
+	"strings"
 	"time"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -661,117 +665,228 @@ func getThreadID(postID int) (ID int, err error) {
 
 //AddBanAppeal adds a given appeal to a given ban
 func AddBanAppeal(banID uint, message string) error {
-	return errors.New("Not implemented")
+	const sql = `
+	/*copy old to audit*/
+	INSERT INTO DBPREFIXip_ban_appeals_audit (appeal_id, staff_id, appeal_text, staff_response, is_denied)
+	SELECT id, staff_id, appeal_text, staff_response, is_denied
+	FROM DBPREFIXip_ban_appeals
+	WHERE DBPREFIXip_ban_appeals.ip_ban_id = ?;
+
+	/*update old values to new values*/
+	UPDATE DBPREFIXip_ban_appeals SET appeal_text = ? WHERE ip_ban_id = ?;
+	`
+	_, err := ExecSQL(sql, banID, message, banID)
+	return err
 }
 
 //GetPostPassword gets the password associated with a given post
 func GetPostPassword(postID int) (password string, err error) {
-	return "", errors.New("Not implemented")
+	const sql = `SELECT password FROM DBPREFIXposts WHERE id = ?`
+	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&password))
+	return password, err
 }
 
 //UpdatePost updates a post with new information
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func UpdatePost(postID int, email string, subject string, message string, messageRaw string) error {
-	return errors.New("Not implemented")
+	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
+	_, err := ExecSQL(sql, email, subject, message, messageRaw)
+	return err
 }
 
 //DeleteFilesFromPost deletes all files belonging to a given post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Should be implemented to delete files individually
 func DeleteFilesFromPost(postID int) error {
+	board, err := GetBoardFromPostID(postID)
+	if err != nil {
+		return err
+	}
 
-	// fileName = fileName[:strings.Index(fileName, ".")]
-	// fileType = fileName[strings.Index(fileName, ".")+1:]
-	// if fileType == "gif" || fileType == "webm" {
-	// 	thumbType = "jpg"
-	// }
+	//Get all filenames
+	const filenameSQL = `SELECT filename FROM DBPREFIXfiles WHERE post_id = ?`
+	rows, err := QuerySQL(filenameSQL)
+	if err != nil {
+		return err
+	}
+	var filenames []string
+	for rows.Next() {
+		var filename string
+		err = rows.Scan(&filename)
+		if err != nil {
+			return err
+		}
+		filenames = append(filenames, filename)
+	}
 
-	// os.Remove(path.Join(config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
-	// os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
-	// os.Remove(path.Join(config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
-	return errors.New("Not implemented")
+	//Remove files from disk
+	for _, fileName := range filenames {
+		fileName = fileName[:strings.Index(fileName, ".")]
+		fileType := fileName[strings.Index(fileName, ".")+1:]
+		var thumbType string
+		if fileType == "gif" || fileType == "webm" {
+			thumbType = "jpg"
+		}
+
+		os.Remove(path.Join(config.Config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
+		os.Remove(path.Join(config.Config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
+		os.Remove(path.Join(config.Config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
+	}
+
+	const removeFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
+	_, err = ExecSQL(removeFilesSQL, postID)
+	return err
 }
 
 //DeletePost deletes a post with a given ID
-func DeletePost(postID int) error {
+func DeletePost(postID int, checkIfTopPost bool) error {
+	if checkIfTopPost {
+		isTopPost, err := isTopPost(postID)
+		if err != nil {
+			return err
+		}
+		if isTopPost {
+			threadID, err := getThreadID(postID)
+			if err != nil {
+				return err
+			}
+			return deleteThread(threadID)
+		}
+	}
+
 	DeleteFilesFromPost(postID)
-	//Also delete child posts if its a top post
-	return errors.New("Not implemented")
+	const sql = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := ExecSQL(sql, postID)
+	return err
+}
+
+func isTopPost(postID int) (val bool, err error) {
+	const sql = `SELECT is_top_post FROM DBPREFIXposts WHERE id = ?`
+	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&val))
+	return val, err
+}
+
+func deleteThread(threadID int) error {
+	const sql = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?;
+	
+	SELECT id FROM DBPREFIXposts WHERE thread_id = ?;`
+
+	rows, err := QuerySQL(sql, threadID, threadID)
+	if err != nil {
+		return err
+	}
+	var ids []int
+	for rows.Next() {
+		var id int
+		err = rows.Scan(&id)
+		if err != nil {
+			return err
+		}
+		ids = append(ids, id)
+	}
+
+	for _, id := range ids {
+		err = DeletePost(id, false)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 //CreateDefaultBoardIfNoneExist creates a default board if no boards exist yet
 func CreateDefaultBoardIfNoneExist() error {
-	return errors.New("Not implemented")
-	// firstBoard := Board{
-	// 	Dir:         "test",
-	// 	Title:       "Testing board",
-	// 	Subtitle:    "Board for testing",
-	// 	Description: "Board for testing",
-	// 	Section:     1}
-	// firstBoard.SetDefaults()
-	// firstBoard.Build(true, true)
+	const sql = `SELECT COUNT(id) FROM DBPREFIXboards`
+	var count int
+	QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	if count > 0 {
+		return nil
+	}
+	return CreateBoard(
+		&Board{
+			Dir:         "test",
+			Title:       "Testing board",
+			Subtitle:    "Board for testing",
+			Description: "Board for testing",
+			Section:     1})
 }
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
 func CreateDefaultAdminIfNoStaff() error {
-	return errors.New("Not implemented")
-	// if _, err = execSQL(
-	// 	"INSERT INTO DBPREFIXstaff (username,password_checksum,rank) VALUES(?,?,?)",
-	// 	"admin", bcryptSum("password"), 3,
-	// ); err != nil {
-	// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed creating admin user with error: ", err.Error())
-	// }
+	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
+	var count int
+	QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	if count > 0 {
+		return nil
+	}
+	_, err := createUser("admin", gcutil.BcryptSum("password"), 3)
+	return err
+}
+
+func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err error) {
+	const sql = `INSERT INTO DBPREFIXstaff (username, password, global_rank) VALUES (?,?,?)
+	RETURNING id`
+	err = QueryRowSQL(sql, InterfaceSlice(username, passwordEncrypted, globalRank), InterfaceSlice(&userID))
+	return userID, err
 }
 
 //UpdateID takes a board struct and sets the database id according to the dir that is already set
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. (Just bad design in general, try to avoid directly mutating state like this)
 func (board *Board) UpdateID() error {
-	return errors.New("Not implemented")
-	// return queryRowSQL("SELECT id FROM DBPREFIXboards WHERE dir = ?",
-	// 	[]interface{}{board.Dir},
-	// 	[]interface{}{&board.ID})
+	const sql = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
+	return QueryRowSQL(sql, InterfaceSlice(board.Dir), InterfaceSlice(&board.ID))
 }
 
 // PopulateData gets the board data from the database, according to its id, and sets the respective properties.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func (board *Board) PopulateData(id int) error {
-	// queryStr := "SELECT * FROM DBPREFIXboards WHERE id = ?"
-	// var values []interface{}
-	// values = append(values, id)
-
-	// return queryRowSQL(queryStr, values, []interface{}{
-	// 	&board.ID, &board.ListOrder, &board.Dir, &board.Type, &board.UploadType,
-	// 	&board.Title, &board.Subtitle, &board.Description, &board.Section,
-	// 	&board.MaxFilesize, &board.MaxPages, &board.DefaultStyle, &board.Locked,
-	// 	&board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.MaxAge,
-	// 	&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
-	// 	&board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile,
-	// 	&board.EnableCatalog})
-	return errors.New("Not implemented")
+	const sql = "SELECT id, section_id, dir, navbar_position, title, subtitle, description, max_file_size, default_style, locked, created_at, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog FROM DBPREFIXboards WHERE id = ?"
+	return QueryRowSQL(sql, InterfaceSlice(id), InterfaceSlice(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog))
 }
 
 //DoesBoardExistByID returns a bool indicating whether a board with a given id exists
 func DoesBoardExistByID(ID int) (bool, error) {
-	return false, errors.New("Not implemented")
+	const sql = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
+	var count int
+	err := QueryRowSQL(sql, InterfaceSlice(ID), InterfaceSlice(&count))
+	return count > 0, err
 }
 
 //GetAllBoards gets a list of all existing boards
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllBoards() ([]Board, error) {
-	return nil, errors.New("Not implemented")
+	const sql = "SELECT id, section_id, dir, navbar_position, title, subtitle, description, max_file_size, default_style, locked, created_at, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog FROM DBPREFIXboards"
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var boards []Board
+	for rows.Next() {
+		var board Board
+		err = rows.Scan(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog)
+		if err != nil {
+			return nil, err
+		}
+		boards = append(boards, board)
+	}
+	return boards, nil
 }
 
 //GetBoardFromID returns the board corresponding to a given id
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetBoardFromID(boardID int) (Board, error) {
-	return Board{}, errors.New("Not implemented")
+	var board Board
+	err := board.PopulateData(boardID)
+	return board, err
 }
 
-func getBoardIDFromURI(URI string) (int, error) {
-	return -1, errors.New("Not implemented")
+func getBoardIDFromURI(URI string) (id int, err error) {
+	const sql = `SELECT id FROM DBPREFIXboards WHERE uri = ?`
+	err = QueryRowSQL(sql, InterfaceSlice(URI), InterfaceSlice(&id))
+	return id, err
 }

@@ -319,7 +319,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID)
 			} else {
 				// delete the post
-				if err = gcsql.DeletePost(post.ID); err != nil {
+				if err = gcsql.DeletePost(post.ID, true); err != nil {
 					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 						"Error deleting post: ", err.Error()))
 				}
