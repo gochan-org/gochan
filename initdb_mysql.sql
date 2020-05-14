@@ -93,7 +93,7 @@ CREATE TABLE DBPREFIXfiles(
 	file_order INT NOT NULL,
 	original_filename VARCHAR(255) NOT NULL,
 	filename VARCHAR(45) NOT NULL,
-	checksum INT NOT NULL,
+	checksum TEXT NOT NULL,
 	file_size INT NOT NULL,
 	is_spoilered BOOL NOT NULL,
 	thumbnail_width INT NOT NULL,

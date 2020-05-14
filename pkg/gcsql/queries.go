@@ -538,62 +538,125 @@ func SinceLastPost(postID int) (int, error) {
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func InsertPost(post *Post, bump bool) error {
-	// queryStr := "INSERT INTO DBPREFIXposts " +
-	// 	"(boardid,parentid,name,tripcode,email,subject,message,message_raw,password,filename,filename_original,file_checksum,filesize,image_w,image_h,thumb_w,thumb_h,ip,tag,timestamp,autosage,deleted_timestamp,bumped,stickied,locked,reviewed)" +
-	// 	"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+	isNewThread := post.ParentID == 0
+	var threadID int
+	var err error
+	if isNewThread {
+		threadID, err = createThread(post.BoardID, post.Locked, post.Stickied, post.Autosage, false)
+	} else {
+		threadID, err = getThreadID(post.ParentID)
+	}
+	if err != nil {
+		return err
+	}
 
-	// result, err := execSQL(queryStr,
-	// 	post.BoardID, post.ParentID, post.Name, post.Tripcode, post.Email,
-	// 	post.Subject, post.MessageHTML, post.MessageText, post.Password,
-	// 	post.Filename, post.FilenameOriginal, post.FileChecksum, post.Filesize,
-	// 	post.ImageW, post.ImageH, post.ThumbW, post.ThumbH, post.IP, post.Capcode,
-	// 	post.Timestamp, post.Autosage, post.DeletedTimestamp, post.Bumped,
-	// 	post.Stickied, post.Locked, post.Reviewed)
-	// if err != nil {
-	// 	return err
-	// }
+	//threadid, istoppost, ip, message, message_raw, password, banned_message, trip, rolesig, name, email, subject
+	const sql = `INSERT INTO DBPREFIXposts (thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	RETURNING id`
 
-	// switch config.DBtype {
-	// case "mysql":
-	// 	var postID int64
-	// 	postID, err = result.LastInsertId()
-	// 	post.ID = int(postID)
-	// case "postgres":
-	// 	err = queryRowSQL("SELECT currval(pg_get_serial_sequence('DBPREFIXposts','id'))", nil, []interface{}{&post.ID})
-	// case "sqlite3":
-	// 	err = queryRowSQL("SELECT LAST_INSERT_ROWID()", nil, []interface{}{&post.ID})
-	// }
+	err = QueryRowSQL(sql,
+		InterfaceSlice(threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password),
+		InterfaceSlice(&post.ID))
+	if err != nil {
+		return err
+	}
 
-	// // Bump parent post if requested.
-	// if err != nil && post.ParentID != 0 && bump {
-	// 	err = BumpThread(post.ParentID, post.BoardID)
-	// }
-	// return err
-	return errors.New("Not implemented")
+	if post.Filename != "" {
+		err = appendFile(post.ID, post.FilenameOriginal, post.Filename, post.FileChecksum, post.Filesize, false, post.ImageW, post.ImageH, post.ThumbW, post.ThumbH)
+	}
+	if err != nil {
+		return err
+	}
+	if bump {
+		return bumpThread(threadID)
+	}
+	return nil
+}
+
+func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
+	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)
+	RETURNING id`
+	err = QueryRowSQL(sql, InterfaceSlice(boardID, locked, stickied, anchored, cyclical), InterfaceSlice(&threadID))
+	return threadID, err
+}
+
+func bumpThreadOfPost(postID int) error {
+	id, err := getThreadID(postID)
+	if err != nil {
+		return err
+	}
+	return bumpThread(id)
+}
+
+func bumpThread(threadID int) error {
+	const sql = "UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?"
+	_, err := ExecSQL(sql, threadID)
+	return err
+}
+
+func appendFile(postID int, originalFilename string, filename string, checksum string, fileSize int, isSpoilered bool, width int, height int, thumbnailWidth int, thumbnailHeight int) error {
+	const nextIDSQL = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
+	var nextID int
+	err := QueryRowSQL(nextIDSQL, InterfaceSlice(postID), InterfaceSlice(&nextID))
+	if err != nil {
+		return err
+	}
+	const insertSQL = `INSERT INTO DBPREFIXfiles (file_order, post_id, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height)
+	VALUES (?,?,?,?,?,?,?,?,?,?,?)`
+	_, err = ExecSQL(insertSQL, nextID, postID, originalFilename, filename, checksum, fileSize, isSpoilered, width, height, thumbnailWidth, thumbnailHeight)
+	return err
 }
 
 //GetMaxMessageLength returns the max message length on a board
-func GetMaxMessageLength(boardID int) (int, error) {
-
-	return 0, errors.New("Not implemented")
+func GetMaxMessageLength(boardID int) (length int, err error) {
+	const sql = `SELECT max_message_length FROM DBPREFIXboards
+	WHERE id = ?`
+	err = QueryRowSQL(sql, InterfaceSlice(boardID), InterfaceSlice(&length))
+	return length, err
 }
 
 //GetEmbedsAllowed returns if embeds are allowed on a given board
-func GetEmbedsAllowed(boardID int) (bool, error) {
-
-	return false, errors.New("Not implemented")
+func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
+	const sql = `SELECT allow_embeds FROM DBPREFIXboards
+	WHERE id = ?`
+	err = QueryRowSQL(sql, InterfaceSlice(boardID), InterfaceSlice(&allowed))
+	return allowed, err
 }
 
 //GetBoardFromPostID gets the boardURI that a given postid exists on
 func GetBoardFromPostID(postID int) (boardURI string, err error) {
-	return "", errors.New("Not implemented")
+	const sql = `SELECT board.uri FROM DBPREFIXboards as board
+	JOIN (
+		SELECT threads.board_id FROM DBPREFIXthreads as threads
+		JOIN DBPREFIXposts as posts ON posts.thread_id = threads.id
+		WHERE posts.id = ?
+	) as threads ON threads.board_id = board.id`
+	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&boardURI))
+	return boardURI, err
 }
 
 //GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Posts do not directly reference their post post anymore.
 func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
-	return 0, errors.New("Not implemented")
+	const sql = `SELECT t1.id FROM DBPREFIXposts as t1
+	JOIN (SELECT thread_id FROM DBPREFIXposts where id = ?) as t2 ON t1.thread_id = t2.thread_id
+	WHERE t1.is_top_post`
+	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&ID))
+	if err != nil {
+		return 0, err
+	}
+	if ID == postID {
+		return 0, nil
+	}
+	return ID, nil
+}
+
+func getThreadID(postID int) (ID int, err error) {
+	const sql = `SELECT thread_id FROM DBPREFIXposts WHERE id = ?`
+	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&ID))
+	return ID, err
 }
 
 //AddBanAppeal adds a given appeal to a given ban

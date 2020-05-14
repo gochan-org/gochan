@@ -6,7 +6,7 @@ name, abbreviation, "position", hidden, id) VALUES (
  returning id;
 
 INSERT INTO public.dbprefixboards (
-section_id, uri, dir, navbar_position, title, subtitle, description, max_file_size, max_threads, default_style, locked, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redictect_to_thread, require_file, enable_catalog) VALUES (
+section_id, uri, dir, navbar_position, title, subtitle, description, max_file_size, max_threads, default_style, locked, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog) VALUES (
 '1'::bigint, 'drrr'::text, 'dr'::character varying(45), '0'::smallint, 'title'::character varying(45), 'subtitle'::character varying(64), 'descr'::character varying(64), '456456'::integer, '444'::smallint, 'idk'::character varying(45), false::boolean, true::boolean, '33'::smallint, '44'::smallint, '4435'::smallint, '23'::smallint, true::boolean, true::boolean, true::boolean, true::boolean)
  returning id;
 
