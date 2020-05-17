@@ -515,7 +515,7 @@ type IPBan struct {
 	CopyPostText    string    `json:"copy_post_text"`
 	IsThreadBan     bool      `json:"is_thread_ban"`
 	IsActive        bool      `json:"is_active"`
-	IP              int       `json:"ip"`
+	IP              string    `json:"ip"`
 	IssuedAt        time.Time `json:"issued_at"`
 	AppealAt        time.Time `json:"appeal_at"`
 	ExpiresAt       time.Time `json:"expires_at"`

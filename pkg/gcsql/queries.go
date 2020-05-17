@@ -3,7 +3,6 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
-	"net"
 	"os"
 	"path"
 	"strings"
@@ -258,7 +257,7 @@ func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban
 // CreateUserBan creates either a full ip ban, or an ip ban for threads only, for a given IP.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func CreateUserBan(IP net.IP, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
+func CreateUserBan(IP string, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
 	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
 	const sql = `INSERT INTO DBPREFIXip_ban (board_id, staff_id, staff_note, is_thread_ban, ip, appeal_at, expires_at, permanent, message, can_appeal, issued_at, copy_posted_text, is_active)
 	VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'OLD SYSTEM BAN, NO TEXT AVAILABLE',TRUE)`

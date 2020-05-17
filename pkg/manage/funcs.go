@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"path"
@@ -349,7 +348,7 @@ var manageFunctions = map[string]ManageFunction{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) { //TODO whatever this does idk man
 			var post gcsql.Post
 			if request.FormValue("do") == "add" {
-				ip := net.ParseIP(request.FormValue("ip"))
+				ip := request.FormValue("ip")
 				name := request.FormValue("name")
 				nameIsRegex := (request.FormValue("nameregex") == "on")
 				checksum := request.FormValue("checksum")
