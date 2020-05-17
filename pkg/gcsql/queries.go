@@ -353,25 +353,39 @@ func GetAllSections() ([]BoardSection, error) {
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllSectionsOrCreateDefault() ([]BoardSection, error) {
-	err := CreateDefaultSectionIfNotExist()
+	_, err := GetOrCreateDefaultSectionID()
 	if err != nil {
 		return nil, err
 	}
 	return GetAllSections()
 }
 
-//CreateDefaultSectionIfNotExist creates the default section if it does not exist yet
-func CreateDefaultSectionIfNotExist() error {
-	const sql = `SELECT COUNT(id) FROM DBPREFIXsections`
-	var count int
-	err := QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+func getNextSectionListOrder() (int, error) {
+	const sql = `SELECT COALESCE(MAX(position) + 1, 0) FROM DBPREFIXsections`
+	var ID int
+	err := QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&ID))
+	return ID, err
+}
+
+//GetOrCreateDefaultSectionID creates the default section if it does not exist yet, returns default section ID if it exists
+func GetOrCreateDefaultSectionID() (sectionID int, err error) {
+	const SQL = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
+	var ID int
+	err = QueryRowSQL(SQL, InterfaceSlice(), InterfaceSlice(&ID))
+	if err == sql.ErrNoRows {
+		//create it
+		ID, err := getNextSectionListOrder()
+		if err != nil {
+			return 0, err
+		}
+		board := BoardSection{Name: "Main", Abbreviation: "Main", Hidden: false, ListOrder: ID}
+		err = CreateSection(&board)
+		return board.ID, err
+	}
 	if err != nil {
-		return err
+		return 0, err //other error
 	}
-	if count > 0 {
-		return CreateSection(&BoardSection{Name: "Main", Abbreviation: "Main", Hidden: false, ListOrder: 0})
-	}
-	return nil
+	return ID, nil
 }
 
 //CreateSection creates a section, setting the newly created id in the given struct
@@ -680,7 +694,7 @@ func AddBanAppeal(banID uint, message string) error {
 
 //GetPostPassword gets the password associated with a given post
 func GetPostPassword(postID int) (password string, err error) {
-	const sql = `SELECT password FROM DBPREFIXposts WHERE id = ?`
+	const sql = `SELECT password_checksum FROM DBPREFIXposts WHERE id = ?`
 	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&password))
 	return password, err
 }
@@ -802,13 +816,17 @@ func CreateDefaultBoardIfNoneExist() error {
 	if count > 0 {
 		return nil
 	}
+	defaultSectionID, err := GetOrCreateDefaultSectionID()
+	if err != nil {
+		return err
+	}
 	return CreateBoard(
 		&Board{
 			Dir:         "test",
 			Title:       "Testing board",
 			Subtitle:    "Board for testing",
 			Description: "Board for testing",
-			Section:     1})
+			Section:     defaultSectionID})
 }
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
@@ -824,7 +842,7 @@ func CreateDefaultAdminIfNoStaff() error {
 }
 
 func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err error) {
-	const sql = `INSERT INTO DBPREFIXstaff (username, password, global_rank) VALUES (?,?,?)
+	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)
 	RETURNING id`
 	err = QueryRowSQL(sql, InterfaceSlice(username, passwordEncrypted, globalRank), InterfaceSlice(&userID))
 	return userID, err

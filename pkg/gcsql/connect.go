@@ -57,7 +57,7 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 	}
 
 	// Create generic "Main" section if one doesn't already exist
-	if err = CreateDefaultSectionIfNotExist(); err != nil {
+	if _, err = GetOrCreateDefaultSectionID(); err != nil {
 		gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
 	}
 	//TODO fix new install thing once it works with existing database
