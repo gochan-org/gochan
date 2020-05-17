@@ -52,34 +52,38 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", err.Error())
 	}
 
-	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
-		gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
-	}
+	//TODO TEMP
+	alreadyPopulated, err := DoesDatabaseVersionExist()
+	if !alreadyPopulated {
 
-	// Create generic "Main" section if one doesn't already exist
-	if _, err = GetOrCreateDefaultSectionID(); err != nil {
-		gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
-	}
-	//TODO fix new install thing once it works with existing database
-	// var sqlVersionStr string
-	// isNewInstall := false
-	// if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
-	// 	[]interface{}{}, []interface{}{&sqlVersionStr},
-	// ); err == sql.ErrNoRows {
-	// 	isNewInstall = true
-	// } else if err != nil {
-	// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
-	// }
+		if err = initDB("initdb_" + dbType + ".sql"); err != nil {
+			gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
+		}
 
-	err = CreateDefaultBoardIfNoneExist()
-	if err != nil {
-		gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Error())
+		//TODO fix new install thing once it works with existing database
+		// var sqlVersionStr string
+		// isNewInstall := false
+		// if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
+		// 	[]interface{}{}, []interface{}{&sqlVersionStr},
+		// ); err == sql.ErrNoRows {
+		// 	isNewInstall = true
+		// } else if err != nil {
+		// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
+		// }
+
+		err = CreateDefaultBoardIfNoneExist()
+		if err != nil {
+			gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Error())
+		}
+		err = CreateDefaultAdminIfNoStaff()
+		if err != nil {
+			gclog.Print(fatalSQLFlags, "Failed creating default admin account: ", err.Error())
+		}
+		//fix versioning thing
+	} else {
+		gclog.Print(gclog.LStdLog, "Database already populated")
 	}
-	err = CreateDefaultAdminIfNoStaff()
-	if err != nil {
-		gclog.Print(fatalSQLFlags, "Failed creating default admin account: ", err.Error())
-	}
-	//fix versioning thing
+	//END TEMP
 }
 
 func initDB(initFile string) error {

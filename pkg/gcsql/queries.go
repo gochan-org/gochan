@@ -907,3 +907,30 @@ func getBoardIDFromURI(URI string) (id int, err error) {
 	err = QueryRowSQL(sql, InterfaceSlice(URI), InterfaceSlice(&id))
 	return id, err
 }
+
+//DoesDatabaseVersionExist returns whether or not the database versions table exists
+func DoesDatabaseVersionExist() (bool, error) {
+	const sql = `SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.TABLES
+	WHERE TABLE_NAME = 'DBPREFIXdatabase_version'`
+	var count int
+	err := QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	return count > 0, err
+}
+
+//GetDatabaseVersion gets the version of the database, or an error if none or multiple exist
+func GetDatabaseVersion() (int, error) {
+	const countsql = `SELECT COUNT(version) FROM DBPREFIXdatabase_version`
+	var count int
+	err := QueryRowSQL(countsql, InterfaceSlice(), InterfaceSlice(&count))
+	if err != nil {
+		return 0, err
+	}
+	if count > 1 {
+		return 0, errors.New("More than one version in database")
+	}
+	const sql = `SELECT version FROM DBPREFIXdatabase_version`
+	var version int
+	err = QueryRowSQL(countsql, InterfaceSlice(), InterfaceSlice(&version))
+	return version, err
+}
