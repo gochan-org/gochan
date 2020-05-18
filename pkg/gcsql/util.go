@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/gochan-org/gochan/pkg/config"
 )
 
 const (
@@ -138,7 +140,18 @@ func ResetBoardSectionArrays() {
 	AllSections = append(AllSections, allSectionsArr...)
 }
 
-// InterfaceSlice creates a new interface slice from an arbitrary collection of values
-func InterfaceSlice(args ...interface{}) []interface{} {
+// interfaceSlice creates a new interface slice from an arbitrary collection of values
+func interfaceSlice(args ...interface{}) []interface{} {
 	return args
+}
+
+func returningIDSql() string {
+	switch config.Config.DBtype {
+	case "mysql":
+		return ";SELECT LAST_INSERT_ID()"
+	case "postgres":
+		return "RETURNING id"
+	default:
+		return "INVALID DATABASE TYPE"
+	}
 }

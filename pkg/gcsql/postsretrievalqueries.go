@@ -157,7 +157,7 @@ func GetSpecificTopPost(ID int) (Post, error) {
 	WHERE posts.is_top_post`
 	//get top post of item with given id
 	var FoundID int
-	err := QueryRowSQL(topPostIDQuery, InterfaceSlice(ID), InterfaceSlice(&FoundID))
+	err := QueryRowSQL(topPostIDQuery, interfaceSlice(ID), interfaceSlice(&FoundID))
 	if err != nil {
 		return Post{}, err
 	}

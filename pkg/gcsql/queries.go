@@ -64,7 +64,7 @@ func GetReplyCount(postID int) (int, error) {
 	ON posts.thread_id = thread.id
 	WHERE posts.is_deleted = FALSE`
 	var count int
-	err := QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&count))
+	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&count))
 	return count, err
 }
 
@@ -82,7 +82,7 @@ func GetReplyFileCount(postID int) (int, error) {
 		WHERE posts.is_deleted = FALSE) as posts
 	ON posts.id = files.post_id`
 	var count int
-	err := QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&count))
+	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&count))
 	return count, err
 }
 
@@ -93,7 +93,7 @@ func GetStaffName(session string) (string, error) {
 	ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
 	var username string
-	err := QueryRowSQL(sql, InterfaceSlice(session), InterfaceSlice(&username))
+	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&username))
 	return username, err
 }
 
@@ -113,7 +113,7 @@ func GetStaffBySession(session string) (*Staff, error) {
 	ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
 	staff := new(Staff)
-	err := QueryRowSQL(sql, InterfaceSlice(session), InterfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
 	return staff, err
 }
 
@@ -131,7 +131,7 @@ func GetStaffByName(name string) (*Staff, error) {
 	FROM DBPREFIXstaff as staff
 	WHERE staff.username = ?`
 	staff := new(Staff)
-	err := QueryRowSQL(sql, InterfaceSlice(name), InterfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	err := QueryRowSQL(sql, interfaceSlice(name), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
 	return staff, err
 }
 
@@ -146,7 +146,7 @@ func getStaffByID(id int) (*Staff, error) {
 	FROM DBPREFIXstaff as staff
 	WHERE staff.id = ?`
 	staff := new(Staff)
-	err := QueryRowSQL(sql, InterfaceSlice(id), InterfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	err := QueryRowSQL(sql, interfaceSlice(id), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
 	return staff, err
 }
 
@@ -299,16 +299,17 @@ func GetAllAccouncements() ([]Announcement, error) {
 // The code should be changed to reflect the new database design
 func CreateBoard(values *Board) error {
 	const maxThreads = 300
-	const sql = `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
+	sql := `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	RETURNING id`
+	` + returningIDSql()
+
 	if values == nil {
 		return errors.New("Board is nil")
 	}
 	return QueryRowSQL(
 		sql,
-		InterfaceSlice(values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section),
-		InterfaceSlice(&values.ID))
+		interfaceSlice(values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section),
+		interfaceSlice(&values.ID))
 }
 
 //GetBoardUris gets a list of all existing board URIs
@@ -363,7 +364,7 @@ func GetAllSectionsOrCreateDefault() ([]BoardSection, error) {
 func getNextSectionListOrder() (int, error) {
 	const sql = `SELECT COALESCE(MAX(position) + 1, 0) FROM DBPREFIXsections`
 	var ID int
-	err := QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&ID))
+	err := QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
 	return ID, err
 }
 
@@ -371,7 +372,7 @@ func getNextSectionListOrder() (int, error) {
 func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 	const SQL = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
 	var ID int
-	err = QueryRowSQL(SQL, InterfaceSlice(), InterfaceSlice(&ID))
+	err = QueryRowSQL(SQL, interfaceSlice(), interfaceSlice(&ID))
 	if err == sql.ErrNoRows {
 		//create it
 		ID, err := getNextSectionListOrder()
@@ -390,12 +391,12 @@ func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 
 //CreateSection creates a section, setting the newly created id in the given struct
 func CreateSection(section *BoardSection) error {
-	const sql = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)
-	RETURNING id`
+	sql := `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)
+	` + returningIDSql()
 	return QueryRowSQL(
 		sql,
-		InterfaceSlice(section.Name, section.Abbreviation, section.Hidden, section.ListOrder),
-		InterfaceSlice(&section.ID))
+		interfaceSlice(section.Name, section.Abbreviation, section.Hidden, section.ListOrder),
+		interfaceSlice(&section.ID))
 }
 
 //GetAllStaffNopass gets all staff accounts without their password
@@ -507,7 +508,7 @@ func checkIPBan(ip string) (*IPBan, error) {
 	const sql = `SELECT id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note, message, can_appeal
 	FROM DBPREFIXusername_ban WHERE username = ?`
 	var ban = new(IPBan)
-	err := QueryRowSQL(sql, InterfaceSlice(ip), InterfaceSlice(&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan, &ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal))
+	err := QueryRowSQL(sql, interfaceSlice(ip), interfaceSlice(&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan, &ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal))
 	return ban, err
 }
 
@@ -515,7 +516,7 @@ func checkUsernameBan(name string) (*UsernameBan, error) {
 	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, username, is_regex 
 	FROM DBPREFIXusername_ban WHERE username = ?`
 	var ban = new(UsernameBan)
-	err := QueryRowSQL(sql, InterfaceSlice(name), InterfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username, &ban.IsRegex))
+	err := QueryRowSQL(sql, interfaceSlice(name), interfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username, &ban.IsRegex))
 	return ban, err
 }
 
@@ -523,7 +524,7 @@ func checkFilenameBan(filename string) (*FilenameBan, error) {
 	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, filename, is_regex 
 	FROM DBPREFIXfilename_ban WHERE filename = ?`
 	var ban = new(FilenameBan)
-	err := QueryRowSQL(sql, InterfaceSlice(filename), InterfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex))
+	err := QueryRowSQL(sql, interfaceSlice(filename), interfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex))
 	return ban, err
 }
 
@@ -531,7 +532,7 @@ func checkFileBan(checksum string) (*FileBan, error) {
 	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, checksum 
 	FROM DBPREFIXfile_ban WHERE checksum = ?`
 	var ban = new(FileBan)
-	err := QueryRowSQL(sql, InterfaceSlice(checksum), InterfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum))
+	err := QueryRowSQL(sql, interfaceSlice(checksum), interfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum))
 	return ban, err
 }
 
@@ -544,7 +545,7 @@ func SinceLastPost(postID int) (int, error) {
 		 WHERE sp.id = ?) as ip
 	ON posts.ip = ip.ip`
 	var when time.Time
-	err := QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&when))
+	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&when))
 	if err != nil {
 		return -1, err
 	}
@@ -568,13 +569,13 @@ func InsertPost(post *Post, bump bool) error {
 	}
 
 	//threadid, istoppost, ip, message, message_raw, password, banned_message, trip, rolesig, name, email, subject
-	const sql = `INSERT INTO DBPREFIXposts (thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
+	var sql = `INSERT INTO DBPREFIXposts (thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	RETURNING id`
+	` + returningIDSql()
 
 	err = QueryRowSQL(sql,
-		InterfaceSlice(threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password),
-		InterfaceSlice(&post.ID))
+		interfaceSlice(threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password),
+		interfaceSlice(&post.ID))
 	if err != nil {
 		return err
 	}
@@ -592,9 +593,9 @@ func InsertPost(post *Post, bump bool) error {
 }
 
 func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
-	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)
-	RETURNING id`
-	err = QueryRowSQL(sql, InterfaceSlice(boardID, locked, stickied, anchored, cyclical), InterfaceSlice(&threadID))
+	var sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)
+	` + returningIDSql()
+	err = QueryRowSQL(sql, interfaceSlice(boardID, locked, stickied, anchored, cyclical), interfaceSlice(&threadID))
 	return threadID, err
 }
 
@@ -615,7 +616,7 @@ func bumpThread(threadID int) error {
 func appendFile(postID int, originalFilename string, filename string, checksum string, fileSize int, isSpoilered bool, width int, height int, thumbnailWidth int, thumbnailHeight int) error {
 	const nextIDSQL = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
 	var nextID int
-	err := QueryRowSQL(nextIDSQL, InterfaceSlice(postID), InterfaceSlice(&nextID))
+	err := QueryRowSQL(nextIDSQL, interfaceSlice(postID), interfaceSlice(&nextID))
 	if err != nil {
 		return err
 	}
@@ -629,7 +630,7 @@ func appendFile(postID int, originalFilename string, filename string, checksum s
 func GetMaxMessageLength(boardID int) (length int, err error) {
 	const sql = `SELECT max_message_length FROM DBPREFIXboards
 	WHERE id = ?`
-	err = QueryRowSQL(sql, InterfaceSlice(boardID), InterfaceSlice(&length))
+	err = QueryRowSQL(sql, interfaceSlice(boardID), interfaceSlice(&length))
 	return length, err
 }
 
@@ -637,7 +638,7 @@ func GetMaxMessageLength(boardID int) (length int, err error) {
 func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
 	const sql = `SELECT allow_embeds FROM DBPREFIXboards
 	WHERE id = ?`
-	err = QueryRowSQL(sql, InterfaceSlice(boardID), InterfaceSlice(&allowed))
+	err = QueryRowSQL(sql, interfaceSlice(boardID), interfaceSlice(&allowed))
 	return allowed, err
 }
 
@@ -649,7 +650,7 @@ func GetBoardFromPostID(postID int) (boardURI string, err error) {
 		JOIN DBPREFIXposts as posts ON posts.thread_id = threads.id
 		WHERE posts.id = ?
 	) as threads ON threads.board_id = board.id`
-	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&boardURI))
+	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&boardURI))
 	return boardURI, err
 }
 
@@ -660,7 +661,7 @@ func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
 	const sql = `SELECT t1.id FROM DBPREFIXposts as t1
 	JOIN (SELECT thread_id FROM DBPREFIXposts where id = ?) as t2 ON t1.thread_id = t2.thread_id
 	WHERE t1.is_top_post`
-	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&ID))
+	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&ID))
 	if err != nil {
 		return 0, err
 	}
@@ -672,7 +673,7 @@ func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
 
 func getThreadID(postID int) (ID int, err error) {
 	const sql = `SELECT thread_id FROM DBPREFIXposts WHERE id = ?`
-	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&ID))
+	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&ID))
 	return ID, err
 }
 
@@ -695,7 +696,7 @@ func AddBanAppeal(banID uint, message string) error {
 //GetPostPassword gets the password associated with a given post
 func GetPostPassword(postID int) (password string, err error) {
 	const sql = `SELECT password_checksum FROM DBPREFIXposts WHERE id = ?`
-	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&password))
+	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&password))
 	return password, err
 }
 
@@ -776,7 +777,7 @@ func DeletePost(postID int, checkIfTopPost bool) error {
 
 func isTopPost(postID int) (val bool, err error) {
 	const sql = `SELECT is_top_post FROM DBPREFIXposts WHERE id = ?`
-	err = QueryRowSQL(sql, InterfaceSlice(postID), InterfaceSlice(&val))
+	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&val))
 	return val, err
 }
 
@@ -812,7 +813,7 @@ func deleteThread(threadID int) error {
 func CreateDefaultBoardIfNoneExist() error {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXboards`
 	var count int
-	QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
 	if count > 0 {
 		return nil
 	}
@@ -833,7 +834,7 @@ func CreateDefaultBoardIfNoneExist() error {
 func CreateDefaultAdminIfNoStaff() error {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
-	QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
 	if count > 0 {
 		return nil
 	}
@@ -842,9 +843,9 @@ func CreateDefaultAdminIfNoStaff() error {
 }
 
 func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err error) {
-	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)
-	RETURNING id`
-	err = QueryRowSQL(sql, InterfaceSlice(username, passwordEncrypted, globalRank), InterfaceSlice(&userID))
+	var sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)
+	` + returningIDSql()
+	err = QueryRowSQL(sql, interfaceSlice(username, passwordEncrypted, globalRank), interfaceSlice(&userID))
 	return userID, err
 }
 
@@ -853,7 +854,7 @@ func createUser(username string, passwordEncrypted string, globalRank int) (user
 // The code should be changed to reflect the new database design. (Just bad design in general, try to avoid directly mutating state like this)
 func (board *Board) UpdateID() error {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
-	return QueryRowSQL(sql, InterfaceSlice(board.Dir), InterfaceSlice(&board.ID))
+	return QueryRowSQL(sql, interfaceSlice(board.Dir), interfaceSlice(&board.ID))
 }
 
 // PopulateData gets the board data from the database, according to its id, and sets the respective properties.
@@ -861,14 +862,14 @@ func (board *Board) UpdateID() error {
 // The code should be changed to reflect the new database design
 func (board *Board) PopulateData(id int) error {
 	const sql = "SELECT id, section_id, dir, navbar_position, title, subtitle, description, max_file_size, default_style, locked, created_at, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog FROM DBPREFIXboards WHERE id = ?"
-	return QueryRowSQL(sql, InterfaceSlice(id), InterfaceSlice(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog))
+	return QueryRowSQL(sql, interfaceSlice(id), interfaceSlice(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog))
 }
 
 //DoesBoardExistByID returns a bool indicating whether a board with a given id exists
 func DoesBoardExistByID(ID int) (bool, error) {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
 	var count int
-	err := QueryRowSQL(sql, InterfaceSlice(ID), InterfaceSlice(&count))
+	err := QueryRowSQL(sql, interfaceSlice(ID), interfaceSlice(&count))
 	return count > 0, err
 }
 
@@ -904,7 +905,7 @@ func GetBoardFromID(boardID int) (Board, error) {
 
 func getBoardIDFromURI(URI string) (id int, err error) {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE uri = ?`
-	err = QueryRowSQL(sql, InterfaceSlice(URI), InterfaceSlice(&id))
+	err = QueryRowSQL(sql, interfaceSlice(URI), interfaceSlice(&id))
 	return id, err
 }
 
@@ -914,7 +915,7 @@ func DoesDatabaseVersionExist() (bool, error) {
 	FROM INFORMATION_SCHEMA.TABLES
 	WHERE TABLE_NAME = 'DBPREFIXdatabase_version'`
 	var count int
-	err := QueryRowSQL(sql, InterfaceSlice(), InterfaceSlice(&count))
+	err := QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
 	return count > 0, err
 }
 
@@ -922,7 +923,7 @@ func DoesDatabaseVersionExist() (bool, error) {
 func GetDatabaseVersion() (int, error) {
 	const countsql = `SELECT COUNT(version) FROM DBPREFIXdatabase_version`
 	var count int
-	err := QueryRowSQL(countsql, InterfaceSlice(), InterfaceSlice(&count))
+	err := QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&count))
 	if err != nil {
 		return 0, err
 	}
@@ -931,6 +932,6 @@ func GetDatabaseVersion() (int, error) {
 	}
 	const sql = `SELECT version FROM DBPREFIXdatabase_version`
 	var version int
-	err = QueryRowSQL(countsql, InterfaceSlice(), InterfaceSlice(&version))
+	err = QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&version))
 	return version, err
 }
