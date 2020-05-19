@@ -104,8 +104,11 @@ func initDB(initFile string) error {
 	sqlArr := strings.Split(sqlReplacer.Replace(sqlStr), ";")
 
 	for _, statement := range sqlArr {
-		if statement != "" && statement != " " {
+		statement = strings.Trim(statement, " \n\r\t")
+		if len(statement) > 0 {
 			if _, err = db.Exec(statement); err != nil {
+				print(len(statement))
+				fmt.Printf("%08b", []byte(statement))
 				return err
 			}
 		}
