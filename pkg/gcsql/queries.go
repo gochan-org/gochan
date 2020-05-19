@@ -36,8 +36,7 @@ func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
 func SetFormattedInDatabase(messages []MessagePostContainer) error {
 	const sql = `UPDATE DBPREFIXposts
 	SET message = ?
-	WHERE id = ? ;
-	`
+	WHERE id = ?`
 	stmt, err := PrepareSQL(sql)
 	defer stmt.Close()
 	if err != nil {
@@ -153,7 +152,7 @@ func getStaffByID(id int) (*Staff, error) {
 // NewStaff creates a new staff account from a given username, password and rank
 func NewStaff(username string, password string, rank int) error {
 	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank)
-	VALUES (?, ?, ?);`
+	VALUES (?, ?, ?)`
 	_, err := ExecSQL(sql, username, gcutil.BcryptSum(password), rank)
 	return err
 }
@@ -176,21 +175,29 @@ func getStaffID(username string) (int, error) {
 
 // CreateSession inserts a session for a given key and username into the database
 func CreateSession(key string, username string) error {
-	const sql = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?); 
-	UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?;`
+	const sql1 = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
+	const sql2 = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
 	staffID, err := getStaffID(username)
 	if err != nil {
 		return err
 	}
-	_, err = ExecSQL(sql, staffID, key, time.Now().Add(time.Duration(time.Hour*730)), staffID) //TODO move amount of time to config file
+	_, err = ExecSQL(sql1, staffID, key, time.Now().Add(time.Duration(time.Hour*730))) //TODO move amount of time to config file
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql2, staffID)
 	return err
 }
 
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
 func PermanentlyRemoveDeletedPosts() error {
-	const sql = `DELETE FROM DBPREFIXposts WHERE is_deleted;
-	DELETE FROM DBPREFIXthreads WHERE is_deleted;`
-	_, err := ExecSQL(sql)
+	const sql1 = `DELETE FROM DBPREFIXposts WHERE is_deleted`
+	const sql2 = `DELETE FROM DBPREFIXthreads WHERE is_deleted`
+	_, err := ExecSQL(sql1)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql2)
 	return err
 }
 
@@ -299,17 +306,19 @@ func GetAllAccouncements() ([]Announcement, error) {
 // The code should be changed to reflect the new database design
 func CreateBoard(values *Board) error {
 	const maxThreads = 300
-	sql := `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	` + returningIDSql()
+	const sqlINSERT = `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	const sqlSELECT = "SELECT id FROM DBPREFIXboards WHERE dir = ?"
+	//Excecuted in two steps this way because last row id functions arent thread safe, dir and uri is unique
 
 	if values == nil {
 		return errors.New("Board is nil")
 	}
-	return QueryRowSQL(
-		sql,
-		interfaceSlice(values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section),
-		interfaceSlice(&values.ID))
+	_, err := ExecSQL(sqlINSERT, values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section)
+	if err != nil {
+		return err
+	}
+	return QueryRowSQL(sqlSELECT, interfaceSlice(values.Dir), interfaceSlice(&values.ID))
 }
 
 //GetBoardUris gets a list of all existing board URIs
@@ -391,11 +400,16 @@ func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 
 //CreateSection creates a section, setting the newly created id in the given struct
 func CreateSection(section *BoardSection) error {
-	sql := `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)
-	` + returningIDSql()
+	const sqlINSERT = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)`
+	const sqlSELECT = `SELECT id FROM DBPREFIXsections WHERE position = ?`
+	//Excecuted in two steps this way because last row id functions arent thread safe, position is unique
+	_, err := ExecSQL(sqlINSERT, section.Name, section.Abbreviation, section.Hidden, section.ListOrder)
+	if err != nil {
+		return err
+	}
 	return QueryRowSQL(
-		sql,
-		interfaceSlice(section.Name, section.Abbreviation, section.Hidden, section.ListOrder),
+		sqlSELECT,
+		interfaceSlice(section.ListOrder),
 		interfaceSlice(&section.ID))
 }
 
@@ -556,6 +570,8 @@ func SinceLastPost(postID int) (int, error) {
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func InsertPost(post *Post, bump bool) error {
+	const sql = `INSERT INTO DBPREFIXposts (id, thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	isNewThread := post.ParentID == 0
 	var threadID int
 	var err error
@@ -568,16 +584,25 @@ func InsertPost(post *Post, bump bool) error {
 		return err
 	}
 
-	//threadid, istoppost, ip, message, message_raw, password, banned_message, trip, rolesig, name, email, subject
-	var sql = `INSERT INTO DBPREFIXposts (thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	` + returningIDSql()
+	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
+	//This is done because mysql/sqlite doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
+	isPrimaryKeyError := true
+	for isPrimaryKeyError {
+		nextFreeID, err := getNextFreeID("DBPREFIXposts")
+		if err != nil {
+			return err
+		}
+		err = QueryRowSQL(sql,
+			interfaceSlice(nextFreeID, threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password),
+			interfaceSlice())
 
-	err = QueryRowSQL(sql,
-		interfaceSlice(threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password),
-		interfaceSlice(&post.ID))
-	if err != nil {
-		return err
+		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
+		if err != nil {
+			return err
+		}
+		if !isPrimaryKeyError {
+			post.ID = nextFreeID
+		}
 	}
 
 	if post.Filename != "" {
@@ -593,10 +618,23 @@ func InsertPost(post *Post, bump bool) error {
 }
 
 func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
-	var sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)
-	` + returningIDSql()
-	err = QueryRowSQL(sql, interfaceSlice(boardID, locked, stickied, anchored, cyclical), interfaceSlice(&threadID))
-	return threadID, err
+	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
+	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
+	//This is done because mysql/sqlite doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
+	isPrimaryKeyError := true
+	for isPrimaryKeyError {
+		threadID, err = getNextFreeID("DBPREFIXthreads")
+		if err != nil {
+			return 0, err
+		}
+		err = QueryRowSQL(sql, interfaceSlice(boardID, locked, stickied, anchored, cyclical), interfaceSlice())
+
+		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return threadID, nil
 }
 
 func bumpThreadOfPost(postID int) error {
@@ -679,17 +717,21 @@ func getThreadID(postID int) (ID int, err error) {
 
 //AddBanAppeal adds a given appeal to a given ban
 func AddBanAppeal(banID uint, message string) error {
-	const sql = `
+	const sql1 = `
 	/*copy old to audit*/
 	INSERT INTO DBPREFIXip_ban_appeals_audit (appeal_id, staff_id, appeal_text, staff_response, is_denied)
 	SELECT id, staff_id, appeal_text, staff_response, is_denied
 	FROM DBPREFIXip_ban_appeals
-	WHERE DBPREFIXip_ban_appeals.ip_ban_id = ?;
-
+	WHERE DBPREFIXip_ban_appeals.ip_ban_id = ?`
+	const sql2 = `
 	/*update old values to new values*/
-	UPDATE DBPREFIXip_ban_appeals SET appeal_text = ? WHERE ip_ban_id = ?;
+	UPDATE DBPREFIXip_ban_appeals SET appeal_text = ? WHERE ip_ban_id = ?
 	`
-	_, err := ExecSQL(sql, banID, message, banID)
+	_, err := ExecSQL(sql1, banID)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql2, message, banID)
 	return err
 }
 
@@ -782,11 +824,14 @@ func isTopPost(postID int) (val bool, err error) {
 }
 
 func deleteThread(threadID int) error {
-	const sql = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?;
-	
-	SELECT id FROM DBPREFIXposts WHERE thread_id = ?;`
+	const sql1 = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
+	const sql2 = `SELECT id FROM DBPREFIXposts WHERE thread_id = ?`
 
-	rows, err := QuerySQL(sql, threadID, threadID)
+	_, err := QuerySQL(sql1, threadID)
+	if err != nil {
+		return err
+	}
+	rows, err := QuerySQL(sql2, threadID)
 	if err != nil {
 		return err
 	}
@@ -843,9 +888,14 @@ func CreateDefaultAdminIfNoStaff() error {
 }
 
 func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err error) {
-	var sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)
-	` + returningIDSql()
-	err = QueryRowSQL(sql, interfaceSlice(username, passwordEncrypted, globalRank), interfaceSlice(&userID))
+	const sqlInsert = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)`
+	const sqlSelect = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
+	//Excecuted in two steps this way because last row id functions arent thread safe, username is unique
+	_, err = ExecSQL(sqlInsert, username, passwordEncrypted, globalRank)
+	if err != nil {
+		return 0, err
+	}
+	err = QueryRowSQL(sqlSelect, interfaceSlice(username), interfaceSlice(&userID))
 	return userID, err
 }
 
@@ -934,4 +984,10 @@ func GetDatabaseVersion() (int, error) {
 	var version int
 	err = QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&version))
 	return version, err
+}
+
+func getNextFreeID(tableName string) (ID int, err error) {
+	var sql = `SELECT MAX(id) + 1 FROM ` + tableName
+	err = QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
+	return ID, err
 }

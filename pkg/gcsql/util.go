@@ -2,6 +2,7 @@ package gcsql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -16,7 +17,7 @@ Before reporting an error, make sure that you are using the up to date version o
 Error text: %s`
 )
 
-func sqlVersionErr(err error) error {
+func sqlVersionErr(err error, query *string) error {
 	if err == nil {
 		return nil
 	}
@@ -34,6 +35,9 @@ func sqlVersionErr(err error) error {
 		if !strings.Contains(errText, "Error: near ") {
 			return err
 		}
+	}
+	if config.Config.DebugMode {
+		return fmt.Errorf(unsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
 	}
 	return fmt.Errorf(unsupportedSQLVersionMsg, errText)
 }
@@ -57,7 +61,7 @@ func PrepareSQL(query string) (*sql.Stmt, error) {
 		preparedStr = strings.Join(arr, "")
 	}
 	stmt, err := db.Prepare(sqlReplacer.Replace(preparedStr))
-	return stmt, sqlVersionErr(err)
+	return stmt, sqlVersionErr(err, &preparedStr)
 }
 
 // Close closes the connection to the SQL database
@@ -145,13 +149,25 @@ func interfaceSlice(args ...interface{}) []interface{} {
 	return args
 }
 
-func returningIDSql() string {
-	switch config.Config.DBtype {
-	case "mysql":
-		return ";SELECT LAST_INSERT_ID()"
-	case "postgres":
-		return "RETURNING id"
-	default:
-		return "INVALID DATABASE TYPE"
+func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {
+	if err == nil {
+		return false, nil
 	}
+	errText := err.Error()
+	switch dbDriver {
+	case "mysql":
+		if !strings.Contains(errText, "Duplicate entry") {
+			return false, err
+		}
+	case "postgres":
+		if !strings.Contains(errText, "duplicate key value violates unique constraint") {
+			return false, err
+		}
+	case "sqlite3":
+		return false, errors.New("Not implemented")
+		// if !strings.Contains(errText, "Error: near ") {//TODO fill in correct error string
+		// 	return false, err
+		// }
+	}
+	return true, nil
 }
