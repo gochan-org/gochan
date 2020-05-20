@@ -40,7 +40,7 @@ clean:
 	rm -f ${BIN}
 	rm -f ${BIN}.exe
 	rm -rf releases/
-	rm -rf ~/go/src/${GOCHAN_PKG}
+	rm -rf ${GOPATH}/src/${GOCHAN_PKG}
 
 dependencies:
 	go get -v \
