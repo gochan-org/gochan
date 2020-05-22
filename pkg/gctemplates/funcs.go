@@ -135,6 +135,12 @@ var funcMap = template.FuncMap{
 	},
 
 	// Imageboard functions
+	"bannedForever": func(banInfo *gcsql.BanInfo) bool {
+		return banInfo.BannedForever()
+	},
+	"isBanned": func(banInfo *gcsql.BanInfo, board string) bool {
+		return banInfo.IsBanned(board)
+	},
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},
