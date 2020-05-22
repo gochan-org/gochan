@@ -2,6 +2,7 @@ package manage
 
 import (
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gclog"
@@ -85,4 +86,19 @@ func GetStaffRank(request *http.Request) int {
 		return 0
 	}
 	return staff.Rank
+}
+
+func actionHTMLLinker(funcMap map[string]ManageFunction) string {
+	var links = ""
+	var keys []string
+	for key := range funcMap {
+		if funcMap[key].Title != "" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		links += `<a href="manage?action=` + key + `">` + funcMap[key].Title + "</a></br>"
+	}
+	return links
 }

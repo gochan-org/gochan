@@ -22,9 +22,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	action := request.FormValue("action")
 	staffRank := GetStaffRank(request)
 	var managePageBuffer bytes.Buffer
-	if action == "" {
-		action = "announcements"
-	} else if action == "postinfo" {
+	if action == "postinfo" {
 		writer.Header().Add("Content-Type", "application/json")
 		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	}
@@ -38,18 +36,22 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if _, ok := manageFunctions[action]; ok {
-		if staffRank >= manageFunctions[action].Permissions {
-			managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
-		} else if staffRank == 0 && manageFunctions[action].Permissions == 0 {
-			managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
-		} else if staffRank == 0 {
-			managePageBuffer.Write([]byte(manageFunctions["login"].Callback(writer, request)))
+	if action == "" {
+		managePageBuffer.Write([]byte(actionHTMLLinker(manageFunctions)))
+	} else {
+		if _, ok := manageFunctions[action]; ok {
+			if staffRank >= manageFunctions[action].Permissions {
+				managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
+			} else if staffRank == 0 && manageFunctions[action].Permissions == 0 {
+				managePageBuffer.Write([]byte(manageFunctions[action].Callback(writer, request)))
+			} else if staffRank == 0 {
+				managePageBuffer.Write([]byte(manageFunctions["login"].Callback(writer, request)))
+			} else {
+				managePageBuffer.Write([]byte(action + " is undefined."))
+			}
 		} else {
 			managePageBuffer.Write([]byte(action + " is undefined."))
 		}
-	} else {
-		managePageBuffer.Write([]byte(action + " is undefined."))
 	}
 	if action != "getstaffjquery" && action != "postinfo" {
 		managePageBuffer.Write([]byte("</body></html>"))
