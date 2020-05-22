@@ -11,6 +11,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting"
 
@@ -41,6 +42,9 @@ func main() {
 	gcutil.InitMinifier()
 
 	posting.InitCaptcha()
+	if err := gctemplates.InitTemplates(); err != nil {
+		gclog.Printf(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal, err.Error())
+	}
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
