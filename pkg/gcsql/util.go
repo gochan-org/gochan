@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
 const (
@@ -61,6 +62,10 @@ func PrepareSQL(query string) (*sql.Stmt, error) {
 		preparedStr = strings.Join(arr, "")
 	}
 	stmt, err := db.Prepare(sqlReplacer.Replace(preparedStr))
+	if err != nil {
+		gclog.Print(gclog.LErrorLog,
+			"Error preparing sql query:", "\n", query, "\n", err.Error())
+	}
 	return stmt, sqlVersionErr(err, &preparedStr)
 }
 
