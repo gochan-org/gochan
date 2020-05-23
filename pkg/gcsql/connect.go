@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -31,7 +32,7 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 
 	switch dbType {
 	case "mysql":
-		connStr = fmt.Sprintf("%s:%s@%s/%s?parseTime=true&collation=utf8mb4_unicode_ci",
+		connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci",
 			username, password, host, dbName)
 		nilTimestamp = "0000-00-00 00:00:00"
 	case "postgres":
@@ -84,6 +85,7 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 		gclog.Print(gclog.LStdLog, "Database already populated")
 	}
 	//END TEMP
+	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Finished initializing server...")
 }
 
 func initDB(initFile string) error {
@@ -107,8 +109,13 @@ func initDB(initFile string) error {
 		statement = strings.Trim(statement, " \n\r\t")
 		if len(statement) > 0 {
 			if _, err = db.Exec(statement); err != nil {
-				print(len(statement))
-				fmt.Printf("%08b", []byte(statement))
+				if config.Config.DebugMode {
+					println("Error excecuting sql:")
+					println(err.Error())
+					println("Length sql: " + string(len(statement)))
+					println(statement)
+					fmt.Printf("%08b", []byte(statement))
+				}
 				return err
 			}
 		}
