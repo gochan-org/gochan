@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"strconv"
-	"syscall"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -187,15 +186,6 @@ func BuildBoardPages(board *gcsql.Board) (html string) {
 		}, currentPageFile, "text/html"); err != nil {
 			return html + gclog.Printf(gclog.LErrorLog,
 				"Failed building /%s/ boardpage: %s", board.Dir, err.Error()) + "<br />"
-		}
-
-		if board.CurrentPage == 1 {
-			boardPage := path.Join(config.Config.DocumentRoot, board.Dir, "board.html")
-			os.Remove(boardPage)
-			if err = syscall.Symlink(currentPageFilepath, boardPage); !os.IsExist(err) && err != nil {
-				html += gclog.Printf(gclog.LErrorLog, "Failed building /%s/: %s",
-					board.Dir, err.Error())
-			}
 		}
 
 		// Collect up threads for this page.
