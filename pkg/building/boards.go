@@ -50,7 +50,7 @@ func BuildBoardPages(board *gcsql.Board) (html string) {
 		var postsInThread []gcsql.Post
 
 		var replyCount, err = gcsql.GetReplyCount(op.ID)
-		if err == nil {
+		if err != nil {
 			return html + gclog.Printf(gclog.LErrorLog,
 				"Error getting replies to /%s/%d: %s",
 				board.Dir, op.ID, err.Error()) + "<br />"
@@ -58,7 +58,7 @@ func BuildBoardPages(board *gcsql.Board) (html string) {
 		thread.NumReplies = replyCount
 
 		fileCount, err := gcsql.GetReplyFileCount(op.ID)
-		if err == nil {
+		if err != nil {
 			return html + gclog.Printf(gclog.LErrorLog,
 				"Error getting file count to /%s/%d: %s",
 				board.Dir, op.ID, err.Error()) + "<br />"

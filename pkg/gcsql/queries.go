@@ -520,7 +520,7 @@ func CheckBan(ip string, name string, filename string, checksum string) (*BanInf
 
 func checkIPBan(ip string) (*IPBan, error) {
 	const sql = `SELECT id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note, message, can_appeal
-	FROM DBPREFIXusername_ban WHERE username = ?`
+	FROM DBPREFIXip_ban WHERE ip = ?`
 	var ban = new(IPBan)
 	err := QueryRowSQL(sql, interfaceSlice(ip), interfaceSlice(&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan, &ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal))
 	return ban, err
@@ -571,7 +571,7 @@ func SinceLastPost(postID int) (int, error) {
 // The code should be changed to reflect the new database design
 func InsertPost(post *Post, bump bool) error {
 	const sql = `INSERT INTO DBPREFIXposts (id, thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	isNewThread := post.ParentID == 0
 	var threadID int
 	var err error
@@ -592,9 +592,7 @@ func InsertPost(post *Post, bump bool) error {
 		if err != nil {
 			return err
 		}
-		err = QueryRowSQL(sql,
-			interfaceSlice(nextFreeID, threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password),
-			interfaceSlice())
+		_, err = ExecSQL(sql, nextFreeID, threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password)
 
 		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
 		if err != nil {
@@ -627,7 +625,7 @@ func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclic
 		if err != nil {
 			return 0, err
 		}
-		err = QueryRowSQL(sql, interfaceSlice(boardID, locked, stickied, anchored, cyclical), interfaceSlice())
+		_, err = ExecSQL(sql, boardID, locked, stickied, anchored, cyclical)
 
 		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
 		if err != nil {
@@ -866,13 +864,14 @@ func CreateDefaultBoardIfNoneExist() error {
 	if err != nil {
 		return err
 	}
-	return CreateBoard(
-		&Board{
-			Dir:         "test",
-			Title:       "Testing board",
-			Subtitle:    "Board for testing",
-			Description: "Board for testing",
-			Section:     defaultSectionID})
+	var board = Board{
+		Dir:         "test",
+		Title:       "Testing board",
+		Subtitle:    "Board for testing",
+		Description: "Board for testing",
+		Section:     defaultSectionID}
+	board.SetDefaults()
+	return CreateBoard(&board)
 }
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
@@ -987,7 +986,7 @@ func GetDatabaseVersion() (int, error) {
 }
 
 func getNextFreeID(tableName string) (ID int, err error) {
-	var sql = `SELECT MAX(id) + 1 FROM ` + tableName
+	var sql = `SELECT COALESCE(MAX(id), 0) + 1 FROM ` + tableName
 	err = QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
 	return ID, err
 }

@@ -53,10 +53,11 @@ FROM
 		posts.message_raw,
 		posts.password,
 		posts.created_on,
-		 threads.anchored,
-		 threads.last_bump,
-		 threads.stickied,
-		 threads.locked
+		posts.is_top_post,
+		threads.anchored,
+		threads.last_bump,
+		threads.stickied,
+		threads.locked
 	FROM
 		DBPREFIXposts AS posts
 	JOIN DBPREFIXthreads AS threads 
@@ -265,22 +266,22 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 	var err error
 
 	if onlyWithFile && onSpecificBoard {
-		recentQueryStr += `\nWHERE singlefiles.filename IS NOT NULL AND recentposts.boardid = ?
+		recentQueryStr += "\n" + `WHERE singlefiles.filename IS NOT NULL AND recentposts.boardid = ?
 		ORDER BY recentposts.created_on DESC LIMIT ?`
 		rows, err = QuerySQL(recentQueryStr, boardID, amount)
 	}
 	if onlyWithFile && !onSpecificBoard {
-		recentQueryStr += `\nWHERE singlefiles.filename IS NOT NULL
+		recentQueryStr += "\n" + `WHERE singlefiles.filename IS NOT NULL
 		ORDER BY recentposts.created_on DESC LIMIT ?`
 		rows, err = QuerySQL(recentQueryStr, amount)
 	}
 	if !onlyWithFile && onSpecificBoard {
-		recentQueryStr += `\nWHERE recentposts.boardid = ?
+		recentQueryStr += "\n" + `WHERE recentposts.boardid = ?
 		ORDER BY recentposts.created_on DESC LIMIT ?`
 		rows, err = QuerySQL(recentQueryStr, boardID, amount)
 	}
 	if !onlyWithFile && !onSpecificBoard {
-		recentQueryStr += `\nORDER BY recentposts.created_on DESC LIMIT ?`
+		recentQueryStr += "\nORDER BY recentposts.created_on DESC LIMIT ?"
 		rows, err = QuerySQL(recentQueryStr, amount)
 	}
 

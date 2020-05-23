@@ -28,7 +28,7 @@ func BuildFrontPage() string {
 
 	var recentPostsArr []gcsql.RecentPost
 	recentPostsArr, err = gcsql.GetRecentPostsGlobal(config.Config.MaxRecentPosts, !config.Config.RecentPostsWithNoFile)
-	if err == nil {
+	if err != nil {
 		return gclog.Print(gclog.LErrorLog, "Failed loading recent posts: "+err.Error()) + "<br />"
 	}
 

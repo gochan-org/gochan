@@ -344,7 +344,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boards, _ := gcsql.GetAllBoards()
 
 	postBoard, _ := gcsql.GetBoardFromID(post.BoardID)
-	if banStatus.IsBanned(postBoard.Dir) {
+	if banStatus != nil && banStatus.IsBanned(postBoard.Dir) {
 		var banpageBuffer bytes.Buffer
 
 		if err = gcutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
