@@ -1,10 +1,8 @@
 package gcsql
 
 import (
-	"errors"
 	"fmt"
 	"html"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -14,10 +12,6 @@ import (
 )
 
 const (
-	dirIsAFileStr = `unable to create "%s", path exists and is a file`
-	genericErrStr = `unable to create "%s": %s`
-	pathExistsStr = `unable to create "%s", path already exists`
-
 	_ = iota
 	threadBan
 	imageBan
@@ -186,100 +180,6 @@ func (board *Board) PagePath(pageNum interface{}) string {
 		page = pageNumStr
 	}
 	return board.WebPath(page+".html", "boardPage")
-}
-
-// Build builds the board and its thread files
-// if newBoard is true, it adds a row to DBPREFIXboards and fails if it exists
-// if force is true, it doesn't fail if the directories exist but does fail if it is a file
-func (board *Board) Build(newBoard bool, force bool) error {
-	var err error
-	if board.Dir == "" {
-		return errors.New("board must have a directory before it is built")
-	}
-	if board.Title == "" {
-		return errors.New("board must have a title before it is built")
-	}
-
-	dirPath := board.AbsolutePath()
-	resPath := board.AbsolutePath("res")
-	srcPath := board.AbsolutePath("src")
-	thumbPath := board.AbsolutePath("thumb")
-	dirInfo, _ := os.Stat(dirPath)
-	resInfo, _ := os.Stat(resPath)
-	srcInfo, _ := os.Stat(srcPath)
-	thumbInfo, _ := os.Stat(thumbPath)
-	if dirInfo != nil {
-		if !force {
-			return fmt.Errorf(pathExistsStr, dirPath)
-		}
-		if !dirInfo.IsDir() {
-			return fmt.Errorf(dirIsAFileStr, dirPath)
-		}
-	} else {
-		if err = os.Mkdir(dirPath, 0666); err != nil {
-			return fmt.Errorf(genericErrStr, dirPath, err.Error())
-		}
-	}
-
-	if resInfo != nil {
-		if !force {
-			return fmt.Errorf(pathExistsStr, resPath)
-		}
-		if !resInfo.IsDir() {
-			return fmt.Errorf(dirIsAFileStr, resPath)
-		}
-	} else {
-		if err = os.Mkdir(resPath, 0666); err != nil {
-			return fmt.Errorf(genericErrStr, resPath, err.Error())
-		}
-	}
-
-	if srcInfo != nil {
-		if !force {
-			return fmt.Errorf(pathExistsStr, srcPath)
-		}
-		if !srcInfo.IsDir() {
-			return fmt.Errorf(dirIsAFileStr, srcPath)
-		}
-	} else {
-		if err = os.Mkdir(srcPath, 0666); err != nil {
-			return fmt.Errorf(genericErrStr, srcPath, err.Error())
-		}
-	}
-
-	if thumbInfo != nil {
-		if !force {
-			return fmt.Errorf(pathExistsStr, thumbPath)
-		}
-		if !thumbInfo.IsDir() {
-			return fmt.Errorf(dirIsAFileStr, thumbPath)
-		}
-	} else {
-		if err = os.Mkdir(thumbPath, 0666); err != nil {
-			return fmt.Errorf(genericErrStr, thumbPath, err.Error())
-		}
-	}
-
-	if newBoard {
-		board.CreatedOn = time.Now()
-		err := CreateBoard(board)
-		if err != nil {
-			return err
-		}
-	} else {
-		if err = board.UpdateID(); err != nil {
-			return err
-		}
-	}
-	/* buildBoardPages(board)
-	buildThreads(true, board.ID, 0)
-	resetBoardSectionArrays()
-	buildFrontPage()
-	if board.EnableCatalog {
-		buildCatalog(board.ID)
-	}
-	buildBoardListJSON() */
-	return nil
 }
 
 func (board *Board) SetDefaults() {

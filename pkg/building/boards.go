@@ -2,16 +2,25 @@ package building
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+)
+
+const (
+	dirIsAFileStr = `unable to create "%s", path exists and is a file`
+	genericErrStr = `unable to create "%s": %s`
+	pathExistsStr = `unable to create "%s", path already exists`
 )
 
 // BuildBoardPages builds the pages for the board archive.
@@ -229,11 +238,152 @@ func BuildBoards(which ...int) (html string) {
 	}
 
 	for _, board := range boards {
-		if err = board.Build(false, true); err != nil {
+		if err = buildBoard(&board, false, true); err != nil {
 			return gclog.Printf(gclog.LErrorLog,
 				"Error building /%s/: %s", board.Dir, err.Error()) + "<br />"
 		}
 		html += "Built /" + board.Dir + "/ successfully."
 	}
 	return
+}
+
+//BuildCatalog builds the catalog for a board with a given id
+func BuildCatalog(boardID int) string {
+	err := gctemplates.InitTemplates("catalog")
+	if err != nil {
+		return err.Error()
+	}
+
+	var board gcsql.Board
+	if err = board.PopulateData(boardID); err != nil {
+		return gclog.Printf(gclog.LErrorLog, "Error getting board information (ID: %d)", boardID)
+	}
+
+	catalogPath := path.Join(config.Config.DocumentRoot, board.Dir, "catalog.html")
+	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	if err != nil {
+		return gclog.Printf(gclog.LErrorLog,
+			"Failed opening /%s/catalog.html: %s", board.Dir, err.Error()) + "<br />"
+	}
+
+	threadOPs, err := gcsql.GetTopPosts(boardID, true)
+	// threadOPs, err := getPostArr(map[string]interface{}{
+	// 	"boardid":           boardID,
+	// 	"parentid":          0,
+	// 	"deleted_timestamp": nilTimestamp,
+	// }, "ORDER BY bumped ASC")
+	if err != nil {
+		return gclog.Printf(gclog.LErrorLog,
+			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
+	}
+
+	var threadInterfaces []interface{}
+	for _, thread := range threadOPs {
+		threadInterfaces = append(threadInterfaces, thread)
+	}
+
+	if err = gcutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
+		"boards":   gcsql.AllBoards,
+		"config":   config.Config,
+		"board":    board,
+		"sections": gcsql.AllSections,
+	}, catalogFile, "text/html"); err != nil {
+		return gclog.Printf(gclog.LErrorLog,
+			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
+	}
+	return fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
+}
+
+// Build builds the board and its thread files
+// if newBoard is true, it adds a row to DBPREFIXboards and fails if it exists
+// if force is true, it doesn't fail if the directories exist but does fail if it is a file
+func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
+	var err error
+	if board.Dir == "" {
+		return errors.New("board must have a directory before it is built")
+	}
+	if board.Title == "" {
+		return errors.New("board must have a title before it is built")
+	}
+
+	dirPath := board.AbsolutePath()
+	resPath := board.AbsolutePath("res")
+	srcPath := board.AbsolutePath("src")
+	thumbPath := board.AbsolutePath("thumb")
+	dirInfo, _ := os.Stat(dirPath)
+	resInfo, _ := os.Stat(resPath)
+	srcInfo, _ := os.Stat(srcPath)
+	thumbInfo, _ := os.Stat(thumbPath)
+	if dirInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, dirPath)
+		}
+		if !dirInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, dirPath)
+		}
+	} else {
+		if err = os.Mkdir(dirPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, dirPath, err.Error())
+		}
+	}
+
+	if resInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, resPath)
+		}
+		if !resInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, resPath)
+		}
+	} else {
+		if err = os.Mkdir(resPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, resPath, err.Error())
+		}
+	}
+
+	if srcInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, srcPath)
+		}
+		if !srcInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, srcPath)
+		}
+	} else {
+		if err = os.Mkdir(srcPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, srcPath, err.Error())
+		}
+	}
+
+	if thumbInfo != nil {
+		if !force {
+			return fmt.Errorf(pathExistsStr, thumbPath)
+		}
+		if !thumbInfo.IsDir() {
+			return fmt.Errorf(dirIsAFileStr, thumbPath)
+		}
+	} else {
+		if err = os.Mkdir(thumbPath, 0666); err != nil {
+			return fmt.Errorf(genericErrStr, thumbPath, err.Error())
+		}
+	}
+
+	if newBoard {
+		board.CreatedOn = time.Now()
+		err := gcsql.CreateBoard(board)
+		if err != nil {
+			return err
+		}
+	} else {
+		if err = board.UpdateID(); err != nil {
+			return err
+		}
+	}
+	BuildBoardPages(board)
+	BuildThreads(true, board.ID, 0)
+	gcsql.ResetBoardSectionArrays()
+	BuildFrontPage()
+	if board.EnableCatalog {
+		BuildCatalog(board.ID)
+	}
+	BuildBoardListJSON()
+	return nil
 }
