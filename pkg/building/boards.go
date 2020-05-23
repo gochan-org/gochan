@@ -38,7 +38,7 @@ func BuildBoardPages(board *gcsql.Board) (html string) {
 	var opPosts []gcsql.Post
 
 	// Get all top level posts for the board.
-	if opPosts, err = gcsql.GetTopPosts(board.ID, true); err != nil {
+	if opPosts, err = gcsql.GetTopPosts(board.ID); err != nil {
 		return html + gclog.Printf(gclog.LErrorLog,
 			"Error getting OP posts for /%s/: %s", board.Dir, err.Error()) + "<br />"
 	}
@@ -256,7 +256,7 @@ func BuildCatalog(boardID int) string {
 			"Failed opening /%s/catalog.html: %s", board.Dir, err.Error()) + "<br />"
 	}
 
-	threadOPs, err := gcsql.GetTopPosts(boardID, true)
+	threadOPs, err := gcsql.GetTopPosts(boardID)
 	// threadOPs, err := getPostArr(map[string]interface{}{
 	// 	"boardid":           boardID,
 	// 	"parentid":          0,

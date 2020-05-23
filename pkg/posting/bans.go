@@ -82,7 +82,7 @@ func getBannedStatus(request *http.Request) (*gcsql.BanInfo, error) {
 		if data, err2 := ioutil.ReadAll(file); err2 == nil {
 			checksum = fmt.Sprintf("%x", md5.Sum(data))
 		}
+		file.Close()
 	}
-	file.Close()
 	return gcsql.CheckBan(ip, tripcode, filename, checksum)
 }

@@ -26,13 +26,13 @@ Select
 	recentposts.message_raw,
 	recentposts.password,
 	COALESCE(singlefiles.filename, '') as filename,
-	singlefiles.original_filename,
-	singlefiles.checksum,
-	singlefiles.file_size,
-	singlefiles.width as image_w,
-	singlefiles.height as image_h,
-	singlefiles.thumbnail_width as thumb_w,
-	singlefiles.thumbnail_height as thumb_h,
+	COALESCE(singlefiles.original_filename, '') as original_filename,
+	COALESCE(singlefiles.checksum, ''),
+	COALESCE(singlefiles.file_size, 0),
+	COALESCE(singlefiles.width, 0),
+	COALESCE(singlefiles.height, 0),
+	COALESCE(singlefiles.thumbnail_width, 0),
+	COALESCE(singlefiles.thumbnail_height, 0),
 	recentposts.ip,
 	recentposts.created_on,
 	recentposts.anchored,
@@ -104,7 +104,7 @@ func getPostsExcecution(sql string, arguments ...interface{}) ([]Post, error) {
 	return posts, nil
 }
 
-var onlyTopPosts = abstractSelectPosts + "\nWHERE recentposts.is_top_post"
+var onlyTopPosts = abstractSelectPosts + "\nWHERE recentposts.is_top_post AND recentposts.boardid = ?"
 var sortedTopPosts = onlyTopPosts + "\nORDER BY recentposts.last_bump DESC"
 
 // GetTopPostsNoSort gets the thread ops for a given board.
@@ -112,19 +112,19 @@ var sortedTopPosts = onlyTopPosts + "\nORDER BY recentposts.last_bump DESC"
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetTopPostsNoSort(boardID int) (posts []Post, err error) {
-	return getPostsExcecution(onlyTopPosts)
+	return getPostsExcecution(onlyTopPosts, boardID)
 }
 
 // GetTopPosts gets the thread ops for a given board.
 // newestFirst sorts the ops by the newest first if true, by newest last if false
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetTopPosts(boardID int, newestFirst bool) (posts []Post, err error) {
-	return getPostsExcecution(sortedTopPosts)
+func GetTopPosts(boardID int) (posts []Post, err error) {
+	return getPostsExcecution(sortedTopPosts, boardID)
 }
 
 var repliesToX = abstractSelectPosts + "\nWHERE recentposts.toppostid = ?"
-var oldestRepliesFirst = repliesToX + "\nORDER BY recentposts.created_on DESC"
+var oldestRepliesFirst = repliesToX + "\nORDER BY recentposts.created_on ASC"
 var newestFirstLimited = repliesToX + "\nORDER BY recentposts.created_on DESC\nLIMIT ?"
 
 // GetExistingReplies gets all the reply posts to a given thread, ordered by oldest first.
