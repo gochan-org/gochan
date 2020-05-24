@@ -22,7 +22,7 @@
 				{{end}}
 			{{end}}
 			<input type="checkbox" id="check{{$op.ID}}" name="check{{$op.ID}}" /><label class="post-info" for="check{{$op.ID}}"> <span class="subject">{{$op.Subject}}</span> <span class="postername">{{if ne $op.Email ""}}<a href="mailto:{{$op.Email}}">{{end}}{{if ne $op.Name ""}}{{$op.Name}}{{else}}{{if eq $op.Tripcode ""}}{{$.board.Anonymous}}{{end}}{{end}}{{if ne $op.Email ""}}</a>{{end}}</span>{{if ne $op.Tripcode ""}}<span class="tripcode">!{{$op.Tripcode}}</span>{{end}} {{formatTimestamp $op.Timestamp}} </label><a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$op.ID}}.html#{{$op.ID}}">No.</a> <a href="javascript:quote({{$op.ID}})" class="backlink-click">{{$op.ID}}</a> <span class="post-links"> <span class="thread-ddown">[<a href="javascript:void(0)">&#9660;</a>]</span> <span>[<a href="{{$.config.SiteWebfolder}}{{$.board.Dir}}/res/{{$op.ID}}.html">View</a>]</span></span><br />
-			<div class="post-text">{{truncateMessage $op.MessageHTML 2222 18}}</div>
+			<div class="post-text">{{truncateHTMLMessage $op.MessageHTML 2222 18}}</div>
 			{{- if gt $thread.NumReplies 3}}
 				<b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b>
 			{{end}}
