@@ -109,8 +109,8 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
-	"stripHTML": func(htmlStr string) string {
-		dom := x_html.NewTokenizer(strings.NewReader(htmlStr))
+	"stripHTML": func(htmlStr template.HTML) string {
+		dom := x_html.NewTokenizer(strings.NewReader(string(htmlStr)))
 		for tokenType := dom.Next(); tokenType != x_html.ErrorToken; {
 			if tokenType != x_html.TextToken {
 				tokenType = dom.Next()

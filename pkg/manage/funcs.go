@@ -717,7 +717,7 @@ var manageFunctions = map[string]ManageFunction{
 				html += fmt.Sprintf(
 					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
 					path.Join(config.Config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
-					recentpost.BoardName, recentpost.PostID, recentpost.IP, recentpost.Message,
+					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
 					recentpost.Timestamp.Format("01/02/06, 15:04"),
 				)
 			}

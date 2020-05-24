@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"html/template"
 	"strconv"
 	"strings"
 	"time"
@@ -50,7 +51,7 @@ func (mf *MessageFormatter) Compile(msg string) string {
 	return mf.bbCompiler.Compile(msg)
 }
 
-func FormatMessage(message string) string {
+func FormatMessage(message string) template.HTML {
 	message = msgfmtr.Compile(message)
 	// prepare each line to be formatted
 	postLines := strings.Split(message, "<br>")
@@ -94,5 +95,5 @@ func FormatMessage(message string) string {
 		}
 		postLines[i] = line
 	}
-	return strings.Join(postLines, "<br />")
+	return template.HTML(strings.Join(postLines, "<br />"))
 }

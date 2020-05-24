@@ -3,6 +3,7 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+	"html/template"
 	"os"
 	"path"
 	"strings"
@@ -23,10 +24,12 @@ func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
 	var messages []MessagePostContainer
 	for rows.Next() {
 		var message MessagePostContainer
-		err = rows.Scan(message.ID, message.Message, message.MessageRaw)
+		var formattedHTML template.HTML
+		err = rows.Scan(&message.ID, &formattedHTML, &message.MessageRaw)
 		if err != nil {
 			return nil, err
 		}
+		message.Message = template.HTML(formattedHTML)
 		messages = append(messages, message)
 	}
 	return messages, nil
@@ -43,7 +46,7 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 		return err
 	}
 	for _, message := range messages {
-		_, err = stmt.Exec(message.Message, message.ID)
+		_, err = stmt.Exec(string(message.Message), message.ID)
 		if err != nil {
 			return err
 		}
@@ -522,7 +525,9 @@ func checkIPBan(ip string) (*IPBan, error) {
 	const sql = `SELECT id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note, message, can_appeal
 	FROM DBPREFIXip_ban WHERE ip = ?`
 	var ban = new(IPBan)
-	err := QueryRowSQL(sql, interfaceSlice(ip), interfaceSlice(&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan, &ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal))
+	var formattedHTMLcopyposttest template.HTML
+	err := QueryRowSQL(sql, interfaceSlice(ip), interfaceSlice(&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &formattedHTMLcopyposttest, &ban.IsThreadBan, &ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal))
+	ban.CopyPostText = formattedHTMLcopyposttest
 	return ban, err
 }
 
@@ -592,7 +597,7 @@ func InsertPost(post *Post, bump bool) error {
 		if err != nil {
 			return err
 		}
-		_, err = ExecSQL(sql, nextFreeID, threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, post.MessageHTML, post.MessageText, "", post.Password)
+		_, err = ExecSQL(sql, nextFreeID, threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, string(post.MessageHTML), post.MessageText, "", post.Password)
 
 		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
 		if err != nil {
@@ -743,9 +748,9 @@ func GetPostPassword(postID int) (password string, err error) {
 //UpdatePost updates a post with new information
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func UpdatePost(postID int, email string, subject string, message string, messageRaw string) error {
+func UpdatePost(postID int, email string, subject string, message template.HTML, messageRaw string) error {
 	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
-	_, err := ExecSQL(sql, email, subject, message, messageRaw)
+	_, err := ExecSQL(sql, email, subject, string(message), messageRaw)
 	return err
 }
 

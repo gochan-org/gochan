@@ -3,6 +3,7 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+	"html/template"
 	"strconv"
 )
 
@@ -91,13 +92,15 @@ func getPostsExcecution(sql string, arguments ...interface{}) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		post := new(Post)
+		var messageHTML string
 		err = rows.Scan(&post.ID, &post.ParentID, &post.BoardID, &post.Name, &post.Tripcode, &post.Email,
-			&post.Subject, &post.MessageHTML, &post.MessageText, &post.Password, &post.Filename,
+			&post.Subject, &messageHTML, &post.MessageText, &post.Password, &post.Filename,
 			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH,
 			&post.ThumbW, &post.ThumbH, &post.IP, &post.Timestamp, &post.Autosage, &post.Bumped, &post.Stickied, &post.Locked)
 		if err != nil {
 			return nil, err
 		}
+		post.MessageHTML = template.HTML(messageHTML)
 		post.FileExt = "placeholder"
 		posts = append(posts, *post)
 	}
@@ -293,12 +296,14 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 
 	for rows.Next() {
 		recentPost := new(RecentPost)
+		var formattedHTML template.HTML
 		if err = rows.Scan(
 			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
-			&recentPost.Name, &recentPost.Tripcode, &recentPost.Message, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
+			&recentPost.Name, &recentPost.Tripcode, &formattedHTML, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
 		); err != nil {
 			return nil, err
 		}
+		recentPost.Message = formattedHTML
 		recentPostsArr = append(recentPostsArr, *recentPost)
 	}
 

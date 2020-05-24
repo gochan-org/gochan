@@ -3,6 +3,7 @@ package gcsql
 import (
 	"fmt"
 	"html"
+	"html/template"
 	"path"
 	"strconv"
 	"strings"
@@ -218,34 +219,34 @@ type BoardSection struct {
 // Deprecated. Struct was made for use with old database, deprecated since refactor of april 2020.
 // Please refactor all code that uses this struct to use a struct that alligns with the new database structure and functions.
 type Post struct {
-	ID               int       `json:"no"`
-	ParentID         int       `json:"resto"`
-	CurrentPage      int       `json:"-"`
-	BoardID          int       `json:"-"`
-	Name             string    `json:"name"`
-	Tripcode         string    `json:"trip"`
-	Email            string    `json:"email"`
-	Subject          string    `json:"sub"`
-	MessageHTML      string    `json:"com"`
-	MessageText      string    `json:"-"`
-	Password         string    `json:"-"`
-	Filename         string    `json:"tim"`
-	FilenameOriginal string    `json:"filename"`
-	FileChecksum     string    `json:"md5"`
-	FileExt          string    `json:"extension"`
-	Filesize         int       `json:"fsize"`
-	ImageW           int       `json:"w"`
-	ImageH           int       `json:"h"`
-	ThumbW           int       `json:"tn_w"`
-	ThumbH           int       `json:"tn_h"`
-	IP               string    `json:"-"`
-	Capcode          string    `json:"capcode"`
-	Timestamp        time.Time `json:"time"`
-	Autosage         bool      `json:"-"`
-	Bumped           time.Time `json:"last_modified"`
-	Stickied         bool      `json:"-"`
-	Locked           bool      `json:"-"`
-	Reviewed         bool      `json:"-"`
+	ID               int           `json:"no"`
+	ParentID         int           `json:"resto"`
+	CurrentPage      int           `json:"-"`
+	BoardID          int           `json:"-"`
+	Name             string        `json:"name"`
+	Tripcode         string        `json:"trip"`
+	Email            string        `json:"email"`
+	Subject          string        `json:"sub"`
+	MessageHTML      template.HTML `json:"com"`
+	MessageText      string        `json:"-"`
+	Password         string        `json:"-"`
+	Filename         string        `json:"tim"`
+	FilenameOriginal string        `json:"filename"`
+	FileChecksum     string        `json:"md5"`
+	FileExt          string        `json:"extension"`
+	Filesize         int           `json:"fsize"`
+	ImageW           int           `json:"w"`
+	ImageH           int           `json:"h"`
+	ThumbW           int           `json:"tn_w"`
+	ThumbH           int           `json:"tn_h"`
+	IP               string        `json:"-"`
+	Capcode          string        `json:"capcode"`
+	Timestamp        time.Time     `json:"time"`
+	Autosage         bool          `json:"-"`
+	Bumped           time.Time     `json:"last_modified"`
+	Stickied         bool          `json:"-"`
+	Locked           bool          `json:"-"`
+	Reviewed         bool          `json:"-"`
 }
 
 func (p *Post) GetURL(includeDomain bool) string {
@@ -314,7 +315,7 @@ type BoardCooldowns struct {
 type MessagePostContainer struct {
 	ID         int
 	MessageRaw string
-	Message    string
+	Message    template.HTML
 }
 
 // Deprecated. Struct was made for use with old database, deprecated since refactor of april 2020.
@@ -326,7 +327,7 @@ type RecentPost struct {
 	ParentID  int
 	Name      string
 	Tripcode  string
-	Message   string
+	Message   template.HTML
 	Filename  string
 	ThumbW    int
 	ThumbH    int
@@ -408,19 +409,19 @@ type WordFilter struct {
 
 //IPBan contains the information association with a specific ip ban
 type IPBan struct {
-	ID              int       `json:id`
-	BoardID         *int      `json:"board"`
-	StaffID         int       `json:"staff_id"`
-	BannedForPostID *int      `json:"banned_for_post_id"`
-	CopyPostText    string    `json:"copy_post_text"`
-	IsThreadBan     bool      `json:"is_thread_ban"`
-	IsActive        bool      `json:"is_active"`
-	IP              string    `json:"ip"`
-	IssuedAt        time.Time `json:"issued_at"`
-	AppealAt        time.Time `json:"appeal_at"`
-	ExpiresAt       time.Time `json:"expires_at"`
-	Permanent       bool      `json:"permanent"`
-	StaffNote       string    `json:"staff_note"`
-	Message         string    `json:"message"`
-	CanAppeal       bool      `json:"can_appeal"`
+	ID              int           `json:id`
+	BoardID         *int          `json:"board"`
+	StaffID         int           `json:"staff_id"`
+	BannedForPostID *int          `json:"banned_for_post_id"`
+	CopyPostText    template.HTML `json:"copy_post_text"`
+	IsThreadBan     bool          `json:"is_thread_ban"`
+	IsActive        bool          `json:"is_active"`
+	IP              string        `json:"ip"`
+	IssuedAt        time.Time     `json:"issued_at"`
+	AppealAt        time.Time     `json:"appeal_at"`
+	ExpiresAt       time.Time     `json:"expires_at"`
+	Permanent       bool          `json:"permanent"`
+	StaffNote       string        `json:"staff_note"`
+	Message         string        `json:"message"`
+	CanAppeal       bool          `json:"can_appeal"`
 }
