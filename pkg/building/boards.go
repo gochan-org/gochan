@@ -120,11 +120,11 @@ func BuildBoardPages(board *gcsql.Board) (html string) {
 	// If there are no posts on the board
 	if len(threads) == 0 {
 		board.CurrentPage = 1
-		// Open board.html for writing to the first page.
-		boardPageFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "board.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+		// Open 1.html for writing to the first page.
+		boardPageFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			return html + gclog.Printf(gclog.LErrorLog,
-				"Failed opening /%s/board.html: %s",
+				"Failed opening /%s/1.html: %s",
 				board.Dir, err.Error()) + "<br />"
 		}
 

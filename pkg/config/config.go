@@ -169,7 +169,7 @@ func InitConfig(versionStr string) {
 	}
 
 	if len(Config.FirstPage) == 0 {
-		Config.FirstPage = []string{"index.html", "board.html", "firstrun.html"}
+		Config.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
 	}
 
 	Config.Username = Config.checkString(Config.Username, "gochan", false,
