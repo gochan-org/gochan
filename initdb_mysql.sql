@@ -8,9 +8,6 @@ CREATE TABLE DBPREFIXdatabase_version(
 	version INT NOT NULL
 );
 
-INSERT INTO DBPREFIXdatabase_version(version)
-VALUES(1);
-
 CREATE TABLE DBPREFIXsections(
 	id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
 	name TEXT NOT NULL,
@@ -266,3 +263,6 @@ CREATE TABLE DBPREFIXwordfilters(
 	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
 	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
+
+INSERT INTO DBPREFIXdatabase_version(version)
+VALUES(1);
