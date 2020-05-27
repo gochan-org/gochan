@@ -277,6 +277,7 @@ func BuildCatalog(boardID int) string {
 		"config":   config.Config,
 		"board":    board,
 		"sections": gcsql.AllSections,
+		"threads":  threadInterfaces,
 	}, catalogFile, "text/html"); err != nil {
 		return gclog.Printf(gclog.LErrorLog,
 			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
