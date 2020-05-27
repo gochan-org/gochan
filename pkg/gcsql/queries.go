@@ -964,35 +964,86 @@ func getBoardIDFromURI(URI string) (id int, err error) {
 	return id, err
 }
 
-//DoesDatabaseVersionExist returns whether or not the database versions table exists
-func DoesDatabaseVersionExist() (bool, error) {
-	const sql = `SELECT COUNT(*)
-	FROM INFORMATION_SCHEMA.TABLES
-	WHERE TABLE_NAME = 'DBPREFIXdatabase_version'`
-	var count int
-	err := QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
-	return count > 0, err
-}
-
-//GetDatabaseVersion gets the version of the database, or an error if none or multiple exist
-func GetDatabaseVersion() (int, error) {
+//getDatabaseVersion gets the version of the database, or an error if none or multiple exist
+func getDatabaseVersion() (int, *gcutil.GcError) {
 	const countsql = `SELECT COUNT(version) FROM DBPREFIXdatabase_version`
 	var count int
 	err := QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&count))
 	if err != nil {
-		return 0, err
+		return 0, gcutil.FromError(err, false)
 	}
 	if count > 1 {
-		return 0, errors.New("More than one version in database")
+		return 0, gcutil.NewError("More than one version in database", false)
 	}
 	const sql = `SELECT version FROM DBPREFIXdatabase_version`
 	var version int
 	err = QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&version))
-	return version, err
+	return version, gcutil.FromError(err, false)
 }
 
 func getNextFreeID(tableName string) (ID int, err error) {
 	var sql = `SELECT COALESCE(MAX(id), 0) + 1 FROM ` + tableName
 	err = QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
 	return ID, err
+}
+
+func doesTableExist(tableName string) (bool, *gcutil.GcError) {
+	const mysqlPostgresql = `SELECT COUNT(*)
+	FROM INFORMATION_SCHEMA.TABLES
+	WHERE TABLE_NAME = ?`
+	const sqlite = `SELECT 
+    COUNT(name)
+	FROM 
+		sqlite_master 
+	WHERE 
+		type ='table' AND 
+		name NOT LIKE 'sqlite_%' AND name = ?;`
+	var sql string
+	switch config.Config.DBtype {
+	case "mysql":
+		sql = mysqlPostgresql
+	case "postgres":
+		sql = mysqlPostgresql
+	case "sqlite3":
+		sql = sqlite
+	}
+	var count int
+	err := QueryRowSQL(sql, []interface{}{config.Config.DBprefix + tableName}, []interface{}{&count})
+	if err != nil {
+		return false, gcutil.FromError(err, false)
+	}
+	return count == 1, nil
+}
+
+//doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
+//Returns false if the prefix is an empty string
+func doesGochanPrefixTableExist() (bool, *gcutil.GcError) {
+	if config.Config.DBprefix == "" {
+		return false, nil
+	}
+	var mysqlPostgresql = `SELECT count(*) 
+	FROM INFORMATION_SCHEMA.TABLES
+	WHERE TABLE_NAME LIKE '` + config.Config.DBprefix + `%'`
+	var sqlite = `SELECT 
+    COUNT(name)
+	FROM 
+		sqlite_master 
+	WHERE 
+		type ='table' AND 
+		name LIKE '` + config.Config.DBprefix + `%';`
+	var sql string
+	switch config.Config.DBtype {
+	case "mysql":
+		sql = mysqlPostgresql
+	case "postgres":
+		sql = mysqlPostgresql
+	case "sqlite3":
+		sql = sqlite
+	}
+	var count int
+	err := QueryRowSQL(sql, []interface{}{}, []interface{}{&count})
+	if err != nil {
+		return false, gcutil.FromError(err, false)
+	}
+	return count > 0, nil
 }

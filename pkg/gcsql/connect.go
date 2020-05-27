@@ -53,38 +53,11 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", err.Error())
 	}
 
-	//TODO TEMP
-	alreadyPopulated, err := DoesDatabaseVersionExist()
-	if !alreadyPopulated {
-
-		if err = initDB("initdb_" + dbType + ".sql"); err != nil {
-			gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
-		}
-
-		//TODO fix new install thing once it works with existing database
-		// var sqlVersionStr string
-		// isNewInstall := false
-		// if err = queryRowSQL("SELECT value FROM DBPREFIXinfo WHERE name = 'version'",
-		// 	[]interface{}{}, []interface{}{&sqlVersionStr},
-		// ); err == sql.ErrNoRows {
-		// 	isNewInstall = true
-		// } else if err != nil {
-		// 	gclog.Print(lErrorLog|lStdLog|lFatal, "Failed initializing DB: ", err.Error())
-		// }
-
-		err = CreateDefaultBoardIfNoneExist()
-		if err != nil {
-			gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Error())
-		}
-		err = CreateDefaultAdminIfNoStaff()
-		if err != nil {
-			gclog.Print(fatalSQLFlags, "Failed creating default admin account: ", err.Error())
-		}
-		//fix versioning thing
-	} else {
-		gclog.Print(gclog.LStdLog, "Database already populated")
+	err = handleVersioning(dbType)
+	if err != nil {
+		gclog.Print(fatalSQLFlags, "Failed to initialise database: ", err.Error())
 	}
-	//END TEMP
+
 	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Finished initializing server...")
 }
 
