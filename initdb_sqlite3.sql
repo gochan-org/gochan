@@ -46,8 +46,7 @@ CREATE TABLE DBPREFIXboards(
 	enable_catalog BOOL NOT NULL,
 	FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
 	UNIQUE(dir),
-	UNIQUE(uri),
-	UNIQUE(navbar_position)
+	UNIQUE(uri)
 );
 
 CREATE TABLE DBPREFIXthreads(
