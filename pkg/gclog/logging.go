@@ -53,7 +53,7 @@ func (gcl *GcLogger) selectLogs(flags int) []*os.File {
 
 func (gcl *GcLogger) getPrefix() string {
 	prefix := time.Now().Format(logTimeFmt)
-	_, file, line, _ := runtime.Caller(2)
+	_, file, line, _ := runtime.Caller(3)
 	prefix += fmt.Sprint(file, ":", line, ": ")
 
 	return prefix
