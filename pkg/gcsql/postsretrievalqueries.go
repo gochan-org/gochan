@@ -2,9 +2,10 @@ package gcsql
 
 import (
 	"database/sql"
-	"errors"
 	"html/template"
 	"strconv"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 var abstractSelectPosts = `
@@ -84,7 +85,7 @@ LEFT JOIN
 	ON recentposts.selfid = singlefiles.post_id`
 
 // getPostsExcecution excecutes a given variation on abstractSelectPosts with parameters and loads the result into an array of posts
-func getPostsExcecution(sql string, arguments ...interface{}) ([]Post, error) {
+func getPostsExcecution(sql string, arguments ...interface{}) ([]Post, *gcutil.GcError) {
 	rows, err := QuerySQL(sql, arguments...)
 	if err != nil {
 		return nil, err
@@ -93,10 +94,10 @@ func getPostsExcecution(sql string, arguments ...interface{}) ([]Post, error) {
 	for rows.Next() {
 		post := new(Post)
 		var messageHTML string
-		err = rows.Scan(&post.ID, &post.ParentID, &post.BoardID, &post.Name, &post.Tripcode, &post.Email,
+		err = gcutil.FromError(rows.Scan(&post.ID, &post.ParentID, &post.BoardID, &post.Name, &post.Tripcode, &post.Email,
 			&post.Subject, &messageHTML, &post.MessageText, &post.Password, &post.Filename,
 			&post.FilenameOriginal, &post.FileChecksum, &post.Filesize, &post.ImageW, &post.ImageH,
-			&post.ThumbW, &post.ThumbH, &post.IP, &post.Timestamp, &post.Autosage, &post.Bumped, &post.Stickied, &post.Locked)
+			&post.ThumbW, &post.ThumbH, &post.IP, &post.Timestamp, &post.Autosage, &post.Bumped, &post.Stickied, &post.Locked), false)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +115,7 @@ var sortedTopPosts = onlyTopPosts + "\nORDER BY recentposts.last_bump DESC"
 // Results are unsorted
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetTopPostsNoSort(boardID int) (posts []Post, err error) {
+func GetTopPostsNoSort(boardID int) (posts []Post, err *gcutil.GcError) {
 	return getPostsExcecution(onlyTopPosts, boardID)
 }
 
@@ -122,7 +123,7 @@ func GetTopPostsNoSort(boardID int) (posts []Post, err error) {
 // newestFirst sorts the ops by the newest first if true, by newest last if false
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetTopPosts(boardID int) (posts []Post, err error) {
+func GetTopPosts(boardID int) (posts []Post, err *gcutil.GcError) {
 	return getPostsExcecution(sortedTopPosts, boardID)
 }
 
@@ -133,14 +134,14 @@ var newestFirstLimited = repliesToX + "\nORDER BY recentposts.created_on DESC\nL
 // GetExistingReplies gets all the reply posts to a given thread, ordered by oldest first.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetExistingReplies(topPost int) (posts []Post, err error) {
+func GetExistingReplies(topPost int) (posts []Post, err *gcutil.GcError) {
 	return getPostsExcecution(oldestRepliesFirst, topPost)
 }
 
 // GetExistingRepliesLimitedRev gets N amount of reply posts to a given thread, ordered by newest first.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetExistingRepliesLimitedRev(topPost int, limit int) (posts []Post, err error) {
+func GetExistingRepliesLimitedRev(topPost int, limit int) (posts []Post, err *gcutil.GcError) {
 	return getPostsExcecution(newestFirstLimited, topPost, limit)
 }
 
@@ -149,7 +150,7 @@ func GetExistingRepliesLimitedRev(topPost int, limit int) (posts []Post, err err
 // GetSpecificTopPost gets the information for the top post for a given id.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetSpecificTopPost(ID int) (Post, error) {
+func GetSpecificTopPost(ID int) (Post, *gcutil.GcError) {
 	const topPostIDQuery = `SELECT posts.id from DBPREFIXposts as posts
 	JOIN (
 		SELECT threads.id from DBPREFIXthreads as threads
@@ -171,7 +172,7 @@ func GetSpecificTopPost(ID int) (Post, error) {
 // GetSpecificPostByString gets a specific post for a given string id.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetSpecificPostByString(ID string) (post Post, err error) {
+func GetSpecificPostByString(ID string) (post Post, err *gcutil.GcError) {
 	return getSpecificPostStringDecorated(ID, false)
 }
 
@@ -179,14 +180,14 @@ func GetSpecificPostByString(ID string) (post Post, err error) {
 // returns SQL.ErrNoRows if no post could be found
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetSpecificPost(ID int, onlyNotDeleted bool) (post Post, err error) {
+func GetSpecificPost(ID int, onlyNotDeleted bool) (post Post, err *gcutil.GcError) {
 	return getSpecificPostStringDecorated(strconv.Itoa(ID), onlyNotDeleted)
 }
 
 var specificPostSQL = abstractSelectPosts + "\nWHERE recentposts.selfid = ?"
 var specificPostSQLNotDeleted = specificPostSQL + "\nWHERE recentposts.is_deleted = FALSE"
 
-func getSpecificPostStringDecorated(ID string, onlyNotDeleted bool) (Post, error) {
+func getSpecificPostStringDecorated(ID string, onlyNotDeleted bool) (Post, *gcutil.GcError) {
 	var sql string
 	if onlyNotDeleted {
 		sql = specificPostSQL
@@ -198,7 +199,7 @@ func getSpecificPostStringDecorated(ID string, onlyNotDeleted bool) (Post, error
 		return Post{}, err
 	}
 	if len(posts) == 0 {
-		return Post{}, errors.New("Could not find a post with the ID: " + ID)
+		return Post{}, gcutil.NewError("Could not find a post with the ID: "+ID, false)
 	}
 	return posts[0], nil
 }
@@ -206,7 +207,7 @@ func getSpecificPostStringDecorated(ID string, onlyNotDeleted bool) (Post, error
 // getRecentPostsInternal returns the most recent N posts, on a specific board if specified, only with files if specified
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecificBoard bool) ([]RecentPost, error) {
+func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecificBoard bool) ([]RecentPost, *gcutil.GcError) {
 	//TODO: rework so it uses all features/better sql
 	//get recent posts
 	recentQueryStr := `
@@ -266,7 +267,7 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 		
 		ON recentposts.selfid = singlefiles.post_id`
 	var rows *sql.Rows
-	var err error
+	var err *gcutil.GcError
 
 	if onlyWithFile && onSpecificBoard {
 		recentQueryStr += "\n" + `WHERE singlefiles.filename IS NOT NULL AND recentposts.boardid = ?
@@ -297,9 +298,9 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 	for rows.Next() {
 		recentPost := new(RecentPost)
 		var formattedHTML template.HTML
-		if err = rows.Scan(
+		if err = gcutil.FromError(rows.Scan(
 			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
-			&recentPost.Name, &recentPost.Tripcode, &formattedHTML, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
+			&recentPost.Name, &recentPost.Tripcode, &formattedHTML, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH), false,
 		); err != nil {
 			return nil, err
 		}
@@ -313,6 +314,6 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 // GetRecentPostsGlobal returns the global N most recent posts from the database.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetRecentPostsGlobal(amount int, onlyWithFile bool) ([]RecentPost, error) {
+func GetRecentPostsGlobal(amount int, onlyWithFile bool) ([]RecentPost, *gcutil.GcError) {
 	return getRecentPostsInternal(amount, onlyWithFile, 0, false)
 }

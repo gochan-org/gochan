@@ -4,6 +4,11 @@ import (
 	"encoding/json"
 )
 
+var (
+	// ErrNotImplemented should be used for unimplemented functionality when necessary
+	ErrNotImplemented = NewError("Not implemented", true)
+)
+
 // GcError is an error type that can be rendered as a regular string or a JSON string
 // and can be treated as a regular error if needed
 type GcError struct {
@@ -60,8 +65,11 @@ func (gce *GcError) addError(user bool, err ...interface{}) {
 }
 
 // AddChildError creates a new GcError object, adds it to the SubErrors array, and returns it
-func (gce *GcError) AddChildError(message string, userCaused bool) *GcError {
-	child := NewError(message, userCaused)
+func (gce *GcError) AddChildError(err error, userCaused bool) *GcError {
+	if err == nil {
+		return nil
+	}
+	child := FromError(err, userCaused)
 	gce.SubErrors = append(gce.SubErrors, child)
 	return child
 }
@@ -84,4 +92,15 @@ func (gce GcError) Error() string {
 func (gce *GcError) JSON() string {
 	ba, _ := json.Marshal(gce)
 	return string(ba)
+}
+
+// CompareErrors returns true if the given errors have the same error message
+func CompareErrors(err1 error, err2 error) bool {
+	if err1 == nil && err2 == nil {
+		return true
+	}
+	if err1 != nil {
+		return err1.Error() == err2.Error()
+	}
+	return false
 }

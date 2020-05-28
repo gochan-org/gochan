@@ -22,7 +22,6 @@ var (
 
 // ConnectToDB initializes the database connection and exits if there are any errors
 func ConnectToDB(host string, dbType string, dbName string, username string, password string, prefix string) {
-	var err error
 	var connStr string
 	sqlReplacer = strings.NewReplacer(
 		"DBNAME", dbName,
@@ -32,7 +31,7 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 
 	switch dbType {
 	case "mysql":
-		connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci",
+		connStr = fmt.Sprintf("%s:%s@%s/%s?parseTime=true&collation=utf8mb4_unicode_ci",
 			username, password, host, dbName)
 		nilTimestamp = "0000-00-00 00:00:00"
 	case "postgres":
@@ -49,11 +48,12 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 			`Invalid DBtype %q in gochan.json, valid values are "mysql", "postgres", and "sqlite3"`, dbType)
 	}
 	dbDriver = dbType
-	if db, err = sql.Open(dbType, connStr); err != nil {
-		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", err.Error())
+	var gErr error
+	if db, gErr = sql.Open(dbType, connStr); gErr != nil {
+		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", gErr.Error())
 	}
 
-	err = handleVersioning(dbType)
+	err := handleVersioning(dbType)
 	if err != nil {
 		gclog.Print(fatalSQLFlags, "Failed to initialise database: ", err.Error())
 	}
@@ -61,18 +61,18 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Finished initializing server...")
 }
 
-func initDB(initFile string) error {
-	var err error
+func initDB(initFile string) *gcutil.GcError {
 	filePath := gcutil.FindResource(initFile,
 		"/usr/local/share/gochan/"+initFile,
 		"/usr/share/gochan/"+initFile)
 	if filePath == "" {
-		return fmt.Errorf("SQL database initialization file (%s) missing. Please reinstall gochan", initFile)
+		return gcutil.NewError(fmt.Sprintf(
+			"SQL database initialization file (%s) missing. Please reinstall gochan", initFile), false)
 	}
 
 	sqlBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return err
+		return gcutil.FromError(err, false)
 	}
 
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
@@ -89,7 +89,7 @@ func initDB(initFile string) error {
 					println(statement)
 					fmt.Printf("%08b", []byte(statement))
 				}
-				return err
+				return gcutil.FromError(err, false)
 			}
 		}
 	}

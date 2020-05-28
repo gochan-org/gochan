@@ -2,12 +2,12 @@ package gcsql
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -18,7 +18,7 @@ Before reporting an error, make sure that you are using the up to date version o
 Error text: %s`
 )
 
-func sqlVersionErr(err error, query *string) error {
+func sqlVersionErr(err error, query *string) *gcutil.GcError {
 	if err == nil {
 		return nil
 	}
@@ -26,25 +26,25 @@ func sqlVersionErr(err error, query *string) error {
 	switch dbDriver {
 	case "mysql":
 		if !strings.Contains(errText, "You have an error in your SQL syntax") {
-			return err
+			return gcutil.FromError(err, false)
 		}
 	case "postgres":
 		if !strings.Contains(errText, "syntax error at or near") {
-			return err
+			return gcutil.FromError(err, false)
 		}
 	case "sqlite3":
 		if !strings.Contains(errText, "Error: near ") {
-			return err
+			return gcutil.FromError(err, false)
 		}
 	}
 	if config.Config.DebugMode {
-		return fmt.Errorf(unsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
+		return gcutil.NewError(fmt.Sprintf(unsupportedSQLVersionMsg+"\nQuery: "+*query, errText), false)
 	}
-	return fmt.Errorf(unsupportedSQLVersionMsg, errText)
+	return gcutil.NewError(fmt.Sprintf(unsupportedSQLVersionMsg, errText), false)
 }
 
 // PrepareSQL is used for generating a prepared SQL statement formatted according to config.DBtype
-func PrepareSQL(query string) (*sql.Stmt, error) {
+func PrepareSQL(query string) (*sql.Stmt, *gcutil.GcError) {
 	var preparedStr string
 	switch dbDriver {
 	case "mysql":
@@ -84,13 +84,14 @@ Example:
 	result, err := gcsql.ExecSQL(
 		"INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
 */
-func ExecSQL(query string, values ...interface{}) (sql.Result, error) {
-	stmt, err := PrepareSQL(query)
-	if err != nil {
-		return nil, err
+func ExecSQL(query string, values ...interface{}) (sql.Result, *gcutil.GcError) {
+	stmt, gcerr := PrepareSQL(query)
+	if gcerr != nil {
+		return nil, gcerr
 	}
 	defer stmt.Close()
-	return stmt.Exec(values...)
+	res, err := stmt.Exec(values...)
+	return res, gcutil.FromError(err, false)
 }
 
 /*
@@ -104,13 +105,13 @@ Example:
 		[]interface{}{&id},
 		[]interface{}{&intVal, &stringVal})
 */
-func QueryRowSQL(query string, values []interface{}, out []interface{}) error {
+func QueryRowSQL(query string, values []interface{}, out []interface{}) *gcutil.GcError {
 	stmt, err := PrepareSQL(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	return stmt.QueryRow(values...).Scan(out...)
+	return gcutil.FromError(stmt.QueryRow(values...).Scan(out...), false)
 }
 
 /*
@@ -127,13 +128,14 @@ Example:
 		}
 	}
 */
-func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
-	stmt, err := PrepareSQL(query)
-	if err != nil {
-		return nil, err
+func QuerySQL(query string, a ...interface{}) (*sql.Rows, *gcutil.GcError) {
+	stmt, gcerr := PrepareSQL(query)
+	if gcerr != nil {
+		return nil, gcerr
 	}
 	defer stmt.Close()
-	return stmt.Query(a...)
+	rows, err := stmt.Query(a...)
+	return rows, gcutil.FromError(err, false)
 }
 
 // ResetBoardSectionArrays is run when the board list needs to be changed
@@ -154,23 +156,23 @@ func interfaceSlice(args ...interface{}) []interface{} {
 	return args
 }
 
-func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {
+func errFilterDuplicatePrimaryKey(err *gcutil.GcError) (isPKerror bool, nonPKerror *gcutil.GcError) {
 	if err == nil {
 		return false, nil
 	}
-	errText := err.Error()
+
 	switch dbDriver {
 	case "mysql":
-		if !strings.Contains(errText, "Duplicate entry") {
+		if !strings.Contains(err.Message, "Duplicate entry") {
 			return false, err
 		}
 	case "postgres":
-		if !strings.Contains(errText, "duplicate key value violates unique constraint") {
+		if !strings.Contains(err.Message, "duplicate key value violates unique constraint") {
 			return false, err
 		}
 	case "sqlite3":
-		return false, errors.New("Not implemented")
-		// if !strings.Contains(errText, "Error: near ") {//TODO fill in correct error string
+		return false, gcutil.ErrNotImplemented
+		// if !strings.Contains(err.Error(), "Error: near ") {//TODO fill in correct error string
 		// 	return false, err
 		// }
 	}

@@ -7,13 +7,13 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	_ = iota
-	sSuccess
+	sSuccess = iota
 	sInvalidPassword
 	sOtherError
 )
@@ -21,24 +21,24 @@ const (
 func createSession(key string, username string, password string, request *http.Request, writer http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
-	var err error
+	var err *gcutil.GcError
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !serverutil.ValidReferer(request) {
 		gclog.Print(gclog.LStaffLog, "Rejected login from possible spambot @ "+request.RemoteAddr)
-		return 2
+		return sOtherError
 	}
 	staff, err := gcsql.GetStaffByName(username)
 	if err != nil {
 		gclog.Print(gclog.LErrorLog, err.Error())
-		return 1
+		return sInvalidPassword
 	}
 
 	success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 	if success == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
 		gclog.Print(gclog.LStaffLog, "Failed login (password mismatch) from "+request.RemoteAddr+" at "+time.Now().Format(gcsql.MySQLDatetimeFormat))
-		return 1
+		return sInvalidPassword
 	}
 
 	// successful login, add cookie that expires in one month
@@ -52,28 +52,28 @@ func createSession(key string, username string, password string, request *http.R
 
 	if err = gcsql.CreateSession(key, username); err != nil {
 		gclog.Print(gclog.LErrorLog, "Error creating new staff session: ", err.Error())
-		return 2
+		return sOtherError
 	}
 
-	return 0
+	return sSuccess
 }
 
-func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
+func getCurrentStaff(request *http.Request) (string, *gcutil.GcError) { //TODO after refactor, check if still used
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return "", err
+		return "", gcutil.FromError(err, true)
 	}
 	name, err := gcsql.GetStaffName(sessionCookie.Value)
 	if err == nil {
-		return "", err
+		return "", gcutil.FromError(err, true)
 	}
 	return name, nil
 }
 
-func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
+func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, *gcutil.GcError) {
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return nil, err
+		return nil, gcutil.FromError(err, true)
 	}
 	return gcsql.GetStaffBySession(sessionCookie.Value)
 }

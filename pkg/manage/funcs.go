@@ -31,46 +31,44 @@ var (
 // ManageFunction represents the functions accessed by staff members at /manage?action=<functionname>.
 type ManageFunction struct {
 	Title       string
-	Permissions int                                                            // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	Callback    func(writer http.ResponseWriter, request *http.Request) string `json:"-"` //return string of html output
+	Permissions int                                                                               // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
+	Callback    func(writer http.ResponseWriter, request *http.Request) (string, *gcutil.GcError) `json:"-"` //return string of html output
 }
 
 var manageFunctions = map[string]ManageFunction{
 	"cleanup": {
 		Title:       "Cleanup",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html = `<h2 class="manage-header">Cleanup</h2><br />`
-			var err error
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			htmlOut = `<h2 class="manage-header">Cleanup</h2><br />`
+
 			if request.FormValue("run") == "Run Cleanup" {
-				html += "Removing deleted posts from the database.<hr />"
+				htmlOut += "Removing deleted posts from the database.<hr />"
 				if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
-					return html + "<tr><td>" +
-						gclog.Print(gclog.LErrorLog, "Error removing deleted posts from database: ", err.Error()) +
-						"</td></tr></table>"
+					err.Message = gclog.Print(gclog.LErrorLog, "Error removing deleted posts from database: ", err.Message)
+					return htmlOut + "<tr><td>" + err.Message + "</td></tr></table>", err
 				}
 				// TODO: remove orphaned replies and uploads
 
-				html += "Optimizing all tables in database.<hr />"
+				htmlOut += "Optimizing all tables in database.<hr />"
 				err = gcsql.OptimizeDatabase()
 				if err != nil {
-					return html + "<tr><td>" +
-						gclog.Print(gclog.LErrorLog, "Error optimizing SQL tables: ", err.Error()) +
-						"</td></tr></table>"
+					err.Message = gclog.Print(gclog.LErrorLog, "Error optimizing SQL tables: ", err.Error())
+					return htmlOut + "<tr><td>" + err.Message + "</td></tr></table>", err
 				}
 
-				html += "Cleanup finished"
+				htmlOut += "Cleanup finished"
 			} else {
-				html += `<form action="/manage?action=cleanup" method="post">` +
+				htmlOut += `<form action="/manage?action=cleanup" method="post">` +
 					`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
 					`</form>`
 			}
-			return
+			return htmlOut, nil
 		}},
 	"config": {
 		Title:       "Configuration",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			do := request.FormValue("do")
 			var status string
 			if do == "save" {
@@ -273,18 +271,20 @@ var manageFunctions = map[string]ManageFunction{
 				}
 			}
 			manageConfigBuffer := bytes.NewBufferString("")
-			if err := gctemplates.ManageConfig.Execute(manageConfigBuffer,
-				map[string]interface{}{"config": config.Config, "status": status},
+			if err = gcutil.FromError(gctemplates.ManageConfig.Execute(manageConfigBuffer,
+				map[string]interface{}{"config": config.Config, "status": status}), false,
 			); err != nil {
-				return html + gclog.Print(gclog.LErrorLog, "Error executing config management page: ", err.Error())
+				err.Message = gclog.Print(gclog.LErrorLog,
+					"Error executing config management page: ", err.Message)
+				return htmlOut + err.Message, err
 			}
-			html += manageConfigBuffer.String()
-			return
+			htmlOut += manageConfigBuffer.String()
+			return htmlOut, nil
 		}},
 	"login": {
 		Title:       "Login",
 		Permissions: 0,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			if GetStaffRank(request) > 0 {
 				http.Redirect(writer, request, path.Join(config.Config.SiteWebfolder, "manage"), http.StatusFound)
 			}
@@ -296,7 +296,7 @@ var manageFunctions = map[string]ManageFunction{
 			}
 			if username == "" || password == "" {
 				//assume that they haven't logged in
-				html = `<form method="POST" action="` + config.Config.SiteWebfolder + `manage?action=login" id="login-box" class="staff-form">` +
+				htmlOut = `<form method="POST" action="` + config.Config.SiteWebfolder + `manage?action=login" id="login-box" class="staff-form">` +
 					`<input type="hidden" name="redirect" value="` + redirectAction + `" />` +
 					`<input type="text" name="username" class="logindata" /><br />` +
 					`<input type="password" name="password" class="logindata" /><br />` +
@@ -312,40 +312,40 @@ var manageFunctions = map[string]ManageFunction{
 	"logout": {
 		Title:       "Logout",
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			cookie, _ := request.Cookie("sessiondata")
 			cookie.MaxAge = 0
 			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
 			http.SetCookie(writer, cookie)
-			return "Logged out successfully"
+			return "Logged out successfully", nil
 		}},
 	"announcements": {
 		Title:       "Announcements",
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html = `<h1 class="manage-header">Announcements</h1><br />`
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			htmlOut = `<h1 class="manage-header">Announcements</h1><br />`
 
 			//get all announcements to announcement list
 			//loop to html if exist, no announcement if empty
 			announcements, err := gcsql.GetAllAccouncements()
 			if err != nil {
-				return html + gclog.Print(gclog.LErrorLog, "Error getting announcements: ", err.Error())
+				return "", err
 			}
 			if len(announcements) == 0 {
-				html += "No announcements"
+				htmlOut += "No announcements"
 			} else {
 				for _, announcement := range announcements {
-					html += `<div class="section-block">` +
+					htmlOut += `<div class="section-block">` +
 						`<div class="section-title-block"><b>` + announcement.Subject + `</b> by ` + announcement.Poster + ` at ` + announcement.Timestamp.Format(config.Config.DateTimeFormat) + `</div>` +
 						`<div class="section-body">` + announcement.Message + `</div></div>`
 				}
 			}
-			return html
+			return htmlOut, nil
 		}},
 	"bans": {
 		Title:       "Bans",
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (pageHTML string) { //TODO whatever this does idk man
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) { //TODO whatever this does idk man
 			var post gcsql.Post
 			if request.FormValue("do") == "add" {
 				ip := request.FormValue("ip")
@@ -357,7 +357,8 @@ var manageFunctions = map[string]ManageFunction{
 				permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
 				duration, err := gcutil.ParseDurationString(durationForm)
 				if err != nil {
-					serverutil.ServeErrorPage(writer, err.Error())
+					err.UserError = true
+					return "", err
 				}
 				expires := time.Now().Add(duration)
 
@@ -366,88 +367,85 @@ var manageFunctions = map[string]ManageFunction{
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
 				currentStaff, _ := getCurrentStaff(request)
 
-				err = nil
 				if filename != "" {
 					err = gcsql.CreateFileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
 				}
 				if err != nil {
-					pageHTML += err.Error()
+					htmlOut += err.Error()
 					err = nil
 				}
 				if name != "" {
-					err = gcsql.CreateUserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards)
-				}
-				if err != nil {
-					pageHTML += err.Error()
-					err = nil
+					if err = gcsql.CreateUserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards); err != nil {
+						return "", err
+					}
 				}
 
 				if request.FormValue("fullban") == "on" {
 					err = gcsql.CreateUserBan(ip, false, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
 					if err != nil {
-						pageHTML += err.Error()
-						err = nil
+						return "", err
 					}
 				} else {
 					if request.FormValue("threadban") == "on" {
 						err = gcsql.CreateUserBan(ip, true, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
 						if err != nil {
-							pageHTML += err.Error()
-							err = nil
+							return "", err
+
 						}
 					}
 					if request.FormValue("imageban") == "on" {
 						err = gcsql.CreateFileBan(checksum, currentStaff, permaban, staffNote, boards)
 						if err != nil {
-							pageHTML += err.Error()
-							err = nil
+							return "", err
 						}
 					}
 				}
 			}
 
 			if request.FormValue("postid") != "" {
-				var err error
+				var err *gcutil.GcError
 				post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"))
 				if err != nil {
-					return pageHTML + gclog.Print(gclog.LErrorLog, "Error getting post: ", err.Error())
+					err.Message = "Error getting post: " + err.Message
+					return "", err
 				}
 			}
 
 			banlist, err := gcsql.GetAllBans()
 			if err != nil {
-				return pageHTML + gclog.Print(gclog.LErrorLog, "Error getting ban list: ", err.Error())
+				err.Message = "Error getting ban list: " + err.Message
+				return "", err
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
-			if err := gctemplates.ManageBans.Execute(manageBansBuffer,
+			if err = gcutil.FromError(gctemplates.ManageBans.Execute(manageBansBuffer,
 				map[string]interface{}{"config": config.Config, "banlist": banlist, "post": post},
-			); err != nil {
-				return pageHTML + gclog.Print(gclog.LErrorLog, "Error executing ban management page template: ", err.Error())
+			), false); err != nil {
+				err.Message = "Error executing ban management page template: " + err.Message
+				return "", err
 			}
-			pageHTML += manageBansBuffer.String()
+			htmlOut += manageBansBuffer.String()
 			return
 		}},
 	"getstaffjquery": {
 		Permissions: 0,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			staff, err := getCurrentFullStaff(request)
 			if err != nil {
-				html = "nobody;0;"
-				return
+				return err.JSON(), err
 			}
-			html = staff.Username + ";" + strconv.Itoa(staff.Rank)
-			return
+			htmlOut, gErr := gcutil.MarshalJSON(staff, false)
+			return htmlOut, gcutil.FromError(gErr, false)
 		}},
 	"boards": {
 		Title:       "Boards",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			do := request.FormValue("do")
 			var done bool
 			board := new(gcsql.Board)
 			var boardCreationStatus string
-			var err error
+			var gErr error
 			for !done {
 				switch {
 				case do == "add":
@@ -458,8 +456,8 @@ var manageFunctions = map[string]ManageFunction{
 						continue
 					}
 					orderStr := request.FormValue("order")
-					board.ListOrder, err = strconv.Atoi(orderStr)
-					if err != nil {
+					board.ListOrder, gErr = strconv.Atoi(orderStr)
+					if gErr != nil {
 						board.ListOrder = 0
 					}
 					board.Title = request.FormValue("title")
@@ -476,17 +474,17 @@ var manageFunctions = map[string]ManageFunction{
 					}
 
 					board.CreatedOn = time.Now()
-					board.Section, err = strconv.Atoi(sectionStr)
-					if err != nil {
+					board.Section, gErr = strconv.Atoi(sectionStr)
+					if gErr != nil {
 						board.Section = 0
 					}
-					board.MaxFilesize, err = strconv.Atoi(request.FormValue("maximagesize"))
+					board.MaxFilesize, gErr = strconv.Atoi(request.FormValue("maximagesize"))
 					if err != nil {
 						board.MaxFilesize = 1024 * 4
 					}
 
-					board.MaxPages, err = strconv.Atoi(request.FormValue("maxpages"))
-					if err != nil {
+					board.MaxPages, gErr = strconv.Atoi(request.FormValue("maxpages"))
+					if gErr != nil {
 						board.MaxPages = 11
 					}
 
@@ -499,23 +497,23 @@ var manageFunctions = map[string]ManageFunction{
 						board.Anonymous = "Anonymous"
 					}
 
-					board.MaxAge, err = strconv.Atoi(request.FormValue("maxage"))
-					if err != nil {
+					board.MaxAge, gErr = strconv.Atoi(request.FormValue("maxage"))
+					if gErr != nil {
 						board.MaxAge = 0
 					}
 
-					board.AutosageAfter, err = strconv.Atoi(request.FormValue("autosageafter"))
-					if err != nil {
+					board.AutosageAfter, gErr = strconv.Atoi(request.FormValue("autosageafter"))
+					if gErr != nil {
 						board.AutosageAfter = 200
 					}
 
-					board.NoImagesAfter, err = strconv.Atoi(request.FormValue("noimagesafter"))
-					if err != nil {
+					board.NoImagesAfter, gErr = strconv.Atoi(request.FormValue("noimagesafter"))
+					if gErr != nil {
 						board.NoImagesAfter = 0
 					}
 
-					board.MaxMessageLength, err = strconv.Atoi(request.FormValue("maxmessagelength"))
-					if err != nil {
+					board.MaxMessageLength, gErr = strconv.Atoi(request.FormValue("maxmessagelength"))
+					if gErr != nil {
 						board.MaxMessageLength = 1024 * 8
 					}
 
@@ -525,37 +523,37 @@ var manageFunctions = map[string]ManageFunction{
 					board.EnableCatalog = (request.FormValue("enablecatalog") == "on")
 
 					//actually start generating stuff
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir), 0666); err != nil {
+					if gErr = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir), 0666); gErr != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/ already exists.",
 							config.Config.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "res"), 0666); err != nil {
+					if gErr = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "res"), 0666); gErr != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/res/ already exists.",
 							config.Config.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "src"), 0666); err != nil {
+					if gErr = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "src"), 0666); gErr != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/src/ already exists.",
 							config.Config.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
+					if gErr = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "thumb"), 0666); gErr != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/thumb/ already exists.",
 							config.Config.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err := gcsql.CreateBoard(board); err != nil {
+					if gErr = gcsql.CreateBoard(board); err != nil {
 						do = ""
-						boardCreationStatus = gclog.Print(gclog.LErrorLog, "Error creating board: ", err.Error())
+						boardCreationStatus = gclog.Print(gclog.LErrorLog, "Error creating board: ", gErr.Error())
 						break
 					} else {
 						boardCreationStatus = "Board created successfully"
@@ -583,30 +581,34 @@ var manageFunctions = map[string]ManageFunction{
 					board.ThreadsPerPage = config.Config.ThreadsPerPage
 				}
 
-				html = `<h1 class="manage-header">Manage boards</h1><form action="/manage?action=boards" method="POST"><input type="hidden" name="do" value="existing" /><select name="boardselect"><option>Select board...</option>`
-				boards, err := gcsql.GetBoardUris()
+				htmlOut = `<h1 class="manage-header">Manage boards</h1><form action="/manage?action=boards" method="POST"><input type="hidden" name="do" value="existing" /><select name="boardselect"><option>Select board...</option>`
+				var boards []string
+				boards, err = gcsql.GetBoardUris()
 				if err != nil {
-					return html + gclog.Print(gclog.LErrorLog, "Error getting board list: ", err.Error())
+					err.Message = gclog.Print(gclog.LErrorLog,
+						"Error getting board list: ", err.Message)
+					return "", err
 				}
 				for _, boardDir := range boards {
-					html += "<option>" + boardDir + "</option>"
+					htmlOut += "<option>" + boardDir + "</option>"
 				}
 
-				html += `</select><input type="submit" value="Edit" /><input type="submit" value="Delete" /></form><hr />` +
+				htmlOut += `</select><input type="submit" value="Edit" /><input type="submit" value="Delete" /></form><hr />` +
 					`<h2 class="manage-header">Create new board</h2><span id="board-creation-message">` + boardCreationStatus + `</span><br />`
 
 				manageBoardsBuffer := bytes.NewBufferString("")
 				gcsql.AllSections, _ = gcsql.GetAllSectionsOrCreateDefault()
 
-				if err := gctemplates.ManageBoards.Execute(manageBoardsBuffer, map[string]interface{}{
+				if err = gcutil.FromError(gctemplates.ManageBoards.Execute(manageBoardsBuffer, map[string]interface{}{
 					"config":      config.Config,
 					"board":       board,
 					"section_arr": gcsql.AllSections,
-				}); err != nil {
-					return html + gclog.Print(gclog.LErrorLog,
-						"Error executing board management page template: ", err.Error())
+				}), false); err != nil {
+					err.Message = gclog.Print(gclog.LErrorLog,
+						"Error executing board management page template: ", err.Message)
+					return "", err
 				}
-				html += manageBoardsBuffer.String()
+				htmlOut += manageBoardsBuffer.String()
 				return
 			}
 			gcsql.ResetBoardSectionArrays()
@@ -615,13 +617,13 @@ var manageFunctions = map[string]ManageFunction{
 	"staffmenu": {
 		Title:       "Staff menu",
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			rank := GetStaffRank(request)
 
-			html = `<a href="javascript:void(0)" id="logout" class="staffmenu-item">Log out</a><br />` +
+			htmlOut = `<a href="javascript:void(0)" id="logout" class="staffmenu-item">Log out</a><br />` +
 				`<a href="javascript:void(0)" id="announcements" class="staffmenu-item">Announcements</a><br />`
 			if rank == 3 {
-				html += `<b>Admin stuff</b><br /><a href="javascript:void(0)" id="staff" class="staffmenu-item">Manage staff</a><br />` +
+				htmlOut += `<b>Admin stuff</b><br /><a href="javascript:void(0)" id="staff" class="staffmenu-item">Manage staff</a><br />` +
 					//`<a href="javascript:void(0)" id="purgeeverything" class="staffmenu-item">Purge everything!</a><br />` +
 					`<a href="javascript:void(0)" id="executesql" class="staffmenu-item">Execute SQL statement(s)</a><br />` +
 					`<a href="javascript:void(0)" id="cleanup" class="staffmenu-item">Run cleanup</a><br />` +
@@ -632,12 +634,12 @@ var manageFunctions = map[string]ManageFunction{
 					`<a href="javascript:void(0)" id="boards" class="staffmenu-item">Add/edit/delete boards</a><br />`
 			}
 			if rank >= 2 {
-				html += `<b>Mod stuff</b><br />` +
+				htmlOut += `<b>Mod stuff</b><br />` +
 					`<a href="javascript:void(0)" id="bans" class="staffmenu-item">Ban User(s)</a><br />`
 			}
 
 			if rank >= 1 {
-				html += `<a href="javascript:void(0)" id="recentimages" class="staffmenu-item">Recently uploaded images</a><br />` +
+				htmlOut += `<a href="javascript:void(0)" id="recentimages" class="staffmenu-item">Recently uploaded images</a><br />` +
 					`<a href="javascript:void(0)" id="recentposts" class="staffmenu-item">Recent posts</a><br />` +
 					`<a href="javascript:void(0)" id="searchip" class="staffmenu-item">Search posts by IP</a><br />`
 			}
@@ -646,61 +648,87 @@ var manageFunctions = map[string]ManageFunction{
 	"rebuildfront": {
 		Title:       "Rebuild front page",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			gctemplates.InitTemplates()
-			return building.BuildFrontPage()
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			if err = gctemplates.InitTemplates(); err != nil {
+				return "", err
+			}
+			return "Built front page successfully", building.BuildFrontPage()
 		}},
 	"rebuildall": {
 		Title:       "Rebuild everything",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			gctemplates.InitTemplates()
 			gcsql.ResetBoardSectionArrays()
-			return building.BuildFrontPage() + "<hr />" +
-				building.BuildBoardListJSON() + "<hr />" +
-				building.BuildBoards() + "<hr />" +
-				building.BuildJS() + "<hr />"
+			if err = building.BuildFrontPage(); err != nil {
+				return "", err
+			}
+
+			if err = building.BuildBoardListJSON(); err != nil {
+				return "", err
+			}
+
+			if err = building.BuildBoards(); err != nil {
+				return "", err
+			}
+
+			if err = building.BuildJS(); err != nil {
+				return "", err
+			}
+
+			return "", nil
 		}},
 	"rebuildboards": {
 		Title:       "Rebuild boards",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			gctemplates.InitTemplates()
-			return building.BuildBoards()
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			if err = gctemplates.InitTemplates(); err != nil {
+				return "", err
+			}
+			return "Boards built successfully", building.BuildBoards()
 		}},
 	"reparsehtml": {
 		Title:       "Reparse HTML",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			messages, err := gcsql.GetAllNondeletedMessageRaw()
 			if err != nil {
-				html += err.Error() + "<br />"
-				return
+				return "", err
 			}
 
 			for _, message := range messages {
 				message.Message = posting.FormatMessage(message.MessageRaw)
 			}
-			err = gcsql.SetFormattedInDatabase(messages)
-
-			if err != nil {
-				return html + gclog.Printf(gclog.LErrorLog, err.Error())
+			if err = gcsql.SetFormattedInDatabase(messages); err != nil {
+				return "", err
 			}
-			html += "Done reparsing HTML<hr />" +
-				building.BuildFrontPage() + "<hr />" +
-				building.BuildBoardListJSON() + "<hr />" +
-				building.BuildBoards() + "<hr />"
+			htmlOut += "Done reparsing HTML<hr />"
+
+			if err = building.BuildFrontPage(); err != nil {
+				return "", err
+			}
+			htmlOut += "Done building front page<hr />"
+
+			if err = building.BuildBoardListJSON(); err != nil {
+				return "", err
+			}
+			htmlOut += "Done building board list JSON<hr />"
+
+			if err = building.BuildBoards(); err != nil {
+				return "", err
+			}
+			htmlOut += "Done building boards<hr />"
 			return
 		}},
 	"recentposts": {
 		Title:       "Recent posts",
 		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
 			limit := request.FormValue("limit")
 			if limit == "" {
 				limit = "50"
 			}
-			html = `<h1 class="manage-header">Recent posts</h1>` +
+			htmlOut = `<h1 class="manage-header">Recent posts</h1>` +
 				`Limit by: <select id="limit">` +
 				`<option>25</option><option>50</option><option>100</option><option>200</option>` +
 				`</select><br /><table width="100%%d" border="1">` +
@@ -709,49 +737,46 @@ var manageFunctions = map[string]ManageFunction{
 			recentposts, err := gcsql.GetRecentPostsGlobal(gcutil.HackyStringToInt(limit), false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
 
 			if err != nil {
-				return html + "<tr><td>" + gclog.Print(gclog.LErrorLog, "Error getting recent posts: ",
-					err.Error()) + "</td></tr></table>"
+				err.Message = "Error getting recent posts: " + err.Message
+				return "", err
 			}
 
 			for _, recentpost := range recentposts {
-				html += fmt.Sprintf(
+				htmlOut += fmt.Sprintf(
 					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
 					path.Join(config.Config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
 					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
 					recentpost.Timestamp.Format("01/02/06, 15:04"),
 				)
 			}
-			html += "</table>"
+			htmlOut += "</table>"
 			return
 		}},
 	"postinfo": {
 		Title:       "Post info",
 		Permissions: 2,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			errMap := map[string]interface{}{
-				"action":  "postInfo",
-				"success": false,
-			}
-			post, err := gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			var post gcsql.Post
+			post, err = gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
 			if err != nil {
-				errMap["message"] = err.Error()
-				jsonErr, _ := gcutil.MarshalJSON(errMap, false)
-				return jsonErr
+				return err.JSON(), nil
 			}
 			jsonStr, _ := gcutil.MarshalJSON(post, false)
-			return jsonStr
+			return jsonStr, nil
 		}},
 	"staff": {
 		Title:       "Staff",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			var allStaff []gcsql.Staff
 			do := request.FormValue("do")
-			html = `<h1 class="manage-header">Staff</h1><br />` +
+			htmlOut = `<h1 class="manage-header">Staff</h1><br />` +
 				`<table id="stafftable" border="1">` +
 				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>"
-			allStaff, err := gcsql.GetAllStaffNopass()
+			allStaff, err = gcsql.GetAllStaffNopass()
 			if err != nil {
-				return html + gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error())
+				err.Message = gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Message)
+				return "", err
 			}
 
 			for _, staff := range allStaff {
@@ -760,7 +785,7 @@ var manageFunctions = map[string]ManageFunction{
 				rank := request.FormValue("rank")
 				rankI, _ := strconv.Atoi(rank)
 				if do == "add" {
-					if err := gcsql.NewStaff(username, password, rankI); err != nil {
+					if err = gcsql.NewStaff(username, password, rankI); err != nil {
 						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
 							"Error creating new staff account %q: %s", username, err.Error()))
 						return
@@ -781,12 +806,12 @@ var manageFunctions = map[string]ManageFunction{
 				case staff.Rank == 1:
 					rank = "janitor"
 				}
-				html += fmt.Sprintf(
+				htmlOut += fmt.Sprintf(
 					`<tr><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
 					staff.Username, rank, staff.AddedOn.Format(config.Config.DateTimeFormat), staff.Username)
 
 			}
-			html += `</table><hr /><h2 class="manage-header">Add new staff</h2>` +
+			htmlOut += `</table><hr /><h2 class="manage-header">Add new staff</h2>` +
 				`<form action="/manage?action=staff" onsubmit="return makeNewStaff();" method="POST">` +
 				`<input type="hidden" name="do" value="add" />` +
 				`Username: <input id="username" name="username" type="text" /><br />` +
@@ -803,14 +828,14 @@ var manageFunctions = map[string]ManageFunction{
 	"tempposts": {
 		Title:       "Temporary posts lists",
 		Permissions: 3,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (html string) {
-			html += `<h1 class="manage-header">Temporary posts</h1>`
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err *gcutil.GcError) {
+			htmlOut += `<h1 class="manage-header">Temporary posts</h1>`
 			if len(gcsql.TempPosts) == 0 {
-				html += "No temporary posts<br />"
+				htmlOut += "No temporary posts<br />"
 				return
 			}
 			for p, post := range gcsql.TempPosts {
-				html += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
+				htmlOut += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
 			}
 			return
 		}},

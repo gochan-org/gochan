@@ -14,22 +14,26 @@ import (
 )
 
 // BuildFrontPage builds the front page using templates/front.html
-func BuildFrontPage() string {
+func BuildFrontPage() *gcutil.GcError {
 	err := gctemplates.InitTemplates("front")
 	if err != nil {
-		return gclog.Print(gclog.LErrorLog, "Error loading front page template: ", err.Error())
+		return gcutil.NewError(gclog.Print(gclog.LErrorLog,
+			"Error loading front page template: ", err.Error()), false)
 	}
 	os.Remove(path.Join(config.Config.DocumentRoot, "index.html"))
-	frontFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	if err != nil {
-		return gclog.Print(gclog.LErrorLog, "Failed opening front page for writing: ", err.Error()) + "<br />"
+	frontFile, gErr := os.OpenFile(path.Join(config.Config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+
+	if gErr != nil {
+		return gcutil.NewError(gclog.Print(gclog.LErrorLog,
+			"Failed opening front page for writing: ", err.Error()), false)
 	}
 	defer frontFile.Close()
 
 	var recentPostsArr []gcsql.RecentPost
 	recentPostsArr, err = gcsql.GetRecentPostsGlobal(config.Config.MaxRecentPosts, !config.Config.RecentPostsWithNoFile)
 	if err != nil {
-		return gclog.Print(gclog.LErrorLog, "Failed loading recent posts: "+err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Print(gclog.LErrorLog,
+			"Failed loading recent posts: "+err.Error()), false)
 	}
 
 	for b := range gcsql.AllBoards {
@@ -44,16 +48,18 @@ func BuildFrontPage() string {
 		"boards":       gcsql.AllBoards,
 		"recent_posts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
-		return gclog.Print(gclog.LErrorLog, "Failed executing front page template: "+err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Print(gclog.LErrorLog,
+			"Failed executing front page template: "+err.Error()), false)
 	}
-	return "Front page rebuilt successfully."
+	return nil
 }
 
 // BuildBoardListJSON generates a JSON file with info about the boards
-func BuildBoardListJSON() (html string) {
-	boardListFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	if err != nil {
-		return gclog.Print(gclog.LErrorLog, "Failed opening boards.json for writing: ", err.Error()) + "<br />"
+func BuildBoardListJSON() *gcutil.GcError {
+	boardListFile, gErr := os.OpenFile(path.Join(config.Config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	if gErr != nil {
+		return gcutil.NewError(
+			gclog.Print(gclog.LErrorLog, "Failed opening boards.json for writing: ", gErr.Error()), false)
 	}
 	defer boardListFile.Close()
 
@@ -72,58 +78,61 @@ func BuildBoardListJSON() (html string) {
 		boardsMap["boards"] = append(boardsMap["boards"], gcsql.AllBoards[b])
 	}
 
-	boardJSON, err := json.Marshal(boardsMap)
-	if err != nil {
-		return gclog.Print(gclog.LErrorLog, "Failed to create boards.json: ", err.Error()) + "<br />"
+	boardJSON, gErr := json.Marshal(boardsMap)
+	if gErr != nil {
+		return gcutil.NewError(gclog.Print(gclog.LErrorLog, "Failed to create boards.json: ", gErr.Error()), false)
 	}
 
-	if _, err = gcutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
-		return gclog.Print(gclog.LErrorLog, "Failed writing boards.json file: ", err.Error()) + "<br />"
+	_, err := gcutil.MinifyWriter(boardListFile, boardJSON, "application/json")
+	if err != nil {
+		err.Message = gclog.Print(gclog.LErrorLog, "Failed writing boards.json file: ", err.Message)
+		return err
 	}
-	return "Board list JSON rebuilt successfully.<br />"
+	return nil
 }
 
 // BuildJS minifies (if enabled) gochan.js and consts.js (the latter is built from a template)
-func BuildJS() string {
+func BuildJS() *gcutil.GcError {
 	// minify gochan.js (if enabled)
 	gochanMinJSPath := path.Join(config.Config.DocumentRoot, "javascript", "gochan.min.js")
 	gochanMinJSFile, err := os.OpenFile(gochanMinJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return gclog.Printf(gclog.LErrorLog, "Error opening %q for writing: %s",
-			gochanMinJSPath, err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
+			"Error opening %q for writing: %s", gochanMinJSPath, err.Error()), false)
 	}
 	defer gochanMinJSFile.Close()
 
 	gochanJSPath := path.Join(config.Config.DocumentRoot, "javascript", "gochan.js")
 	gochanJSBytes, err := ioutil.ReadFile(gochanJSPath)
 	if err != nil {
-		return gclog.Printf(gclog.LErrorLog, "Error opening %q for writing: %s",
-			gochanJSPath, err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
+			"Error opening %q for writing: %s", gochanJSPath, err.Error()), false)
 	}
 	if _, err := gcutil.MinifyWriter(gochanMinJSFile, gochanJSBytes, "text/javascript"); err != nil {
 		config.Config.UseMinifiedGochanJS = false
-		return gclog.Printf(gclog.LErrorLog, "Error minifying %q: %s:",
-			gochanMinJSPath, err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
+			"Error minifying %q: %s:", gochanMinJSPath, err.Error()), false)
 	}
 	config.Config.UseMinifiedGochanJS = true
 
 	// build consts.js from template
 	if err = gctemplates.InitTemplates("js"); err != nil {
-		return gclog.Print(gclog.LErrorLog, "Error loading consts.js template: ", err.Error())
+		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
+			"Error loading consts.js template: ", err.Error()), false)
 	}
 	constsJSPath := path.Join(config.Config.DocumentRoot, "javascript", "consts.js")
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return gclog.Printf(gclog.LErrorLog, "Error opening %q for writing: %s",
-			constsJSPath, err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
+			"Error opening %q for writing: %s", constsJSPath, err.Error()), false)
 	}
 	defer constsJSFile.Close()
 
 	if err = gcutil.MinifyTemplate(gctemplates.JsConsts, config.Config, constsJSFile, "text/javascript"); err != nil {
-		return gclog.Printf(gclog.LErrorLog, "Error building %q: %s",
-			constsJSPath, err.Error()) + "<br />"
+		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
+			"Error building %q: %s", constsJSPath, err.Error()), true)
 	}
-	return "Built gochan.min.js and consts.js successfully.<br />"
+	return nil
 }
 
 // paginate returns a 2d array of a specified interface from a 1d array passed in,

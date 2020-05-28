@@ -34,22 +34,23 @@ func tempCleaner() {
 				}
 
 				fileSrc := path.Join(config.Config.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
-				if err = os.Remove(fileSrc); err != nil {
+				var gErr error
+				if gErr = os.Remove(fileSrc); gErr != nil {
 					gclog.Printf(errStdLogs,
-						"Error pruning temporary upload for %q: %s", fileSrc, err.Error())
+						"Error pruning temporary upload for %q: %s", fileSrc, gErr.Error())
 				}
 
 				thumbSrc := gcutil.GetThumbnailPath("thread", fileSrc)
-				if err = os.Remove(thumbSrc); err != nil {
+				if gErr = os.Remove(thumbSrc); gErr != nil {
 					gclog.Printf(errStdLogs,
-						"Error pruning temporary upload for %q: %s", thumbSrc, err.Error())
+						"Error pruning temporary upload for %q: %s", thumbSrc, gErr.Error())
 				}
 
 				if post.ParentID == 0 {
 					catalogSrc := gcutil.GetThumbnailPath("catalog", fileSrc)
-					if err = os.Remove(catalogSrc); err != nil {
+					if gErr = os.Remove(catalogSrc); gErr != nil {
 						gclog.Printf(errStdLogs,
-							"Error pruning temporary upload for %s: %s", catalogSrc, err.Error())
+							"Error pruning temporary upload for %s: %s", catalogSrc, gErr.Error())
 					}
 				}
 			}

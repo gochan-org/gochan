@@ -59,13 +59,13 @@ func handleVersioning(dbType string) *gcutil.GcError {
 }
 
 func buildNewDatabase(dbType string) {
-	var err error
+	var err *gcutil.GcError
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
 		gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
 	}
 	err = CreateDefaultBoardIfNoneExist()
 	if err != nil {
-		gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Error())
+		gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Message)
 	}
 	err = CreateDefaultAdminIfNoStaff()
 	if err != nil {

@@ -94,5 +94,5 @@ func ValidReferer(request *http.Request) bool {
 		return false
 	}
 
-	return rURL.Host == config.Config.SiteDomain && strings.Index(rURL.Path, config.Config.SiteWebfolder) == 0
+	return strings.Index(rURL.Path, config.Config.SiteWebfolder) == 0
 }

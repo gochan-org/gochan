@@ -2,7 +2,6 @@ package gcsql
 
 import (
 	"database/sql"
-	"errors"
 	"html/template"
 	"os"
 	"path"
@@ -13,8 +12,13 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+var (
+	ErrMultipleDBVersions = gcutil.NewError("More than one version in database", false)
+	ErrNilBoard           = gcutil.NewError("Board is nil", true)
+)
+
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
-func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
+func GetAllNondeletedMessageRaw() ([]MessagePostContainer, *gcutil.GcError) {
 	const sql = `select posts.id, posts.message, posts.message_raw from DBPREFIXposts as posts
 	WHERE posts.is_deleted = FALSE`
 	rows, err := QuerySQL(sql)
@@ -25,7 +29,7 @@ func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
 	for rows.Next() {
 		var message MessagePostContainer
 		var formattedHTML template.HTML
-		err = rows.Scan(&message.ID, &formattedHTML, &message.MessageRaw)
+		err = gcutil.FromError(rows.Scan(&message.ID, &formattedHTML, &message.MessageRaw), false)
 		if err != nil {
 			return nil, err
 		}
@@ -36,7 +40,7 @@ func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
 }
 
 // SetFormattedInDatabase sets all the non-raw text for a given array of items.
-func SetFormattedInDatabase(messages []MessagePostContainer) error {
+func SetFormattedInDatabase(messages []MessagePostContainer) *gcutil.GcError {
 	const sql = `UPDATE DBPREFIXposts
 	SET message = ?
 	WHERE id = ?`
@@ -46,16 +50,16 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 		return err
 	}
 	for _, message := range messages {
-		_, err = stmt.Exec(string(message.Message), message.ID)
-		if err != nil {
-			return err
+		_, gErr := stmt.Exec(string(message.Message), message.ID)
+		if gErr != nil {
+			return gcutil.FromError(gErr, false)
 		}
 	}
 	return err
 }
 
 // GetReplyCount gets the total amount non-deleted of replies in a thread
-func GetReplyCount(postID int) (int, error) {
+func GetReplyCount(postID int) (int, *gcutil.GcError) {
 	const sql = `SELECT COUNT(posts.id) FROM DBPREFIXposts as posts
 	JOIN (
 		SELECT threads.id FROM DBPREFIXthreads as threads
@@ -71,7 +75,7 @@ func GetReplyCount(postID int) (int, error) {
 }
 
 // GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
-func GetReplyFileCount(postID int) (int, error) {
+func GetReplyFileCount(postID int) (int, *gcutil.GcError) {
 	const sql = `SELECT COUNT(files.id) from DBPREFIXfiles as files
 	JOIN (SELECT posts.id FROM DBPREFIXposts as posts
 		JOIN (
@@ -89,7 +93,7 @@ func GetReplyFileCount(postID int) (int, error) {
 }
 
 // GetStaffName returns the name associated with a session
-func GetStaffName(session string) (string, error) {
+func GetStaffName(session string) (string, *gcutil.GcError) {
 	const sql = `SELECT staff.username from DBPREFIXstaff as staff
 	JOIN DBPREFIXsessions as sessions
 	ON sessions.staff_id = staff.id
@@ -102,7 +106,7 @@ func GetStaffName(session string) (string, error) {
 // GetStaffBySession gets the staff that is logged in in the given session
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetStaffBySession(session string) (*Staff, error) {
+func GetStaffBySession(session string) (*Staff, *gcutil.GcError) {
 	const sql = `SELECT 
 		staff.id, 
 		staff.username, 
@@ -122,7 +126,7 @@ func GetStaffBySession(session string) (*Staff, error) {
 // GetStaffByName gets the staff with a given name
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetStaffByName(name string) (*Staff, error) {
+func GetStaffByName(name string) (*Staff, *gcutil.GcError) {
 	const sql = `SELECT 
 		staff.id, 
 		staff.username, 
@@ -137,7 +141,7 @@ func GetStaffByName(name string) (*Staff, error) {
 	return staff, err
 }
 
-func getStaffByID(id int) (*Staff, error) {
+func getStaffByID(id int) (*Staff, *gcutil.GcError) {
 	const sql = `SELECT 
 		staff.id, 
 		staff.username, 
@@ -153,7 +157,7 @@ func getStaffByID(id int) (*Staff, error) {
 }
 
 // NewStaff creates a new staff account from a given username, password and rank
-func NewStaff(username string, password string, rank int) error {
+func NewStaff(username string, password string, rank int) *gcutil.GcError {
 	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank)
 	VALUES (?, ?, ?)`
 	_, err := ExecSQL(sql, username, gcutil.BcryptSum(password), rank)
@@ -162,13 +166,13 @@ func NewStaff(username string, password string, rank int) error {
 
 // DeleteStaff deletes the staff with a given name.
 // Implemented to change the account name to a random string and set it to inactive
-func DeleteStaff(username string) error {
+func DeleteStaff(username string) *gcutil.GcError {
 	const sql = `UPDATE DBPREFIXstaff SET username = ?, is_active = FALSE WHERE username = ?`
 	_, err := ExecSQL(sql, gcutil.RandomString(45), username)
 	return err
 }
 
-func getStaffID(username string) (int, error) {
+func getStaffID(username string) (int, *gcutil.GcError) {
 	staff, err := GetStaffByName(username)
 	if err != nil {
 		return -1, err
@@ -177,7 +181,7 @@ func getStaffID(username string) (int, error) {
 }
 
 // CreateSession inserts a session for a given key and username into the database
-func CreateSession(key string, username string) error {
+func CreateSession(key string, username string) *gcutil.GcError {
 	const sql1 = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
 	const sql2 = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
 	staffID, err := getStaffID(username)
@@ -193,7 +197,7 @@ func CreateSession(key string, username string) error {
 }
 
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
-func PermanentlyRemoveDeletedPosts() error {
+func PermanentlyRemoveDeletedPosts() *gcutil.GcError {
 	const sql1 = `DELETE FROM DBPREFIXposts WHERE is_deleted`
 	const sql2 = `DELETE FROM DBPREFIXthreads WHERE is_deleted`
 	_, err := ExecSQL(sql1)
@@ -205,7 +209,7 @@ func PermanentlyRemoveDeletedPosts() error {
 }
 
 // OptimizeDatabase peforms a database optimisation
-func OptimizeDatabase() error {
+func OptimizeDatabase() *gcutil.GcError {
 	tableRows, tablesErr := QuerySQL("SHOW TABLES")
 	if tablesErr != nil {
 		return tablesErr
@@ -229,7 +233,7 @@ func getBoardIDFromURIOrNil(URI string) *int {
 }
 
 // CreateFileBan creates a new ban on a file. If boards = nil, the ban is global.
-func CreateFileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) error {
+func CreateFileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) *gcutil.GcError {
 	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -241,7 +245,7 @@ func CreateFileBan(fileChecksum string, staffName string, permaban bool, staffNo
 }
 
 // CreateFileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
-func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) *gcutil.GcError {
 	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, filename = ?, is_regex = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -253,7 +257,7 @@ func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban
 }
 
 // CreateUserNameBan creates a new ban on a username. If boards = nil, the ban is global.
-func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) *gcutil.GcError {
 	const sql = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, username = ?, is_regex = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -268,7 +272,7 @@ func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func CreateUserBan(IP string, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
-	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
+	staffNote string, message string, canAppeal bool, appealAt time.Time) *gcutil.GcError {
 	const sql = `INSERT INTO DBPREFIXip_ban (board_id, staff_id, staff_note, is_thread_ban, ip, appeal_at, expires_at, permanent, message, can_appeal, issued_at, copy_posted_text, is_active)
 	VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'OLD SYSTEM BAN, NO TEXT AVAILABLE',TRUE)`
 	staffID, err := getStaffID(staffName)
@@ -283,7 +287,7 @@ func CreateUserBan(IP string, threadBan bool, staffName string, boardURI string,
 //GetAllAccouncements gets all announcements, newest first
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllAccouncements() ([]Announcement, error) {
+func GetAllAccouncements() ([]Announcement, *gcutil.GcError) {
 	const sql = `SELECT s.username, a.timestamp, a.subject, a.message FROM DBPREFIXannouncements AS a
 	JOIN DBPREFIXstaff AS s
 	ON a.staff_id = s.id
@@ -295,7 +299,7 @@ func GetAllAccouncements() ([]Announcement, error) {
 	var announcements []Announcement
 	for rows.Next() {
 		var announcement Announcement
-		err = rows.Scan(&announcement.Poster, &announcement.Timestamp, &announcement.Subject, &announcement.Message)
+		err = gcutil.FromError(rows.Scan(&announcement.Poster, &announcement.Timestamp, &announcement.Subject, &announcement.Message), false)
 		if err != nil {
 			return nil, err
 		}
@@ -307,7 +311,7 @@ func GetAllAccouncements() ([]Announcement, error) {
 //CreateBoard creates this board in the database if it doesnt exist already, also sets ID to correct value
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func CreateBoard(values *Board) error {
+func CreateBoard(values *Board) *gcutil.GcError {
 	const maxThreads = 300
 	const sqlINSERT = `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -315,7 +319,7 @@ func CreateBoard(values *Board) error {
 	//Excecuted in two steps this way because last row id functions arent thread safe, dir and uri is unique
 
 	if values == nil {
-		return errors.New("Board is nil")
+		return ErrNilBoard
 	}
 	_, err := ExecSQL(sqlINSERT, values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section)
 	if err != nil {
@@ -325,7 +329,7 @@ func CreateBoard(values *Board) error {
 }
 
 //GetBoardUris gets a list of all existing board URIs
-func GetBoardUris() (URIS []string, err error) {
+func GetBoardUris() (URIS []string, err *gcutil.GcError) {
 	const sql = `SELECT uri FROM DBPREFIXboards`
 	rows, err := QuerySQL(sql)
 	if err != nil {
@@ -334,7 +338,7 @@ func GetBoardUris() (URIS []string, err error) {
 	var uris []string
 	for rows.Next() {
 		var uri string
-		err = rows.Scan(&uri)
+		err = gcutil.FromError(rows.Scan(&uri), false)
 		if err != nil {
 			return nil, err
 		}
@@ -344,7 +348,7 @@ func GetBoardUris() (URIS []string, err error) {
 }
 
 //GetAllSections gets a list of all existing sections
-func GetAllSections() ([]BoardSection, error) {
+func GetAllSections() ([]BoardSection, *gcutil.GcError) {
 	const sql = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections`
 	rows, err := QuerySQL(sql)
 	if err != nil {
@@ -353,7 +357,7 @@ func GetAllSections() ([]BoardSection, error) {
 	var sections []BoardSection
 	for rows.Next() {
 		var section BoardSection
-		err = rows.Scan(&section.ID, &section.Name, &section.Abbreviation, &section.ListOrder, &section.Hidden)
+		err = gcutil.FromError(rows.Scan(&section.ID, &section.Name, &section.Abbreviation, &section.ListOrder, &section.Hidden), false)
 		if err != nil {
 			return nil, err
 		}
@@ -365,7 +369,7 @@ func GetAllSections() ([]BoardSection, error) {
 // GetAllSectionsOrCreateDefault gets all sections in the database, creates default if none exist
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllSectionsOrCreateDefault() ([]BoardSection, error) {
+func GetAllSectionsOrCreateDefault() ([]BoardSection, *gcutil.GcError) {
 	_, err := GetOrCreateDefaultSectionID()
 	if err != nil {
 		return nil, err
@@ -373,7 +377,7 @@ func GetAllSectionsOrCreateDefault() ([]BoardSection, error) {
 	return GetAllSections()
 }
 
-func getNextSectionListOrder() (int, error) {
+func getNextSectionListOrder() (int, *gcutil.GcError) {
 	const sql = `SELECT COALESCE(MAX(position) + 1, 0) FROM DBPREFIXsections`
 	var ID int
 	err := QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
@@ -381,11 +385,11 @@ func getNextSectionListOrder() (int, error) {
 }
 
 //GetOrCreateDefaultSectionID creates the default section if it does not exist yet, returns default section ID if it exists
-func GetOrCreateDefaultSectionID() (sectionID int, err error) {
+func GetOrCreateDefaultSectionID() (sectionID int, err *gcutil.GcError) {
 	const SQL = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
 	var ID int
 	err = QueryRowSQL(SQL, interfaceSlice(), interfaceSlice(&ID))
-	if err == sql.ErrNoRows {
+	if gcutil.CompareErrors(err, sql.ErrNoRows) {
 		//create it
 		ID, err := getNextSectionListOrder()
 		if err != nil {
@@ -402,7 +406,7 @@ func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 }
 
 //CreateSection creates a section, setting the newly created id in the given struct
-func CreateSection(section *BoardSection) error {
+func CreateSection(section *BoardSection) *gcutil.GcError {
 	const sqlINSERT = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)`
 	const sqlSELECT = `SELECT id FROM DBPREFIXsections WHERE position = ?`
 	//Excecuted in two steps this way because last row id functions arent thread safe, position is unique
@@ -419,7 +423,7 @@ func CreateSection(section *BoardSection) error {
 //GetAllStaffNopass gets all staff accounts without their password
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllStaffNopass() ([]Staff, error) {
+func GetAllStaffNopass() ([]Staff, *gcutil.GcError) {
 	const sql = `SELECT id, username, global_rank, added_on, last_login FROM DBPREFIXstaff`
 	rows, err := QuerySQL(sql)
 	if err != nil {
@@ -428,7 +432,7 @@ func GetAllStaffNopass() ([]Staff, error) {
 	var staffs []Staff
 	for rows.Next() {
 		var staff Staff
-		err = rows.Scan(&staff.ID, &staff.Username, &staff.Rank, &staff.AddedOn, &staff.LastActive)
+		err = gcutil.FromError(rows.Scan(&staff.ID, &staff.Username, &staff.Rank, &staff.AddedOn, &staff.LastActive), false)
 		if err != nil {
 			return nil, err
 		}
@@ -441,7 +445,7 @@ func GetAllStaffNopass() ([]Staff, error) {
 //Warning, currently only gets ip bans, not other types of bans, as the ban functionality needs a major revamp anyway
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllBans() ([]BanInfo, error) {
+func GetAllBans() ([]BanInfo, *gcutil.GcError) {
 	const sql = `SELECT 
 	ban.id, 
 	ban.ip, 
@@ -466,7 +470,7 @@ ON ban.board_id = board.id`
 	var bans []BanInfo
 	for rows.Next() {
 		var ban BanInfo
-		err = rows.Scan(&ban.ID, &ban.IP, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason, &ban.StaffNote, &ban.AppealAt, &ban.CanAppeal)
+		err = gcutil.FromError(rows.Scan(&ban.ID, &ban.IP, &ban.Boards, &ban.Staff, &ban.Timestamp, &ban.Expires, &ban.Permaban, &ban.Reason, &ban.StaffNote, &ban.AppealAt, &ban.CanAppeal), false)
 		if err != nil {
 			return nil, err
 		}
@@ -479,26 +483,31 @@ ON ban.board_id = board.id`
 // name, filename and checksum may be empty strings and will be treated as not requested if done so
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func CheckBan(ip string, name string, filename string, checksum string) (*BanInfo, error) {
+func CheckBan(ip string, name string, filename string, checksum string) (*BanInfo, *gcutil.GcError) {
 	ban := new(BanInfo)
 	ipban, err1 := checkIPBan(ip)
+	err1NoRows := gcutil.CompareErrors(err1, sql.ErrNoRows)
 	_, err2 := checkFileBan(checksum)
+	err2NoRows := gcutil.CompareErrors(err2, sql.ErrNoRows)
 	_, err3 := checkFilenameBan(filename)
+	err3NoRows := gcutil.CompareErrors(err3, sql.ErrNoRows)
 	_, err4 := checkUsernameBan(name)
+	err4NoRows := gcutil.CompareErrors(err4, sql.ErrNoRows)
 
-	if err1 == sql.ErrNoRows && err2 == sql.ErrNoRows && err3 == sql.ErrNoRows && err4 == sql.ErrNoRows {
-		return nil, sql.ErrNoRows
+	if err1NoRows && err2NoRows && err3NoRows && err4NoRows {
+		return nil, gcutil.FromError(sql.ErrNoRows, false)
 	}
-	if err1 != nil && err1 != sql.ErrNoRows {
+
+	if err1NoRows {
 		return nil, err1
 	}
-	if err2 != nil && err2 != sql.ErrNoRows {
+	if err2NoRows {
 		return nil, err2
 	}
-	if err3 != nil && err3 != sql.ErrNoRows {
+	if err3NoRows {
 		return nil, err3
 	}
-	if err4 != nil && err4 != sql.ErrNoRows {
+	if err4NoRows {
 		return nil, err4
 	}
 
@@ -518,10 +527,10 @@ func CheckBan(ip string, name string, filename string, checksum string) (*BanInf
 	}
 
 	//TODO implement other types of bans or refactor banning code
-	return nil, errors.New("Not implemented")
+	return nil, gcutil.ErrNotImplemented
 }
 
-func checkIPBan(ip string) (*IPBan, error) {
+func checkIPBan(ip string) (*IPBan, *gcutil.GcError) {
 	const sql = `SELECT id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note, message, can_appeal
 	FROM DBPREFIXip_ban WHERE ip = ?`
 	var ban = new(IPBan)
@@ -531,7 +540,7 @@ func checkIPBan(ip string) (*IPBan, error) {
 	return ban, err
 }
 
-func checkUsernameBan(name string) (*UsernameBan, error) {
+func checkUsernameBan(name string) (*UsernameBan, *gcutil.GcError) {
 	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, username, is_regex 
 	FROM DBPREFIXusername_ban WHERE username = ?`
 	var ban = new(UsernameBan)
@@ -539,7 +548,7 @@ func checkUsernameBan(name string) (*UsernameBan, error) {
 	return ban, err
 }
 
-func checkFilenameBan(filename string) (*FilenameBan, error) {
+func checkFilenameBan(filename string) (*FilenameBan, *gcutil.GcError) {
 	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, filename, is_regex 
 	FROM DBPREFIXfilename_ban WHERE filename = ?`
 	var ban = new(FilenameBan)
@@ -547,7 +556,7 @@ func checkFilenameBan(filename string) (*FilenameBan, error) {
 	return ban, err
 }
 
-func checkFileBan(checksum string) (*FileBan, error) {
+func checkFileBan(checksum string) (*FileBan, *gcutil.GcError) {
 	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, checksum 
 	FROM DBPREFIXfile_ban WHERE checksum = ?`
 	var ban = new(FileBan)
@@ -558,7 +567,7 @@ func checkFileBan(checksum string) (*FileBan, error) {
 //SinceLastPost returns the seconds since the last post by the ip address that made this post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func SinceLastPost(postID int) (int, error) {
+func SinceLastPost(postID int) (int, *gcutil.GcError) {
 	const sql = `SELECT MAX(created_on) FROM DBPREFIXposts as posts
 	JOIN (SELECT ip FROM DBPREFIXposts as sp
 		 WHERE sp.id = ?) as ip
@@ -574,12 +583,12 @@ func SinceLastPost(postID int) (int, error) {
 // InsertPost insersts prepared post object into the SQL table so that it can be rendered
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func InsertPost(post *Post, bump bool) error {
+func InsertPost(post *Post, bump bool) *gcutil.GcError {
 	const sql = `INSERT INTO DBPREFIXposts (id, thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	isNewThread := post.ParentID == 0
 	var threadID int
-	var err error
+	var err *gcutil.GcError
 	if isNewThread {
 		threadID, err = createThread(post.BoardID, post.Locked, post.Stickied, post.Autosage, false)
 	} else {
@@ -620,7 +629,7 @@ func InsertPost(post *Post, bump bool) error {
 	return nil
 }
 
-func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
+func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err *gcutil.GcError) {
 	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
 	//This is done because mysql/sqlite doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
@@ -640,7 +649,7 @@ func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclic
 	return threadID, nil
 }
 
-func bumpThreadOfPost(postID int) error {
+func bumpThreadOfPost(postID int) *gcutil.GcError {
 	id, err := getThreadID(postID)
 	if err != nil {
 		return err
@@ -648,13 +657,13 @@ func bumpThreadOfPost(postID int) error {
 	return bumpThread(id)
 }
 
-func bumpThread(threadID int) error {
+func bumpThread(threadID int) *gcutil.GcError {
 	const sql = "UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?"
 	_, err := ExecSQL(sql, threadID)
 	return err
 }
 
-func appendFile(postID int, originalFilename string, filename string, checksum string, fileSize int, isSpoilered bool, width int, height int, thumbnailWidth int, thumbnailHeight int) error {
+func appendFile(postID int, originalFilename string, filename string, checksum string, fileSize int, isSpoilered bool, width int, height int, thumbnailWidth int, thumbnailHeight int) *gcutil.GcError {
 	const nextIDSQL = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
 	var nextID int
 	err := QueryRowSQL(nextIDSQL, interfaceSlice(postID), interfaceSlice(&nextID))
@@ -668,7 +677,7 @@ func appendFile(postID int, originalFilename string, filename string, checksum s
 }
 
 //GetMaxMessageLength returns the max message length on a board
-func GetMaxMessageLength(boardID int) (length int, err error) {
+func GetMaxMessageLength(boardID int) (length int, err *gcutil.GcError) {
 	const sql = `SELECT max_message_length FROM DBPREFIXboards
 	WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(boardID), interfaceSlice(&length))
@@ -676,7 +685,7 @@ func GetMaxMessageLength(boardID int) (length int, err error) {
 }
 
 //GetEmbedsAllowed returns if embeds are allowed on a given board
-func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
+func GetEmbedsAllowed(boardID int) (allowed bool, err *gcutil.GcError) {
 	const sql = `SELECT allow_embeds FROM DBPREFIXboards
 	WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(boardID), interfaceSlice(&allowed))
@@ -684,7 +693,7 @@ func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
 }
 
 //GetBoardFromPostID gets the boardURI that a given postid exists on
-func GetBoardFromPostID(postID int) (boardURI string, err error) {
+func GetBoardFromPostID(postID int) (boardURI string, err *gcutil.GcError) {
 	const sql = `SELECT board.uri FROM DBPREFIXboards as board
 	JOIN (
 		SELECT threads.board_id FROM DBPREFIXthreads as threads
@@ -698,7 +707,7 @@ func GetBoardFromPostID(postID int) (boardURI string, err error) {
 //GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Posts do not directly reference their post post anymore.
-func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
+func GetThreadIDZeroIfTopPost(postID int) (ID int, err *gcutil.GcError) {
 	const sql = `SELECT t1.id FROM DBPREFIXposts as t1
 	JOIN (SELECT thread_id FROM DBPREFIXposts where id = ?) as t2 ON t1.thread_id = t2.thread_id
 	WHERE t1.is_top_post`
@@ -712,14 +721,14 @@ func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
 	return ID, nil
 }
 
-func getThreadID(postID int) (ID int, err error) {
+func getThreadID(postID int) (ID int, err *gcutil.GcError) {
 	const sql = `SELECT thread_id FROM DBPREFIXposts WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&ID))
 	return ID, err
 }
 
 //AddBanAppeal adds a given appeal to a given ban
-func AddBanAppeal(banID uint, message string) error {
+func AddBanAppeal(banID uint, message string) *gcutil.GcError {
 	const sql1 = `
 	/*copy old to audit*/
 	INSERT INTO DBPREFIXip_ban_appeals_audit (appeal_id, staff_id, appeal_text, staff_response, is_denied)
@@ -739,7 +748,7 @@ func AddBanAppeal(banID uint, message string) error {
 }
 
 //GetPostPassword gets the password associated with a given post
-func GetPostPassword(postID int) (password string, err error) {
+func GetPostPassword(postID int) (password string, err *gcutil.GcError) {
 	const sql = `SELECT password_checksum FROM DBPREFIXposts WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&password))
 	return password, err
@@ -748,7 +757,7 @@ func GetPostPassword(postID int) (password string, err error) {
 //UpdatePost updates a post with new information
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func UpdatePost(postID int, email string, subject string, message template.HTML, messageRaw string) error {
+func UpdatePost(postID int, email string, subject string, message template.HTML, messageRaw string) *gcutil.GcError {
 	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
 	_, err := ExecSQL(sql, email, subject, string(message), messageRaw)
 	return err
@@ -757,7 +766,7 @@ func UpdatePost(postID int, email string, subject string, message template.HTML,
 //DeleteFilesFromPost deletes all files belonging to a given post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Should be implemented to delete files individually
-func DeleteFilesFromPost(postID int) error {
+func DeleteFilesFromPost(postID int) *gcutil.GcError {
 	board, err := GetBoardFromPostID(postID)
 	if err != nil {
 		return err
@@ -772,7 +781,7 @@ func DeleteFilesFromPost(postID int) error {
 	var filenames []string
 	for rows.Next() {
 		var filename string
-		err = rows.Scan(&filename)
+		err = gcutil.FromError(rows.Scan(&filename), false)
 		if err != nil {
 			return err
 		}
@@ -799,7 +808,7 @@ func DeleteFilesFromPost(postID int) error {
 }
 
 //DeletePost deletes a post with a given ID
-func DeletePost(postID int, checkIfTopPost bool) error {
+func DeletePost(postID int, checkIfTopPost bool) *gcutil.GcError {
 	if checkIfTopPost {
 		isTopPost, err := isTopPost(postID)
 		if err != nil {
@@ -820,13 +829,13 @@ func DeletePost(postID int, checkIfTopPost bool) error {
 	return err
 }
 
-func isTopPost(postID int) (val bool, err error) {
+func isTopPost(postID int) (val bool, err *gcutil.GcError) {
 	const sql = `SELECT is_top_post FROM DBPREFIXposts WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&val))
 	return val, err
 }
 
-func deleteThread(threadID int) error {
+func deleteThread(threadID int) *gcutil.GcError {
 	const sql1 = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
 	const sql2 = `SELECT id FROM DBPREFIXposts WHERE thread_id = ?`
 
@@ -841,7 +850,7 @@ func deleteThread(threadID int) error {
 	var ids []int
 	for rows.Next() {
 		var id int
-		err = rows.Scan(&id)
+		err = gcutil.FromError(rows.Scan(&id), false)
 		if err != nil {
 			return err
 		}
@@ -858,15 +867,15 @@ func deleteThread(threadID int) error {
 }
 
 //CreateDefaultBoardIfNoneExist creates a default board if no boards exist yet
-func CreateDefaultBoardIfNoneExist() error {
-	const sql = `SELECT COUNT(id) FROM DBPREFIXboards`
+func CreateDefaultBoardIfNoneExist() *gcutil.GcError {
+	const sqlStr = `SELECT COUNT(id) FROM DBPREFIXboards`
 	var count int
-	QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
+	QueryRowSQL(sqlStr, interfaceSlice(), interfaceSlice(&count))
 	if count > 0 {
 		return nil
 	}
 	defaultSectionID, err := GetOrCreateDefaultSectionID()
-	if err != nil {
+	if err != nil && !gcutil.CompareErrors(err, sql.ErrNoRows) {
 		return err
 	}
 	var board = Board{
@@ -880,7 +889,7 @@ func CreateDefaultBoardIfNoneExist() error {
 }
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
-func CreateDefaultAdminIfNoStaff() error {
+func CreateDefaultAdminIfNoStaff() *gcutil.GcError {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
 	QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
@@ -891,7 +900,7 @@ func CreateDefaultAdminIfNoStaff() error {
 	return err
 }
 
-func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err error) {
+func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err *gcutil.GcError) {
 	const sqlInsert = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)`
 	const sqlSelect = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
 	//Excecuted in two steps this way because last row id functions arent thread safe, username is unique
@@ -906,7 +915,7 @@ func createUser(username string, passwordEncrypted string, globalRank int) (user
 //UpdateID takes a board struct and sets the database id according to the dir that is already set
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. (Just bad design in general, try to avoid directly mutating state like this)
-func (board *Board) UpdateID() error {
+func (board *Board) UpdateID() *gcutil.GcError {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
 	return QueryRowSQL(sql, interfaceSlice(board.Dir), interfaceSlice(&board.ID))
 }
@@ -914,13 +923,13 @@ func (board *Board) UpdateID() error {
 // PopulateData gets the board data from the database, according to its id, and sets the respective properties.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func (board *Board) PopulateData(id int) error {
+func (board *Board) PopulateData(id int) *gcutil.GcError {
 	const sql = "SELECT id, section_id, dir, navbar_position, title, subtitle, description, max_file_size, default_style, locked, created_at, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog FROM DBPREFIXboards WHERE id = ?"
 	return QueryRowSQL(sql, interfaceSlice(id), interfaceSlice(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog))
 }
 
 //DoesBoardExistByID returns a bool indicating whether a board with a given id exists
-func DoesBoardExistByID(ID int) (bool, error) {
+func DoesBoardExistByID(ID int) (bool, *gcutil.GcError) {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
 	var count int
 	err := QueryRowSQL(sql, interfaceSlice(ID), interfaceSlice(&count))
@@ -930,7 +939,7 @@ func DoesBoardExistByID(ID int) (bool, error) {
 //GetAllBoards gets a list of all existing boards
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllBoards() ([]Board, error) {
+func GetAllBoards() ([]Board, *gcutil.GcError) {
 	const sql = `SELECT id, section_id, dir, navbar_position, title, subtitle, description, max_file_size, default_style, locked, created_at, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog FROM DBPREFIXboards
 	ORDER BY navbar_position ASC, dir ASC`
 	rows, err := QuerySQL(sql)
@@ -940,7 +949,7 @@ func GetAllBoards() ([]Board, error) {
 	var boards []Board
 	for rows.Next() {
 		var board Board
-		err = rows.Scan(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog)
+		err = gcutil.FromError(rows.Scan(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog), false)
 		if err != nil {
 			return nil, err
 		}
@@ -952,13 +961,13 @@ func GetAllBoards() ([]Board, error) {
 //GetBoardFromID returns the board corresponding to a given id
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetBoardFromID(boardID int) (Board, error) {
+func GetBoardFromID(boardID int) (Board, *gcutil.GcError) {
 	var board Board
 	err := board.PopulateData(boardID)
 	return board, err
 }
 
-func getBoardIDFromURI(URI string) (id int, err error) {
+func getBoardIDFromURI(URI string) (id int, err *gcutil.GcError) {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE uri = ?`
 	err = QueryRowSQL(sql, interfaceSlice(URI), interfaceSlice(&id))
 	return id, err
@@ -970,18 +979,18 @@ func getDatabaseVersion() (int, *gcutil.GcError) {
 	var count int
 	err := QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&count))
 	if err != nil {
-		return 0, gcutil.FromError(err, false)
+		return 0, err
 	}
 	if count > 1 {
-		return 0, gcutil.NewError("More than one version in database", false)
+		return 0, ErrMultipleDBVersions
 	}
 	const sql = `SELECT version FROM DBPREFIXdatabase_version`
 	var version int
 	err = QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&version))
-	return version, gcutil.FromError(err, false)
+	return version, err
 }
 
-func getNextFreeID(tableName string) (ID int, err error) {
+func getNextFreeID(tableName string) (ID int, err *gcutil.GcError) {
 	var sql = `SELECT COALESCE(MAX(id), 0) + 1 FROM ` + tableName
 	err = QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
 	return ID, err
