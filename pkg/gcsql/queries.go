@@ -349,7 +349,7 @@ func GetBoardUris() (URIS []string, err *gcutil.GcError) {
 
 //GetAllSections gets a list of all existing sections
 func GetAllSections() ([]BoardSection, *gcutil.GcError) {
-	const sql = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections`
+	const sql = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections ORDER BY position ASC, name ASC`
 	rows, err := QuerySQL(sql)
 	if err != nil {
 		return nil, err

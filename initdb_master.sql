@@ -13,8 +13,7 @@ CREATE TABLE DBPREFIXsections(
 	name TEXT NOT NULL,
 	abbreviation TEXT NOT NULL,
 	position SMALLINT NOT NULL,
-	hidden BOOL NOT NULL,
-	UNIQUE(position)
+	hidden BOOL NOT NULL
 );
 
 CREATE TABLE DBPREFIXboards(
