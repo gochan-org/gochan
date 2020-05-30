@@ -69,8 +69,11 @@ func initDB(initFile string) *gcutil.GcError {
 		return gcutil.NewError(fmt.Sprintf(
 			"SQL database initialization file (%s) missing. Please reinstall gochan", initFile), false)
 	}
+	return runSQLFile(filePath)
+}
 
-	sqlBytes, err := ioutil.ReadFile(filePath)
+func runSQLFile(path string) *gcutil.GcError {
+	sqlBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return gcutil.FromError(err, false)
 	}

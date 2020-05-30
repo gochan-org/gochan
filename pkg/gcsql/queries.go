@@ -1056,3 +1056,15 @@ func doesGochanPrefixTableExist() (bool, *gcutil.GcError) {
 	}
 	return count > 0, nil
 }
+
+func renameTable(tablename string, tableNameNew string) *gcutil.GcError {
+	var sql = "ALTER TABLE DBPREFIX" + tablename + " RENAME TO DBPREFIX" + tableNameNew
+	_, err := ExecSQL(sql)
+	return err
+}
+
+func dropTable(tablename string) *gcutil.GcError {
+	var sql = "DROP TABLE DBPREFIX" + tablename
+	_, err := ExecSQL(sql)
+	return err
+}

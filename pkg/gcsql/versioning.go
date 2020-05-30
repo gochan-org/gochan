@@ -39,7 +39,7 @@ func handleVersioning(dbType string) *gcutil.GcError {
 		return err
 	}
 	if isOldDesign {
-		return migratePreApril2020Database()
+		return migratePreApril2020Database(dbType)
 	}
 	//No old or current database versioning tables found.
 	if config.Config.DBprefix != "" {
@@ -96,8 +96,35 @@ func versionHandler(foundDatabaseVersion int) *gcutil.GcError {
 
 }
 
-func migratePreApril2020Database() *gcutil.GcError {
-	return notImplemented
+func migratePreApril2020Database(dbType string) *gcutil.GcError {
+	var tables = []string{"announcements", "appeals", "banlist", "boards", "embeds", "info", "links", "posts", "reports", "sections", "sessions", "staff", "wordfilters"}
+	for _, i := range tables {
+		err := renameTable(i, i+"_old")
+		if err != nil {
+			return err
+		}
+	}
+	var buildfile = "initdb_" + dbType + ".sql"
+	err := runSQLFile(gcutil.FindResource(buildfile,
+		"/usr/local/share/gochan/"+buildfile,
+		"/usr/share/gochan/"+buildfile))
+	if err != nil {
+		return err
+	}
+	const migrFile = "oldDBMigration.sql"
+	err = runSQLFile(gcutil.FindResource(migrFile,
+		"/usr/local/share/gochan/"+migrFile,
+		"/usr/share/gochan/"+migrFile))
+	if err != nil {
+		return err
+	}
+	for _, i := range tables {
+		err := dropTable(i + "_old")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 var migrations = map[int]func() *gcutil.GcError{}
