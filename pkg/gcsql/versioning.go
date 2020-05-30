@@ -75,30 +75,29 @@ func buildNewDatabase(dbType string) {
 
 func versionHandler(foundDatabaseVersion int) *gcutil.GcError {
 	if foundDatabaseVersion < targetDatabaseVersion {
-		return migrateFrom(foundDatabaseVersion)
+		for foundDatabaseVersion < targetDatabaseVersion {
+			gclog.Print(gclog.LStdLog, "Migrating database from version %v to version %v", foundDatabaseVersion, foundDatabaseVersion+1)
+			err := migrations[foundDatabaseVersion]()
+			if err != nil {
+				gclog.Print(fatalSQLFlags, "Failed migration: ", err.Error())
+				return err
+			}
+			gclog.Print(gclog.LStdLog, "Finished migrating database to version %v", foundDatabaseVersion+1)
+			foundDatabaseVersion++
+		}
+		return nil
 	}
 	if foundDatabaseVersion == targetDatabaseVersion {
 		gclog.Print(gclog.LStdLog, "Database already populated")
 		return nil
 	}
-	gclog.Println(gclog.LFatal, "Found database version higher than target version.\nFound version: %i\n Target version: %i", foundDatabaseVersion, targetDatabaseVersion)
+	gclog.Println(gclog.LFatal, "Found database version higher than target version.\nFound version: %v\n Target version: %v", foundDatabaseVersion, targetDatabaseVersion)
 	return nil
 
 }
 
 func migratePreApril2020Database() *gcutil.GcError {
 	return notImplemented
-}
-
-func migrateFrom(version int) *gcutil.GcError {
-	err := migrations[version]()
-	if err != nil {
-		return err
-	}
-	if version+1 < targetDatabaseVersion {
-		return migrateFrom(version + 1)
-	}
-	return nil
 }
 
 var migrations = map[int]func() *gcutil.GcError{}
