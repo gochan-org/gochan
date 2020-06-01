@@ -1,50 +1,52 @@
 from os import path
-
+#
+# Use a macro like this {exact macro name}
+#
 class macro():
-	def __init__(self, macroname, postgres, sqlite, mysql):
+	def __init__(self, macroname, postgres, mysql):
 		self.macroname = macroname
 		self.postgres = postgres
-		self.sqlite = sqlite
 		self.mysql = mysql
 	
 # macros
 macros = [
-	macro("serial pk", "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT", "BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
-	macro("fk to serial", "BIGINT", "INTEGER", "BIGINT")
-]
-masterfileIn = open(path.join("..", "initdb_master.sql"), 'r')
-masterfile = masterfileIn.read()
-masterfileIn.close()
+	macro("serial pk", "BIGSERIAL PRIMARY KEY", "BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
+	macro("fk to serial", "BIGINT", "BIGINT"),
+	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY")
+]	
 
-postgresProcessed = masterfile
-sqliteProcessed = masterfile
-mysqlProcessed = masterfile
+def dofile(filestart):
+	print("building " + filestart + " sql file")
+	masterfileIn = open(filestart + "master.sql", 'r')
+	masterfile = masterfileIn.read()
+	masterfileIn.close()
 
-for item in macros:
-	macroCode = "{" + item.macroname + "}"
-	postgresProcessed = postgresProcessed.replace(macroCode, item.postgres)
-	mysqlProcessed = mysqlProcessed.replace(macroCode, item.mysql)
-	sqliteProcessed = sqliteProcessed.replace(macroCode, item.sqlite)
-	
-def hasError(text):
-	if '{' in text or '}' in text:
-		return True
+	postgresProcessed = masterfile
+	mysqlProcessed = masterfile
+
+	for item in macros:
+		macroCode = "{" + item.macroname + "}"
+		postgresProcessed = postgresProcessed.replace(macroCode, item.postgres)
+		mysqlProcessed = mysqlProcessed.replace(macroCode, item.mysql)
 		
-error = hasError(postgresProcessed)
-error = error or hasError(mysqlProcessed)
-error = error or hasError(sqliteProcessed)
+	def hasError(text):
+		if '{' in text or '}' in text:
+			return True
+			
+	error = hasError(postgresProcessed)
+	error = error or hasError(mysqlProcessed)
 
-i = open(path.join("..", "initdb_postgres.sql"), 'w')
-i.write(postgresProcessed)
-i.close()
+	i = open(filestart + "postgres.sql", 'w')
+	i.write(postgresProcessed)
+	i.close()
 
-i = open(path.join("..", "initdb_mysql.sql"), 'w')
-i.write(mysqlProcessed)
-i.close()
-
-i = open(path.join("..", "initdb_sqlite3.sql"), 'w')
-i.write(sqliteProcessed)
-i.close()
+	i = open(filestart + "mysql.sql", 'w')
+	i.write(mysqlProcessed)
+	i.close()
+		
+	if error:
+		input("Error processing macros, files still contain curly braces (might be in comments?), press any key to continue")
 	
-if error:
-	input("Error processing macros, files still contain curly braces (might be in comments?), press any key to continue")
+dofile(path.join("..", "initdb_"))
+dofile(path.join("..", "sql", "preapril2020migration", "initdb_"))
+dofile(path.join("..", "sql", "preapril2020migration", "oldDBMigration_"))
