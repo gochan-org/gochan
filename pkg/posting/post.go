@@ -75,7 +75,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	post.Subject = request.FormValue("postsubject")
 	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
-	var err error
+	var err *gcutil.GcError
 	if maxMessageLength, err = gcsql.GetMaxMessageLength(post.BoardID); err != nil {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 			"Error getting board info: ", err.Error()))
@@ -127,18 +127,18 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	default:
 	}
 
-	file, handler, err := request.FormFile("imagefile")
+	file, handler, gErr := request.FormFile("imagefile")
 
-	if err != nil || handler.Size == 0 {
+	if gErr != nil || handler.Size == 0 {
 		// no file was uploaded
 		post.Filename = ""
 		gclog.Printf(gclog.LAccessLog,
 			"Receiving post from %s, referred from: %s", post.IP, request.Referer())
 	} else {
-		data, err := ioutil.ReadAll(file)
-		if err != nil {
+		data, gErr := ioutil.ReadAll(file)
+		if gErr != nil {
 			serverutil.ServeErrorPage(writer,
-				gclog.Print(gclog.LErrorLog, "Error while trying to read file: ", err.Error()))
+				gclog.Print(gclog.LErrorLog, "Error while trying to read file: ", gErr.Error()))
 			return
 		}
 		defer file.Close()
@@ -171,8 +171,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		thumbPath := path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
 		catalogThumbPath := path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
-		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
-			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
+		if gErr = ioutil.WriteFile(filePath, data, 0777); err != nil {
+			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, gErr.Error())
 			serverutil.ServeErrorPage(writer, `Couldn't write file "`+post.FilenameOriginal+`"`)
 			return
 		}
@@ -335,7 +335,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	banStatus, err := getBannedStatus(request)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !gcutil.CompareErrors(err, sql.ErrNoRows) {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 			"Error getting banned status: ", err.Error()))
 		return

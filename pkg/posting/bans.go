@@ -62,7 +62,7 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 
 // Checks check poster's name/tripcode/file checksum (from Post post) for banned status
 // returns ban table if the user is banned or sql.ErrNoRows if they aren't
-func getBannedStatus(request *http.Request) (*gcsql.BanInfo, error) {
+func getBannedStatus(request *http.Request) (*gcsql.BanInfo, *gcutil.GcError) {
 	formName := request.FormValue("postname")
 	var tripcode string
 	if formName != "" {
@@ -76,10 +76,10 @@ func getBannedStatus(request *http.Request) (*gcsql.BanInfo, error) {
 
 	var filename string
 	var checksum string
-	file, fileHandler, err := request.FormFile("imagefile")
-	if err == nil {
+	file, fileHandler, gErr := request.FormFile("imagefile")
+	if gErr == nil {
 		html.EscapeString(fileHandler.Filename)
-		if data, err2 := ioutil.ReadAll(file); err2 == nil {
+		if data, gErr2 := ioutil.ReadAll(file); gErr2 == nil {
 			checksum = fmt.Sprintf("%x", md5.Sum(data))
 		}
 		file.Close()
