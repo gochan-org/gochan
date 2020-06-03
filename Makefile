@@ -80,16 +80,15 @@ install-symlinks:
 	DO_SYMLINKS=-s make install
 
 js:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build
+
 js-minify:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build-minify
+
 js-watch:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build-watch
+
 js-minify-watch:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build-minify-watch
 
 release-all: 

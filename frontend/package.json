@@ -1,0 +1,36 @@
+{
+  "name": "gochan.js",
+  "version": "2.11.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "gulp",
+    "build-minify": "gulp -m",
+    "build-watch": "gulp -w",
+    "build-minify-watch": "gulp -m -w"
+  },
+  "keywords": [],
+  "author": "Eggbertx",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "gulp-sourcemaps": "^2.6.5"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.1",
+    "@babel/core": "^7.10.2",
+    "@babel/preset-env": "^7.10.2",
+    "@babel/register": "^7.10.1",
+    "@types/jquery": "^3.3.38",
+    "@types/jqueryui": "^1.12.13",
+    "babelify": "^10.0.0",
+    "browserify": "^16.5.0",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0",
+    "gulp-uglify": "^3.0.2",
+    "stdio": "^0.2.7",
+    "vinyl-buffer": "^1.0.1",
+    "vinyl-source-stream": "^2.0.0",
+    "watchify": "^3.11.1"
+  }
+}
