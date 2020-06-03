@@ -126,11 +126,11 @@ func BuildBoardPages(board *gcsql.Board) *gcutil.GcError {
 		board.CurrentPage = 1
 
 		// Open 1.html for writing to the first page.
-		boardPageFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-		if err != nil {
+		boardPageFile, gErr := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+		if gErr != nil {
 			return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
 				"Failed opening /%s/board.html: %s",
-				board.Dir, err.Error()), false)
+				board.Dir, gErr.Error()), false)
 		}
 
 		// Render board page template to the file,
@@ -142,9 +142,9 @@ func BuildBoardPages(board *gcsql.Board) *gcutil.GcError {
 			"threads":  threads,
 			"board":    board,
 		}, boardPageFile, "text/html"); err != nil {
-			return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-				"Failed building /%s/: %s",
-				board.Dir, err.Error()), false)
+			err.Message = gclog.Printf(gclog.LErrorLog,
+				"Failed building /%s/: %s", board.Dir, err.Message)
+			return err
 		}
 		return nil
 	}
@@ -188,8 +188,9 @@ func BuildBoardPages(board *gcsql.Board) *gcutil.GcError {
 				gcsql.Post{BoardID: board.ID},
 			},
 		}, currentPageFile, "text/html"); err != nil {
-			return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-				"Failed building /%s/ boardpage: %s", board.Dir, err.Error()), false)
+			err.Message = gclog.Printf(gclog.LErrorLog,
+				"Failed building /%s/ boardpage: %s", board.Dir, err.Message)
+			return err
 		}
 
 		// Collect up threads for this page.
@@ -213,8 +214,8 @@ func BuildBoardPages(board *gcsql.Board) *gcutil.GcError {
 }
 
 // BuildBoards builds the specified board IDs, or all boards if no arguments are passed
-// The return value is a string of HTML with debug information produced by the build process.
-func BuildBoards(which ...int) *gcutil.GcError {
+// it returns any errors that were encountered
+func BuildBoards(verbose bool, which ...int) *gcutil.GcError {
 	var boards []gcsql.Board
 	var err *gcutil.GcError
 
@@ -238,6 +239,9 @@ func BuildBoards(which ...int) *gcutil.GcError {
 			err.Message = gclog.Printf(gclog.LErrorLog,
 				"Error building /%s/: %s", board.Dir, err.Error())
 			return err
+		}
+		if verbose {
+			gclog.Printf(gclog.LStdLog, "Built /%s/ successfully", board.Dir)
 		}
 	}
 	return nil

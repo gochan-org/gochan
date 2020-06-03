@@ -258,7 +258,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		building.BuildBoards(boardid)
+		building.BuildBoards(false, boardid)
 		if request.FormValue("parentid") == "0" {
 			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
 		} else {
@@ -330,7 +330,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					_board, _ := gcsql.GetBoardFromID(post.BoardID)
 					building.BuildBoardPages(&_board)
 				}
-				building.BuildBoards(post.BoardID)
+				building.BuildBoards(false, post.BoardID)
 
 				writer.Header().Add("refresh", "4;url="+request.Referer())
 				fmt.Fprintf(writer, "%d deleted successfully\n", post.ID)

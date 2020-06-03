@@ -95,20 +95,21 @@ func BuildBoardListJSON() *gcutil.GcError {
 func BuildJS() *gcutil.GcError {
 	// minify gochan.js (if enabled)
 	gochanMinJSPath := path.Join(config.Config.DocumentRoot, "javascript", "gochan.min.js")
-	gochanMinJSFile, err := os.OpenFile(gochanMinJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
+	gochanMinJSFile, gErr := os.OpenFile(gochanMinJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if gErr != nil {
 		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Error opening %q for writing: %s", gochanMinJSPath, err.Error()), false)
+			"Error opening %q for writing: %s", gochanMinJSPath, gErr.Error()), false)
 	}
 	defer gochanMinJSFile.Close()
 
 	gochanJSPath := path.Join(config.Config.DocumentRoot, "javascript", "gochan.js")
-	gochanJSBytes, err := ioutil.ReadFile(gochanJSPath)
-	if err != nil {
+	gochanJSBytes, gErr := ioutil.ReadFile(gochanJSPath)
+	if gErr != nil {
 		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Error opening %q for writing: %s", gochanJSPath, err.Error()), false)
+			"Error opening %q for writing: %s", gochanJSPath, gErr.Error()), false)
 	}
-	if _, err := gcutil.MinifyWriter(gochanMinJSFile, gochanJSBytes, "text/javascript"); err != nil {
+	_, err := gcutil.MinifyWriter(gochanMinJSFile, gochanJSBytes, "text/javascript")
+	if err != nil {
 		config.Config.UseMinifiedGochanJS = false
 		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
 			"Error minifying %q: %s:", gochanMinJSPath, err.Error()), false)
@@ -117,14 +118,15 @@ func BuildJS() *gcutil.GcError {
 
 	// build consts.js from template
 	if err = gctemplates.InitTemplates("js"); err != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Error loading consts.js template: ", err.Error()), false)
+		err.Message = gclog.Println(gclog.LErrorLog,
+			"Error loading consts.js template:", err.Error())
+		return err
 	}
 	constsJSPath := path.Join(config.Config.DocumentRoot, "javascript", "consts.js")
-	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
+	constsJSFile, gErr := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if gErr != nil {
 		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Error opening %q for writing: %s", constsJSPath, err.Error()), false)
+			"Error opening %q for writing: %s", constsJSPath, gErr.Error()), false)
 	}
 	defer constsJSFile.Close()
 

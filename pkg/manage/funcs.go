@@ -557,7 +557,7 @@ var manageFunctions = map[string]ManageFunction{
 						break
 					} else {
 						boardCreationStatus = "Board created successfully"
-						building.BuildBoards()
+						building.BuildBoards(false)
 						gcsql.ResetBoardSectionArrays()
 						gclog.Print(gclog.LStaffLog, "Boards rebuilt successfully")
 						done = true
@@ -668,7 +668,7 @@ var manageFunctions = map[string]ManageFunction{
 				return "", err
 			}
 
-			if err = building.BuildBoards(); err != nil {
+			if err = building.BuildBoards(false); err != nil {
 				return "", err
 			}
 
@@ -685,7 +685,7 @@ var manageFunctions = map[string]ManageFunction{
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
 			}
-			return "Boards built successfully", building.BuildBoards()
+			return "Boards built successfully", building.BuildBoards(false)
 		}},
 	"reparsehtml": {
 		Title:       "Reparse HTML",
@@ -714,7 +714,7 @@ var manageFunctions = map[string]ManageFunction{
 			}
 			htmlOut += "Done building board list JSON<hr />"
 
-			if err = building.BuildBoards(); err != nil {
+			if err = building.BuildBoards(false); err != nil {
 				return "", err
 			}
 			htmlOut += "Done building boards<hr />"
