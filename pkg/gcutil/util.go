@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,8 +23,10 @@ import (
 )
 
 var (
-	ErrEmptyDurationString   = NewError("Empty Duration string", true)
-	ErrInvalidDurationString = NewError("Invalid Duration string", true)
+	// ErrNotImplemented should be used for unimplemented functionality when necessary
+	ErrNotImplemented        = errors.New("Not implemented")
+	ErrEmptyDurationString   = errors.New("Empty Duration string")
+	ErrInvalidDurationString = errors.New("Invalid Duration string")
 	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
 )
 
@@ -176,7 +179,7 @@ func MarshalJSON(data interface{}, indent bool) (string, error) {
 
 // ParseDurationString parses the given string into a duration and returns any errors
 // based on TinyBoard's parse_time function
-func ParseDurationString(str string) (time.Duration, *GcError) {
+func ParseDurationString(str string) (time.Duration, error) {
 	if str == "" {
 		return 0, ErrEmptyDurationString
 	}
@@ -215,8 +218,8 @@ func ParseDurationString(str string) (time.Duration, *GcError) {
 		seconds, _ := strconv.Atoi(matches[0][14])
 		expire += seconds
 	}
-	dur, gErr := time.ParseDuration(strconv.Itoa(expire) + "s")
-	return dur, FromError(gErr, false)
+	dur, err := time.ParseDuration(strconv.Itoa(expire) + "s")
+	return dur, err
 }
 
 // ParseName takes a name string from a request object and returns the name and tripcode parts

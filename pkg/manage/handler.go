@@ -7,18 +7,16 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
 // CallManageFunction is called when a user accesses /manage to use manage tools
 // or log in to a staff account
 func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
-	var err *gcutil.GcError
-	var gErr error
-	if gErr = request.ParseForm(); gErr != nil {
+	var err error
+	if err = request.ParseForm(); err != nil {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error parsing form data: ", gErr.Error()))
+			"Error parsing form data: ", err.Error()))
 	}
 
 	action := request.FormValue("action")
@@ -29,9 +27,9 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 	} else {
 		managePageBuffer.WriteString("<!DOCTYPE html><html><head>")
-		if gErr = gctemplates.ManageHeader.Execute(&managePageBuffer, config.Config); gErr != nil {
+		if err = gctemplates.ManageHeader.Execute(&managePageBuffer, config.Config); err != nil {
 			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog|gclog.LStaffLog,
-				"Error executing manage page header template: ", gErr.Error()))
+				"Error executing manage page header template: ", err.Error()))
 			return
 		}
 	}

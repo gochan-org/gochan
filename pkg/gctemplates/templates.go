@@ -6,8 +6,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/gochan-org/gochan/pkg/gcutil"
-
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
@@ -28,7 +26,7 @@ var (
 	ThreadPage   *template.Template
 )
 
-func loadTemplate(files ...string) (*template.Template, *gcutil.GcError) {
+func loadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
 	for i, file := range files {
 		templates = append(templates, file)
@@ -41,21 +39,20 @@ func loadTemplate(files ...string) (*template.Template, *gcutil.GcError) {
 		}
 	}
 
-	tmpl, err := template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
-	return tmpl, gcutil.FromError(err, false)
+	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
 }
 
-func templateError(name string, err error) *gcutil.GcError {
+func templateError(name string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return gcutil.NewError(fmt.Sprintf("Failed loading template '%s/%s': %s",
-		config.Config.TemplateDir, name, err.Error()), false)
+	return fmt.Errorf("Failed loading template '%s/%s': %s",
+		config.Config.TemplateDir, name, err.Error())
 }
 
 // InitTemplates loads the given templates by name. If no parameters are given,
 // or the first one is "all", all templates are (re)loaded
-func InitTemplates(which ...string) *gcutil.GcError {
+func InitTemplates(which ...string) error {
 	gcsql.ResetBoardSectionArrays()
 	if len(which) == 0 || which[0] == "all" {
 		return templateLoading("", true)
@@ -69,8 +66,8 @@ func InitTemplates(which ...string) *gcutil.GcError {
 	return nil
 }
 
-func templateLoading(t string, buildAll bool) *gcutil.GcError {
-	var err *gcutil.GcError
+func templateLoading(t string, buildAll bool) error {
+	var err error
 	if buildAll || t == "banpage" {
 		Banpage, err = loadTemplate("banpage.html", "page_footer.html")
 		if err != nil {

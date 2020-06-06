@@ -20,7 +20,7 @@ const (
 )
 
 func startupRebuild(buildFlag int) {
-	var err *gcutil.GcError
+	var err error
 	gcutil.InitMinifier()
 	if err = gctemplates.InitTemplates(); err != nil {
 		gclog.Print(buildLogFlags, "Error initializing templates: ", err.Error())

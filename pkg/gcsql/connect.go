@@ -48,34 +48,33 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 			`Invalid DBtype %q in gochan.json, valid values are "mysql", "postgres", and "sqlite3"`, dbType)
 	}
 	dbDriver = dbType
-	var gErr error
-	if db, gErr = sql.Open(dbType, connStr); gErr != nil {
-		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", gErr.Error())
+	var err error
+	if db, err = sql.Open(dbType, connStr); err != nil {
+		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", err.Error())
 	}
 
-	err := handleVersioning(dbType)
-	if err != nil {
+	if err = handleVersioning(dbType); err != nil {
 		gclog.Print(fatalSQLFlags, "Failed to initialise database: ", err.Error())
 	}
 
 	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Finished initializing server...")
 }
 
-func initDB(initFile string) *gcutil.GcError {
+func initDB(initFile string) error {
 	filePath := gcutil.FindResource(initFile,
 		"/usr/local/share/gochan/"+initFile,
 		"/usr/share/gochan/"+initFile)
 	if filePath == "" {
-		return gcutil.NewError(fmt.Sprintf(
-			"SQL database initialization file (%s) missing. Please reinstall gochan", initFile), false)
+		return fmt.Errorf(
+			"SQL database initialization file (%s) missing. Please reinstall gochan", initFile)
 	}
 	return runSQLFile(filePath)
 }
 
-func runSQLFile(path string) *gcutil.GcError {
+func runSQLFile(path string) error {
 	sqlBytes, err := ioutil.ReadFile(path)
 	if err != nil {
-		return gcutil.FromError(err, false)
+		return err
 	}
 
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
@@ -86,13 +85,12 @@ func runSQLFile(path string) *gcutil.GcError {
 		if len(statement) > 0 {
 			if _, err = db.Exec(statement); err != nil {
 				if config.Config.DebugMode {
-					println("Error excecuting sql:")
-					println(err.Error())
-					println("Length sql: " + string(len(statement)))
-					println(statement)
+					gclog.Printf(gclog.LStdLog, "Error excecuting sql: %s\n", err.Error())
+					gclog.Printf(gclog.LStdLog, "Length sql: %d\n", len(statement))
+					gclog.Printf(gclog.LStdLog, "Statement: %s\n", statement)
 					fmt.Printf("%08b", []byte(statement))
 				}
-				return gcutil.FromError(err, false)
+				return err
 			}
 		}
 	}

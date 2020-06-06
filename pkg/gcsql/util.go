@@ -18,7 +18,7 @@ Before reporting an error, make sure that you are using the up to date version o
 Error text: %s`
 )
 
-func sqlVersionErr(err error, query *string) *gcutil.GcError {
+func sqlVersionErr(err error, query *string) error {
 	if err == nil {
 		return nil
 	}
@@ -26,25 +26,25 @@ func sqlVersionErr(err error, query *string) *gcutil.GcError {
 	switch dbDriver {
 	case "mysql":
 		if !strings.Contains(errText, "You have an error in your SQL syntax") {
-			return gcutil.FromError(err, false)
+			return err
 		}
 	case "postgres":
 		if !strings.Contains(errText, "syntax error at or near") {
-			return gcutil.FromError(err, false)
+			return err
 		}
 	case "sqlite3":
 		if !strings.Contains(errText, "Error: near ") {
-			return gcutil.FromError(err, false)
+			return err
 		}
 	}
 	if config.Config.DebugMode {
-		return gcutil.NewError(fmt.Sprintf(unsupportedSQLVersionMsg+"\nQuery: "+*query, errText), false)
+		return fmt.Errorf(unsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
 	}
-	return gcutil.NewError(fmt.Sprintf(unsupportedSQLVersionMsg, errText), false)
+	return fmt.Errorf(unsupportedSQLVersionMsg, errText)
 }
 
 // PrepareSQL is used for generating a prepared SQL statement formatted according to config.DBtype
-func PrepareSQL(query string) (*sql.Stmt, *gcutil.GcError) {
+func PrepareSQL(query string) (*sql.Stmt, error) {
 	var preparedStr string
 	switch dbDriver {
 	case "mysql":
@@ -84,14 +84,13 @@ Example:
 	result, err := gcsql.ExecSQL(
 		"INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
 */
-func ExecSQL(query string, values ...interface{}) (sql.Result, *gcutil.GcError) {
+func ExecSQL(query string, values ...interface{}) (sql.Result, error) {
 	stmt, gcerr := PrepareSQL(query)
 	if gcerr != nil {
 		return nil, gcerr
 	}
 	defer stmt.Close()
-	res, err := stmt.Exec(values...)
-	return res, gcutil.FromError(err, false)
+	return stmt.Exec(values...)
 }
 
 /*
@@ -105,13 +104,13 @@ Example:
 		[]interface{}{&id},
 		[]interface{}{&intVal, &stringVal})
 */
-func QueryRowSQL(query string, values []interface{}, out []interface{}) *gcutil.GcError {
+func QueryRowSQL(query string, values []interface{}, out []interface{}) error {
 	stmt, err := PrepareSQL(query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	return gcutil.FromError(stmt.QueryRow(values...).Scan(out...), false)
+	return stmt.QueryRow(values...).Scan(out...)
 }
 
 /*
@@ -128,14 +127,13 @@ Example:
 		}
 	}
 */
-func QuerySQL(query string, a ...interface{}) (*sql.Rows, *gcutil.GcError) {
+func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	stmt, gcerr := PrepareSQL(query)
 	if gcerr != nil {
 		return nil, gcerr
 	}
 	defer stmt.Close()
-	rows, err := stmt.Query(a...)
-	return rows, gcutil.FromError(err, false)
+	return stmt.Query(a...)
 }
 
 // ResetBoardSectionArrays is run when the board list needs to be changed
@@ -156,18 +154,18 @@ func interfaceSlice(args ...interface{}) []interface{} {
 	return args
 }
 
-func errFilterDuplicatePrimaryKey(err *gcutil.GcError) (isPKerror bool, nonPKerror *gcutil.GcError) {
+func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {
 	if err == nil {
 		return false, nil
 	}
 
 	switch dbDriver {
 	case "mysql":
-		if !strings.Contains(err.Message, "Duplicate entry") {
+		if !strings.Contains(err.Error(), "Duplicate entry") {
 			return false, err
 		}
 	case "postgres":
-		if !strings.Contains(err.Message, "duplicate key value violates unique constraint") {
+		if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return false, err
 		}
 	case "sqlite3":
