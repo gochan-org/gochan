@@ -41,6 +41,7 @@ clean:
 	rm -f ${BIN}.exe
 	rm -rf releases/
 	rm -rf ${GOPATH}/src/${GOCHAN_PKG}
+	rm -f pkg/gclog/logtest/*
 
 dependencies:
 	go get -v \

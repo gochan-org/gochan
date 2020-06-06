@@ -99,9 +99,9 @@ func (gcl *GcLogger) Println(flags int, v ...interface{}) string {
 	logs := gcl.selectLogs(flags)
 	for _, l := range logs {
 		if l == os.Stdout {
-			io.WriteString(l, str+"\n")
+			io.WriteString(l, str)
 		} else {
-			io.WriteString(l, gcl.getPrefix()+str+"\n")
+			io.WriteString(l, gcl.getPrefix()+str)
 		}
 	}
 	if flags&LFatal > 0 {
