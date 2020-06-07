@@ -7,7 +7,6 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,7 +20,7 @@ const (
 func createSession(key string, username string, password string, request *http.Request, writer http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
-	var err *gcutil.GcError
+	var err error
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !serverutil.ValidReferer(request) {
@@ -58,22 +57,22 @@ func createSession(key string, username string, password string, request *http.R
 	return sSuccess
 }
 
-func getCurrentStaff(request *http.Request) (string, *gcutil.GcError) { //TODO after refactor, check if still used
+func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return "", gcutil.FromError(err, true)
+		return "", err
 	}
 	name, err := gcsql.GetStaffName(sessionCookie.Value)
 	if err == nil {
-		return "", gcutil.FromError(err, true)
+		return "", err
 	}
 	return name, nil
 }
 
-func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, *gcutil.GcError) {
+func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return nil, gcutil.FromError(err, true)
+		return nil, err
 	}
 	return gcsql.GetStaffBySession(sessionCookie.Value)
 }

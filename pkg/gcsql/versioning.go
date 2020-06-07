@@ -19,9 +19,7 @@ import (
 
 const targetDatabaseVersion = 1
 
-var notImplemented = gcutil.NewError("Not implemented", false)
-
-func handleVersioning(dbType string) *gcutil.GcError {
+func handleVersioning(dbType string) error {
 	versionTableExists, err := doesTableExist("database_version")
 	if err != nil {
 		return err
@@ -59,13 +57,13 @@ func handleVersioning(dbType string) *gcutil.GcError {
 }
 
 func buildNewDatabase(dbType string) {
-	var err *gcutil.GcError
+	var err error
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
 		gclog.Print(fatalSQLFlags, "Failed initializing DB: ", err.Error())
 	}
 	err = CreateDefaultBoardIfNoneExist()
 	if err != nil {
-		gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Message)
+		gclog.Print(fatalSQLFlags, "Failed creating default board: ", err.Error())
 	}
 	err = CreateDefaultAdminIfNoStaff()
 	if err != nil {
@@ -73,7 +71,7 @@ func buildNewDatabase(dbType string) {
 	}
 }
 
-func versionHandler(foundDatabaseVersion int) *gcutil.GcError {
+func versionHandler(foundDatabaseVersion int) error {
 	if foundDatabaseVersion < targetDatabaseVersion {
 		for foundDatabaseVersion < targetDatabaseVersion {
 			gclog.Print(gclog.LStdLog, "Migrating database from version %v to version %v", foundDatabaseVersion, foundDatabaseVersion+1)
@@ -96,7 +94,7 @@ func versionHandler(foundDatabaseVersion int) *gcutil.GcError {
 
 }
 
-func migratePreApril2020Database(dbType string) *gcutil.GcError {
+func migratePreApril2020Database(dbType string) error {
 	var tables = []string{"announcements", "appeals", "banlist", "boards", "embeds", "info", "links", "posts", "reports", "sections", "sessions", "staff", "wordfilters"}
 	for _, i := range tables {
 		err := renameTable(i, i+"_old")
@@ -127,4 +125,4 @@ func migratePreApril2020Database(dbType string) *gcutil.GcError {
 	return nil
 }
 
-var migrations = map[int]func() *gcutil.GcError{}
+var migrations = map[int]func() error{}

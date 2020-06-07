@@ -12,3 +12,4 @@
 **/*.bak
 *.log
 __debug_bin
+node_modules

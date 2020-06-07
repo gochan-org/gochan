@@ -381,7 +381,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// rebuild the board page
-	building.BuildBoards(post.BoardID)
+	building.BuildBoards(false, post.BoardID)
 	building.BuildFrontPage()
 
 	if emailCommand == "noko" {

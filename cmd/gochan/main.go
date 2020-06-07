@@ -56,12 +56,29 @@ func main() {
 func parseCommandLine() {
 	var newstaff string
 	var delstaff string
+	var rebuild string
 	var rank int
 	var err error
 	flag.StringVar(&newstaff, "newstaff", "", "<newusername>:<newpassword>")
 	flag.StringVar(&delstaff, "delstaff", "", "<username>")
+	flag.StringVar(&rebuild, "rebuild", "", "accepted values are boards,front,js, or all")
 	flag.IntVar(&rank, "rank", 0, "New staff member rank, to be used with -newstaff or -delstaff")
 	flag.Parse()
+
+	rebuildFlag := buildNone
+	switch rebuild {
+	case "boards":
+		rebuildFlag = buildBoards
+	case "front":
+		rebuildFlag = buildFront
+	case "js":
+		rebuildFlag = buildJS
+	case "all":
+		rebuildFlag = buildAll
+	}
+	if rebuildFlag > 0 {
+		startupRebuild(rebuildFlag)
+	}
 
 	if newstaff != "" {
 		arr := strings.Split(newstaff, ":")

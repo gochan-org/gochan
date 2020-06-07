@@ -86,7 +86,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 				// and redirect to the thread
 
 				gcsql.InsertPost(&gcsql.TempPosts[tempPostIndex], emailCommand == "noko")
-				building.BuildBoards(gcsql.TempPosts[tempPostIndex].BoardID)
+				building.BuildBoards(false, gcsql.TempPosts[tempPostIndex].BoardID)
 				building.BuildFrontPage()
 
 				url := gcsql.TempPosts[tempPostIndex].GetURL(false)

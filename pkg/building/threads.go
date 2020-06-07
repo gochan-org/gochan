@@ -2,6 +2,7 @@ package building
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path"
 	"strconv"
@@ -39,7 +40,7 @@ func BuildThreads(all bool, boardid, threadid int) error {
 }
 
 // BuildThreadPages builds the pages for a thread given by a Post object.
-func BuildThreadPages(op *gcsql.Post) *gcutil.GcError {
+func BuildThreadPages(op *gcsql.Post) error {
 	err := gctemplates.InitTemplates("threadpage")
 	if err != nil {
 		return err
@@ -54,8 +55,8 @@ func BuildThreadPages(op *gcsql.Post) *gcutil.GcError {
 
 	replies, err = gcsql.GetExistingReplies(op.ID)
 	if err != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Error building thread %d: %s", op.ID, err.Error()), false)
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			"Error building thread %d: %s", op.ID, err.Error()))
 	}
 	os.Remove(path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
 
@@ -65,10 +66,10 @@ func BuildThreadPages(op *gcsql.Post) *gcutil.GcError {
 	}
 
 	threadPageFilepath := path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
-	threadPageFile, gErr := os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	if gErr != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Failed opening /%s/res/%d.html: %s", board.Dir, op.ID, gErr.Error()), false)
+	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	if err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			"Failed opening /%s/res/%d.html: %s", board.Dir, op.ID, err.Error()))
 	}
 
 	// render thread page
@@ -80,15 +81,15 @@ func BuildThreadPages(op *gcsql.Post) *gcutil.GcError {
 		"posts":    replies,
 		"op":       op,
 	}, threadPageFile, "text/html"); err != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error()), false)
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			"Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error()))
 	}
 
 	// Put together the thread JSON
-	threadJSONFile, gErr := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	if gErr != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, gErr.Error()), false)
+	threadJSONFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	if err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			"Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error()))
 	}
 	defer threadJSONFile.Close()
 
@@ -99,15 +100,15 @@ func BuildThreadPages(op *gcsql.Post) *gcutil.GcError {
 
 	// Iterate through each reply, which are of type Post
 	threadMap["posts"] = append(threadMap["posts"], replies...)
-	threadJSON, gErr := json.Marshal(threadMap)
+	threadJSON, err := json.Marshal(threadMap)
 	if err != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Failed to marshal to JSON: %s", gErr.Error()), false)
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			"Failed to marshal to JSON: %s", err.Error()))
 	}
 
-	if _, gErr = threadJSONFile.Write(threadJSON); err != nil {
-		return gcutil.NewError(gclog.Printf(gclog.LErrorLog,
-			"Failed writing /%s/res/%d.json: %s", board.Dir, op.ID, gErr.Error()), false)
+	if _, err = threadJSONFile.Write(threadJSON); err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			"Failed writing /%s/res/%d.json: %s", board.Dir, op.ID, err.Error()))
 	}
 
 	return nil

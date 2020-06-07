@@ -39,25 +39,25 @@ func canMinify(mediaType string) bool {
 }
 
 // MinifyTemplate minifies the given template/data (if enabled) and returns any errors
-func MinifyTemplate(tmpl *template.Template, data interface{}, writer io.Writer, mediaType string) *GcError {
+func MinifyTemplate(tmpl *template.Template, data interface{}, writer io.Writer, mediaType string) error {
 	if !canMinify(mediaType) {
-		return FromError(tmpl.Execute(writer, data), false)
+		return tmpl.Execute(writer, data)
 	}
 
 	minWriter := minifier.Writer(mediaType, writer)
 	defer minWriter.Close()
-	return FromError(tmpl.Execute(minWriter, data), false)
+	return tmpl.Execute(minWriter, data)
 }
 
 // MinifyWriter minifies the given writer/data (if enabled) and returns the number of bytes written and any errors
-func MinifyWriter(writer io.Writer, data []byte, mediaType string) (int, *GcError) {
+func MinifyWriter(writer io.Writer, data []byte, mediaType string) (int, error) {
 	if !canMinify(mediaType) {
 		n, err := writer.Write(data)
-		return n, FromError(err, false)
+		return n, err
 	}
 
 	minWriter := minifier.Writer(mediaType, writer)
 	defer minWriter.Close()
 	n, err := minWriter.Write(data)
-	return n, FromError(err, false)
+	return n, err
 }
