@@ -3,7 +3,6 @@ package gcsql
 import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 //Check if it can find version
@@ -92,37 +91,6 @@ func versionHandler(foundDatabaseVersion int) error {
 	gclog.Println(gclog.LFatal, "Found database version higher than target version.\nFound version: %v\n Target version: %v", foundDatabaseVersion, targetDatabaseVersion)
 	return nil
 
-}
-
-func migratePreApril2020Database(dbType string) error {
-	var tables = []string{"announcements", "appeals", "banlist", "boards", "embeds", "info", "links", "posts", "reports", "sections", "sessions", "staff", "wordfilters"}
-	for _, i := range tables {
-		err := renameTable(i, i+"_old")
-		if err != nil {
-			return err
-		}
-	}
-	var buildfile = "initdb_" + dbType + ".sql"
-	err := runSQLFile(gcutil.FindResource(buildfile,
-		"/usr/local/share/gochan/"+buildfile,
-		"/usr/share/gochan/"+buildfile))
-	if err != nil {
-		return err
-	}
-	const migrFile = "oldDBMigration.sql"
-	err = runSQLFile(gcutil.FindResource(migrFile,
-		"/usr/local/share/gochan/"+migrFile,
-		"/usr/share/gochan/"+migrFile))
-	if err != nil {
-		return err
-	}
-	for _, i := range tables {
-		err := dropTable(i + "_old")
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 var migrations = map[int]func() error{}

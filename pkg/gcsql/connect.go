@@ -52,8 +52,19 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 	if db, err = sql.Open(dbType, connStr); err != nil {
 		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", err.Error())
 	}
-
-	if err = handleVersioning(dbType); err != nil {
+	//TEMP
+	var temp = "oldDBpostgres.sql"
+	runSQLFile(gcutil.FindResource(temp,
+		"/usr/local/share/gochan/"+temp,
+		"/usr/share/gochan/"+temp))
+	var temp2 = "olddbdummydata.sql"
+	runSQLFile(gcutil.FindResource(temp2,
+		"/usr/local/share/gochan/"+temp2,
+		"/usr/share/gochan/"+temp2))
+	err = migratePreApril2020Database(dbType)
+	//END TEMP
+	err = handleVersioning(dbType)
+	if err != nil {
 		gclog.Print(fatalSQLFlags, "Failed to initialise database: ", err.Error())
 	}
 
