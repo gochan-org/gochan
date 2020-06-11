@@ -88,3 +88,31 @@ INSERT INTO DBPREFIXposts(is_top_post, ip, created_on, name, tripcode, is_role_s
 SELECT parentid = 0, ip, timestamp, name, tripcode, false, email, subject, 
 	message, message_raw, password, deleted_timestamp, deleted_timestamp > '2000-01-01', parentid, boardid, id from DBPREFIXposts_old WHERE parentid <> 0;
 
+
+	--Sets correct thread id
+	UPDATE DBPREFIXposts as posts, DBPREFIXthreads as threads
+	SET posts.thread_id = threads.id
+	WHERE threads.oldpostid = posts.oldparentid AND threads.board_id = posts.oldboardid;
+
+INSERT INTO DBPREFIXfiles(file_order, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height, oldpostid, oldboardid)
+SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '';
+
+
+	-- Creates files in files table
+	UPDATE DBPREFIXfiles as files, DBPREFIXposts as posts
+	SET files.post_id = posts.id
+	WHERE files.oldpostid = posts.oldselfid AND files.oldboardid = posts.oldboardid;
+
+ALTER TABLE DBPREFIXthreads DROP COLUMN oldpostid;
+ALTER TABLE DBPREFIXposts DROP COLUMN oldselfid;
+ALTER TABLE DBPREFIXposts DROP COLUMN oldparentid;
+ALTER TABLE DBPREFIXposts DROP COLUMN oldboardid;
+ALTER TABLE DBPREFIXfiles DROP COLUMN oldpostid;
+ALTER TABLE DBPREFIXfiles DROP COLUMN oldboardid;
+ALTER TABLE DBPREFIXfiles ADD CONSTRAINT files_post_id_fk FOREIGN KEY (post_id) REFERENCES DBPREFIXposts(id);
+ALTER TABLE DBPREFIXposts ADD CONSTRAINT posts_thread_id_fk FOREIGN KEY (thread_id) REFERENCES DBPREFIXthreads(id);
+
+
+	-- Adds not null constraint
+	ALTER TABLE DBPREFIXposts MODIFY thread_id BIGINT NOT NULL;
+	ALTER TABLE DBPREFIXfiles MODIFY post_id BIGINT NOT NULL;
