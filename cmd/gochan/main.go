@@ -28,7 +28,7 @@ var (
 func main() {
 	defer func() {
 		gclog.Print(gclog.LStdLog, "Cleaning up")
-		gcsql.ExecSQL("DROP TABLE DBPREFIXsessions")
+		//gcsql.ExecSQL("DROP TABLE DBPREFIXsessions")
 		gcsql.Close()
 	}()
 
