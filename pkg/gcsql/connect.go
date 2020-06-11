@@ -31,7 +31,7 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 
 	switch dbType {
 	case "mysql":
-		connStr = fmt.Sprintf("%s:%s@%s/%s?parseTime=true&collation=utf8mb4_unicode_ci",
+		connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci",
 			username, password, host, dbName)
 		nilTimestamp = "0000-00-00 00:00:00"
 	case "postgres":
