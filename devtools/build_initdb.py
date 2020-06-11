@@ -15,14 +15,30 @@ macros = [
 	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY")
 ]	
 
+def compileOutIfs(text, flag):
+	lines = text.splitlines()
+	newText = ""
+	compile = True
+	for i in lines:
+		if "#IF" in i:
+			if flag in i:
+				compile = True
+			else:
+				compile = False
+		elif "#ENDIF" in i:
+				compile = True
+		elif compile:
+			newText += i + "\n"
+	return newText
+
 def dofile(filestart):
 	print("building " + filestart + " sql file")
 	masterfileIn = open(filestart + "master.sql", 'r')
 	masterfile = masterfileIn.read()
 	masterfileIn.close()
 
-	postgresProcessed = masterfile
-	mysqlProcessed = masterfile
+	postgresProcessed = compileOutIfs(masterfile, "POSTGRES")
+	mysqlProcessed = compileOutIfs(masterfile, "MYSQL")
 
 	for item in macros:
 		macroCode = "{" + item.macroname + "}"

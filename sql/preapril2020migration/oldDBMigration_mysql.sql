@@ -69,26 +69,22 @@ ALTER TABLE DBPREFIXthreads ADD oldpostid int;
 ALTER TABLE DBPREFIXposts ADD oldselfid int;
 ALTER TABLE DBPREFIXposts ADD oldparentid int;
 ALTER TABLE DBPREFIXposts ADD oldboardid int;
-ALTER TABLE DBPREFIXposts DROP FOREIGN KEY thread_id;
+ALTER TABLE DBPREFIXposts DROP FOREIGN KEY posts_thread_id_fk;
 ALTER TABLE DBPREFIXfiles ADD oldpostid int;
 ALTER TABLE DBPREFIXfiles ADD oldboardid int;
-ALTER TABLE DBPREFIXfiles DROP FOREIGN KEY post_id;
+ALTER TABLE DBPREFIXfiles DROP FOREIGN KEY files_post_id_fk;
+-- Drops not null constraint
+ALTER TABLE DBPREFIXposts MODIFY thread_id BIGINT;
+ALTER TABLE DBPREFIXfiles MODIFY post_id BIGINT;
 
 INSERT INTO DBPREFIXthreads(board_id, locked, stickied, anchored, last_bump, is_deleted, deleted_at, oldpostid)
 SELECT boardid, locked, stickied, autosage, bumped, deleted_timestamp > '2000-01-01', deleted_timestamp, id FROM DBPREFIXposts_old WHERE parentid = 0;
 
-INSERT INTO DBPREFIXposts(is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject, message, message_raw, password, deleted_at, is_deleted, oldparentid, oldboardid)
+INSERT INTO DBPREFIXposts(is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject, message, message_raw, password, deleted_at, is_deleted, oldparentid, oldboardid, oldselfid)
 SELECT parentid = 0, ip, timestamp, name, tripcode, false, email, subject, 
-	message, message_raw, password, deleted_timestamp, deleted_timestamp > '2000-01-01', CASE WHEN parentid = 0 THEN id ELSE parentid, boardid from DBPREFIXposts_old;
+	message, message_raw, password, deleted_timestamp, deleted_timestamp > '2000-01-01', id, boardid, id from DBPREFIXposts_old WHERE parentid = 0;
 
-UPDATE DBPREFIXposts as posts, DBPREFIXthreads as threads
-SET posts.thread_id = thread.id
-WHERE threads.oldpostid = posts.oldparentid AND thread.board_id = posts.oldboardid;
-
-INSERT INTO DBPREFIXfiles(file_oder, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height, oldpostid, oldboardid)
-SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename != '';
-
-UPDATE DBPREFIXfiles as files, DBPREFIXposts as posts
-SET files.post_id = posts.id
-WHERE files.oldpostid = posts.oldselfid AND files.oldboardid = posts.oldboardid;
+INSERT INTO DBPREFIXposts(is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject, message, message_raw, password, deleted_at, is_deleted, oldparentid, oldboardid, oldselfid)
+SELECT parentid = 0, ip, timestamp, name, tripcode, false, email, subject, 
+	message, message_raw, password, deleted_timestamp, deleted_timestamp > '2000-01-01', parentid, boardid, id from DBPREFIXposts_old WHERE parentid <> 0;
 
