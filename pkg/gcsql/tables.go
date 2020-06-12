@@ -365,7 +365,7 @@ type Thread struct {
 
 //FileBan contains the information associated with a specific file ban
 type FileBan struct {
-	ID        int       `json:id`
+	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
 	StaffID   int       `json:"staff_id"`
 	StaffNote string    `json:"staff_note"`
@@ -375,7 +375,7 @@ type FileBan struct {
 
 //FilenameBan contains the information associated with a specific filename ban
 type FilenameBan struct {
-	ID        int       `json:id`
+	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
 	StaffID   int       `json:"staff_id"`
 	StaffNote string    `json:"staff_note"`
@@ -386,7 +386,7 @@ type FilenameBan struct {
 
 //UsernameBan contains the information associated with a specific username ban
 type UsernameBan struct {
-	ID        int       `json:id`
+	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
 	StaffID   int       `json:"staff_id"`
 	StaffNote string    `json:"staff_note"`
@@ -397,7 +397,7 @@ type UsernameBan struct {
 
 //WordFilter contains the information associated with a specific wordfilter
 type WordFilter struct {
-	ID        int       `json:id`
+	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
 	StaffID   int       `json:"staff_id"`
 	StaffNote string    `json:"staff_note"`
@@ -409,7 +409,7 @@ type WordFilter struct {
 
 //IPBan contains the information association with a specific ip ban
 type IPBan struct {
-	ID              int           `json:id`
+	ID              int           `json:"id"`
 	BoardID         *int          `json:"board"`
 	StaffID         int           `json:"staff_id"`
 	BannedForPostID *int          `json:"banned_for_post_id"`

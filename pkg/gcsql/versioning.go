@@ -73,13 +73,13 @@ func buildNewDatabase(dbType string) {
 func versionHandler(foundDatabaseVersion int) error {
 	if foundDatabaseVersion < targetDatabaseVersion {
 		for foundDatabaseVersion < targetDatabaseVersion {
-			gclog.Print(gclog.LStdLog, "Migrating database from version %v to version %v", foundDatabaseVersion, foundDatabaseVersion+1)
+			gclog.Printf(gclog.LStdLog, "Migrating database from version %v to version %v", foundDatabaseVersion, foundDatabaseVersion+1)
 			err := migrations[foundDatabaseVersion]()
 			if err != nil {
 				gclog.Print(fatalSQLFlags, "Failed migration: ", err.Error())
 				return err
 			}
-			gclog.Print(gclog.LStdLog, "Finished migrating database to version %v", foundDatabaseVersion+1)
+			gclog.Printf(gclog.LStdLog, "Finished migrating database to version %v", foundDatabaseVersion+1)
 			foundDatabaseVersion++
 		}
 		return nil
@@ -88,7 +88,7 @@ func versionHandler(foundDatabaseVersion int) error {
 		gclog.Print(gclog.LStdLog, "Database already populated")
 		return nil
 	}
-	gclog.Println(gclog.LFatal, "Found database version higher than target version.\nFound version: %v\n Target version: %v", foundDatabaseVersion, targetDatabaseVersion)
+	gclog.Printf(gclog.LFatal, "Found database version higher than target version.\nFound version: %v\n Target version: %v", foundDatabaseVersion, targetDatabaseVersion)
 	return nil
 
 }
