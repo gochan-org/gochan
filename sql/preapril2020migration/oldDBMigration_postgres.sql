@@ -118,3 +118,48 @@ ALTER TABLE DBPREFIXposts ADD CONSTRAINT posts_thread_id_fk FOREIGN KEY (thread_
 	ALTER TABLE DBPREFIXposts ALTER COLUMN thread_id SET NOT NULL;
 	ALTER TABLE DBPREFIXfiles ALTER COLUMN post_id SET NOT NULL;
 
+
+--Staff
+INSERT INTO DBPREFIXstaff(id, username, password_checksum, global_rank, added_on, last_login)
+SELECT id, username, password_checksum, rank, added_on, last_active
+FROM DBPREFIXstaff_old;
+
+
+--Bans
+--Step 1, normalisation from comma seperated boards to seperate entries per board
+
+--Create copy of table structure and drop not null constraint on boards
+	CREATE TABLE DBPREFIXbanlist_old_normalized (like DBPREFIXbanlist_old including all);
+	ALTER TABLE DBPREFIXbanlist_old_normalized ALTER COLUMN boards DROP NOT NULL;
+
+/*
+Joins every ban on every entry in the numbers list (lists 1 to 1000 ints), then filters to only return results where numbers.num <= #elementsInCommaList
+Cuts out element in list using the num as index
+*/
+INSERT INTO DBPREFIXbanlist_old_normalized(allow_read, ip, name, name_is_regex, filename, file_checksum, staff, timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal, boards)
+(SELECT
+	bans.allow_read,
+	bans.ip,
+	bans.name,
+	bans.name_is_regex,
+	bans.filename,
+	bans.file_checksum,
+	bans.staff,
+	bans.timestamp,
+	bans.expires,
+	bans.permaban,
+	bans.reason,
+	bans.type,
+	bans.staff_note,
+	bans.appeal_at,
+	bans.can_appeal,
+		TRIM(SPLIT_PART(bans.boards, ',', nums.num))
+FROM
+gc_numbersequel_temp AS nums INNER JOIN gc_banlist_old AS bans
+ON TRUE
+WHERE CHAR_LENGTH(bans.boards)-CHAR_LENGTH(REPLACE(bans.boards, ',', '')) >= nums.num-1);
+
+--replace * with null
+UPDATE DBPREFIXbanlist_old_normalized
+SET boards = null
+WHERE boards = '*'; 
