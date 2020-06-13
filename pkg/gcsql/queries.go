@@ -1008,8 +1008,6 @@ func doesTableExist(tableName string) (bool, error) {
 		sql = mysqlPostgresql
 	case "postgres":
 		sql = mysqlPostgresql
-	case "sqlite3":
-		sql = sqlite
 	}
 	var count int
 	err := QueryRowSQL(sql, []interface{}{config.Config.DBprefix + tableName}, []interface{}{&count})
@@ -1050,16 +1048,4 @@ func doesGochanPrefixTableExist() (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
-}
-
-func renameTable(tablename string, tableNameNew string) error {
-	var sql = "ALTER TABLE DBPREFIX" + tablename + " RENAME TO DBPREFIX" + tableNameNew
-	_, err := ExecSQL(sql)
-	return err
-}
-
-func dropTable(tablename string) error {
-	var sql = "DROP TABLE DBPREFIX" + tablename
-	_, err := ExecSQL(sql)
-	return err
 }

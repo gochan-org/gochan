@@ -13,9 +13,10 @@ import (
 )
 
 var (
-	db            *sql.DB
-	dbDriver      string
-	fatalSQLFlags = gclog.LErrorLog | gclog.LStdLog | gclog.LFatal
+	db       *sql.DB
+	dbDriver string
+	//FatalSQLFlags is used to log a fatal sql error and then close gochan
+	FatalSQLFlags = gclog.LErrorLog | gclog.LStdLog | gclog.LFatal
 	nilTimestamp  string
 	sqlReplacer   *strings.Replacer // used during SQL string preparation
 )
@@ -44,13 +45,13 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 			host, username, password)
 		nilTimestamp = "0001-01-01 00:00:00+00:00"
 	default:
-		gclog.Printf(fatalSQLFlags,
+		gclog.Printf(FatalSQLFlags,
 			`Invalid DBtype %q in gochan.json, valid values are "mysql", "postgres", and "sqlite3"`, dbType)
 	}
 	dbDriver = dbType
 	var err error
 	if db, err = sql.Open(dbType, connStr); err != nil {
-		gclog.Print(fatalSQLFlags, "Failed to connect to the database: ", err.Error())
+		gclog.Print(FatalSQLFlags, "Failed to connect to the database: ", err.Error())
 	}
 	//TEMP
 	// var temp = "oldDB" + dbType + ".sql"
@@ -64,12 +65,7 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 	// err = migratePreApril2020Database(dbType)
 	// os.Exit(0)
 	//END TEMP
-	err = handleVersioning(dbType)
-	if err != nil {
-		gclog.Print(fatalSQLFlags, "Failed to initialise database: ", err.Error())
-	}
-
-	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Finished initializing server...")
+	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Connected to database...")
 }
 
 func initDB(initFile string) error {
@@ -80,10 +76,11 @@ func initDB(initFile string) error {
 		return fmt.Errorf(
 			"SQL database initialization file (%s) missing. Please reinstall gochan", initFile)
 	}
-	return runSQLFile(filePath)
+	return RunSQLFile(filePath)
 }
 
-func runSQLFile(path string) error {
+//RunSQLFile cuts a given sql file into individual statements and runs it.
+func RunSQLFile(path string) error {
 	sqlBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err

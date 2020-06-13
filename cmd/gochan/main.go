@@ -38,6 +38,7 @@ func main() {
 	gcsql.ConnectToDB(
 		config.Config.DBhost, config.Config.DBtype, config.Config.DBname,
 		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
+	gcsql.CheckAndInitializeDatabase(config.Config.DBtype)
 	parseCommandLine()
 	gcutil.InitMinifier()
 
