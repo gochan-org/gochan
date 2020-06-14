@@ -24,6 +24,10 @@ func Entry(targetVersion int) error {
 		return nil
 	}
 	if isPreAprilVersion {
+		err = checkMigrationsExist(1, targetVersion)
+		if err != nil {
+			return err
+		}
 		println("Migrating pre april 2020 version to version 1 of modern system.")
 		err = migratePreApril2020Database(config.Config.DBtype)
 		if err != nil {
@@ -31,6 +35,10 @@ func Entry(targetVersion int) error {
 		}
 		println("Finish migrating to version 1.")
 		return Entry(targetVersion)
+	}
+	err = checkMigrationsExist(databaseVersion, targetVersion)
+	if err != nil {
+		return err
 	}
 	return versionHandler(databaseVersion, targetVersion)
 }
