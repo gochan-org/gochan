@@ -7,13 +7,12 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
 	MySQLDatetimeFormat      = "2006-01-02 15:04:05"
 	unsupportedSQLVersionMsg = `Received syntax error while preparing a SQL string.
-This means that either there is a bug in gochan's code (hopefully not) or that you are using an unsupported My/Postgre/SQLite version.
+This means that either there is a bug in gochan's code (hopefully not) or that you are using an unsupported My/Postgre version.
 Before reporting an error, make sure that you are using the up to date version of your selected SQL server.
 Error text: %s`
 )
@@ -32,10 +31,6 @@ func sqlVersionErr(err error, query *string) error {
 		if !strings.Contains(errText, "syntax error at or near") {
 			return err
 		}
-	case "sqlite3":
-		if !strings.Contains(errText, "Error: near ") {
-			return err
-		}
 	}
 	if config.Config.DebugMode {
 		return fmt.Errorf(unsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
@@ -49,8 +44,6 @@ func PrepareSQL(query string) (*sql.Stmt, error) {
 	switch dbDriver {
 	case "mysql":
 		fallthrough
-	case "sqlite3":
-		preparedStr = query
 	case "postgres":
 		arr := strings.Split(query, "?")
 		for i := range arr {
@@ -60,6 +53,8 @@ func PrepareSQL(query string) (*sql.Stmt, error) {
 			arr[i] += fmt.Sprintf("$%d", i+1)
 		}
 		preparedStr = strings.Join(arr, "")
+	default:
+		return nil, ErrUnsupportedDB
 	}
 	stmt, err := db.Prepare(sqlReplacer.Replace(preparedStr))
 	if err != nil {
@@ -168,11 +163,6 @@ func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) 
 		if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return false, err
 		}
-	case "sqlite3":
-		return false, gcutil.ErrNotImplemented
-		// if !strings.Contains(err.Error(), "Error: near ") {//TODO fill in correct error string
-		// 	return false, err
-		// }
 	}
 	return true, nil
 }

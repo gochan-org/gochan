@@ -190,7 +190,7 @@ func InitConfig(versionStr string) {
 		"TemplateDir not set in gochan.json or unable to locate template directory, halting.")
 
 	Config.checkString(Config.DBtype, "", true,
-		"DBtype not set in gochan.json, halting (currently supported values: mysql,postgresql,sqlite3)")
+		"DBtype not set in gochan.json, halting (currently supported values: mysql,postgresql)")
 	Config.checkString(Config.DBhost, "", true,
 		"DBhost not set in gochan.json, halting.")
 	Config.DBname = Config.checkString(Config.DBname, "gochan", false,

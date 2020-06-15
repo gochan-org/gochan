@@ -39,14 +39,9 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 		connStr = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
 			username, password, host, dbName)
 		nilTimestamp = "0001-01-01 00:00:00"
-	case "sqlite3":
-		gclog.Print(gclog.LStdLog, "sqlite3 support is still flaky, consider using mysql or postgres")
-		connStr = fmt.Sprintf("file:%s?mode=rwc&_auth&_auth_user=%s&_auth_pass=%s&cache=shared",
-			host, username, password)
-		nilTimestamp = "0001-01-01 00:00:00+00:00"
 	default:
 		gclog.Printf(FatalSQLFlags,
-			`Invalid DBtype %q in gochan.json, valid values are "mysql", "postgres", and "sqlite3"`, dbType)
+			`Invalid DBtype %q in gochan.json, valid values are "mysql" and "postgres" (sqlite3 is no longer supported for stability reasons)`, dbType)
 	}
 	dbDriver = dbType
 	var err error

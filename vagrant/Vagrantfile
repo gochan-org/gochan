@@ -2,8 +2,8 @@
 # vi: set ft=ruby :
 
 DBTYPE = ENV.fetch("GC_DBTYPE", "mysql")
-if DBTYPE != "mysql" && DBTYPE != "postgresql" && DBTYPE != "sqlite3"
-	puts "Invalid GC_DBTYPE environment variable, must be mysql, postgresql, or sqlite3, got #{DBTYPE}"
+if DBTYPE != "mysql" && DBTYPE != "postgresql"
+	puts "Invalid GC_DBTYPE environment variable, must be mysql or postgresql, got #{DBTYPE}"
 	abort
 end
 

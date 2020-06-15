@@ -8,7 +8,6 @@ require (
 	github.com/frustra/bbcode v0.0.0-20180807171629-48be21ce690c
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/lib/pq v1.5.2
-	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/mojocn/base64Captcha v1.3.1
 	github.com/nranchev/go-libGeoIP v0.0.0-20170629073846-d6d4a9a4c7e8 // indirect
 	github.com/tdewolff/minify v2.3.6+incompatible

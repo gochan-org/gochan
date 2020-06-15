@@ -65,7 +65,6 @@ function dependencies {
 		github.com/aquilax/tripcode `
 		golang.org/x/crypto/bcrypt `
 		github.com/frustra/bbcode `
-		github.com/mattn/go-sqlite3 `
 		github.com/tdewolff/minify `
 		github.com/mojocn/base64Captcha
 }

@@ -3,7 +3,6 @@ FROM golang:1.13.9-alpine3.11
 RUN apk --no-cache add \
 						postgresql-client	\
 						mariadb-client		\
-						sqlite				\
 						nginx 				\
 						ffmpeg				\
 						make 				\

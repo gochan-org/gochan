@@ -69,7 +69,6 @@ dependencies:
 		github.com/aquilax/tripcode \
 		golang.org/x/crypto/bcrypt \
 		github.com/frustra/bbcode \
-		github.com/mattn/go-sqlite3 \
 		github.com/tdewolff/minify \
 		github.com/mojocn/base64Captcha
 
@@ -88,7 +87,7 @@ install:
 	$(info cp sample-configs/gochan.example.json /etc/gochan/gochan.json)
 ifeq (${GCOS_NAME},linux)
 	$(info If your distro has systemd, you will also need to run the following commands)
-	$(info cp sample-configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service)
+	$(info cp sample-configs/gochan-[mysql|postgresql].service /lib/systemd/system/gochan.service)
 	$(info systemctl daemon-reload)
 	$(info systemctl enable gochan.service)
 	$(info systemctl start gochan.service)
@@ -140,7 +139,6 @@ else ifeq (${GCOS_NAME},windows)
 else
 	cp sample-configs/gochan-mysql.service ${RELEASE_DIR}/sample-configs/
 	cp sample-configs/gochan-postgresql.service ${RELEASE_DIR}/sample-configs/
-	cp sample-configs/gochan-sqlite3.service ${RELEASE_DIR}/sample-configs/
 	tar -C releases -zcvf ${RELEASE_DIR}.tar.gz ${RELEASE_NAME}
 endif
 

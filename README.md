@@ -17,10 +17,9 @@ Demo installation: https://gochan.org
 5. Go to http://[gochan url]/manage?action=staff, log in (default username/password is admin/password), and create a new admin user (and any other staff users as necessary). Then delete the admin user for security.
 
 ## Configuration
-1. Make sure to set `DBtype`, `DBhost`, `DBname`, `DBusername`, and `DBpassword`, since these are required to connect to your SQL database. Valid `DBtype` values are "mysql", "postgres", and "sqlite3".
+1. Make sure to set `DBtype`, `DBhost`, `DBname`, `DBusername`, and `DBpassword`, since these are required to connect to your SQL database. Valid `DBtype` values are "mysql" and "postgres" (sqlite3 is no longer supported for stability reasons).
 	1. To connect to a MySQL database, set `DBhost` to "tcp(ip:3306)" or a different port, if necessary.
 	2. To connect to a PostgreSQL database, set `DBhost` to the IP address or hostname. Using a UNIX socket may work as well, but it is currently untested.
-	3. To connect to a SQLite database, set `DBhost` to the path of the database file. It will be created if it does not already exist.
 2. Set `DomainRegex`,`SiteDomain`, since these are necessary in order to post and log in as a staff member.
 3. If you want to see debugging info/noncritical warnings, set verbosity to 1.
 
@@ -29,7 +28,7 @@ See [`docker/README.md`](docker/README.md)
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
-2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MySQL/MariaDB is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql, postgresql, or sqlite3.
+2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MySQL/MariaDB is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql or postgresql
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 
 # Theme development

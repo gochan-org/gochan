@@ -5,7 +5,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 if [ -z "$DBTYPE" ]; then
-	echo "DBTYPE environment variable not set, must be 'mysql', 'postgresql', or 'sqlite3'"
+	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql' (sqlite3 no longer supported)"
 	exit 1
 fi
 
@@ -52,9 +52,6 @@ elif [ "$DBTYPE" == "postgresql" ]; then
 		systemctl daemon-reload
 		systemctl enable gochan.service
 	fi
-elif [ "$DBTYPE" == "sqlite3" ]; then
-	# using SQLite (mostly stable)
-	apt-get -y install sqlite3
 elif [ "$DBTYPE" == "mssql" ]; then
 	# using Microsoft SQL Server (currently unsupported)
 	echo "Microsoft SQL Server not supported yet";
@@ -99,10 +96,6 @@ if [ "$DBTYPE" = "postgresql" ]; then
 	sed -i /etc/gochan/gochan.json \
 		-e 's/"DBtype": ".*"/"DBtype": "postgres"/' \
 		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
-elif [ "$DBTYPE" = "sqlite3" ]; then
-	sed -i /etc/gochan/gochan.json \
-		-e 's/"DBtype": ".*"/"DBtype": "sqlite3"/' \
-		-e 's/"DBhost": ".*"/"DBhost": "gochan.db"/'
 fi
 
 # a convenient script for connecting to the db, whichever type we're using
@@ -113,8 +106,6 @@ if [ "$DBTYPE" = "mysql" ] || [ -z "$DBTYPE" ]; then
 	mysql -stu gochan -D gochan -pgochan
 elif [ "$DBTYPE" = "postgresql" ]; then
 	psql -U gochan -h 127.0.0.1 gochan
-elif [ "$DBTYPE" = "sqlite3" ]; then
-	sqlite3 ~/gochan/gochan.db
 else
 	echo "DB type '$DBTYPE' not supported"
 fi

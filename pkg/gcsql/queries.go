@@ -16,6 +16,7 @@ import (
 var (
 	ErrMultipleDBVersions = errors.New("More than one version in database")
 	ErrNilBoard           = errors.New("Board is nil")
+	ErrUnsupportedDB      = errors.New("Unsupported DBtype")
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
@@ -597,7 +598,7 @@ func InsertPost(post *Post, bump bool) error {
 	}
 
 	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
-	//This is done because mysql/sqlite doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
+	//This is done because mysql doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
 	isPrimaryKeyError := true
 	for isPrimaryKeyError {
 		nextFreeID, err := getNextFreeID("DBPREFIXposts")
@@ -630,7 +631,7 @@ func InsertPost(post *Post, bump bool) error {
 func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
 	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
-	//This is done because mysql/sqlite doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
+	//This is done because mysql doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
 	isPrimaryKeyError := true
 	for isPrimaryKeyError {
 		threadID, err = getNextFreeID("DBPREFIXthreads")
@@ -992,25 +993,12 @@ func getNextFreeID(tableName string) (ID int, err error) {
 }
 
 func doesTableExist(tableName string) (bool, error) {
-	const mysqlPostgresql = `SELECT COUNT(*)
+	const existQuery = `SELECT COUNT(*)
 	FROM INFORMATION_SCHEMA.TABLES
 	WHERE TABLE_NAME = ?`
-	const sqlite = `SELECT 
-    COUNT(name)
-	FROM 
-		sqlite_master 
-	WHERE 
-		type ='table' AND 
-		name NOT LIKE 'sqlite_%' AND name = ?;`
-	var sql string
-	switch config.Config.DBtype {
-	case "mysql":
-		sql = mysqlPostgresql
-	case "postgres":
-		sql = mysqlPostgresql
-	}
+
 	var count int
-	err := QueryRowSQL(sql, []interface{}{config.Config.DBprefix + tableName}, []interface{}{&count})
+	err := QueryRowSQL(existQuery, []interface{}{config.Config.DBprefix + tableName}, []interface{}{&count})
 	if err != nil {
 		return false, err
 	}
@@ -1023,27 +1011,12 @@ func doesGochanPrefixTableExist() (bool, error) {
 	if config.Config.DBprefix == "" {
 		return false, nil
 	}
-	var mysqlPostgresql = `SELECT count(*) 
+	var prefixTableExist = `SELECT count(*) 
 	FROM INFORMATION_SCHEMA.TABLES
-	WHERE TABLE_NAME LIKE '` + config.Config.DBprefix + `%'`
-	var sqlite = `SELECT 
-    COUNT(name)
-	FROM 
-		sqlite_master 
-	WHERE 
-		type ='table' AND 
-		name LIKE '` + config.Config.DBprefix + `%';`
-	var sql string
-	switch config.Config.DBtype {
-	case "mysql":
-		sql = mysqlPostgresql
-	case "postgres":
-		sql = mysqlPostgresql
-	case "sqlite3":
-		sql = sqlite
-	}
+	WHERE TABLE_NAME LIKE 'DBPREFIX%'`
+
 	var count int
-	err := QueryRowSQL(sql, []interface{}{}, []interface{}{&count})
+	err := QueryRowSQL(prefixTableExist, []interface{}{}, []interface{}{&count})
 	if err != nil {
 		return false, err
 	}

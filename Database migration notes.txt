@@ -6,5 +6,4 @@ Split tripcode from username during migration
 
 Mysql: SERIAL = uint64 NOT NULL AUTO_INCREMENT UNIQUE
 Postgres SERIAL = int32 NOT NULL AUTO_INCREMENT UNIQUE
-sqlite INTEGER = variable INTEGER
 
