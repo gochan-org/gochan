@@ -16,9 +16,10 @@ var (
 	db       *sql.DB
 	dbDriver string
 	//FatalSQLFlags is used to log a fatal sql error and then close gochan
-	FatalSQLFlags = gclog.LErrorLog | gclog.LStdLog | gclog.LFatal
-	nilTimestamp  string
-	sqlReplacer   *strings.Replacer // used during SQL string preparation
+	FatalSQLFlags   = gclog.LErrorLog | gclog.LStdLog | gclog.LFatal
+	nilTimestamp    string
+	sqlReplacer     *strings.Replacer // used during SQL string preparation
+	tcpHostIsolator = regexp.MustCompile(`\b(tcp\()?([^\(\)]*)\b`)
 )
 
 // ConnectToDB initializes the database connection and exits if there are any errors
@@ -29,6 +30,11 @@ func ConnectToDB(host string, dbType string, dbName string, username string, pas
 		"DBPREFIX", prefix,
 		"\n", " ")
 	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Initializing server...")
+
+	addrMatches := tcpHostIsolator.FindAllStringSubmatch(host, -1)
+	if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
+		host = addrMatches[0][2]
+	}
 
 	switch dbType {
 	case "mysql":

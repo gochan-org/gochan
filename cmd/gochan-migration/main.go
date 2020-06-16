@@ -1,6 +1,9 @@
 package main
 
 import (
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+
 	"github.com/gochan-org/gochan/cmd/gochan-migration/gcmigrate"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
