@@ -125,7 +125,8 @@ SELECT id, username, password_checksum, rank, added_on, last_active
 FROM DBPREFIXstaff_old;
 
 
---Bans
+--Bans--
+
 --Step 1, normalisation from comma seperated boards to seperate entries per board
 
 --Create copy of table structure and drop not null constraint on boards
@@ -167,4 +168,33 @@ WHERE CHAR_LENGTH(bans.boards)-CHAR_LENGTH(REPLACE(bans.boards, ',', '')) >= num
 --replace * with null
 UPDATE DBPREFIXbanlist_old_normalized
 SET boards = null
-WHERE boards = '*'; 
+WHERE boards = '*';
+
+ALTER TABLE DBPREFIXbanlist_old_normalized ADD COLUMN board_id int;
+ALTER TABLE DBPREFIXbanlist_old_normalized ADD COLUMN staff_id int;
+
+--Fix board id
+	UPDATE DBPREFIXbanlist_old_normalized as bans
+	SET board_id = boards.id
+	FROM DBPREFIXboards as boards
+	WHERE bans.boards = boards.dir;
+
+
+--Fix staff_id
+	UPDATE DBPREFIXbanlist_old_normalized as bans
+	SET staff_id = staff.id
+	FROM DBPREFIXstaff as staff
+	WHERE bans.staff = staff.username;
+
+
+--Step 2, copy them all to the live ban board per ban type
+
+/*
+ban types:
+1 = thread ban
+2 = image ban
+3 = full ban
+if image <> "" or null create image ban
+*/
+--Add an old_id column to each table for later foreign key linking for appeals, remove at the end
+ALTER TABLE DBPREFIXip_ban ADD COLUMN old_id int;
