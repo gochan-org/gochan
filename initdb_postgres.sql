@@ -139,7 +139,7 @@ CREATE TABLE DBPREFIXannouncements(
 CREATE TABLE DBPREFIXip_ban(
 	id BIGSERIAL PRIMARY KEY,
 	staff_id BIGINT NOT NULL,
-	board_id BIGINT NOT NULL,
+	board_id BIGINT,
 	banned_for_post_id BIGINT,
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
