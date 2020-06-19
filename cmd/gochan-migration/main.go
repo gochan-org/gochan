@@ -17,5 +17,8 @@ var (
 func main() {
 	config.InitConfig(versionStr)
 	gclog.Printf(gclog.LStdLog, "Starting gochan migration (gochan v%s)", versionStr)
-	gcmigrate.Entry(1) //TEMP, get correct database version from command line or some kind of table. 1 Is the current version we are working towards
+	err := gcmigrate.Entry(1) //TEMP, get correct database version from command line or some kind of table. 1 Is the current version we are working towards
+	if err != nil {
+		gclog.Printf(gclog.LErrorLog, "Error while migrating: %s", err)
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -16,6 +17,11 @@ func Entry(targetVersion int) error {
 		config.Config.DBhost, config.Config.DBtype, config.Config.DBname,
 		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
 
+
+	return runMigration(targetVersion)
+}
+
+func runMigration(targetVersion int) error {
 	dbVersion, dbFlags, err := gcsql.GetCompleteDatabaseVersion()
 	if err != nil {
 		return err
@@ -25,7 +31,7 @@ func Entry(targetVersion int) error {
 		gclog.Println(stdFatalFlag, "Database found is corrupted, please contact the devs.")
 	case gcsql.DBClean:
 		gclog.Println(stdFatalFlag,
-			"Database found is clean and ready for a gochan install, please run gochan to autmatically setup the database.")
+			"Database found is clean and ready for a gochan install, please run gochan to automatically setup the database.")
 	case gcsql.DBIsPreApril:
 		if err = checkMigrationsExist(1, targetVersion); err != nil {
 			return err
@@ -35,7 +41,7 @@ func Entry(targetVersion int) error {
 			return err
 		}
 		gclog.Println(gclog.LStdLog, "Finish migrating to version 1.")
-		return Entry(targetVersion)
+		return runMigration(targetVersion)
 	}
 
 	if err = checkMigrationsExist(dbVersion, targetVersion); err != nil {
