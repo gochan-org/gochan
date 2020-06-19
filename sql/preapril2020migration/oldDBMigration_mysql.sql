@@ -194,3 +194,15 @@ if image <> "" or null create image ban
 */
 --Add an old_id column to each table for later foreign key linking for appeals, remove at the end
 ALTER TABLE DBPREFIXip_ban ADD COLUMN old_id int;
+
+INSERT INTO DBPREFIXip_ban(old_id, staff_id, board_id, is_thread_ban, is_active, ip, issued_at, expires_at, permanent, staff_note, message, can_appeal, appeal_at, copy_post_text)
+(
+	SELECT old_id, staff_id, board_id, TRUE, TRUE, ip, timestamp, expires, permaban, staff_note, reason, can_appeal, appeal_at, ''
+	FROM DBPREFIXbanlist_old_normalized WHERE type = 1
+);
+
+INSERT INTO DBPREFIXip_ban(old_id, staff_id, board_id, is_thread_ban, is_active, ip, issued_at, expires_at, permanent, staff_note, message, can_appeal, appeal_at, copy_post_text)
+(
+	SELECT old_id, staff_id, board_id, FALSE, TRUE, ip, timestamp, expires, permaban, staff_note, reason, can_appeal, appeal_at, ''
+	FROM DBPREFIXbanlist_old_normalized WHERE type = 3
+);

@@ -7,9 +7,9 @@ INSERT INTO DBPREFIXannouncements (message, poster) VALUES ('announcement messag
 INSERT INTO DBPREFIXappeals (ban, message, denied, staff_response) VALUES (1, 'one', false, 'staff response');
 INSERT INTO DBPREFIXappeals (ban, message, denied, staff_response) VALUES (2, 'two', true, 'staff response2');
 
-INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff) VALUES ('IP 1', 'staff note 1', '*', 'staff1');
-INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff) VALUES ('IP 2', 'staff note 2', 'a,  d,  k', 'staff2');
-INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff) VALUES ('IP 3', 'staff note 3', 'k', 'staff1');
+INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff, type) VALUES ('IP 1', 'staff note 1', '*', 'staff1', 1);
+INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff, type) VALUES ('IP 2', 'staff note 2', 'a,  d,  k', 'staff2', 3);
+INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff, type) VALUES ('IP 3', 'staff note 3', 'k', 'staff1', 3);
 
 INSERT INTO DBPREFIXboards (dir, title) VALUES ('a', 'anime');
 INSERT INTO DBPREFIXboards (dir, title) VALUES ('d', 'fucked up hentai');
