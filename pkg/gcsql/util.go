@@ -43,7 +43,7 @@ func PrepareSQL(query string) (*sql.Stmt, error) {
 	var preparedStr string
 	switch dbDriver {
 	case "mysql":
-		fallthrough
+		preparedStr = query
 	case "postgres":
 		arr := strings.Split(query, "?")
 		for i := range arr {
