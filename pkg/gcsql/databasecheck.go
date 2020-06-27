@@ -11,6 +11,9 @@ const (
 	DBIsPreApril = 1 << iota
 	DBCorrupted
 	DBClean
+	DBModernButBehind
+	DBUpToDate
+	DBModernButAhead
 
 	targetDatabaseVersion = 1
 )
@@ -35,7 +38,13 @@ func GetCompleteDatabaseVersion() (dbVersion int, dbFlag int, err error) {
 		if versionError != nil {
 			return 0, 0, ErrInvalidVersion
 		}
-		return databaseVersion, 0, nil
+		if databaseVersion < targetDatabaseVersion {
+			return databaseVersion, DBModernButBehind, nil
+		}
+		if databaseVersion > targetDatabaseVersion {
+			return databaseVersion, DBModernButAhead, nil
+		}
+		return databaseVersion, DBUpToDate, nil
 	}
 	isOldDesign, err := doesTableExist("info")
 	if err != nil {
@@ -65,26 +74,31 @@ func CheckAndInitializeDatabase(dbType string) {
 		gclog.Printf(FatalSQLFlags, "Failed to initialise database: %s", err.Error())
 	}
 
-	switch {
-	case versionFlag == DBIsPreApril:
+	switch versionFlag {
+	case DBIsPreApril:
 		fallthrough
-	case dbVersion < targetDatabaseVersion:
+	case DBModernButBehind:
 		gclog.Printf(FatalSQLFlags,
 			"Database layout is deprecated. Please run gochan-migrate. Target version is %d", targetDatabaseVersion) //TODO give exact command
-	case versionFlag == DBClean:
+	case DBClean:
 		buildNewDatabase(dbType)
 		return
-	case versionFlag == DBCorrupted:
+	case DBUpToDate:
+		return
+	case DBCorrupted:
 		gclog.Println(FatalSQLFlags,
 			"Database contains gochan prefixed tables but is missing versioning tables. Database is possible corrupted. Please contact the devs for help.")
-	case dbVersion > targetDatabaseVersion:
+		return
+	case DBModernButAhead:
 		gclog.Printf(gclog.LFatal,
 			"Database layout is ahead of current version. Current version %d, target version: %d.\n"+
 				"Are you running an old gochan version?", dbVersion, targetDatabaseVersion)
+		return
+	default:
+		gclog.Printf(FatalSQLFlags,
+			"Failed to initialise database: Checkdatabase, none of paths matched. Should never be executed. Check for outcome of GetCompleteDatabaseVersion()")
+		return
 	}
-
-	gclog.Printf(FatalSQLFlags,
-		"Failed to initialise database: Checkdatabase, none of paths matched. Should never be executed. Check for outcome of GetCompleteDatabaseVersion()")
 }
 
 func buildNewDatabase(dbType string) {

@@ -130,12 +130,17 @@ FROM DBPREFIXstaff_old;
 	CREATE TABLE DBPREFIXbanlist_old_normalized SELECT * FROM DBPREFIXbanlist_old LIMIT 0;
 	ALTER TABLE DBPREFIXbanlist_old_normalized MODIFY boards VARCHAR(255);
 
+--needed because id sequence is otherwise shared between this and the old table
+ALTER TABLE DBPREFIXbanlist_old_normalized DROP COLUMN id;
+ALTER TABLE DBPREFIXbanlist_old_normalized ADD COLUMN old_id int; 
+
 /*
 Joins every ban on every entry in the numbers list (lists 1 to 1000 ints), then filters to only return results where numbers.num <= #elementsInCommaList
 Cuts out element in list using the num as index
 */
-INSERT INTO DBPREFIXbanlist_old_normalized(allow_read, ip, name, name_is_regex, filename, file_checksum, staff, timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal, boards)
+INSERT INTO DBPREFIXbanlist_old_normalized(old_id, allow_read, ip, name, name_is_regex, filename, file_checksum, staff, timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal, boards)
 (SELECT
+	bans.id,
 	bans.allow_read,
 	bans.ip,
 	bans.name,

@@ -30,7 +30,7 @@ func versionHandler(foundDatabaseVersion int, targetDatabaseVersion int) error {
 }
 
 func checkMigrationsExist(currentVersion int, target int) error {
-	for i := currentVersion; i <= target; i++ {
+	for i := currentVersion; i < target; i++ {
 		if _, ok := migrations[i]; !ok {
 			return fmt.Errorf("This version of the migrator does not contain a migration from version %v to %v, please upgrade the migrator", currentVersion, target)
 		}

@@ -31,12 +31,15 @@ func migratePreApril2020Database(dbType string) error {
 		return err
 	}
 
-	// for _, i := range tables {
-	// 	err := dropTable(i + "_old")
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	//return dropNumberSequelTable()
-	return nil
+	for _, i := range tables {
+		err := dropTable(i + "_old")
+		if err != nil {
+			return err
+		}
+	}
+	err = dropTable("banlist_old_normalized")
+	if err != nil {
+		return err
+	}
+	return dropNumberSequelTable()
 }
