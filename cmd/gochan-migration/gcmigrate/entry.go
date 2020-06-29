@@ -4,7 +4,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -16,7 +15,6 @@ func Entry(targetVersion int) error {
 	gcsql.ConnectToDB(
 		config.Config.DBhost, config.Config.DBtype, config.Config.DBname,
 		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
-
 
 	return runMigration(targetVersion)
 }

@@ -10,6 +10,7 @@ func migratePreApril2020Database(dbType string) error {
 	if err != nil {
 		return err
 	}
+	//Rename all existing tables to [name]_old
 	var tables = []string{"announcements", "appeals", "banlist", "boards", "embeds", "info", "links", "posts", "reports", "sections", "sessions", "staff", "wordfilters"}
 	for _, i := range tables {
 		err := renameTable(i, i+"_old")
@@ -18,11 +19,12 @@ func migratePreApril2020Database(dbType string) error {
 		}
 	}
 	var buildfile = "initdb_" + dbType + ".sql"
-	//err := runSQLFile(gcutil.FindResource("sql/preapril2020migration/" + buildfile)) //TODO move final version 1 build script next to migrate script and exec that
-	err = gcsql.RunSQLFile(gcutil.FindResource(buildfile))
+	//Create all tables for version 1
+	err = gcsql.RunSQLFile(gcutil.FindResource("sql/preapril2020migration/" + buildfile))
 	if err != nil {
 		return err
 	}
+	//Run data migration
 	var migrFile = "oldDBMigration_" + dbType + ".sql"
 	err = gcsql.RunSQLFile(gcutil.FindResource("sql/preapril2020migration/"+migrFile,
 		"/usr/local/share/gochan/"+migrFile,
@@ -31,6 +33,7 @@ func migratePreApril2020Database(dbType string) error {
 		return err
 	}
 
+	//drop all _old tables
 	for _, i := range tables {
 		err := dropTable(i + "_old")
 		if err != nil {
@@ -41,5 +44,9 @@ func migratePreApril2020Database(dbType string) error {
 	if err != nil {
 		return err
 	}
-	return dropNumberSequelTable()
+	err = dropTable("wordfilters_old_normalized")
+	if err != nil {
+		return err
+	}
+	return dropTable("numbersequel_temp")
 }

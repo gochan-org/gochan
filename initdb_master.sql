@@ -124,7 +124,8 @@ CREATE TABLE DBPREFIXboard_staff(
 	board_id {fk to serial} NOT NULL,
 	staff_id {fk to serial} NOT NULL,
 	CONSTRAINT board_staff_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	CONSTRAINT board_staff_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT board_staff_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+    CONSTRAINT board_staff_pk PRIMARY KEY (board_id,staff_id)
 );
 
 CREATE TABLE DBPREFIXannouncements(
@@ -139,7 +140,7 @@ CREATE TABLE DBPREFIXannouncements(
 CREATE TABLE DBPREFIXip_ban(
 	id {serial pk},
 	staff_id {fk to serial} NOT NULL,
-	board_id {fk to serial} NOT NULL,
+	board_id {fk to serial},
 	banned_for_post_id {fk to serial},
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
@@ -255,7 +256,7 @@ CREATE TABLE DBPREFIXfile_ban(
 CREATE TABLE DBPREFIXwordfilters(
 	id {serial pk},
 	board_id {fk to serial},
-	staff_id {fk to serial} NOT NULL,
+	staff_id {fk to serial},
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	search VARCHAR(75) NOT NULL,

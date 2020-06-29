@@ -2,6 +2,8 @@
 -- Contains macros in the form [curlybrace open]macro text[curlybrace close]
 -- Macros are substituted by build_initdb.py to the supported database files. Must not contain extra spaces
 -- Versioning numbering goes by whole numbers. Upgrade script migrate existing databases between versions
+-- Foreign and unique constraints must be named so they can be dropped. 
+-- MYSQL requires constraint names to be unique globally, hence the long constraint names.
 -- Database version: 1
 
 CREATE TABLE DBPREFIXdatabase_version(
@@ -40,9 +42,9 @@ CREATE TABLE DBPREFIXboards(
 	redirect_to_thread BOOL NOT NULL,
 	require_file BOOL NOT NULL,
 	enable_catalog BOOL NOT NULL,
-	FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
-	UNIQUE(dir),
-	UNIQUE(uri)
+	CONSTRAINT boards_section_id_fk FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
+	CONSTRAINT boards_dir_unique UNIQUE(dir),
+	CONSTRAINT boards_uri_unique UNIQUE(uri)
 );
 
 CREATE TABLE DBPREFIXthreads(
@@ -55,7 +57,7 @@ CREATE TABLE DBPREFIXthreads(
 	last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_deleted BOOL NOT NULL DEFAULT FALSE,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
+	CONSTRAINT threads_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
 );
 
 CREATE INDEX thread_deleted_index ON DBPREFIXthreads(is_deleted);
@@ -77,7 +79,7 @@ CREATE TABLE DBPREFIXposts(
 	deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_deleted BOOL NOT NULL DEFAULT FALSE,
 	banned_message TEXT,
-	FOREIGN KEY(thread_id) REFERENCES DBPREFIXthreads(id)
+	CONSTRAINT posts_thread_id_fk FOREIGN KEY(thread_id) REFERENCES DBPREFIXthreads(id)
 );
 
 CREATE INDEX top_post_index ON DBPREFIXposts(is_top_post);
@@ -95,8 +97,8 @@ CREATE TABLE DBPREFIXfiles(
 	thumbnail_height INT NOT NULL,
 	width INT NOT NULL,
 	height INT NOT NULL,
-	FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id),
-	UNIQUE(post_id, file_order)
+	CONSTRAINT files_post_id_fk FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id),
+	CONSTRAINT files_post_id_file_order_unique UNIQUE(post_id, file_order)
 );
 
 CREATE TABLE DBPREFIXstaff(
@@ -107,7 +109,7 @@ CREATE TABLE DBPREFIXstaff(
 	added_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_active BOOL NOT NULL DEFAULT TRUE,
-	UNIQUE(username)
+	CONSTRAINT staff_username_unique UNIQUE(username)
 );
 
 CREATE TABLE DBPREFIXsessions(
@@ -115,14 +117,15 @@ CREATE TABLE DBPREFIXsessions(
 	staff_id BIGINT NOT NULL,
 	expires TIMESTAMP NOT NULL,
 	data VARCHAR(45) NOT NULL,
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT sessions_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXboard_staff(
 	board_id BIGINT NOT NULL,
 	staff_id BIGINT NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT board_staff_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	CONSTRAINT board_staff_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+    CONSTRAINT board_staff_pk PRIMARY KEY (board_id,staff_id)
 );
 
 CREATE TABLE DBPREFIXannouncements(
@@ -131,13 +134,13 @@ CREATE TABLE DBPREFIXannouncements(
 	subject VARCHAR(45) NOT NULL,
 	message TEXT NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT announcements_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXip_ban(
 	id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
 	staff_id BIGINT NOT NULL,
-	board_id BIGINT NOT NULL,
+	board_id BIGINT,
 	banned_for_post_id BIGINT,
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
@@ -150,9 +153,9 @@ CREATE TABLE DBPREFIXip_ban(
 	staff_note VARCHAR(255) NOT NULL,
 	message TEXT NOT NULL,
 	can_appeal BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	FOREIGN KEY(banned_for_post_id) REFERENCES DBPREFIXposts(id)
+	CONSTRAINT ip_ban_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	CONSTRAINT ip_ban_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	CONSTRAINT ip_ban_banned_for_post_id_fk FOREIGN KEY(banned_for_post_id) REFERENCES DBPREFIXposts(id)
 );
 
 CREATE TABLE DBPREFIXip_ban_audit(
@@ -168,8 +171,8 @@ CREATE TABLE DBPREFIXip_ban_audit(
 	message TEXT NOT NULL,
 	can_appeal BOOL NOT NULL,
 	PRIMARY KEY(ip_ban_id, timestamp),
-	FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT ip_ban_audit_ip_ban_id_fk FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id),
+	CONSTRAINT ip_ban_audit_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXip_ban_appeals(
@@ -179,8 +182,8 @@ CREATE TABLE DBPREFIXip_ban_appeals(
 	appeal_text TEXT NOT NULL,
 	staff_response TEXT,
 	is_denied BOOL NOT NULL,
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id)
+	CONSTRAINT ip_ban_appeals_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	CONSTRAINT ip_ban_appeals_ip_ban_id_fk FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id)
 );
 
 CREATE TABLE DBPREFIXip_ban_appeals_audit(
@@ -191,8 +194,8 @@ CREATE TABLE DBPREFIXip_ban_appeals_audit(
 	staff_response TEXT,
 	is_denied BOOL NOT NULL,
 	PRIMARY KEY(appeal_id, timestamp),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id)
+	CONSTRAINT ip_ban_appeals_audit_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	CONSTRAINT ip_ban_appeals_audit_appeal_id_fk FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id)
 );
 
 CREATE TABLE DBPREFIXreports(
@@ -202,8 +205,8 @@ CREATE TABLE DBPREFIXreports(
 	ip VARCHAR(45) NOT NULL,
 	reason TEXT NOT NULL,
 	is_cleared BOOL NOT NULL,
-	FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
-	FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id)
+	CONSTRAINT reports_handled_by_staff_id_fk FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
+	CONSTRAINT reports_post_id_fk FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id)
 );
 
 CREATE TABLE DBPREFIXreports_audit(
@@ -211,8 +214,8 @@ CREATE TABLE DBPREFIXreports_audit(
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	handled_by_staff_id BIGINT,
 	is_cleared BOOL NOT NULL,
-	FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
-	FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id)
+	CONSTRAINT reports_audit_handled_by_staff_id_fk FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
+	CONSTRAINT reports_audit_report_id_fk FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id)
 );
 
 CREATE TABLE DBPREFIXfilename_ban(
@@ -223,8 +226,8 @@ CREATE TABLE DBPREFIXfilename_ban(
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	filename VARCHAR(255) NOT NULL,
 	is_regex BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT filename_ban_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	CONSTRAINT filename_ban_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXusername_ban(
@@ -235,8 +238,8 @@ CREATE TABLE DBPREFIXusername_ban(
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	username VARCHAR(255) NOT NULL,
 	is_regex BOOL NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT username_ban_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	CONSTRAINT username_ban_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXfile_ban(
@@ -246,21 +249,22 @@ CREATE TABLE DBPREFIXfile_ban(
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	checksum TEXT NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT file_ban_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	CONSTRAINT file_ban_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXwordfilters(
 	id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,
 	board_id BIGINT,
-	staff_id BIGINT NOT NULL,
+	staff_id BIGINT,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	search VARCHAR(75) NOT NULL CHECK (search <> ''),
+	search VARCHAR(75) NOT NULL,
 	is_regex BOOL NOT NULL,
 	change_to VARCHAR(75) NOT NULL,
-	FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
-	FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT wordfilters_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id),
+	CONSTRAINT wordfilters_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
+	CONSTRAINT wordfilters_search_check CHECK (search <> '')
 );
 
 INSERT INTO DBPREFIXdatabase_version(version)
