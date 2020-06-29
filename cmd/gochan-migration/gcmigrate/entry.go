@@ -4,7 +4,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -16,17 +15,6 @@ func Entry(targetVersion int) error {
 	gcsql.ConnectToDB(
 		config.Config.DBhost, config.Config.DBtype, config.Config.DBname,
 		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
-
-	//TEMP
-	var temp = "oldDB" + config.Config.DBtype + ".sql"
-	gcsql.RunSQLFile(gcutil.FindResource(temp,
-		"/usr/local/share/gochan/"+temp,
-		"/usr/share/gochan/"+temp))
-	var temp2 = "olddbdummydata.sql"
-	gcsql.RunSQLFile(gcutil.FindResource(temp2,
-		"/usr/local/share/gochan/"+temp2,
-		"/usr/share/gochan/"+temp2))
-	//END TEMP
 
 	return runMigration(targetVersion)
 }
