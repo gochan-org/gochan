@@ -98,7 +98,7 @@ SELECT parentid = 0, ip, timestamp, name, tripcode, false, email, subject,
 
 
 INSERT INTO DBPREFIXfiles(file_order, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height, oldpostid, oldboardid)
-SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '';
+SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '' AND filename <> "deleted";
 
 	-- Creates files in files table
 	UPDATE DBPREFIXfiles as files

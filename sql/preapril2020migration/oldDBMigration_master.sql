@@ -113,7 +113,7 @@ SELECT parentid = 0, ip, timestamp, name, tripcode, false, email, subject,
 #ENDIF
 
 INSERT INTO DBPREFIXfiles(file_order, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height, oldpostid, oldboardid)
-SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '';
+SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '' AND filename <> "deleted";
 
 #IF POSTGRES
 	-- Creates files in files table
@@ -248,7 +248,7 @@ ALTER TABLE DBPREFIXbanlist_old_normalized ADD COLUMN staff_id int;
 #ENDIF
 
 #IF MYSQL
-	UPDATE DBPREFIXbanlist_old_normalized as bans, DBPREFIXboards as boards
+	UPDATE DBPREFIXbanlist_old_normalized as bans, DBPREFIXstaff as staff
 	SET bans.staff_id = staff.id
 	WHERE bans.staff = staff.username;
 #ENDIF
