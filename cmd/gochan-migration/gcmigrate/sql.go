@@ -27,8 +27,3 @@ func createNumberSequelTable(count int) error {
 	}
 	return nil
 }
-
-func dropNumberSequelTable() error {
-	_, err := gcsql.ExecSQL("DROP TABLE DBPREFIXnumbersequel_temp")
-	return err
-}

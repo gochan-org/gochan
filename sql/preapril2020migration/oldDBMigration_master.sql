@@ -4,6 +4,8 @@ Migrates the pre-refactor database of april 2020 to database verion 1
 rename all tables to table_old
 run version 1 population script
 filter, copy change data
+
+A deactivated, unauthorized user with the name "unknown_staff" is created to attribute to unknown staff
 */
 
 INSERT INTO DBPREFIXsections (id, name, abbreviation, position, hidden)
@@ -129,7 +131,6 @@ SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, 
 #ENDIF
 
 ALTER TABLE DBPREFIXthreads DROP COLUMN oldpostid;
-ALTER TABLE DBPREFIXposts DROP COLUMN oldselfid;
 ALTER TABLE DBPREFIXposts DROP COLUMN oldparentid;
 ALTER TABLE DBPREFIXposts DROP COLUMN oldboardid;
 ALTER TABLE DBPREFIXfiles DROP COLUMN oldpostid;
@@ -212,7 +213,7 @@ INSERT INTO DBPREFIXbanlist_old_normalized(old_id, allow_read, ip, name, name_is
 		TRIM(SPLIT_PART(bans.boards, ',', nums.num))
 	#ENDIF
 FROM
-gc_numbersequel_temp AS nums INNER JOIN gc_banlist_old AS bans
+DBPREFIXnumbersequel_temp AS nums INNER JOIN DBPREFIXbanlist_old AS bans
 ON TRUE
 WHERE CHAR_LENGTH(bans.boards)-CHAR_LENGTH(REPLACE(bans.boards, ',', '')) >= nums.num-1);
 
@@ -264,6 +265,7 @@ if image <> "" or null create image ban
 --Add an old_id column to each table for later foreign key linking for appeals, remove at the end
 ALTER TABLE DBPREFIXip_ban ADD COLUMN old_id int;
 
+--ip bans
 INSERT INTO DBPREFIXip_ban(old_id, staff_id, board_id, is_thread_ban, is_active, ip, issued_at, expires_at, permanent, staff_note, message, can_appeal, appeal_at, copy_post_text)
 (
 	SELECT old_id, staff_id, board_id, TRUE, TRUE, ip, timestamp, expires, permaban, staff_note, reason, can_appeal, appeal_at, ''
@@ -275,3 +277,107 @@ INSERT INTO DBPREFIXip_ban(old_id, staff_id, board_id, is_thread_ban, is_active,
 	SELECT old_id, staff_id, board_id, FALSE, TRUE, ip, timestamp, expires, permaban, staff_note, reason, can_appeal, appeal_at, ''
 	FROM DBPREFIXbanlist_old_normalized WHERE type = 3
 );
+
+--appeals
+INSERT INTO DBPREFIXip_ban_appeals(ip_ban_id, appeal_text, staff_response, is_denied)(
+	SELECT ban.id, appeal.message, appeal.staff_response, appeal.denied
+	FROM DBPREFIXappeals_old as appeal
+	JOIN DBPREFIXip_ban as ban ON ban.old_id = appeal.id
+);
+
+ALTER TABLE DBPREFIXip_ban DROP COLUMN old_id;
+
+--file ban
+INSERT INTO DBPREFIXfile_ban(board_id, staff_id, staff_note, issued_at, checksum)(
+	SELECT board_id, staff_id, staff_note, timestamp, file_checksum 
+	FROM DBPREFIXbanlist_old_normalized WHERE file_checksum <> ''
+);
+
+--filename ban
+INSERT INTO DBPREFIXfilename_ban(board_id, staff_id, staff_note, issued_at, filename, is_regex)(
+	SELECT board_id, staff_id, staff_note, timestamp, filename, name_is_regex 
+	FROM DBPREFIXbanlist_old_normalized WHERE filename <> ''
+);
+
+--username ban
+INSERT INTO DBPREFIXusername_ban(board_id, staff_id, staff_note, issued_at, username, is_regex)(
+	SELECT board_id, staff_id, staff_note, timestamp, name, name_is_regex 
+	FROM DBPREFIXbanlist_old_normalized WHERE name <> ''
+);
+
+--reports
+INSERT INTO DBPREFIXreports(post_id, ip, reason, is_cleared)(
+	SELECT post.id, report.id, report.reason, report.cleared
+	FROM DBPREFIXreports_old as report
+	JOIN DBPREFIXposts as post on post.oldselfid = report.postid
+);
+
+--wordfilters
+
+--normalize boards
+--Create copy of table structure and drop not null constraint on boards
+#IF MYSQL
+	CREATE TABLE DBPREFIXwordfilters_old_normalized SELECT * FROM DBPREFIXwordfilters_old LIMIT 0;
+	ALTER TABLE DBPREFIXwordfilters_old_normalized MODIFY boards VARCHAR(255);
+#ENDIF
+#IF POSTGRES
+	CREATE TABLE DBPREFIXwordfilters_old_normalized (like DBPREFIXwordfilters_old including all);
+	ALTER TABLE DBPREFIXwordfilters_old_normalized ALTER COLUMN boards DROP NOT NULL;
+#ENDIF
+
+--needed because id sequence is otherwise shared between this and the old table
+ALTER TABLE DBPREFIXwordfilters_old_normalized DROP COLUMN id;
+ALTER TABLE DBPREFIXwordfilters_old_normalized ADD COLUMN old_id int;
+
+
+INSERT INTO DBPREFIXwordfilters_old_normalized(old_id, search, change_to, regex, boards)
+(SELECT
+	filters.id,
+	filters.search,
+	filters.change_to,
+	filters.regex,
+	#IF MYSQL
+		TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(filters.boards, ',', nums.num), ',', -1))
+	#ENDIF
+	#IF POSTGRES
+		TRIM(SPLIT_PART(filters.boards, ',', nums.num))
+	#ENDIF
+FROM
+DBPREFIXnumbersequel_temp AS nums INNER JOIN DBPREFIXwordfilters_old AS filters
+ON TRUE
+WHERE CHAR_LENGTH(filters.boards)-CHAR_LENGTH(REPLACE(filters.boards, ',', '')) >= nums.num-1);
+
+--replace * with null
+UPDATE DBPREFIXwordfilters_old_normalized
+SET boards = null
+WHERE boards = '*';
+
+ALTER TABLE DBPREFIXwordfilters_old_normalized ADD COLUMN board_id int;
+
+--fix board id
+#IF POSTGRES
+	UPDATE DBPREFIXwordfilters_old_normalized as filters
+	SET board_id = boards.id
+	FROM DBPREFIXboards as boards
+	WHERE filters.boards = boards.dir;
+#ENDIF
+
+#IF MYSQL
+	UPDATE DBPREFIXwordfilters_old_normalized as filters, DBPREFIXboards as boards
+	SET filters.board_id = boards.id
+	WHERE filters.boards = boards.dir;
+#ENDIF
+
+INSERT INTO DBPREFIXwordfilters(board_id, staff_note, issued_at, search, is_regex, change_to)(
+	SELECT 
+	board_id, 
+	'No staff, staff note or date.', 
+	CURRENT_TIMESTAMP,
+	search,
+	regex,
+	change_to
+	FROM DBPREFIXwordfilters_old_normalized
+);
+
+--cleanup
+ALTER TABLE DBPREFIXposts DROP COLUMN oldselfid;

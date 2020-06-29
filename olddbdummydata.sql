@@ -10,6 +10,11 @@ INSERT INTO DBPREFIXappeals (ban, message, denied, staff_response) VALUES (2, 't
 INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff, type) VALUES ('IP 1', 'staff note 1', '*', 'staff1', 1);
 INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff, type) VALUES ('IP 2', 'staff note 2', 'a,  d,  k', 'staff2', 3);
 INSERT INTO DBPREFIXbanlist (ip, staff_note, boards, staff, type) VALUES ('IP 3', 'staff note 3', 'k', 'staff1', 3);
+INSERT INTO DBPREFIXbanlist (staff_note, boards, staff, name) VALUES ('usernameban1', 'k', 'staff1', 'username');
+INSERT INTO DBPREFIXbanlist (staff_note, boards, staff, name, name_is_regex) VALUES ('usernameban2', 'k', 'staff1', 'usernameregex', true);
+INSERT INTO DBPREFIXbanlist (staff_note, boards, staff, filename) VALUES ('filenameban1', 'k', 'staff1', 'filename');
+INSERT INTO DBPREFIXbanlist (staff_note, boards, staff, filename, name_is_regex) VALUES ('filenameban2', 'k', 'staff1', 'filenameregex', true);
+INSERT INTO DBPREFIXbanlist (staff_note, boards, staff, file_checksum) VALUES ('checksumban', 'k, a', 'staff1', 'checksum');
 
 INSERT INTO DBPREFIXboards (dir, title) VALUES ('a', 'anime');
 INSERT INTO DBPREFIXboards (dir, title) VALUES ('d', 'fucked up hentai');
@@ -48,3 +53,4 @@ INSERT INTO DBPREFIXstaff (username, password_checksum, rank) VALUES ('staff2', 
 
 INSERT INTO DBPREFIXwordfilters (search, change_to, boards) VALUES ('searchterm', 'replace', 'a,k');
 INSERT INTO DBPREFIXwordfilters (search, change_to, boards) VALUES ('searchterm2', 'replace2', '*');
+INSERT INTO DBPREFIXwordfilters (search, change_to, boards, regex) VALUES ('searchterm3', 'replace3', 'a,d', true);
