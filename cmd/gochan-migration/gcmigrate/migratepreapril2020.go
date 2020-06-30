@@ -6,12 +6,16 @@ import (
 )
 
 func migratePreApril2020Database(dbType string) error {
-	err := createNumberSequelTable(1000) //number sequel table is used in normalizing comma seperated lists
+	_, err := gcsql.ExecSQL("DROP TABLE IF EXISTS DBPREFIXsessions")
+	if err != nil {
+		return err
+	}
+	err = createNumberSequelTable(1000) //number sequel table is used in normalizing comma seperated lists
 	if err != nil {
 		return err
 	}
 	//Rename all existing tables to [name]_old
-	var tables = []string{"announcements", "appeals", "banlist", "boards", "embeds", "info", "links", "posts", "reports", "sections", "sessions", "staff", "wordfilters"}
+	var tables = []string{"announcements", "appeals", "banlist", "boards", "embeds", "info", "links", "posts", "reports", "sections", "staff", "wordfilters"}
 	for _, i := range tables {
 		err := renameTable(i, i+"_old")
 		if err != nil {

@@ -113,7 +113,7 @@ SELECT parentid = 0, ip, timestamp, name, tripcode, false, email, subject,
 #ENDIF
 
 INSERT INTO DBPREFIXfiles(file_order, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height, oldpostid, oldboardid)
-SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '' AND filename <> "deleted";
+SELECT 1, filename_original, filename, file_checksum, filesize, false, image_w, image_h, thumb_w, thumb_h, id, boardid FROM DBPREFIXposts_old WHERE filename <> '' AND filename <> 'deleted';
 
 #IF POSTGRES
 	-- Creates files in files table
@@ -154,17 +154,6 @@ ALTER TABLE DBPREFIXposts ADD CONSTRAINT posts_thread_id_fk FOREIGN KEY (thread_
 INSERT INTO DBPREFIXstaff(id, username, password_checksum, global_rank, added_on, last_login)
 SELECT id, username, password_checksum, rank, added_on, last_active
 FROM DBPREFIXstaff_old;
-
-#IF COMMENTEDOUT
---Sessions
-INSERT INTO DBPREFIXsessions(staff_id, expires, data)
-(SELECT staff.id, session.expires, session.sessiondata FROM DBPREFIXsessions_old as session JOIN DBPREFIXstaff as staff ON staff.username = session.name);
-
---Announcements
-INSERT INTO DBPREFIXannouncements(staff_id, subject, message, timestamp)
-(SELECT staff.id, a.subject, a.message, a.timestamp FROM DBPREFIXannouncements_old as a JOIN DBPREFIXstaff as staff ON a.poster = staff.username);
-
-#ENDIF
 
 --Bans--
 
