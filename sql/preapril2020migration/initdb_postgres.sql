@@ -7,6 +7,7 @@
 -- Database version: 1
 
 CREATE TABLE DBPREFIXdatabase_version(
+	component TEXT NOT NULL PRIMARY KEY,
 	version INT NOT NULL
 );
 
@@ -267,5 +268,5 @@ CREATE TABLE DBPREFIXwordfilters(
 	CONSTRAINT wordfilters_search_check CHECK (search <> '')
 );
 
-INSERT INTO DBPREFIXdatabase_version(version)
-VALUES(1);
+INSERT INTO DBPREFIXdatabase_version(component, version)
+VALUES('gochan', 1);

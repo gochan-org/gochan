@@ -34,7 +34,7 @@ func GetCompleteDatabaseVersion() (dbVersion int, dbFlag int, err error) {
 		return 0, 0, err
 	}
 	if versionTableExists {
-		databaseVersion, versionError := getDatabaseVersion()
+		databaseVersion, versionError := getDatabaseVersion(GochanVersionKeyConstant)
 		if versionError != nil {
 			return 0, 0, ErrInvalidVersion
 		}

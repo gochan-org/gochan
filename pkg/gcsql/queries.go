@@ -13,10 +13,12 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+// GochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
+const GochanVersionKeyConstant = "gochan"
+
 var (
-	ErrMultipleDBVersions = errors.New("More than one version in database")
-	ErrNilBoard           = errors.New("Board is nil")
-	ErrUnsupportedDB      = errors.New("Unsupported DBtype")
+	ErrNilBoard      = errors.New("Board is nil")
+	ErrUnsupportedDB = errors.New("Unsupported DBtype")
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
@@ -970,19 +972,13 @@ func getBoardIDFromURI(URI string) (id int, err error) {
 }
 
 //getDatabaseVersion gets the version of the database, or an error if none or multiple exist
-func getDatabaseVersion() (int, error) {
-	const countsql = `SELECT COUNT(version) FROM DBPREFIXdatabase_version`
-	var count int
-	err := QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&count))
+func getDatabaseVersion(componentKey string) (int, error) {
+	const sql = `SELECT version FROM DBPREFIXdatabase_version WHERE component = ?`
+	var version int
+	err := QueryRowSQL(sql, []interface{}{componentKey}, []interface{}{&version})
 	if err != nil {
 		return 0, err
 	}
-	if count > 1 {
-		return 0, ErrMultipleDBVersions
-	}
-	const sql = `SELECT version FROM DBPREFIXdatabase_version`
-	var version int
-	err = QueryRowSQL(countsql, interfaceSlice(), interfaceSlice(&version))
 	return version, err
 }
 
