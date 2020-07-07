@@ -367,6 +367,3 @@ INSERT INTO DBPREFIXwordfilters(board_id, staff_note, issued_at, search, is_rege
 	change_to
 	FROM DBPREFIXwordfilters_old_normalized
 );
-
---cleanup
-ALTER TABLE DBPREFIXposts DROP COLUMN oldselfid;
