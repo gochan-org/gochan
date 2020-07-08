@@ -63,10 +63,6 @@ func migratePreApril2020Database(dbType string) error {
 	if err != nil {
 		return err
 	}
-	err = dropTable("wordfilters_old_normalized")
-	if err != nil {
-		return err
-	}
 	return dropTable("numbersequel_temp")
 }
 
