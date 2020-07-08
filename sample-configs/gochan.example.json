@@ -10,8 +10,8 @@
 	"TemplateDir": "templates",
 	"LogDir": "log",
 
-	"DBtype": "mysql",
-	"DBhost": "tcp(127.0.0.1:3306)",
+	"DBtype": "mysql/postgres",
+	"DBhost": "127.0.0.1:3306",
 	"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
 	"DBhost_alt": "unix(/var/run/mysqld/mysqld.sock)",
 	"DBname": "gochan",
