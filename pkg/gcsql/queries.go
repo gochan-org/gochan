@@ -3,6 +3,7 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"html/template"
 	"os"
 	"path"
@@ -694,15 +695,18 @@ func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
 }
 
 //GetBoardFromPostID gets the boardURI that a given postid exists on
-func GetBoardFromPostID(postID int) (boardURI string, err error) {
-	const sql = `SELECT board.uri FROM DBPREFIXboards as board
+func GetBoardFromPostID(postID int) (boardURI string, wasFound bool, err error) {
+	const query = `SELECT board.uri FROM DBPREFIXboards as board
 	JOIN (
 		SELECT threads.board_id FROM DBPREFIXthreads as threads
 		JOIN DBPREFIXposts as posts ON posts.thread_id = threads.id
 		WHERE posts.id = ?
 	) as threads ON threads.board_id = board.id`
-	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&boardURI))
-	return boardURI, err
+	err = QueryRowSQL(query, interfaceSlice(postID), interfaceSlice(&boardURI))
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	return boardURI, true, err
 }
 
 //GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
@@ -768,9 +772,12 @@ func UpdatePost(postID int, email string, subject string, message template.HTML,
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Should be implemented to delete files individually
 func DeleteFilesFromPost(postID int) error {
-	board, err := GetBoardFromPostID(postID)
+	board, boardWasFound, err := GetBoardFromPostID(postID)
 	if err != nil {
 		return err
+	}
+	if !boardWasFound {
+		return fmt.Errorf("Could not find board for post %v", postID)
 	}
 
 	//Get all filenames

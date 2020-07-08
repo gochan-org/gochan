@@ -695,8 +695,8 @@ var manageFunctions = map[string]ManageFunction{
 				return "", err
 			}
 
-			for _, message := range messages {
-				message.Message = posting.FormatMessage(message.MessageRaw)
+			for i := range messages {
+				messages[i].Message = posting.FormatMessage(messages[i].MessageRaw)
 			}
 			if err = gcsql.SetFormattedInDatabase(messages); err != nil {
 				return "", err

@@ -66,8 +66,9 @@ func FormatMessage(message string) template.HTML {
 					// the link is in fact, a valid int
 					var boardDir string
 					var linkParent int
+					var boardIDFound bool
 
-					if boardDir, err = gcsql.GetBoardFromPostID(postID); err != nil {
+					if boardDir, boardIDFound, err = gcsql.GetBoardFromPostID(postID); err != nil {
 						gclog.Print(gclog.LErrorLog, "Error getting board dir for backlink: ", err.Error())
 					}
 					if linkParent, err = gcsql.GetThreadIDZeroIfTopPost(postID); err != nil {
@@ -75,7 +76,7 @@ func FormatMessage(message string) template.HTML {
 					}
 
 					// get post board dir
-					if boardDir == "" {
+					if !boardIDFound {
 						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
 					} else if linkParent == 0 {
 						lineWords[w] = `<a href="` + config.Config.SiteWebfolder + boardDir + `/res/` + word[8:] + `.html" class="postref">` + word + `</a>`
