@@ -17,7 +17,7 @@ const (
 	sOtherError
 )
 
-func createSession(key string, username string, password string, request *http.Request, writer http.ResponseWriter) int {
+func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
 	var err error

@@ -160,7 +160,7 @@ func getStaffByID(id int) (*Staff, error) {
 }
 
 // NewStaff creates a new staff account from a given username, password and rank
-func NewStaff(username string, password string, rank int) error {
+func NewStaff(username, password string, rank int) error {
 	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank)
 	VALUES (?, ?, ?)`
 	_, err := ExecSQL(sql, username, gcutil.BcryptSum(password), rank)
@@ -184,7 +184,7 @@ func getStaffID(username string) (int, error) {
 }
 
 // CreateSession inserts a session for a given key and username into the database
-func CreateSession(key string, username string) error {
+func CreateSession(key, username string) error {
 	const sql1 = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
 	const sql2 = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
 	staffID, err := getStaffID(username)
@@ -236,7 +236,7 @@ func getBoardIDFromURIOrNil(URI string) *int {
 }
 
 // CreateFileBan creates a new ban on a file. If boards = nil, the ban is global.
-func CreateFileBan(fileChecksum string, staffName string, permaban bool, staffNote string, boardURI string) error {
+func CreateFileBan(fileChecksum, staffName string, permaban bool, staffNote, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -248,7 +248,7 @@ func CreateFileBan(fileChecksum string, staffName string, permaban bool, staffNo
 }
 
 // CreateFileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
-func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, filename = ?, is_regex = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -260,7 +260,7 @@ func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban
 }
 
 // CreateUserNameBan creates a new ban on a username. If boards = nil, the ban is global.
-func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote string, boardURI string) error {
+func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, username = ?, is_regex = ?`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
@@ -274,8 +274,8 @@ func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban
 // CreateUserBan creates either a full ip ban, or an ip ban for threads only, for a given IP.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func CreateUserBan(IP string, threadBan bool, staffName string, boardURI string, expires time.Time, permaban bool,
-	staffNote string, message string, canAppeal bool, appealAt time.Time) error {
+func CreateUserBan(IP string, threadBan bool, staffName, boardURI string, expires time.Time, permaban bool,
+	staffNote, message string, canAppeal bool, appealAt time.Time) error {
 	const sql = `INSERT INTO DBPREFIXip_ban (board_id, staff_id, staff_note, is_thread_ban, ip, appeal_at, expires_at, permanent, message, can_appeal, issued_at, copy_posted_text, is_active)
 	VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,'OLD SYSTEM BAN, NO TEXT AVAILABLE',TRUE)`
 	staffID, err := getStaffID(staffName)
@@ -485,7 +485,7 @@ ON ban.board_id = board.id`
 // name, filename and checksum may be empty strings and will be treated as not requested if done so
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func CheckBan(ip string, name string, filename string, checksum string) (*BanInfo, error) {
+func CheckBan(ip, name, filename, checksum string) (*BanInfo, error) {
 	ban := new(BanInfo)
 	ipban, err1 := checkIPBan(ip)
 	err1NoRows := (err1 == sql.ErrNoRows)
@@ -631,7 +631,7 @@ func InsertPost(post *Post, bump bool) error {
 	return nil
 }
 
-func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
+func createThread(boardID int, locked, stickied, anchored, cyclical bool) (threadID int, err error) {
 	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
 	//This is done because mysql doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
@@ -665,7 +665,7 @@ func bumpThread(threadID int) error {
 	return err
 }
 
-func appendFile(postID int, originalFilename string, filename string, checksum string, fileSize int, isSpoilered bool, width int, height int, thumbnailWidth int, thumbnailHeight int) error {
+func appendFile(postID int, originalFilename, filename, checksum string, fileSize int, isSpoilered bool, width, height, thumbnailWidth, thumbnailHeight int) error {
 	const nextIDSQL = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
 	var nextID int
 	err := QueryRowSQL(nextIDSQL, interfaceSlice(postID), interfaceSlice(&nextID))
@@ -762,7 +762,7 @@ func GetPostPassword(postID int) (password string, err error) {
 //UpdatePost updates a post with new information
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func UpdatePost(postID int, email string, subject string, message template.HTML, messageRaw string) error {
+func UpdatePost(postID int, email, subject string, message template.HTML, messageRaw string) error {
 	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
 	_, err := ExecSQL(sql, email, subject, string(message), messageRaw)
 	return err
@@ -905,7 +905,7 @@ func CreateDefaultAdminIfNoStaff() error {
 	return err
 }
 
-func createUser(username string, passwordEncrypted string, globalRank int) (userID int, err error) {
+func createUser(username, passwordEncrypted string, globalRank int) (userID int, err error) {
 	const sqlInsert = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)`
 	const sqlSelect = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
 	//Excecuted in two steps this way because last row id functions arent thread safe, username is unique

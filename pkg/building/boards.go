@@ -298,7 +298,7 @@ func BuildCatalog(boardID int) string {
 // Build builds the board and its thread files
 // if newBoard is true, it adds a row to DBPREFIXboards and fails if it exists
 // if force is true, it doesn't fail if the directories exist but does fail if it is a file
-func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
+func buildBoard(board *gcsql.Board, newBoard, force bool) error {
 	var err error
 	if board.Dir == "" {
 		return ErrNoBoardDir
@@ -324,11 +324,9 @@ func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				dirIsAFileStr, dirPath))
 		}
-	} else {
-		if err = os.Mkdir(dirPath, 0666); err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				genericErrStr, dirPath, err.Error()))
-		}
+	} else if err = os.Mkdir(dirPath, 0666); err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			genericErrStr, dirPath, err.Error()))
 	}
 
 	if resInfo != nil {
@@ -341,11 +339,9 @@ func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
 				dirIsAFileStr, resPath))
 
 		}
-	} else {
-		if err = os.Mkdir(resPath, 0666); err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				genericErrStr, resPath, err.Error()))
-		}
+	} else if err = os.Mkdir(resPath, 0666); err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			genericErrStr, resPath, err.Error()))
 	}
 
 	if srcInfo != nil {
@@ -357,11 +353,9 @@ func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				dirIsAFileStr, srcPath))
 		}
-	} else {
-		if err = os.Mkdir(srcPath, 0666); err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				genericErrStr, srcPath, err.Error()))
-		}
+	} else if err = os.Mkdir(srcPath, 0666); err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			genericErrStr, srcPath, err.Error()))
 	}
 
 	if thumbInfo != nil {
@@ -373,11 +367,9 @@ func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				dirIsAFileStr, thumbPath))
 		}
-	} else {
-		if err = os.Mkdir(thumbPath, 0666); err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				genericErrStr, thumbPath, err.Error()))
-		}
+	} else if err = os.Mkdir(thumbPath, 0666); err != nil {
+		return errors.New(gclog.Printf(gclog.LErrorLog,
+			genericErrStr, thumbPath, err.Error()))
 	}
 
 	if newBoard {
@@ -386,10 +378,8 @@ func buildBoard(board *gcsql.Board, newBoard bool, force bool) error {
 		if err != nil {
 			return err
 		}
-	} else {
-		if err = board.UpdateID(); err != nil {
-			return err
-		}
+	} else if err = board.UpdateID(); err != nil {
+		return err
 	}
 	BuildBoardPages(board)
 	BuildThreads(true, board.ID, 0)

@@ -140,7 +140,7 @@ func GetExistingReplies(topPost int) (posts []Post, err error) {
 // GetExistingRepliesLimitedRev gets N amount of reply posts to a given thread, ordered by newest first.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetExistingRepliesLimitedRev(topPost int, limit int) (posts []Post, err error) {
+func GetExistingRepliesLimitedRev(topPost, limit int) (posts []Post, err error) {
 	return getPostsExcecution(newestFirstLimited, topPost, limit)
 }
 

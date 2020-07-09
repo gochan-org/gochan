@@ -108,7 +108,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func getCaptchaImage() (captchaID string, chaptchaB64 string) {
+func getCaptchaImage() (captchaID, chaptchaB64 string) {
 	if !config.Config.UseCaptcha {
 		return
 	}

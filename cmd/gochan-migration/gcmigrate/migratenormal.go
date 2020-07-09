@@ -7,7 +7,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-func versionHandler(foundDatabaseVersion int, targetDatabaseVersion int) error {
+func versionHandler(foundDatabaseVersion, targetDatabaseVersion int) error {
 	if foundDatabaseVersion < targetDatabaseVersion {
 		for foundDatabaseVersion < targetDatabaseVersion {
 			gclog.Printf(gclog.LStdLog, "Migrating databasefrom version %v to version %v", foundDatabaseVersion, foundDatabaseVersion+1)
@@ -29,7 +29,7 @@ func versionHandler(foundDatabaseVersion int, targetDatabaseVersion int) error {
 	return nil
 }
 
-func checkMigrationsExist(currentVersion int, target int) error {
+func checkMigrationsExist(currentVersion, target int) error {
 	for i := currentVersion; i < target; i++ {
 		if _, ok := migrations[i]; !ok {
 			return fmt.Errorf("This version of the migrator does not contain a migration from version %v to %v, please upgrade the migrator", currentVersion, target)

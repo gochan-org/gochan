@@ -79,7 +79,7 @@ func getNewFilename() string {
 }
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
-func getThumbnailSize(w int, h int, size string) (newWidth int, newHeight int) {
+func getThumbnailSize(w, h int, size string) (newWidth, newHeight int) {
 	var thumbWidth int
 	var thumbHeight int
 

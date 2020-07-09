@@ -10,7 +10,7 @@ import (
 )
 
 //TruncateHTML truncates a template.HTML string to a certain visible character limit and line limit
-func truncateHTML(htmlText template.HTML, characterLimit int, maxLines int) template.HTML {
+func truncateHTML(htmlText template.HTML, characterLimit, maxLines int) template.HTML {
 	dom, err := x_html.Parse(strings.NewReader(string(htmlText)))
 	if err != nil {
 		gclog.Println(gclog.LErrorLog, err.Error())
@@ -30,9 +30,8 @@ func removeNextSiblings(node *x_html.Node) {
 	node.Parent.RemoveChild(node)
 }
 
-func truncateHTMLNodes(node *x_html.Node, charactersLeft int, linesLeft int) (charsLeft int, lineLeft int) {
+func truncateHTMLNodes(node *x_html.Node, charactersLeft, linesLeft int) (charsLeft, lineLeft int) {
 	//Uses a depth first search to map nodes and remove the rest.
-
 	if node == nil {
 		return charactersLeft, linesLeft
 	}

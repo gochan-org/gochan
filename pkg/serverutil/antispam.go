@@ -38,8 +38,7 @@ func CheckAkismetAPIKey(key string) error {
 }
 
 // CheckPostForSpam checks a given post for spam with Akismet. Only checks if Akismet API key is set.
-func CheckPostForSpam(userIP string, userAgent string, referrer string,
-	author string, email string, postContent string) string {
+func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent string) string {
 	if config.Config.AkismetAPIKey != "" {
 		client := &http.Client{}
 		data := url.Values{"blog": {"http://" + config.Config.SiteDomain}, "user_ip": {userIP}, "user_agent": {userAgent}, "referrer": {referrer},

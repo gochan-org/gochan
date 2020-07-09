@@ -145,7 +145,7 @@ func (board *Board) AbsolutePath(subpath ...string) string {
 
 // WebPath returns a string that represents the file's path as accessible by a browser
 // fileType should be "boardPage", "threadPage", "upload", or "thumb"
-func (board *Board) WebPath(fileName string, fileType string) string {
+func (board *Board) WebPath(fileName, fileType string) string {
 	var filePath string
 	switch fileType {
 	case "":

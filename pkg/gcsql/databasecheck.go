@@ -28,7 +28,7 @@ var (
 // If a version is found, execute the version check. Otherwise check for deprecated info
 // If no deprecated info is found, check if any databases exist prefixed with config.DBprefix
 // if no prefixed databases exist, assume this is a new installation
-func GetCompleteDatabaseVersion() (dbVersion int, dbFlag int, err error) {
+func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 	versionTableExists, err := doesTableExist("database_version")
 	if err != nil {
 		return 0, 0, err

@@ -4,7 +4,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-func renameTable(tablename string, tableNameNew string) error {
+func renameTable(tablename, tableNameNew string) error {
 	var sql = "ALTER TABLE DBPREFIX" + tablename + " RENAME TO DBPREFIX" + tableNameNew
 	_, err := gcsql.ExecSQL(sql)
 	return err

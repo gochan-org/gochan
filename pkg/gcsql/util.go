@@ -99,7 +99,7 @@ Example:
 		[]interface{}{&id},
 		[]interface{}{&intVal, &stringVal})
 */
-func QueryRowSQL(query string, values []interface{}, out []interface{}) error {
+func QueryRowSQL(query string, values, out []interface{}) error {
 	stmt, err := PrepareSQL(query)
 	if err != nil {
 		return err

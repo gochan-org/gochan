@@ -23,7 +23,7 @@ var (
 )
 
 // ConnectToDB initializes the database connection and exits if there are any errors
-func ConnectToDB(host string, dbType string, dbName string, username string, password string, prefix string) {
+func ConnectToDB(host, dbType, dbName, username, password, prefix string) {
 	var connStr string
 	sqlReplacer = strings.NewReplacer(
 		"DBNAME", dbName,

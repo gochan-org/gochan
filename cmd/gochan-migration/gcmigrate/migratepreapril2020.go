@@ -90,13 +90,13 @@ func fixPostLinkingOnBoard(boardID int) error {
 	}
 	jumptable := make(map[int]int)
 	for rows.Next() {
-		var old int
-		var new int
-		err = rows.Scan(&old, &new)
+		var oldTable int
+		var newTable int
+		err = rows.Scan(&oldTable, &newTable)
 		if err != nil {
 			return err
 		}
-		jumptable[old] = new
+		jumptable[oldTable] = newTable
 	}
 
 	jumpTableFunc := func(intstring string) string {

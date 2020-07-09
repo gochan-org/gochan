@@ -60,10 +60,8 @@ var funcMap = template.FuncMap{
 
 	// String functions
 	// "arrToString": arrToString,
-	"intToString": strconv.Itoa,
-	"escapeString": func(a string) string {
-		return html.EscapeString(a)
-	},
+	"intToString":  strconv.Itoa,
+	"escapeString": html.EscapeString,
 	"formatFilesize": func(sizeInt int) string {
 		size := float32(sizeInt)
 		if size < 1000 {
@@ -87,7 +85,7 @@ var funcMap = template.FuncMap{
 	},
 	"truncateMessage": func(msg string, limit int, maxLines int) string {
 		var truncated bool
-		split := strings.SplitN(msg, "<br />", -1)
+		split := strings.Split(msg, "<br />")
 
 		if len(split) > maxLines {
 			split = split[:maxLines]
