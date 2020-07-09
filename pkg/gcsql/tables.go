@@ -259,12 +259,11 @@ func (p *Post) GetURL(includeDomain bool) string {
 		return postURL
 	}
 
-	idStr := strconv.Itoa(p.ID)
 	postURL += config.Config.SiteWebfolder + board.Dir + "/res/"
 	if p.ParentID == 0 {
-		postURL += idStr + ".html#" + idStr
+		postURL += fmt.Sprintf("%d.html#%d", p.ID, p.ID)
 	} else {
-		postURL += strconv.Itoa(p.ParentID) + ".html#" + idStr
+		postURL += fmt.Sprintf("%d.html#%d", p.ParentID, p.ID)
 	}
 	return postURL
 }
@@ -276,6 +275,9 @@ func (p *Post) Sanitize() {
 	p.Email = html.EscapeString(p.Email)
 	p.Subject = html.EscapeString(p.Subject)
 	p.Password = html.EscapeString(p.Password)
+	if p.ParentID < 0 {
+		p.ParentID = 0
+	}
 }
 
 type Report struct {

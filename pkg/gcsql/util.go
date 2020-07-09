@@ -95,7 +95,7 @@ Example:
 	id := 32
 	var intVal int
 	var stringVal string
-	err := queryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
+	err := QueryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
 		[]interface{}{&id},
 		[]interface{}{&intVal, &stringVal})
 */

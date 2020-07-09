@@ -127,11 +127,66 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	default:
 	}
 
-	file, handler, err := request.FormFile("imagefile")
+	postDelay, _ := gcsql.SinceLastPost(post.ID)
+	if postDelay > -1 {
+		if post.ParentID == 0 && postDelay < config.Config.NewThreadDelay {
+			serverutil.ServeErrorPage(writer, "Please wait before making a new thread.")
+			return
+		} else if post.ParentID > 0 && postDelay < config.Config.ReplyDelay {
+			serverutil.ServeErrorPage(writer, "Please wait before making a reply.")
+			return
+		}
+	}
 
+	banStatus, err := getBannedStatus(request)
+	if err != nil && err != sql.ErrNoRows {
+		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+			"Error getting banned status: ", err.Error()))
+		return
+	}
+
+	boards, _ := gcsql.GetAllBoards()
+
+	postBoard, _ := gcsql.GetBoardFromID(post.BoardID)
+	if banStatus != nil && banStatus.IsBanned(postBoard.Dir) {
+		var banpageBuffer bytes.Buffer
+
+		if err = gcutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
+			"config": config.Config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
+		}, writer, "text/html"); err != nil {
+			serverutil.ServeErrorPage(writer,
+				gclog.Print(gclog.LErrorLog, "Error minifying page: ", err.Error()))
+			return
+		}
+		writer.Write(banpageBuffer.Bytes())
+		return
+	}
+
+	post.Sanitize()
+
+	if config.Config.UseCaptcha {
+		captchaID := request.FormValue("captchaid")
+		captchaAnswer := request.FormValue("captchaanswer")
+		if captchaID == "" && captchaAnswer == "" {
+			// browser isn't using JS, save post data to tempPosts and show captcha
+			request.Form.Add("temppostindex", strconv.Itoa(len(gcsql.TempPosts)))
+			request.Form.Add("emailcmd", emailCommand)
+			gcsql.TempPosts = append(gcsql.TempPosts, post)
+
+			ServeCaptcha(writer, request)
+			return
+		}
+	}
+
+	file, handler, err := request.FormFile("imagefile")
+	var filePath, thumbPath, catalogThumbPath string
 	if err != nil || handler.Size == 0 {
 		// no file was uploaded
 		post.Filename = ""
+		if strings.TrimSpace(post.MessageText) == "" {
+			serverutil.ServeErrorPage(writer, "Post must contain a message if no image is uploaded.")
+			return
+		}
 		gclog.Printf(gclog.LAccessLog,
 			"Receiving post from %s, referred from: %s", post.IP, request.Referer())
 	} else {
@@ -167,9 +222,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		boardDir := _board.Dir
-		filePath := path.Join(config.Config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
-		thumbPath := path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
-		catalogThumbPath := path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
+		filePath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
+		thumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
+		catalogThumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
 		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
 			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
@@ -318,63 +373,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if strings.TrimSpace(post.MessageText) == "" && post.Filename == "" {
-		serverutil.ServeErrorPage(writer, "Post must contain a message if no image is uploaded.")
-		return
-	}
-
-	postDelay, _ := gcsql.SinceLastPost(post.ID)
-	if postDelay > -1 {
-		if post.ParentID == 0 && postDelay < config.Config.NewThreadDelay {
-			serverutil.ServeErrorPage(writer, "Please wait before making a new thread.")
-			return
-		} else if post.ParentID > 0 && postDelay < config.Config.ReplyDelay {
-			serverutil.ServeErrorPage(writer, "Please wait before making a reply.")
-			return
-		}
-	}
-
-	banStatus, err := getBannedStatus(request)
-	if err != nil && err != sql.ErrNoRows {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error getting banned status: ", err.Error()))
-		return
-	}
-
-	boards, _ := gcsql.GetAllBoards()
-
-	postBoard, _ := gcsql.GetBoardFromID(post.BoardID)
-	if banStatus != nil && banStatus.IsBanned(postBoard.Dir) {
-		var banpageBuffer bytes.Buffer
-
-		if err = gcutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
-			"config": config.Config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
-		}, writer, "text/html"); err != nil {
-			serverutil.ServeErrorPage(writer,
-				gclog.Print(gclog.LErrorLog, "Error minifying page: ", err.Error()))
-			return
-		}
-		writer.Write(banpageBuffer.Bytes())
-		return
-	}
-
-	post.Sanitize()
-
-	if config.Config.UseCaptcha {
-		captchaID := request.FormValue("captchaid")
-		captchaAnswer := request.FormValue("captchaanswer")
-		if captchaID == "" && captchaAnswer == "" {
-			// browser isn't using JS, save post data to tempPosts and show captcha
-			request.Form.Add("temppostindex", strconv.Itoa(len(gcsql.TempPosts)))
-			request.Form.Add("emailcmd", emailCommand)
-			gcsql.TempPosts = append(gcsql.TempPosts, post)
-
-			ServeCaptcha(writer, request)
-			return
-		}
-	}
-
 	if err = gcsql.InsertPost(&post, emailCommand != "sage"); err != nil {
+		if post.Filename != "" {
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+		}
 		serverutil.ServeErrorPage(writer,
 			gclog.Print(gclog.LErrorLog, "Error inserting post: ", err.Error()))
 		return
