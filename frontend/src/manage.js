@@ -56,8 +56,8 @@ export class Staff {
 			cache: true,
 			async:false,
 			success: function(result) {
-				let returnData = result.trim().split(";");
-				s = new Staff(returnData[0],returnData[1],returnData[2].split(","));
+				let data = JSON.parse(result);
+				s = new Staff(data.Username,data.Rank,"");
 			},
 			error: function() {
 				s = new Staff("nobody","0","");

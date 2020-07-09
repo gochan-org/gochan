@@ -30,5 +30,5 @@ export function setCookie(name, value, expires) {
 		d.setTime(d.getTime() + 1000*60*60*24*expires)
 		expiresStr += d.toUTCString();
 	}
-	document.cookie = `${name}=${escape(value)}${expiresStr};path=${webroot}`;
+	document.cookie = `${name}=${escape(value)}${expiresStr};path=${webroot};sameSite=strict`;
 }

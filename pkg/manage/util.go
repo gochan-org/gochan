@@ -81,7 +81,6 @@ func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
 func GetStaffRank(request *http.Request) int {
 	staff, err := getCurrentFullStaff(request)
 	if err != nil {
-		gclog.Print(gclog.LErrorLog, "Error getting current staff: ", err.Error())
 		return 0
 	}
 	return staff.Rank

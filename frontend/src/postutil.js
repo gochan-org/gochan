@@ -1,5 +1,5 @@
 let movablePostPreviews = null;
-let expandablePostrefs = null
+let expandablePostrefs = true;
 
 function deleteCheckedPosts() {
 	if(confirm('Are you sure you want to delete these posts?') == true) {
@@ -12,8 +12,26 @@ function deleteCheckedPosts() {
 }
 window.deleteCheckedPosts = deleteCheckedPosts;
 
-function deletePost(id) {
-	let password = prompt("Password (this doesn't do anything yet)");
+function deletePost(id, board) {
+	let password = prompt("Password");
+	// if(password == "") return;
+	// let xhrFields = {
+	// 	board: board,
+	// 	report_btn: "Report",
+	// 	password: password
+	// }
+	// xhrFields[`check${id}`] = "on";
+	// $.ajax({
+	// 	url: webroot + "/util",
+	// 	method: "POST",
+	// 	xhrFields: xhrFields,
+	// 	success: function() {
+	// 		console.log(arguments);
+	// 	},
+	// 	error: function() {
+	// 		console.log(arguments);
+	// 	}
+	// });
 	//window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password";
 }
 window.deletePost = deletePost;
@@ -90,7 +108,8 @@ export function preparePostPreviews(isInline) {
 
 export function prepareThumbnails() {
 	// set thumbnails to expand when clicked
-	$("a.upload-container").click(e => {
+	$("a.upload-container").click(function(e) {
+		e.preventDefault();
 		let a = $(this);
 		let thumb = a.find("img.upload");
 		let thumbURL = thumb.attr("src");
@@ -151,7 +170,25 @@ export function quote(e) {
 	window.scroll(0,document.getElementById(msgboxID).offsetTop - 48);
 }
 
-function reportPost(id) {
-	let reason = prompt("Reason (this doesn't do anything yet)");
+function reportPost(id, board) {
+	let reason = prompt("Reason");
+	if(reason == "") return;
+	// let xhrFields = {
+	// 	board: board,
+	// 	report_btn: "Report",
+	// 	reason: reason
+	// }
+	// xhrFields[`check${id}`] = "on";
+	// $.ajax({
+	// 	url: webroot + "/util",
+	// 	method: "POST",
+	// 	xhrFields: xhrFields,
+	// 	success: function() {
+	// 		console.log(arguments);
+	// 	},
+	// 	error: function() {
+	// 		console.log(arguments);
+	// 	}
+	// });
 }
 window.reportPost = reportPost;
