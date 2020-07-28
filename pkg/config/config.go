@@ -12,7 +12,10 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
-var Config GochanConfig
+var (
+	Config  GochanConfig
+	cfgPath string
+)
 
 // Style represents a theme (Pipes, Dark, etc)
 type Style struct {
@@ -82,9 +85,8 @@ type GochanConfig struct {
 	NewTabOnOutlinks         bool     `description:"If checked, links to external sites will open in a new tab." default:"checked"`
 	DisableBBcode            bool     `description:"If checked, gochan will not compile bbcode into HTML" default:"unchecked"`
 
-	MinifyHTML          bool `description:"If checked, gochan will minify html files when building" default:"checked"`
-	MinifyJS            bool `description:"If checked, gochan will minify js and json files when building" default:"checked"`
-	UseMinifiedGochanJS bool `json:"-"`
+	MinifyHTML bool `description:"If checked, gochan will minify html files when building" default:"checked"`
+	MinifyJS   bool `description:"If checked, gochan will minify js and json files when building" default:"checked"`
 
 	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info." default:"Mon, January 02, 2006 15:04 PM"`
 	AkismetAPIKey         string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
@@ -134,7 +136,7 @@ func (cfg *GochanConfig) checkInt(val, defaultVal int, critical bool, msg string
 
 // InitConfig loads and parses gochan.json and verifies its contents
 func InitConfig(versionStr string) {
-	cfgPath := findResource("gochan.json", "/etc/gochan/gochan.json")
+	cfgPath = findResource("gochan.json", "/etc/gochan/gochan.json")
 	if cfgPath == "" {
 		fmt.Println("gochan.json not found")
 		os.Exit(1)

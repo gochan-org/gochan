@@ -3,7 +3,6 @@ package building
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -92,32 +91,11 @@ func BuildBoardListJSON() error {
 	return nil
 }
 
-// BuildJS minifies (if enabled) gochan.js and consts.js (the latter is built from a template)
+// BuildJS minifies (if enabled) consts.js, which is built from a template
 func BuildJS() error {
-	// minify gochan.js (if enabled)
-	gochanMinJSPath := path.Join(config.Config.DocumentRoot, "javascript", "gochan.min.js")
-	gochanMinJSFile, err := os.OpenFile(gochanMinJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Error opening %q for writing: %s", gochanMinJSPath, err.Error()))
-	}
-	defer gochanMinJSFile.Close()
-
-	gochanJSPath := path.Join(config.Config.DocumentRoot, "javascript", "gochan.js")
-	gochanJSBytes, err := ioutil.ReadFile(gochanJSPath)
-	if err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Error opening %q for writing: %s", gochanJSPath, err.Error()))
-	}
-	if _, err = gcutil.MinifyWriter(gochanMinJSFile, gochanJSBytes, "text/javascript"); err != nil {
-		config.Config.UseMinifiedGochanJS = false
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Error minifying %q: %s:", gochanMinJSPath, err.Error()))
-	}
-	config.Config.UseMinifiedGochanJS = true
-
 	// build consts.js from template
-	if err = gctemplates.InitTemplates("js"); err != nil {
+	err := gctemplates.InitTemplates("js")
+	if err != nil {
 		return errors.New(gclog.Println(gclog.LErrorLog,
 			"Error loading consts.js template:", err.Error()))
 	}

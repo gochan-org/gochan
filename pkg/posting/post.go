@@ -93,9 +93,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	post.Password = gcutil.Md5Sum(password)
 
 	// Reverse escapes
-	nameCookie = strings.ReplaceAll(formName, "&amp;", "&")
-	nameCookie = strings.ReplaceAll(nameCookie, "\\&#39;", "'")
-	nameCookie = strings.ReplaceAll(url.QueryEscape(nameCookie), "+", "%20")
+	nameCookie = strings.Replace(formName, "&amp;", "&", -1)
+	nameCookie = strings.Replace(nameCookie, "\\&#39;", "'", -1)
+	nameCookie = strings.Replace(url.QueryEscape(nameCookie), "+", "%20", -1)
 
 	// add name and email cookies that will expire in a year (31536000 seconds)
 	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, MaxAge: yearInSeconds})
@@ -223,8 +223,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 		boardDir := _board.Dir
 		filePath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
-		thumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.ReplaceAll(post.Filename, "."+filetype, "t."+thumbFiletype))
-		catalogThumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.ReplaceAll(post.Filename, "."+filetype, "c."+thumbFiletype))
+		thumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
+		catalogThumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
 		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
 			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
