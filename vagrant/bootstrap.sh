@@ -8,6 +8,7 @@ if [ -z "$DBTYPE" ]; then
 	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql' (sqlite3 no longer supported)"
 	exit 1
 fi
+echo "Using DBTYPE $DBTYPE"
 
 add-apt-repository -y ppa:gophers/archive
 apt-get -y update && apt-get -y upgrade
