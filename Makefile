@@ -72,6 +72,15 @@ dependencies:
 		github.com/tdewolff/minify \
 		github.com/mojocn/base64Captcha
 
+docker:
+	docker-compose -f docker/docker-compose-mariadb.yaml up --build
+
+docker-hostdb:
+	docker-compose -f docker/docker-compose.yml.default up --build
+
+docker-macos:
+	docker-compose -f docker/docker-compose-syncForMac.yaml up --build
+
 install:
 	mkdir -p \
 		${PREFIX}/share/gochan \
@@ -151,4 +160,4 @@ sass-minified:
 test:
 	go test -v ./src
 
-.PHONY: subpackages ${INTERNALS} sass
+.PHONY: subpackages docker docker-hostdb docker-macos ${INTERNALS} sass

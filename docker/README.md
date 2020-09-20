@@ -6,7 +6,7 @@ If you want docker to manage the databse, use `docker-compose-[database].yml`.
 
 If you are using MacOS and need better file sync between the host and the container, use `docker-compose-syncForMac.yml`.
 
-To use, run `docker-compose -f [docker-compose.yml file you chose] up --build`. To stop, simply use control+c to send a stop signal. This stops the docker containers but it does not delete them. They are merely frozen.
+To use from the root gochan directory, run `make docker`, or `make docker-macos` if you are using MacOS. This will use the MariaDB docker-compose file. If you want to specify which docker-compose file to use, run `docker-compose -f [docker-compose.yml file you chose] up --build` from this directory. To stop, simply use control+c to send a stop signal. This stops the docker containers but it does not delete them. They are merely frozen.
 
 To delete the containers run `docker-compose -f [file you chose] down`. If you have a container that has a database (for example, if you chose `docker-compose-mariadb.yml`), this command will delete the database too.
 
