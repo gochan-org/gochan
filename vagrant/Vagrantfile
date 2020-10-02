@@ -7,7 +7,7 @@ if DBTYPE != "mysql" && DBTYPE != "postgresql"
 	abort
 end
 
-PROVIDER = ENV.fetch("GC_PROVIDER", "libvirt") # because VirtualBox is crashing the host in Linux
+PROVIDER = ENV.fetch("GC_PROVIDER", "virtualbox") # can be virtualbox or libvirt
 BOX = "generic/ubuntu1604"
 if PROVIDER == "virtualbox"
 	BOX = "ubuntu/xenial64"
