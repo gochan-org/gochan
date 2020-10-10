@@ -2,7 +2,6 @@ package manage
 
 import (
 	"net/http"
-	"sort"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gclog"
@@ -81,22 +80,19 @@ func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
 func GetStaffRank(request *http.Request) int {
 	staff, err := getCurrentFullStaff(request)
 	if err != nil {
-		return 0
+		return NoPerms
 	}
 	return staff.Rank
 }
 
-func actionHTMLLinker(funcMap map[string]ManageFunction) string {
-	var links = ""
-	var keys []string
-	for key := range funcMap {
-		if funcMap[key].Title != "" {
-			keys = append(keys, key)
+func getStaffMenu(writer http.ResponseWriter, request *http.Request) (string, error) {
+	var links string
+	rank := GetStaffRank(request)
+	for f, mf := range actions {
+		if rank < mf.Permissions || mf.Permissions == NoPerms {
+			continue
 		}
+		links += `<a href="manage?action=` + f + `" id="` + f + `">` + mf.Title + `</a></br />`
 	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		links += `<a href="manage?action=` + key + `">` + funcMap[key].Title + "</a></br>"
-	}
-	return links
+	return links, nil
 }

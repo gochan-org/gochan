@@ -25,21 +25,34 @@ import (
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
+const (
+	// NoPerms allows anyone to access this Action
+	NoPerms = iota
+	// JanitorPerms allows anyone with at least a janitor-level account to access this Action
+	JanitorPerms
+	// ModPerms allows anyone with at least a moderator-level account to access this Action
+	ModPerms
+	// AdminPerms allows only the site administrator to view this Action
+	AdminPerms
+)
+
 var (
 	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
 )
 
-// ManageFunction represents the functions accessed by staff members at /manage?action=<functionname>.
-type ManageFunction struct {
-	Title       string
-	Permissions int                                                                     // 0 -> non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	Callback    func(writer http.ResponseWriter, request *http.Request) (string, error) `json:"-"` //return string of html output
+// Action represents the functions accessed by staff members at /manage?action=<functionname>.
+type Action struct {
+	Title       string `json:"title"`
+	Permissions int    `json:"perms"` // 0 = non-staff, 1 => janitor, 2 => moderator, 3 => administrator
+	isJSON      bool   `json:"-"`     // if it can sometimes return JSON, this should still be false
+
+	Callback func(writer http.ResponseWriter, request *http.Request) (string, error) `json:"-"` //return string of html output
 }
 
-var manageFunctions = map[string]ManageFunction{
+var actions = map[string]Action{
 	"cleanup": {
 		Title:       "Cleanup",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			htmlOut = `<h2 class="manage-header">Cleanup</h2><br />`
 
@@ -70,7 +83,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"config": {
 		Title:       "Configuration",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			do := request.FormValue("do")
 			var status string
@@ -285,7 +298,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"login": {
 		Title:       "Login",
-		Permissions: 0,
+		Permissions: NoPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			if GetStaffRank(request) > 0 {
 				http.Redirect(writer, request, path.Join(config.Config.SiteWebfolder, "manage"), http.StatusFound)
@@ -313,7 +326,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"logout": {
 		Title:       "Logout",
-		Permissions: 1,
+		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			cookie, _ := request.Cookie("sessiondata")
 			cookie.MaxAge = 0
@@ -323,7 +336,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"announcements": {
 		Title:       "Announcements",
-		Permissions: 1,
+		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			htmlOut = `<h1 class="manage-header">Announcements</h1><br />`
 
@@ -346,7 +359,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"bans": {
 		Title:       "Bans",
-		Permissions: 1,
+		Permissions: ModPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) { //TODO whatever this does idk man
 			var post gcsql.Post
 			if request.FormValue("do") == "add" {
@@ -427,8 +440,9 @@ var manageFunctions = map[string]ManageFunction{
 			htmlOut += manageBansBuffer.String()
 			return
 		}},
-	"getstaffjquery": {
-		Permissions: 0,
+	"staffinfo": {
+		Permissions: NoPerms,
+		isJSON:      true,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			staff, err := getCurrentFullStaff(request)
 			if err != nil {
@@ -439,7 +453,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"boards": {
 		Title:       "Boards",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			do := request.FormValue("do")
 			var done bool
@@ -615,38 +629,11 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"staffmenu": {
 		Title:       "Staff menu",
-		Permissions: 1,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-			rank := GetStaffRank(request)
-
-			htmlOut = `<a href="javascript:void(0)" id="logout" class="staffmenu-item">Log out</a><br />` +
-				`<a href="javascript:void(0)" id="announcements" class="staffmenu-item">Announcements</a><br />`
-			if rank == 3 {
-				htmlOut += `<b>Admin stuff</b><br /><a href="javascript:void(0)" id="staff" class="staffmenu-item">Manage staff</a><br />` +
-					//`<a href="javascript:void(0)" id="purgeeverything" class="staffmenu-item">Purge everything!</a><br />` +
-					`<a href="javascript:void(0)" id="executesql" class="staffmenu-item">Execute SQL statement(s)</a><br />` +
-					`<a href="javascript:void(0)" id="cleanup" class="staffmenu-item">Run cleanup</a><br />` +
-					`<a href="javascript:void(0)" id="rebuildall" class="staffmenu-item">Rebuild all</a><br />` +
-					`<a href="javascript:void(0)" id="rebuildfront" class="staffmenu-item">Rebuild front page</a><br />` +
-					`<a href="javascript:void(0)" id="rebuildboards" class="staffmenu-item">Rebuild board pages</a><br />` +
-					`<a href="javascript:void(0)" id="reparsehtml" class="staffmenu-item">Reparse all posts</a><br />` +
-					`<a href="javascript:void(0)" id="boards" class="staffmenu-item">Add/edit/delete boards</a><br />`
-			}
-			if rank >= 2 {
-				htmlOut += `<b>Mod stuff</b><br />` +
-					`<a href="javascript:void(0)" id="bans" class="staffmenu-item">Ban User(s)</a><br />`
-			}
-
-			if rank >= 1 {
-				htmlOut += `<a href="javascript:void(0)" id="recentimages" class="staffmenu-item">Recently uploaded images</a><br />` +
-					`<a href="javascript:void(0)" id="recentposts" class="staffmenu-item">Recent posts</a><br />` +
-					`<a href="javascript:void(0)" id="searchip" class="staffmenu-item">Search posts by IP</a><br />`
-			}
-			return
-		}},
+		Permissions: JanitorPerms,
+	},
 	"rebuildfront": {
 		Title:       "Rebuild front page",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
@@ -655,7 +642,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"rebuildall": {
 		Title:       "Rebuild everything",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			gctemplates.InitTemplates()
 			gcsql.ResetBoardSectionArrays()
@@ -679,7 +666,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"rebuildboards": {
 		Title:       "Rebuild boards",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
@@ -688,7 +675,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"reparsehtml": {
 		Title:       "Reparse HTML",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			messages, err := gcsql.GetAllNondeletedMessageRaw()
 			if err != nil {
@@ -721,7 +708,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"recentposts": {
 		Title:       "Recent posts",
-		Permissions: 1,
+		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			limit := request.FormValue("limit")
 			if limit == "" {
@@ -753,7 +740,8 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"postinfo": {
 		Title:       "Post info",
-		Permissions: 2,
+		Permissions: ModPerms,
+		isJSON:      true,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			var post gcsql.Post
 			post, err = gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
@@ -766,7 +754,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"staff": {
 		Title:       "Staff",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			var allStaff []gcsql.Staff
 			do := request.FormValue("do")
@@ -828,7 +816,7 @@ var manageFunctions = map[string]ManageFunction{
 		}},
 	"tempposts": {
 		Title:       "Temporary posts lists",
-		Permissions: 3,
+		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			htmlOut += `<h1 class="manage-header">Temporary posts</h1>`
 			if len(gcsql.TempPosts) == 0 {
