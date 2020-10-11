@@ -11,5 +11,6 @@
 /templates/override
 **/*.bak
 *.log
+*.swp
 __debug_bin
 node_modules

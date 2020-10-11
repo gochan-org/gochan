@@ -76,6 +76,11 @@ sed -e 's/sendfile on;/sendfile off;/' -i /etc/nginx/nginx.conf
 # Make sure our shared directories are mounted before nginx starts
 systemctl disable nginx
 sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/system/nginx.service
+
+# generate self-signed certificate since some browsers like Firefox and Chrome automatically do HTTPS requests
+# this will likely show a warning in the browser, which you can ignore
+openssl req -x509 -nodes -days 7305 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=172.27.0.3"
+
 systemctl daemon-reload
 systemctl enable nginx
 systemctl restart nginx &
@@ -90,12 +95,12 @@ sed -i /etc/gochan/gochan.json \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/local/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
+	-e "s/\"DBtype\": .*/\"DBtype\": \"$DBTYPE\",/" \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/'
 
 if [ "$DBTYPE" = "postgresql" ]; then
 	sed -i /etc/gochan/gochan.json \
-		-e 's/"DBtype": ".*"/"DBtype": "postgres"/' \
 		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
 fi
 

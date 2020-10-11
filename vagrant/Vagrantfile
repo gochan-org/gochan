@@ -17,6 +17,7 @@ Vagrant.configure("2") do |config|
 	config.ssh.username = "vagrant"
 	config.vm.box = BOX
 	config.vm.network "forwarded_port", guest: 80, host: 80
+	config.vm.network "forwarded_port", guest:443, host:443
 	config.vm.network :private_network, ip: "172.27.0.3"
 	config.vm.synced_folder "../", "/vagrant"
 	config.vm.provider PROVIDER do |provider|

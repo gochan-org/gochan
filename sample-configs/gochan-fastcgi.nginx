@@ -3,9 +3,16 @@
 # Change as necessary (duh).
 
 server {
-	listen			80;
-	listen			[::]:80;
-	server_name		localhost;
+	listen	80;
+	listen	[::]:80;
+	listen	443 ssl;
+	listen	[::]:443 ssl ipv6only=on;
+
+	ssl_protocols 		TLSv1 TLSv1.1 TLSv1.2;
+	ssl_certificate		/etc/ssl/certs/nginx-selfsigned.crt;
+	ssl_certificate_key	/etc/ssl/private/nginx-selfsigned.key;
+
+	server_name				localhost;
 	client_max_body_size	12M;
 
 	location / {
