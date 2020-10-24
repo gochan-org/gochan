@@ -246,7 +246,7 @@ func RandomString(length int) string {
 		if num < 32 {
 			num += 32
 		}
-		str += string(num)
+		str += fmt.Sprintf("%c", num)
 	}
 	return str
 }
