@@ -15,5 +15,5 @@ require (
 	github.com/tdewolff/parse v2.3.4+incompatible // indirect
 	github.com/tdewolff/test v1.0.6 // indirect
 	golang.org/x/crypto v0.0.0-20201016220609-9e8e0b390897
-	golang.org/x/net v0.0.0-20201022231255-08b38378de70
+	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
 )

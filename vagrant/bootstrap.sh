@@ -62,7 +62,7 @@ else
 	exit 1
 fi
 
-apt-get -y install git subversion mercurial nginx ffmpeg make golang-1.11
+apt-get -y install git subversion mercurial nginx ffmpeg golang-1.11
 
 ln -s /usr/lib/go-1.11/bin/* /usr/local/bin/
 
@@ -131,10 +131,13 @@ python build_initdb.py
 cd ..
 mkdir -p $GOPATH/src/github.com/gochan-org/gochan
 cp -r pkg $GOPATH/src/github.com/gochan-org/gochan
-make dependencies
-make
+./build.py dependencies
+./build.py
 EOF
-# make install
+
+cd /vagrant
+./build.py install
+/vagrant/gochan -rebuild all
 
 # if [ -d /lib/systemd ]; then
 # 	systemctl start gochan.service
