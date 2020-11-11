@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This build script will eventually replace both the Makefile and build.ps1
 
