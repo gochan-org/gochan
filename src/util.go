@@ -412,7 +412,7 @@ func checkPostForSpam(userIP string, userAgent string, referrer string,
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
 		if resp != nil {
-			closeHandle(resp.Body)
+			defer closeHandle(resp.Body)
 		}
 		if err != nil {
 			gclog.Print(lErrorLog, err.Error())
