@@ -33,6 +33,7 @@
     "stdio": "^0.2.7",
     "vinyl-buffer": "^1.0.1",
     "vinyl-source-stream": "^2.0.0",
-    "watchify": "^3.11.1"
+    "watchify": "^3.11.1",
+    "yargs-parser": ">=5.0.0-security.0"
   }
 }
