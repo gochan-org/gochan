@@ -1,13 +1,19 @@
-BIN=gochan
-BINEXE=$(BIN)$(shell go env GOEXE)
+GOCHAN_BIN=gochan
+MIGRATION_BIN=gochan-migration
+EXE=$(shell go env GOEXE)
+
+GOCHAN_EXE=${GOCHAN_BIN}${EXE}
+MIGRATION_EXE=${MIGRATION_BIN}${EXE}
+
 GCOS=$(shell go env GOOS)
 GCOS_NAME=${GCOS}
 ifeq (${GCOS_NAME},darwin)
 	GCOS_NAME=macos
 endif
 
+GOCHAN_PKG=github.com/gochan-org/gochan
 DOCUMENT_ROOT=/srv/gochan
-RELEASE_NAME=${BIN}-v${VERSION}_${GCOS_NAME}
+RELEASE_NAME=${GOCHAN_BIN}-v${VERSION}_${GCOS_NAME}
 RELEASE_DIR=releases/${RELEASE_NAME}
 PREFIX=/usr/local
 VERSION=$(shell cat version)
@@ -15,6 +21,12 @@ VERSION=$(shell cat version)
 GCFLAGS=-trimpath=${PWD}
 ASMFLAGS=-trimpath=${PWD}
 LDFLAGS=-X main.versionStr=${VERSION}
+
+BUILD_PREFIX=go build -v -asmflags=${ASMFLAGS}
+BUILD_CMD=${BUILD_PREFIX} -gcflags=${GCFLAGS} -ldflags="${LDFLAGS} -w -s"
+DBGBUILD_CMD=${BUILD_PREFIX} -gcflags="${GCFLAGS} -l -N" -ldflags="${LDFLAGS}"
+
+GOCHAN_CMD=
 GO_CMD=go build -o ${BINEXE} -v 
 NPM_CMD=npm --prefix frontend/ run 
 
@@ -30,15 +42,22 @@ DOCUMENT_ROOT_FILES= \
 	hittheroad*
 
 build:
-	GOOS=${GCOS} ${GO_CMD} -gcflags=${GCFLAGS} -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS} -w -s" ./src
+	GOOS=${GCOS} ${BUILD_CMD} -o gochan ./cmd/gochan
+	GOOS=${GCOS} ${BUILD_CMD} -o gochan-migration ./cmd/gochan-migration
+	
 
 build-debug:
-	GOOS=${GCOS} ${GO_CMD} -gcflags="${GCFLAGS} -l -N" -asmflags=${ASMFLAGS} -ldflags="${LDFLAGS}" ./src
+	GOOS=${GCOS} ${DBGBUILD_CMD} -o gochan ./cmd/gochan
+	GOOS=${GCOS} ${DBGBUILD_CMD} -o gochan-migration ./cmd/gochan-migration
 
 clean:
-	rm -f ${BIN}
-	rm -f ${BIN}.exe
+	rm -f ${GOCHAN_BIN}
+	rm -f ${GOCHAN_BIN}.exe
+	rm -f ${MIGRATION_BIN}
+	rm -f ${MIGRATION_BIN}.exe
 	rm -rf releases/
+	rm -rf ${GOPATH}/src/${GOCHAN_PKG}
+	rm -f pkg/gclog/logtest/*
 
 dependencies:
 	go get -v \
@@ -50,9 +69,17 @@ dependencies:
 		github.com/aquilax/tripcode \
 		golang.org/x/crypto/bcrypt \
 		github.com/frustra/bbcode \
-		github.com/mattn/go-sqlite3 \
 		github.com/tdewolff/minify \
-		gopkg.in/mojocn/base64Captcha.v1
+		github.com/mojocn/base64Captcha
+
+docker:
+	docker-compose -f docker/docker-compose-mariadb.yaml up --build
+
+docker-hostdb:
+	docker-compose -f docker/docker-compose.yml.default up --build
+
+docker-macos:
+	docker-compose -f docker/docker-compose-syncForMac.yaml up --build
 
 install:
 	mkdir -p \
@@ -60,7 +87,8 @@ install:
 		${DOCUMENT_ROOT} \
 		/etc/gochan \
 		/var/log/gochan
-	cp ${DO_SYMLINKS} -f ./gochan ${PREFIX}/bin/${BINEXE}
+	cp ${DO_SYMLINKS} -f ./gochan ${PREFIX}/bin/${GOCHAN_EXE}
+	cp ${DO_SYMLINKS} -f ./gochan-migration ${PREFIX}/bin/${MIGRATION_EXE}
 	cp ${DO_SYMLINKS} -f ./*.sql ${PREFIX}/share/gochan/
 	cp ${DO_SYMLINKS} -rf ./templates ${PREFIX}/share/gochan/
 	cd html $(foreach file,${DOCUMENT_ROOT_FILES}, && cp -rf ${file} ${DOCUMENT_ROOT})
@@ -68,7 +96,7 @@ install:
 	$(info cp sample-configs/gochan.example.json /etc/gochan/gochan.json)
 ifeq (${GCOS_NAME},linux)
 	$(info If your distro has systemd, you will also need to run the following commands)
-	$(info cp sample-configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service)
+	$(info cp sample-configs/gochan-[mysql|postgresql].service /lib/systemd/system/gochan.service)
 	$(info systemctl daemon-reload)
 	$(info systemctl enable gochan.service)
 	$(info systemctl start gochan.service)
@@ -78,16 +106,15 @@ install-symlinks:
 	DO_SYMLINKS=-s make install
 
 js:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build
+
 js-minify:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build-minify
+
 js-watch:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build-watch
+
 js-minify-watch:
-	$(error This doesn't work quite yet. It's coming very soon though.)
 	${NPM_CMD} build-minify-watch
 
 release-all: 
@@ -112,7 +139,8 @@ release:
 	cp sample-configs/gochan.example.json ${RELEASE_DIR}/sample-configs/
 	make build
 	make sass-minified
-	mv ${BINEXE} ${RELEASE_DIR}/
+	mv ${GOCHAN_EXE} ${RELEASE_DIR}/
+	mv ${MIGRATION_EXE} ${RELEASE_DIR}/
 ifeq (${GCOS_NAME},macos)
 	cd releases && zip -r ${RELEASE_NAME}.zip ${RELEASE_NAME}
 else ifeq (${GCOS_NAME},windows)
@@ -120,11 +148,9 @@ else ifeq (${GCOS_NAME},windows)
 else
 	cp sample-configs/gochan-mysql.service ${RELEASE_DIR}/sample-configs/
 	cp sample-configs/gochan-postgresql.service ${RELEASE_DIR}/sample-configs/
-	cp sample-configs/gochan-sqlite3.service ${RELEASE_DIR}/sample-configs/
 	tar -C releases -zcvf ${RELEASE_DIR}.tar.gz ${RELEASE_NAME}
 endif
 
-.PHONY: sass
 sass:
 	sass --no-source-map sass:html/css
 
@@ -133,3 +159,5 @@ sass-minified:
 
 test:
 	go test -v ./src
+
+.PHONY: subpackages docker docker-hostdb docker-macos ${INTERNALS} sass

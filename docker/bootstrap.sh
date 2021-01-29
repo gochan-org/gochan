@@ -4,7 +4,7 @@
 set -euo pipefail
 
 if [ -z "$DBTYPE" ]; then
-	echo "DBTYPE environment variable not set, must be 'mysql', 'postgresql', or 'sqlite3'"
+	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql' (sqlite3 no longer supported)"
 	exit 1
 fi
 
@@ -88,10 +88,6 @@ if [ "$DBTYPE" = "postgresql" ]; then
 	sed -i /etc/gochan/gochan.json \
 		-e 's/"DBtype": ".*"/"DBtype": "postgres"/' \
 		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
-elif [ "$DBTYPE" = "sqlite3" ]; then
-	sed -i /etc/gochan/gochan.json \
-		-e 's/"DBtype": ".*"/"DBtype": "sqlite3"/' \
-		-e 's/"DBhost": ".*"/"DBhost": "/usr/local/share/gochan/gochan.db"/'
 fi
 
 echo

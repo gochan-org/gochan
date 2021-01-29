@@ -2,26 +2,35 @@
 # vi: set ft=ruby :
 
 DBTYPE = ENV.fetch("GC_DBTYPE", "mysql")
-if DBTYPE != "mysql" && DBTYPE != "postgresql" && DBTYPE != "sqlite3"
-	puts "Invalid GC_DBTYPE environment variable, must be mysql, postgresql, or sqlite3, got #{DBTYPE}"
+if DBTYPE != "mysql" && DBTYPE != "postgresql"
+	puts "Invalid GC_DBTYPE environment variable, must be mysql or postgresql, got #{DBTYPE}"
 	abort
+end
+
+PROVIDER = ENV.fetch("GC_PROVIDER", "virtualbox") # can be virtualbox or libvirt
+BOX = "generic/ubuntu1604"
+if PROVIDER == "virtualbox"
+	BOX = "ubuntu/xenial64"
 end
 
 Vagrant.configure("2") do |config|
 	config.ssh.username = "vagrant"
-	config.vm.box = "ubuntu/xenial64"
-	config.vm.network "forwarded_port", guest: 80, host: 8080
+	config.vm.box = BOX
+	config.vm.network "forwarded_port", guest: 80, host: 80
+	config.vm.network "forwarded_port", guest:443, host:443
 	config.vm.network :private_network, ip: "172.27.0.3"
 	config.vm.synced_folder "../", "/vagrant"
-	config.vm.provider "virtualbox" do |provider|
-		provider.gui = false
+	config.vm.provider PROVIDER do |provider|
+		if PROVIDER == "virtualbox"
+			provider.gui = false
+		end
 		provider.cpus = "4"
 		provider.memory = "4096"
 	end
 
 	config.vm.provision :shell, path: "bootstrap.sh", env: {
 		:DBTYPE => DBTYPE,
-		:GOPATH => "/vagrant/lib",
+		:GOPATH => "/home/vagrant/go",
 		:FROMDOCKER => ""
 	}, args: "install"
 end

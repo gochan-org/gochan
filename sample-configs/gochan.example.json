@@ -1,7 +1,7 @@
 {
 	"ListenIP": "127.0.0.1",
 	"Port": 8080,
-	"FirstPage": ["index.html","board.html","firstrun.html"],
+	"FirstPage": ["index.html","firstrun.html","1.html"],
 	"Username": "gochan",
 	"UseFastCGI": false,
 	"DebugMode": false,
@@ -10,8 +10,8 @@
 	"TemplateDir": "templates",
 	"LogDir": "log",
 
-	"DBtype": "mysql",
-	"DBhost": "tcp(127.0.0.1:3306)",
+	"DBtype": "mysql/postgres",
+	"DBhost": "127.0.0.1:3306",
 	"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
 	"DBhost_alt": "unix(/var/run/mysqld/mysqld.sock)",
 	"DBname": "gochan",
@@ -30,7 +30,6 @@
 	"SiteDomain": "127.0.0.1",
 	"SiteHeaderURL": "",
 	"SiteWebfolder": "/",
-	"DomainRegex": "(https|http):\\/\\/(gochan\\.org)\\/(.*)",
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },

@@ -5,14 +5,32 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
+            "name": "gochan",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "cwd":"${workspaceFolder}",
-            "program": "${workspaceFolder}/src/",
+            "program": "${workspaceFolder}/cmd/gochan/",
             "env": {},
             "args": [],
+            "dlvLoadConfig": {
+                "maxStringLen": 5000,
+                "maxArrayValues": 500
+            },
+        },
+        {
+            "name": "gochan-migration",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "cwd":"${workspaceFolder}",
+            "program": "${workspaceFolder}/cmd/gochan-migration/",
+            "env": {},
+            "args": [],
+            "dlvLoadConfig": {
+                "maxStringLen": 5000,
+                "maxArrayValues": 500
+            },
         }
     ]
 }
