@@ -82,8 +82,8 @@ def run_cmd(cmd, print_output = True, realtime = False, print_command = False):
 	if realtime: # print the command's output in real time, ignores print_output
 		while True:
 			realtime_output = proc.stdout.readline().decode("utf-8")
-			if realtime_output == "" and proc.poll() is not None:
-				break
+			if realtime_output == "" and status is not None:
+				return ("", status)
 			if realtime_output:
 				print(realtime_output.strip())
 				output += realtime_output
@@ -153,14 +153,15 @@ def build(debugging = False):
 
 	status = run_cmd(build_cmd + " -o " + gochan_exe + " ./cmd/gochan", realtime = True, print_command = True)[1]
 	if status != 0:
-		print("Failed building gochan, got status code", status)
+		print("Failed building gochan, see command output for details")
 		exit(1)
+	print("Built gochan successfully\n")
 
-	status = run_cmd(build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration", realtime = True, print_command = False)[1]
+	status = run_cmd(build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration", realtime = True, print_command = True)[1]
 	if status != 0:
-		print("Failed building gochan-migration, got status code", status)
+		print("Failed building gochan-migration, see command output for details")
 		exit(1)
-	print("Built gochan successfully")
+	print("Build gochan-migration-sucessfully")
 
 def clean():
 	print("Cleaning up")
