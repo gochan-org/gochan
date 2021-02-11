@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# This build script will eventually replace both the Makefile and build.ps1
+# This script replaces both the Makefile and build.ps1
+# to provide a simple cross-platform build tool
 
 import argparse
 import os
@@ -11,7 +12,7 @@ import sys
 import tarfile
 from zipfile import ZipFile
 
-gc_dependencies = [
+gc_dependencies = (
 	"github.com/disintegration/imaging",
 	"github.com/nranchev/go-libGeoIP",
 	"github.com/go-sql-driver/mysql",
@@ -22,9 +23,9 @@ gc_dependencies = [
 	"github.com/frustra/bbcode",
 	"github.com/tdewolff/minify",
 	"github.com/mojocn/base64Captcha"
-]
+)
 
-release_files = [
+release_files = (
 	"html/banned.jpg",
 	"html/css",
 	"html/error",
@@ -45,7 +46,7 @@ release_files = [
 	"initdb_postgres.sql",
 	"LICENSE",
 	"README.md",
-]
+)
 
 def fs_action(action, sourcefile, destfile = ""):
 	isfile = path.isfile(sourcefile) or path.islink(sourcefile)
@@ -281,7 +282,8 @@ if __name__ == "__main__":
 		pass
 	if(action.startswith("-") == False):
 		sys.argv.insert(1, action)
-	set_vars()
+	if(action != "dependencies"):
+		set_vars()
 
 	valid_actions = ["build", "clean", "dependencies", "docker", "install", "js", "release", "sass", "test"]
 	parser = argparse.ArgumentParser(description = "gochan build script")

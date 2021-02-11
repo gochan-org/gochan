@@ -5,11 +5,11 @@ RUN apk --no-cache add \
 						mariadb-client		\
 						nginx 				\
 						ffmpeg				\
-						make 				\
+						python3				\
 						git					\
 						gcc					\
 						musl-dev			\
-						bash 				
+						bash
 
 RUN mkdir -p /root/bin \
 	&& ln -s /usr/lib/go-1.13/bin/* /root/bin/ \
@@ -23,8 +23,8 @@ RUN mkdir -p /root/bin \
 WORKDIR /opt/gochan
 
 # Get dependencies
-COPY Makefile .
-RUN make dependencies
+COPY build.py .
+RUN ./build.py dependencies
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY sample-configs/gochan-fastcgi.nginx /etc/nginx/conf.d/gochan.conf
