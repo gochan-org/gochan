@@ -9,6 +9,7 @@ RUN apk --no-cache add \
 						git					\
 						gcc					\
 						musl-dev			\
+						openssl				\
 						bash
 
 RUN mkdir -p /root/bin \
@@ -35,6 +36,9 @@ COPY . .
 
 EXPOSE 9000
 
+# The openssl command will generate self-signed certificate since some browsers like
+# Firefox and Chrome automatically do HTTPS requests. this will likely show a warning in
+# the browser, which you can ignore
 CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
@@ -48,8 +52,9 @@ CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json 
 	-e "s/\"DBname\".*/\"DBname\": \"${DATABASE_NAME}\",/" \
 	-e "s/\"DBusername\".*/\"DBusername\": \"${DATABASE_USER}\",/" \
 	-e "s/\"DBpassword\".*/\"DBpassword\": \"${DATABASE_PASSWORD}\",/" \
-	&& make \
-	&& make install \
+	&& openssl req -x509 -nodes -days 7305 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=172.27.0.3" \
+	&& ./build.py \
+	&& ./build.py install \
 	&& nginx \
 	&& echo "pinging db" \
 	&& docker/wait-for.sh $DATABASE_HOST:$DATABASE_PORT -t 30 \
