@@ -192,11 +192,11 @@ def install(prefix = "/usr", document_root = "/srv/gochan"):
 		exit(1)
 
 	fs_action("mkdir", "/etc/gochan")
-	fs_action("mkdir", path.join(prefix, "share/gochan"))
+	fs_action("mkdir", path.join(prefix, "/share/gochan"))
 	fs_action("mkdir", document_root)
 	fs_action("mkdir", "/var/log/gochan")
 	for file in release_files:
-		out_path = path.join(prefix, "share", file)
+		out_path = path.join(prefix, "share", "gochan", file)
 		if file.startswith("html/"):
 			out_path = path.join(document_root, file.replace("html/", ""))
 		

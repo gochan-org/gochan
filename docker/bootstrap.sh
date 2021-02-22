@@ -13,8 +13,8 @@ if [ -z "$GCVERSION"]; then
 	exit 1
 fi
 
-if [ -f /usr/local/bin/gochan ]; then
-	/usr/local/bin/gochan
+if [ -f /usr/bin/gochan ]; then
+	/usr/bin/gochan
 	exit $?
 fi
 
@@ -78,7 +78,7 @@ sed -i /etc/gochan/gochan.json \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
 	-e 's/"DomainRegex": ".*"/"DomainRegex": "(https|http):\\\/\\\/(.*)\\\/(.*)"/' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
-	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/local/share/gochan/templates"#' \
+	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
 	-e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' \

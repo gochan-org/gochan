@@ -4,7 +4,7 @@ Wants=mysql.service
 After=mysql.service
 
 [Service]
-ExecStart=/usr/local/bin/gochan
+ExecStart=/usr/bin/gochan
 
 [Install]
 WantedBy=multi-user.target

@@ -93,7 +93,7 @@ sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
-	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/local/share/gochan/templates"#' \
+	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
 	-e "s/\"DBtype\": .*/\"DBtype\": \"$DBTYPE\",/" \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \

@@ -44,7 +44,7 @@ CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json 
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
 	-e 's/"DomainRegex": ".*"/"DomainRegex": "(https|http):\\\/\\\/(.*)\\\/(.*)"/' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
-	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/local/share/gochan/templates"#' \
+	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/' \
 	-e "s/\"DBtype\".*/\"DBtype\": \"${DBTYPE}\",/" \
