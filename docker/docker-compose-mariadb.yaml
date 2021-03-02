@@ -5,7 +5,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     ports:
-      - "80"
+      - "80:80"
+      - "443:443"
     volumes:
       - ../:/opt/gochan # note: this doesn't work too well in MacOS. 
     environment:

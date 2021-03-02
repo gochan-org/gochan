@@ -174,7 +174,7 @@ def dependencies():
 	for dep in gc_dependencies:
 		run_cmd("go get -v " + dep, realtime = True, print_command = True)
 
-def docker(option = "guestdb"):
+def docker(option = "guestdb", attached = False):
 	cmd = "docker-compose -f {} up --build"
 	if option == "guestdb":
 		cmd = cmd.format("docker/docker-compose-mariadb.yaml")
@@ -182,6 +182,8 @@ def docker(option = "guestdb"):
 		cmd = cmd.format("docker/docker-compose.yml.default")
 	elif option == "macos":
 		cmd = cmd.format("docker/docker-compose-syncForMac.yaml")
+	if not attached:
+		cmd += " --detach"
 	status = run_cmd(cmd, print_output = True, realtime = True, print_command = True)[1]
 	if status != 0:
 		print("Failed starting a docker container, exited with status code", status) 
@@ -305,8 +307,15 @@ if __name__ == "__main__":
 			default = "guestdb", choices = ["guestdb", "hostdb", "macos"],
 			help = "create a Docker container, see docker/README.md for more info"
 		)
+		parser.add_argument("--attached",
+			action = "store_true",
+			help = "keep the command line attached to the container (by default it runs detached)"
+		)
 		args = parser.parse_args()
-		docker(args.option)
+		try:
+			docker(args.option, args.attached)
+		except KeyboardInterrupt:
+			print("Received keyboard interrupt, exiting")
 	elif action == "install":
 		parser.add_argument("--prefix",
 			default = "/usr",
