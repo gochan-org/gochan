@@ -238,7 +238,7 @@ var funcMap = template.FuncMap{
 		return loopArr
 	},
 	"generateConfigTable": func() string {
-		configType := reflect.TypeOf(config.Config)
+		configType := reflect.TypeOf(*config.Config)
 		tableOut := `<table style="border-collapse: collapse;" id="config"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>`
 		numFields := configType.NumField()
 		for f := 17; f < numFields-2; f++ {

@@ -46,6 +46,6 @@ func TestGochanLog(t *testing.T) {
 	Println(LErrorLog, "Error log", "(Println)")
 	Println(LStaffLog, "Staff log", "(Println)")
 	Println(LAccessLog|LErrorLog, "Access and error log", "(Println)")
-	Println(LAccessLog|LStaffLog|LFatal, "Fatal access and staff log", "(Println)")
-	Println(LAccessLog, "This shouldn't be here", "(Println)")
+	// Println(LAccessLog|LStaffLog|LFatal, "Fatal access and staff log", "(Println)")
+	// Println(LAccessLog, "This shouldn't be here", "(Println)")
 }

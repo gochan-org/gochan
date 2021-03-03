@@ -108,7 +108,6 @@ var actions = map[string]Action{
 					config.Config.Modboard = request.PostFormValue("Modboard")
 					config.Config.SiteName = request.PostFormValue("SiteName")
 					config.Config.SiteSlogan = request.PostFormValue("SiteSlogan")
-					config.Config.SiteHeaderURL = request.PostFormValue("SiteHeaderURL")
 					config.Config.SiteWebfolder = request.PostFormValue("SiteWebfolder")
 					// TODO: Change this to match the new Style type in gochan.json
 					/* Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
@@ -118,8 +117,7 @@ var actions = map[string]Action{
 					}
 					config.Styles = Styles */
 					config.Config.DefaultStyle = request.PostFormValue("DefaultStyle")
-					config.Config.AllowDuplicateImages = (request.PostFormValue("AllowDuplicateImages") == "on")
-					config.Config.AllowVideoUploads = (request.PostFormValue("AllowVideoUploads") == "on")
+					config.Config.RejectDuplicateImages = (request.PostFormValue("RejectDuplicateImages") == "on")
 					NewThreadDelay, err := strconv.Atoi(request.PostFormValue("NewThreadDelay"))
 					if err != nil {
 						status += err.Error() + "<br />"
@@ -205,14 +203,6 @@ var actions = map[string]Action{
 						config.Config.StickyRepliesOnBoardPage = StickyRepliesOnBoardPage
 					}
 
-					BanColorsArr := strings.Split(request.PostFormValue("BanColors"), "\n")
-					var BanColors []string
-					for _, color := range BanColorsArr {
-						BanColors = append(BanColors, strings.Trim(color, " \n\r"))
-
-					}
-					config.Config.BanColors = BanColors
-
 					config.Config.BanMsg = request.PostFormValue("BanMsg")
 					EmbedWidth, err := strconv.Atoi(request.PostFormValue("EmbedWidth"))
 					if err != nil {
@@ -230,7 +220,6 @@ var actions = map[string]Action{
 
 					config.Config.ExpandButton = (request.PostFormValue("ExpandButton") == "on")
 					config.Config.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
-					config.Config.MakeURLsHyperlinked = (request.PostFormValue("MakeURLsHyperlinked") == "on")
 					config.Config.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
 					config.Config.MinifyHTML = (request.PostFormValue("MinifyHTML") == "on")
 					config.Config.MinifyJS = (request.PostFormValue("MinifyJS") == "on")
@@ -267,7 +256,6 @@ var actions = map[string]Action{
 						config.Config.MaxRecentPosts = MaxRecentPosts
 					}
 
-					config.Config.EnableAppeals = (request.PostFormValue("EnableAppeals") == "on")
 					MaxLogDays, err := strconv.Atoi(request.PostFormValue("MaxLogDays"))
 					if err != nil {
 						status += err.Error() + "<br />"
@@ -288,7 +276,7 @@ var actions = map[string]Action{
 			}
 			manageConfigBuffer := bytes.NewBufferString("")
 			if err = gctemplates.ManageConfig.Execute(manageConfigBuffer,
-				map[string]interface{}{"config": config.Config, "status": status}); err != nil {
+				map[string]interface{}{"config": *config.Config, "status": status}); err != nil {
 				err = errors.New(gclog.Print(gclog.LErrorLog,
 					"Error executing config management page: ", err.Error()))
 				return htmlOut + err.Error(), err

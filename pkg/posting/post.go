@@ -243,7 +243,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		if filetype == "webm" {
-			if !allowsVids || !config.Config.AllowVideoUploads {
+			if !allowsVids {
 				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LAccessLog,
 					"Video uploading is not currently enabled for this board."))
 				os.Remove(filePath)
