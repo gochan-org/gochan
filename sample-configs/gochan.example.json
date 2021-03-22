@@ -35,7 +35,8 @@
 		{ "Name": "Pipes", "Filename": "pipes.css" },
 		{ "Name": "Burichan", "Filename": "burichan.css" },
 		{ "Name": "Dark", "Filename": "dark.css" },
-		{ "Name": "Photon", "Filename": "photon.css" }
+		{ "Name": "Photon", "Filename": "photon.css" },
+		{ "Name": "Yotsuba", "Filename": "yotsuba.css" }
 	],
 	"DefaultStyle": "pipes.css",
 
