@@ -1,0 +1,99 @@
+
+
+@mixin yotsuba(
+	$fadepath,
+	$bodybg,
+	$bodycol,
+	$topbarbg,
+	$topbarborder,
+	$headerfontcol,
+	$postblockbg,
+	$postblockborder,
+	$sectiontitlecol,
+	$sectiontitlebg,
+	$borderbotright,
+	$linkcol,
+	$hrcol,
+	$subjectcol,
+	$namecolor,
+	$replybg,
+	$postlinkcol) {
+
+	body {
+		background: $bodybg url($fadepath) repeat-x 50% 0%;
+		color: $bodycol;
+		font-family: Tahoma,sans-serif;
+		font-size: 14px;
+	}
+	div.op-post {
+		background: $bodybg;
+	}
+	div.inlinepostprev {
+		border: 1px solid $borderbotright;
+	}
+	header {
+		color: $headerfontcol;
+		h1 {
+			font-size: 28px;
+		}
+	}
+	a {
+		text-decoration: none;
+		color: $linkcol;
+	}
+	div.section-block {
+		border: 1px solid;
+	}
+	
+	div.section-title-block {
+		background: $sectiontitlebg;
+	}
+	hr {
+		border: none;
+		border-top: 1px solid $hrcol;
+		height: 0;
+	}
+	div.reply, div.thread-ddown-menu, table#pages, div.postprev {
+		background-color: $replybg;
+		border-left: 0px;
+		border-top: 0px;
+		border-bottom: 1px solid $borderbotright;
+		border-right: 1px solid $borderbotright;
+	}
+	div.post-text a {
+		color: $postlinkcol;
+	}
+	table#pages * {
+		border: none!important;
+	}
+	div.section-title-block {
+		background-color: $sectiontitlebg;
+		color: $sectiontitlecol;
+	}
+	
+	div#topbar {
+		background: $topbarbg;
+		border-bottom: 1px solid $topbarborder;
+	}
+	th.postblock {
+		background-color: $postblockbg;
+		border: 1px solid $postblockborder;
+	}
+	span.postername, span.postername a {
+		color: $namecolor;
+		font-weight: 700;
+	}
+	
+	span.postername a {
+		text-decoration: underline;
+	}
+
+	span.tripcode {
+		color: $namecolor;
+	}
+	
+	span.subject {
+		color: $subjectcol;
+		font-weight: 700;
+	}
+}

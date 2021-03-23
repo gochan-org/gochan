@@ -7,3 +7,6 @@ To have sass watch the input directory for changes as you edit and save the file
 In either case, `--style expanded` is optional. If you replace expanded with compressed, it will minify the generated CSS files. Run `sass -h` for more info about it.
 
 If you are upgading from gochan 2.2, delete your html/css directory unless you have made themes that you want to keep. Then rebuild the pages. (/manage?action=rebuildall)
+
+## Attribution
+The BunkerChan theme comes from the imageboard BunkerChan (as the name would imply). Burichan is based on the theme with the same name from Kusaba X. Photon comes from nol.ch (I think?) that as far as I know no longer exists. Pipes was created by a user (Mbyte?) on Lunachan (defunct). Yotsuba and Yotsuba B are based on the themes with the same names from 4chan.

@@ -33,10 +33,11 @@
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
+		{ "Name": "BunkerChan", "Filename": "bunkerchan.css" },
 		{ "Name": "Burichan", "Filename": "burichan.css" },
-		{ "Name": "Bunkerchan", "Filename": "bunkerchan.css" },
 		{ "Name": "Photon", "Filename": "photon.css" },
-		{ "Name": "Yotsuba", "Filename": "yotsuba.css" }
+		{ "Name": "Yotsuba", "Filename": "yotsuba.css" },
+		{ "Name": "Yotsuba B", "Filename": "yotsubab.css" }
 	],
 	"DefaultStyle": "pipes.css",
 

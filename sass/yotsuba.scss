@@ -1,51 +1,22 @@
 @import 'yotsuba/colors';
-@import 'util';
+@import 'yotsubacommon';
 
-body {
-	background: $bgcol url('res/yotsuba_bg.png') repeat-x 50% 0%;
-	font-family: Tahoma,sans-serif;
-	font-size: 14px;
-}
-
-a {
-	color: #34345C;
-	text-decoration: none;
-}
-
-header {
-	color: $headerfontcol;
-}
-
-header h1 {
-	font-size: 28px;
-}
-
-div#topbar {
-	border-bottom: 1px solid $topbarborder;
-	background: #D6DAF0;
-}
-
-th.postblock {
-	background-color: $postblockbg;
-	border: 1px solid $postblockborder;
-}
-
-div.section-block {
-	border: 1px solid;
-}
-
-div.section-title-block {
-	background: $postblockbg;
-}
-
-table#pages * {
-	border: none!important;
-}
-
-table#pages {
-	background: #d6daf0;
-	border-left: 0px;
-	border-top: 0px;
-	border-bottom: 1px solid $pagesborder;
-	border-right: 1px solid $pagesborder;
-}
+@include yotsuba(
+	'res/yotsuba_bg.png',
+	$bgcol, /* $bodybg */
+	maroon, /* $bodycol */
+	$topbarbg,
+	$topbarborder,
+	$headerfontcol,
+	$postblockbg,
+	$postblockborder,
+	$postblockborder, /* $sectiontitlecol */
+	#fca, /* $sectiontitlebg */
+	$borderbotright,
+	maroon, /* $linkcol */
+	#D9BfB7, /* $hrcol */
+	#CC1105, /* $subjectcol */
+	$namecolor,
+	$replybg,
+	navy /* $postlinkcol */
+);

@@ -1,0 +1,22 @@
+@import 'yotsubab/colors';
+@import 'yotsubacommon';
+
+@include yotsuba(
+	'res/yotsubab_bg.png',
+	$bgcol, /* $bodybg */
+	#000, /* $bodycol */
+	#D6DAF0, /* $topbarbg */
+	$topbarborder,
+	$headerfontcol,
+	$postblockbg,
+	$postblockborder,
+	#000, /* $sectiontitlecol */
+	$postblockbg, /* $sectiontitlebg */
+	$borderbotright,
+	#34345C, /* $linkcol */
+	#B7C5D9, /* $hrcol */
+	#0F0C5D, /* $subjectcol */
+	$namecolor,
+	$replybg,
+	navy /* $postlinkcol */
+);
