@@ -800,7 +800,7 @@ func DeleteFilesFromPost(postID int) error {
 		fileName = fileName[:strings.Index(fileName, ".")]
 		fileType := fileName[strings.Index(fileName, ".")+1:]
 		var thumbType string
-		if fileType == "gif" || fileType == "webm" {
+		if fileType == "gif" || fileType == "webm" || fileType == "mp4" {
 			thumbType = "jpg"
 		}
 

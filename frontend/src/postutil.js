@@ -1,6 +1,6 @@
 let movablePostPreviews = null;
 let expandablePostrefs = true;
-
+let videoTestRE = /\.(mp4)|(webm)$/;
 function deleteCheckedPosts() {
 	if(confirm('Are you sure you want to delete these posts?') == true) {
 		let form = $("form#main-form");
@@ -117,8 +117,8 @@ export function prepareThumbnails() {
 		thumb.removeAttr("width").removeAttr("height");
 
 		var fileInfoElement = a.prevAll(".file-info:first");
-
-		if((thumbURL+uploadURL).indexOf(".webm") > 0) {
+		
+		if(videoTestRE.test(thumbURL + uploadURL)) {
 			// Upload is a video
 			thumb.hide();
 			var video = $("<video />")

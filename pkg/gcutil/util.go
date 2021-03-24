@@ -140,7 +140,7 @@ func GetRealIP(request *http.Request) string {
 // GetThumbnailPath returns the thumbnail path of the given filename
 func GetThumbnailPath(thumbType string, img string) string {
 	filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
-	if filetype == "gif" || filetype == "webm" {
+	if filetype == "gif" || filetype == "webm" || filetype == "mp4" {
 		filetype = "jpg"
 	}
 	index := strings.LastIndex(img, ".")

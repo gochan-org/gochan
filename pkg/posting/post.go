@@ -200,7 +200,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		post.FilenameOriginal = html.EscapeString(handler.Filename)
 		filetype := gcutil.GetFileExtension(post.FilenameOriginal)
 		thumbFiletype := strings.ToLower(filetype)
-		if thumbFiletype == "gif" || thumbFiletype == "webm" {
+		if thumbFiletype == "gif" || thumbFiletype == "webm" || thumbFiletype == "mp4" {
 			thumbFiletype = "jpg"
 		}
 
@@ -242,7 +242,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if filetype == "webm" {
+		if filetype == "webm" || filetype == "mp4" {
 			if !allowsVids {
 				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LAccessLog,
 					"Video uploading is not currently enabled for this board."))

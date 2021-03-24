@@ -126,8 +126,8 @@ type GochanConfig struct {
 	RepliesOnBoardPage       int    `description:"Number of replies to a thread to show on the board page."`
 	StickyRepliesOnBoardPage int    `description:"Same as above for stickied threads."`
 	BanMsg                   string `description:"The default public ban message."`
-	EmbedWidth               int    `description:"The width for inline/expanded webm videos."`
-	EmbedHeight              int    `description:"The height for inline/expanded webm videos."`
+	EmbedWidth               int    `description:"The width for inline/expanded videos."`
+	EmbedHeight              int    `description:"The height for inline/expanded videos."`
 	ExpandButton             bool   `description:"If checked, adds [Embed] after a Youtube, Vimeo, etc link to toggle an inline video frame."`
 	ImagesOpenNewTab         bool   `description:"If checked, thumbnails will open the respective image/video in a new tab instead of expanding them." `
 	NewTabOnOutlinks         bool   `description:"If checked, links to external sites will open in a new tab."`

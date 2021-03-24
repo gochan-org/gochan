@@ -188,6 +188,8 @@ var funcMap = template.FuncMap{
 			uploadType = ""
 		case "webm":
 			fallthrough
+		case "mp4":
+			fallthrough
 		case "jpg":
 			fallthrough
 		case "jpeg":
@@ -201,7 +203,7 @@ var funcMap = template.FuncMap{
 	},
 	"imageToThumbnailPath": func(thumbType string, img string) string {
 		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
-		if filetype == "gif" || filetype == "webm" {
+		if filetype == "gif" || filetype == "webm" || filetype == "mp4" {
 			filetype = "jpg"
 		}
 		index := strings.LastIndex(img, ".")
