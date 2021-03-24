@@ -35,3 +35,7 @@ div#threadlinks-top {
 	background: $topbarbg;
 	border-bottom: 1px solid $topborder;
 }
+
+table#pages, table#pages * {
+	border: none!important;
+}

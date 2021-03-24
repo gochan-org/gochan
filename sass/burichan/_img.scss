@@ -1,9 +1,10 @@
 @import 'colors';
+@import '../global/colors';
 
 h1#board-title {
 	font-family: serif!important;
 	font-size: 24pt;
-	color:#AF0A0F;
+	color: $headercol;
 }
 
 .postblock {
@@ -15,17 +16,22 @@ div.file-info {
 	font-family:sans-serif;
 }
 
-.postername {
+span.postername {
 	font-size:12px;
 	font-family:serif;
-	color:#117743;
+	color: $namecol;
 	font-weight:800;
 }
 
-.reply, .thread-ddown-menu {
+div.reply,
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
 	background:#D6DAF0;
 }
 
-.thread-ddown-menu {
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
 	border: 1px solid $bordercol;
 }

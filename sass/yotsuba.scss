@@ -1,3 +1,4 @@
+@import 'global/colors';
 @import 'yotsuba/colors';
 @import 'yotsubacommon';
 
@@ -7,7 +8,7 @@
 	maroon, /* $bodycol */
 	$topbarbg,
 	$topbarborder,
-	$headerfontcol,
+	$headercol,
 	$postblockbg,
 	$postblockborder,
 	$postblockborder, /* $sectiontitlecol */
@@ -16,7 +17,7 @@
 	maroon, /* $linkcol */
 	#D9BfB7, /* $hrcol */
 	#CC1105, /* $subjectcol */
-	$namecolor,
+	$namecol,
 	$replybg,
 	navy /* $postlinkcol */
 );

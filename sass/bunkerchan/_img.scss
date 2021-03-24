@@ -7,14 +7,21 @@
 }
 
 
-div.reply, th.postblock {
+div.reply,
+th.postblock,
+div.postprev,
+div.inlinepostprev {
 	background: #282A2E;
 	border: 1px solid #117743;
 	border-radius: 5px;
 }
 
 table#postbox-static, div#report-delbox {
-	input, select, textarea {
+	input,
+	select,
+	textarea,
+	input[type="file"]::file-selector-button,
+	input[type="file"]::-webkit-file-upload-button {
 		border-radius: 5px;
 		@extend %formstyle;
 	}

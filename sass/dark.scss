@@ -1,0 +1,69 @@
+@import 'dark/colors';
+
+body {
+	background-color: $bgcol;
+	font-family: $font-family;
+	color: $color;
+	font-size: 80%;
+}
+
+a {
+	text-decoration: none;
+	color: $linkcol;
+}
+
+div#topbar {
+	background-color: $topbarbg;
+	border-bottom: 1px solid $color;
+	a {
+		text-shadow: black 1px 1px 1px, black -1px -1px 1px, black -1px 1px 1px, black 1px -1px 1px;
+	}
+}
+
+header {
+	color: $headercol;
+}
+
+// input:not([type=submit]):not([type=button]),
+input:not(div#qrbuttons input),
+textarea {
+	background-color: $inputbg;
+	border: 1px solid $topbarbg;
+	color: $linkcol;
+}
+
+th.postblock {
+	background-color: $blockcol;
+	border: 1px solid $blockborder;
+	border-radius: 5px;
+	text-align: left;
+}
+
+div.reply,
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
+	background-color: $inputbg;
+	border: 1px solid $replyborder;
+	border-radius: 5px;
+}
+
+span.postername {
+	color: $headercol;
+	font-weight: bold;
+	a {
+		text-decoration: underline;
+	}
+}
+
+span.tripcode {
+	color: $headercol;
+}
+
+span.subject {
+	color: $subjectcol;
+}
+
+table#pages, table#pages * {
+	border: none!important;
+}
