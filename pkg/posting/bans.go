@@ -51,7 +51,7 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if err = gcutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
 		"config": config.Config, "ban": banStatus, "banBoards": banStatus.Boards, "post": gcsql.Post{},
 	}, writer, "text/html"); err != nil {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,

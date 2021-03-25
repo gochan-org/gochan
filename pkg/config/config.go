@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"net"
 	"reflect"
-
-	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
 const (
@@ -168,34 +166,6 @@ func (cfg *GochanConfig) ToMap() map[string]interface{} {
 		out[cType.Field(f).Name] = field.Elem().Interface()
 	}
 	return out
-}
-
-func (cfg *GochanConfig) checkString(val, defaultVal string, critical bool, msg string) string {
-	if val == "" {
-		val = defaultVal
-		flags := gclog.LStdLog | gclog.LErrorLog
-		if critical {
-			flags |= gclog.LFatal
-		}
-		if msg != "" {
-			gclog.Print(flags, msg)
-		}
-	}
-	return val
-}
-
-func (cfg *GochanConfig) checkInt(val, defaultVal int, critical bool, msg string) int {
-	if val == 0 {
-		val = defaultVal
-		flags := gclog.LStdLog | gclog.LErrorLog
-		if critical {
-			flags |= gclog.LFatal
-		}
-		if msg != "" {
-			gclog.Print(flags, msg)
-		}
-	}
-	return val
 }
 
 // ValidateValues checks to make sure that the configuration options are usable

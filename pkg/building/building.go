@@ -10,7 +10,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
-	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
 // BuildFrontPage builds the front page using templates/front.html
@@ -42,7 +42,7 @@ func BuildFrontPage() error {
 		}
 	}
 
-	if err = gcutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
 		"config":       config.Config,
 		"sections":     gcsql.AllSections,
 		"boards":       gcsql.AllBoards,
@@ -84,7 +84,7 @@ func BuildBoardListJSON() error {
 			gclog.Print(gclog.LErrorLog, "Failed to create boards.json: ", err.Error()))
 	}
 
-	if _, err = gcutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
+	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
 		return errors.New(
 			gclog.Print(gclog.LErrorLog, "Failed writing boards.json file: ", err.Error()))
 	}
@@ -107,7 +107,7 @@ func BuildJS() error {
 	}
 	defer constsJSFile.Close()
 
-	if err = gcutil.MinifyTemplate(gctemplates.JsConsts, config.Config, constsJSFile, "text/javascript"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.JsConsts, config.Config, constsJSFile, "text/javascript"); err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Error building %q: %s", constsJSPath, err.Error()))
 	}

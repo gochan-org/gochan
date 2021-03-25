@@ -53,16 +53,6 @@ func Sha1Sum(str string) string {
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
-/* func byteByByteReplace(input, from, to string) string {
-	if len(from) != len(to) {
-		return ""
-	}
-	for i := 0; i < len(from); i++ {
-		input = strings.Replace(input, from[i:i+1], to[i:i+1], -1)
-	}
-	return input
-} */
-
 // CloseHandle closes the given closer object only if it is non-nil
 func CloseHandle(handle io.Closer) {
 	if handle != nil {

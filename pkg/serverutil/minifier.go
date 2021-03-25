@@ -1,4 +1,4 @@
-package gcutil
+package serverutil
 
 import (
 	"html/template"

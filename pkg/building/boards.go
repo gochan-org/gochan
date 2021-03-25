@@ -14,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
 const (
@@ -137,7 +138,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
-		if err = gcutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
 			"config":   config.Config,
 			"boards":   gcsql.AllBoards,
 			"sections": gcsql.AllSections,
@@ -179,7 +180,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		defer currentPageFile.Close()
 
 		// Render the boardpage template
-		if err = gcutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
 			"config":   config.Config,
 			"boards":   gcsql.AllBoards,
 			"sections": gcsql.AllSections,
@@ -282,7 +283,7 @@ func BuildCatalog(boardID int) string {
 		threadInterfaces = append(threadInterfaces, thread)
 	}
 
-	if err = gcutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
 		"boards":   gcsql.AllBoards,
 		"config":   config.Config,
 		"board":    board,

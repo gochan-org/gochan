@@ -12,7 +12,7 @@ import (
 
 // ServeErrorPage shows a general error page if something goes wrong
 func ServeErrorPage(writer http.ResponseWriter, err string) {
-	gcutil.MinifyTemplate(gctemplates.ErrorPage, map[string]interface{}{
+	MinifyTemplate(gctemplates.ErrorPage, map[string]interface{}{
 		"config":     config.Config,
 		"ErrorTitle": "Error :c",
 		// "ErrorImage":  "/error/lol 404.gif",
@@ -29,7 +29,7 @@ func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		writer.Write([]byte("Requested page not found, and /error/404.html not found"))
 	} else {
-		gcutil.MinifyWriter(writer, errorPage, "text/html")
+		MinifyWriter(writer, errorPage, "text/html")
 	}
 	gclog.Printf(gclog.LAccessLog, "Error: 404 Not Found from %s @ %s", gcutil.GetRealIP(request), request.URL.Path)
 }

@@ -12,8 +12,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -39,7 +39,7 @@ func main() {
 		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
 	gcsql.CheckAndInitializeDatabase(config.Config.DBtype)
 	parseCommandLine()
-	gcutil.InitMinifier()
+	serverutil.InitMinifier()
 
 	posting.InitCaptcha()
 	if err := gctemplates.InitTemplates(); err != nil {

@@ -66,7 +66,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Add("Content-Type", "application/json")
 
 		str, _ := gcutil.MarshalJSON(captchaStruct, false)
-		gcutil.MinifyWriter(writer, []byte(str), "application/json")
+		serverutil.MinifyWriter(writer, []byte(str), "application/json")
 		return
 	}
 	if request.FormValue("reload") == "Reload" {
@@ -102,7 +102,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 			captchaStruct.Result = "Incorrect CAPTCHA"
 		}
 	}
-	if err = gcutil.MinifyTemplate(gctemplates.Captcha, captchaStruct, writer, "text/html"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.Captcha, captchaStruct, writer, "text/html"); err != nil {
 		fmt.Fprintf(writer,
 			gclog.Print(gclog.LErrorLog, "Error executing captcha template: ", err.Error()))
 	}

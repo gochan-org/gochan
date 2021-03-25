@@ -7,7 +7,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
-	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 
 func startupRebuild(buildFlag int) {
 	var err error
-	gcutil.InitMinifier()
+	serverutil.InitMinifier()
 	if err = gctemplates.InitTemplates(); err != nil {
 		gclog.Print(buildLogFlags, "Error initializing templates: ", err.Error())
 	}

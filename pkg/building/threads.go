@@ -11,7 +11,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
-	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
 // BuildThreads builds thread(s) given a boardid, or if all = false, also given a threadid.
@@ -73,7 +73,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 	}
 
 	// render thread page
-	if err = gcutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
 		"config":   config.Config,
 		"boards":   gcsql.AllBoards,
 		"board":    board,

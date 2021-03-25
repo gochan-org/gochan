@@ -151,7 +151,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if banStatus != nil && banStatus.IsBanned(postBoard.Dir) {
 		var banpageBuffer bytes.Buffer
 
-		if err = gcutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
 			"config": config.Config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
 		}, writer, "text/html"); err != nil {
 			serverutil.ServeErrorPage(writer,
