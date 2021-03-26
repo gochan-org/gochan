@@ -46,7 +46,7 @@ func templateError(name string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return fmt.Errorf("Failed loading template '%s/%s': %s",
+	return fmt.Errorf("failed loading template '%s/%s': %s",
 		config.Config.TemplateDir, name, err.Error())
 }
 

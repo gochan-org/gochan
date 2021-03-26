@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -40,12 +42,17 @@ func createSession(key, username, password string, request *http.Request, writer
 	}
 
 	// successful login, add cookie that expires in one month
+
+	maxAge, err := gcutil.ParseDurationString(config.Config.CookieMaxAge)
+	if err != nil {
+		maxAge = gcutil.DefaultMaxAge
+	}
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "sessiondata",
 		Value:  key,
 		Path:   "/",
 		Domain: domain,
-		MaxAge: 60 * 60 * 24 * 7,
+		MaxAge: int(maxAge),
 	})
 
 	if err = gcsql.CreateSession(key, username); err != nil {

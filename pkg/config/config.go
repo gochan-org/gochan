@@ -5,10 +5,13 @@ import (
 	"io/ioutil"
 	"net"
 	"reflect"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
 	randomStringSize = 16
+	cookieMaxAgeEx   = ` (example: "1 year 2 months 3 days 4 hours", or "1y2mo3d4h"`
 )
 
 var (
@@ -19,6 +22,7 @@ var (
 		"FirstPage":    []string{"index.html", "board.html", "firstrun.html"},
 		"DocumentRoot": "html",
 		"TemplateDir":  "templates",
+		"CookieMaxAge": "1y",
 		"LogDir":       "log",
 
 		"SillyTags": []string{},
@@ -75,12 +79,13 @@ type Style struct {
 // If a field has a critical struct tag set to "true", a warning will be printed
 // if it exists in the defaults map and an error will be printed if it doesn't.
 type GochanConfig struct {
-	ListenIP   string   `critical:"true"`
-	Port       int      `critical:"true"`
-	FirstPage  []string `critical:"true"`
-	Username   string   `critical:"true"`
-	UseFastCGI bool     `critical:"true"`
-	DebugMode  bool     `description:"Disables several spam/browser checks that can cause problems when hosting an instance locally."`
+	ListenIP     string   `critical:"true"`
+	Port         int      `critical:"true"`
+	FirstPage    []string `critical:"true"`
+	Username     string   `critical:"true"`
+	UseFastCGI   bool     `critical:"true"`
+	DebugMode    bool     `description:"Disables several spam/browser checks that can cause problems when hosting an instance locally."`
+	CookieMaxAge string   `description:"The amount of time that session cookies will exist before they expire (ex: 1y2mo3d4h or 1 year 2 months 3 days 4 hours). Default is 1 year"`
 
 	DocumentRoot string `critical:"true"`
 	TemplateDir  string `critical:"true"`
@@ -178,6 +183,14 @@ func (cfg *GochanConfig) ValidateValues() error {
 	if len(cfg.FirstPage) == 0 {
 		cfg.FirstPage = cfgDefaults["FirstPage"].([]string)
 		changed = true
+	}
+	_, err := gcutil.ParseDurationString(cfg.CookieMaxAge)
+	if err == gcutil.ErrInvalidDurationString {
+		return &ErrInvalidValue{Field: "CookieMaxAge", Value: cfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
+	} else if err == gcutil.ErrEmptyDurationString {
+		return &ErrInvalidValue{Field: "CookieMaxAge", Details: err.Error() + cookieMaxAgeEx}
+	} else if err != nil {
+		return err
 	}
 	if cfg.DBtype != "mysql" && cfg.DBtype != "postgresql" {
 		return &ErrInvalidValue{Field: "DBtype", Value: cfg.DBtype, Details: "currently supported values: mysql, postgresql"}

@@ -22,11 +22,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	// DefaultMaxAge is used for cookies that have an invalid or unset max age (default is 1 year)
+	DefaultMaxAge = 60 * 60 * 24 * 31
+)
+
 var (
 	// ErrNotImplemented should be used for unimplemented functionality when necessary
-	ErrNotImplemented        = errors.New("Not implemented")
-	ErrEmptyDurationString   = errors.New("Empty Duration string")
-	ErrInvalidDurationString = errors.New("Invalid Duration string")
+	ErrNotImplemented        = errors.New("not implemented")
+	ErrEmptyDurationString   = errors.New("empty Duration string")
+	ErrInvalidDurationString = errors.New("invalid Duration string")
 	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
 )
 

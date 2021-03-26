@@ -60,7 +60,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	formEmail = request.FormValue("postemail")
 
-	http.SetCookie(writer, &http.Cookie{Name: "email", Value: formEmail, MaxAge: yearInSeconds})
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "email",
+		Value:  formEmail,
+		MaxAge: yearInSeconds,
+	})
 
 	if !strings.Contains(formEmail, "noko") && !strings.Contains(formEmail, "sage") {
 		post.Email = formEmail
@@ -98,8 +102,16 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	nameCookie = strings.Replace(url.QueryEscape(nameCookie), "+", "%20", -1)
 
 	// add name and email cookies that will expire in a year (31536000 seconds)
-	http.SetCookie(writer, &http.Cookie{Name: "name", Value: nameCookie, MaxAge: yearInSeconds})
-	http.SetCookie(writer, &http.Cookie{Name: "password", Value: password, MaxAge: yearInSeconds})
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "name",
+		Value:  nameCookie,
+		MaxAge: yearInSeconds,
+	})
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "password",
+		Value:  password,
+		MaxAge: yearInSeconds,
+	})
 
 	post.IP = gcutil.GetRealIP(request)
 	post.Timestamp = time.Now()

@@ -95,6 +95,11 @@ var actions = map[string]Action{
 					status += gclog.Println(gclog.LErrorLog,
 						"Error backing up old gochan.json, cancelling save:", err.Error())
 				} else {
+					config.Config.CookieMaxAge = request.PostFormValue("CookieMaxAge")
+					if _, err = gcutil.ParseDurationString(config.Config.CookieMaxAge); err != nil {
+						status += err.Error()
+						config.Config.CookieMaxAge = "1y"
+					}
 					config.Config.Lockdown = (request.PostFormValue("Lockdown") == "on")
 					config.Config.LockdownMessage = request.PostFormValue("LockdownMessage")
 					SillytagsArr := strings.Split(request.PostFormValue("Sillytags"), "\n")
@@ -556,13 +561,12 @@ var actions = map[string]Action{
 						do = ""
 						boardCreationStatus = gclog.Print(gclog.LErrorLog, "Error creating board: ", err.Error())
 						break
-					} else {
-						boardCreationStatus = "Board created successfully"
-						building.BuildBoards(false)
-						gcsql.ResetBoardSectionArrays()
-						gclog.Print(gclog.LStaffLog, "Boards rebuilt successfully")
-						done = true
 					}
+					boardCreationStatus = "Board created successfully"
+					building.BuildBoards(false)
+					gcsql.ResetBoardSectionArrays()
+					gclog.Print(gclog.LStaffLog, "Boards rebuilt successfully")
+					done = true
 				case do == "del":
 					// resetBoardSectionArrays()
 				case do == "edit":

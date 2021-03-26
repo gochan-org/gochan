@@ -239,7 +239,7 @@ var funcMap = template.FuncMap{
 		}
 		return loopArr
 	},
-	"generateConfigTable": func() string {
+	"generateConfigTable": func() template.HTML {
 		configType := reflect.TypeOf(*config.Config)
 		tableOut := `<table style="border-collapse: collapse;" id="config"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>`
 		numFields := configType.NumField()
@@ -289,7 +289,7 @@ var funcMap = template.FuncMap{
 			tableOut += "</tr>"
 		}
 		tableOut += "</table>"
-		return tableOut
+		return template.HTML(tableOut)
 	},
 	"isStyleDefault": func(style string) bool {
 		return style == config.Config.DefaultStyle
