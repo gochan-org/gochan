@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path"
 	"reflect"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 // MissingField represents a field missing from the configuration file
@@ -33,17 +33,6 @@ func (iv *ErrInvalidValue) Error() string {
 		str += " - " + iv.Details
 	}
 	return str
-}
-
-// copied from gcutil to avoid import loop
-func findResource(paths ...string) string {
-	var err error
-	for _, filepath := range paths {
-		if _, err = os.Stat(filepath); err == nil {
-			return filepath
-		}
-	}
-	return ""
 }
 
 // ParseJSON loads and parses JSON data, returning a GochanConfig pointer, any critical missing
@@ -96,7 +85,7 @@ func ParseJSON(ba []byte) (*GochanConfig, []MissingField, error) {
 
 // InitConfig loads and parses gochan.json on startup and verifies its contents
 func InitConfig(versionStr string) {
-	cfgPath = findResource("gochan.json", "/etc/gochan/gochan.json")
+	cfgPath = gcutil.FindResource("gochan.json", "/etc/gochan/gochan.json")
 	if cfgPath == "" {
 		fmt.Println("gochan.json not found")
 		os.Exit(1)
@@ -146,7 +135,7 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	Config.LogDir = findResource(Config.LogDir, "log", "/var/log/gochan/")
+	Config.LogDir = gcutil.FindResource(Config.LogDir, "log", "/var/log/gochan/")
 	if err = gclog.InitLogs(
 		path.Join(Config.LogDir, "access.log"),
 		path.Join(Config.LogDir, "error.log"),
@@ -187,17 +176,4 @@ func InitConfig(versionStr string) {
 
 	Config.Version = ParseVersion(versionStr)
 	Config.Version.Normalize()
-}
-
-// reimplemented from gcutil.RandomString to avoid a dependency cycle
-func randomString(length int) string {
-	var str string
-	for i := 0; i < length; i++ {
-		num := rand.Intn(127)
-		if num < 32 {
-			num += 32
-		}
-		str += fmt.Sprintf("%c", num)
-	}
-	return str
 }

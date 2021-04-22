@@ -245,3 +245,26 @@ func RandomString(length int) string {
 	}
 	return str
 }
+
+func ThumbnailExtension(filename string) string {
+	ext := filepath.Ext(strings.ToLower(filename))
+	switch ext {
+	case ".gif":
+		fallthrough
+	case ".png":
+		fallthrough
+	case ".webm":
+		fallthrough
+	case ".webp":
+		return "png"
+	case ".jpg":
+		fallthrough
+	case ".jpeg":
+		fallthrough
+	case "mp4":
+		return "jpg"
+	default:
+		// invalid file format
+		return ""
+	}
+}

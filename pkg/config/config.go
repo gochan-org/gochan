@@ -278,7 +278,7 @@ func (cfg *GochanConfig) ValidateValues() error {
 	}
 
 	if cfg.RandomSeed == "" {
-		cfg.RandomSeed = randomString(randomStringSize)
+		cfg.RandomSeed = gcutil.RandomString(randomStringSize)
 		changed = true
 	}
 	if !changed {
