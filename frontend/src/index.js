@@ -10,8 +10,6 @@ let currentStaff = null;
 let $watchedThreadsBtn = null;
 let $staffBtn = null;
 
-console.log("Hello gochan.js!");
-
 export function toTop() {
 	window.scrollTo(0,0);
 }
