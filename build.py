@@ -35,7 +35,7 @@ release_files = (
 	"html/hittheroad.mp3",
 	"html/hittheroad.ogg",
 	"html/hittheroad.wav",
-	"html/javascript",
+	"html/js",
 	"html/notbanned.png",
 	"html/permabanned.jpg",
 	"sample-configs",

@@ -99,7 +99,7 @@ func BuildJS() error {
 		return errors.New(gclog.Println(gclog.LErrorLog,
 			"Error loading consts.js template:", err.Error()))
 	}
-	constsJSPath := path.Join(config.Config.DocumentRoot, "javascript", "consts.js")
+	constsJSPath := path.Join(config.Config.DocumentRoot, "js", "consts.js")
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,

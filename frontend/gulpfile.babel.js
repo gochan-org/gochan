@@ -35,7 +35,7 @@ function buildTask(minify) {
 
 	return out
 		.pipe(sourcemaps.write('./maps/'))
-		.pipe(gulp.dest("../html/javascript/", {overwrite: true}));
+		.pipe(gulp.dest("../html/js/", {overwrite: true}));
 }
 
 gulp.task("default", () => {
