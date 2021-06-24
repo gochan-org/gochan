@@ -162,7 +162,7 @@ def build(debugging = False):
 	if status != 0:
 		print("Failed building gochan-migration, see command output for details")
 		exit(1)
-	print("Build gochan-migration-sucessfully")
+	print("Build gochan-migration successfully\n")
 
 def clean():
 	print("Cleaning up")
