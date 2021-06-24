@@ -1,7 +1,6 @@
 package gcsql
 
 import (
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -13,48 +12,20 @@ import (
 )
 
 var (
-	db       *sql.DB
-	dbDriver string
+	gcdb *GCDB
 	//FatalSQLFlags is used to log a fatal sql error and then close gochan
 	FatalSQLFlags   = gclog.LErrorLog | gclog.LStdLog | gclog.LFatal
-	nilTimestamp    string
-	sqlReplacer     *strings.Replacer // used during SQL string preparation
 	tcpHostIsolator = regexp.MustCompile(`\b(tcp\()?([^\(\)]*)\b`)
 )
 
 // ConnectToDB initializes the database connection and exits if there are any errors
-func ConnectToDB(host, dbType, dbName, username, password, prefix string) {
-	var connStr string
-	sqlReplacer = strings.NewReplacer(
-		"DBNAME", dbName,
-		"DBPREFIX", prefix,
-		"\n", " ")
-	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Initializing server...")
-
-	addrMatches := tcpHostIsolator.FindAllStringSubmatch(host, -1)
-	if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
-		host = addrMatches[0][2]
-	}
-
-	switch dbType {
-	case "mysql":
-		connStr = fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci",
-			username, password, host, dbName)
-		nilTimestamp = "0000-00-00 00:00:00"
-	case "postgres":
-		connStr = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
-			username, password, host, dbName)
-		nilTimestamp = "0001-01-01 00:00:00"
-	default:
-		gclog.Printf(FatalSQLFlags,
-			`Invalid DBtype %q in gochan.json, valid values are "mysql" and "postgres" (sqlite3 is no longer supported for stability reasons)`, dbType)
-	}
-	dbDriver = dbType
+func ConnectToDB(host, driver, dbName, username, password, prefix string) {
 	var err error
-	if db, err = sql.Open(dbType, connStr); err != nil {
+	if gcdb, err = Open(host, driver, dbName, username, password, prefix); err != nil {
 		gclog.Print(FatalSQLFlags, "Failed to connect to the database: ", err.Error())
+		return
 	}
-	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Connected to database...")
+	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Connected to database")
 }
 
 func initDB(initFile string) error {
@@ -76,12 +47,12 @@ func RunSQLFile(path string) error {
 	}
 
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
-	sqlArr := strings.Split(sqlReplacer.Replace(sqlStr), ";")
+	sqlArr := strings.Split(gcdb.replacer.Replace(sqlStr), ";")
 
 	for _, statement := range sqlArr {
 		statement = strings.Trim(statement, " \n\r\t")
 		if len(statement) > 0 {
-			if _, err = db.Exec(statement); err != nil {
+			if _, err = gcdb.db.Exec(statement); err != nil {
 				if config.Config.DebugMode {
 					gclog.Printf(gclog.LStdLog, "Error excecuting sql: %s\n", err.Error())
 					gclog.Printf(gclog.LStdLog, "Length sql: %d\n", len(statement))

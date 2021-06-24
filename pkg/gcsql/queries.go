@@ -18,8 +18,7 @@ import (
 const GochanVersionKeyConstant = "gochan"
 
 var (
-	ErrNilBoard      = errors.New("Board is nil")
-	ErrUnsupportedDB = errors.New("Unsupported DBtype")
+	ErrNilBoard = errors.New("Board is nil")
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
@@ -49,10 +48,11 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 	SET message = ?
 	WHERE id = ?`
 	stmt, err := PrepareSQL(sql)
-	defer stmt.Close()
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	for _, message := range messages {
 		if _, err = stmt.Exec(string(message.Message), message.ID); err != nil {
 			return err
@@ -777,7 +777,7 @@ func DeleteFilesFromPost(postID int) error {
 		return err
 	}
 	if !boardWasFound {
-		return fmt.Errorf("Could not find board for post %v", postID)
+		return fmt.Errorf("could not find board for post %v", postID)
 	}
 
 	//Get all filenames
@@ -890,7 +890,11 @@ func CreateDefaultBoardIfNoneExist() error {
 		Description: "Board for testing",
 		Section:     defaultSectionID}
 	board.SetDefaults()
-	return CreateBoard(&board)
+	err = CreateBoard(&board)
+	if err != nil {
+		panic(err)
+	}
+	return nil // CreateBoard(&board)
 }
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
