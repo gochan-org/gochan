@@ -54,7 +54,6 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
-		// "config":    config.Config,
 		"systemCritical": systemCritical,
 		"siteConfig":     siteConfig,
 		"boardConfig":    boardConfig,

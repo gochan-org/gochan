@@ -4,8 +4,8 @@
 		<span id="board-subtitle">Catalog</span>
 	</header><hr />
 	<div id="catalog-links" style="float: left;">
-		[<a href="{{$.config.WebRoot}}{{$.board.Dir}}">Return</a>]
-		[<a href="{{$.config.WebRoot}}{{$.board.Dir}}/catalog.html">Refresh</a>]
+		[<a href="{{$.webroot}}{{$.board.Dir}}">Return</a>]
+		[<a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Refresh</a>]
 	</div>
 	<div id="catalog-controls" style="float: right;">
 		Sort by: <select>
@@ -16,9 +16,9 @@
 	</div><hr />
 	<div id="content">{{range $_,$thread := .threads}}
 		<div class="catalog-thread">
-			<a href="{{$.config.WebRoot}}{{$.board.Dir}}/res/{{$thread.ID}}.html">
+			<a href="{{$.webroot}}{{$.board.Dir}}/res/{{$thread.ID}}.html">
 				{{if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else}}
-				<img src="{{$.config.WebRoot}}{{$.board.Dir}}/thumb/{{getThreadThumbnail $thread.Filename}}" alt="{{$.config.WebRoot}}{{$.board.Dir}}/src/{{$thread.Filename}}" width="{{$thread.ThumbW}}" height="{{$thread.ThumbH}}" />
+				<img src="{{$.webroot}}{{$.board.Dir}}/thumb/{{getThreadThumbnail $thread.Filename}}" alt="{{$.webroot}}{{$.board.Dir}}/src/{{$thread.Filename}}" width="{{$thread.ThumbW}}" height="{{$thread.ThumbH}}" />
 			{{end}}</a><br />
 			<b>{{if eq $thread.Name ""}}Anonymous{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}<br />
 			{{$thread.MessageHTML}}

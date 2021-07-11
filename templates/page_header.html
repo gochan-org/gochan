@@ -9,14 +9,14 @@
 			{{- else if ne $.op.MessageHTML "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
 			{{- else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
 		{{- else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
-	{{- else}}<title>{{.config.SiteName}}</title>{{end}}
-	<link rel="stylesheet" href="{{.config.WebRoot}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.config.WebRoot}}css/{{.config.DefaultStyle}}" />
-	<link rel="shortcut icon" href="{{.config.WebRoot}}favicon.png">
-	<script type="text/javascript" src="{{$.config.WebRoot}}js/consts.js"></script>
-	<script type="text/javascript" src="{{$.config.WebRoot}}js/gochan.js"></script>
+	{{- else}}<title>{{.site_config.SiteName}}</title>{{end}}
+	<link rel="stylesheet" href="{{$.webroot}}css/global.css" />
+	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board_config.DefaultStyle}}" />
+	<link rel="shortcut icon" href="{{.webroot}}favicon.png">
+	<script type="text/javascript" src="{{$.webroot}}js/consts.js"></script>
+	<script type="text/javascript" src="{{$.webroot}}js/gochan.js"></script>
 </head>
 <body>
 <div id="topbar">
-	{{range $i, $board := .boards}}<a href="{{$.config.WebRoot}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
+	{{range $i, $board := .boards}}<a href="{{$.webroot}}{{$board.Dir}}/" class="topbar-item">/{{$board.Dir}}/</a>{{end}}
 </div>

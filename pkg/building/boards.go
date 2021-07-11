@@ -140,7 +140,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"config":   config.Config,
+			"webroot":  criticalCfg.WebRoot,
 			"boards":   gcsql.AllBoards,
 			"sections": gcsql.AllSections,
 			"threads":  threads,
@@ -183,7 +183,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		// Render the boardpage template
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"config":   config.Config,
+			"webroot":  criticalCfg.WebRoot,
 			"boards":   gcsql.AllBoards,
 			"sections": gcsql.AllSections,
 			"threads":  pageThreads,
@@ -261,8 +261,8 @@ func BuildCatalog(boardID int) string {
 	if err = board.PopulateData(boardID); err != nil {
 		return gclog.Printf(gclog.LErrorLog, "Error getting board information (ID: %d)", boardID)
 	}
-
-	catalogPath := path.Join(config.Config.DocumentRoot, board.Dir, "catalog.html")
+	criticalCfg := config.GetSystemCriticalConfig()
+	catalogPath := path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.html")
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return gclog.Printf(gclog.LErrorLog,
@@ -287,7 +287,7 @@ func BuildCatalog(boardID int) string {
 
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
 		"boards":   gcsql.AllBoards,
-		"config":   config.Config,
+		"webroot":  criticalCfg.WebRoot,
 		"board":    board,
 		"sections": gcsql.AllSections,
 		"threads":  threadInterfaces,

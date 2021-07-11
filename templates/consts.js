@@ -3,11 +3,11 @@
 	instead of loading them on every HTML page.
 */ -}}
 var styles = [
-	{{- range $ii, $style := .Styles -}}
+	{{- range $ii, $style := .styles -}}
 		{{if gt $ii 0}},{{end -}}
 		{Name: "{{js $style.Name}}", Filename: "{{js $style.Filename}}"}
 	{{- end -}}
 ];
-var defaultStyle = "{{js .DefaultStyle}}";
-var webroot = "{{js .WebRoot}}";
-var serverTZ = {{.TimeZone}};
+var defaultStyle = "{{js .default_style}}";
+var webroot = "{{js .webroot}}";
+var serverTZ = {{.timezone}};

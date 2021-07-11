@@ -21,7 +21,6 @@ func BuildFrontPage() error {
 			"Error loading front page template: ", err.Error()))
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
-	boardCfg := config.GetBoardConfig("")
 	os.Remove(path.Join(criticalCfg.DocumentRoot, "index.html"))
 	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 
@@ -32,7 +31,8 @@ func BuildFrontPage() error {
 	defer frontFile.Close()
 
 	var recentPostsArr []gcsql.RecentPost
-	recentPostsArr, err = gcsql.GetRecentPostsGlobal(boardCfg.MaxRecentPosts, !config.Config.RecentPostsWithNoFile)
+	siteCfg := config.GetSiteConfig()
+	recentPostsArr, err = gcsql.GetRecentPostsGlobal(siteCfg.MaxRecentPosts, !siteCfg.RecentPostsWithNoFile)
 	if err != nil {
 		return errors.New(gclog.Print(gclog.LErrorLog,
 			"Failed loading recent posts: "+err.Error()))
@@ -45,7 +45,8 @@ func BuildFrontPage() error {
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
-		"config":       config.Config,
+		"webroot":      criticalCfg.WebRoot,
+		"site_config":  siteCfg,
 		"sections":     gcsql.AllSections,
 		"boards":       gcsql.AllBoards,
 		"recent_posts": recentPostsArr,
@@ -58,7 +59,8 @@ func BuildFrontPage() error {
 
 // BuildBoardListJSON generates a JSON file with info about the boards
 func BuildBoardListJSON() error {
-	boardListFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	criticalCfg := config.GetSystemCriticalConfig()
+	boardListFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return errors.New(
 			gclog.Print(gclog.LErrorLog, "Failed opening boards.json for writing: ", err.Error()))
@@ -69,11 +71,12 @@ func BuildBoardListJSON() error {
 		"boards": []gcsql.Board{},
 	}
 
+	boardCfg := config.GetBoardConfig("")
 	// Our cooldowns are site-wide currently.
 	cooldowns := gcsql.BoardCooldowns{
-		NewThread:  config.Config.NewThreadDelay,
-		Reply:      config.Config.ReplyDelay,
-		ImageReply: config.Config.ReplyDelay}
+		NewThread:  boardCfg.NewThreadDelay,
+		Reply:      boardCfg.ReplyDelay,
+		ImageReply: boardCfg.ReplyDelay}
 
 	for b := range gcsql.AllBoards {
 		gcsql.AllBoards[b].Cooldowns = cooldowns
@@ -101,7 +104,10 @@ func BuildJS() error {
 		return errors.New(gclog.Println(gclog.LErrorLog,
 			"Error loading consts.js template:", err.Error()))
 	}
-	constsJSPath := path.Join(config.Config.DocumentRoot, "js", "consts.js")
+
+	boardCfg := config.GetBoardConfig("")
+	criticalCfg := config.GetSystemCriticalConfig()
+	constsJSPath := path.Join(criticalCfg.DocumentRoot, "js", "consts.js")
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
@@ -109,7 +115,14 @@ func BuildJS() error {
 	}
 	defer constsJSFile.Close()
 
-	if err = serverutil.MinifyTemplate(gctemplates.JsConsts, config.Config, constsJSFile, "text/javascript"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.JsConsts,
+		map[string]interface{}{
+			"webroot":       criticalCfg.WebRoot,
+			"styles":        boardCfg.Styles,
+			"default_style": boardCfg.DefaultStyle,
+			"timezone":      criticalCfg.TimeZone,
+		},
+		constsJSFile, "text/javascript"); err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Error building %q: %s", constsJSPath, err.Error()))
 	}

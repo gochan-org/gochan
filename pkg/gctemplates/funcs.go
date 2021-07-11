@@ -162,7 +162,7 @@ var funcMap = template.FuncMap{
 		postURL += systemCritical.WebRoot
 
 		if typeOf == "recent" {
-			post, ok := postInterface.(*gcsql.RecentPost)
+			post, ok := postInterface.(gcsql.RecentPost)
 			if !ok {
 				return
 			}

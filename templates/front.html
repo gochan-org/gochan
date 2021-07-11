@@ -1,7 +1,7 @@
 {{- template "page_header.html" .}}
 	<div id="top-pane">
-		<span id="site-title">{{.config.SiteName}}</span><br />
-		<span id="site-slogan">{{.config.SiteSlogan}}</span>
+		<span id="site-title">{{.site_config.SiteName}}</span><br />
+		<span id="site-slogan">{{.site_config.SiteSlogan}}</span>
 	</div><br />
 	<div id="frontpage">
 		<div class="section-block" style="margin: 16px 64px 16px 64px;">
@@ -17,8 +17,8 @@
 						<ul style="float:left; list-style: none">
 						<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
 						{{range $_, $board := $.boards}}
-							{{if and (eq $board.Section $section.ID) (ne $board.Dir $.config.Modboard)}}
-								<li><a href="{{$.config.WebRoot}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
+							{{if and (eq $board.Section $section.ID) (ne $board.Dir $.site_config.Modboard)}}
+								<li><a href="{{$.webroot}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
 							{{end}}
 						{{end}}
 						</ul>
@@ -26,7 +26,7 @@
 				{{end}}
 			</div>
 		</div>
-		{{- if gt .config.MaxRecentPosts 0}}
+		{{- if gt .site_config.MaxRecentPosts 0}}
 		<div class="section-block">
 			<div class="section-title-block"><b>Recent Posts</b></div>
 			<div class="section-body">
@@ -34,11 +34,11 @@
 				{{- range $i, $post := $.recent_posts}}{{$postURL := getPostURL $post "recent" false}}
 					<div class="recent-post">
 						{{if and (ne $post.Filename "deleted") (ne $post.Filename "") -}}
-							<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.config.WebRoot}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
+							<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.webroot}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
 						{{else}}
 							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$postURL}}" class="front-reply" target="_blank">No file</a></div>
 						{{- end}}<br />
-						<a href="{{$.config.WebRoot}}{{$post.BoardName}}/">/{{$post.BoardName}}/</a><hr />
+						<a href="{{$.webroot}}{{$post.BoardName}}/">/{{$post.BoardName}}/</a><hr />
 						{{truncateMessage (stripHTML $post.Message) 40 4}}
 					</div>{{end}}
 				</div>
