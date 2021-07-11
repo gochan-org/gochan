@@ -33,7 +33,8 @@ func tempCleaner() {
 					continue
 				}
 
-				fileSrc := path.Join(config.Config.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
+				systemCritical := config.GetSystemCriticalConfig()
+				fileSrc := path.Join(systemCritical.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
 				if err = os.Remove(fileSrc); err != nil {
 					gclog.Printf(errStdLogs,
 						"Error pruning temporary upload for %q: %s", fileSrc, err.Error())

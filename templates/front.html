@@ -18,7 +18,7 @@
 						<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
 						{{range $_, $board := $.boards}}
 							{{if and (eq $board.Section $section.ID) (ne $board.Dir $.config.Modboard)}}
-								<li><a href="{{$.config.SiteWebfolder}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
+								<li><a href="{{$.config.WebRoot}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
 							{{end}}
 						{{end}}
 						</ul>
@@ -34,11 +34,11 @@
 				{{- range $i, $post := $.recent_posts}}{{$postURL := getPostURL $post "recent" false}}
 					<div class="recent-post">
 						{{if and (ne $post.Filename "deleted") (ne $post.Filename "") -}}
-							<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.config.SiteWebfolder}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
+							<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.config.WebRoot}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
 						{{else}}
 							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$postURL}}" class="front-reply" target="_blank">No file</a></div>
 						{{- end}}<br />
-						<a href="{{$.config.SiteWebfolder}}{{$post.BoardName}}/">/{{$post.BoardName}}/</a><hr />
+						<a href="{{$.config.WebRoot}}{{$post.BoardName}}/">/{{$post.BoardName}}/</a><hr />
 						{{truncateMessage (stripHTML $post.Message) 40 4}}
 					</div>{{end}}
 				</div>

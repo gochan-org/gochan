@@ -16,17 +16,18 @@ import (
 func createImageThumbnail(imageObj image.Image, size string) image.Image {
 	var thumbWidth int
 	var thumbHeight int
+	boardCfg := config.GetBoardConfig("")
 
 	switch size {
 	case "op":
-		thumbWidth = config.Config.ThumbWidth
-		thumbHeight = config.Config.ThumbHeight
+		thumbWidth = boardCfg.ThumbWidth
+		thumbHeight = boardCfg.ThumbHeight
 	case "reply":
-		thumbWidth = config.Config.ThumbWidthReply
-		thumbHeight = config.Config.ThumbHeightReply
+		thumbWidth = boardCfg.ThumbWidthReply
+		thumbHeight = boardCfg.ThumbHeightReply
 	case "catalog":
-		thumbWidth = config.Config.ThumbWidthCatalog
-		thumbHeight = config.Config.ThumbHeightCatalog
+		thumbWidth = boardCfg.ThumbWidthCatalog
+		thumbHeight = boardCfg.ThumbHeightCatalog
 	}
 	oldRect := imageObj.Bounds()
 	if thumbWidth >= oldRect.Max.X && thumbHeight >= oldRect.Max.Y {
@@ -82,17 +83,17 @@ func getNewFilename() string {
 func getThumbnailSize(w, h int, size string) (newWidth, newHeight int) {
 	var thumbWidth int
 	var thumbHeight int
-
+	boardCfg := config.GetBoardConfig("")
 	switch {
 	case size == "op":
-		thumbWidth = config.Config.ThumbWidth
-		thumbHeight = config.Config.ThumbHeight
+		thumbWidth = boardCfg.ThumbWidth
+		thumbHeight = boardCfg.ThumbHeight
 	case size == "reply":
-		thumbWidth = config.Config.ThumbWidthReply
-		thumbHeight = config.Config.ThumbHeightReply
+		thumbWidth = boardCfg.ThumbWidthReply
+		thumbHeight = boardCfg.ThumbHeightReply
 	case size == "catalog":
-		thumbWidth = config.Config.ThumbWidthCatalog
-		thumbHeight = config.Config.ThumbHeightCatalog
+		thumbWidth = boardCfg.ThumbWidthCatalog
+		thumbHeight = boardCfg.ThumbHeightCatalog
 	}
 	if w == h {
 		newWidth = thumbWidth

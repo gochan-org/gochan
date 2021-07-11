@@ -20,8 +20,10 @@ func BuildFrontPage() error {
 		return errors.New(gclog.Print(gclog.LErrorLog,
 			"Error loading front page template: ", err.Error()))
 	}
-	os.Remove(path.Join(config.Config.DocumentRoot, "index.html"))
-	frontFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	criticalCfg := config.GetSystemCriticalConfig()
+	boardCfg := config.GetBoardConfig("")
+	os.Remove(path.Join(criticalCfg.DocumentRoot, "index.html"))
+	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 
 	if err != nil {
 		return errors.New(gclog.Print(gclog.LErrorLog,
@@ -30,7 +32,7 @@ func BuildFrontPage() error {
 	defer frontFile.Close()
 
 	var recentPostsArr []gcsql.RecentPost
-	recentPostsArr, err = gcsql.GetRecentPostsGlobal(config.Config.MaxRecentPosts, !config.Config.RecentPostsWithNoFile)
+	recentPostsArr, err = gcsql.GetRecentPostsGlobal(boardCfg.MaxRecentPosts, !config.Config.RecentPostsWithNoFile)
 	if err != nil {
 		return errors.New(gclog.Print(gclog.LErrorLog,
 			"Failed loading recent posts: "+err.Error()))

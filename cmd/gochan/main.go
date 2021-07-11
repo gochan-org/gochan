@@ -34,10 +34,12 @@ func main() {
 	gclog.Printf(gclog.LStdLog, "Starting gochan v%s", versionStr)
 	config.InitConfig(versionStr)
 
+	systemCritical := config.GetSystemCriticalConfig()
+
 	gcsql.ConnectToDB(
-		config.Config.DBhost, config.Config.DBtype, config.Config.DBname,
-		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
-	gcsql.CheckAndInitializeDatabase(config.Config.DBtype)
+		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
+		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
+	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
 	parseCommandLine()
 	serverutil.InitMinifier()
 

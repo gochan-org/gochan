@@ -16,7 +16,7 @@ const (
 		"DBusername": "gochan",
 		"DBpassword": "",
 		"SiteDomain": "127.0.0.1",
-		"SiteWebfolder": "/",
+		"SiteWebFolder": "/",
 	
 		"Styles": [
 			{ "Name": "Pipes", "Filename": "pipes.css" },
@@ -57,7 +57,7 @@ const (
 		"SiteName": "Gochan",
 		"SiteSlogan": "",
 		"SiteDomain": "127.0.0.1",
-		"SiteWebfolder": "/",
+		"SiteWebFolder": "/",
 	
 		"Styles": [
 			{ "Name": "Pipes", "Filename": "pipes.css" },

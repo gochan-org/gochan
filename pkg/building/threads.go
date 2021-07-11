@@ -58,14 +58,15 @@ func BuildThreadPages(op *gcsql.Post) error {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Error building thread %d: %s", op.ID, err.Error()))
 	}
-	os.Remove(path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
+	criticalCfg := config.GetSystemCriticalConfig()
+	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
 
 	var repliesInterface []interface{}
 	for _, reply := range replies {
 		repliesInterface = append(repliesInterface, reply)
 	}
 
-	threadPageFilepath := path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
+	threadPageFilepath := path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
 	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
@@ -74,7 +75,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 
 	// render thread page
 	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
-		"config":   config.Config,
+		"webroot":  criticalCfg.WebRoot,
 		"boards":   gcsql.AllBoards,
 		"board":    board,
 		"sections": gcsql.AllSections,
@@ -86,7 +87,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 	}
 
 	// Put together the thread JSON
-	threadJSONFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	threadJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error()))

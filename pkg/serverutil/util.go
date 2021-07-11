@@ -13,8 +13,10 @@ import (
 // ServeErrorPage shows a general error page if something goes wrong
 func ServeErrorPage(writer http.ResponseWriter, err string) {
 	MinifyTemplate(gctemplates.ErrorPage, map[string]interface{}{
-		"config":     config.Config,
-		"ErrorTitle": "Error :c",
+		"systemCritical": config.GetSystemCriticalConfig(),
+		"siteConfig":     config.GetSiteConfig(),
+		"boardConfig":    config.GetBoardConfig(""),
+		"ErrorTitle":     "Error :c",
 		// "ErrorImage":  "/error/lol 404.gif",
 		"ErrorHeader": "Error",
 		"ErrorText":   err,
@@ -25,7 +27,8 @@ func ServeErrorPage(writer http.ResponseWriter, err string) {
 func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Add("Content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(404)
-	errorPage, err := ioutil.ReadFile(config.Config.DocumentRoot + "/error/404.html")
+	systemCritical := config.GetSystemCriticalConfig()
+	errorPage, err := ioutil.ReadFile(systemCritical.DocumentRoot + "/error/404.html")
 	if err != nil {
 		writer.Write([]byte("Requested page not found, and /error/404.html not found"))
 	} else {

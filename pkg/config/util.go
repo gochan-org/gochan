@@ -98,11 +98,11 @@ func InitConfig(versionStr string) {
 	}
 
 	var fields []MissingField
-	Config, fields, err = ParseJSON(jfile)
+	cfg, fields, err = ParseJSON(jfile)
 	if err != nil {
 		fmt.Printf("Error parsing %s: %s", cfgPath, err.Error())
 	}
-	Config.jsonLocation = cfgPath
+	cfg.jsonLocation = cfgPath
 
 	numMissing := 0
 	for _, missing := range fields {
@@ -117,63 +117,63 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	if err = Config.ValidateValues(); err != nil {
+	if err = cfg.ValidateValues(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	if _, err = os.Stat(Config.DocumentRoot); err != nil {
+	if _, err = os.Stat(cfg.DocumentRoot); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(Config.TemplateDir); err != nil {
+	if _, err = os.Stat(cfg.TemplateDir); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(Config.LogDir); err != nil {
+	if _, err = os.Stat(cfg.LogDir); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	Config.LogDir = gcutil.FindResource(Config.LogDir, "log", "/var/log/gochan/")
+	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
 	if err = gclog.InitLogs(
-		path.Join(Config.LogDir, "access.log"),
-		path.Join(Config.LogDir, "error.log"),
-		path.Join(Config.LogDir, "staff.log"),
-		Config.DebugMode); err != nil {
+		path.Join(cfg.LogDir, "access.log"),
+		path.Join(cfg.LogDir, "error.log"),
+		path.Join(cfg.LogDir, "staff.log"),
+		cfg.DebugMode); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	if Config.Port == 0 {
-		Config.Port = 80
+	if cfg.Port == 0 {
+		cfg.Port = 80
 	}
 
-	if len(Config.FirstPage) == 0 {
-		Config.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
+	if len(cfg.FirstPage) == 0 {
+		cfg.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
 	}
 
-	if Config.SiteWebfolder == "" {
-		Config.SiteWebfolder = "/"
+	if cfg.WebRoot == "" {
+		cfg.WebRoot = "/"
 	}
 
-	if Config.SiteWebfolder[0] != '/' {
-		Config.SiteWebfolder = "/" + Config.SiteWebfolder
+	if cfg.WebRoot[0] != '/' {
+		cfg.WebRoot = "/" + cfg.WebRoot
 	}
-	if Config.SiteWebfolder[len(Config.SiteWebfolder)-1] != '/' {
-		Config.SiteWebfolder += "/"
+	if cfg.WebRoot[len(cfg.WebRoot)-1] != '/' {
+		cfg.WebRoot += "/"
 	}
 
-	if Config.EnableGeoIP {
-		if _, err = os.Stat(Config.GeoIPDBlocation); err != nil {
+	if cfg.EnableGeoIP {
+		if _, err = os.Stat(cfg.GeoIPDBlocation); err != nil {
 			gclog.Print(gclog.LErrorLog|gclog.LStdLog, "Unable to find GeoIP file location set in gochan.json, disabling GeoIP")
 		}
-		Config.EnableGeoIP = false
+		cfg.EnableGeoIP = false
 	}
 
 	_, zoneOffset := time.Now().Zone()
-	Config.TimeZone = zoneOffset / 60 / 60
+	cfg.TimeZone = zoneOffset / 60 / 60
 
-	Config.Version = ParseVersion(versionStr)
-	Config.Version.Normalize()
+	cfg.Version = ParseVersion(versionStr)
+	cfg.Version.Normalize()
 }

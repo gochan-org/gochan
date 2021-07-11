@@ -9,5 +9,5 @@ var styles = [
 	{{- end -}}
 ];
 var defaultStyle = "{{js .DefaultStyle}}";
-var webroot = "{{js .SiteWebfolder}}";
+var webroot = "{{js .WebRoot}}";
 var serverTZ = {{.TimeZone}};

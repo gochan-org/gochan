@@ -49,11 +49,12 @@ func RunSQLFile(path string) error {
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
 	sqlArr := strings.Split(gcdb.replacer.Replace(sqlStr), ";")
 
+	debugMode := config.GetSystemCriticalConfig().DebugMode
 	for _, statement := range sqlArr {
 		statement = strings.Trim(statement, " \n\r\t")
 		if len(statement) > 0 {
 			if _, err = gcdb.db.Exec(statement); err != nil {
-				if config.Config.DebugMode {
+				if debugMode {
 					gclog.Printf(gclog.LStdLog, "Error excecuting sql: %s\n", err.Error())
 					gclog.Printf(gclog.LStdLog, "Length sql: %d\n", len(statement))
 					gclog.Printf(gclog.LStdLog, "Statement: %s\n", statement)

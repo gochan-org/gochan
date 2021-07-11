@@ -1,5 +1,8 @@
 Gochan
 =======
+**NOTE**: I am currently working on refactoring configuration, use `master` for non-broken code until this branch is merged into it.
+
+
 A semi-standalone imageboard server written in Go
 
 Gochan works in a manner similar to Kusaba X, Tinyboard and others. As such, Gochan generates static HTML files which can optionally be served by a separate web server.

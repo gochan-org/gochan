@@ -29,7 +29,7 @@
 	"SiteSlogan": "",
 	"SiteDomain": "127.0.0.1",
 	"SiteHeaderURL": "",
-	"SiteWebfolder": "/",
+	"WebRoot": "/",
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },

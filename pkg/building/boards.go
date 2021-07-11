@@ -73,14 +73,15 @@ func BuildBoardPages(board *gcsql.Board) error {
 		thread.OP = op
 
 		var numRepliesOnBoardPage int
-
+		// postCfg := config.getpo
+		postCfg := config.GetBoardConfig("").PostConfig
 		if op.Stickied {
 			// If the thread is stickied, limit replies on the archive page to the
 			// configured value for stickied threads.
-			numRepliesOnBoardPage = config.Config.StickyRepliesOnBoardPage
+			numRepliesOnBoardPage = postCfg.StickyRepliesOnBoardPage
 		} else {
 			// Otherwise, limit the replies to the configured value for normal threads.
-			numRepliesOnBoardPage = config.Config.RepliesOnBoardPage
+			numRepliesOnBoardPage = postCfg.RepliesOnBoardPage
 		}
 
 		postsInThread, err = gcsql.GetExistingRepliesLimitedRev(op.ID, numRepliesOnBoardPage)
@@ -118,8 +119,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 			nonStickiedThreads = append(nonStickiedThreads, thread)
 		}
 	}
-
-	gcutil.DeleteMatchingFiles(path.Join(config.Config.DocumentRoot, board.Dir), "\\d.html$")
+	criticalCfg := config.GetSystemCriticalConfig()
+	gcutil.DeleteMatchingFiles(path.Join(criticalCfg.DocumentRoot, board.Dir), "\\d.html$")
 	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickiedThreads, nonStickiedThreads...)
 
@@ -129,7 +130,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		board.CurrentPage = 1
 
 		// Open 1.html for writing to the first page.
-		boardPageFile, err = os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+		boardPageFile, err = os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				"Failed opening /%s/board.html: %s",
@@ -152,13 +153,14 @@ func BuildBoardPages(board *gcsql.Board) error {
 	}
 
 	// Create the archive pages.
-	threadPages = paginate(config.Config.ThreadsPerPage, threads)
+	boardCfg := config.GetBoardConfig(board.Dir)
+	threadPages = paginate(boardCfg.ThreadsPerPage, threads)
 	board.NumPages = len(threadPages)
 
 	// Create array of page wrapper objects, and open the file.
 	pagesArr := make([]map[string]interface{}, board.NumPages)
 
-	catalogJSONFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Failed opening /%s/catalog.json: %s", board.Dir, err.Error()))
@@ -170,7 +172,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		board.CurrentPage++
 		var currentPageFilepath string
 		pageFilename := strconv.Itoa(board.CurrentPage) + ".html"
-		currentPageFilepath = path.Join(config.Config.DocumentRoot, board.Dir, pageFilename)
+		currentPageFilepath = path.Join(criticalCfg.DocumentRoot, board.Dir, pageFilename)
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			err = errors.New(gclog.Printf(gclog.LErrorLog,
