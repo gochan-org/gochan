@@ -55,10 +55,10 @@
 
 	"ThumbWidth": 200,
 	"ThumbHeight": 200,
-	"ThumbWidth_reply": 125,
-	"ThumbHeight_reply": 125,
-	"ThumbWidth_catalog": 50,
-	"ThumbHeight_catalog": 50,
+	"ThumbWidthReply": 125,
+	"ThumbHeightReply": 125,
+	"ThumbWidthCatalog": 50,
+	"ThumbHeightCatalog": 50,
 
 	"ThreadsPerPage": 15,
 	"PostsPerThreadPage": 50,
@@ -73,7 +73,6 @@
 	"EmbedHeight": 164,
 	"ExpandButton": true,
 	"ImagesOpenNewTab": true,
-	"MakeURLsHyperlinked": true,
 	"NewTabOnOutlinks": true,
 
 	"MinifyHTML": true,

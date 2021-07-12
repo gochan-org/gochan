@@ -18,9 +18,51 @@ const (
 )
 
 var (
-	cfg          *GochanConfig
-	cfgPath      string
-	cfgDefaults  = map[string]interface{}{}
+	cfg         *GochanConfig
+	cfgPath     string
+	cfgDefaults = map[string]interface{}{
+		"WebRoot": "/",
+		// SiteConfig
+		"FirstPage":       []string{"index.html", "firstrun.html", "1.html"},
+		"CookieMaxAge":    "1y",
+		"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
+		"SiteName":        "Gochan",
+		"MinifyHTML":      true,
+		"MinifyJS":        true,
+		"MaxRecentPosts":  3,
+		"EnableAppeals":   true,
+		"MaxLogDays":      14,
+
+		// BoardConfig
+		"DateTimeFormat":        "Mon, January 02, 2006 15:04 PM",
+		"CaptchaWidth":          240,
+		"CaptchaHeight":         80,
+		"CaptchaMinutesTimeout": 15,
+
+		// PostConfig
+		"NewThreadDelay":           30,
+		"ReplyDelay":               7,
+		"MaxLineLength":            150,
+		"ThreadsPerPage":           15,
+		"PostsPerThreadPage":       50,
+		"RepliesOnBoardPage":       3,
+		"StickyRepliesOnBoardPage": 1,
+		"BanMsg":                   "USER WAS BANNED FOR THIS POST",
+		"EmbedWidth":               200,
+		"EmbedHeight":              164,
+		"ExpandButton":             true,
+		"ImagesOpenNewTab":         true,
+		"NewTabOnOutlinks":         true,
+
+		// UploadConfig
+		"ThumbWidth":         200,
+		"ThumbHeight":        200,
+		"ThumbWidthReply":    125,
+		"ThumbHeightReply":   125,
+		"ThumbWidthCatalog":  50,
+		"ThumbHeightCatalog": 50,
+	}
+
 	boardConfigs = map[string]BoardConfig{}
 )
 
@@ -54,18 +96,30 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		return &ErrInvalidValue{Field: "ListenIP", Value: gcfg.ListenIP}
 	}
 	changed := false
+
+	if gcfg.WebRoot == "" {
+		gcfg.WebRoot = "/"
+		changed = true
+	}
 	if len(gcfg.FirstPage) == 0 {
 		gcfg.FirstPage = cfgDefaults["FirstPage"].([]string)
+		changed = true
+	}
+	if gcfg.CookieMaxAge == "" {
+		gcfg.CookieMaxAge = cfgDefaults["CookieMaxAge"].(string)
 		changed = true
 	}
 	_, err := gcutil.ParseDurationString(gcfg.CookieMaxAge)
 	if err == gcutil.ErrInvalidDurationString {
 		return &ErrInvalidValue{Field: "CookieMaxAge", Value: gcfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
-	} else if err == gcutil.ErrEmptyDurationString {
-		return &ErrInvalidValue{Field: "CookieMaxAge", Details: err.Error() + cookieMaxAgeEx}
 	} else if err != nil {
 		return err
 	}
+
+	if gcfg.LockdownMessage == "" {
+		gcfg.LockdownMessage = cfgDefaults["LockdownMessage"].(string)
+	}
+
 	if gcfg.DBtype != "mysql" && gcfg.DBtype != "postgresql" {
 		return &ErrInvalidValue{Field: "DBtype", Value: gcfg.DBtype, Details: "currently supported values: mysql, postgresql"}
 	}
@@ -76,14 +130,11 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		gcfg.DefaultStyle = gcfg.Styles[0].Filename
 		changed = true
 	}
-	if gcfg.NewThreadDelay == 0 {
-		gcfg.NewThreadDelay = cfgDefaults["NewThreadDelay"].(int)
-		changed = true
+
+	if gcfg.SiteName == "" {
+		gcfg.SiteName = cfgDefaults["SiteName"].(string)
 	}
-	if gcfg.ReplyDelay == 0 {
-		gcfg.ReplyDelay = cfgDefaults["ReplyDelay"].(int)
-		changed = true
-	}
+
 	if gcfg.MaxLineLength == 0 {
 		gcfg.MaxLineLength = cfgDefaults["MaxLineLength"].(int)
 		changed = true
@@ -251,13 +302,12 @@ type Style struct {
 
 type UploadConfig struct {
 	RejectDuplicateImages bool `description:"Enabling this will cause gochan to reject a post if the image has already been uploaded for another post.\nThis may end up being removed or being made board-specific in the future."`
-	AllowVideoUploads     bool
-	ThumbWidth            int `description:"OP thumbnails use this as their max width.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger."`
-	ThumbHeight           int `description:"OP thumbnails use this as their max height.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger."`
-	ThumbWidthReply       int `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
-	ThumbHeightReply      int `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
-	ThumbWidthCatalog     int `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
-	ThumbHeightCatalog    int `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
+	ThumbWidth            int  `description:"OP thumbnails use this as their max width.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger."`
+	ThumbHeight           int  `description:"OP thumbnails use this as their max height.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger."`
+	ThumbWidthReply       int  `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
+	ThumbHeightReply      int  `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
+	ThumbWidthCatalog     int  `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
+	ThumbHeightCatalog    int  `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
 }
 
 type PostConfig struct {

@@ -35,6 +35,39 @@ func (iv *ErrInvalidValue) Error() string {
 	return str
 }
 
+func GetDefaultBool(key string) bool {
+	boolInterface := cfgDefaults[key]
+	if boolInterface == nil {
+		return false
+	}
+	b, ok := boolInterface.(bool)
+	return b && ok
+}
+
+func GetDefaultInt(key string) int {
+	intInterface := cfgDefaults[key]
+	if intInterface == nil {
+		return 0
+	}
+	i, ok := intInterface.(int)
+	if !ok {
+		return 0
+	}
+	return i
+}
+
+func GetDefaultString(key string) string {
+	i := cfgDefaults[key]
+	if i == nil {
+		return ""
+	}
+	str, ok := i.(string)
+	if !ok {
+		return ""
+	}
+	return str
+}
+
 // ParseJSON loads and parses JSON data, returning a GochanConfig pointer, any critical missing
 // fields that don't have defaults, and any error from parsing the file. This doesn't mean that the
 // values are valid, just that they exist
