@@ -18,9 +18,9 @@ const (
 )
 
 var (
-	cfg         *GochanConfig
-	cfgPath     string
-	cfgDefaults = map[string]interface{}{
+	cfg      *GochanConfig
+	cfgPath  string
+	defaults = map[string]interface{}{
 		"WebRoot": "/",
 		// SiteConfig
 		"FirstPage":       []string{"index.html", "firstrun.html", "1.html"},
@@ -73,6 +73,24 @@ type GochanConfig struct {
 	jsonLocation string `json:"-"`
 }
 
+func (gcfg *GochanConfig) setField(field string, value interface{}) {
+	structValue := reflect.ValueOf(gcfg).Elem()
+	structFieldValue := structValue.FieldByName(field)
+	if !structFieldValue.IsValid() {
+		return
+	}
+	if !structFieldValue.CanSet() {
+		return
+	}
+	structFieldType := structFieldValue.Type()
+	val := reflect.ValueOf(value)
+	if structFieldType != val.Type() {
+		return
+	}
+
+	structFieldValue.Set(val)
+}
+
 // ToMap returns the configuration file as a map. This will probably be removed
 func (gcfg *GochanConfig) ToMap() map[string]interface{} {
 	cVal := reflect.ValueOf(gcfg).Elem()
@@ -102,11 +120,11 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		changed = true
 	}
 	if len(gcfg.FirstPage) == 0 {
-		gcfg.FirstPage = cfgDefaults["FirstPage"].([]string)
+		gcfg.FirstPage = defaults["FirstPage"].([]string)
 		changed = true
 	}
 	if gcfg.CookieMaxAge == "" {
-		gcfg.CookieMaxAge = cfgDefaults["CookieMaxAge"].(string)
+		gcfg.CookieMaxAge = defaults["CookieMaxAge"].(string)
 		changed = true
 	}
 	_, err := gcutil.ParseDurationString(gcfg.CookieMaxAge)
@@ -117,7 +135,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 
 	if gcfg.LockdownMessage == "" {
-		gcfg.LockdownMessage = cfgDefaults["LockdownMessage"].(string)
+		gcfg.LockdownMessage = defaults["LockdownMessage"].(string)
 	}
 
 	if gcfg.DBtype != "mysql" && gcfg.DBtype != "postgresql" {
@@ -132,64 +150,64 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 
 	if gcfg.SiteName == "" {
-		gcfg.SiteName = cfgDefaults["SiteName"].(string)
+		gcfg.SiteName = defaults["SiteName"].(string)
 	}
 
 	if gcfg.MaxLineLength == 0 {
-		gcfg.MaxLineLength = cfgDefaults["MaxLineLength"].(int)
+		gcfg.MaxLineLength = defaults["MaxLineLength"].(int)
 		changed = true
 	}
 	if gcfg.ThumbWidth == 0 {
-		gcfg.ThumbWidth = cfgDefaults["ThumbWidth"].(int)
+		gcfg.ThumbWidth = defaults["ThumbWidth"].(int)
 		changed = true
 	}
 	if gcfg.ThumbHeight == 0 {
-		gcfg.ThumbHeight = cfgDefaults["ThumbHeight"].(int)
+		gcfg.ThumbHeight = defaults["ThumbHeight"].(int)
 		changed = true
 	}
 	if gcfg.ThumbWidthReply == 0 {
-		gcfg.ThumbWidthReply = cfgDefaults["ThumbWidthReply"].(int)
+		gcfg.ThumbWidthReply = defaults["ThumbWidthReply"].(int)
 		changed = true
 	}
 	if gcfg.ThumbHeightReply == 0 {
-		gcfg.ThumbHeightReply = cfgDefaults["ThumbHeightReply"].(int)
+		gcfg.ThumbHeightReply = defaults["ThumbHeightReply"].(int)
 		changed = true
 	}
 
 	if gcfg.ThumbWidthCatalog == 0 {
-		gcfg.ThumbWidthCatalog = cfgDefaults["ThumbWidthCatalog"].(int)
+		gcfg.ThumbWidthCatalog = defaults["ThumbWidthCatalog"].(int)
 		changed = true
 	}
 	if gcfg.ThumbHeightCatalog == 0 {
-		gcfg.ThumbHeightCatalog = cfgDefaults["ThumbHeightCatalog"].(int)
+		gcfg.ThumbHeightCatalog = defaults["ThumbHeightCatalog"].(int)
 		changed = true
 	}
 	if gcfg.ThreadsPerPage == 0 {
-		gcfg.ThreadsPerPage = cfgDefaults["ThreadsPerPage"].(int)
+		gcfg.ThreadsPerPage = defaults["ThreadsPerPage"].(int)
 		changed = true
 	}
 	if gcfg.RepliesOnBoardPage == 0 {
-		gcfg.RepliesOnBoardPage = cfgDefaults["RepliesOnBoardPage"].(int)
+		gcfg.RepliesOnBoardPage = defaults["RepliesOnBoardPage"].(int)
 		changed = true
 	}
 	if gcfg.StickyRepliesOnBoardPage == 0 {
-		gcfg.StickyRepliesOnBoardPage = cfgDefaults["StickyRepliesOnBoardPage"].(int)
+		gcfg.StickyRepliesOnBoardPage = defaults["StickyRepliesOnBoardPage"].(int)
 		changed = true
 	}
 	if gcfg.BanMsg == "" {
-		gcfg.BanMsg = cfgDefaults["BanMsg"].(string)
+		gcfg.BanMsg = defaults["BanMsg"].(string)
 		changed = true
 	}
 	if gcfg.DateTimeFormat == "" {
-		gcfg.DateTimeFormat = cfgDefaults["DateTimeFormat"].(string)
+		gcfg.DateTimeFormat = defaults["DateTimeFormat"].(string)
 		changed = true
 	}
 	if gcfg.CaptchaWidth == 0 {
-		gcfg.CaptchaWidth = cfgDefaults["CaptchaWidth"].(int)
+		gcfg.CaptchaWidth = defaults["CaptchaWidth"].(int)
 		changed = true
 	}
 	if gcfg.CaptchaHeight == 0 {
-		gcfg.CaptchaHeight = cfgDefaults["CaptchaHeight"].(int)
+		gcfg.CaptchaHeight = defaults["CaptchaHeight"].(int)
 		changed = true
 	}
 	if gcfg.EnableGeoIP {
@@ -199,7 +217,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 
 	if gcfg.MaxLogDays == 0 {
-		gcfg.MaxLogDays = cfgDefaults["MaxLogDays"].(int)
+		gcfg.MaxLogDays = defaults["MaxLogDays"].(int)
 		changed = true
 	}
 
@@ -227,22 +245,22 @@ func (gcfg *GochanConfig) Write() error {
  file and restarting the server.
 */
 type SystemCriticalConfig struct {
-	ListenIP     string
-	Port         int
-	UseFastCGI   bool
-	DocumentRoot string
-	TemplateDir  string
-	LogDir       string
+	ListenIP     string `critical:"true"`
+	Port         int    `critical:"true"`
+	UseFastCGI   bool   `critical:"true"`
+	DocumentRoot string `critical:"true"`
+	TemplateDir  string `critical:"true"`
+	LogDir       string `critical:"true"`
 
 	SiteHeaderURL string
 	WebRoot       string `description:"The HTTP root appearing in the browser (e.g. '/', 'https://yoursite.net/', etc) that all internal links start with"`
 	SiteDomain    string `description:"The server's domain (e.g. gochan.org, 127.0.0.1, etc)"`
 
-	DBtype     string
-	DBhost     string
-	DBname     string
-	DBusername string
-	DBpassword string
+	DBtype     string `critical:"true"`
+	DBhost     string `critical:"true"`
+	DBname     string `critical:"true"`
+	DBusername string `critical:"true"`
+	DBpassword string `critical:"true"`
 	DBprefix   string `description:"Each table's name in the database will start with this, if it is set"`
 
 	DebugMode  bool `description:"Disables several spam/browser checks that can cause problems when hosting an instance locally."`

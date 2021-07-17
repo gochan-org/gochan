@@ -13,6 +13,13 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+var (
+	criticalFields = []string{
+		"ListenIP", "Port", "Username", "UseFastCGI", "DocumentRoot", "TemplateDir", "LogDir",
+		"DBtype", "DBhost", "DBname", "DBusername", "DBpassword", "SiteDomain", "Styles",
+	}
+)
+
 // MissingField represents a field missing from the configuration file
 type MissingField struct {
 	Name        string
@@ -36,7 +43,7 @@ func (iv *ErrInvalidValue) Error() string {
 }
 
 func GetDefaultBool(key string) bool {
-	boolInterface := cfgDefaults[key]
+	boolInterface := defaults[key]
 	if boolInterface == nil {
 		return false
 	}
@@ -45,7 +52,7 @@ func GetDefaultBool(key string) bool {
 }
 
 func GetDefaultInt(key string) int {
-	intInterface := cfgDefaults[key]
+	intInterface := defaults[key]
 	if intInterface == nil {
 		return 0
 	}
@@ -57,7 +64,7 @@ func GetDefaultInt(key string) int {
 }
 
 func GetDefaultString(key string) string {
-	i := cfgDefaults[key]
+	i := defaults[key]
 	if i == nil {
 		return ""
 	}
@@ -99,9 +106,9 @@ func ParseJSON(ba []byte) (*GochanConfig, []MissingField, error) {
 			// field is in the JSON file
 			continue
 		}
-		if cfgDefaults[fType.Name] != nil {
+		if defaults[fType.Name] != nil {
 			// the field isn't in the JSON file but has a default value that we can use
-			fVal.Set(reflect.ValueOf(cfgDefaults[fType.Name]))
+			fVal.Set(reflect.ValueOf(defaults[fType.Name]))
 			continue
 		}
 		if critical {
@@ -209,4 +216,31 @@ func InitConfig(versionStr string) {
 
 	cfg.Version = ParseVersion(versionStr)
 	cfg.Version.Normalize()
+}
+
+// TODO: use reflect to check if the field exists in SystemCriticalConfig
+func fieldIsCritical(field string) bool {
+	for _, cF := range criticalFields {
+		if field == cF {
+			return true
+		}
+	}
+	return false
+}
+
+// UpdateFromMap updates the configuration with the given key->values for use in things like the
+// config editor page and possibly others
+func UpdateFromMap(m map[string]interface{}, validate bool) error {
+	for key, val := range m {
+		if fieldIsCritical(key) {
+			// don't mess with critical/read-only fields (ListenIP, DocumentRoot, etc)
+			// after the server has started
+			continue
+		}
+		cfg.setField(key, val)
+	}
+	if validate {
+		return cfg.ValidateValues()
+	}
+	return nil
 }
