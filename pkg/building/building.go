@@ -49,6 +49,7 @@ func BuildFrontPage() error {
 		"site_config":  siteCfg,
 		"sections":     gcsql.AllSections,
 		"boards":       gcsql.AllBoards,
+		"board_config": config.GetBoardConfig(""),
 		"recent_posts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
 		return errors.New(gclog.Print(gclog.LErrorLog,

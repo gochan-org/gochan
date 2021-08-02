@@ -130,7 +130,11 @@ func initServer() {
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
 
 	// Check if Akismet API key is usable at startup.
-	if err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey); err != nil {
+	err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey)
+	if err == serverutil.ErrBlankAkismetKey {
+		gclog.Print(gclog.LErrorLog, err.Error(), ". Akismet spam protection won't be used.")
+	} else if err != nil {
+		gclog.Print(gclog.LErrorLog|gclog.LAccessLog, ". Akismet spam protection will be disabled.")
 		siteConfig.AkismetAPIKey = ""
 	}
 
@@ -144,8 +148,8 @@ func initServer() {
 			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
 		}
 	}
-	// Eventually plugins will be able to register new namespaces (assuming they ever get it working on Windows or macOS)
-	// or they will be restricted to something like /plugin
+	// Eventually plugins will be able to register new namespaces or they will be restricted to something
+	// like /plugin
 
 	if systemCritical.UseFastCGI {
 		err = fcgi.Serve(listener, server)

@@ -68,10 +68,10 @@
 		"admin:#0000A0",
 		"somemod:blue"
 	],
-	"BanMsg": "USER WAS BANNED FOR THIS POST",
+	"BanMessage": "USER WAS BANNED FOR THIS POST",
+	"EnableEmbeds": true,
 	"EmbedWidth": 200,
 	"EmbedHeight": 164,
-	"ExpandButton": true,
 	"ImagesOpenNewTab": true,
 	"NewTabOnOutlinks": true,
 

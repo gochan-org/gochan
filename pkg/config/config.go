@@ -47,10 +47,10 @@ var (
 		"PostsPerThreadPage":       50,
 		"RepliesOnBoardPage":       3,
 		"StickyRepliesOnBoardPage": 1,
-		"BanMsg":                   "USER WAS BANNED FOR THIS POST",
+		"BanMessage":               "USER WAS BANNED FOR THIS POST",
 		"EmbedWidth":               200,
 		"EmbedHeight":              164,
-		"ExpandButton":             true,
+		"EnableEmbeds":             true,
 		"ImagesOpenNewTab":         true,
 		"NewTabOnOutlinks":         true,
 
@@ -194,8 +194,8 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		gcfg.StickyRepliesOnBoardPage = defaults["StickyRepliesOnBoardPage"].(int)
 		changed = true
 	}
-	if gcfg.BanMsg == "" {
-		gcfg.BanMsg = defaults["BanMsg"].(string)
+	if gcfg.BanMessage == "" {
+		gcfg.BanMessage = defaults["BanMessage"].(string)
 		changed = true
 	}
 	if gcfg.DateTimeFormat == "" {
@@ -341,10 +341,10 @@ type PostConfig struct {
 	StickyRepliesOnBoardPage int `description:"Same as above for stickied threads."`
 
 	BanColors        []string
-	BanMsg           string `description:"The default public ban message."`
+	BanMessage       string `description:"The default public ban message."`
 	EmbedWidth       int    `description:"The width for inline/expanded videos."`
 	EmbedHeight      int    `description:"The height for inline/expanded videos."`
-	ExpandButton     bool   `description:"If checked, adds [Embed] after a Youtube, Vimeo, etc link to toggle an inline video frame."`
+	EnableEmbeds     bool   `description:"If checked, adds [Embed] after a Youtube, Vimeo, etc link to toggle an inline video frame."`
 	ImagesOpenNewTab bool   `description:"If checked, thumbnails will open the respective image/video in a new tab instead of expanding them." `
 	NewTabOnOutlinks bool   `description:"If checked, links to external sites will open in a new tab."`
 	DisableBBcode    bool   `description:"If checked, gochan will not compile bbcode into HTML"`

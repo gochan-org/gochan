@@ -209,7 +209,7 @@ var actions = map[string]Action{
 			// 			boardCfg.StickyRepliesOnBoardPage = StickyRepliesOnBoardPage
 			// 		}
 
-			// 		boardCfg.BanMsg = request.PostFormValue("BanMsg")
+			// 		boardCfg.BanMessage = request.PostFormValue("BanMessage")
 			// 		EmbedWidth, err := strconv.Atoi(request.PostFormValue("EmbedWidth"))
 			// 		if err != nil {
 			// 			status += err.Error() + "<br />"
@@ -224,7 +224,7 @@ var actions = map[string]Action{
 			// 			boardCfg.EmbedHeight = EmbedHeight
 			// 		}
 
-			// 		boardCfg.ExpandButton = (request.PostFormValue("ExpandButton") == "on")
+			// 		boardCfg.EnableEmbeds = (request.PostFormValue("EnableEmbeds") == "on")
 			// 		boardCfg.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
 			// 		boardCfg.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
 			// 		boardCfg.DateTimeFormat = request.PostFormValue("DateTimeFormat")

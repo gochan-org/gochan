@@ -11,10 +11,15 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
+var (
+	ErrBlankAkismetKey   = errors.New("blank Akismet key")
+	ErrInvalidAkismetKey = errors.New("invalid Akismet key")
+)
+
 // CheckAkismetAPIKey checks the validity of the Akismet API key given in the config file.
 func CheckAkismetAPIKey(key string) error {
 	if key == "" {
-		return errors.New("blank key given, Akismet spam checking won't be used")
+		return ErrBlankAkismetKey
 	}
 	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.GetSystemCriticalConfig().SiteDomain}})
 	if err != nil {
@@ -30,9 +35,7 @@ func CheckAkismetAPIKey(key string) error {
 	}
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
-		errmsg := "Akismet API key is invalid, Akismet spam protection will be disabled."
-		gclog.Print(gclog.LErrorLog, errmsg)
-		return errors.New(errmsg)
+		return ErrInvalidAkismetKey
 	}
 	return nil
 }
