@@ -2,11 +2,9 @@ package manage
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -85,216 +83,220 @@ var actions = map[string]Action{
 		Title:       "Configuration",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-			do := request.FormValue("do")
-			var status string
-			if do == "save" {
-				configJSON, err := json.MarshalIndent(config.Config, "", "\t")
-				if err != nil {
-					status += gclog.Println(gclog.LErrorLog, err.Error()) + "<br />"
-				} else if err = ioutil.WriteFile("gochan.json", configJSON, 0777); err != nil {
-					status += gclog.Println(gclog.LErrorLog,
-						"Error backing up old gochan.json, cancelling save:", err.Error())
-				} else {
-					config.Config.CookieMaxAge = request.PostFormValue("CookieMaxAge")
-					if _, err = gcutil.ParseDurationString(config.Config.CookieMaxAge); err != nil {
-						status += err.Error()
-						config.Config.CookieMaxAge = "1y"
-					}
-					config.Config.Lockdown = (request.PostFormValue("Lockdown") == "on")
-					config.Config.LockdownMessage = request.PostFormValue("LockdownMessage")
-					SillytagsArr := strings.Split(request.PostFormValue("Sillytags"), "\n")
-					var Sillytags []string
-					for _, tag := range SillytagsArr {
-						Sillytags = append(Sillytags, strings.Trim(tag, " \n\r"))
-					}
 
-					config.Config.Sillytags = Sillytags
-					config.Config.UseSillytags = (request.PostFormValue("UseSillytags") == "on")
-					config.Config.Modboard = request.PostFormValue("Modboard")
-					config.Config.SiteName = request.PostFormValue("SiteName")
-					config.Config.SiteSlogan = request.PostFormValue("SiteSlogan")
-					config.Config.SiteWebfolder = request.PostFormValue("SiteWebfolder")
-					// TODO: Change this to match the new Style type in gochan.json
-					/* Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
-					var Styles []string
-					for _, style := range Styles_arr {
-						Styles = append(Styles, strings.Trim(style, " \n\r"))
-					}
-					config.Styles = Styles */
-					config.Config.DefaultStyle = request.PostFormValue("DefaultStyle")
-					config.Config.RejectDuplicateImages = (request.PostFormValue("RejectDuplicateImages") == "on")
-					NewThreadDelay, err := strconv.Atoi(request.PostFormValue("NewThreadDelay"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.NewThreadDelay = NewThreadDelay
-					}
+			// do := request.FormValue("do")
+			// siteCfg := config.GetSiteConfig()
+			// boardCfg := config.GetBoardConfig("")
+			// var status string
+			// if do == "save" {
+			// 	configJSON, err := json.MarshalIndent(config.Config, "", "\t")
+			// 	if err != nil {
+			// 		status += gclog.Println(gclog.LErrorLog, err.Error()) + "<br />"
+			// 	} else if err = ioutil.WriteFile("gochan.json", configJSON, 0777); err != nil {
+			// 		status += gclog.Println(gclog.LErrorLog,
+			// 			"Error backing up old gochan.json, cancelling save:", err.Error())
+			// 	} else {
+			// 		siteCfg.CookieMaxAge = request.PostFormValue("CookieMaxAge")
+			// 		if _, err = gcutil.ParseDurationString(config.Config.CookieMaxAge); err != nil {
+			// 			status += err.Error()
+			// 			siteCfg.CookieMaxAge = "1y"
+			// 		}
+			// 		siteCfg.Lockdown = (request.PostFormValue("Lockdown") == "on")
+			// 		siteCfg.LockdownMessage = request.PostFormValue("LockdownMessage")
+			// 		SillytagsArr := strings.Split(request.PostFormValue("Sillytags"), "\n")
+			// 		var Sillytags []string
+			// 		for _, tag := range SillytagsArr {
+			// 			Sillytags = append(Sillytags, strings.Trim(tag, " \n\r"))
+			// 		}
 
-					ReplyDelay, err := strconv.Atoi(request.PostFormValue("ReplyDelay"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ReplyDelay = ReplyDelay
-					}
+			// 		boardCfg.Sillytags = Sillytags
+			// 		boardCfg.UseSillytags = (request.PostFormValue("UseSillytags") == "on")
+			// 		siteCfg.Modboard = request.PostFormValue("Modboard")
+			// 		siteCfg.SiteName = request.PostFormValue("SiteName")
+			// 		siteCfg.SiteSlogan = request.PostFormValue("SiteSlogan")
+			// 		// boardCfg.WebRoot = request.PostFormValue("WebRoot")
+			// 		// TODO: Change this to match the new Style type in gochan.json
+			// 		/* Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
+			// 		var Styles []string
+			// 		for _, style := range Styles_arr {
+			// 			Styles = append(Styles, strings.Trim(style, " \n\r"))
+			// 		}
+			// 		config.Styles = Styles */
+			// 		boardCfg.DefaultStyle = request.PostFormValue("DefaultStyle")
+			// 		boardCfg.RejectDuplicateImages = (request.PostFormValue("RejectDuplicateImages") == "on")
+			// 		NewThreadDelay, err := strconv.Atoi(request.PostFormValue("NewThreadDelay"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.NewThreadDelay = NewThreadDelay
+			// 		}
 
-					MaxLineLength, err := strconv.Atoi(request.PostFormValue("MaxLineLength"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.MaxLineLength = MaxLineLength
-					}
+			// 		ReplyDelay, err := strconv.Atoi(request.PostFormValue("ReplyDelay"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ReplyDelay = ReplyDelay
+			// 		}
 
-					ReservedTripsArr := strings.Split(request.PostFormValue("ReservedTrips"), "\n")
-					var ReservedTrips []string
-					for _, trip := range ReservedTripsArr {
-						ReservedTrips = append(ReservedTrips, strings.Trim(trip, " \n\r"))
+			// 		MaxLineLength, err := strconv.Atoi(request.PostFormValue("MaxLineLength"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.MaxLineLength = MaxLineLength
+			// 		}
 
-					}
-					config.Config.ReservedTrips = ReservedTrips
+			// 		ReservedTripsArr := strings.Split(request.PostFormValue("ReservedTrips"), "\n")
+			// 		var ReservedTrips []string
+			// 		for _, trip := range ReservedTripsArr {
+			// 			ReservedTrips = append(ReservedTrips, strings.Trim(trip, " \n\r"))
 
-					ThumbWidth, err := strconv.Atoi(request.PostFormValue("ThumbWidth"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ThumbWidth = ThumbWidth
-					}
+			// 		}
+			// 		boardCfg.ReservedTrips = ReservedTrips
 
-					ThumbHeight, err := strconv.Atoi(request.PostFormValue("ThumbHeight"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ThumbHeight = ThumbHeight
-					}
+			// 		ThumbWidth, err := strconv.Atoi(request.PostFormValue("ThumbWidth"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ThumbWidth = ThumbWidth
+			// 		}
 
-					ThumbWidthReply, err := strconv.Atoi(request.PostFormValue("ThumbWidthReply"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ThumbWidthReply = ThumbWidthReply
-					}
+			// 		ThumbHeight, err := strconv.Atoi(request.PostFormValue("ThumbHeight"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ThumbHeight = ThumbHeight
+			// 		}
 
-					ThumbHeightReply, err := strconv.Atoi(request.PostFormValue("ThumbHeightReply"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ThumbHeightReply = ThumbHeightReply
-					}
+			// 		ThumbWidthReply, err := strconv.Atoi(request.PostFormValue("ThumbWidthReply"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ThumbWidthReply = ThumbWidthReply
+			// 		}
 
-					ThumbWidthCatalog, err := strconv.Atoi(request.PostFormValue("ThumbWidthCatalog"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ThumbWidthCatalog = ThumbWidthCatalog
-					}
+			// 		ThumbHeightReply, err := strconv.Atoi(request.PostFormValue("ThumbHeightReply"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ThumbHeightReply = ThumbHeightReply
+			// 		}
 
-					ThumbHeightCatalog, err := strconv.Atoi(request.PostFormValue("ThumbHeightCatalog"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.ThumbHeightCatalog = ThumbHeightCatalog
-					}
+			// 		ThumbWidthCatalog, err := strconv.Atoi(request.PostFormValue("ThumbWidthCatalog"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ThumbWidthCatalog = ThumbWidthCatalog
+			// 		}
 
-					RepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("RepliesOnBoardPage"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.RepliesOnBoardPage = RepliesOnBoardPage
-					}
+			// 		ThumbHeightCatalog, err := strconv.Atoi(request.PostFormValue("ThumbHeightCatalog"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.ThumbHeightCatalog = ThumbHeightCatalog
+			// 		}
 
-					StickyRepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("StickyRepliesOnBoardPage"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.StickyRepliesOnBoardPage = StickyRepliesOnBoardPage
-					}
+			// 		RepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("RepliesOnBoardPage"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.RepliesOnBoardPage = RepliesOnBoardPage
+			// 		}
 
-					config.Config.BanMsg = request.PostFormValue("BanMsg")
-					EmbedWidth, err := strconv.Atoi(request.PostFormValue("EmbedWidth"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.EmbedWidth = EmbedWidth
-					}
+			// 		StickyRepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("StickyRepliesOnBoardPage"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.StickyRepliesOnBoardPage = StickyRepliesOnBoardPage
+			// 		}
 
-					EmbedHeight, err := strconv.Atoi(request.PostFormValue("EmbedHeight"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.EmbedHeight = EmbedHeight
-					}
+			// 		boardCfg.BanMessage = request.PostFormValue("BanMessage")
+			// 		EmbedWidth, err := strconv.Atoi(request.PostFormValue("EmbedWidth"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.EmbedWidth = EmbedWidth
+			// 		}
 
-					config.Config.ExpandButton = (request.PostFormValue("ExpandButton") == "on")
-					config.Config.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
-					config.Config.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
-					config.Config.MinifyHTML = (request.PostFormValue("MinifyHTML") == "on")
-					config.Config.MinifyJS = (request.PostFormValue("MinifyJS") == "on")
-					config.Config.DateTimeFormat = request.PostFormValue("DateTimeFormat")
-					AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
+			// 		EmbedHeight, err := strconv.Atoi(request.PostFormValue("EmbedHeight"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.EmbedHeight = EmbedHeight
+			// 		}
 
-					if err = serverutil.CheckAkismetAPIKey(AkismetAPIKey); err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.AkismetAPIKey = AkismetAPIKey
-					}
+			// 		boardCfg.EnableEmbeds = (request.PostFormValue("EnableEmbeds") == "on")
+			// 		boardCfg.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
+			// 		boardCfg.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
+			// 		boardCfg.DateTimeFormat = request.PostFormValue("DateTimeFormat")
+			// 		siteCfg.MinifyHTML = (request.PostFormValue("MinifyHTML") == "on")
+			// 		siteCfg.MinifyJS = (request.PostFormValue("MinifyJS") == "on")
+			// 		AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
 
-					config.Config.UseCaptcha = (request.PostFormValue("UseCaptcha") == "on")
-					CaptchaWidth, err := strconv.Atoi(request.PostFormValue("CaptchaWidth"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.CaptchaWidth = CaptchaWidth
-					}
-					CaptchaHeight, err := strconv.Atoi(request.PostFormValue("CaptchaHeight"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.CaptchaHeight = CaptchaHeight
-					}
+			// 		if err = serverutil.CheckAkismetAPIKey(AkismetAPIKey); err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			siteCfg.AkismetAPIKey = AkismetAPIKey
+			// 		}
 
-					config.Config.EnableGeoIP = (request.PostFormValue("EnableGeoIP") == "on")
-					config.Config.GeoIPDBlocation = request.PostFormValue("GeoIPDBlocation")
+			// 		boardCfg.UseCaptcha = (request.PostFormValue("UseCaptcha") == "on")
+			// 		CaptchaWidth, err := strconv.Atoi(request.PostFormValue("CaptchaWidth"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.CaptchaWidth = CaptchaWidth
+			// 		}
+			// 		CaptchaHeight, err := strconv.Atoi(request.PostFormValue("CaptchaHeight"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			boardCfg.CaptchaHeight = CaptchaHeight
+			// 		}
 
-					MaxRecentPosts, err := strconv.Atoi(request.PostFormValue("MaxRecentPosts"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.MaxRecentPosts = MaxRecentPosts
-					}
+			// 		boardCfg.EnableGeoIP = (request.PostFormValue("EnableGeoIP") == "on")
+			// 		siteCfg.GeoIPDBlocation = request.PostFormValue("GeoIPDBlocation")
 
-					MaxLogDays, err := strconv.Atoi(request.PostFormValue("MaxLogDays"))
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else {
-						config.Config.MaxLogDays = MaxLogDays
-					}
+			// 		MaxRecentPosts, err := strconv.Atoi(request.PostFormValue("MaxRecentPosts"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			siteCfg.MaxRecentPosts = MaxRecentPosts
+			// 		}
 
-					configJSON, err = json.MarshalIndent(config.Config, "", "\t")
-					if err != nil {
-						status += err.Error() + "<br />"
-					} else if err = ioutil.WriteFile("gochan.json", configJSON, 0777); err != nil {
-						status = gclog.Print(gclog.LErrorLog, "Error writing gochan.json: ", err.Error())
-					} else {
-						status = "Wrote gochan.json successfully<br />"
-						building.BuildJS()
-					}
-				}
-			}
-			manageConfigBuffer := bytes.NewBufferString("")
-			if err = gctemplates.ManageConfig.Execute(manageConfigBuffer,
-				map[string]interface{}{"config": *config.Config, "status": status}); err != nil {
-				err = errors.New(gclog.Print(gclog.LErrorLog,
-					"Error executing config management page: ", err.Error()))
-				return htmlOut + err.Error(), err
-			}
-			htmlOut += manageConfigBuffer.String()
-			return htmlOut, nil
+			// 		MaxLogDays, err := strconv.Atoi(request.PostFormValue("MaxLogDays"))
+			// 		if err != nil {
+			// 			status += err.Error() + "<br />"
+			// 		} else {
+			// 			siteCfg.MaxLogDays = MaxLogDays
+			// 		}
+
+			// 		if err = config.WriteConfig(); err != nil {
+			// 			status = gclog.Print(gclog.LErrorLog, "Error writing gochan.json: ", err.Error()) + "<br />"
+			// 		} else {
+			// 			status = "Wrote gochan.json successfully<br />"
+			// 		}
+			// 	}
+			// }
+			// manageConfigBuffer := bytes.NewBufferString("")
+			// if err = gctemplates.ManageConfig.Execute(manageConfigBuffer, map[string]interface{}{
+			// 	"siteCfg":  siteCfg,
+			// 	"boardCfg": boardCfg,
+			// 	"status":   status,
+			// }); err != nil {
+			// 	err = errors.New(gclog.Print(gclog.LErrorLog,
+			// 		"Error executing config management page: ", err.Error()))
+			// 	return htmlOut + err.Error(), err
+			// }
+			// htmlOut += manageConfigBuffer.String()
+			// return htmlOut, nil
+			return htmlOut + "Web-based configuration tool has been temporarily disabled", nil
 		}},
 	"login": {
 		Title:       "Login",
 		Permissions: NoPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+			systemCritical := config.GetSystemCriticalConfig()
 			if GetStaffRank(request) > 0 {
-				http.Redirect(writer, request, path.Join(config.Config.SiteWebfolder, "manage"), http.StatusFound)
+				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
 			}
 			username := request.FormValue("username")
 			password := request.FormValue("password")
@@ -304,16 +306,16 @@ var actions = map[string]Action{
 			}
 			if username == "" || password == "" {
 				//assume that they haven't logged in
-				htmlOut = `<form method="POST" action="` + config.Config.SiteWebfolder + `manage?action=login" id="login-box" class="staff-form">` +
+				htmlOut = `<form method="POST" action="` + systemCritical.WebRoot + `manage?action=login" id="login-box" class="staff-form">` +
 					`<input type="hidden" name="redirect" value="` + redirectAction + `" />` +
 					`<input type="text" name="username" class="logindata" /><br />` +
 					`<input type="password" name="password" class="logindata" /><br />` +
 					`<input type="submit" value="Login" />` +
 					`</form>`
 			} else {
-				key := gcutil.Md5Sum(request.RemoteAddr + username + password + config.Config.RandomSeed + gcutil.RandomString(3))[0:10]
+				key := gcutil.Md5Sum(request.RemoteAddr + username + password + systemCritical.RandomSeed + gcutil.RandomString(3))[0:10]
 				createSession(key, username, password, request, writer)
-				http.Redirect(writer, request, path.Join(config.Config.SiteWebfolder, "manage?action="+request.FormValue("redirect")), http.StatusFound)
+				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage?action="+request.FormValue("redirect")), http.StatusFound)
 			}
 			return
 		}},
@@ -342,9 +344,10 @@ var actions = map[string]Action{
 			if len(announcements) == 0 {
 				htmlOut += "No announcements"
 			} else {
+				boardConfig := config.GetBoardConfig("")
 				for _, announcement := range announcements {
 					htmlOut += `<div class="section-block">` +
-						`<div class="section-title-block"><b>` + announcement.Subject + `</b> by ` + announcement.Poster + ` at ` + announcement.Timestamp.Format(config.Config.DateTimeFormat) + `</div>` +
+						`<div class="section-title-block"><b>` + announcement.Subject + `</b> by ` + announcement.Poster + ` at ` + announcement.Timestamp.Format(boardConfig.DateTimeFormat) + `</div>` +
 						`<div class="section-body">` + announcement.Message + `</div></div>`
 				}
 			}
@@ -426,7 +429,11 @@ var actions = map[string]Action{
 			manageBansBuffer := bytes.NewBufferString("")
 
 			if err = gctemplates.ManageBans.Execute(manageBansBuffer,
-				map[string]interface{}{"config": config.Config, "banlist": banlist, "post": post},
+				map[string]interface{}{
+					// "systemCritical": config.GetSystemCriticalConfig(),
+					"banlist": banlist,
+					"post":    post,
+				},
 			); err != nil {
 				return "", errors.New("Error executing ban management page template: " + err.Error())
 			}
@@ -452,6 +459,7 @@ var actions = map[string]Action{
 			var done bool
 			board := new(gcsql.Board)
 			var boardCreationStatus string
+			systemCritical := config.GetSystemCriticalConfig()
 
 			for !done {
 				switch {
@@ -529,31 +537,32 @@ var actions = map[string]Action{
 					board.EnableCatalog = (request.FormValue("enablecatalog") == "on")
 
 					//actually start generating stuff
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir), 0666); err != nil {
+
+					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir), 0666); err != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/ already exists.",
-							config.Config.DocumentRoot, board.Dir)
+							systemCritical.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "res"), 0666); err != nil {
+					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir, "res"), 0666); err != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/res/ already exists.",
-							config.Config.DocumentRoot, board.Dir)
+							systemCritical.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "src"), 0666); err != nil {
+					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir, "src"), 0666); err != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/src/ already exists.",
-							config.Config.DocumentRoot, board.Dir)
+							systemCritical.DocumentRoot, board.Dir)
 						break
 					}
 
-					if err = os.Mkdir(path.Join(config.Config.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
+					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
 						do = ""
 						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/thumb/ already exists.",
-							config.Config.DocumentRoot, board.Dir)
+							systemCritical.DocumentRoot, board.Dir)
 						break
 					}
 
@@ -572,6 +581,7 @@ var actions = map[string]Action{
 				case do == "edit":
 					// resetBoardSectionArrays()
 				default:
+					boardConfig := config.GetBoardConfig("")
 					// put the default column values in the text boxes
 					board.Section = 1
 					board.MaxFilesize = 4718592
@@ -583,7 +593,7 @@ var actions = map[string]Action{
 					board.EmbedsAllowed = true
 					board.EnableCatalog = true
 					board.Worksafe = true
-					board.ThreadsPerPage = config.Config.ThreadsPerPage
+					board.ThreadsPerPage = boardConfig.ThreadsPerPage
 				}
 
 				htmlOut = `<h1 class="manage-header">Manage boards</h1><form action="/manage?action=boards" method="POST"><input type="hidden" name="do" value="existing" /><select name="boardselect"><option>Select board...</option>`
@@ -604,8 +614,9 @@ var actions = map[string]Action{
 				manageBoardsBuffer := bytes.NewBufferString("")
 				gcsql.AllSections, _ = gcsql.GetAllSectionsOrCreateDefault()
 
+				boardConfig := config.GetBoardConfig("")
 				if err = gctemplates.ManageBoards.Execute(manageBoardsBuffer, map[string]interface{}{
-					"config":      config.Config,
+					"boardConfig": boardConfig,
 					"board":       board,
 					"section_arr": gcsql.AllSections,
 				}); err != nil {
@@ -702,6 +713,7 @@ var actions = map[string]Action{
 		Title:       "Recent posts",
 		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+			systemCritical := config.GetSystemCriticalConfig()
 			limit := request.FormValue("limit")
 			if limit == "" {
 				limit = "50"
@@ -722,7 +734,7 @@ var actions = map[string]Action{
 			for _, recentpost := range recentposts {
 				htmlOut += fmt.Sprintf(
 					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
-					path.Join(config.Config.SiteWebfolder, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
+					path.Join(systemCritical.WebRoot, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
 					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
 					recentpost.Timestamp.Format("01/02/06, 15:04"),
 				)
@@ -759,7 +771,7 @@ var actions = map[string]Action{
 					gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
 				return "", err
 			}
-
+			boardConfig := config.GetBoardConfig("")
 			for _, staff := range allStaff {
 				username := request.FormValue("username")
 				password := request.FormValue("password")
@@ -789,7 +801,7 @@ var actions = map[string]Action{
 				}
 				htmlOut += fmt.Sprintf(
 					`<tr><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
-					staff.Username, rank, staff.AddedOn.Format(config.Config.DateTimeFormat), staff.Username)
+					staff.Username, rank, staff.AddedOn.Format(boardConfig.DateTimeFormat), staff.Username)
 
 			}
 			htmlOut += `</table><hr /><h2 class="manage-header">Add new staff</h2>` +

@@ -2,16 +2,16 @@
 <html>
 <head>
 	<title>Banned</title>
-	<link rel="shortcut icon" href="{{.config.SiteWebfolder}}favicon.png">
-	<link rel="stylesheet" href="{{.config.SiteWebfolder}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.config.SiteWebfolder}}css/{{.config.DefaultStyle}}" />
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}js/consts.js"></script>
-	<script type="text/javascript" src="{{.config.SiteWebfolder}}js/gochan.js"></script>
+	<link rel="shortcut icon" href="{{.systemCritical.WebRoot}}favicon.png">
+	<link rel="stylesheet" href="{{.systemCritical.WebRoot}}css/global.css" />
+	<link id="theme" rel="stylesheet" href="{{.systemCritical.WebRoot}}css/{{.boardConfig.DefaultStyle}}" />
+	<script type="text/javascript" src="{{.systemCritical.WebRoot}}js/consts.js"></script>
+	<script type="text/javascript" src="{{.systemCritical.WebRoot}}js/gochan.js"></script>
 </head>
 <body>
 	<div id="top-pane">
-		<span id="site-title">{{.config.SiteName}}</span><br />
-		<span id="site-slogan">{{.config.SiteSlogan}}</span>
+		<span id="site-title">{{.siteConfig.SiteName}}</span><br />
+		<span id="site-slogan">{{.siteConfig.SiteSlogan}}</span>
 	</div><br />
 	<div class="section-block" style="margin: 0px 26px 0px 24px">
 		<div class="section-title-block">
@@ -35,9 +35,9 @@
 				</div>{{if bannedForever .ban}}
 				<img id="banpage-image" src="/permabanned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
-					<source src="{{.config.SiteWebfolder}}hittheroad.ogg" />
-					<source src="{{.config.SiteWebfolder}}hittheroad.wav" />
-					<source src="{{.config.SiteWebfolder}}hittheroad.mp3" />
+					<source src="{{.systemCritical.WebRoot}}hittheroad.ogg" />
+					<source src="{{.systemCritical.WebRoot}}hittheroad.wav" />
+					<source src="{{.systemCritical.WebRoot}}hittheroad.mp3" />
 				</audio>
 				<script type="text/javascript">
 					document.getElementById("jack").play();

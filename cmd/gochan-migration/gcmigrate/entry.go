@@ -12,9 +12,10 @@ const (
 
 //Entry runs all the migration logic until the database matches the given database version
 func Entry(targetVersion int) error {
+	cfg := config.GetSystemCriticalConfig()
 	gcsql.ConnectToDB(
-		config.Config.DBhost, config.Config.DBtype, config.Config.DBname,
-		config.Config.DBusername, config.Config.DBpassword, config.Config.DBprefix)
+		cfg.DBhost, cfg.DBtype, cfg.DBname,
+		cfg.DBusername, cfg.DBpassword, cfg.DBprefix)
 
 	return runMigration(targetVersion)
 }
@@ -24,6 +25,7 @@ func runMigration(targetVersion int) error {
 	if err != nil {
 		return err
 	}
+	criticalCfg := config.GetSystemCriticalConfig()
 	switch dbFlags {
 	case gcsql.DBCorrupted:
 		gclog.Println(stdFatalFlag, "Database found is corrupted, please contact the devs.")
@@ -35,7 +37,7 @@ func runMigration(targetVersion int) error {
 			return err
 		}
 		gclog.Println(gclog.LStdLog, "Migrating pre april 2020 version to version 1 of modern system.")
-		if err = migratePreApril2020Database(config.Config.DBtype); err != nil {
+		if err = migratePreApril2020Database(criticalCfg.DBtype); err != nil {
 			return err
 		}
 		gclog.Println(gclog.LStdLog, "Finish migrating to version 1.")

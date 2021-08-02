@@ -18,24 +18,28 @@ const (
 )
 
 type GCDB struct {
-	db           *sql.DB
-	connStr      string
-	driver       string
-	nilTimestamp string
-	replacer     *strings.Replacer
+	db       *sql.DB
+	connStr  string
+	driver   string
+	replacer *strings.Replacer
+	// nilTimestamp string
 }
 
 func (db *GCDB) ConnectionString() string {
 	return db.connStr
 }
 
+func (db *GCDB) Connection() *sql.DB {
+	return db.db
+}
+
 func (db *GCDB) SQLDriver() string {
 	return db.driver
 }
 
-func (db *GCDB) NilSQLTimestamp() string {
+/* func (db *GCDB) NilSQLTimestamp() string {
 	return db.nilTimestamp
-}
+} */
 
 func (db *GCDB) Close() error {
 	if db.db != nil {
@@ -145,10 +149,10 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 	switch dbDriver {
 	case "mysql":
 		db.connStr = fmt.Sprintf(mysqlConnStr, username, password, host, dbName)
-		db.nilTimestamp = "0000-00-00 00:00:00"
+		// db.nilTimestamp = "0000-00-00 00:00:00"
 	case "postgres":
 		db.connStr = fmt.Sprintf(postgresConnStr, username, password, host, dbName)
-		db.nilTimestamp = "0001-01-01 00:00:00"
+		// db.nilTimestamp = "0001-01-01 00:00:00"
 	default:
 		return nil, ErrUnsupportedDB
 	}
@@ -172,7 +176,7 @@ func sqlVersionError(err error, dbDriver string, query *string) error {
 			return err
 		}
 	}
-	if config.Config.DebugMode {
+	if config.GetSystemCriticalConfig().DebugMode {
 		return fmt.Errorf(UnsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
 	}
 	return fmt.Errorf(UnsupportedSQLVersionMsg, errText)

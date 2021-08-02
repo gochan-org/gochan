@@ -1,5 +1,8 @@
 Gochan
 =======
+**NOTE**: I am currently working on refactoring configuration, use `master` for non-broken code until this branch is merged into it.
+
+
 A semi-standalone imageboard server written in Go
 
 Gochan works in a manner similar to Kusaba X, Tinyboard and others. As such, Gochan generates static HTML files which can optionally be served by a separate web server.
@@ -17,11 +20,7 @@ Demo installation: https://gochan.org
 5. Go to http://[gochan url]/manage?action=staff, log in (default username/password is admin/password), and create a new admin user (and any other staff users as necessary). Then delete the admin user for security.
 
 ## Configuration
-1. Make sure to set `DBtype`, `DBhost`, `DBname`, `DBusername`, and `DBpassword`, since these are required to connect to your SQL database. Valid `DBtype` values are "mysql" and "postgres" (sqlite3 is no longer supported for stability reasons).
-	1. To connect to a MySQL database, set `DBhost` to "ip:3306" or a different port, if necessary.
-	2. To connect to a PostgreSQL database, set `DBhost` to the IP address or hostname. Using a UNIX socket may work as well, but it is currently untested.
-2. Set `DomainRegex`,`SiteDomain`, since these are necessary in order to post and log in as a staff member.
-3. If you want to see debugging info/noncritical warnings, set verbosity to 1.
+See [config.md](config.md)
 
 ## Installation using Docker
 See [`docker/README.md`](docker/README.md)

@@ -24,7 +24,7 @@ func (me *MigrationError) OldChanType() string {
 func (me *MigrationError) Error() string {
 	from := me.oldChanType
 	if from != "" {
-		from = " from " + from + " "
+		from = " from " + from
 	}
 	return "unable to migrate" + from + ": " + me.errMessage
 }
@@ -34,13 +34,14 @@ func NewMigrationError(oldChanType string, errMessage string) *MigrationError {
 }
 
 type DBOptions struct {
-	Host        string
-	DBType      string
-	Username    string
-	Password    string
-	OldDBName   string
-	OldChanType string
-	NewDBName   string
+	Host        string `json:"dbhost"`
+	DBType      string `json:"dbtype"`
+	Username    string `json:"dbusername"`
+	Password    string `json:"dbpassword"`
+	OldDBName   string `json:"olddbname"`
+	OldChanType string `json:"oldchan"`
+	NewDBName   string `json:"newdbname"`
+	TablePrefix string `json:"tableprefix"`
 }
 
 // DBMigrator is used for handling the migration from one database type to a

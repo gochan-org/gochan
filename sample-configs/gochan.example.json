@@ -29,7 +29,7 @@
 	"SiteSlogan": "",
 	"SiteDomain": "127.0.0.1",
 	"SiteHeaderURL": "",
-	"SiteWebfolder": "/",
+	"WebRoot": "/",
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
@@ -55,10 +55,10 @@
 
 	"ThumbWidth": 200,
 	"ThumbHeight": 200,
-	"ThumbWidth_reply": 125,
-	"ThumbHeight_reply": 125,
-	"ThumbWidth_catalog": 50,
-	"ThumbHeight_catalog": 50,
+	"ThumbWidthReply": 125,
+	"ThumbHeightReply": 125,
+	"ThumbWidthCatalog": 50,
+	"ThumbHeightCatalog": 50,
 
 	"ThreadsPerPage": 15,
 	"PostsPerThreadPage": 50,
@@ -68,12 +68,11 @@
 		"admin:#0000A0",
 		"somemod:blue"
 	],
-	"BanMsg": "USER WAS BANNED FOR THIS POST",
+	"BanMessage": "USER WAS BANNED FOR THIS POST",
+	"EnableEmbeds": true,
 	"EmbedWidth": 200,
 	"EmbedHeight": 164,
-	"ExpandButton": true,
 	"ImagesOpenNewTab": true,
-	"MakeURLsHyperlinked": true,
 	"NewTabOnOutlinks": true,
 
 	"MinifyHTML": true,

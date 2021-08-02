@@ -29,7 +29,9 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 	// banStatus, err := getBannedStatus(request) TODO refactor to use ipban
 	var banStatus gcsql.BanInfo
 	var err error
-
+	systemCritical := config.GetSystemCriticalConfig()
+	siteConfig := config.GetSiteConfig()
+	boardConfig := config.GetBoardConfig("")
 	if appealMsg != "" {
 		if banStatus.BannedForever() {
 			fmt.Fprint(writer, "No.")
@@ -40,7 +42,7 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 			serverutil.ServeErrorPage(writer, err.Error())
 		}
 		fmt.Fprint(writer,
-			"Appeal sent. It will (hopefully) be read by a staff member. check "+config.Config.SiteWebfolder+"banned occasionally for a response",
+			"Appeal sent. It will (hopefully) be read by a staff member. check "+systemCritical.WebRoot+"banned occasionally for a response",
 		)
 		return
 	}
@@ -52,7 +54,12 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
-		"config": config.Config, "ban": banStatus, "banBoards": banStatus.Boards, "post": gcsql.Post{},
+		"systemCritical": systemCritical,
+		"siteConfig":     siteConfig,
+		"boardConfig":    boardConfig,
+		"ban":            banStatus,
+		"banBoards":      banStatus.Boards,
+		"post":           gcsql.Post{},
 	}, writer, "text/html"); err != nil {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 			"Error minifying page template: ", err.Error()))

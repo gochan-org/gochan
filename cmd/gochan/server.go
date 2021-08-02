@@ -32,7 +32,11 @@ type gochanServer struct {
 }
 
 func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Request) {
-	filePath := path.Join(config.Config.DocumentRoot, request.URL.Path)
+
+	systemCritical := config.GetSystemCriticalConfig()
+	siteConfig := config.GetSiteConfig()
+
+	filePath := path.Join(systemCritical.DocumentRoot, request.URL.Path)
 	var fileBytes []byte
 	results, err := os.Stat(filePath)
 	if err != nil {
@@ -46,7 +50,7 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	if results.IsDir() {
 		//check to see if one of the specified index pages exists
 		var found bool
-		for _, value := range config.Config.FirstPage {
+		for _, value := range siteConfig.FirstPage {
 			newPath := path.Join(filePath, value)
 			_, err := os.Stat(newPath)
 			if err == nil {
@@ -103,9 +107,9 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 }
 
 func (s gochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+	systemCritical := config.GetSystemCriticalConfig()
 	for name, namespaceFunction := range s.namespaces {
-		if request.URL.Path == config.Config.SiteWebfolder+name {
-			// writer.WriteHeader(200)
+		if request.URL.Path == systemCritical.WebRoot+name {
 			namespaceFunction(writer, request)
 			return
 		}
@@ -114,17 +118,24 @@ func (s gochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 }
 
 func initServer() {
-	listener, err := net.Listen("tcp", config.Config.ListenIP+":"+strconv.Itoa(config.Config.Port))
+	systemCritical := config.GetSystemCriticalConfig()
+	siteConfig := config.GetSiteConfig()
+
+	listener, err := net.Listen("tcp", systemCritical.ListenIP+":"+strconv.Itoa(systemCritical.Port))
 	if err != nil {
 		gclog.Printf(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal,
-			"Failed listening on %s:%d: %s", config.Config.ListenIP, config.Config.Port, err.Error())
+			"Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
 	}
 	server = new(gochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
 
 	// Check if Akismet API key is usable at startup.
-	if err = serverutil.CheckAkismetAPIKey(config.Config.AkismetAPIKey); err != nil {
-		config.Config.AkismetAPIKey = ""
+	err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey)
+	if err == serverutil.ErrBlankAkismetKey {
+		gclog.Print(gclog.LErrorLog, err.Error(), ". Akismet spam protection won't be used.")
+	} else if err != nil {
+		gclog.Print(gclog.LErrorLog|gclog.LAccessLog, ". Akismet spam protection will be disabled.")
+		siteConfig.AkismetAPIKey = ""
 	}
 
 	server.namespaces["banned"] = posting.BanHandler
@@ -137,10 +148,10 @@ func initServer() {
 			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
 		}
 	}
-	// Eventually plugins will be able to register new namespaces (assuming they ever get it working on Windows or macOS)
-	// or they will be restricted to something like /plugin
+	// Eventually plugins will be able to register new namespaces or they will be restricted to something
+	// like /plugin
 
-	if config.Config.UseFastCGI {
+	if systemCritical.UseFastCGI {
 		err = fcgi.Serve(listener, server)
 	} else {
 		err = http.Serve(listener, server)
@@ -163,10 +174,11 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	reportBtn := request.PostFormValue("report_btn")
 	editBtn := request.PostFormValue("edit_btn")
 	doEdit := request.PostFormValue("doedit")
+	systemCritical := config.GetSystemCriticalConfig()
 
 	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
 		gclog.Printf(gclog.LAccessLog, "Received invalid /util request from %q", request.Host)
-		http.Redirect(writer, request, path.Join(config.Config.SiteWebfolder, "/"), http.StatusFound)
+		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusFound)
 		return
 	}
 	var postsArr []string
@@ -207,9 +219,11 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			}
 
 			if err = gctemplates.PostEdit.Execute(writer, map[string]interface{}{
-				"config":   config.Config,
-				"post":     post,
-				"referrer": request.Referer(),
+				"systemCritical": config.GetSystemCriticalConfig(),
+				"siteConfig":     config.GetSiteConfig(),
+				"boardConfig":    config.GetBoardConfig(""),
+				"post":           post,
+				"referrer":       request.Referer(),
 			}); err != nil {
 				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 					"Error executing edit post template: ", err.Error()))
@@ -325,7 +339,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 				if post.ParentID == 0 {
 					os.Remove(path.Join(
-						config.Config.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
+						systemCritical.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
 				} else {
 					_board, _ := gcsql.GetBoardFromID(post.BoardID)
 					building.BuildBoardPages(&_board)

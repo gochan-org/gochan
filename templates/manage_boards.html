@@ -12,7 +12,7 @@
 	<tr><td>Description</td><td><input type="text" name="description" value="{{$.board.Description}}" /></td></tr>
 	<tr><td>Max image size</td><td><input type="text" name="maximagesize" value="{{$.board.MaxFilesize}}" /></td></tr>
 	<tr><td>Max pages</td><td><input type="text" name="maxpages" value="{{$.board.MaxPages}}" /></td></tr>
-	<tr><td>Default style</td><td><select name="defaultstyle">{{range $_, $style := $.config.Styles}}
+	<tr><td>Default style</td><td><select name="defaultstyle">{{range $_, $style := $.boardConfig.Styles}}
 		<option value="{{$style.Filename}}">{{$style.Name}} ({{$style.Filename}})</option>{{end}}
 	</select></td></tr>
 	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if $.board.Locked}}checked{{end}}/></td></tr>

@@ -1,0 +1,10 @@
+{
+	"dbhost": "127.0.0.1:3306",
+	"dbtype": "mysql",
+	"dbusername": "gochan",
+	"dbpassword": "gochan",
+	"olddbname": "gochan_pre2021_db",
+	"newdbname": "gochan",
+	"oldchan": "pre2021",
+	"tableprefix": "gc_"
+}

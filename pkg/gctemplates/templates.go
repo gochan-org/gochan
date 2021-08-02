@@ -28,14 +28,15 @@ var (
 
 func loadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
+	templateDir := config.GetSystemCriticalConfig().TemplateDir
 	for i, file := range files {
 		templates = append(templates, file)
-		tmplPath := path.Join(config.Config.TemplateDir, "override", file)
+		tmplPath := path.Join(templateDir, "override", file)
 
 		if _, err := os.Stat(tmplPath); !os.IsNotExist(err) {
 			files[i] = tmplPath
 		} else {
-			files[i] = path.Join(config.Config.TemplateDir, file)
+			files[i] = path.Join(templateDir, file)
 		}
 	}
 
@@ -46,8 +47,10 @@ func templateError(name string, err error) error {
 	if err == nil {
 		return nil
 	}
+	templateDir := config.GetSystemCriticalConfig().TemplateDir
+
 	return fmt.Errorf("failed loading template '%s/%s': %s",
-		config.Config.TemplateDir, name, err.Error())
+		templateDir, name, err.Error())
 }
 
 // InitTemplates loads the given templates by name. If no parameters are given,

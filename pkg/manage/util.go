@@ -42,15 +42,16 @@ func createSession(key, username, password string, request *http.Request, writer
 	}
 
 	// successful login, add cookie that expires in one month
-
-	maxAge, err := gcutil.ParseDurationString(config.Config.CookieMaxAge)
+	systemCritical := config.GetSystemCriticalConfig()
+	siteConfig := config.GetSiteConfig()
+	maxAge, err := gcutil.ParseDurationString(siteConfig.CookieMaxAge)
 	if err != nil {
 		maxAge = gcutil.DefaultMaxAge
 	}
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "sessiondata",
 		Value:  key,
-		Path:   "/",
+		Path:   systemCritical.WebRoot,
 		Domain: domain,
 		MaxAge: int(maxAge),
 	})

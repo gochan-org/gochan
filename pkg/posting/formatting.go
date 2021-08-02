@@ -32,7 +32,7 @@ type MessageFormatter struct {
 }
 
 func (mf *MessageFormatter) InitBBcode() {
-	if config.Config.DisableBBcode {
+	if config.GetBoardConfig("").DisableBBcode {
 		return
 	}
 	mf.bbCompiler = bbcode.NewCompiler(true, true)
@@ -45,7 +45,7 @@ func (mf *MessageFormatter) InitBBcode() {
 }
 
 func (mf *MessageFormatter) Compile(msg string) string {
-	if config.Config.DisableBBcode {
+	if config.GetBoardConfig("").DisableBBcode {
 		return msg
 	}
 	return mf.bbCompiler.Compile(msg)
@@ -59,6 +59,7 @@ func FormatMessage(message string) template.HTML {
 		trimmedLine := strings.TrimSpace(line)
 		lineWords := strings.Split(trimmedLine, " ")
 		isGreentext := false // if true, append </span> to end of line
+		WebRoot := config.GetSystemCriticalConfig().WebRoot
 		for w, word := range lineWords {
 			if strings.LastIndex(word, "&gt;&gt;") == 0 {
 				//word is a backlink
@@ -79,9 +80,9 @@ func FormatMessage(message string) template.HTML {
 					if !boardIDFound {
 						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
 					} else if linkParent == 0 {
-						lineWords[w] = `<a href="` + config.Config.SiteWebfolder + boardDir + `/res/` + word[8:] + `.html" class="postref">` + word + `</a>`
+						lineWords[w] = `<a href="` + WebRoot + boardDir + `/res/` + word[8:] + `.html" class="postref">` + word + `</a>`
 					} else {
-						lineWords[w] = `<a href="` + config.Config.SiteWebfolder + boardDir + `/res/` + strconv.Itoa(linkParent) + `.html#` + word[8:] + `" class="postref">` + word + `</a>`
+						lineWords[w] = `<a href="` + WebRoot + boardDir + `/res/` + strconv.Itoa(linkParent) + `.html#` + word[8:] + `" class="postref">` + word + `</a>`
 					}
 				}
 			} else if strings.Index(word, "&gt;") == 0 && w == 0 {

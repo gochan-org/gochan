@@ -140,24 +140,26 @@ type Board struct {
 
 // AbsolutePath returns the full filepath of the board directory
 func (board *Board) AbsolutePath(subpath ...string) string {
-	return path.Join(config.Config.DocumentRoot, board.Dir, path.Join(subpath...))
+	return path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.Dir, path.Join(subpath...))
 }
 
 // WebPath returns a string that represents the file's path as accessible by a browser
 // fileType should be "boardPage", "threadPage", "upload", or "thumb"
 func (board *Board) WebPath(fileName, fileType string) string {
 	var filePath string
+	systemCritical := config.GetSystemCriticalConfig()
+
 	switch fileType {
 	case "":
 		fallthrough
 	case "boardPage":
-		filePath = path.Join(config.Config.SiteWebfolder, board.Dir, fileName)
+		filePath = path.Join(systemCritical.WebRoot, board.Dir, fileName)
 	case "threadPage":
-		filePath = path.Join(config.Config.SiteWebfolder, board.Dir, "res", fileName)
+		filePath = path.Join(systemCritical.WebRoot, board.Dir, "res", fileName)
 	case "upload":
-		filePath = path.Join(config.Config.SiteWebfolder, board.Dir, "src", fileName)
+		filePath = path.Join(systemCritical.WebRoot, board.Dir, "src", fileName)
 	case "thumb":
-		filePath = path.Join(config.Config.SiteWebfolder, board.Dir, "thumb", fileName)
+		filePath = path.Join(systemCritical.WebRoot, board.Dir, "thumb", fileName)
 	}
 	return filePath
 }
@@ -188,7 +190,7 @@ func (board *Board) SetDefaults() {
 	board.Section = 1
 	board.MaxFilesize = 4096
 	board.MaxPages = 11
-	board.DefaultStyle = config.Config.DefaultStyle
+	board.DefaultStyle = config.GetBoardConfig("").DefaultStyle
 	board.Locked = false
 	board.Anonymous = "Anonymous"
 	board.ForcedAnon = false
@@ -251,15 +253,16 @@ type Post struct {
 
 func (p *Post) GetURL(includeDomain bool) string {
 	postURL := ""
+	systemCritical := config.GetSystemCriticalConfig()
 	if includeDomain {
-		postURL += config.Config.SiteDomain
+		postURL += systemCritical.SiteDomain
 	}
 	var board Board
 	if err := board.PopulateData(p.BoardID); err != nil {
 		return postURL
 	}
 
-	postURL += config.Config.SiteWebfolder + board.Dir + "/res/"
+	postURL += systemCritical.WebRoot + board.Dir + "/res/"
 	if p.ParentID == 0 {
 		postURL += fmt.Sprintf("%d.html#%d", p.ID, p.ID)
 	} else {
@@ -340,11 +343,12 @@ type RecentPost struct {
 // GetURL returns the full URL of the recent post, or the full path if includeDomain is false
 func (p *RecentPost) GetURL(includeDomain bool) string {
 	postURL := ""
+	systemCritical := config.GetSystemCriticalConfig()
 	if includeDomain {
-		postURL += config.Config.SiteDomain
+		postURL += systemCritical.SiteDomain
 	}
 	idStr := strconv.Itoa(p.PostID)
-	postURL += config.Config.SiteWebfolder + p.BoardName + "/res/"
+	postURL += systemCritical.WebRoot + p.BoardName + "/res/"
 	if p.ParentID == 0 {
 		postURL += idStr + ".html#" + idStr
 	} else {

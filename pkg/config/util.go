@@ -13,6 +13,13 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+var (
+	criticalFields = []string{
+		"ListenIP", "Port", "Username", "UseFastCGI", "DocumentRoot", "TemplateDir", "LogDir",
+		"DBtype", "DBhost", "DBname", "DBusername", "DBpassword", "SiteDomain", "Styles",
+	}
+)
+
 // MissingField represents a field missing from the configuration file
 type MissingField struct {
 	Name        string
@@ -31,6 +38,39 @@ func (iv *ErrInvalidValue) Error() string {
 	str := fmt.Sprintf("invalid %s value: %#v", iv.Field, iv.Value)
 	if iv.Details != "" {
 		str += " - " + iv.Details
+	}
+	return str
+}
+
+func GetDefaultBool(key string) bool {
+	boolInterface := defaults[key]
+	if boolInterface == nil {
+		return false
+	}
+	b, ok := boolInterface.(bool)
+	return b && ok
+}
+
+func GetDefaultInt(key string) int {
+	intInterface := defaults[key]
+	if intInterface == nil {
+		return 0
+	}
+	i, ok := intInterface.(int)
+	if !ok {
+		return 0
+	}
+	return i
+}
+
+func GetDefaultString(key string) string {
+	i := defaults[key]
+	if i == nil {
+		return ""
+	}
+	str, ok := i.(string)
+	if !ok {
+		return ""
 	}
 	return str
 }
@@ -66,9 +106,9 @@ func ParseJSON(ba []byte) (*GochanConfig, []MissingField, error) {
 			// field is in the JSON file
 			continue
 		}
-		if cfgDefaults[fType.Name] != nil {
+		if defaults[fType.Name] != nil {
 			// the field isn't in the JSON file but has a default value that we can use
-			fVal.Set(reflect.ValueOf(cfgDefaults[fType.Name]))
+			fVal.Set(reflect.ValueOf(defaults[fType.Name]))
 			continue
 		}
 		if critical {
@@ -98,11 +138,11 @@ func InitConfig(versionStr string) {
 	}
 
 	var fields []MissingField
-	Config, fields, err = ParseJSON(jfile)
+	cfg, fields, err = ParseJSON(jfile)
 	if err != nil {
 		fmt.Printf("Error parsing %s: %s", cfgPath, err.Error())
 	}
-	Config.jsonLocation = cfgPath
+	cfg.jsonLocation = cfgPath
 
 	numMissing := 0
 	for _, missing := range fields {
@@ -117,63 +157,90 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	if err = Config.ValidateValues(); err != nil {
+	if err = cfg.ValidateValues(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	if _, err = os.Stat(Config.DocumentRoot); err != nil {
+	if _, err = os.Stat(cfg.DocumentRoot); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(Config.TemplateDir); err != nil {
+	if _, err = os.Stat(cfg.TemplateDir); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(Config.LogDir); err != nil {
+	if _, err = os.Stat(cfg.LogDir); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	Config.LogDir = gcutil.FindResource(Config.LogDir, "log", "/var/log/gochan/")
+	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
 	if err = gclog.InitLogs(
-		path.Join(Config.LogDir, "access.log"),
-		path.Join(Config.LogDir, "error.log"),
-		path.Join(Config.LogDir, "staff.log"),
-		Config.DebugMode); err != nil {
+		path.Join(cfg.LogDir, "access.log"),
+		path.Join(cfg.LogDir, "error.log"),
+		path.Join(cfg.LogDir, "staff.log"),
+		cfg.DebugMode); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	if Config.Port == 0 {
-		Config.Port = 80
+	if cfg.Port == 0 {
+		cfg.Port = 80
 	}
 
-	if len(Config.FirstPage) == 0 {
-		Config.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
+	if len(cfg.FirstPage) == 0 {
+		cfg.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
 	}
 
-	if Config.SiteWebfolder == "" {
-		Config.SiteWebfolder = "/"
+	if cfg.WebRoot == "" {
+		cfg.WebRoot = "/"
 	}
 
-	if Config.SiteWebfolder[0] != '/' {
-		Config.SiteWebfolder = "/" + Config.SiteWebfolder
+	if cfg.WebRoot[0] != '/' {
+		cfg.WebRoot = "/" + cfg.WebRoot
 	}
-	if Config.SiteWebfolder[len(Config.SiteWebfolder)-1] != '/' {
-		Config.SiteWebfolder += "/"
+	if cfg.WebRoot[len(cfg.WebRoot)-1] != '/' {
+		cfg.WebRoot += "/"
 	}
 
-	if Config.EnableGeoIP {
-		if _, err = os.Stat(Config.GeoIPDBlocation); err != nil {
+	if cfg.EnableGeoIP {
+		if _, err = os.Stat(cfg.GeoIPDBlocation); err != nil {
 			gclog.Print(gclog.LErrorLog|gclog.LStdLog, "Unable to find GeoIP file location set in gochan.json, disabling GeoIP")
 		}
-		Config.EnableGeoIP = false
+		cfg.EnableGeoIP = false
 	}
 
 	_, zoneOffset := time.Now().Zone()
-	Config.TimeZone = zoneOffset / 60 / 60
+	cfg.TimeZone = zoneOffset / 60 / 60
 
-	Config.Version = ParseVersion(versionStr)
-	Config.Version.Normalize()
+	cfg.Version = ParseVersion(versionStr)
+	cfg.Version.Normalize()
+}
+
+// TODO: use reflect to check if the field exists in SystemCriticalConfig
+func fieldIsCritical(field string) bool {
+	for _, cF := range criticalFields {
+		if field == cF {
+			return true
+		}
+	}
+	return false
+}
+
+// UpdateFromMap updates the configuration with the given key->values for use in things like the
+// config editor page and possibly others
+func UpdateFromMap(m map[string]interface{}, validate bool) error {
+	for key, val := range m {
+		if fieldIsCritical(key) {
+			// don't mess with critical/read-only fields (ListenIP, DocumentRoot, etc)
+			// after the server has started
+			continue
+		}
+		cfg.setField(key, val)
+	}
+	if validate {
+		return cfg.ValidateValues()
+	}
+	return nil
 }

@@ -795,6 +795,8 @@ func DeleteFilesFromPost(postID int) error {
 		filenames = append(filenames, filename)
 	}
 
+	systemCriticalCfg := config.GetSystemCriticalConfig()
+
 	//Remove files from disk
 	for _, fileName := range filenames {
 		fileName = fileName[:strings.Index(fileName, ".")]
@@ -804,9 +806,9 @@ func DeleteFilesFromPost(postID int) error {
 			thumbType = "jpg"
 		}
 
-		os.Remove(path.Join(config.Config.DocumentRoot, board, "/src/"+fileName+"."+fileType))
-		os.Remove(path.Join(config.Config.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
-		os.Remove(path.Join(config.Config.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
+		os.Remove(path.Join(systemCriticalCfg.DocumentRoot, board, "/src/"+fileName+"."+fileType))
+		os.Remove(path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
+		os.Remove(path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
 	}
 
 	const removeFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
@@ -1005,7 +1007,7 @@ func doesTableExist(tableName string) (bool, error) {
 	WHERE TABLE_NAME = ?`
 
 	var count int
-	err := QueryRowSQL(existQuery, []interface{}{config.Config.DBprefix + tableName}, []interface{}{&count})
+	err := QueryRowSQL(existQuery, []interface{}{config.GetSystemCriticalConfig().DBprefix + tableName}, []interface{}{&count})
 	if err != nil {
 		return false, err
 	}
@@ -1015,7 +1017,7 @@ func doesTableExist(tableName string) (bool, error) {
 //doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
 //Returns false if the prefix is an empty string
 func doesGochanPrefixTableExist() (bool, error) {
-	if config.Config.DBprefix == "" {
+	if config.GetSystemCriticalConfig().DBprefix == "" {
 		return false, nil
 	}
 	var prefixTableExist = `SELECT count(*) 

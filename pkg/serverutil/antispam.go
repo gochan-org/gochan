@@ -11,12 +11,17 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
+var (
+	ErrBlankAkismetKey   = errors.New("blank Akismet key")
+	ErrInvalidAkismetKey = errors.New("invalid Akismet key")
+)
+
 // CheckAkismetAPIKey checks the validity of the Akismet API key given in the config file.
 func CheckAkismetAPIKey(key string) error {
 	if key == "" {
-		return errors.New("blank key given, Akismet spam checking won't be used")
+		return ErrBlankAkismetKey
 	}
-	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.Config.SiteDomain}})
+	resp, err := http.PostForm("https://rest.akismet.com/1.1/verify-key", url.Values{"key": {key}, "blog": {"http://" + config.GetSystemCriticalConfig().SiteDomain}})
 	if err != nil {
 		return err
 	}
@@ -30,22 +35,22 @@ func CheckAkismetAPIKey(key string) error {
 	}
 	if string(body) == "invalid" {
 		// This should disable the Akismet checks if the API key is not valid.
-		errmsg := "Akismet API key is invalid, Akismet spam protection will be disabled."
-		gclog.Print(gclog.LErrorLog, errmsg)
-		return errors.New(errmsg)
+		return ErrInvalidAkismetKey
 	}
 	return nil
 }
 
 // CheckPostForSpam checks a given post for spam with Akismet. Only checks if Akismet API key is set.
 func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent string) string {
-	if config.Config.AkismetAPIKey != "" {
+	systemCritical := config.GetSystemCriticalConfig()
+	siteCfg := config.GetSiteConfig()
+	if siteCfg.AkismetAPIKey != "" {
 		client := &http.Client{}
-		data := url.Values{"blog": {"http://" + config.Config.SiteDomain}, "user_ip": {userIP}, "user_agent": {userAgent}, "referrer": {referrer},
+		data := url.Values{"blog": {"http://" + systemCritical.SiteDomain}, "user_ip": {userIP}, "user_agent": {userAgent}, "referrer": {referrer},
 			"comment_type": {"forum-post"}, "comment_author": {author}, "comment_author_email": {email},
 			"comment_content": {postContent}}
 
-		req, err := http.NewRequest("POST", "https://"+config.Config.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
+		req, err := http.NewRequest("POST", "https://"+siteCfg.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(data.Encode()))
 		if err != nil {
 			gclog.Print(gclog.LErrorLog, err.Error())
@@ -84,7 +89,8 @@ func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent st
 
 // ValidReferer checks to make sure that the incoming request is from the same domain (or if debug mode is enabled)
 func ValidReferer(request *http.Request) bool {
-	if config.Config.DebugMode {
+	systemCritical := config.GetSystemCriticalConfig()
+	if systemCritical.DebugMode {
 		return true
 	}
 	rURL, err := url.ParseRequestURI(request.Referer())
@@ -93,5 +99,5 @@ func ValidReferer(request *http.Request) bool {
 		return false
 	}
 
-	return strings.Index(rURL.Path, config.Config.SiteWebfolder) == 0
+	return strings.Index(rURL.Path, systemCritical.WebRoot) == 0
 }

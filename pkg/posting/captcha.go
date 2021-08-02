@@ -31,18 +31,20 @@ type captchaJSON struct {
 
 // InitCaptcha prepares the captcha driver for use
 func InitCaptcha() {
-	if !config.Config.UseCaptcha {
+	boardConfig := config.GetBoardConfig("")
+	if !boardConfig.UseCaptcha {
 		return
 	}
 	driver = base64Captcha.NewDriverString(
-		config.Config.CaptchaHeight, config.Config.CaptchaWidth, 0, 0, 6,
+		boardConfig.CaptchaHeight, boardConfig.CaptchaWidth, 0, 0, 6,
 		"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
 		&color.RGBA{0, 0, 0, 0}, nil).ConvertFonts()
 }
 
 // ServeCaptcha handles requests to /captcha if UseCaptcha is enabled in gochan.json
 func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
-	if !config.Config.UseCaptcha {
+	boardConfig := config.GetBoardConfig("")
+	if !boardConfig.UseCaptcha {
 		return
 	}
 	var err error
@@ -109,7 +111,8 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 }
 
 func getCaptchaImage() (captchaID, chaptchaB64 string) {
-	if !config.Config.UseCaptcha {
+	boardConfig := config.GetBoardConfig("")
+	if !boardConfig.UseCaptcha {
 		return
 	}
 	captcha := base64Captcha.NewCaptcha(driver, base64Captcha.DefaultMemStore)

@@ -42,8 +42,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	var nameCookie string
 	var formEmail string
 
+	systemCritical := config.GetSystemCriticalConfig()
+	boardConfig := config.GetBoardConfig("")
+
 	if request.Method == "GET" {
-		http.Redirect(writer, request, config.Config.SiteWebfolder, http.StatusFound)
+		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
 		return
 	}
 	// fix new cookie domain for when you use a port number
@@ -141,10 +144,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	postDelay, _ := gcsql.SinceLastPost(post.ID)
 	if postDelay > -1 {
-		if post.ParentID == 0 && postDelay < config.Config.NewThreadDelay {
+		if post.ParentID == 0 && postDelay < boardConfig.NewThreadDelay {
 			serverutil.ServeErrorPage(writer, "Please wait before making a new thread.")
 			return
-		} else if post.ParentID > 0 && postDelay < config.Config.ReplyDelay {
+		} else if post.ParentID > 0 && postDelay < boardConfig.ReplyDelay {
 			serverutil.ServeErrorPage(writer, "Please wait before making a reply.")
 			return
 		}
@@ -164,7 +167,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		var banpageBuffer bytes.Buffer
 
 		if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
-			"config": config.Config, "ban": banStatus, "banBoards": boards[post.BoardID-1].Dir,
+			"systemCritical": config.GetSystemCriticalConfig(),
+			"siteConfig":     config.GetSiteConfig(),
+			"boardConfig":    config.GetBoardConfig(""),
+			"ban":            banStatus,
+			"banBoards":      boards[post.BoardID-1].Dir,
 		}, writer, "text/html"); err != nil {
 			serverutil.ServeErrorPage(writer,
 				gclog.Print(gclog.LErrorLog, "Error minifying page: ", err.Error()))
@@ -176,7 +183,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	post.Sanitize()
 
-	if config.Config.UseCaptcha {
+	if boardConfig.UseCaptcha {
 		captchaID := request.FormValue("captchaid")
 		captchaAnswer := request.FormValue("captchaanswer")
 		if captchaID == "" && captchaAnswer == "" {
@@ -234,9 +241,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		boardDir := _board.Dir
-		filePath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
-		thumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
-		catalogThumbPath = path.Join(config.Config.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
+		filePath = path.Join(systemCritical.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
+		thumbPath = path.Join(systemCritical.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
+		catalogThumbPath = path.Join(systemCritical.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
 
 		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
 			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
@@ -265,20 +272,20 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			gclog.Printf(gclog.LAccessLog, "Receiving post with video: %s from %s, referrer: %s",
 				handler.Filename, post.IP, request.Referer())
 			if post.ParentID == 0 {
-				if err := createVideoThumbnail(filePath, thumbPath, config.Config.ThumbWidth); err != nil {
+				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
 					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 						"Error creating video thumbnail: ", err.Error()))
 					return
 				}
 			} else {
-				if err := createVideoThumbnail(filePath, thumbPath, config.Config.ThumbWidthReply); err != nil {
+				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidthReply); err != nil {
 					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 						"Error creating video thumbnail: ", err.Error()))
 					return
 				}
 			}
 
-			if err := createVideoThumbnail(filePath, catalogThumbPath, config.Config.ThumbWidthCatalog); err != nil {
+			if err := createVideoThumbnail(filePath, catalogThumbPath, boardConfig.ThumbWidthCatalog); err != nil {
 				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 					"Error creating video thumbnail: ", err.Error()))
 				return
@@ -345,15 +352,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 			if request.FormValue("spoiler") == "on" {
 				// If spoiler is enabled, symlink thumbnail to spoiler image
-				if _, err := os.Stat(path.Join(config.Config.DocumentRoot, "spoiler.png")); err != nil {
+				if _, err := os.Stat(path.Join(systemCritical.DocumentRoot, "spoiler.png")); err != nil {
 					serverutil.ServeErrorPage(writer, "missing /spoiler.png")
 					return
 				}
-				if err = syscall.Symlink(path.Join(config.Config.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
+				if err = syscall.Symlink(path.Join(systemCritical.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
 					serverutil.ServeErrorPage(writer, err.Error())
 					return
 				}
-			} else if config.Config.ThumbWidth >= post.ImageW && config.Config.ThumbHeight >= post.ImageH {
+			} else if boardConfig.ThumbWidth >= post.ImageW && boardConfig.ThumbHeight >= post.ImageH {
 				// If image fits in thumbnail size, symlink thumbnail to original
 				post.ThumbW = img.Bounds().Max.X
 				post.ThumbH = img.Bounds().Max.Y
@@ -402,11 +409,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	if emailCommand == "noko" {
 		if post.ParentID < 1 {
-			http.Redirect(writer, request, config.Config.SiteWebfolder+postBoard.Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
+			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
-			http.Redirect(writer, request, config.Config.SiteWebfolder+postBoard.Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
+			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
 		}
 	} else {
-		http.Redirect(writer, request, config.Config.SiteWebfolder+postBoard.Dir+"/", http.StatusFound)
+		http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/", http.StatusFound)
 	}
 }

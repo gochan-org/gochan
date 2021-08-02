@@ -73,14 +73,15 @@ func BuildBoardPages(board *gcsql.Board) error {
 		thread.OP = op
 
 		var numRepliesOnBoardPage int
-
+		// postCfg := config.getpo
+		postCfg := config.GetBoardConfig("").PostConfig
 		if op.Stickied {
 			// If the thread is stickied, limit replies on the archive page to the
 			// configured value for stickied threads.
-			numRepliesOnBoardPage = config.Config.StickyRepliesOnBoardPage
+			numRepliesOnBoardPage = postCfg.StickyRepliesOnBoardPage
 		} else {
 			// Otherwise, limit the replies to the configured value for normal threads.
-			numRepliesOnBoardPage = config.Config.RepliesOnBoardPage
+			numRepliesOnBoardPage = postCfg.RepliesOnBoardPage
 		}
 
 		postsInThread, err = gcsql.GetExistingRepliesLimitedRev(op.ID, numRepliesOnBoardPage)
@@ -118,8 +119,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 			nonStickiedThreads = append(nonStickiedThreads, thread)
 		}
 	}
-
-	gcutil.DeleteMatchingFiles(path.Join(config.Config.DocumentRoot, board.Dir), "\\d.html$")
+	criticalCfg := config.GetSystemCriticalConfig()
+	gcutil.DeleteMatchingFiles(path.Join(criticalCfg.DocumentRoot, board.Dir), "\\d.html$")
 	// Order the threads, stickied threads first, then nonstickied threads.
 	threads = append(stickiedThreads, nonStickiedThreads...)
 
@@ -129,7 +130,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		board.CurrentPage = 1
 
 		// Open 1.html for writing to the first page.
-		boardPageFile, err = os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+		boardPageFile, err = os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				"Failed opening /%s/board.html: %s",
@@ -139,7 +140,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"config":   config.Config,
+			"webroot":  criticalCfg.WebRoot,
 			"boards":   gcsql.AllBoards,
 			"sections": gcsql.AllSections,
 			"threads":  threads,
@@ -152,13 +153,14 @@ func BuildBoardPages(board *gcsql.Board) error {
 	}
 
 	// Create the archive pages.
-	threadPages = paginate(config.Config.ThreadsPerPage, threads)
+	boardCfg := config.GetBoardConfig(board.Dir)
+	threadPages = paginate(boardCfg.ThreadsPerPage, threads)
 	board.NumPages = len(threadPages)
 
 	// Create array of page wrapper objects, and open the file.
 	pagesArr := make([]map[string]interface{}, board.NumPages)
 
-	catalogJSONFile, err := os.OpenFile(path.Join(config.Config.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Failed opening /%s/catalog.json: %s", board.Dir, err.Error()))
@@ -170,7 +172,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		board.CurrentPage++
 		var currentPageFilepath string
 		pageFilename := strconv.Itoa(board.CurrentPage) + ".html"
-		currentPageFilepath = path.Join(config.Config.DocumentRoot, board.Dir, pageFilename)
+		currentPageFilepath = path.Join(criticalCfg.DocumentRoot, board.Dir, pageFilename)
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			err = errors.New(gclog.Printf(gclog.LErrorLog,
@@ -181,7 +183,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		// Render the boardpage template
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"config":   config.Config,
+			"webroot":  criticalCfg.WebRoot,
 			"boards":   gcsql.AllBoards,
 			"sections": gcsql.AllSections,
 			"threads":  pageThreads,
@@ -259,8 +261,8 @@ func BuildCatalog(boardID int) string {
 	if err = board.PopulateData(boardID); err != nil {
 		return gclog.Printf(gclog.LErrorLog, "Error getting board information (ID: %d)", boardID)
 	}
-
-	catalogPath := path.Join(config.Config.DocumentRoot, board.Dir, "catalog.html")
+	criticalCfg := config.GetSystemCriticalConfig()
+	catalogPath := path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.html")
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return gclog.Printf(gclog.LErrorLog,
@@ -285,7 +287,7 @@ func BuildCatalog(boardID int) string {
 
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
 		"boards":   gcsql.AllBoards,
-		"config":   config.Config,
+		"webroot":  criticalCfg.WebRoot,
 		"board":    board,
 		"sections": gcsql.AllSections,
 		"threads":  threadInterfaces,

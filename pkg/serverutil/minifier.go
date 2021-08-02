@@ -15,24 +15,26 @@ var minifier *minify.M
 
 // InitMinifier sets up the HTML/JS/JSON minifier if enabled in gochan.json
 func InitMinifier() {
-	if !config.Config.MinifyHTML && !config.Config.MinifyJS {
+	siteConfig := config.GetSiteConfig()
+	if !siteConfig.MinifyHTML && !siteConfig.MinifyJS {
 		return
 	}
 	minifier = minify.New()
-	if config.Config.MinifyHTML {
+	if siteConfig.MinifyHTML {
 		minifier.AddFunc("text/html", minifyHTML.Minify)
 	}
-	if config.Config.MinifyJS {
+	if siteConfig.MinifyJS {
 		minifier.AddFunc("text/javascript", minifyJS.Minify)
 		minifier.AddFunc("application/json", minifyJSON.Minify)
 	}
 }
 
 func canMinify(mediaType string) bool {
-	if mediaType == "text/html" && config.Config.MinifyHTML {
+	siteConfig := config.GetSiteConfig()
+	if mediaType == "text/html" && siteConfig.MinifyHTML {
 		return true
 	}
-	if (mediaType == "application/json" || mediaType == "text/javascript") && config.Config.MinifyJS {
+	if (mediaType == "application/json" || mediaType == "text/javascript") && siteConfig.MinifyJS {
 		return true
 	}
 	return false

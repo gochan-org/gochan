@@ -65,7 +65,10 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 
 	if !handler.isJSON {
 		managePageBuffer.WriteString("<!DOCTYPE html><html><head>")
-		if err = gctemplates.ManageHeader.Execute(&managePageBuffer, config.Config); err != nil {
+		criticalCfg := config.GetSystemCriticalConfig()
+		if err = gctemplates.ManageHeader.Execute(&managePageBuffer, map[string]interface{}{
+			"webroot": criticalCfg.WebRoot,
+		}); err != nil {
 			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog|gclog.LStaffLog,
 				"Error executing manage page header template: ", err.Error()))
 			return

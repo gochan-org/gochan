@@ -16,7 +16,7 @@ const (
 		"DBusername": "gochan",
 		"DBpassword": "",
 		"SiteDomain": "127.0.0.1",
-		"SiteWebfolder": "/",
+		"SiteWebFolder": "/",
 	
 		"Styles": [
 			{ "Name": "Pipes", "Filename": "pipes.css" },
@@ -57,7 +57,7 @@ const (
 		"SiteName": "Gochan",
 		"SiteSlogan": "",
 		"SiteDomain": "127.0.0.1",
-		"SiteWebfolder": "/",
+		"SiteWebFolder": "/",
 	
 		"Styles": [
 			{ "Name": "Pipes", "Filename": "pipes.css" },
@@ -87,10 +87,10 @@ const (
 		"PostsPerThreadPage": 50,
 		"RepliesOnBoardPage": 3,
 		"StickyRepliesOnBoardPage": 1,
-		"BanMsg": "USER WAS BANNED FOR THIS POST",
+		"BanMessage": "USER WAS BANNED FOR THIS POST",
 		"EmbedWidth": 200,
 		"EmbedHeight": 164,
-		"ExpandButton": true,
+		"EnableEmbeds": true,
 		"ImagesOpenNewTab": true,
 		"MakeURLsHyperlinked": true,
 		"NewTabOnOutlinks": true,
