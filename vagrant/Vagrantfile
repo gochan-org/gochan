@@ -8,9 +8,9 @@ if DBTYPE != "mysql" && DBTYPE != "postgresql"
 end
 
 PROVIDER = ENV.fetch("GC_PROVIDER", "virtualbox") # can be virtualbox or libvirt
-BOX = "generic/ubuntu1604"
+BOX = "generic/ubuntu1804"
 if PROVIDER == "virtualbox"
-	BOX = "ubuntu/xenial64"
+	BOX = "ubuntu/bionic64"
 end
 
 Vagrant.configure("2") do |config|

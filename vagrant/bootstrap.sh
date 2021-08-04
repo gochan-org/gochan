@@ -5,7 +5,8 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 if [ -z "$DBTYPE" ]; then
-	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql' (sqlite3 no longer supported)"
+	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql'."
+	echo "sqlite3 support has been dropped but it may come back eventually."
 	exit 1
 fi
 echo "Using DBTYPE $DBTYPE"
@@ -23,8 +24,8 @@ if [ "$DBTYPE" == "mysql" ]; then
 	SET PASSWORD FOR 'gochan'@'%' = PASSWORD('gochan');
 	FLUSH PRIVILEGES;
 	EOF
-	systemctl enable mysql
-	systemctl start mysql &
+	systemctl enable mariadb
+	systemctl start mariadb &
 	wait
 	if [ -d /lib/systemd ]; then
 		cp /vagrant/sample-configs/gochan-mysql.service /lib/systemd/system/gochan.service
@@ -79,7 +80,10 @@ sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/syste
 
 # generate self-signed certificate since some browsers like Firefox and Chrome automatically do HTTPS requests
 # this will likely show a warning in the browser, which you can ignore
-openssl req -x509 -nodes -days 7305 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=172.27.0.3"
+openssl req -x509 -nodes -days 7305 -newkey rsa:2048 \
+	-keyout /etc/ssl/private/nginx-selfsigned.key \
+	-out /etc/ssl/certs/nginx-selfsigned.crt \
+	-subj "/CN=172.27.0.3"
 
 systemctl daemon-reload
 systemctl enable nginx
@@ -131,7 +135,6 @@ python build_initdb.py
 cd ..
 mkdir -p $GOPATH/src/github.com/gochan-org/gochan
 cp -r pkg $GOPATH/src/github.com/gochan-org/gochan
-./build.py dependencies
 ./build.py
 EOF
 
