@@ -12,6 +12,9 @@ import (
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/kusabax"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/pre2021"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/tinyboard"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 const (

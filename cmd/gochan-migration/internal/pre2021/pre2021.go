@@ -58,6 +58,8 @@ func (m *Pre2021Migrator) MigrateDB() error {
 	cfg := config.GetSystemCriticalConfig()
 	gcsql.CheckAndInitializeDatabase(cfg.DBtype)
 
+	GetPosts(m.db)
+
 	return nil
 }
 
