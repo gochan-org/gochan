@@ -1,5 +1,6 @@
 import browserify from "browserify";
 import buffer from "vinyl-buffer"
+import fancy_log from "fancy-log";
 import glob from "glob";
 import gulp from "gulp";
 import stdio from "stdio";
@@ -18,7 +19,7 @@ let builder = browserify({
 });
 
 function buildTask(minify) {
-	console.log("Building gochan frontend");
+	fancy_log("Building gochan frontend");
 	let babelOptions = {
 		presets: ["@babel/preset-env"],
 		comments: false
