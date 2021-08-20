@@ -43,6 +43,55 @@ type BanAppeal struct {
 	StaffResponse string     // staff_response: text
 }
 
+// DBPREFIXbanlist
+type BanInfo struct {
+	ID          uint      // id: bigint
+	AllowRead   bool      // allow_read: tinyint
+	IP          string    // ip: varchar
+	Name        string    // name: varchar
+	NameIsRegex bool      // name_is_regex: tinyint
+	Filename    string    // filename: varchar
+	Checksum    string    // file_checksum: varchar
+	Boards      string    // boards: varchar
+	Staff       string    // staff: varchar
+	Timestamp   time.Time // timestamp: timestamp
+	Expires     time.Time // expires: timestamp
+	Permaban    bool      // permaban: tinyint
+	Reason      string    // reason: varchar
+	Type        int       // type: smallint
+	StaffNote   string    // staff_note: varchar
+	AppealAt    time.Time // appeal_at: timestamp
+	CanAppeal   bool      // can_appeal: tinyint
+}
+
+// DBPREFIXboards
+type Board struct {
+	ID               int       // id: bigint
+	ListOrder        int       // list_order: tinyint
+	Dir              string    // dir: varchar
+	Type             int       // type: tinyint
+	UploadType       int       // upload_type: tinyint
+	Title            string    // title: varchar
+	Subtitle         string    // subtitle: varchar
+	Description      string    // description: varchar
+	Section          int       // section: int
+	MaxFilesize      int       // max_file_size: int
+	MaxPages         int       // max_pages: tinyint
+	DefaultStyle     string    // default_style: varchar
+	Locked           bool      // locked: tinyint
+	CreatedOn        time.Time // created_on: timestamp
+	Anonymous        string    // anonymous: varchar
+	ForcedAnon       bool      // forced_anon: tinyint
+	MaxAge           int       // max_age: int
+	AutosageAfter    int       // autosage_after: int
+	NoImagesAfter    int       // no_images_after: int
+	MaxMessageLength int       // max_message_length: int
+	EmbedsAllowed    bool      // embeds_allowed: tinyint
+	RedirectToThread bool      // redirect_to_thread: tinyint
+	RequireFile      bool      // require_file: tinyint
+	EnableCatalog    bool      // enable_catalog: tinyint
+}
+
 // DBPREFIXposts
 type Post struct {
 	ID               int       // id: bigint
@@ -72,4 +121,25 @@ type Post struct {
 	Stickied         bool      // stickied: tinyint
 	Locked           bool      // locked: tinyint
 	Reviewed         bool      // reviewed: tinyint
+}
+
+// DBPREFIXreports
+type Report struct {
+	ID        int       // id: bigint
+	Board     string    // board: varchar
+	PostID    int       // postid: int
+	Timestamp time.Time // timestamp: timestamp
+	IP        string    // ip: varchar
+	Reason    string    // reason: varchar
+	Cleared   bool      // cleared: tinyint
+	IsTemp    bool      // istemp: tinyint
+}
+
+// DBPREFIXsections
+type BoardSection struct {
+	ID           int    // id: bigint
+	ListOrder    int    // list_order: int
+	Hidden       bool   // hidden: tinyint
+	Name         string // name: varchar
+	Abbreviation string // abbreviation: varchar
 }

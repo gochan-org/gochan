@@ -6,8 +6,7 @@ OLD_URL="https://github.com/gochan-org/gochan/releases/download/v$OLD_VERSION/$O
 
 if [ "$USER" = "root" ]; then
 	echo "This testing script isn't intended to be run as root but will still probably run anyway."
-	read -p "Press enter to continue anyway or ctrl+c to exit
-"
+	read -p "Press enter to continue anyway or ctrl+c to exit "
 fi
 
 pgrep gochan > /dev/null
@@ -53,5 +52,5 @@ elif [ "$1" = "uninstall" ]; then
 	sudo mysqladmin -f DROP gochan_pre2021_db
 	killall "gochan_$OLD_VERSION"; rm -rf ~/$OLD_GCDIR
 else
-	echo "Invalid argument. Usage is $1 [install|uninstall]"
+	echo "Invalid argument. Usage is $0 [install|uninstall]"
 fi

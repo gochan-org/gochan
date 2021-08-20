@@ -1,5 +1,6 @@
 --
 -- gochan 2.12.0 sample MySQL database for migration testing
+-- TODO: Make it compatible with Postgres (not a priority since it's primarily for testing migration)
 --
 
 CREATE DATABASE gochan_pre2021_db;
@@ -183,9 +184,14 @@ CREATE TABLE `gc_wordfilters` (
 	PRIMARY KEY (`id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4;
 
+INSERT INTO `gc_announcements` (`subject`,`message`,`poster`) VALUES('subject','message','admin');
+INSERT INTO `gc_banlist`
+	(`allow_read`,`ip`,`name`,`filename`,`boards`,`staff`,`permaban`,`reason`,`staff_note`)
+	VALUES(1,'127.0.0.1','Meanie','badfile.jpg','test,test2','admin',1,'reason here','staff note');
 INSERT INTO `gc_boards` VALUES (1,0,'test',0,0,'Testing','Testing, testing, 123','jieofjeio',1,4718592,11,'pipes.css',0,'2021-06-24 04:08:58','Anonymous',0,0,200,0,8192,1,0,0,1);
 INSERT INTO `gc_info` VALUES ('version','2.12.0');
 INSERT INTO `gc_posts` VALUES (1,1,0,'Name','3GqYIJ3Obs','email@site.com','Subject','message body','message body','df740f13f6c59841743598b2fd9a45c9','162450778130.jpg','60056568.jpg','02a3317c1e16d88e052c1b6c5f181cd2',32174,750,751,199,200,'172.27.0.1','','2021-06-24 04:09:41',0,'0000-00-00 00:00:00','2021-06-24 04:09:41',0,0,0);
+INSERT INTO `gc_reports` (`board`,`postid`,`ip`,`reason`,`cleared`) VALUES('test',1,'127.0.0.1','bad post pls delet',0);
 INSERT INTO `gc_sections` VALUES (1,0,0,'Main','main');
 INSERT INTO `gc_staff` VALUES (1,'admin','$2a$04$L8aNP6T4IAENeg6YzEI/EOG4JbotSTtC7TC.2rQu/z6aFixOu7c52',3,'*','2021-06-24 04:06:37','2021-06-24 04:08:12');
 

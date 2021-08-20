@@ -10,7 +10,7 @@ import (
 const (
 	// check to see if the old db exists, if the new db exists, and the number of tables
 	// in the new db
-	dbInfoSQL = `SELECT
+	mysqlDbInfoSQL = `SELECT
 		(SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?) AS olddb,
 		(SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?) as newdb,
 		(SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?) as num_tables`
@@ -31,7 +31,7 @@ func (m *Pre2021Migrator) Init(options common.DBOptions) error {
 }
 
 func (m *Pre2021Migrator) MigrateDB() error {
-	chkDbStmt, err := m.db.PrepareSQL(dbInfoSQL)
+	chkDbStmt, err := m.db.PrepareSQL(mysqlDbInfoSQL)
 	if err != nil {
 		return err
 	}
