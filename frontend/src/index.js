@@ -5,6 +5,7 @@ import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
 import { initQR } from "./qr";
 import { opRegex } from "./vars";
+import { initWatcher } from "./watcher";
 
 let currentStaff = null;
 let $watchedThreadsBtn = null;
@@ -91,13 +92,14 @@ function handleKeydown(e) {
 
 $(() => {
 	let pageThread = getPageThread();
-	let style = getCookie("style", defaultStyle);
+	let style = getCookie("style", {default: defaultStyle});
 	let themeElem = document.getElementById("theme");
 	if(themeElem) themeElem.setAttribute("href", `${webroot}css/${style}`);
 	currentStaff = getStaff();
 	initCookies();
 	initTopBar();
 	initSettings();
+	initWatcher();
 
 	$watchedThreadsBtn = new TopBarButton("WT", () => {});
 
@@ -106,8 +108,8 @@ $(() => {
 			window.location = "/manage?action=dashboard"
 		})
 		/* $staffBtn = new DropDownMenu("Staff",getStaffMenuHTML())
-		$("a#staff.dropdown-button").click(function() {
-			$("a.staffmenu-item").click(function() {
+		$("a#staff.dropdown-button").on("click", function() {
+			$("a.staffmenu-item").on("click", function() {
 				let url = $(this).attr("id");
 				openStaffLightBox(url);
 	 		});
@@ -117,11 +119,11 @@ $(() => {
 
 	if(pageThread.board != "") {
 		prepareThumbnails();
-		if(getCookie("useqr") == "true") initQR(pageThread);
+		if(getCookie("useqr", {type: "bool"})) initQR(pageThread);
 	}
 
 	preparePostPreviews(false);
-	$(".plus").click(function() {
+	$("plus").on("click", function() {
 		let block = $(this).parent().next();
 		if(block.css("display") == "none") {
 			block.show();
@@ -132,7 +134,7 @@ $(() => {
 		}
 	});
 	let threadMenuOpen = false;
-	$(".thread-ddown a, body").click(function(e) {
+	$(".thread-ddown a, body").on("click", function(e) {
 		e.stopPropagation();
 		let postID = $(this).parent().parent().parent().attr("id");
 		let isOP = $(this).parent().parent().parent().attr("class") == "thread";

@@ -16,8 +16,8 @@ const qrTitleBar =
 	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
 
 export function initQR(pageThread) {
-	const nameCookie = getCookie("name","");
-	const emailCookie = getCookie("email","");
+	const nameCookie = getCookie("name");
+	const emailCookie = getCookie("email");
 	const qrFormHTML =
 		`<input type="hidden" name="threadid" value="${pageThread.op}" />` +
 		`<input type="hidden" name="boardid" value="1" />` +
@@ -37,9 +37,13 @@ export function initQR(pageThread) {
 		enctype:"multipart/form-data"
 	}).append(qrFormHTML,$qrbuttons);
 	let qrTop = 32;
-	if(!getCookie("pintopbar",true)) qrTop = $topbar.outerHeight() + 16;
+	if(!getCookie("pintopbar",{default: true, type: "bool"}))
+		qrTop = $topbar.outerHeight() + 16;
 
-	let qrPos = JSON.parse(getCookie("qrpos", JSON.stringify({top: qrTop, left: 16})));
+	let qrPos = getCookie("qrpos", {
+		type: "json",
+		default: JSON.stringify({top: qrTop, left: 16})
+	});
 	$qr = $("<div />").prop({
 		id: "qr-box",
 		style: `top: ${qrPos.top}px;left: ${qrPos.left}px; position:fixed;`,

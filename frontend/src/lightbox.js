@@ -2,7 +2,7 @@ export function showLightBox(title, innerHTML) {
 	$(document.body).prepend(
 		`<div class="lightbox-bg"></div><div class="lightbox"><div class="lightbox-title">${title}<a href="#" class="lightbox-x">X</a><hr /></div>${innerHTML}</div>`
 	);
-	$("a.lightbox-x, .lightbox-bg").click(() => {
+	$("a.lightbox-x, .lightbox-bg").on("click", () => {
 		$(".lightbox, .lightbox-bg").remove();
 	});
 }
@@ -17,7 +17,7 @@ export function showMessage(msg) {
 		"left": $(document).width()/2 - centeroffset/2-16
 	});
 
-	$(".lightbox-msg-ok, .lightbox-bg").click(() => {
+	$(".lightbox-msg-ok, .lightbox-bg").on("click", () => {
 		$(".lightbox-msg, .lightbox-bg").remove();
 	});
 }

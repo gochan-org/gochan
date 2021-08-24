@@ -87,7 +87,7 @@ export function preparePostPreviews(isInline) {
 	if(expandablePostrefs) {
 		let clkStr = "a.postref";
 		if(isInline) clkStr = "div.inlinepostprev " + clkStr;
-		$(clkStr).click(() => {
+		$(clkStr).on("click", () => {
 			let $this = $(this);
 			if($this.next().attr("class") != "inlinepostprev") {
 				$(".postprev").remove();
@@ -108,7 +108,7 @@ export function preparePostPreviews(isInline) {
 
 export function prepareThumbnails() {
 	// set thumbnails to expand when clicked
-	$("a.upload-container").click(function(e) {
+	$("a.upload-container").on("click", function(e) {
 		e.preventDefault();
 		let a = $(this);
 		let thumb = a.find("img.upload");
@@ -132,7 +132,7 @@ export function prepareThumbnails() {
 
 			fileInfoElement.append($("<a />")
 			.prop("href", "javascript:;")
-			.click(e =>{
+			.on("click", e =>{
 				video.remove();
 				thumb.show();
 				this.remove();

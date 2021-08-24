@@ -12,7 +12,7 @@ export class TopBarButton {
 		$topbar.append(`<a href="javascript:;" class="dropdown-button" id="${title.toLowerCase()}">${title}${downArrow}</a>`);
 		let buttonOpen = false;
 		let self = this;
-		$topbar.find("a#" + title.toLowerCase()).click(event => {
+		$topbar.find("a#" + title.toLowerCase()).on("click", event => {
 			if(!buttonOpen) {
 				self.onOpen();
 				$(document).bind("click", () => {
@@ -30,7 +30,7 @@ export class TopBarButton {
 
 export function initTopBar() {
 	$topbar = $("div#topbar");
-	if(!getCookie("pintopbar", true)) {
+	if(!getCookie("pintopbar", {default: true, type: "bool"})) {
 		$topbar.css({
 			"position": "absolute",
 			"top": "0px",

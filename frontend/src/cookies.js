@@ -1,5 +1,5 @@
-export function getCookie(name, defaultVal) {
-	let val = defaultVal;
+export function getCookie(name, options = {type: "string"}) {
+	let val = options.default;
 	let cookieArr = document.cookie.split("; ");
 
 	for(const cookie of cookieArr) {
@@ -8,18 +8,34 @@ export function getCookie(name, defaultVal) {
 		try {
 			val = decodeURIComponent(pair[1]);
 		} catch(err) {
-			return defaultVal;
+			return options.default;
 		}
+	}
+	switch(options.type) {
+		case "int":
+			return parseInt(val);
+		case "float":
+			return parseFloat(val);
+		case "bool":
+		case "boolean":
+			return val == "true" || val == "1";
+		case "json":
+			// console.log(val);
+			try {
+				return JSON.parse(val);
+			} catch(e) {
+				return {};
+			}
 	}
 	return val;
 }
 
 // gets cookies ready to be used elsewhere
 export function initCookies() {
-	$("input[name=postname]").val(getCookie("name", ""));
-	$("input[name=postemail]").val(getCookie("email", ""));
-	$("input[name=postpassword]").val(getCookie("password", ""));
-	$("input[name=delete-password]").val(getCookie("password", ""));
+	$("input[name=postname]").val(getCookie("name"));
+	$("input[name=postemail]").val(getCookie("email"));
+	$("input[name=postpassword]").val(getCookie("password"));
+	$("input[name=delete-password]").val(getCookie("password"));
 }
 
 export function setCookie(name, value, expires) {

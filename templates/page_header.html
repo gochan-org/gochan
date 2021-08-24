@@ -11,7 +11,7 @@
 		{{- else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
 	{{- else}}<title>{{.site_config.SiteName}}</title>{{end}}
 	<link rel="stylesheet" href="{{$.webroot}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board_config.DefaultStyle}}" />
+	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board.DefaultStyle}}" />
 	<link rel="shortcut icon" href="{{.webroot}}favicon.png">
 	<script type="text/javascript" src="{{$.webroot}}js/consts.js"></script>
 	<script type="text/javascript" src="{{$.webroot}}js/gochan.js"></script>

@@ -27273,8 +27273,11 @@ function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o =
 
 function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
 
-function getCookie(name, defaultVal) {
-  var val = defaultVal;
+function getCookie(name) {
+  var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
+    type: "string"
+  };
+  var val = options["default"];
   var cookieArr = document.cookie.split("; ");
 
   var _iterator = _createForOfIteratorHelper(cookieArr),
@@ -27289,7 +27292,7 @@ function getCookie(name, defaultVal) {
       try {
         val = decodeURIComponent(pair[1]);
       } catch (err) {
-        return defaultVal;
+        return options["default"];
       }
     }
   } catch (err) {
@@ -27298,14 +27301,34 @@ function getCookie(name, defaultVal) {
     _iterator.f();
   }
 
+  switch (options.type) {
+    case "int":
+      return parseInt(val);
+
+    case "float":
+      return parseFloat(val);
+
+    case "bool":
+    case "boolean":
+      return val == "true" || val == "1";
+
+    case "json":
+      try {
+        return JSON.parse(val);
+      } catch (e) {
+        return {};
+      }
+
+  }
+
   return val;
 }
 
 function initCookies() {
-  $("input[name=postname]").val(getCookie("name", ""));
-  $("input[name=postemail]").val(getCookie("email", ""));
-  $("input[name=postpassword]").val(getCookie("password", ""));
-  $("input[name=delete-password]").val(getCookie("password", ""));
+  $("input[name=postname]").val(getCookie("name"));
+  $("input[name=postemail]").val(getCookie("email"));
+  $("input[name=postpassword]").val(getCookie("password"));
+  $("input[name=delete-password]").val(getCookie("password"));
 }
 
 function setCookie(name, value, expires) {
@@ -27345,6 +27368,8 @@ var _topbar = require("./topbar");
 var _qr = require("./qr");
 
 var _vars = require("./vars");
+
+var _watcher = require("./watcher");
 
 var currentStaff = null;
 var $watchedThreadsBtn = null;
@@ -27441,13 +27466,16 @@ function handleKeydown(e) {
 
 $(function () {
   var pageThread = getPageThread();
-  var style = (0, _cookies.getCookie)("style", defaultStyle);
+  var style = (0, _cookies.getCookie)("style", {
+    "default": defaultStyle
+  });
   var themeElem = document.getElementById("theme");
   if (themeElem) themeElem.setAttribute("href", "".concat(webroot, "css/").concat(style));
   currentStaff = (0, _manage.getStaff)();
   (0, _cookies.initCookies)();
   (0, _topbar.initTopBar)();
   (0, _settings.initSettings)();
+  (0, _watcher.initWatcher)();
   $watchedThreadsBtn = new _topbar.TopBarButton("WT", function () {});
 
   if (currentStaff.rank > 0) {
@@ -27458,11 +27486,13 @@ $(function () {
 
   if (pageThread.board != "") {
     (0, _postutil.prepareThumbnails)();
-    if ((0, _cookies.getCookie)("useqr") == "true") (0, _qr.initQR)(pageThread);
+    if ((0, _cookies.getCookie)("useqr", {
+      type: "bool"
+    })) (0, _qr.initQR)(pageThread);
   }
 
   (0, _postutil.preparePostPreviews)(false);
-  $(".plus").click(function () {
+  $("plus").on("click", function () {
     var block = $(this).parent().next();
 
     if (block.css("display") == "none") {
@@ -27474,7 +27504,7 @@ $(function () {
     }
   });
   var threadMenuOpen = false;
-  $(".thread-ddown a, body").click(function (e) {
+  $(".thread-ddown a, body").on("click", function (e) {
     e.stopPropagation();
     var postID = $(this).parent().parent().parent().attr("id");
     var isOP = $(this).parent().parent().parent().attr("class") == "thread";
@@ -27495,7 +27525,7 @@ $(function () {
   $(document).keydown(handleKeydown);
 });
 
-},{"./cookies":3,"./manage":6,"./postutil":7,"./qr":8,"./settings":9,"./topbar":10,"./vars":11}],5:[function(require,module,exports){
+},{"./cookies":3,"./manage":6,"./postutil":7,"./qr":8,"./settings":9,"./topbar":10,"./vars":11,"./watcher":12}],5:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -27506,7 +27536,7 @@ exports.showMessage = showMessage;
 
 function showLightBox(title, innerHTML) {
   $(document.body).prepend("<div class=\"lightbox-bg\"></div><div class=\"lightbox\"><div class=\"lightbox-title\">".concat(title, "<a href=\"#\" class=\"lightbox-x\">X</a><hr /></div>").concat(innerHTML, "</div>"));
-  $("a.lightbox-x, .lightbox-bg").click(function () {
+  $("a.lightbox-x, .lightbox-bg").on("click", function () {
     $(".lightbox, .lightbox-bg").remove();
   });
 }
@@ -27518,7 +27548,7 @@ function showMessage(msg) {
     "position": "fixed",
     "left": $(document).width() / 2 - centeroffset / 2 - 16
   });
-  $(".lightbox-msg-ok, .lightbox-bg").click(function () {
+  $(".lightbox-msg-ok, .lightbox-bg").on("click", function () {
     $(".lightbox-msg, .lightbox-bg").remove();
   });
 }
@@ -27808,7 +27838,7 @@ function preparePostPreviews(isInline) {
   if (expandablePostrefs) {
     var clkStr = "a.postref";
     if (isInline) clkStr = "div.inlinepostprev " + clkStr;
-    $(clkStr).click(function () {
+    $(clkStr).on("click", function () {
       var $this = $(_this);
 
       if ($this.next().attr("class") != "inlinepostprev") {
@@ -27830,7 +27860,7 @@ function preparePostPreviews(isInline) {
 }
 
 function prepareThumbnails() {
-  $("a.upload-container").click(function (e) {
+  $("a.upload-container").on("click", function (e) {
     var _this2 = this;
 
     e.preventDefault();
@@ -27850,7 +27880,7 @@ function prepareThumbnails() {
         "class": "upload",
         loop: true
       }).insertAfter(fileInfoElement);
-      fileInfoElement.append($("<a />").prop("href", "javascript:;").click(function (e) {
+      fileInfoElement.append($("<a />").prop("href", "javascript:;").on("click", function (e) {
         video.remove();
         thumb.show();
 
@@ -27919,8 +27949,8 @@ var qrButtonHTML = "<input type=\"file\" id=\"imagefile\" name=\"imagefile\" sty
 var qrTitleBar = "<div id=\"qr-title\">" + "<span id=\"qr-message\"></span>" + "<span id=\"qr-buttons\"><a href=\"javascript:toBottom();\">".concat(_vars.downArrow, "</a>") + "<a href=\"javascript:toTop();\">".concat(_vars.upArrow, "</a><a href=\"javascript:closeQR();\">X</a></span></div>");
 
 function initQR(pageThread) {
-  var nameCookie = (0, _cookies.getCookie)("name", "");
-  var emailCookie = (0, _cookies.getCookie)("email", "");
+  var nameCookie = (0, _cookies.getCookie)("name");
+  var emailCookie = (0, _cookies.getCookie)("email");
   var qrFormHTML = "<input type=\"hidden\" name=\"threadid\" value=\"".concat(pageThread.op, "\" />") + "<input type=\"hidden\" name=\"boardid\" value=\"1\" />" + "<div id=\"qrpostname\"><input id=\"qrpostname\" type=\"text\" name=\"postname\" value=\"".concat(nameCookie, "\" placeholder=\"Name\"/></div>") + "<div id=\"qrpostemail\"><input id=\"qrpostemail\" type=\"text\" name=\"postemail\" value=\"".concat(emailCookie, "\" placeholder=\"Email\"/></div>") + "<div id=\"qrpostsubject\"><input id=\"qrpostsubject\" type=\"text\" name=\"postsubject\" placeholder=\"Subject\"/></div>" + "<div id=\"qrpostmsg\"><textarea id=\"qrpostmsg\" name=\"postmsg\" id=\"postmsg\" placeholder=\"Message\"></textarea></div>";
   var $qrbuttons = $("<div />").prop("id", "qrbuttons").append(qrButtonHTML);
   var $postform = $("<form />").prop({
@@ -27931,11 +27961,17 @@ function initQR(pageThread) {
     enctype: "multipart/form-data"
   }).append(qrFormHTML, $qrbuttons);
   var qrTop = 32;
-  if (!(0, _cookies.getCookie)("pintopbar", true)) qrTop = _topbar.$topbar.outerHeight() + 16;
-  var qrPos = JSON.parse((0, _cookies.getCookie)("qrpos", JSON.stringify({
-    top: qrTop,
-    left: 16
-  })));
+  if (!(0, _cookies.getCookie)("pintopbar", {
+    "default": true,
+    type: "bool"
+  })) qrTop = _topbar.$topbar.outerHeight() + 16;
+  var qrPos = (0, _cookies.getCookie)("qrpos", {
+    type: "json",
+    "default": JSON.stringify({
+      top: qrTop,
+      left: 16
+    })
+  });
   exports.$qr = $qr = $("<div />").prop({
     id: "qr-box",
     style: "top: ".concat(qrPos.top, "px;left: ").concat(qrPos.left, "px; position:fixed;")
@@ -28027,8 +28063,13 @@ var Setting = function () {
     }
   }, {
     key: "getCookie",
-    value: function getCookie(defaultVal) {
-      var val = (0, _cookies.getCookie)(this.id, defaultVal);
+    value: function getCookie() {
+      var type = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : "string";
+      var defaultVal = arguments.length > 1 ? arguments[1] : undefined;
+      var val = (0, _cookies.getCookie)(this.id, {
+        type: type,
+        "default": defaultVal
+      });
       if (this.type == "checkbox") val = val == "true";
       return val;
     }
@@ -28135,7 +28176,7 @@ function initSettings() {
   settingsHTML += "</table></div><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
   exports.$settingsMenu = $settingsMenu = new _topbar.TopBarButton("Settings", function () {
     (0, _lightbox.showLightBox)("Settings", settingsHTML);
-    $("button#save-settings-button").click(function () {
+    $("button#save-settings-button").on("click", function () {
       var _iterator4 = _createForOfIteratorHelper(settings),
           _step4;
 
@@ -28185,7 +28226,7 @@ var TopBarButton = function TopBarButton(title) {
   $topbar.append("<a href=\"javascript:;\" class=\"dropdown-button\" id=\"".concat(title.toLowerCase(), "\">").concat(title).concat(_vars.downArrow, "</a>"));
   var buttonOpen = false;
   var self = this;
-  $topbar.find("a#" + title.toLowerCase()).click(function (event) {
+  $topbar.find("a#" + title.toLowerCase()).on("click", function (event) {
     if (!buttonOpen) {
       self.onOpen();
       $(document).bind("click", function () {
@@ -28206,7 +28247,10 @@ exports.TopBarButton = TopBarButton;
 function initTopBar() {
   exports.$topbar = $topbar = $("div#topbar");
 
-  if (!(0, _cookies.getCookie)("pintopbar", true)) {
+  if (!(0, _cookies.getCookie)("pintopbar", {
+    "default": true,
+    type: "bool"
+  })) {
     $topbar.css({
       "position": "absolute",
       "top": "0px",
@@ -28258,6 +28302,39 @@ exports.opRegex = opRegex;
 var dropdownDivCreated = false;
 exports.dropdownDivCreated = dropdownDivCreated;
 
-},{"jquery":1,"jqueryui":2}]},{},[3,4,5,6,7,8,9,10,11]);
+},{"jquery":1,"jqueryui":2}],12:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getWatchedThreads = getWatchedThreads;
+exports.initWatcher = initWatcher;
+var watching = false;
+
+function getWatchedThreads() {
+  if (!watching) {
+    clearInterval(getWatchedThreads);
+    return;
+  }
+
+  fetch("/test/res/1.json").then(function (response) {
+    if (!response.ok) throw new Error(response.statusText);
+    return response.json();
+  }).then(function (data) {
+    console.log(data);
+  })["catch"](function (err) {
+    console.log("Error getting watched threads: ".concat(err));
+    clearInterval(getWatchedThreads);
+    watching = false;
+  });
+}
+
+function initWatcher() {
+  watching = true;
+  getWatchedThreads();
+}
+
+},{}]},{},[3,4,5,6,7,8,9,10,11,12]);
 
 //# sourceMappingURL=maps/gochan.js.map

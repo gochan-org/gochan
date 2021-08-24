@@ -32,8 +32,8 @@ class Setting {
 		this.cb();
 	}
 
-	getCookie(defaultVal) {
-		let val = getCookie(this.id, defaultVal);
+	getCookie(type = "string", defaultVal) {
+		let val = getCookie(this.id, {type: type, default: defaultVal});
 
 		if(this.type == "checkbox") val = (val == "true");
 		return val;
@@ -106,7 +106,7 @@ export function initSettings() {
 
 	$settingsMenu = new TopBarButton("Settings", () => {
 		showLightBox("Settings", settingsHTML);
-		$("button#save-settings-button").click(() => {
+		$("button#save-settings-button").on("click", () => {
 			for(const setting of settings) {
 				setting.save(setting.getVal());
 			}

@@ -151,4 +151,6 @@ Server set up. To access the virtual machine, run 'vagrant ssh'. Then, to start 
 run 'sudo systemctl start gochan.service'. The virtual machine is set to run gochan on startup, so you
 will not need to do this every time you start it. You can access it from a browser at http://172.27.0.3/
 The first time gochan is run, it will create a simple /test/ board.
+
+If you want to do frontend development, you'll need to run 'apt install npm'
 EOF
