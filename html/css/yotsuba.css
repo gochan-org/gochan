@@ -39,7 +39,13 @@ hr {
   height: 0;
 }
 
-div.reply, div.thread-ddown-menu, table#pages, div.postprev {
+select.post-actions {
+  background-color: #F0E0D6;
+  border-bottom: 1px solid #D9BFB7;
+  border-right: 1px solid #D9BFB7;
+}
+
+div.reply, table#pages, div.postprev {
   background-color: #F0E0D6;
   border-left: 0px;
   border-top: 0px;

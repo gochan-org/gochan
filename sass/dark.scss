@@ -39,10 +39,14 @@ th.postblock {
 	text-align: left;
 }
 
+select.post-actions {
+	color: $color;
+}
+
 div.reply,
-div.thread-ddown-menu,
 div.postprev,
-div.inlinepostprev {
+div.inlinepostprev,
+select.post-actions {
 	background-color: $inputbg;
 	border: 1px solid $replyborder;
 	border-radius: 5px;

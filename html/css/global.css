@@ -79,27 +79,6 @@ table#pages td {
   position: absolute;
 }
 
-.thread-ddown-menu {
-  display: inline-block;
-  float: left;
-  margin-left: -4px;
-  margin-top: 8px;
-  padding: 4px;
-  position: absolute;
-}
-
-.thread-ddown-menu ul {
-  list-style: none;
-  padding-left: 0px;
-  margin-top: 0px;
-  margin-bottom: 0px;
-}
-
-.thread-ddown-menu li {
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
 .reply {
   margin-bottom: 4px;
   padding: 4px 8px 4px 8px;
@@ -569,4 +548,9 @@ div.section-block div.section-body {
   position: static;
   text-align: center;
   width: 100%;
+}
+
+select.post-actions {
+  margin-right: 4px;
+  margin-left: 4px;
 }

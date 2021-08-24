@@ -1,6 +1,6 @@
 import { initCookies, getCookie } from "./cookies";
 import { addStaffButtons, getStaff, getStaffMenuHTML, openStaffLightBox } from "./manage";
-import { prepareThumbnails, preparePostPreviews } from "./postutil";
+import { prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
 import { initQR } from "./qr";
@@ -90,6 +90,29 @@ function handleKeydown(e) {
 	ta.setSelectionRange(r, r);
 }
 
+function handleActions(action, postID) {
+	// console.log(`Action for ${postID}: ${action}`);
+	switch(action) {
+		case "Watch thread":
+			console.log(`Watching thread ${postID}`);
+			break;
+		case "Show/hide thread":
+		case "Show/hide post":
+			console.log(`Showing/hiding ${postID}`);
+			hidePost(postID);
+			break;
+		case "Report post":
+			reportPost(postID);
+			console.log(`Reporting ${postID}`);
+			break;
+		case "Delete thread":
+		case "Delete post":
+			console.log(`Deleting ${postID}`);
+			deletePost(postID);
+			break;
+	}
+}
+
 $(() => {
 	let pageThread = getPageThread();
 	let style = getCookie("style", {default: defaultStyle});
@@ -133,28 +156,31 @@ $(() => {
 			$(this).html("+");
 		}
 	});
-	let threadMenuOpen = false;
-	$(".thread-ddown a, body").on("click", function(e) {
-		e.stopPropagation();
-		let postID = $(this).parent().parent().parent().attr("id");
-		let isOP = $(this).parent().parent().parent().attr("class") == "thread";
 
-		if(postID == undefined) return;
-		if($(this).parent().find("div.thread-ddown-menu").length == 0) {
-			$("div.thread-ddown-menu").remove();
+	let $postInfo = $("label.post-info");
+	$postInfo.each((i, elem) => {
+		let $elem = $(elem);
+		let isOP = $elem.parents("div.reply-container").length == 0;
+		let postID = $elem.parent().attr("id");
+		let threadPost = isOP?"thread":"post";
 
-			let menuHTML = `<div class="thread-ddown-menu" id="${postID}">`;
-			if(!isOP) menuHTML += `<ul><li><a href="javascript:hidePost(${postID});" class="hide-post">Show/Hide post</a></li>`;
-			menuHTML +=
-				`<li><a href="javascript:deletePost(${postID});" class="delete-post">Delete post</a></li>` +
-				`<li><a href="javascript:reportPost(${postID});" class="report-post">Report Post</a></li></ul></div>`
-
-			$(this).parent().append(menuHTML);
-			threadMenuOpen = true;
-		} else {
-			$("div.thread-ddown-menu").remove();
-			threadMenuOpen = false;
+		let $ddownMenu = $("<select />", {
+			class: "post-actions",
+			id: postID
+		}).append(
+			"<option>Actions</option>",
+		);
+		if(isOP) {
+			$ddownMenu.append(
+				"<option>Watch thread</option>"
+			);
 		}
+		$ddownMenu.append(
+			`<option>Show/hide ${threadPost}</option>`,
+			`<option>Report post</option>`,
+			`<option>Delete ${threadPost}</option>`
+		).insertAfter($elem)
+		.on("change", () => handleActions($ddownMenu.val(), postID));
 	});
-	$(document).keydown(handleKeydown);
+	$(document).on("keydown", handleKeydown);
 });

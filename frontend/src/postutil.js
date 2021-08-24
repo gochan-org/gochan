@@ -12,7 +12,7 @@ function deleteCheckedPosts() {
 }
 window.deleteCheckedPosts = deleteCheckedPosts;
 
-function deletePost(id, board) {
+export function deletePost(id, board) {
 	let password = prompt("Password");
 	// if(password == "") return;
 	// let xhrFields = {
@@ -170,7 +170,7 @@ export function quote(e) {
 	window.scroll(0,document.getElementById(msgboxID).offsetTop - 48);
 }
 
-function reportPost(id, board) {
+export function reportPost(id, board) {
 	let reason = prompt("Reason");
 	if(reason == "") return;
 	// let xhrFields = {

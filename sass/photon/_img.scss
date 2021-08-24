@@ -2,7 +2,6 @@
 @import 'colors';
 
 div.reply,
-div.thread-ddown-menu,
 div.postprev,
 div.inlinepostprev,
 th.postblock {
@@ -10,7 +9,6 @@ th.postblock {
 	border: 1px solid $replyborder;
 	@include border-radius(5px);
 }
-
 
 span.subject {
 	color: $subjectcol;

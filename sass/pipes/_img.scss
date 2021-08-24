@@ -46,11 +46,6 @@ img.thumbnail {
 	color: #F90;
 }
 
-.thread-ddown a {
-	font-size: 75%;
-	vertical-align: middle;
-}
-
 .tripcode {
 	color: #FC0;
 }
@@ -58,18 +53,8 @@ img.thumbnail {
 input:not([type=submit]):not([type=button]),
 textarea,
 select#changepage,
-.thread-ddown-menu {
+select.post-actions {
 	background-color: #25272D;
 	border: 1px solid #8C94AB;
 	color: #FFF;
-}
-
-.thread-ddown-menu {
-	background-color: #25272D;
-	border: 1px solid #8C94AB;
-	color: #FFF;
-}
-
-.thread-ddown-menu li:hover {
-	background-color: #404040;
 }
