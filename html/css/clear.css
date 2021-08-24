@@ -1,1 +1,76 @@
-body{background-color:#ccc;font-family:monospace,sans-serif;font-size:80%}div#topbar{background:#acacac;border-bottom:1px solid #b0790a}a{color:#a00;text-decoration:none}a:hover{text-shadow:0px 0px 5px #117743}header{color:#663e11}hr{border:none;border-top:1px solid #117743;height:0}input,select,textarea{border:1px double #07371f;border-radius:5px;background:#ddd;color:#000}input:active,select:active,textarea:active{box-shadow:0px 0px 5px #117743}input[type=button],input[type=submit],input[type=file]::file-selector-button,input[type=file]::-webkit-file-upload-button{background:#a7a7a7;border:3px double #07371f;border-radius:5px;color:#000}div.reply,div.section-block,th.postblock,div.thread-ddown-menu,div.postprev,div.inlinepostprev{background:#ddd;border:1px solid #117743;border-radius:5px;text-align:left}span.subject{font-weight:bold;color:#34ed3a}table#pages,table#pages *{border:none !important}div.section-title-block{background:#a7a7a7;border-bottom:1px solid #117743}
+body {
+  background-color: #CCC;
+  font-family: monospace, sans-serif;
+  font-size: 80%;
+}
+
+div#topbar {
+  background: #ACACAC;
+  border-bottom: 1px solid #B0790A;
+}
+
+a {
+  color: #A00;
+  text-decoration: none;
+}
+a:hover {
+  text-shadow: 0px 0px 5px #117743;
+}
+
+header {
+  color: #663E11;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #117743;
+  height: 0;
+}
+
+input, select, textarea {
+  border: 1px double #07371F;
+  border-radius: 5px;
+  background: #DDD;
+  color: #000;
+}
+
+input:active, select:active, textarea:active {
+  -webkit-filter: drop-shadow(0px 0px 5px #117743);
+  filter: drop-shadow(0px 0px 5px #117743);
+}
+
+input[type=button],
+input[type=submit],
+input[type=file]::file-selector-button,
+input[type=file]::-webkit-file-upload-button {
+  background: #A7A7A7;
+  border: 3px double #07371F;
+  border-radius: 5px;
+  color: #000;
+}
+
+div.reply,
+div.section-block,
+th.postblock,
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
+  background: #DDD;
+  border: 1px solid #117743;
+  border-radius: 5px;
+  text-align: left;
+}
+
+span.subject {
+  font-weight: bold;
+  color: #34ED3A;
+}
+
+table#pages, table#pages * {
+  border: none !important;
+}
+
+div.section-title-block {
+  background: #A7A7A7;
+  border-bottom: 1px solid #117743;
+}

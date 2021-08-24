@@ -1,1 +1,128 @@
-h1#board-title{font-family:serif !important;font-size:24pt;color:#af0a0f}.postblock{background:#98e}div.file-info{font-size:12px;font-family:sans-serif}span.postername{font-size:12px;font-family:serif;color:#117743;font-weight:800}div.reply,div.thread-ddown-menu,div.postprev,div.inlinepostprev{background:#d6daf0}div.thread-ddown-menu,div.postprev,div.inlinepostprev{border:1px solid #9295a4}#site-title{font-family:sans-serif;padding-top:88px}#site-slogan{font-size:9pt;font-style:italic}.tab{background-color:#dfdffe;border:1px solid #9295a4}#current-tab{margin-top:16px;border-bottom:0px}#current-tab,div.section-title-block{background-color:#bfc6e7}.loginbox input{height:20%}.manage-header{background-color:#eef2ff;border-radius:8px}body{font:sans-serif 12pt;background:#eef2ff;margin:8px}a,a:visited{color:#34345c;text-decoration:none}h1{margin:0;text-align:center}h2{margin:0px 0px 0px 0px;font-size:140%}h2 a{text-decoration:none;color:#550}h3{margin:0px;text-align:center;font-size:medium}h1,h2{font-family:Verdana,Tahoma,sans-serif}h1,h2,h3{font-weight:bold;color:#333}div#topbar{-moz-box-shadow:3px 3px 5px 6px #555;-ms-box-shadow:3px 3px 5px 6px #555;-webkit-box-shadow:3px 3px 5px 6px #555;box-shadow:3px 3px 5px 6px #555;height:30px}div#topbar,.topbar-item,.topbar-item:visited,.dropdown-button,.dropdown-menu,.dropdown-menu a{background-color:#000a89;color:#eef2ff !important}div#footer{font-size:8pt}
+h1#board-title {
+  font-family: serif !important;
+  font-size: 24pt;
+  color: #AF0A0F;
+}
+
+.postblock {
+  background: #9988EE;
+}
+
+div.file-info {
+  font-size: 12px;
+  font-family: sans-serif;
+}
+
+span.postername {
+  font-size: 12px;
+  font-family: serif;
+  color: #117743;
+  font-weight: 800;
+}
+
+div.reply,
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
+  background: #D6DAF0;
+}
+
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
+  border: 1px solid #9295a4;
+}
+
+#site-title {
+  font-family: sans-serif;
+  padding-top: 88px;
+}
+
+#site-slogan {
+  font-size: 9pt;
+  font-style: italic;
+}
+
+.tab {
+  background-color: #dfdffe;
+  border: 1px solid #9295a4;
+}
+
+#current-tab {
+  margin-top: 16px;
+  border-bottom: 0px;
+}
+
+#current-tab, div.section-title-block {
+  background-color: #bfc6e7;
+}
+
+.loginbox input {
+  height: 20%;
+}
+
+.manage-header {
+  background-color: #EEF2FF;
+  border-radius: 8px;
+}
+
+body {
+  font: sans-serif 12pt;
+  background: #EEF2FF;
+  margin: 8px;
+}
+
+a, a:visited {
+  color: #34345C;
+  text-decoration: none;
+}
+
+h1 {
+  margin: 0;
+  text-align: center;
+}
+
+h2 {
+  margin: 0px 0px 0px 0px;
+  font-size: 140%;
+}
+
+h2 a {
+  text-decoration: none;
+  color: #550;
+}
+
+h3 {
+  margin: 0px;
+  text-align: center;
+  font-size: medium;
+}
+
+h1, h2 {
+  font-family: Verdana, Tahoma, sans-serif;
+}
+
+h1, h2, h3 {
+  font-weight: bold;
+  color: #333;
+}
+
+div#topbar {
+  -webkit-filter: drop-shadow(3px 5px 6px #555555);
+  filter: drop-shadow(3px 5px 6px #555555);
+  height: 30px;
+}
+
+div#topbar,
+.topbar-item,
+.topbar-item:visited,
+.dropdown-button,
+.dropdown-menu,
+.dropdown-menu a {
+  background-color: #000A89;
+  color: #EEF2FF !important;
+}
+
+div#footer {
+  font-size: 8pt;
+}

@@ -1,3 +1,5 @@
+@import '../util';
+
 .lightbox {
 	background-color:#CDCDCD;
 	border:1px solid #000;
@@ -14,7 +16,8 @@
 }
 
 .lightbox * {
-	box-shadow: 0px 0px 0px 0px #000000;
+	// box-shadow: 0px 0px 0px 0px #000000;
+	@include shadow-filter(0px 0px 0px #000);
 	color:#000000;
 }
 
@@ -47,13 +50,13 @@
 }
 
 .lightbox-x {
-	color: #000000!important;
+	color: #000!important;
 	float:right;
 	z-index:90002;
 }
 
 .lightbox-x:hover {
-	color:#555555!important;
+	color:#555!important;
 }
 
 .lightbox a {
@@ -65,9 +68,9 @@
 .lightbox input[type=password],
 .lightbox input[type=file],
 .lightbox textarea {
-	background-color:#FFFFFF;
-	border:1px solid #000000;
-	color:#000000;
+	background-color:#FFF;
+	border:1px solid #000;
+	color:#000;
 }
 
 .lightbox textarea#sql-statement {
@@ -75,8 +78,8 @@
 	height:300px;
 	margin-left: 0px;
 	clear: both;
-	background-color: #FFFFFF;
-	color: #000000;
+	background-color: #FFF;
+	color: #000;
 }
 
 .lightbox div.section-body {
@@ -84,8 +87,9 @@
 }
 
 .lightbox div.section-title-block {
-	border: 1px solid #000000;
+	border: 1px solid #000;
 	border-radius: 0px;
-	background-color: #777777;
-	box-shadow: 0px 0px 0px 0px #000000!important;
+	background-color: #777;
+	// box-shadow: 0px 0px 0px 0px #000000!important;
+	@include shadow-filter(0px 0px 0px #000);
 }

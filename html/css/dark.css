@@ -1,1 +1,66 @@
-body{background-color:#1e1e1e;font-family:sans-serif;color:#999;font-size:80%}a{text-decoration:none;color:#ccc}div#topbar{background-color:#666;border-bottom:1px solid #999}div#topbar a{text-shadow:#000 1px 1px 1px,#000 -1px -1px 1px,#000 -1px 1px 1px,#000 1px -1px 1px}header{color:#32dd72}input:not(div#qrbuttons input),textarea{background-color:#333;border:1px solid #666;color:#ccc}th.postblock{background-color:#282a2e;border:1px solid #888;border-radius:5px;text-align:left}div.reply,div.thread-ddown-menu,div.postprev,div.inlinepostprev{background-color:#333;border:1px solid #555;border-radius:5px}span.postername{color:#32dd72;font-weight:bold}span.postername a{text-decoration:underline}span.tripcode{color:#32dd72}span.subject{color:#465}table#pages,table#pages *{border:none !important}
+body {
+  background-color: #1E1E1E;
+  font-family: sans-serif;
+  color: #999;
+  font-size: 80%;
+}
+
+a {
+  text-decoration: none;
+  color: #CCC;
+}
+
+div#topbar {
+  background-color: #666;
+  border-bottom: 1px solid #999;
+}
+div#topbar a {
+  text-shadow: black 1px 1px 1px, black -1px -1px 1px, black -1px 1px 1px, black 1px -1px 1px;
+}
+
+header {
+  color: #32DD72;
+}
+
+input:not(div#qrbuttons input),
+textarea {
+  background-color: #333;
+  border: 1px solid #666;
+  color: #CCC;
+}
+
+th.postblock {
+  background-color: #282A2E;
+  border: 1px solid #888;
+  border-radius: 5px;
+  text-align: left;
+}
+
+div.reply,
+div.thread-ddown-menu,
+div.postprev,
+div.inlinepostprev {
+  background-color: #333;
+  border: 1px solid #555;
+  border-radius: 5px;
+}
+
+span.postername {
+  color: #32DD72;
+  font-weight: bold;
+}
+span.postername a {
+  text-decoration: underline;
+}
+
+span.tripcode {
+  color: #32DD72;
+}
+
+span.subject {
+  color: #446655;
+}
+
+table#pages, table#pages * {
+  border: none !important;
+}

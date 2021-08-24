@@ -47,7 +47,8 @@ h1, h2, h3 {
 }
 
 div#topbar {
-	@include box-shadow(3px 3px 5px 6px $shadowcol);
+	// @include box-shadow(3px 3px 5px 6px $shadowcol);
+	@include shadow-filter(3px 5px 6px $shadowcol);
 	height: 30px;
 }
 
