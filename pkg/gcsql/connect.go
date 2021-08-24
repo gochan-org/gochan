@@ -25,7 +25,7 @@ func ConnectToDB(host, driver, dbName, username, password, prefix string) {
 		gclog.Print(FatalSQLFlags, "Failed to connect to the database: ", err.Error())
 		return
 	}
-	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Connected to database")
+	gclog.Print(gclog.LStdLog, "Connected to database")
 }
 
 func initDB(initFile string) error {

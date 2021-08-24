@@ -1,6 +1,7 @@
 package config
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"net"
@@ -137,9 +138,23 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	if gcfg.LockdownMessage == "" {
 		gcfg.LockdownMessage = defaults["LockdownMessage"].(string)
 	}
-
-	if gcfg.DBtype != "mysql" && gcfg.DBtype != "postgresql" {
-		return &ErrInvalidValue{Field: "DBtype", Value: gcfg.DBtype, Details: "currently supported values: mysql, postgresql"}
+	if gcfg.DBtype == "postgresql" {
+		gcfg.DBtype = "postgres"
+	}
+	drivers := sql.Drivers()
+	found := false
+	driverlist := ""
+	for d, driver := range drivers {
+		if gcfg.DBtype == driver {
+			found = true
+		}
+		driverlist += driver
+		if d < len(drivers)-1 {
+			driverlist += ","
+		}
+	}
+	if !found {
+		return &ErrInvalidValue{Field: "DBtype", Value: gcfg.DBtype, Details: "currently supported values: " + driverlist}
 	}
 	if len(gcfg.Styles) == 0 {
 		return &ErrInvalidValue{Field: "Styles", Value: gcfg.Styles}

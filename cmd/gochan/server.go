@@ -132,9 +132,9 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey)
 	if err == serverutil.ErrBlankAkismetKey {
-		gclog.Print(gclog.LErrorLog, err.Error(), ". Akismet spam protection won't be used.")
+		gclog.Print(gclog.LStdLog, err.Error(), ". Akismet spam protection won't be used.")
 	} else if err != nil {
-		gclog.Print(gclog.LErrorLog|gclog.LAccessLog, ". Akismet spam protection will be disabled.")
+		gclog.Print(gclog.LErrorLog|gclog.LStdLog, ". Akismet spam protection will be disabled.")
 		siteConfig.AkismetAPIKey = ""
 	}
 
