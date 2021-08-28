@@ -44,6 +44,17 @@ export function getUploadPostID(upload, container) {
 	else return jqu.siblings().eq(3).text();
 }
 
+export function getBoard() {
+	let rootIndex = window.location.pathname.indexOf(webroot);
+	let board = window.location.pathname.substring(rootIndex+webroot.length);
+	if(board.length > 0 && board.indexOf("/") > -1) {
+		board = board.split("/")[0];
+	} else {
+		board = "";
+	}
+	return board;
+}
+
 export function hidePost(id) {
 	let posttext = $("div#"+id+".post .posttext");
 	if(posttext.length > 0) posttext.remove();
@@ -169,6 +180,7 @@ export function quote(e) {
 	} else document.getElementById(msgboxID).value += `>>${e}\n`;
 	window.scroll(0,document.getElementById(msgboxID).offsetTop - 48);
 }
+window.quote = quote;
 
 export function reportPost(id, board) {
 	let reason = prompt("Reason");

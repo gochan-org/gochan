@@ -1,3 +1,6 @@
+import { getCookie, setCookie } from "./cookies";
+import { getBoard } from "./postutil";
+
 let watching = false;
 
 export function getWatchedThreads() {
@@ -5,7 +8,7 @@ export function getWatchedThreads() {
 		clearInterval(getWatchedThreads);
 		return;
 	}
-
+	let threadJsonURL = `${webroot}/res/$`
 	fetch("/test/res/1.json")
 	.then(response => {
 		if(!response.ok)
@@ -22,8 +25,33 @@ export function getWatchedThreads() {
 	})
 }
 
+export function watchThread(threadID, board) {
+	watchedCookie = getCookie("watched", {type: "json", default: {}});
+
+	if(!(watchedCookie[board] instanceof Array))
+		watchedCookie[board] = [];
+	for(const id of watchedCookie[board]) {
+		if(id == threadID) return; // thread is already in the watched list
+	}
+	watchedCookie[board].push(threadID);
+	setCookie("watched", JSON.stringify(watchedCookie));
+}
+
 export function initWatcher() {
-	watching = true;
-	getWatchedThreads();
-	// setInterval(getWatchedThreads, 1000);
+	let watched = {}
+	let localWatched = localStorage.getItem("watched");
+	if(localWatched)
+		watched = JSON.parse(localWatched);
+	else
+		localStorage.setItem("watched", "{}");
+
+	// watchedCookie = getCookie("watched", {type: "json", default: {}});
+	let board = getBoard();
+	watching = watched[board] instanceof Array;
+
+	if(watching) {
+		getWatchedThreads();
+		// setInterval(getWatchedThreads, 1000);
+	}
+
 }

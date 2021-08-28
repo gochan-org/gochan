@@ -1,15 +1,16 @@
 import { initCookies, getCookie } from "./cookies";
 import { addStaffButtons, getStaff, getStaffMenuHTML, openStaffLightBox } from "./manage";
-import { prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
+import { getBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost, currentBoard } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
 import { initQR } from "./qr";
 import { opRegex } from "./vars";
-import { initWatcher } from "./watcher";
+import { initWatcher, watchThread } from "./watcher";
 
 let currentStaff = null;
 let $watchedThreadsBtn = null;
 let $staffBtn = null;
+let idRe = /^((reply)|(op))(\d)/;
 
 export function toTop() {
 	window.scrollTo(0,0);
@@ -26,17 +27,6 @@ export function changePage(sel) {
 	if(info.board == "" || info.op == -1) return;
 	if(sel.value != "")
 		window.location = webroot + info.board + "/res/" + info.op + "p" + sel.value + ".html";
-}
-
-function getBoard() {
-	let rootIndex = window.location.pathname.indexOf(webroot);
-	let board = window.location.pathname.substring(rootIndex+webroot.length);
-	if(board.length > 0 && board.indexOf("/") > -1) {
-		board = board.split("/")[0];
-	} else {
-		board = "";
-	}
-	return board;
 }
 
 export function getPageThread() {
@@ -94,7 +84,12 @@ function handleActions(action, postID) {
 	// console.log(`Action for ${postID}: ${action}`);
 	switch(action) {
 		case "Watch thread":
-			console.log(`Watching thread ${postID}`);
+			let idArr = idRe.exec(postID);
+			if(!idArr) break;
+			let threadID = idArr[4];
+			let board = getBoard();
+			console.log(`Watching thread ${threadID} on board /${board}/`);
+			watchThread(threadID, board);
 			break;
 		case "Show/hide thread":
 		case "Show/hide post":
