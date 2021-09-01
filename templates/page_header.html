@@ -18,6 +18,6 @@
 </head>
 <body>
 <div id="topbar">
-	<a href="{{$.webroot}}">home</a>
+	<a href="{{$.webroot}}" class="topbar-item">home</a>
 	{{range $i, $board := .boards}}<a href="{{$.webroot}}{{$board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>{{end}}
 </div>
