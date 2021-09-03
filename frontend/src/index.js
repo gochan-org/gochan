@@ -3,7 +3,7 @@ import "regenerator-runtime/runtime";
 import { initCookies, getCookie } from "./cookies";
 import { addStaffButtons, getStaff, getStaffMenuHTML, openStaffLightBox } from "./manage";
 import { notify } from './notifications';
-import { getBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost, currentBoard } from "./postutil";
+import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost, currentBoard } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
 import { initQR } from "./qr";
@@ -35,7 +35,7 @@ export function changePage(sel) {
 export function getPageThread() {
 	let arr = opRegex.exec(window.location.pathname);
 	let info = {
-		board: getBoard(),
+		board: currentBoard(),
 		boardID: -1,
 		op: -1,
 		page: 0
@@ -90,7 +90,7 @@ function handleActions(action, postID) {
 			let idArr = idRe.exec(postID);
 			if(!idArr) break;
 			let threadID = idArr[4];
-			let board = getBoard();
+			let board = currentBoard();
 			console.log(`Watching thread ${threadID} on board /${board}/`);
 			watchThread(threadID, board);
 			break;

@@ -1,5 +1,5 @@
 import { getCookie, setCookie } from "./cookies";
-import { getBoard } from "./postutil";
+import { currentBoard } from "./postutil";
 
 let watching = false;
 
@@ -52,7 +52,7 @@ export function initWatcher() {
 	}
 
 	// watchedCookie = getCookie("watched", {type: "json", default: {}});
-	let board = getBoard();
+	let board = currentBoard();
 	watching = watched[board] instanceof Array;
 
 	if(watching) {

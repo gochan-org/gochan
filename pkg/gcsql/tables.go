@@ -305,7 +305,7 @@ type LoginSession struct {
 type Staff struct {
 	ID               int
 	Username         string
-	PasswordChecksum string
+	PasswordChecksum string `json:"-"`
 	Rank             int
 	AddedOn          time.Time
 	LastActive       time.Time

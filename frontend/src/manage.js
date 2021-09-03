@@ -1,3 +1,4 @@
+import $ from 'jquery';
 import { showLightBox } from "./lightbox"
 
 export class Staff {
@@ -22,6 +23,7 @@ export class Staff {
 				cache: false,
 				async:true,
 				success: function(result) {
+					alert(result);
 					let rankStr = "";
 					switch(rankSel) {
 						case "3":
@@ -34,10 +36,16 @@ export class Staff {
 							rankStr = "janitor";
 							break;
 					}
-					$("table#stafftable tr:last").after(`<tr><td>${usernameTxt}</td><td>${rankStr}</td><td>all</td><td>now</td><td></td></tr>`);
+					let userTd = $("<td/>");
+					userTd.text(usernameTxt);
+					let rankTd = $("<td/>");
+					rankTd.text(rankStr);
+					$("table#stafftable tr:last").after(
+						userTd, rankTd, "<td>all</td>", "<td>now</td>","<td></td>"
+					);
 				},
-				error: function() {
-					alert("Something went wrong...")
+				error: (xhr, status, err) => {
+					console.log(`Error in Staff.makeNew: ${err}`);
 				}
 			});
 		}
@@ -46,24 +54,24 @@ export class Staff {
 
 	static getStaff() {
 		let s = null;
+		let staffInfo = {Username: "nobody", Rank: "0", Board: ""}
 		$.ajax({
 			method: 'GET',
 			url:`${webroot}manage`,
 			data: {
-				action: 'getstaffjquery',
+				action: 'staffinfo',
 			},
 			dataType:"text",
 			cache: true,
 			async:false,
-			success: function(result) {
-				let data = JSON.parse(result);
-				s = new Staff(data.Username,data.Rank,"");
+			success: result => {
+				staffInfo = JSON.parse(result);
 			},
-			error: function() {
-				s = new Staff("nobody","0","");
+			error: (xhr, status, err) => {
+				console.log(`unable to load ${webroot}/manage?action=staffinfo: ${err}`);
 			}
 		});
-		return s;
+		return new Staff(staffInfo.Username, staffInfo.Rank, staffInfo.Board);
 	}
 
 	constructor(name, rank, boards) {
@@ -106,7 +114,8 @@ export function banSelectedPost() {
 }
 
 export function getStaffMenuHTML() {
-	let s = "<ul class=\"staffmenu\">";
+	let $s = $("<ul/>").prop({class: "staffmenu"});
+	// let s = "<ul class=\"staffmenu\">";
 	$.ajax({
 		method: 'GET',
 		url: webroot + "manage",
@@ -128,7 +137,8 @@ export function getStaffMenuHTML() {
 				}
 			}
 		},
-		error: () => {
+		error: (xhr, status, err) => {
+			console.log(`unable to load ${webroot}/manage?action=staffmenu: ${err}`);
 			s = "Something went wrong :/";
 		}
 	});

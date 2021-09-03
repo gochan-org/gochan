@@ -44,15 +44,26 @@ export function getUploadPostID(upload, container) {
 	else return jqu.siblings().eq(3).text();
 }
 
-export function getBoard() {
-	let rootIndex = window.location.pathname.indexOf(webroot);
-	let board = window.location.pathname.substring(rootIndex+webroot.length);
-	if(board.length > 0 && board.indexOf("/") > -1) {
-		board = board.split("/")[0];
-	} else {
-		board = "";
-	}
-	return board;
+export function currentBoard() {
+	// may or may not actually return the board. For example, if you're at
+	// /manage?action=whatever, it will return "manage"
+	let splits = location.pathname.split("/");
+	if(splits.length > 1)
+		return splits[1];
+	return "";
+}
+
+export function currentThread() {
+	// returns the board and thread ID if we are viewing a thread
+	let thread = {board: currentBoard(), thread: 0};
+	let splits = location.pathname.split("/");
+	if(splits.length != 4)
+		return thread;
+	let threadRE = /^\d+/;
+	let reArr = threadRE.exec(splits[3]);
+	if(reArr.length > 0)
+		thread.thread = reArr[0];
+	return thread;
 }
 
 export function hidePost(id) {
