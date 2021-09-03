@@ -1,5 +1,8 @@
+import "regenerator-runtime/runtime";
+
 import { initCookies, getCookie } from "./cookies";
 import { addStaffButtons, getStaff, getStaffMenuHTML, openStaffLightBox } from "./manage";
+import { notify } from './notifications';
 import { getBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost, currentBoard } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
@@ -175,7 +178,11 @@ $(() => {
 			`<option>Report post</option>`,
 			`<option>Delete ${threadPost}</option>`
 		).insertAfter($elem)
-		.on("change", () => handleActions($ddownMenu.val(), postID));
+		.on("click", event => {
+			if(event.target.nodeName != "OPTION")
+				return;
+			handleActions($ddownMenu.val(), postID);
+		});
 	});
 	$(document).on("keydown", handleKeydown);
 });

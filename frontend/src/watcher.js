@@ -40,10 +40,16 @@ export function watchThread(threadID, board) {
 export function initWatcher() {
 	let watched = {}
 	let localWatched = localStorage.getItem("watched");
-	if(localWatched)
-		watched = JSON.parse(localWatched);
-	else
+	if(localWatched) {
+		try {
+			watched = JSON.parse(localWatched);
+		} catch(e) {
+			console.log(`Error parsing watched thread setting: ${e}`);
+			localStorage.setItem("watched", "{}");
+		}
+	} else {
 		localStorage.setItem("watched", "{}");
+	}
 
 	// watchedCookie = getCookie("watched", {type: "json", default: {}});
 	let board = getBoard();
