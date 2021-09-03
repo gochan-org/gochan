@@ -3,7 +3,7 @@ import "regenerator-runtime/runtime";
 import { initCookies, getCookie } from "./cookies";
 import { addStaffButtons, getStaff, getStaffMenuHTML, openStaffLightBox } from "./manage";
 import { notify } from './notifications';
-import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost, currentBoard } from "./postutil";
+import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
 import { initQR } from "./qr";
