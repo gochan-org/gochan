@@ -3,7 +3,7 @@
 
 DBTYPE = ENV.fetch("GC_DBTYPE", "mysql")
 if DBTYPE != "mysql" && DBTYPE != "postgresql"
-	puts "Invalid GC_DBTYPE environment variable, must be mysql or postgresql, got #{DBTYPE}"
+	puts "Invalid GC_DBTYPE environment variable set in the host, must be mysql or postgresql, got #{DBTYPE}"
 	abort
 end
 
@@ -18,7 +18,7 @@ Vagrant.configure("2") do |config|
 	config.vm.box = BOX
 	config.vm.network "forwarded_port", guest: 80, host: 80
 	config.vm.network "forwarded_port", guest:443, host:443
-	config.vm.network :private_network, ip: "172.27.0.3"
+	config.vm.network :private_network, ip: "192.168.56.3"
 	config.vm.synced_folder "../", "/vagrant"
 	config.vm.provider PROVIDER do |provider|
 		if PROVIDER == "virtualbox"
