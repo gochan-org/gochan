@@ -277,14 +277,15 @@ var actions = map[string]Action{
 			// 	}
 			// }
 			// manageConfigBuffer := bytes.NewBufferString("")
-			// if err = gctemplates.ManageConfig.Execute(manageConfigBuffer, map[string]interface{}{
-			// 	"siteCfg":  siteCfg,
-			// 	"boardCfg": boardCfg,
-			// 	"status":   status,
-			// }); err != nil {
-			// 	err = errors.New(gclog.Print(gclog.LErrorLog,
+			// if err = serverutil.MinifyTemplate(gctemplates.ManageConfig,
+			// 	map[string]interface{}{
+			// 		"siteCfg":  siteCfg,
+			// 		"boardCfg": boardCfg,
+			// 		"status":   status,
+			// 	},
+			// 	manageConfigBuffer, "text/html"); err != nil {
+			// 	return "", errors.New(gclog.Print(gclog.LErrorLog,
 			// 		"Error executing config management page: ", err.Error()))
-			// 	return htmlOut + err.Error(), err
 			// }
 			// htmlOut += manageConfigBuffer.String()
 			// return htmlOut, nil
@@ -296,8 +297,10 @@ var actions = map[string]Action{
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
 			dashBuffer := bytes.NewBufferString("")
 
-			if err = gctemplates.ManageDashboard.Execute(dashBuffer, nil); err != nil {
-				return "", errors.New("Error executing management dashboard template: " + err.Error())
+			if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
+				nil, dashBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing management dashboard template: "+err.Error()))
 			}
 			htmlOut += dashBuffer.String()
 			return
@@ -440,17 +443,18 @@ var actions = map[string]Action{
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
-			if err = gctemplates.ManageBans.Execute(manageBansBuffer,
+			if err = serverutil.MinifyTemplate(gctemplates.ManageConfig,
 				map[string]interface{}{
 					// "systemCritical": config.GetSystemCriticalConfig(),
 					"banlist": banlist,
 					"post":    post,
 				},
-			); err != nil {
-				return "", errors.New("Error executing ban management page template: " + err.Error())
+				manageBansBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing ban management page template: "+err.Error()))
 			}
 			htmlOut += manageBansBuffer.String()
-			return
+			return htmlOut, nil
 		}},
 	"staffinfo": {
 		Permissions: NoPerms,
@@ -627,14 +631,16 @@ var actions = map[string]Action{
 				gcsql.AllSections, _ = gcsql.GetAllSectionsOrCreateDefault()
 
 				boardConfig := config.GetBoardConfig("")
-				if err = gctemplates.ManageBoards.Execute(manageBoardsBuffer, map[string]interface{}{
-					"boardConfig": boardConfig,
-					"board":       board,
-					"section_arr": gcsql.AllSections,
-				}); err != nil {
-					err = errors.New(gclog.Print(gclog.LErrorLog,
+
+				if err = serverutil.MinifyTemplate(gctemplates.ManageStaff,
+					map[string]interface{}{
+						"boardConfig": boardConfig,
+						"board":       board,
+						"section_arr": gcsql.AllSections,
+					},
+					manageBoardsBuffer, "text/html"); err != nil {
+					return "", errors.New(gclog.Print(gclog.LErrorLog,
 						"Error executing board management page template: ", err.Error()))
-					return "", err
 				}
 				htmlOut += manageBoardsBuffer.String()
 				return
