@@ -290,6 +290,18 @@ var actions = map[string]Action{
 			// return htmlOut, nil
 			return htmlOut + "Web-based configuration tool has been temporarily disabled", nil
 		}},
+	"dashboard": {
+		Title:       "Dashboard",
+		Permissions: JanitorPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+			dashBuffer := bytes.NewBufferString("")
+
+			if err = gctemplates.ManageDashboard.Execute(dashBuffer, nil); err != nil {
+				return "", errors.New("Error executing management dashboard template: " + err.Error())
+			}
+			htmlOut += dashBuffer.String()
+			return
+		}},
 	"login": {
 		Title:       "Login",
 		Permissions: NoPerms,
@@ -760,18 +772,13 @@ var actions = map[string]Action{
 		Title:       "Staff",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-			var allStaff []gcsql.Staff
 			do := request.FormValue("do")
-			htmlOut = `<h1 class="manage-header">Staff</h1><br />` +
-				`<table id="stafftable" border="1">` +
-				"<tr><td><b>Username</b></td><td><b>Rank</b></td><td><b>Boards</b></td><td><b>Added on</b></td><td><b>Action</b></td></tr>"
-			allStaff, err = gcsql.GetAllStaffNopass()
+			allStaff, err := gcsql.GetAllStaffNopass(true)
 			if err != nil {
-				err = errors.New(
-					gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
+				err = errors.New(gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
 				return "", err
 			}
-			boardConfig := config.GetBoardConfig("")
+
 			for _, staff := range allStaff {
 				username := request.FormValue("username")
 				password := request.FormValue("password")
@@ -784,7 +791,7 @@ var actions = map[string]Action{
 						return
 					}
 				} else if do == "del" && username != "" {
-					if err = gcsql.DeleteStaff(request.FormValue("username")); err != nil {
+					if err = gcsql.DeleteStaff(username); err != nil {
 						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
 							"Error deleting staff account %q : %s", username, err.Error()))
 						return
@@ -799,23 +806,18 @@ var actions = map[string]Action{
 				case staff.Rank == 1:
 					rank = "janitor"
 				}
-				htmlOut += fmt.Sprintf(
-					`<tr><td>%s</td><td>%s</td><td>%s</td><td><a href="/manage?action=staff&amp;do=del&amp;username=%s" style="float:right;color:red;">X</a></td></tr>`,
-					staff.Username, rank, staff.AddedOn.Format(boardConfig.DateTimeFormat), staff.Username)
-
 			}
-			htmlOut += `</table><hr /><h2 class="manage-header">Add new staff</h2>` +
-				`<form action="/manage?action=staff" onsubmit="return makeNewStaff();" method="POST">` +
-				`<input type="hidden" name="do" value="add" />` +
-				`Username: <input id="username" name="username" type="text" /><br />` +
-				`Password: <input id="password" name="password" type="password" /><br />` +
-				`Rank: <select id="rank" name="rank">` +
-				`<option value="3">Admin</option>` +
-				`<option value="2">Moderator</option>` +
-				`<option value="1">Janitor</option>` +
-				`</select><br />` +
-				`<input id="submitnewstaff" type="submit" value="Add" />` +
-				`</form>`
+
+			staffBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageStaff,
+				map[string]interface{}{
+					"allstaff": allStaff,
+				},
+				staffBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing staff management page template: ", err.Error()))
+			}
+			htmlOut += staffBuffer.String()
 			return
 		}},
 	"tempposts": {

@@ -425,8 +425,11 @@ func CreateSection(section *BoardSection) error {
 //GetAllStaffNopass gets all staff accounts without their password
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetAllStaffNopass() ([]Staff, error) {
-	const sql = `SELECT id, username, global_rank, added_on, last_login FROM DBPREFIXstaff`
+func GetAllStaffNopass(onlyactive bool) ([]Staff, error) {
+	sql := `SELECT id, username, global_rank, added_on, last_login FROM DBPREFIXstaff`
+	if onlyactive {
+		sql += " where is_active = 1"
+	}
 	rows, err := QuerySQL(sql)
 	if err != nil {
 		return nil, err

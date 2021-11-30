@@ -11,19 +11,21 @@ import (
 )
 
 var (
-	Banpage      *template.Template
-	Captcha      *template.Template
-	Catalog      *template.Template
-	ErrorPage    *template.Template
-	FrontPage    *template.Template
-	BoardPage    *template.Template
-	JsConsts     *template.Template
-	ManageBans   *template.Template
-	ManageBoards *template.Template
-	ManageConfig *template.Template
-	ManageHeader *template.Template
-	PostEdit     *template.Template
-	ThreadPage   *template.Template
+	Banpage         *template.Template
+	Captcha         *template.Template
+	Catalog         *template.Template
+	ErrorPage       *template.Template
+	FrontPage       *template.Template
+	BoardPage       *template.Template
+	JsConsts        *template.Template
+	ManageBans      *template.Template
+	ManageBoards    *template.Template
+	ManageConfig    *template.Template
+	ManageDashboard *template.Template
+	ManageHeader    *template.Template
+	ManageStaff     *template.Template
+	PostEdit        *template.Template
+	ThreadPage      *template.Template
 )
 
 func loadTemplate(files ...string) (*template.Template, error) {
@@ -137,10 +139,22 @@ func templateLoading(t string, buildAll bool) error {
 			return templateError("manage_config.html", err)
 		}
 	}
+	if buildAll || t == "managedashboard" {
+		ManageDashboard, err = loadTemplate("manage_dashboard.html")
+		if err != nil {
+			return templateError("manage_dashboard.html", err)
+		}
+	}
 	if buildAll || t == "manageheader" {
 		ManageHeader, err = loadTemplate("manage_header.html")
 		if err != nil {
 			return templateError("manage_header.html", err)
+		}
+	}
+	if buildAll || t == "managestaff" {
+		ManageStaff, err = loadTemplate("manage_staff.html")
+		if err != nil {
+			return templateError("manage_staff.html", err)
 		}
 	}
 	if buildAll || t == "js" {

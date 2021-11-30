@@ -1,0 +1,33 @@
+
+<h1 class="manage-header">Staff</h1><br />
+<table id="stafftable" border="1">
+<tr>
+	<td><b>Username</b></td>
+	<td><b>Rank</b></td>
+	<!-- <td><b>Boards</b></td> -->
+	<td><b>Added on</b></td>
+	<td><b>Action</b></td>
+</tr>
+{{range $s, $staff := $.allstaff}}
+<tr>
+	<td>{{$staff.Username}}</td>
+	<td>{{$staff.RankString}}</td>
+	<td>{{formatTimestamp $staff.AddedOn}}</td>
+	<td><a href="/manage?action=staff&do=del&username={{$staff.Username}}" style="float:right;color:red;">X</a></td>
+</tr>
+{{end}}
+</table>
+<hr />
+
+<h2 class="manage-header">Add new staff</h2>
+<form action="/manage?action=staff" onsubmit="return makeNewStaff();" method="POST">
+	<input type="hidden" name="do" value="add" />
+	Username: <input id="username" name="username" type="text" /><br />
+	Password: <input id="password" name="password" type="password" /><br />
+	Rank: <select id="rank" name="rank">
+		<option value="3">Admin</option>
+		<option value="2">Moderator</option>
+		<option value="1">Janitor</option>
+	</select><br />
+	<input id="submitnewstaff" type="submit" value="Add" />
+</form>

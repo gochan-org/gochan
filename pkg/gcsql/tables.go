@@ -311,6 +311,18 @@ type Staff struct {
 	LastActive       time.Time
 }
 
+func (s *Staff) RankString() string {
+	switch s.Rank {
+	case 3:
+		return "Administrator"
+	case 2:
+		return "Moderator"
+	case 1:
+		return "Janitor"
+	}
+	return ""
+}
+
 type BoardCooldowns struct {
 	NewThread  int `json:"threads"`
 	Reply      int `json:"replies"`
