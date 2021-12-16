@@ -785,7 +785,7 @@ func DeleteFilesFromPost(postID int) error {
 
 	//Get all filenames
 	const filenameSQL = `SELECT filename FROM DBPREFIXfiles WHERE post_id = ?`
-	rows, err := QuerySQL(filenameSQL)
+	rows, err := QuerySQL(filenameSQL, postID)
 	if err != nil {
 		return err
 	}
@@ -802,16 +802,20 @@ func DeleteFilesFromPost(postID int) error {
 
 	//Remove files from disk
 	for _, fileName := range filenames {
-		fileName = fileName[:strings.Index(fileName, ".")]
-		fileType := fileName[strings.Index(fileName, ".")+1:]
-		var thumbType string
-		if fileType == "gif" || fileType == "webm" || fileType == "mp4" {
-			thumbType = "jpg"
+		fileExt := path.Ext(fileName)
+		filenameBase := fileName[:strings.LastIndex(fileName, ".")]
+		thumbExt := fileExt
+		if thumbExt == ".gif" || thumbExt == ".webm" || thumbExt == ".mp4" {
+			thumbExt = ".jpg"
 		}
 
-		os.Remove(path.Join(systemCriticalCfg.DocumentRoot, board, "/src/"+fileName+"."+fileType))
-		os.Remove(path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/"+fileName+"t."+thumbType))
-		os.Remove(path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/"+fileName+"c."+thumbType))
+		uploadPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/src/", filenameBase+fileExt)
+		thumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"t"+thumbExt)
+		catalogThumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"c"+thumbExt)
+
+		os.Remove(uploadPath)
+		os.Remove(thumbPath)
+		os.Remove(catalogThumbPath)
 	}
 
 	const removeFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
