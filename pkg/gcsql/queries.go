@@ -7,7 +7,6 @@ import (
 	"html/template"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -802,16 +801,16 @@ func DeleteFilesFromPost(postID int) error {
 
 	//Remove files from disk
 	for _, fileName := range filenames {
-		fileExt := path.Ext(fileName)
-		filenameBase := fileName[:strings.LastIndex(fileName, ".")]
+		_, filenameBase, fileExt := gcutil.GetFileParts(fileName)
+
 		thumbExt := fileExt
-		if thumbExt == ".gif" || thumbExt == ".webm" || thumbExt == ".mp4" {
-			thumbExt = ".jpg"
+		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
+			thumbExt = "jpg"
 		}
 
-		uploadPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/src/", filenameBase+fileExt)
-		thumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"t"+thumbExt)
-		catalogThumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"c"+thumbExt)
+		uploadPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/src/", filenameBase+"."+fileExt)
+		thumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"t."+thumbExt)
+		catalogThumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"c."+thumbExt)
 
 		os.Remove(uploadPath)
 		os.Remove(thumbPath)

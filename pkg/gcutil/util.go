@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -28,10 +29,10 @@ const (
 )
 
 var (
-	// ErrNotImplemented should be used for unimplemented functionality when necessary
+	// ErrNotImplemented should be used for unimplemented functionality when necessary, not for bugs
 	ErrNotImplemented        = errors.New("not implemented")
-	ErrEmptyDurationString   = errors.New("empty Duration string")
-	ErrInvalidDurationString = errors.New("invalid Duration string")
+	ErrEmptyDurationString   = errors.New("empty duration string")
+	ErrInvalidDurationString = errors.New("invalid duration string")
 	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
 )
 
@@ -94,13 +95,24 @@ func FindResource(paths ...string) string {
 	return ""
 }
 
+// GetFileParts returns the base filename, the filename sans-extension, and the extension
+// sans-filename
+func GetFileParts(filename string) (string, string, string) {
+	base := path.Base(filename)
+	var noExt string
+	var ext string
+	lastIndex := strings.LastIndex(base, ".")
+	if lastIndex > -1 {
+		noExt = base[:strings.LastIndex(base, ".")]
+		ext = path.Ext(base)[1:]
+	}
+	return base, noExt, ext
+}
+
 // GetFileExtension returns the given file's extension, or a blank string if it has none
 func GetFileExtension(filename string) string {
-	if !strings.Contains(filename, ".") {
-		return ""
-	}
-
-	return filename[strings.LastIndex(filename, ".")+1:]
+	_, _, ext := GetFileParts(filename)
+	return ext
 }
 
 // GetFormattedFilesize returns a human readable filesize

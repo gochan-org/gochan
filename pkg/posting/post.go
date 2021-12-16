@@ -217,13 +217,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 		defer file.Close()
 		post.FilenameOriginal = html.EscapeString(handler.Filename)
-		filetype := gcutil.GetFileExtension(post.FilenameOriginal)
-		thumbFiletype := strings.ToLower(filetype)
-		if thumbFiletype == "gif" || thumbFiletype == "webm" || thumbFiletype == "mp4" {
-			thumbFiletype = "jpg"
+		ext := gcutil.GetFileExtension(post.FilenameOriginal)
+		thumbExt := strings.ToLower(ext)
+		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
+			thumbExt = "jpg"
 		}
 
-		post.Filename = getNewFilename() + "." + gcutil.GetFileExtension(post.FilenameOriginal)
+		post.Filename = getNewFilename() + "." + ext
 		boardExists, err := gcsql.DoesBoardExistByID(
 			gcutil.HackyStringToInt(request.FormValue("boardid")))
 		if err != nil {
@@ -241,9 +241,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		boardDir := _board.Dir
-		filePath = path.Join(systemCritical.DocumentRoot, "/"+boardDir+"/src/", post.Filename)
-		thumbPath = path.Join(systemCritical.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "t."+thumbFiletype, -1))
-		catalogThumbPath = path.Join(systemCritical.DocumentRoot, "/"+boardDir+"/thumb/", strings.Replace(post.Filename, "."+filetype, "c."+thumbFiletype, -1))
+		filePath = path.Join(systemCritical.DocumentRoot, boardDir, "src", post.Filename)
+		thumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "t."+thumbExt, -1))
+		catalogThumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "c."+thumbExt, -1))
 
 		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
 			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
@@ -261,7 +261,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		if filetype == "webm" || filetype == "mp4" {
+		if ext == "webm" || ext == "mp4" {
 			if !allowsVids {
 				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LAccessLog,
 					"Video uploading is not currently enabled for this board."))
