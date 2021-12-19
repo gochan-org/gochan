@@ -24,7 +24,7 @@ See [`docker/README.md`](docker/README.md)
 ## Migration
 <s>If you run gochan and get a message telling you your database is out of data, please run gochan-migration. If this does not work, please contact the developers.</s>
 
-gochan-migration has been a gargantuan time sink and has wasted a lot of time that would be much better spent working on other features, so I am putting its development on indefinite hiatus as of 12/18/2021. It may or may not come back, but for the time being, RIP gochan-migration, we hardly knew ya.
+gochan-migration has been a gargantuan time sink and has wasted a lot of time that would be much better spent working on other features, so I am putting its development on indefinite hiatus as of 12/18/2021 so I can focus on gochan's development. It may or may not come back, but for the time being, RIP gochan-migration, we hardly knew ya.
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
