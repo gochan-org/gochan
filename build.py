@@ -158,11 +158,12 @@ def build(debugging = False):
 		exit(1)
 	print("Built gochan successfully\n")
 
-	status = run_cmd(build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration", realtime = True, print_command = True)[1]
-	if status != 0:
-		print("Failed building gochan-migration, see command output for details")
-		exit(1)
-	print("Build gochan-migration successfully\n")
+	print("Note: gochan-migration has been put on indefinite suspention. See README.md")
+	# status = run_cmd(build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration", realtime = True, print_command = True)[1]
+	# if status != 0:
+	# 	print("Failed building gochan-migration, see command output for details")
+	# 	exit(1)
+	# print("Build gochan-migration successfully\n")
 
 def clean():
 	print("Cleaning up")
@@ -212,8 +213,9 @@ def install(prefix = "/usr", document_root = "/srv/gochan"):
 		build()
 	print("Installing",gochan_exe,"to",path.join(prefix, "bin", gochan_exe))
 	fs_action("copy", gochan_exe, path.join(prefix, "bin", gochan_exe))
-	print("Installing",migration_exe,"to",path.join(prefix, "bin", migration_exe))
-	fs_action("copy", migration_exe, path.join(prefix, "bin", migration_exe))
+	print("Note: gochan-migration has been put on indefinite suspention. See README.md")
+	# print("Installing",migration_exe,"to",path.join(prefix, "bin", migration_exe))
+	# fs_action("copy", migration_exe, path.join(prefix, "bin", migration_exe))
 
 
 	print(
@@ -257,7 +259,7 @@ def release(goos):
 		handle = tarfile.open(release_dir + ".tar.gz", "w:gz")
 		func = handle.add
 	func(gochan_exe, path.join(release_name, gochan_exe))
-	func(migration_exe, path.join(release_name, migration_exe))
+	# func(migration_exe, path.join(release_name, migration_exe))
 	for file in release_files:
 		func(file, path.join(release_name, file))
 	handle.close()

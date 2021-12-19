@@ -22,7 +22,9 @@ See [config.md](config.md)
 See [`docker/README.md`](docker/README.md)
 
 ## Migration
-If you run gochan and get a message telling you your database is out of data, please run gochan-migration. If this does not work, please contact the developers.
+<s>If you run gochan and get a message telling you your database is out of data, please run gochan-migration. If this does not work, please contact the developers.</s>
+
+gochan-migration has been a gargantuan time sink and has wasted a lot of time that would be much better spent working on other features, so I am putting its development on indefinite hiatus as of 12/18/2021. It may or may not come back, but for the time being, RIP gochan-migration, we hardly knew ya.
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
@@ -35,7 +37,7 @@ If you run gochan and get a message telling you your database is out of data, pl
 3. Set "DebugMode" to true. This will log all logs to the console and disable some checks.
 4. Open the folder containing everything in vscode (named gochan most likely), go to "Run"
 	1. Select "gochan" if you wish to run/debug the website itself
-	2. Select "gochan-migrate" if you wish to run/debug the migrator
+	2. <s>Select "gochan-migrate" if you wish to run/debug the migrator</s> (gochan-migrate development has been put on indefinite hiatus)
 5. (Optional) Change go extention configs. Examples: save all files on start debugging
 6. Press F5 or "Start Debugging" to debug.
 
