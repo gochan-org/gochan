@@ -158,7 +158,7 @@ def build(debugging = False):
 		exit(1)
 	print("Built gochan successfully\n")
 
-	print("Note: gochan-migration has been put on indefinite suspention. See README.md")
+	# print("Note: gochan-migration has been put on indefinite suspention. See README.md")
 	# status = run_cmd(build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration", realtime = True, print_command = True)[1]
 	# if status != 0:
 	# 	print("Failed building gochan-migration, see command output for details")
@@ -189,11 +189,20 @@ def docker(option = "guestdb", attached = False):
 	if status != 0:
 		print("Failed starting a docker container, exited with status code", status) 
 
-def install(prefix = "/usr", document_root = "/srv/gochan"):
+def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False):
 	if gcos == "windows" or gcos == "darwin":
 		print("Installation is not currently supported for Windows and macOS, use the respective directory created by running `python build.py release`")
 		exit(1)
 
+	if js_only:
+		print("Installing gochan JavaScript files")
+		js_install_dir = path.join(document_root, "js")
+		if not path.exists(path.join(document_root, "js")):
+			fs_action("mkdir", js_install_dir)
+		else:
+			fs_action("copy", "html/js/gochan.js", path.join(js_install_dir, "gochan.js"))
+			fs_action("copy", "html/js/maps", path.join(js_install_dir, "maps"))
+		return
 	fs_action("mkdir", "/etc/gochan")
 	fs_action("mkdir", path.join(prefix, "/share/gochan"))
 	fs_action("mkdir", document_root)
@@ -320,6 +329,10 @@ if __name__ == "__main__":
 		except KeyboardInterrupt:
 			print("Received keyboard interrupt, exiting")
 	elif action == "install":
+		parser.add_argument("--js",
+			action = "store_true",
+			help = "only install JavaScript (useful for frontend development)",
+		)
 		parser.add_argument("--prefix",
 			default = "/usr",
 			help = "install gochan to this directory and its subdirectories",
@@ -329,7 +342,7 @@ if __name__ == "__main__":
 			help = "install files in ./html/ to this directory to be requested by a browser"
 		)
 		args = parser.parse_args()
-		install(args.prefix, args.documentroot)
+		install(args.prefix, args.documentroot, args.js)
 	elif action == "js":
 		parser.add_argument("--minify", action = "store_true", help = "create a minified gochan.js")
 		parser.add_argument("--watch", action = "store_true", help = "automatically rebuild when you change a file (keeps running)")
