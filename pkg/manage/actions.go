@@ -34,15 +34,30 @@ const (
 	AdminPerms
 )
 
+const (
+	// NoJSON actions will return an error if JSON is requested by the user
+	NoJSON = iota
+	// OptionalJSON actions have an optional JSON output if requested
+	OptionalJSON
+	// AlwaysJSON actions always return JSON whether or not it is requested
+	AlwaysJSON
+)
+
 var (
 	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
 )
 
 // Action represents the functions accessed by staff members at /manage?action=<functionname>.
 type Action struct {
-	Title       string `json:"title"`
-	Permissions int    `json:"perms"` // 0 = non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	isJSON      bool   // if it can sometimes return JSON, this should still be false
+	Title string `json:"title"`
+	// Permissions represent who can access the page. 0 for anyone,
+	// 1 requires the user to have a janitor, mod, or admin account. 2 requires mod or admin,
+	// and 3 is only accessible by admins
+	Permissions int `json:"perms"`
+	// JSONoutput sets what the action can output. If it is 0, it will throw an error
+	// if JSON is requested. If it is 1, it can output JSON if requested, and if 2, it always
+	// outputs JSON whether it is requested or not
+	JSONoutput int `json:"jsonOutput"` // if it can sometimes return JSON, this should still be false
 	// Callback executes the staff page. if wantsJSON is true, it returns an object to be marshalled
 	// into JSON. Otherwise, a string assumed to be valid HTML is returned.
 	Callback func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) `json:"-"`
@@ -53,6 +68,7 @@ var actions = map[string]Action{
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			// TODO: make a proper JSON output for this, possibly /manage?action=cleanup&json=1&confirmed=1
 			outputStr := `<h2 class="manage-header">Cleanup</h2><br />`
 			if request.FormValue("run") == "Run Cleanup" {
 				outputStr += "Removing deleted posts from the database.<hr />"
@@ -294,11 +310,7 @@ var actions = map[string]Action{
 	"dashboard": {
 		Title:       "Dashboard",
 		Permissions: JanitorPerms,
-		isJSON:      false,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			if wantsJSON {
-				return "", createNoJSONError("dashboard")
-			}
 			dashBuffer := bytes.NewBufferString("")
 
 			if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
@@ -313,10 +325,6 @@ var actions = map[string]Action{
 		Title:       "Login",
 		Permissions: NoPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			if wantsJSON {
-				return "", createNoJSONError("dashboard")
-			}
-
 			systemCritical := config.GetSystemCriticalConfig()
 			if GetStaffRank(request) > 0 {
 				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
@@ -467,7 +475,7 @@ var actions = map[string]Action{
 		}},
 	"staffinfo": {
 		Permissions: NoPerms,
-		isJSON:      true,
+		JSONoutput:  AlwaysJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			staff, err := getCurrentFullStaff(request)
 			return staff, err
@@ -653,11 +661,6 @@ var actions = map[string]Action{
 			gcsql.ResetBoardSectionArrays()
 			return
 		}},
-	"actions": {
-		Title:       "Staff actions",
-		Permissions: JanitorPerms,
-		isJSON:      true,
-	},
 	"rebuildfront": {
 		Title:       "Rebuild front page",
 		Permissions: AdminPerms,
@@ -670,6 +673,7 @@ var actions = map[string]Action{
 	"rebuildall": {
 		Title:       "Rebuild everything",
 		Permissions: AdminPerms,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			gctemplates.InitTemplates()
 			gcsql.ResetBoardSectionArrays()
@@ -728,7 +732,6 @@ var actions = map[string]Action{
 	"rebuildboard": {
 		Title:       "Rebuild board",
 		Permissions: AdminPerms,
-		isJSON:      true,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			return "Not implemented (yet)", gcutil.ErrNotImplemented
 			// if err = gctemplates.InitTemplates(); err != nil {
@@ -749,6 +752,7 @@ var actions = map[string]Action{
 	"rebuildboards": {
 		Title:       "Rebuild boards",
 		Permissions: AdminPerms,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
@@ -799,6 +803,7 @@ var actions = map[string]Action{
 	"recentposts": {
 		Title:       "Recent posts",
 		Permissions: JanitorPerms,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			var outputStr string
 			systemCritical := config.GetSystemCriticalConfig()
@@ -844,7 +849,6 @@ var actions = map[string]Action{
 	"postinfo": {
 		Title:       "Post info",
 		Permissions: ModPerms,
-		isJSON:      true,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			var post gcsql.Post
 			post, err = gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
@@ -858,6 +862,7 @@ var actions = map[string]Action{
 	"staff": {
 		Title:       "Staff",
 		Permissions: AdminPerms,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			var outputStr string
 			do := request.FormValue("do")

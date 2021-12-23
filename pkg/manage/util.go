@@ -93,9 +93,19 @@ func GetStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
+func init() {
+	actions["actions"] = Action{
+		Title:       "Staff actions",
+		Permissions: JanitorPerms,
+		JSONoutput:  AlwaysJSON,
+		Callback:    getStaffActions,
+	}
+}
+
 func getStaffActions(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
 	rank := GetStaffRank(request)
 	actionMap := map[string]Action{}
+
 	for id, action := range actions {
 		if rank < action.Permissions || action.Permissions == NoPerms {
 			continue

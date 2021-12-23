@@ -12,14 +12,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
-func createNoJSONError(action string) *ErrStaffAction {
-	return &ErrStaffAction{
-		ErrorField: "nojson",
-		Action:     action,
-		Message:    "Requested mod page does not have a JSON output option",
-	}
-}
-
 type ErrStaffAction struct {
 	// ErrorField can be used in the frontend for giving more specific info about the error
 	ErrorField string `json:"error"`
@@ -83,10 +75,6 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		}
 		return
 	}
-	if action == "actions" {
-		handler.Callback = getStaffActions
-		wantsJSON = true
-	}
 	if staffRank == NoPerms && handler.Permissions > NoPerms {
 		handler = actions["login"]
 	} else if staffRank < handler.Permissions {
@@ -97,20 +85,30 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 			"Rejected request to manage page %s from %s (insufficient permissions)",
 			action, staffName)
 
-		serveError(writer, "permission", action, "You do not have permission to access this page", handler.isJSON || wantsJSON)
+		serveError(writer, "permission", action, "You do not have permission to access this page", wantsJSON || (handler.JSONoutput > NoJSON))
 		return
 	}
 
-	output, err := handler.Callback(writer, request, isRequestingJSON(request))
+	var output interface{}
+	if wantsJSON && handler.JSONoutput == NoJSON {
+		output = nil
+		err = &ErrStaffAction{
+			ErrorField: "nojson",
+			Action:     action,
+			Message:    "Requested mod page does not have a JSON output option",
+		}
+	} else {
+		output, err = handler.Callback(writer, request, wantsJSON)
+	}
 	if err != nil {
 		staffName, _ := getCurrentStaff(request)
 		// writer.WriteHeader(500)
 		gclog.Printf(gclog.LStaffLog|gclog.LErrorLog,
 			"Error accessing manage page %s by %s: %s", action, staffName, err.Error())
-		serveError(writer, "actionerror", action, err.Error(), wantsJSON || handler.isJSON)
+		serveError(writer, "actionerror", action, err.Error(), wantsJSON || (handler.JSONoutput > NoJSON))
 		return
 	}
-	if handler.isJSON || wantsJSON {
+	if handler.JSONoutput == AlwaysJSON || wantsJSON {
 		writer.Header().Add("Content-Type", "application/json")
 		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 		outputJSON, err := gcutil.MarshalJSON(output, true)
