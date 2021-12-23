@@ -42,48 +42,47 @@ var (
 type Action struct {
 	Title       string `json:"title"`
 	Permissions int    `json:"perms"` // 0 = non-staff, 1 => janitor, 2 => moderator, 3 => administrator
-	isJSON      bool   `json:"-"`     // if it can sometimes return JSON, this should still be false
-
-	Callback func(writer http.ResponseWriter, request *http.Request) (string, error) `json:"-"` //return string of html output
+	isJSON      bool   // if it can sometimes return JSON, this should still be false
+	// Callback executes the staff page. if wantsJSON is true, it returns an object to be marshalled
+	// into JSON. Otherwise, a string assumed to be valid HTML is returned.
+	Callback func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) `json:"-"`
 }
 
 var actions = map[string]Action{
 	"cleanup": {
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-			htmlOut = `<h2 class="manage-header">Cleanup</h2><br />`
-
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			outputStr := `<h2 class="manage-header">Cleanup</h2><br />`
 			if request.FormValue("run") == "Run Cleanup" {
-				htmlOut += "Removing deleted posts from the database.<hr />"
+				outputStr += "Removing deleted posts from the database.<hr />"
 				if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
 					err = errors.New(
 						gclog.Print(gclog.LErrorLog, "Error removing deleted posts from database: ", err.Error()))
-					return htmlOut + "<tr><td>" + err.Error() + "</td></tr></table>", err
+					return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 				}
 				// TODO: remove orphaned replies and uploads
 
-				htmlOut += "Optimizing all tables in database.<hr />"
+				outputStr += "Optimizing all tables in database.<hr />"
 				err = gcsql.OptimizeDatabase()
 				if err != nil {
 					err = errors.New(
 						gclog.Print(gclog.LErrorLog, "Error optimizing SQL tables: ", err.Error()))
-					return htmlOut + "<tr><td>" + err.Error() + "</td></tr></table>", err
+					return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 				}
 
-				htmlOut += "Cleanup finished"
+				outputStr += "Cleanup finished"
 			} else {
-				htmlOut += `<form action="/manage?action=cleanup" method="post">` +
+				outputStr += `<form action="/manage?action=cleanup" method="post">` +
 					`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
 					`</form>`
 			}
-			return htmlOut, nil
+			return outputStr, nil
 		}},
 	"config": {
 		Title:       "Configuration",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			// do := request.FormValue("do")
 			// siteCfg := config.GetSiteConfig()
 			// boardCfg := config.GetBoardConfig("")
@@ -287,28 +286,37 @@ var actions = map[string]Action{
 			// 	return "", errors.New(gclog.Print(gclog.LErrorLog,
 			// 		"Error executing config management page: ", err.Error()))
 			// }
-			// htmlOut += manageConfigBuffer.String()
-			// return htmlOut, nil
-			return htmlOut + "Web-based configuration tool has been temporarily disabled", nil
+			// output += manageConfigBuffer.String()
+			// return output, nil
+			errStr := "web-based configuration tool has been temporarily disabled"
+			return errStr, errors.New(errStr)
 		}},
 	"dashboard": {
 		Title:       "Dashboard",
 		Permissions: JanitorPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		isJSON:      false,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			if wantsJSON {
+				return "", createNoJSONError("dashboard")
+			}
 			dashBuffer := bytes.NewBufferString("")
 
 			if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
 				nil, dashBuffer, "text/html"); err != nil {
-				return "", errors.New(gclog.Print(gclog.LErrorLog,
-					"Error executing management dashboard template: "+err.Error()))
+				gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
+					"Error executing dashboard template: %q", err.Error())
+				return "", err
 			}
-			htmlOut += dashBuffer.String()
-			return
+			return dashBuffer.String(), nil
 		}},
 	"login": {
 		Title:       "Login",
 		Permissions: NoPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			if wantsJSON {
+				return "", createNoJSONError("dashboard")
+			}
+
 			systemCritical := config.GetSystemCriticalConfig()
 			if GetStaffRank(request) > 0 {
 				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
@@ -321,7 +329,7 @@ var actions = map[string]Action{
 			}
 			if username == "" || password == "" {
 				//assume that they haven't logged in
-				htmlOut = `<form method="POST" action="` + systemCritical.WebRoot + `manage?action=login" id="login-box" class="staff-form">` +
+				output = `<form method="POST" action="` + systemCritical.WebRoot + `manage?action=login" id="login-box" class="staff-form">` +
 					`<input type="hidden" name="redirect" value="` + redirectAction + `" />` +
 					`<input type="text" name="username" class="logindata" /><br />` +
 					`<input type="password" name="password" class="logindata" /><br />` +
@@ -337,7 +345,7 @@ var actions = map[string]Action{
 	"logout": {
 		Title:       "Logout",
 		Permissions: JanitorPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			cookie, _ := request.Cookie("sessiondata")
 			cookie.MaxAge = 0
 			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
@@ -347,8 +355,8 @@ var actions = map[string]Action{
 	"announcements": {
 		Title:       "Announcements",
 		Permissions: JanitorPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-			htmlOut = `<h1 class="manage-header">Announcements</h1><br />`
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			outputStr := `<h1 class="manage-header">Announcements</h1><br />`
 
 			//get all announcements to announcement list
 			//loop to html if exist, no announcement if empty
@@ -357,21 +365,22 @@ var actions = map[string]Action{
 				return "", err
 			}
 			if len(announcements) == 0 {
-				htmlOut += "No announcements"
+				outputStr += "No announcements"
 			} else {
 				boardConfig := config.GetBoardConfig("")
 				for _, announcement := range announcements {
-					htmlOut += `<div class="section-block">` +
+					outputStr += `<div class="section-block">` +
 						`<div class="section-title-block"><b>` + announcement.Subject + `</b> by ` + announcement.Poster + ` at ` + announcement.Timestamp.Format(boardConfig.DateTimeFormat) + `</div>` +
 						`<div class="section-body">` + announcement.Message + `</div></div>`
 				}
 			}
-			return htmlOut, nil
+			return outputStr, nil
 		}},
 	"bans": {
 		Title:       "Bans",
 		Permissions: ModPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) { //TODO whatever this does idk man
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) { //TODO whatever this does idk man
+			var outputStr string
 			var post gcsql.Post
 			if request.FormValue("do") == "add" {
 				ip := request.FormValue("ip")
@@ -396,7 +405,7 @@ var actions = map[string]Action{
 					err = gcsql.CreateFileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
 				}
 				if err != nil {
-					htmlOut += err.Error()
+					outputStr += err.Error()
 					err = nil
 				}
 				if name != "" {
@@ -453,24 +462,21 @@ var actions = map[string]Action{
 				return "", errors.New(gclog.Print(gclog.LErrorLog,
 					"Error executing ban management page template: "+err.Error()))
 			}
-			htmlOut += manageBansBuffer.String()
-			return htmlOut, nil
+			outputStr += manageBansBuffer.String()
+			return outputStr, nil
 		}},
 	"staffinfo": {
 		Permissions: NoPerms,
 		isJSON:      true,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			staff, err := getCurrentFullStaff(request)
-			if err != nil {
-				htmlOut, _ = gcutil.MarshalJSON(err, false)
-				return htmlOut, nil
-			}
-			return gcutil.MarshalJSON(staff, false)
+			return staff, err
 		}},
 	"boards": {
 		Title:       "Boards",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var outputStr string
 			do := request.FormValue("do")
 			var done bool
 			board := new(gcsql.Board)
@@ -612,7 +618,7 @@ var actions = map[string]Action{
 					board.ThreadsPerPage = boardConfig.ThreadsPerPage
 				}
 
-				htmlOut = `<h1 class="manage-header">Manage boards</h1><form action="/manage?action=boards" method="POST"><input type="hidden" name="do" value="existing" /><select name="boardselect"><option>Select board...</option>`
+				output = `<h1 class="manage-header">Manage boards</h1><form action="/manage?action=boards" method="POST"><input type="hidden" name="do" value="existing" /><select name="boardselect"><option>Select board...</option>`
 				var boards []string
 				boards, err = gcsql.GetBoardUris()
 				if err != nil {
@@ -621,10 +627,10 @@ var actions = map[string]Action{
 					return "", err
 				}
 				for _, boardDir := range boards {
-					htmlOut += "<option>" + boardDir + "</option>"
+					outputStr += "<option>" + boardDir + "</option>"
 				}
 
-				htmlOut += `</select><input type="submit" value="Edit" /><input type="submit" value="Delete" /></form><hr />` +
+				outputStr += `</select><input type="submit" value="Edit" /><input type="submit" value="Delete" /></form><hr />` +
 					`<h2 class="manage-header">Create new board</h2><span id="board-creation-message">` + boardCreationStatus + `</span><br />`
 
 				manageBoardsBuffer := bytes.NewBufferString("")
@@ -642,20 +648,20 @@ var actions = map[string]Action{
 					return "", errors.New(gclog.Print(gclog.LErrorLog,
 						"Error executing board management page template: ", err.Error()))
 				}
-				htmlOut += manageBoardsBuffer.String()
-				return
+				return outputStr + manageBoardsBuffer.String(), nil
 			}
 			gcsql.ResetBoardSectionArrays()
 			return
 		}},
-	"staffmenu": {
-		Title:       "Staff menu",
+	"actions": {
+		Title:       "Staff actions",
 		Permissions: JanitorPerms,
+		isJSON:      true,
 	},
 	"rebuildfront": {
 		Title:       "Rebuild front page",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
 			}
@@ -664,40 +670,103 @@ var actions = map[string]Action{
 	"rebuildall": {
 		Title:       "Rebuild everything",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			gctemplates.InitTemplates()
 			gcsql.ResetBoardSectionArrays()
-			if err = building.BuildFrontPage(); err != nil {
-				return "", err
+			buildErr := &ErrStaffAction{
+				ErrorField: "builderror",
+				Action:     "rebuildall",
 			}
+			buildMap := map[string]string{}
+			if err = building.BuildFrontPage(); err != nil {
+				buildErr.Message = gclog.Println(gclog.LErrorLog,
+					"Error building front page:", err.Error())
+				if wantsJSON {
+					return buildErr, buildErr
+				}
+				return buildErr.Message, buildErr
+			}
+			buildMap["front"] = "Built front page successfully"
 
 			if err = building.BuildBoardListJSON(); err != nil {
-				return "", err
+				buildErr.Message = gclog.Println(gclog.LErrorLog,
+					"Error building board list:", err.Error())
+				if wantsJSON {
+					return buildErr, buildErr
+				}
+				return buildErr.Message, buildErr
 			}
+			buildMap["boardlist"] = "Built board list successfully"
 
 			if err = building.BuildBoards(false); err != nil {
-				return "", err
+				buildErr.Message = gclog.Println(gclog.LErrorLog,
+					"Error building boards:", err.Error())
+				if wantsJSON {
+					return buildErr, buildErr
+				}
+				return buildErr.Message, buildErr
 			}
+			buildMap["boards"] = "Built boards successfully"
 
 			if err = building.BuildJS(); err != nil {
-				return "", err
+				buildErr.Message = gclog.Println(gclog.LErrorLog,
+					"Error building consts.js:", err.Error())
+				if wantsJSON {
+					return buildErr, buildErr
+				}
+				return buildErr.Message, buildErr
 			}
+			if wantsJSON {
+				return buildMap, nil
+			}
+			buildStr := ""
+			for _, msg := range buildMap {
+				buildStr += fmt.Sprintln(msg, "<hr />")
+			}
+			return buildStr, nil
+		}},
+	"rebuildboard": {
+		Title:       "Rebuild board",
+		Permissions: AdminPerms,
+		isJSON:      true,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			return "Not implemented (yet)", gcutil.ErrNotImplemented
+			// if err = gctemplates.InitTemplates(); err != nil {
+			// 	return "", err
+			// }
 
-			return "", nil
+			// for b, board := range request.Form {
+			// 	if b == "board" {
+			// 		return board[0], nil
+			// 	}
+			// }
+			// return "", &ErrStaffAction{
+			// 	ErrorField: "staffaction",
+			// 	Action:     "rebuildboard",
+			// 	Message:    fmt.Sprintf("/%s/ is not a board"),
+			// }
 		}},
 	"rebuildboards": {
 		Title:       "Rebuild boards",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
+			}
+			if wantsJSON {
+				return map[string]interface{}{
+					"success": true,
+					"message": "Boards built successfully",
+				}, building.BuildBoards(false)
 			}
 			return "Boards built successfully", building.BuildBoards(false)
 		}},
 	"reparsehtml": {
 		Title:       "Reparse HTML",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var outputStr string
+
 			messages, err := gcsql.GetAllNondeletedMessageRaw()
 			if err != nil {
 				return "", err
@@ -709,67 +778,79 @@ var actions = map[string]Action{
 			if err = gcsql.SetFormattedInDatabase(messages); err != nil {
 				return "", err
 			}
-			htmlOut += "Done reparsing HTML<hr />"
+			outputStr += "Done reparsing HTML<hr />"
 
 			if err = building.BuildFrontPage(); err != nil {
 				return "", err
 			}
-			htmlOut += "Done building front page<hr />"
+			outputStr += "Done building front page<hr />"
 
 			if err = building.BuildBoardListJSON(); err != nil {
 				return "", err
 			}
-			htmlOut += "Done building board list JSON<hr />"
+			outputStr += "Done building board list JSON<hr />"
 
 			if err = building.BuildBoards(false); err != nil {
 				return "", err
 			}
-			htmlOut += "Done building boards<hr />"
-			return
+			outputStr += "Done building boards<hr />"
+			return outputStr, nil
 		}},
 	"recentposts": {
 		Title:       "Recent posts",
 		Permissions: JanitorPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var outputStr string
 			systemCritical := config.GetSystemCriticalConfig()
-			limit := request.FormValue("limit")
-			if limit == "" {
-				limit = "50"
+			limit := gcutil.HackyStringToInt(request.FormValue("limit"))
+			if limit == 0 {
+				limit = 50
 			}
-			htmlOut = `<h1 class="manage-header">Recent posts</h1>` +
+			output = `<h1 class="manage-header">Recent posts</h1>` +
 				`Limit by: <select id="limit">` +
 				`<option>25</option><option>50</option><option>100</option><option>200</option>` +
 				`</select><br /><table width="100%%d" border="1">` +
 				`<colgroup><col width="25%%" /><col width="50%%" /><col width="17%%" /></colgroup>` +
 				`<tr><th></th><th>Message</th><th>Time</th></tr>`
-			recentposts, err := gcsql.GetRecentPostsGlobal(gcutil.HackyStringToInt(limit), false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
+			recentposts, err := gcsql.GetRecentPostsGlobal(limit, false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
+			if wantsJSON {
+				return recentposts, err
+			}
 
 			if err != nil {
-				err = errors.New("Error getting recent posts: " + err.Error())
-				return "", err
+				errMsg := gclog.Println(gclog.LErrorLog, "Error getting recent posts:", err.Error())
+				err = errors.New(errMsg)
+				if wantsJSON {
+					return ErrStaffAction{
+						ErrorField: "recentpostserror",
+						Action:     "recentposts",
+						Message:    errMsg,
+					}, err
+				}
+				return errMsg, err
 			}
 
 			for _, recentpost := range recentposts {
-				htmlOut += fmt.Sprintf(
+				outputStr += fmt.Sprintf(
 					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
 					path.Join(systemCritical.WebRoot, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
 					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
 					recentpost.Timestamp.Format("01/02/06, 15:04"),
 				)
 			}
-			htmlOut += "</table>"
+			outputStr += "</table>"
 			return
 		}},
 	"postinfo": {
 		Title:       "Post info",
 		Permissions: ModPerms,
 		isJSON:      true,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			var post gcsql.Post
 			post, err = gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
 			if err != nil {
-				htmlOut, _ = gcutil.MarshalJSON(err, false)
-				return htmlOut, nil
+				output, _ = gcutil.MarshalJSON(err, false)
+				return output, nil
 			}
 			jsonStr, _ := gcutil.MarshalJSON(post, false)
 			return jsonStr, nil
@@ -777,9 +858,13 @@ var actions = map[string]Action{
 	"staff": {
 		Title:       "Staff",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var outputStr string
 			do := request.FormValue("do")
 			allStaff, err := gcsql.GetAllStaffNopass(true)
+			if wantsJSON {
+				return allStaff, err
+			}
 			if err != nil {
 				err = errors.New(gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
 				return "", err
@@ -823,21 +908,21 @@ var actions = map[string]Action{
 				return "", errors.New(gclog.Print(gclog.LErrorLog,
 					"Error executing staff management page template: ", err.Error()))
 			}
-			htmlOut += staffBuffer.String()
-			return
+			outputStr += staffBuffer.String()
+			return outputStr, nil
 		}},
 	"tempposts": {
 		Title:       "Temporary posts lists",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request) (htmlOut string, err error) {
-			htmlOut += `<h1 class="manage-header">Temporary posts</h1>`
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			outputStr := `<h1 class="manage-header">Temporary posts</h1>`
 			if len(gcsql.TempPosts) == 0 {
-				htmlOut += "No temporary posts<br />"
+				outputStr += "No temporary posts<br />"
 				return
 			}
 			for p, post := range gcsql.TempPosts {
-				htmlOut += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
+				outputStr += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
 			}
-			return
+			return outputStr, nil
 		}},
 }

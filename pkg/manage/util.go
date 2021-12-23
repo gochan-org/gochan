@@ -93,14 +93,14 @@ func GetStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
-func getStaffMenu(writer http.ResponseWriter, request *http.Request) (string, error) {
-	var links string
+func getStaffActions(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
 	rank := GetStaffRank(request)
-	for f, mf := range actions {
-		if rank < mf.Permissions || mf.Permissions == NoPerms {
+	actionMap := map[string]Action{}
+	for id, action := range actions {
+		if rank < action.Permissions || action.Permissions == NoPerms {
 			continue
 		}
-		links += `<a href="manage?action=` + f + `" id="` + f + `">` + mf.Title + `</a></br />`
+		actionMap[id] = action
 	}
-	return links, nil
+	return actionMap, nil
 }

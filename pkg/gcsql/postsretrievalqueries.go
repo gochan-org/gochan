@@ -229,8 +229,8 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 		recentposts.tripcode,
 		recentposts.message,
 		COALESCE(singlefiles.filename, '') as filename,
-		singlefiles.thumbnail_width as thumb_w,
-		singlefiles.thumbnail_height as thumb_h
+		COALESCE(singlefiles.thumbnail_width, 0) as thumb_w,
+		COALESCE(singlefiles.thumbnail_height, 0) as thumb_h
 	FROM
 		(SELECT 
 			posts.id AS selfid,
