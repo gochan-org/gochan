@@ -1,3 +1,5 @@
+import $ from "jquery"
+
 export function showLightBox(title, innerHTML) {
 	$(document.body).prepend(
 		`<div class="lightbox-bg"></div><div class="lightbox"><div class="lightbox-title">${title}<a href="#" class="lightbox-x">X</a><hr /></div>${innerHTML}</div>`
@@ -9,15 +11,39 @@ export function showLightBox(title, innerHTML) {
 
 // opens up a lightbox for use as a message box that will look the same on all browsers
 export function showMessage(msg) {
-	$(document.body).prepend(`<div class="lightbox-bg"></div><div class="lightbox-msg">${msg}<br /><button class="lightbox-msg-ok" style="float: right; margin-top: 8px;">OK</button></div>`);
-	let centeroffset = parseInt($(".lightbox-msg").css("transform-origin").replace("px",""),10)+$(".lightbox-msg").width()/2;
+	let boxMsg = $("<div />").prop({
+		class: "lightbox-msg"
+	}).css({
+		"text-align": "center"
+	}).text(msg);
 
-	$(".lightbox-msg").css({
-		"position": "fixed",
-		"left": $(document).width()/2 - centeroffset/2-16
-	});
+	let boxBtn = $("<button />").prop({
+		class: "lightbox-msg-ok",
+	}).css({
+		"display": "block",
+		"margin-left": "auto",
+		"margin-right": "auto",
+		"padding": "5px 10px 5px 10px"
+	}).text("OK");
+
+	let box = $("<div />").prop({
+		class: "lightbox"
+	}).css({
+		"bottom": "inherit",
+		"margin-top": "40px",
+		"margin-bottom": "80px",
+		"display": "inline-block",
+		"padding": "80px"
+	}).append(boxMsg, "<br />", boxBtn)
+	.prependTo(document.body);
+
+	let boxBg = $("<div />").prop({
+			class: "lightbox-bg"
+		}).prependTo(document.body);
 
 	$(".lightbox-msg-ok, .lightbox-bg").on("click", () => {
-		$(".lightbox-msg, .lightbox-bg").remove();
+		boxMsg.remove();
+		box.remove();
+		boxBg.remove();
 	});
 }
