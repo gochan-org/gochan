@@ -3,7 +3,7 @@
 @import 'util';
 
 body {
-	background-color: $bgcol;
+	background: $bgcol;
 	font: 15px $font;
 }
 
@@ -12,7 +12,7 @@ a {
 }
 
 div#topbar, div.dropdown-menu {
-	background-color: #000;
+	background: #000;
 	opacity: 0.8;
 	padding: 2px;
 }

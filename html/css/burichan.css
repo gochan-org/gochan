@@ -1,5 +1,5 @@
 h1#board-title {
-  font-family: serif !important;
+  font-family: serif;
   font-size: 24pt;
   color: #AF0A0F;
 }
@@ -44,7 +44,7 @@ div.inlinepostprev {
 }
 
 .tab {
-  background-color: #dfdffe;
+  background: #dfdffe;
   border: 1px solid #9295a4;
 }
 
@@ -54,7 +54,7 @@ div.inlinepostprev {
 }
 
 #current-tab, div.section-title-block {
-  background-color: #bfc6e7;
+  background: #bfc6e7;
 }
 
 .loginbox input {
@@ -62,7 +62,7 @@ div.inlinepostprev {
 }
 
 .manage-header {
-  background-color: #EEF2FF;
+  background: #EEF2FF;
   border-radius: 8px;
 }
 
@@ -119,8 +119,8 @@ div#topbar,
 .dropdown-button,
 .dropdown-menu,
 .dropdown-menu a {
-  background-color: #000A89;
-  color: #EEF2FF !important;
+  background: #000A89;
+  color: #EEF2FF;
 }
 
 div#footer {

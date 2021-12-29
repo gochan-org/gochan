@@ -54,12 +54,12 @@
 		height: 0;
 	}
 	select.post-actions {
-		background-color: $replybg;
+		background: $replybg;
 		border-bottom: 1px solid $borderbotright;
 		border-right: 1px solid $borderbotright;
 	}
 	div.reply, table#pages, div.postprev {
-		background-color: $replybg;
+		background: $replybg;
 		border-left: 0px;
 		border-top: 0px;
 		border-bottom: 1px solid $borderbotright;
@@ -69,10 +69,10 @@
 		color: $postlinkcol;
 	}
 	table#pages * {
-		border: none!important;
+		border: none;
 	}
 	div.section-title-block {
-		background-color: $sectiontitlebg;
+		background: $sectiontitlebg;
 		color: $sectiontitlecol;
 	}
 	
@@ -81,7 +81,7 @@
 		border-bottom: 1px solid $topbarborder;
 	}
 	th.postblock {
-		background-color: $postblockbg;
+		background: $postblockbg;
 		border: 1px solid $postblockborder;
 	}
 	span.postername, span.postername a {

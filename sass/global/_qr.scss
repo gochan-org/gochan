@@ -5,22 +5,22 @@ div#qr-box {
 	padding:1px;
 	@include box-sizing(border-box);
 	min-width: 300px;
-	background-color:lightgray;
+	background:lightgray;
 	border: 1px solid #000;
 	display: table;
 
 	input[type=text],textarea {
 		display: table-cell;
 		min-width:300px;
-		background-color: #FFF!important;
-		color: #000!important;
+		background: #FFF;
+		color: #000;
 		width:100%;
 		@include box-sizing(border-box);
 	}
 	input[type=file] {
-		background-color: lightgray!important;
-		border: none!important;
-		color: #000!important;
+		background: lightgray;
+		border: none;
+		color: #000;
 		width: auto;
 	}
 	label {
@@ -32,7 +32,7 @@ div#qr-box {
 }
 
 div#qr-title {
-	background-color: #000;
+	background: #000;
 	min-width: 100%;
 	height: 22px;
 	color: #FFF;
@@ -58,7 +58,7 @@ table#qr-postbox {
 		width:100%
 	}
 	textarea {
-		background-color: #FFF!important;
+		background: #FFF;
 		color: #000;
 	}
 }

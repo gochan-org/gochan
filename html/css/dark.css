@@ -1,5 +1,5 @@
 body {
-  background-color: #1E1E1E;
+  background: #1E1E1E;
   font-family: sans-serif;
   color: #999;
   font-size: 80%;
@@ -11,7 +11,7 @@ a {
 }
 
 div#topbar {
-  background-color: #666;
+  background: #666;
   border-bottom: 1px solid #999;
 }
 div#topbar a {
@@ -24,13 +24,13 @@ header {
 
 input:not(div#qrbuttons input),
 textarea {
-  background-color: #333;
+  background: #333;
   border: 1px solid #666;
   color: #CCC;
 }
 
 th.postblock {
-  background-color: #282A2E;
+  background: #282A2E;
   border: 1px solid #888;
   border-radius: 5px;
   text-align: left;
@@ -44,7 +44,7 @@ div.reply,
 div.postprev,
 div.inlinepostprev,
 select.post-actions {
-  background-color: #333;
+  background: #333;
   border: 1px solid #555;
   border-radius: 5px;
 }
@@ -66,5 +66,5 @@ span.subject {
 }
 
 table#pages, table#pages * {
-  border: none !important;
+  border: none;
 }

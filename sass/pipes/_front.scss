@@ -2,25 +2,25 @@
 @import '../util';
 
 .dropdown-button:hover {
-	background-color: $bglight;
+	background: $bglight;
 }
 
 .section-body {
-	background-color: #606060;
+	background: #606060;
 }
 
 .section-title-block {
-	background-color: $topbarcol;
+	background: $topbarcol;
 	border-radius: 4px 4px 0px 0px;
 }
 
 .tab {
-	background-color: $bglight!important;
+	background: $bglight;
 	border: 1px solid $bgcol;
 }
 
 #current-tab {
-	background-color: $bgcol!important;
+	background: $bgcol;
 }
 
 div#recent-posts-header {
@@ -31,6 +31,6 @@ div#recent-posts-header {
 }
 
 .postblock {
-	background-color: $bgcol;
+	background: $bgcol;
 	font-weight: 700;
 }

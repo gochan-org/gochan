@@ -40,13 +40,13 @@ hr {
 }
 
 select.post-actions {
-  background-color: #F0E0D6;
+  background: #F0E0D6;
   border-bottom: 1px solid #D9BFB7;
   border-right: 1px solid #D9BFB7;
 }
 
 div.reply, table#pages, div.postprev {
-  background-color: #F0E0D6;
+  background: #F0E0D6;
   border-left: 0px;
   border-top: 0px;
   border-bottom: 1px solid #D9BFB7;
@@ -58,11 +58,11 @@ div.post-text a {
 }
 
 table#pages * {
-  border: none !important;
+  border: none;
 }
 
 div.section-title-block {
-  background-color: #fca;
+  background: #fca;
   color: #800;
 }
 
@@ -72,7 +72,7 @@ div#topbar {
 }
 
 th.postblock {
-  background-color: #EA8;
+  background: #EA8;
   border: 1px solid #800;
 }
 

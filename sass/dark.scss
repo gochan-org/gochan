@@ -1,7 +1,7 @@
 @import 'dark/colors';
 
 body {
-	background-color: $bgcol;
+	background: $bgcol;
 	font-family: $font-family;
 	color: $color;
 	font-size: 80%;
@@ -13,7 +13,7 @@ a {
 }
 
 div#topbar {
-	background-color: $topbarbg;
+	background: $topbarbg;
 	border-bottom: 1px solid $color;
 	a {
 		text-shadow: black 1px 1px 1px, black -1px -1px 1px, black -1px 1px 1px, black 1px -1px 1px;
@@ -27,13 +27,13 @@ header {
 // input:not([type=submit]):not([type=button]),
 input:not(div#qrbuttons input),
 textarea {
-	background-color: $inputbg;
+	background: $inputbg;
 	border: 1px solid $topbarbg;
 	color: $linkcol;
 }
 
 th.postblock {
-	background-color: $blockcol;
+	background: $blockcol;
 	border: 1px solid $blockborder;
 	border-radius: 5px;
 	text-align: left;
@@ -47,7 +47,7 @@ div.reply,
 div.postprev,
 div.inlinepostprev,
 select.post-actions {
-	background-color: $inputbg;
+	background: $inputbg;
 	border: 1px solid $replyborder;
 	border-radius: 5px;
 }
@@ -69,5 +69,5 @@ span.subject {
 }
 
 table#pages, table#pages * {
-	border: none!important;
+	border: none;
 }

@@ -2,7 +2,7 @@
 @import './util';
 
 body {
-	background-color: $bgcol;
+	background: $bgcol;
 	font-family: monospace, sans-serif;
 	font-size: 80%;
 }
@@ -69,7 +69,7 @@ span.subject {
 }
 
 table#pages, table#pages * {
-	border: none!important;
+	border: none;
 }
 
 div.section-title-block {

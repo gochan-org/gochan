@@ -9,7 +9,7 @@
 }
 
 body {
-	background-color: $bgcol;
+	background: $bgcol;
 	background-image: url(res/pipes_bg.png);
 	color: #d8d0b9;
 	font: $font;
@@ -31,7 +31,7 @@ a:hover {
 }
 
 a.topbar-item:hover {
-	background-color: $bglight;
+	background: $bglight;
 }
 
 div#footer, div#footer * {
@@ -39,12 +39,12 @@ div#footer, div#footer * {
 }
 
 div#topbar {
-	background-color: $topbarcol;
+	background: $topbarcol;
 	// @include box-shadow(0px 2px 2px 3px $shadowcol);
 	@include shadow-filter(0px 4px 2px $shadowcol);
 	z-index: 9001;
 
 	li:hover {
-		background-color: $bglight;
+		background: $bglight;
 	}
 }

@@ -5,8 +5,8 @@ div.section-title-block {
 }
 
 div.front-intro {
-  border-radius: 0px !important;
-  border-width: 1px !important;
+  border-radius: 0px;
+  border-width: 1px;
 }
 
 div.section-body {
@@ -26,7 +26,7 @@ div#report-delbox select,
 div#report-delbox textarea,
 div#report-delbox input[type=file]::file-selector-button,
 div#report-delbox input[type=file]::-webkit-file-upload-button {
-  background: #282A2E !important;
+  background: #282A2E;
   border: 1px double #07371F;
   color: #ACACAC;
 }
@@ -88,5 +88,5 @@ div#topbar a:visited div#threadlinks-top {
 }
 
 table#pages, table#pages * {
-  border: none !important;
+  border: none;
 }

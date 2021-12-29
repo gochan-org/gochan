@@ -5,7 +5,7 @@ div.reply,
 div.postprev,
 div.inlinepostprev,
 th.postblock {
-	background-color: $replycol;
+	background: $replycol;
 	border: 1px solid $replyborder;
 	@include border-radius(5px);
 }
@@ -15,11 +15,11 @@ span.subject {
 }
 
 div.section-title-block {
-	background-color: $replyborder;
+	background: $replyborder;
 }
 
 div.section-block {
 	@include border-radius(5px);
-	background-color: $sectionbg;
+	background: $sectionbg;
 	border: 1px solid $sectionborder;
 }

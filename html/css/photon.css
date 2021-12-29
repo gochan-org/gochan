@@ -2,7 +2,7 @@ div.reply,
 div.postprev,
 div.inlinepostprev,
 th.postblock {
-  background-color: #ddd;
+  background: #ddd;
   border: 1px solid #ccc;
   -moz-border-radius: 5px;
   -ms-border-radius: 5px;
@@ -15,7 +15,7 @@ span.subject {
 }
 
 div.section-title-block {
-  background-color: #ccc;
+  background: #ccc;
 }
 
 div.section-block {
@@ -23,12 +23,12 @@ div.section-block {
   -ms-border-radius: 5px;
   -webkit-border-radius: 5px;
   border-radius: 5px;
-  background-color: #FCFCFC;
+  background: #FCFCFC;
   border: 1px solid #D7D7D7;
 }
 
 body {
-  background-color: #eee;
+  background: #eee;
   font: 15px "Trebuchet MS", Trebuchet, sans-serif;
 }
 
@@ -37,7 +37,7 @@ a {
 }
 
 div#topbar, div.dropdown-menu {
-  background-color: #000;
+  background: #000;
   opacity: 0.8;
   padding: 2px;
 }
