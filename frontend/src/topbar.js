@@ -15,7 +15,7 @@ export class TopBarButton {
 			if(!buttonOpen) {
 				this.onOpen();
 				$(document).bind("click", () => {
-					self.onClose();
+					this.onClose();
 				});
 				buttonOpen = true;
 			} else {
