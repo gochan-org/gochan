@@ -1,6 +1,6 @@
 import $ from "jquery"
 
-const noteCloseTime = 5*1000; // 4 seconds
+const noteCloseTime = 4*1000; // 4 seconds
 const noteIcon = "/favicon.png";
 
 function canNotify() {

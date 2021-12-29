@@ -121,8 +121,12 @@ $(() => {
 	initTopBar();
 	initSettings();
 	initWatcher();
+	let passwordText = $("input#postpassword").val();
+	$("input#delete-password").val(passwordText);
 
-	$watchedThreadsBtn = new TopBarButton("WT", () => {});
+	$watchedThreadsBtn = new TopBarButton("WT", () => {
+		alert("Watched threads yet implemented");
+	});
 
 	if(currentStaff.rank > 0) {
 		$staffBtn = new TopBarButton("Staff", () => {
@@ -166,7 +170,7 @@ $(() => {
 			class: "post-actions",
 			id: postID
 		}).append(
-			"<option>Actions</option>",
+			"<option disabled selected>Actions</option>",
 		);
 		if(isOP) {
 			$ddownMenu.append(

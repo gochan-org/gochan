@@ -11,16 +11,15 @@ export class TopBarButton {
 		this.onClose = onClose;
 		$topbar.append(`<a href="javascript:;" class="dropdown-button" id="${title.toLowerCase()}">${title}${downArrow}</a>`);
 		let buttonOpen = false;
-		let self = this;
 		$topbar.find("a#" + title.toLowerCase()).on("click", event => {
 			if(!buttonOpen) {
-				self.onOpen();
+				this.onOpen();
 				$(document).bind("click", () => {
 					self.onClose();
 				});
 				buttonOpen = true;
 			} else {
-				self.onClose();
+				this.onClose();
 				buttonOpen = false;
 			}
 			return false;
