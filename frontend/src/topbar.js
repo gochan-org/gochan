@@ -9,12 +9,17 @@ export class TopBarButton {
 		this.title = title;
 		this.onOpen = onOpen;
 		this.onClose = onClose;
-		$topbar.append(`<a href="javascript:;" class="dropdown-button" id="${title.toLowerCase()}">${title}${downArrow}</a>`);
+		this.button = $("<a/>").prop({
+			"href": "javascript:;",
+			"class": "dropdown-button",
+			"id": title.toLowerCase()
+		}).text(title + "▼");
+		$topbar.append(this.button);
 		let buttonOpen = false;
-		$topbar.find("a#" + title.toLowerCase()).on("click", event => {
+		this.button.on("click", event => {
 			if(!buttonOpen) {
 				this.onOpen();
-				$(document).bind("click", () => {
+				$(document).on("click", () => {
 					this.onClose();
 				});
 				buttonOpen = true;

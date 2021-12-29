@@ -1,8 +1,10 @@
 let movablePostPreviews = null;
 let expandablePostrefs = true;
+let threadRE = /^\d+/;
 let videoTestRE = /\.(mp4)|(webm)$/;
+
 function deleteCheckedPosts() {
-	if(confirm('Are you sure you want to delete these posts?') == true) {
+	if(confirm('Are you sure you want to delete these posts?')) {
 		let form = $("form#main-form");
 		form.append("<input type=\"hidden\" name=\"action\" value=\"delete\" ");
 		form.get(0).submit();
@@ -59,7 +61,6 @@ export function currentThread() {
 	let splits = location.pathname.split("/");
 	if(splits.length != 4)
 		return thread;
-	let threadRE = /^\d+/;
 	let reArr = threadRE.exec(splits[3]);
 	if(reArr.length > 0)
 		thread.thread = reArr[0];
@@ -84,10 +85,12 @@ export function preparePostPreviews(isInline) {
 	if(!movablePostPreviews) mType = "mouseover";
 
 	var hvrStr = "a.postref";
-	if(isInline) hvr_str = "div.inlinepostprev "+hvr_str;
+	if(isInline) hvrStr = "div.inlinepostprev " + hvrStr;
 
-	$(hvrStr).hover(() => {
-		let replaced = this.innerHTML.replace("&gt;&gt;","");
+	let $hover = $(hvrStr)
+	$hover.on("mouseenter", function() {
+		console.log("mouseenter");
+		let replaced = $hover[0].innerHTML.replace("&gt;&gt;","");
 		let postID = `div.reply#reply${replaced},div.op-post#op${replaced}`;
 		let $clone = $(postID).clone();
 		$(document.body).append($clone.attr({
@@ -95,21 +98,21 @@ export function preparePostPreviews(isInline) {
 			id: postID + "preview"
 		}));
 		$clone.find(".inlinepostprev").remove();
-		$(document).bind(mType, e => {
+		$(document).on(mType, e => {
 			$('.postprev').css({
 				left:	e.pageX + 8,
 				top:	e.pageY + 8
 			});
 		});
-	},
-	() => {
+	}).on("mouseleave", () => {
+		console.log("mouseleave")
 		$(".postprev").remove();
 	});
 
 	if(expandablePostrefs) {
 		let clkStr = "a.postref";
 		if(isInline) clkStr = "div.inlinepostprev " + clkStr;
-		$(clkStr).on("click", () => {
+		$(clkStr).on("click", function() {
 			let $this = $(this);
 			if($this.next().attr("class") != "inlinepostprev") {
 				$(".postprev").remove();
@@ -180,16 +183,18 @@ export function prepareThumbnails() {
 export function quote(e) {
 	let msgboxID = "postmsg";
 
-	if (document.selection) {
+	let msgbox = document.getElementById(msgboxID);
+
+	if(document.selection) {
 		document.getElementById(msgboxID).focus();
 		let t = document.getselection.createRange();
 		t.text = `>>${e}\n`;
-	} else if(document.getElementById(msgboxID).selectionStart || "0" == document.getElementById(msgboxID).selectionStart) {
-		let n = document.getElementById(msgboxID).selectionStart,
-		o = document.getElementById(msgboxID).selectionEnd;
-		document.getElementById(msgboxID).value = document.getElementById(msgboxID).value.substring(0, n) + ">>" + e + "\n" + document.getElementById(msgboxID).value.substring(o, document.getElementById(msgboxID).value.length)
-	} else document.getElementById(msgboxID).value += `>>${e}\n`;
-	window.scroll(0,document.getElementById(msgboxID).offsetTop - 48);
+	} else if(msgbox.selectionStart || "0" == msgbox.selectionStart) {
+		let n = msgbox.selectionStart,
+		o = msgbox.selectionEnd;
+		msgbox.value = msgbox.value.substring(0, n) + ">>" + e + "\n" + msgbox.value.substring(o, msgbox.value.length)
+	} else msgbox.value += `>>${e}\n`;
+	window.scroll(0,msgbox.offsetTop - 48);
 }
 window.quote = quote;
 
