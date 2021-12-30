@@ -150,12 +150,6 @@ a.upload-container {
   margin: 5px 10px 10px 0px;
 }
 
-ul.staffmenu {
-  list-style: none;
-  margin: 0px;
-  padding-left: 0;
-}
-
 div.file-deleted-box {
   width: 120px;
   height: 120px;
@@ -294,10 +288,6 @@ a.permalink {
 .loginbox input {
   width: 175px;
   height: 30%;
-}
-
-.menu {
-  margin-top: 1em;
 }
 
 h1, h2 {
@@ -498,33 +488,34 @@ div#topbar {
   position: fixed;
   top: 0;
   width: 100%;
-  z-index: 2;
   margin-top: 0px;
   padding-left: 8px;
-  padding-right: 4px;
+}
+div#topbar * {
+  padding: 4px;
 }
 div#topbar a.topbar-item {
   display: inline-block;
-  padding: 4px;
 }
 div#topbar a.dropdown-button {
-  padding: 4px 8px;
   float: right;
+  margin-right: 4px;
 }
 
 div.dropdown-menu {
   position: fixed;
   min-width: 300px;
   min-height: 100px;
-  top: 24px;
+  top: 28px;
   right: 0px;
-  z-index: 8999;
+  z-index: 500;
   padding: 4px 8px 4px 8px;
+  max-height: 100%;
+  overflow-y: scroll;
+  background-color: #999;
 }
-div.dropdown-menu ul.staffmenu {
-  list-style: none;
-  margin: 0px;
-  padding-left: 0;
+div.dropdown-menu div {
+  padding: 2px;
 }
 
 div.section-block {

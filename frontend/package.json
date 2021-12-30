@@ -14,9 +14,11 @@
   "author": "Eggbertx",
   "license": "BSD-2-Clause",
   "dependencies": {
+    "core-js": "^3.20.1",
     "gulp-sourcemaps": "^2.6.5",
     "jquery": "^3.5.1",
-    "jqueryui": "^1.11.1"
+    "jqueryui": "^1.11.1",
+    "regenerator-runtime": "^0.13.9"
   },
   "devDependencies": {
     "@babel/cli": "^7.10.1",

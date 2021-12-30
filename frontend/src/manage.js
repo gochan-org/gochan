@@ -1,97 +1,75 @@
 import $ from 'jquery';
-import { showLightBox } from "./lightbox"
+import { showLightBox } from "./lightbox";
+import { $topbar, TopBarButton } from './topbar';
 
-export class Staff {
-	static makeNew() {
-		let onManagePage = false; // true to submit, false for ajax;
-		if(window.location.pathname == "/manage") {
-			onManagePage = true;
-		} else {
-			let usernameTxt = $("input#username").val();
-			let passwordTxt = $("input#password").val();
-			let rankSel = $("select#rank").val();
-			$.ajax({
-				method: 'POST',
-				url: `${webroot}manage?action=staff`,
-				data: {
-					do:"add",
-					username: usernameTxt,
-					password: passwordTxt,
-					rank: rankSel,
-					boards: "all"
-				},
-				cache: false,
-				async:true,
-				success: function(result) {
-					alert(result);
-					let rankStr = "";
-					switch(rankSel) {
-						case "3":
-							rankStr = "admin";
-							break;
-						case "2":
-							rankStr = "mod";
-							break;
-						case "1":
-							rankStr = "janitor";
-							break;
-					}
-					let userTd = $("<td/>");
-					userTd.text(usernameTxt);
-					let rankTd = $("<td/>");
-					rankTd.text(rankStr);
-					$("table#stafftable tr:last").after(
-						userTd, rankTd, "<td>all</td>", "<td>now</td>","<td></td>"
-					);
-				},
-				error: (xhr, status, err) => {
-					console.log(`Error in Staff.makeNew: ${err}`);
-				}
-			});
+/**
+ * @type {StaffInfo}
+ */
+const notAStaff = {
+	ID: 0,
+	Username: "",
+	Rank: 0
+};
+
+/**
+ * @type {StaffActions}
+ */
+export let staffActions = {};
+export let staffInfo = notAStaff;
+
+/**
+ * @type {JQuery<HTMLElement>}
+ * The menu shown when the Staff button on the top bar is clicked
+ */
+let $staffMenu = null;
+/**
+ * @type {TopBarButton}
+ * A button that opens $staffMenu
+ */
+let $staffBtn = null;
+
+export async function initStaff() {
+	return $.ajax({
+		method: "GET",
+		url: `${webroot}manage`,
+		data: {
+			action: "actions"
+		},
+		async: true,
+		cache: true,
+		dataType: "json",
+		success: result => {
+			staffActions = result;
+		},
+		error: (xhr, status, err) => {
 		}
-		return onManagePage
-	}
-
-	static getStaff() {
-		let s = null;
-		let staffInfo = {Username: "nobody", Rank: "0", Board: ""}
-		$.ajax({
-			method: 'GET',
-			url:`${webroot}manage`,
-			data: {
-				action: 'staffinfo',
-			},
-			dataType:"text",
-			cache: true,
-			async:false,
-			success: result => {
-				staffInfo = JSON.parse(result);
-			},
-			error: (xhr, status, err) => {
-				console.log(`unable to load ${webroot}/manage?action=staffinfo: ${err}`);
-			}
-		});
-		return new Staff(staffInfo.Username, staffInfo.Rank, staffInfo.Board);
-	}
-
-	constructor(name, rank, boards) {
-		this.name = name;
-		this.rank = rank;
-		this.boards = boards;
-	}
+	}).then(getStaffInfo);
 }
 
-/* export function addStaffButtons() {
-	$("input#delete-password").remove();
-	$("input[value=Delete]").after("<input type=\"submit\" name=\"Ban\" value=\"Ban\" onclick=\"banSelectedPost(); return false;\"  />")
-} */
-
-export function getStaff() {
-	return Staff.getStaff();
+export async function getStaffInfo() {
+	return $.ajax({
+		method: "GET",
+		url: `${webroot}manage`,
+		data: {
+			action: "staffinfo",
+		},
+		async: true,
+		cache: true,
+		dataType: "json"
+	}).catch(() => {
+		return notAStaff;
+	}).then((info) => {
+		if(info.error)
+			return notAStaff;
+		staffInfo = info;
+		return info;
+	});
 }
 
-export function getManagePage() {
-
+export async function isLoggedIn() {
+	return getStaffInfo().then(info => {
+		return info.ID > 0
+	});
 }
 
 export function banSelectedPost() {
@@ -113,38 +91,92 @@ export function banSelectedPost() {
 	window.location = `${webroot}manage?action=bans&dir=${boardDir}&postid=${postID}`
 }
 
-export function getStaffMenuHTML() {
-	let $s = $("<ul/>").prop({class: "staffmenu"});
-	// let s = "<ul class=\"staffmenu\">";
-	$.ajax({
-		method: 'GET',
-		url: webroot + "manage",
-		data: {
-			action: 'staffmenu',
-		},
-		dataType: "text",
-		cache: true,
-		async: false,
-		success: result => {
-			let lines = result.substring(result.indexOf("body>")+5,result.indexOf("</body")).trim().split("\n");
-			for(let l = 0; l < lines.length; l++) {
-				if(lines[l] != "") {
-					if(lines[l].indexOf("<a href=") > -1) {
-						s += lines[l].substr(0,lines[l].indexOf("\">")+2)+"<li>"+$(lines[l]).text()+"</li></a>";
-					} else {
-						s += `<li>${lines[1]}</li>`;
-					}
-				}
-			}
-		},
-		error: (xhr, status, err) => {
-			console.log(`unable to load ${webroot}/manage?action=staffmenu: ${err}`);
-			s = "Something went wrong :/";
-		}
-	});
-	return s+"</ul>";
+/**
+ * A helper function for creating a menu item
+ * @param {StaffAction} action
+ */
+function menuItem(action, isCategory = false) {
+	let text = isCategory?action:action.title;
+	let $item;
+	if(isCategory) {
+		$item = $("<b/>");
+	} else {
+		$item = $("<a/>").prop({
+			href: `${webroot}manage?action=${action.id}`
+		});
+	}
+	return $("<div/>").append($item.text(text));
 }
 
+/**
+ * Creates a list of staff actions accessible to the user if they are logged in.
+ * It is shown when the user clicks the Staff button
+ * @param {number} rank 0 = not logged in, 1 = janitor, 2 = moderator
+ * 3 = administrator
+ */
+export function createStaffMenu(rank = staffInfo.Rank) {
+	if(rank == 0) return;
+	$staffMenu = $("<div/>").prop({
+		id: "staffmenu",
+		class: "dropdown-menu"
+	});
+	let actions = Object.keys(staffActions);
+	let adminActions = [];
+	let modActions = [];
+	let janitorActions = [];
+	for(const key of actions) {
+		let action = staffActions[key];
+		if(action.jsonOutput == 2)
+			// action only outputs JSON, we don't need this in the menu
+			continue;
+		action.id = key;
+		if(key == "logout") {
+			$staffMenu.append(menuItem(action));
+			continue;
+		}
+		switch(action.perms) {
+			case 3:
+				adminActions.push(action);
+				break;
+			case 2:
+				modActions.push(action);
+				break;
+			case 1:
+				janitorActions.push(action);
+				break;
+			default:
+		}
+	}
+	$staffMenu.append(menuItem("Janitorial", true));
+	for(const action of janitorActions) {
+		$staffMenu.append(menuItem(action));
+	}
+	if(rank < 2) return $staffMenu;
+
+	$staffMenu.append(menuItem("Moderation", true));
+	for(const action of modActions) {
+		$staffMenu.append(menuItem(action));
+	}
+	if(rank < 3) return $staffMenu;
+
+	$staffMenu.append(menuItem("Administration", true));
+	for(const action of adminActions) {
+		$staffMenu.append(menuItem(action));
+	}
+	$staffBtn = new TopBarButton("Staff", () => {
+		let exists = $(document).find($staffMenu).length > 0;
+		if(exists)
+			$staffMenu.remove();
+		else
+			$topbar.after($staffMenu);
+	});
+}
+
+/**
+ * Opens a lightbox for using staff tools without having to go load the page
+ * @param {string} actionURL The URL to get the action HTML from
+ * @deprecated
+ */
 export function openStaffLightBox(actionURL) {
 	$.ajax({
 		method: 'GET',

@@ -47,17 +47,6 @@ div#recent-posts-header {
   background: #404040;
 }
 
-.dropdown-menu {
-  background: #202020;
-  -webkit-filter: drop-shadow(2px 2px 3px #101010);
-  filter: drop-shadow(2px 2px 3px #101010);
-  z-index: 0;
-}
-
-ul.staffmenu li:hover {
-  background: #404040;
-}
-
 img.thumbnail {
   float: left;
   max-width: 100%;
@@ -139,8 +128,17 @@ div#topbar {
   background: #202020;
   -webkit-filter: drop-shadow(0px 4px 2px #101010);
   filter: drop-shadow(0px 4px 2px #101010);
-  z-index: 9001;
 }
 div#topbar li:hover {
+  background: #404040;
+}
+
+.dropdown-menu {
+  background: #202020 !important;
+  -webkit-filter: drop-shadow(2px 2px 3px #101010);
+  filter: drop-shadow(2px 2px 3px #101010);
+  z-index: 0;
+}
+.dropdown-menu div:hover {
   background: #404040;
 }

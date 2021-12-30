@@ -6,18 +6,18 @@
 
 body {
 	font: $font;
-	background:$bgcol;
+	background: $bgcol;
 	margin: 8px;
 }
 
 a, a:visited {
-	color:$linkcol;
-	text-decoration:none;
+	color: $linkcol;
+	text-decoration: none;
 }
 
 h1 {
-	margin:0;
-	text-align:center;
+	margin: 0;
+	text-align: center;
 }
 
 h2 {
@@ -58,8 +58,8 @@ div#topbar,
 .dropdown-button,
 .dropdown-menu,
 .dropdown-menu a {
-	background:#000A89;
-	color:$bgcol;
+	background: #000A89;
+	color: $bgcol;
 }
 
 div#footer {

@@ -1,18 +1,18 @@
+// needed for Promise stuff
+import "core-js/stable";
 import "regenerator-runtime/runtime";
 
 import { initCookies, getCookie } from "./cookies";
-import { addStaffButtons, getStaff, getStaffMenuHTML, openStaffLightBox } from "./manage";
-import { notify } from './notifications';
+import { initStaff, createStaffMenu } from "./manage";
+// import { notify } from './notifications';
 import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
-import { initQR } from "./qr";
+import { initQR, openQR } from "./qr";
 import { opRegex } from "./vars";
 import { initWatcher, watchThread } from "./watcher";
 
-let currentStaff = null;
 let $watchedThreadsBtn = null;
-let $staffBtn = null;
 let idRe = /^((reply)|(op))(\d)/;
 
 export function toTop() {
@@ -49,7 +49,10 @@ export function getPageThread() {
 
 function handleKeydown(e) {
 	let tag = "";
-	if(!e.ctrlKey || e.target.nodeName != "TEXTAREA") return;
+	if(!e.ctrlKey && e.target.nodeName != "TEXTAREA" && e.target.nodeName != "INPUT") {
+		openQR();
+		return;
+	}
 	switch(e.keyCode) {
 		case 10: // Enter key
 		case 13: // Enter key in Chrome/IE
@@ -116,31 +119,18 @@ $(() => {
 	let style = getCookie("style", {default: defaultStyle});
 	let themeElem = document.getElementById("theme");
 	if(themeElem) themeElem.setAttribute("href", `${webroot}css/${style}`);
-	currentStaff = getStaff();
 	initCookies();
 	initTopBar();
 	initSettings();
+	initStaff().then(createStaffMenu);
 	initWatcher();
+
 	let passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
 	$watchedThreadsBtn = new TopBarButton("WT", () => {
 		alert("Watched threads yet implemented");
 	});
-
-	if(currentStaff.rank > 0) {
-		$staffBtn = new TopBarButton("Staff", () => {
-			window.location = "/manage?action=dashboard"
-		})
-		/* $staffBtn = new DropDownMenu("Staff",getStaffMenuHTML())
-		$("a#staff.dropdown-button").on("click", function() {
-			$("a.staffmenu-item").on("click", function() {
-				let url = $(this).attr("id");
-				openStaffLightBox(url);
-	 		});
-		}); */
-		// addStaffButtons();
-	}
 
 	if(pageThread.board != "") {
 		prepareThumbnails();

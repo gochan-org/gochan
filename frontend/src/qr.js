@@ -96,7 +96,7 @@ export function initQR(pageThread) {
 			ui.position.top = Math.max(ui.position.top, topbarHeight);
 			setCookie("qrpos", JSON.stringify(ui.position),7);
 		}
-	}).insertAfter("div#footer");
+	});
 
 	// Thread updating needs to be implemented for this to be useful
 	/* $("form#qrpostform").submit(e => {
@@ -111,7 +111,13 @@ export function initQR(pageThread) {
 		})
 		return false;
 	}); */
+	openQR();
 }
+
+export function openQR() {
+	if($qr) $qr.insertAfter("div#footer");
+}
+window.openQR = openQR;
 
 export function closeQR() {
 	if($qr) $qr.remove();

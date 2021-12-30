@@ -1,3 +1,6 @@
+/**
+ * @param {string} name
+ */
 export function getCookie(name, options = {type: "string"}) {
 	let val = options.default;
 	let cookieArr = document.cookie.split("; ");
@@ -30,7 +33,9 @@ export function getCookie(name, options = {type: "string"}) {
 	return val;
 }
 
-// gets cookies ready to be used elsewhere
+/**
+ * gets cookies ready to be used elsewhere
+ */
 export function initCookies() {
 	$("input[name=postname]").val(getCookie("name"));
 	$("input[name=postemail]").val(getCookie("email"));
@@ -38,6 +43,12 @@ export function initCookies() {
 	$("input[name=delete-password]").val(getCookie("password"));
 }
 
+/**
+ * Set a cookie
+ * @param {string} name
+ * @param {string} value
+ * @param {string} expires
+ */
 export function setCookie(name, value, expires) {
 	let expiresStr = "";
 	if(expires) {

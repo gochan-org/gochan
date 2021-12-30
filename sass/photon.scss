@@ -22,8 +22,15 @@ div#topbar {
 	@include shadow-filter(0px 2px 2px $shadowcol);
 }
 
-div.dropdown-menu {
+.dropdown-menu {
 	color: #FFF;
+	background: #000!important;
+	// @include box-shadow(2px 2px 2px 3px $shadowcol);
+	@include shadow-filter(2px 2px 3px $shadowcol);
+	z-index: 0;
+	/* div:hover {
+		background: $bglight;
+	} */
 }
 
 header, div#top-pane, a {

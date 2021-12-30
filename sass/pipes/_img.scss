@@ -5,17 +5,6 @@
 	background: $bglight;
 }
 
-.dropdown-menu {
-	background: $topbarcol;
-	// @include box-shadow(2px 2px 2px 3px $shadowcol);
-	@include shadow-filter(2px 2px 3px $shadowcol);
-	z-index: 0;
-}
-
-ul.staffmenu li:hover {
-	background: $bglight;
-}
-
 img.thumbnail {
 	float: left;
 	max-width: 100%;
