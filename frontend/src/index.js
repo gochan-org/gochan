@@ -128,9 +128,9 @@ $(() => {
 	let passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
-	$watchedThreadsBtn = new TopBarButton("WT", () => {
+	/* $watchedThreadsBtn = new TopBarButton("WT", () => {
 		alert("Watched threads yet implemented");
-	});
+	}); */
 
 	if(pageThread.board != "") {
 		prepareThumbnails();
