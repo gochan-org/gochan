@@ -89,10 +89,10 @@ function applyBBCode(e, ta) {
 	let ss = ta.selectionStart;
 	let se = ta.selectionEnd;
 	let r = se + 2 + tag.length;
-	ta.value = val.slice(0, ss) + 
-		("[" + tag + "]") +
+	ta.value = val.slice(0, ss) +
+		`[${tag}]` +
 		val.slice(ss, se) +
-		("[/" + tag + "]") +
+		`[/${tag}]` +
 		val.slice(se);
 	ta.setSelectionRange(r, r);
 }
