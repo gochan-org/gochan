@@ -48,11 +48,19 @@ export function getPageThread() {
 }
 
 function handleKeydown(e) {
-	let tag = "";
-	if(!e.ctrlKey && e.target.nodeName != "TEXTAREA" && e.target.nodeName != "INPUT") {
+	let ta = e.target;
+	let isPostMsg = ta.nodeName == "TEXTAREA" && ta.name == "postmsg";
+	let inForm = ta.form != undefined;
+	if(!inForm && !e.ctrlKey) {
 		openQR();
 		return;
+	} else if(isPostMsg && e.ctrlKey) {
+		applyBBCode(e, ta);
 	}
+}
+
+function applyBBCode(e, ta) {
+	let tag = "";
 	switch(e.keyCode) {
 		case 10: // Enter key
 		case 13: // Enter key in Chrome/IE
@@ -77,12 +85,15 @@ function handleKeydown(e) {
 	if(tag == "") return;
 
 	e.preventDefault();
-	let ta = e.target;
 	let val = ta.value;
 	let ss = ta.selectionStart;
 	let se = ta.selectionEnd;
 	let r = se + 2 + tag.length;
-	ta.value = val.slice(0, ss) + ("[" + tag + "]") + val.slice(ss, se) + ("[/" + tag + "]") + val.slice(se);
+	ta.value = val.slice(0, ss) + 
+		("[" + tag + "]") +
+		val.slice(ss, se) +
+		("[/" + tag + "]") +
+		val.slice(se);
 	ta.setSelectionRange(r, r);
 }
 
@@ -128,9 +139,9 @@ $(() => {
 	let passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
-	/* $watchedThreadsBtn = new TopBarButton("WT", () => {
+	$watchedThreadsBtn = new TopBarButton("WT", () => {
 		alert("Watched threads yet implemented");
-	}); */
+	});
 
 	if(pageThread.board != "") {
 		prepareThumbnails();
