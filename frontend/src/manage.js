@@ -12,7 +12,7 @@ const notAStaff = {
 };
 
 /**
- * @type {StaffActions}
+ * @type {StaffActionMap}
  */
 export let staffActions = {};
 export let staffInfo = notAStaff;
