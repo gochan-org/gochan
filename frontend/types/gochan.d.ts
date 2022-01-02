@@ -132,14 +132,9 @@ interface StaffAction {
 }
 
 /**
- * The result of requestiong /manage?action=actions
+ * The result of requesting /manage?action=actions
  */
-interface StaffActionMap {
-	/**
-	 * The "id" of the action. Retreived by requesting /manage?action=<id>
-	 */
-	[id:string]: StaffAction;
-}
+declare var staffActions: StaffAction[];
 
 /**
  * The menu shown when the Staff button on the top bar is clicked

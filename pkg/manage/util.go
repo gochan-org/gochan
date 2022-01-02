@@ -93,24 +93,38 @@ func GetStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
+// returns the action by its ID, or nil if it doesn't exist
+func getAction(id string, rank int) *Action {
+	for a, _ := range actions {
+		if rank == NoPerms && actions[a].Permissions > NoPerms {
+			id = "login"
+		}
+		if actions[a].ID == id {
+			return &actions[a]
+		}
+	}
+	return nil
+}
+
 func init() {
-	actions["actions"] = Action{
+	actions = append(actions, Action{
+		ID:          "actions",
 		Title:       "Staff actions",
 		Permissions: JanitorPerms,
 		JSONoutput:  AlwaysJSON,
 		Callback:    getStaffActions,
-	}
+	})
 }
 
 func getStaffActions(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
 	rank := GetStaffRank(request)
-	actionMap := map[string]Action{}
+	actionArr := []Action{}
 
-	for id, action := range actions {
+	for _, action := range actions {
 		if rank < action.Permissions || action.Permissions == NoPerms {
 			continue
 		}
-		actionMap[id] = action
+		actionArr = append(actionArr, action)
 	}
-	return actionMap, nil
+	return actionArr, nil
 }

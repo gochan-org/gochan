@@ -54,66 +54,63 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	wantsJSON := isRequestingJSON(request)
-	action := request.FormValue("action")
+	actionID := request.FormValue("action")
 	staffRank := GetStaffRank(request)
-	var managePageBuffer bytes.Buffer
 
-	if action == "" {
+	if actionID == "" {
 		if staffRank == NoPerms {
-			action = "login"
+			actionID = "login"
 		} else {
-			action = "dashboard"
+			actionID = "dashboard"
 		}
 	}
 
-	handler, ok := actions[action]
-	if !ok {
+	var managePageBuffer bytes.Buffer
+	action := getAction(actionID, staffRank)
+	if action == nil {
 		if wantsJSON {
-			serveError(writer, "notfound", action, "action not found", wantsJSON)
+			serveError(writer, "notfound", actionID, "action not found", wantsJSON)
 		} else {
 			serverutil.ServeNotFound(writer, request)
 		}
 		return
 	}
-	if staffRank == NoPerms && handler.Permissions > NoPerms {
-		handler = actions["login"]
-	} else if staffRank < handler.Permissions {
+
+	if staffRank < action.Permissions {
 		writer.WriteHeader(403)
 		staffName, _ := getCurrentStaff(request)
-
 		gclog.Printf(gclog.LStaffLog,
 			"Rejected request to manage page %s from %s (insufficient permissions)",
-			action, staffName)
-
-		serveError(writer, "permission", action, "You do not have permission to access this page", wantsJSON || (handler.JSONoutput > NoJSON))
+			actionID, staffName)
+		serveError(writer, "permission", actionID, "You do not have permission to access this page", wantsJSON || (action.JSONoutput > NoJSON))
 		return
 	}
 
 	var output interface{}
-	if wantsJSON && handler.JSONoutput == NoJSON {
+	if wantsJSON && action.JSONoutput == NoJSON {
 		output = nil
 		err = &ErrStaffAction{
 			ErrorField: "nojson",
-			Action:     action,
+			Action:     actionID,
 			Message:    "Requested mod page does not have a JSON output option",
 		}
 	} else {
-		output, err = handler.Callback(writer, request, wantsJSON)
+		output, err = action.Callback(writer, request, wantsJSON)
 	}
 	if err != nil {
 		staffName, _ := getCurrentStaff(request)
 		// writer.WriteHeader(500)
 		gclog.Printf(gclog.LStaffLog|gclog.LErrorLog,
-			"Error accessing manage page %s by %s: %s", action, staffName, err.Error())
-		serveError(writer, "actionerror", action, err.Error(), wantsJSON || (handler.JSONoutput > NoJSON))
+			"Error accessing manage page %s by %s: %s", actionID, staffName, err.Error())
+		serveError(writer, "actionerror", actionID, err.Error(), wantsJSON || (action.JSONoutput > NoJSON))
 		return
 	}
-	if handler.JSONoutput == AlwaysJSON || wantsJSON {
+	if action.JSONoutput == AlwaysJSON || wantsJSON {
 		writer.Header().Add("Content-Type", "application/json")
 		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 		outputJSON, err := gcutil.MarshalJSON(output, true)
 		if err != nil {
-			serveError(writer, "error", action, err.Error(), true)
+			serveError(writer, "error", actionID, err.Error(), true)
 			return
 		}
 		serverutil.MinifyWriter(writer, []byte(outputJSON), "application/json")

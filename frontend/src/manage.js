@@ -11,10 +11,7 @@ const notAStaff = {
 	Rank: 0
 };
 
-/**
- * @type {StaffActionMap}
- */
-export let staffActions = {};
+export let staffActions = [];
 export let staffInfo = notAStaff;
 
 /**
@@ -95,15 +92,23 @@ export function banSelectedPost() {
  * A helper function for creating a menu item
  * @param {StaffAction} action
  */
-function menuItem(action, id = "") {
-	if(id == "") {
+function menuItem(action, isCategory = false) {
+	if(isCategory) {
 		return $("<div/>").append($("<b/>").text(action));
 	} else {
 		return $("<div/>").append(
 			$("<a/>").prop({
-				href: `${webroot}manage?action=${id}`
+				href: `${webroot}manage?action=${action.id}`
 			}).text(action.title)
 		);
+	}
+}
+
+function getAction(id) {
+	for (const action of staffActions) {
+		if(action.id == id) {
+			return action;
+		}
 	}
 }
 
@@ -130,27 +135,29 @@ export function createStaffMenu(rank = staffInfo.Rank) {
 		id: "staffmenu",
 		class: "dropdown-menu"
 	});
-	let actions = Object.keys(staffActions);
-	let adminActions = actions.filter(val => filterAction(staffActions[val], 3));
-	let modActions = actions.filter(val => filterAction(staffActions[val], 2));
-	let janitorActions = actions.filter(val => filterAction(staffActions[val], 1));
+	let adminActions = staffActions.filter(val => filterAction(val, 3));
+	let modActions = staffActions.filter(val => filterAction(val, 2));
+	let janitorActions = staffActions.filter(val => filterAction(val, 1));
+	
+	$staffMenu.append(
+		menuItem(getAction("logout")),
+		menuItem(getAction("dashboard")));
 
-	$staffMenu.append(menuItem(staffActions["logout"], "logout"), menuItem(staffActions["dashboard"], "dashboard"))
-	$staffMenu.append(menuItem("Janitorial"));
-	for(const actionID of janitorActions) {
-		$staffMenu.append(menuItem(staffActions[actionID], actionID));
+	$staffMenu.append(menuItem("Janitorial", true));
+	for(const action of janitorActions) {
+		$staffMenu.append(menuItem(action));
 	}
 	if(rank < 2) return $staffMenu;
 
-	$staffMenu.append(menuItem("Moderation"));
-	for(const actionID of modActions) {
-		$staffMenu.append(menuItem(staffActions[actionID], actionID));
+	$staffMenu.append(menuItem("Moderation", true));
+	for(const action of modActions) {
+		$staffMenu.append(menuItem(action));
 	}
 	if(rank < 3) return $staffMenu;
 
-	$staffMenu.append(menuItem("Administration"));
-	for(const actionID of adminActions) {
-		$staffMenu.append(menuItem(staffActions[actionID], actionID));
+	$staffMenu.append(menuItem("Administration", true));
+	for(const action of adminActions) {
+		$staffMenu.append(menuItem(action));
 	}
 	$staffBtn = new TopBarButton("Staff", () => {
 		let exists = $(document).find($staffMenu).length > 0;

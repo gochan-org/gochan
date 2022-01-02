@@ -49,22 +49,31 @@ var (
 
 // Action represents the functions accessed by staff members at /manage?action=<functionname>.
 type Action struct {
+	// the string used when the user requests /manage?action=<id>
+	ID string `json:"id"`
+
+	// The text shown in the staff menu and the window title
 	Title string `json:"title"`
+
 	// Permissions represent who can access the page. 0 for anyone,
 	// 1 requires the user to have a janitor, mod, or admin account. 2 requires mod or admin,
 	// and 3 is only accessible by admins
 	Permissions int `json:"perms"`
+
 	// JSONoutput sets what the action can output. If it is 0, it will throw an error
 	// if JSON is requested. If it is 1, it can output JSON if requested, and if 2, it always
 	// outputs JSON whether it is requested or not
 	JSONoutput int `json:"jsonOutput"` // if it can sometimes return JSON, this should still be false
+
 	// Callback executes the staff page. if wantsJSON is true, it returns an object to be marshalled
 	// into JSON. Otherwise, a string assumed to be valid HTML is returned.
 	Callback func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) `json:"-"`
 }
 
-var actions = map[string]Action{
-	"cleanup": {
+// var actions = map[string]Action{
+var actions = []Action{
+	{
+		ID:          "cleanup",
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -95,7 +104,8 @@ var actions = map[string]Action{
 			}
 			return outputStr, nil
 		}},
-	"config": {
+	{
+		ID:          "config",
 		Title:       "Configuration",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -307,7 +317,8 @@ var actions = map[string]Action{
 			errStr := "web-based configuration tool has been temporarily disabled"
 			return errStr, errors.New(errStr)
 		}},
-	"dashboard": {
+	{
+		ID:          "dashboard",
 		Title:       "Dashboard",
 		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -321,7 +332,8 @@ var actions = map[string]Action{
 			}
 			return dashBuffer.String(), nil
 		}},
-	"login": {
+	{
+		ID:          "login",
 		Title:       "Login",
 		Permissions: NoPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -350,7 +362,8 @@ var actions = map[string]Action{
 			}
 			return
 		}},
-	"logout": {
+	{
+		ID:          "logout",
 		Title:       "Logout",
 		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -360,7 +373,8 @@ var actions = map[string]Action{
 			http.SetCookie(writer, cookie)
 			return "Logged out successfully", nil
 		}},
-	"announcements": {
+	{
+		ID:          "announcements",
 		Title:       "Announcements",
 		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -384,7 +398,8 @@ var actions = map[string]Action{
 			}
 			return outputStr, nil
 		}},
-	"bans": {
+	{
+		ID:          "bans",
 		Title:       "Bans",
 		Permissions: ModPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) { //TODO whatever this does idk man
@@ -473,14 +488,16 @@ var actions = map[string]Action{
 			outputStr += manageBansBuffer.String()
 			return outputStr, nil
 		}},
-	"staffinfo": {
+	{
+		ID:          "staffinfo",
 		Permissions: NoPerms,
 		JSONoutput:  AlwaysJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			staff, err := getCurrentFullStaff(request)
 			return staff, err
 		}},
-	"boards": {
+	{
+		ID:          "boards",
 		Title:       "Boards",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -661,7 +678,8 @@ var actions = map[string]Action{
 			gcsql.ResetBoardSectionArrays()
 			return
 		}},
-	"rebuildfront": {
+	{
+		ID:          "rebuildfront",
 		Title:       "Rebuild front page",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -670,7 +688,8 @@ var actions = map[string]Action{
 			}
 			return "Built front page successfully", building.BuildFrontPage()
 		}},
-	"rebuildall": {
+	{
+		ID:          "rebuildall",
 		Title:       "Rebuild everything",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
@@ -729,7 +748,8 @@ var actions = map[string]Action{
 			}
 			return buildStr, nil
 		}},
-	"rebuildboard": {
+	{
+		ID:          "rebuildboard",
 		Title:       "Rebuild board",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -749,7 +769,8 @@ var actions = map[string]Action{
 			// 	Message:    fmt.Sprintf("/%s/ is not a board"),
 			// }
 		}},
-	"rebuildboards": {
+	{
+		ID:          "rebuildboards",
 		Title:       "Rebuild boards",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
@@ -765,7 +786,8 @@ var actions = map[string]Action{
 			}
 			return "Boards built successfully", building.BuildBoards(false)
 		}},
-	"reparsehtml": {
+	{
+		ID:          "reparsehtml",
 		Title:       "Reparse HTML",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -800,7 +822,8 @@ var actions = map[string]Action{
 			outputStr += "Done building boards<hr />"
 			return outputStr, nil
 		}},
-	"recentposts": {
+	{
+		ID:          "recentposts",
 		Title:       "Recent posts",
 		Permissions: JanitorPerms,
 		JSONoutput:  OptionalJSON,
@@ -846,7 +869,8 @@ var actions = map[string]Action{
 			outputStr += "</table>"
 			return
 		}},
-	"postinfo": {
+	{
+		ID:          "postinfo",
 		Title:       "Post info",
 		Permissions: ModPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
@@ -859,7 +883,8 @@ var actions = map[string]Action{
 			jsonStr, _ := gcutil.MarshalJSON(post, false)
 			return jsonStr, nil
 		}},
-	"staff": {
+	{
+		ID:          "staff",
 		Title:       "Staff",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
@@ -916,7 +941,8 @@ var actions = map[string]Action{
 			outputStr += staffBuffer.String()
 			return outputStr, nil
 		}},
-	"tempposts": {
+	{
+		ID:          "tempposts",
 		Title:       "Temporary posts lists",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
