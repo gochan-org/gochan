@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/gclog"
-	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
@@ -116,18 +115,16 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		serverutil.MinifyWriter(writer, []byte(outputJSON), "application/json")
 		return
 	}
-	managePageBuffer.WriteString("<!DOCTYPE html><html><head>")
-	criticalCfg := config.GetSystemCriticalConfig()
-
-	if err = serverutil.MinifyTemplate(gctemplates.ManageHeader,
-		map[string]interface{}{
-			"webroot": criticalCfg.WebRoot,
-		},
-		&managePageBuffer, "text/html"); err != nil {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog|gclog.LStaffLog,
-			"Error executing manage page header template: ", err.Error()))
+	if err = building.BuildPageHeader(&managePageBuffer); err != nil {
+		serveError(writer, "error", actionID,
+			gclog.Print(gclog.LErrorLog, "Failed writing page header: ", err.Error()), false)
 		return
 	}
-	managePageBuffer.WriteString(fmt.Sprint(output, "</body></html>"))
+	managePageBuffer.WriteString("<br />" + fmt.Sprint(output) + "<br /><br />")
+	if err = building.BuildPageFooter(&managePageBuffer); err != nil {
+		serveError(writer, "error", actionID,
+			gclog.Print(gclog.LErrorLog, "Failed writing page footer: ", err.Error()), false)
+		return
+	}
 	writer.Write(managePageBuffer.Bytes())
 }

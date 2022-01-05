@@ -3,6 +3,7 @@ package building
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"os"
 	"path"
 
@@ -95,6 +96,28 @@ func BuildBoardListJSON() error {
 			gclog.Print(gclog.LErrorLog, "Failed writing boards.json file: ", err.Error()))
 	}
 	return nil
+}
+
+// BuildPageHeader is a convenience function for automatically generating the top part
+// of every normal HTML page
+func BuildPageHeader(writer io.Writer) error {
+	return serverutil.MinifyTemplate(gctemplates.PageHeader,
+		map[string]interface{}{
+			"webroot":      config.GetSystemCriticalConfig().WebRoot,
+			"site_config":  config.GetSiteConfig(),
+			"sections":     gcsql.AllSections,
+			"boards":       gcsql.AllBoards,
+			"board_config": config.GetBoardConfig(""),
+		}, writer, "text/html")
+}
+
+// BuildPageFooter is a convenience function for automatically generating the bottom
+// of every normal HTML page
+func BuildPageFooter(writer io.Writer) (err error) {
+	return serverutil.MinifyTemplate(gctemplates.PageFooter,
+		map[string]interface{}{
+			"webroot": config.GetSystemCriticalConfig().WebRoot,
+		}, writer, "text/html")
 }
 
 // BuildJS minifies (if enabled) consts.js, which is built from a template

@@ -344,17 +344,26 @@ var actions = []Action{
 			username := request.FormValue("username")
 			password := request.FormValue("password")
 			redirectAction := request.FormValue("action")
-			if redirectAction == "" {
+			if redirectAction == "" || redirectAction == "logout" {
 				redirectAction = "announcements"
 			}
+
 			if username == "" || password == "" {
 				//assume that they haven't logged in
-				output = `<form method="POST" action="` + systemCritical.WebRoot + `manage?action=login" id="login-box" class="staff-form">` +
-					`<input type="hidden" name="redirect" value="` + redirectAction + `" />` +
-					`<input type="text" name="username" class="logindata" /><br />` +
-					`<input type="password" name="password" class="logindata" /><br />` +
-					`<input type="submit" value="Login" />` +
-					`</form>`
+				manageLoginBuffer := bytes.NewBufferString("")
+				if err = serverutil.MinifyTemplate(gctemplates.ManageLogin,
+					map[string]interface{}{
+						"webroot":      config.GetSystemCriticalConfig().WebRoot,
+						"site_config":  config.GetSiteConfig(),
+						"sections":     gcsql.AllSections,
+						"boards":       gcsql.AllBoards,
+						"board_config": config.GetBoardConfig(""),
+						"redirect":     redirectAction,
+					}, manageLoginBuffer, "text/html"); err != nil {
+					return "", errors.New(gclog.Print(gclog.LErrorLog,
+						"Error executing staff login page template: "+err.Error()))
+				}
+				output = manageLoginBuffer.String()
 			} else {
 				key := gcutil.Md5Sum(request.RemoteAddr + username + password + systemCritical.RandomSeed + gcutil.RandomString(3))[0:10]
 				createSession(key, username, password, request, writer)
@@ -371,7 +380,7 @@ var actions = []Action{
 			cookie.MaxAge = 0
 			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
 			http.SetCookie(writer, cookie)
-			return "Logged out successfully", nil
+			return "<br />Logged out successfully", nil
 		}},
 	{
 		ID:          "announcements",

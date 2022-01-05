@@ -1,0 +1,9 @@
+<h1>Login</h1><br />
+<form method="POST" action="{{.webroot}}manage?action=login" id="login-box" class="staff-form">
+<input type="hidden" name="redirect" value="{{.redirect}}" />
+<table>
+	<tr><td>Login</td><td><input type="text" name="username" class="logindata" /><br /></td></tr>
+	<tr><td>Password</td><td><input type="password" name="password" class="logindata" /><br /></td></tr>
+	<tr><td><input type="submit" value="Login" /></td></tr>
+</table>
+</form><br />

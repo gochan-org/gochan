@@ -1,3 +1,30 @@
-<h1 class="manage-header">Dashboard</h1>
+{{/*
+	TODO: Make this actually useful
+*/}}
 
-Coming soon
+<h2>Dashboard</h2>
+(still a work in progress)<br /><br />
+<fieldset><legend>Announcements</legend>
+	<div class="announcement">
+	<b>Announcement title</b><br />
+	Announcement body goes here
+	</div><hr />
+	<div class="announcement">
+		<b>Announcement title 2</b><br />
+		Announcement body goes here
+	</div>
+</fieldset><br />
+<fieldset><legend>Boards</legend>
+	<ul>
+		<li><a href="/test/">/test/</a> - Testing board</li>
+		<li><a href="/test2/">/test2/</a> - Testing board 2</li>
+		<li><a href="/test3/">/test2/</a> - Testing board 3</li>
+	</ul>
+</fieldset><br />
+<fieldset><legend>Staff actions (role: administrator)</legend>
+	<ul>
+		<li><a href="/manage?action=logout">Log out</a></li>
+		<li><a href="/manage?action=rebuildall">Rebuild everything</a></li>
+		<li><a href="/manage?action=bans">Bans</a></li>
+	</ul>
+</fieldset>

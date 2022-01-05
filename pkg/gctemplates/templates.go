@@ -22,8 +22,10 @@ var (
 	ManageBoards    *template.Template
 	ManageConfig    *template.Template
 	ManageDashboard *template.Template
-	ManageHeader    *template.Template
+	ManageLogin     *template.Template
 	ManageStaff     *template.Template
+	PageHeader      *template.Template
+	PageFooter      *template.Template
 	PostEdit        *template.Template
 	ThreadPage      *template.Template
 )
@@ -145,16 +147,28 @@ func templateLoading(t string, buildAll bool) error {
 			return templateError("manage_dashboard.html", err)
 		}
 	}
-	if buildAll || t == "manageheader" {
-		ManageHeader, err = loadTemplate("manage_header.html")
+	if buildAll || t == "managelogin" {
+		ManageLogin, err = loadTemplate("manage_login.html")
 		if err != nil {
-			return templateError("manage_header.html", err)
+			return templateError("manage_login.html", err)
 		}
 	}
 	if buildAll || t == "managestaff" {
 		ManageStaff, err = loadTemplate("manage_staff.html")
 		if err != nil {
 			return templateError("manage_staff.html", err)
+		}
+	}
+	if buildAll || t == "pageheader" {
+		PageHeader, err = loadTemplate("page_header.html")
+		if err != nil {
+			return templateError("page_header.html", err)
+		}
+	}
+	if buildAll || t == "pagefooter" {
+		PageFooter, err = loadTemplate("page_footer.html")
+		if err != nil {
+			return templateError("page_footer.html", err)
 		}
 	}
 	if buildAll || t == "js" {
