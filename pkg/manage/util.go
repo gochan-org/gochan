@@ -1,12 +1,14 @@
 package manage
 
 import (
+	"bytes"
 	"net/http"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 	"golang.org/x/crypto/bcrypt"
@@ -107,24 +109,59 @@ func getAction(id string, rank int) *Action {
 }
 
 func init() {
-	actions = append(actions, Action{
-		ID:          "actions",
-		Title:       "Staff actions",
-		Permissions: JanitorPerms,
-		JSONoutput:  AlwaysJSON,
-		Callback:    getStaffActions,
-	})
+	actions = append(actions,
+		Action{
+			ID:          "actions",
+			Title:       "Staff actions",
+			Permissions: JanitorPerms,
+			JSONoutput:  AlwaysJSON,
+			Callback:    getStaffActions,
+		},
+		Action{
+			ID:          "dashboard",
+			Title:       "Dashboard",
+			Permissions: JanitorPerms,
+			Callback:    dashboardCallback,
+		})
+}
+
+func dashboardCallback(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
+	dashBuffer := bytes.NewBufferString("")
+	announcements, err := gcsql.GetAllAccouncements()
+	if err != nil {
+		return nil, err
+	}
+	rank := GetStaffRank(request)
+	availableActions := getAvailableActions(rank, true)
+	if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
+		map[string]interface{}{
+			"actions":       availableActions,
+			"rank":          rank,
+			"announcements": announcements,
+			"boards":        gcsql.AllBoards,
+			"webroot":       config.GetSystemCriticalConfig().WebRoot,
+		}, dashBuffer, "text/html"); err != nil {
+		gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
+			"Error executing dashboard template: %q", err.Error())
+		return "", err
+	}
+	return dashBuffer.String(), nil
+}
+
+func getAvailableActions(rank int, noJSON bool) []Action {
+	available := []Action{}
+	for _, action := range actions {
+		if (rank < action.Permissions || action.Permissions == NoPerms) ||
+			(noJSON && action.JSONoutput == AlwaysJSON) {
+			continue
+		}
+		available = append(available, action)
+	}
+	return available
 }
 
 func getStaffActions(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
 	rank := GetStaffRank(request)
-	actionArr := []Action{}
-
-	for _, action := range actions {
-		if rank < action.Permissions || action.Permissions == NoPerms {
-			continue
-		}
-		actionArr = append(actionArr, action)
-	}
-	return actionArr, nil
+	availableActions := getAvailableActions(rank, false)
+	return availableActions, nil
 }

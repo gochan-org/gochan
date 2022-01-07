@@ -54,9 +54,6 @@ var funcMap = template.FuncMap{
 		}
 		return arr[start:length]
 	},
-	"len": func(arr []interface{}) int {
-		return len(arr)
-	},
 
 	// String functions
 	// "arrToString": arrToString,

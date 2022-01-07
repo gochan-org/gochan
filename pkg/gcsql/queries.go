@@ -298,7 +298,7 @@ func GetAllAccouncements() ([]Announcement, error) {
 	if err != nil {
 		return nil, err
 	}
-	var announcements []Announcement
+	announcements := []Announcement{}
 	for rows.Next() {
 		var announcement Announcement
 		err = rows.Scan(&announcement.Poster, &announcement.Timestamp, &announcement.Subject, &announcement.Message)

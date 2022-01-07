@@ -73,6 +73,17 @@ type Action struct {
 // var actions = map[string]Action{
 var actions = []Action{
 	{
+		ID:          "logout",
+		Title:       "Logout",
+		Permissions: JanitorPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			cookie, _ := request.Cookie("sessiondata")
+			cookie.MaxAge = 0
+			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
+			http.SetCookie(writer, cookie)
+			return "<br />Logged out successfully", nil
+		}},
+	{
 		ID:          "cleanup",
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
@@ -102,6 +113,143 @@ var actions = []Action{
 					`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
 					`</form>`
 			}
+			return outputStr, nil
+		}},
+	{
+		ID:          "recentposts",
+		Title:       "Recent posts",
+		Permissions: JanitorPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var outputStr string
+			systemCritical := config.GetSystemCriticalConfig()
+			limit := gcutil.HackyStringToInt(request.FormValue("limit"))
+			if limit == 0 {
+				limit = 50
+			}
+			output = `<h1 class="manage-header">Recent posts</h1>` +
+				`Limit by: <select id="limit">` +
+				`<option>25</option><option>50</option><option>100</option><option>200</option>` +
+				`</select><br /><table width="100%%d" border="1">` +
+				`<colgroup><col width="25%%" /><col width="50%%" /><col width="17%%" /></colgroup>` +
+				`<tr><th></th><th>Message</th><th>Time</th></tr>`
+			recentposts, err := gcsql.GetRecentPostsGlobal(limit, false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
+			if wantsJSON {
+				return recentposts, err
+			}
+
+			if err != nil {
+				errMsg := gclog.Println(gclog.LErrorLog, "Error getting recent posts:", err.Error())
+				err = errors.New(errMsg)
+				if wantsJSON {
+					return ErrStaffAction{
+						ErrorField: "recentpostserror",
+						Action:     "recentposts",
+						Message:    errMsg,
+					}, err
+				}
+				return errMsg, err
+			}
+
+			for _, recentpost := range recentposts {
+				outputStr += fmt.Sprintf(
+					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
+					path.Join(systemCritical.WebRoot, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
+					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
+					recentpost.Timestamp.Format("01/02/06, 15:04"),
+				)
+			}
+			outputStr += "</table>"
+			return
+		}},
+	{
+		ID:          "bans",
+		Title:       "Bans",
+		Permissions: ModPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) { //TODO whatever this does idk man
+			var outputStr string
+			var post gcsql.Post
+			if request.FormValue("do") == "add" {
+				ip := request.FormValue("ip")
+				name := request.FormValue("name")
+				nameIsRegex := (request.FormValue("nameregex") == "on")
+				checksum := request.FormValue("checksum")
+				filename := request.FormValue("filename")
+				durationForm := request.FormValue("duration")
+				permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
+				duration, err := gcutil.ParseDurationString(durationForm)
+				if err != nil {
+					return "", err
+				}
+				expires := time.Now().Add(duration)
+
+				boards := request.FormValue("boards")
+				reason := html.EscapeString(request.FormValue("reason"))
+				staffNote := html.EscapeString(request.FormValue("staffnote"))
+				currentStaff, _ := getCurrentStaff(request)
+
+				if filename != "" {
+					err = gcsql.CreateFileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
+				}
+				if err != nil {
+					outputStr += err.Error()
+					err = nil
+				}
+				if name != "" {
+					if err = gcsql.CreateUserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards); err != nil {
+						return "", err
+					}
+				}
+
+				if request.FormValue("fullban") == "on" {
+					err = gcsql.CreateUserBan(ip, false, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
+					if err != nil {
+						return "", err
+					}
+				} else {
+					if request.FormValue("threadban") == "on" {
+						err = gcsql.CreateUserBan(ip, true, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
+						if err != nil {
+							return "", err
+
+						}
+					}
+					if request.FormValue("imageban") == "on" {
+						err = gcsql.CreateFileBan(checksum, currentStaff, permaban, staffNote, boards)
+						if err != nil {
+							return "", err
+						}
+					}
+				}
+			}
+
+			if request.FormValue("postid") != "" {
+				var err error
+				post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"))
+				if err != nil {
+					err = errors.New("Error getting post: " + err.Error())
+					return "", err
+				}
+			}
+
+			banlist, err := gcsql.GetAllBans()
+			if err != nil {
+				err = errors.New("Error getting ban list: " + err.Error())
+				return "", err
+			}
+			manageBansBuffer := bytes.NewBufferString("")
+
+			if err = serverutil.MinifyTemplate(gctemplates.ManageConfig,
+				map[string]interface{}{
+					// "systemCritical": config.GetSystemCriticalConfig(),
+					"banlist": banlist,
+					"post":    post,
+				},
+				manageBansBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing ban management page template: "+err.Error()))
+			}
+			outputStr += manageBansBuffer.String()
 			return outputStr, nil
 		}},
 	{
@@ -318,19 +466,62 @@ var actions = []Action{
 			return errStr, errors.New(errStr)
 		}},
 	{
-		ID:          "dashboard",
-		Title:       "Dashboard",
-		Permissions: JanitorPerms,
+		ID:          "staff",
+		Title:       "Staff",
+		Permissions: AdminPerms,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			dashBuffer := bytes.NewBufferString("")
-
-			if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
-				nil, dashBuffer, "text/html"); err != nil {
-				gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
-					"Error executing dashboard template: %q", err.Error())
+			var outputStr string
+			do := request.FormValue("do")
+			allStaff, err := gcsql.GetAllStaffNopass(true)
+			if wantsJSON {
+				return allStaff, err
+			}
+			if err != nil {
+				err = errors.New(gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
 				return "", err
 			}
-			return dashBuffer.String(), nil
+
+			for _, staff := range allStaff {
+				username := request.FormValue("username")
+				password := request.FormValue("password")
+				rank := request.FormValue("rank")
+				rankI, _ := strconv.Atoi(rank)
+				if do == "add" {
+					if err = gcsql.NewStaff(username, password, rankI); err != nil {
+						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
+							"Error creating new staff account %q: %s", username, err.Error()))
+						return
+					}
+				} else if do == "del" && username != "" {
+					if err = gcsql.DeleteStaff(username); err != nil {
+						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
+							"Error deleting staff account %q : %s", username, err.Error()))
+						return
+					}
+				}
+
+				switch {
+				case staff.Rank == 3:
+					rank = "admin"
+				case staff.Rank == 2:
+					rank = "mod"
+				case staff.Rank == 1:
+					rank = "janitor"
+				}
+			}
+
+			staffBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageStaff,
+				map[string]interface{}{
+					"allstaff": allStaff,
+				},
+				staffBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing staff management page template: ", err.Error()))
+			}
+			outputStr += staffBuffer.String()
+			return outputStr, nil
 		}},
 	{
 		ID:          "login",
@@ -345,7 +536,7 @@ var actions = []Action{
 			password := request.FormValue("password")
 			redirectAction := request.FormValue("action")
 			if redirectAction == "" || redirectAction == "logout" {
-				redirectAction = "announcements"
+				redirectAction = "dashboard"
 			}
 
 			if username == "" || password == "" {
@@ -361,7 +552,7 @@ var actions = []Action{
 						"redirect":     redirectAction,
 					}, manageLoginBuffer, "text/html"); err != nil {
 					return "", errors.New(gclog.Print(gclog.LErrorLog,
-						"Error executing staff login page template: "+err.Error()))
+						"Error executing staff login page template: ", err.Error()))
 				}
 				output = manageLoginBuffer.String()
 			} else {
@@ -372,130 +563,13 @@ var actions = []Action{
 			return
 		}},
 	{
-		ID:          "logout",
-		Title:       "Logout",
-		Permissions: JanitorPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			cookie, _ := request.Cookie("sessiondata")
-			cookie.MaxAge = 0
-			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
-			http.SetCookie(writer, cookie)
-			return "<br />Logged out successfully", nil
-		}},
-	{
 		ID:          "announcements",
 		Title:       "Announcements",
 		Permissions: JanitorPerms,
+		JSONoutput:  AlwaysJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			outputStr := `<h1 class="manage-header">Announcements</h1><br />`
-
-			//get all announcements to announcement list
-			//loop to html if exist, no announcement if empty
-			announcements, err := gcsql.GetAllAccouncements()
-			if err != nil {
-				return "", err
-			}
-			if len(announcements) == 0 {
-				outputStr += "No announcements"
-			} else {
-				boardConfig := config.GetBoardConfig("")
-				for _, announcement := range announcements {
-					outputStr += `<div class="section-block">` +
-						`<div class="section-title-block"><b>` + announcement.Subject + `</b> by ` + announcement.Poster + ` at ` + announcement.Timestamp.Format(boardConfig.DateTimeFormat) + `</div>` +
-						`<div class="section-body">` + announcement.Message + `</div></div>`
-				}
-			}
-			return outputStr, nil
-		}},
-	{
-		ID:          "bans",
-		Title:       "Bans",
-		Permissions: ModPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) { //TODO whatever this does idk man
-			var outputStr string
-			var post gcsql.Post
-			if request.FormValue("do") == "add" {
-				ip := request.FormValue("ip")
-				name := request.FormValue("name")
-				nameIsRegex := (request.FormValue("nameregex") == "on")
-				checksum := request.FormValue("checksum")
-				filename := request.FormValue("filename")
-				durationForm := request.FormValue("duration")
-				permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
-				duration, err := gcutil.ParseDurationString(durationForm)
-				if err != nil {
-					return "", err
-				}
-				expires := time.Now().Add(duration)
-
-				boards := request.FormValue("boards")
-				reason := html.EscapeString(request.FormValue("reason"))
-				staffNote := html.EscapeString(request.FormValue("staffnote"))
-				currentStaff, _ := getCurrentStaff(request)
-
-				if filename != "" {
-					err = gcsql.CreateFileNameBan(filename, nameIsRegex, currentStaff, permaban, staffNote, boards)
-				}
-				if err != nil {
-					outputStr += err.Error()
-					err = nil
-				}
-				if name != "" {
-					if err = gcsql.CreateUserNameBan(name, nameIsRegex, currentStaff, permaban, staffNote, boards); err != nil {
-						return "", err
-					}
-				}
-
-				if request.FormValue("fullban") == "on" {
-					err = gcsql.CreateUserBan(ip, false, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
-					if err != nil {
-						return "", err
-					}
-				} else {
-					if request.FormValue("threadban") == "on" {
-						err = gcsql.CreateUserBan(ip, true, currentStaff, boards, expires, permaban, staffNote, reason, true, time.Now())
-						if err != nil {
-							return "", err
-
-						}
-					}
-					if request.FormValue("imageban") == "on" {
-						err = gcsql.CreateFileBan(checksum, currentStaff, permaban, staffNote, boards)
-						if err != nil {
-							return "", err
-						}
-					}
-				}
-			}
-
-			if request.FormValue("postid") != "" {
-				var err error
-				post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"))
-				if err != nil {
-					err = errors.New("Error getting post: " + err.Error())
-					return "", err
-				}
-			}
-
-			banlist, err := gcsql.GetAllBans()
-			if err != nil {
-				err = errors.New("Error getting ban list: " + err.Error())
-				return "", err
-			}
-			manageBansBuffer := bytes.NewBufferString("")
-
-			if err = serverutil.MinifyTemplate(gctemplates.ManageConfig,
-				map[string]interface{}{
-					// "systemCritical": config.GetSystemCriticalConfig(),
-					"banlist": banlist,
-					"post":    post,
-				},
-				manageBansBuffer, "text/html"); err != nil {
-				return "", errors.New(gclog.Print(gclog.LErrorLog,
-					"Error executing ban management page template: "+err.Error()))
-			}
-			outputStr += manageBansBuffer.String()
-			return outputStr, nil
+			// return an array of announcements and any errors
+			return gcsql.GetAllAccouncements()
 		}},
 	{
 		ID:          "staffinfo",
@@ -832,53 +906,6 @@ var actions = []Action{
 			return outputStr, nil
 		}},
 	{
-		ID:          "recentposts",
-		Title:       "Recent posts",
-		Permissions: JanitorPerms,
-		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			var outputStr string
-			systemCritical := config.GetSystemCriticalConfig()
-			limit := gcutil.HackyStringToInt(request.FormValue("limit"))
-			if limit == 0 {
-				limit = 50
-			}
-			output = `<h1 class="manage-header">Recent posts</h1>` +
-				`Limit by: <select id="limit">` +
-				`<option>25</option><option>50</option><option>100</option><option>200</option>` +
-				`</select><br /><table width="100%%d" border="1">` +
-				`<colgroup><col width="25%%" /><col width="50%%" /><col width="17%%" /></colgroup>` +
-				`<tr><th></th><th>Message</th><th>Time</th></tr>`
-			recentposts, err := gcsql.GetRecentPostsGlobal(limit, false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
-			if wantsJSON {
-				return recentposts, err
-			}
-
-			if err != nil {
-				errMsg := gclog.Println(gclog.LErrorLog, "Error getting recent posts:", err.Error())
-				err = errors.New(errMsg)
-				if wantsJSON {
-					return ErrStaffAction{
-						ErrorField: "recentpostserror",
-						Action:     "recentposts",
-						Message:    errMsg,
-					}, err
-				}
-				return errMsg, err
-			}
-
-			for _, recentpost := range recentposts {
-				outputStr += fmt.Sprintf(
-					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
-					path.Join(systemCritical.WebRoot, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
-					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
-					recentpost.Timestamp.Format("01/02/06, 15:04"),
-				)
-			}
-			outputStr += "</table>"
-			return
-		}},
-	{
 		ID:          "postinfo",
 		Title:       "Post info",
 		Permissions: ModPerms,
@@ -891,64 +918,6 @@ var actions = []Action{
 			}
 			jsonStr, _ := gcutil.MarshalJSON(post, false)
 			return jsonStr, nil
-		}},
-	{
-		ID:          "staff",
-		Title:       "Staff",
-		Permissions: AdminPerms,
-		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			var outputStr string
-			do := request.FormValue("do")
-			allStaff, err := gcsql.GetAllStaffNopass(true)
-			if wantsJSON {
-				return allStaff, err
-			}
-			if err != nil {
-				err = errors.New(gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
-				return "", err
-			}
-
-			for _, staff := range allStaff {
-				username := request.FormValue("username")
-				password := request.FormValue("password")
-				rank := request.FormValue("rank")
-				rankI, _ := strconv.Atoi(rank)
-				if do == "add" {
-					if err = gcsql.NewStaff(username, password, rankI); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
-							"Error creating new staff account %q: %s", username, err.Error()))
-						return
-					}
-				} else if do == "del" && username != "" {
-					if err = gcsql.DeleteStaff(username); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
-							"Error deleting staff account %q : %s", username, err.Error()))
-						return
-					}
-				}
-
-				switch {
-				case staff.Rank == 3:
-					rank = "admin"
-				case staff.Rank == 2:
-					rank = "mod"
-				case staff.Rank == 1:
-					rank = "janitor"
-				}
-			}
-
-			staffBuffer := bytes.NewBufferString("")
-			if err = serverutil.MinifyTemplate(gctemplates.ManageStaff,
-				map[string]interface{}{
-					"allstaff": allStaff,
-				},
-				staffBuffer, "text/html"); err != nil {
-				return "", errors.New(gclog.Print(gclog.LErrorLog,
-					"Error executing staff management page template: ", err.Error()))
-			}
-			outputStr += staffBuffer.String()
-			return outputStr, nil
 		}},
 	{
 		ID:          "tempposts",

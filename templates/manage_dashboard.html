@@ -1,30 +1,30 @@
-{{/*
-	TODO: Make this actually useful
-*/}}
-
 <h2>Dashboard</h2>
-(still a work in progress)<br /><br />
 <fieldset><legend>Announcements</legend>
+{{range $a, $announcement := $.announcements}}
 	<div class="announcement">
-	<b>Announcement title</b><br />
-	Announcement body goes here
-	</div><hr />
-	<div class="announcement">
-		<b>Announcement title 2</b><br />
-		Announcement body goes here
+		<b>{{$announcement.Subject}}</b><br />
+		{{$announcement.Message}}
 	</div>
+	{{if gt (len $.announcements) (add $a 1)}}<hr />{{end}}
+{{else}}
+	<i>No announcements</i>
+{{end}}
 </fieldset><br />
 <fieldset><legend>Boards</legend>
+{{with $.boards}}
 	<ul>
-		<li><a href="/test/">/test/</a> - Testing board</li>
-		<li><a href="/test2/">/test2/</a> - Testing board 2</li>
-		<li><a href="/test3/">/test2/</a> - Testing board 3</li>
+	{{range $b, $board := $.boards}}
+		<li><a href="{{$.webroot}}{{$board.Dir}}/">/{{$board.Dir}}/</a> - {{$board.Title}}</li>
+	{{end}}
 	</ul>
+{{else}}
+	<i>No boards</i>
+{{end}}
 </fieldset><br />
 <fieldset><legend>Staff actions (role: administrator)</legend>
 	<ul>
-		<li><a href="/manage?action=logout">Log out</a></li>
-		<li><a href="/manage?action=rebuildall">Rebuild everything</a></li>
-		<li><a href="/manage?action=bans">Bans</a></li>
+	{{range $a, $action := $.actions}}
+		{{if ne $action.Title "Dashboard"}}<li><a href="{{$.webroot}}manage?action=$action.ID">{{$action.Title}}</a> </li>{{end}}
+	{{end}}
 	</ul>
 </fieldset>
