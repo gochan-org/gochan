@@ -21,6 +21,11 @@ export function initQR(pageThread) {
 		return;
 	}
 
+	let onPostingPage = $("form input[name=boardid]").length > 0;
+	// don't open the QR box if we aren't on a board or thread page
+	if(!onPostingPage)
+		return;
+
 	const nameCookie = getCookie("name");
 	const emailCookie = getCookie("email");
 

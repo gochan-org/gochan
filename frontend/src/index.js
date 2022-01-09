@@ -7,7 +7,7 @@ import { initStaff, createStaffMenu } from "./manage";
 // import { notify } from './notifications';
 import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
 import { initSettings } from "./settings";
-import { initTopBar, TopBarButton, DropDownMenu } from "./topbar";
+import { initTopBar, TopBarButton } from "./topbar";
 import { initQR, openQR } from "./qr";
 import { opRegex } from "./vars";
 import { initWatcher, watchThread } from "./watcher";

@@ -48,33 +48,3 @@ export function initTopBar() {
 
 	topbarHeight = $topbar.outerHeight() + 4;
 }
-
-/**
- * A menu opened when a TopBarButton is clicked
- * @deprecated probably going to replace this with jQuery UI's menu
- */
-export class DropDownMenu {
-	/**
-	 * @param {string} title Text 
-	 */
-	constructor(title, menu) {
-		this.title = title;
-		this.menu = menu;
-		// this.menu.menu();
-		let titleLower = title.toLowerCase();
-		this.menuDiv = $("<div/>").prop({
-			id: `${titleLower}-menu`,
-			class: "dropdown-menu"
-		}).append(this.menu);
-		this.button = new TopBarButton(title, () => {
-			$topbar.after(this.menuDiv);
-			// $(`a#${titleLower}-menu`).children(0).text(title + upArrow);
-			// $(`div#${titleLower}`).css({
-			// 	top: $topbar.outerHeight()
-			// });
-		}, () => {
-			// $(`div#${titleLower}-menu.dropdown-menu`).remove();
-			// $(`a#${titleLower}-menu`).children(0).html(title + downArrow);
-		});
-	}
-}
