@@ -264,10 +264,10 @@ def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css
 		)
 
 
-def js(minify = False, watch = False):
+def js(nominify = False, watch = False):
 	print("Transpiling JS")
 	npm_cmd = "npm --prefix frontend/ run build"
-	if minify:
+	if nominify == False:
 		npm_cmd += "-minify"
 	if watch:
 		npm_cmd += "-watch"
@@ -282,19 +282,12 @@ def release(goos):
 	release_name = gochan_bin + "-v" + version + "_" + gcos_name
 	release_dir = path.join("releases", release_name)
 	print("Creating release for", gcos_name)
-	handle = None
-	func = None
-	if goos == "windows" or goos == "darwin":
-		handle = ZipFile(release_dir + ".zip", "w")
-		func = handle.write
-	else:
-		handle = tarfile.open(release_dir + ".tar.gz", "w:gz")
-		func = handle.add
-	func(gochan_exe, path.join(release_name, gochan_exe))
-	# func(migration_exe, path.join(release_name, migration_exe))
+	fs_action("mkdir", path.join(release_dir, "html"))
 	for file in release_files:
-		func(file, path.join(release_name, file))
-	handle.close()
+		fs_action("copy", file, path.join(release_dir, file))
+	fs_action("copy", gochan_exe, path.join(release_dir, gochan_exe))
+	format = "zip" if goos == "windows" or goos == "darwin" else "gztar"
+	shutil.make_archive(release_dir, format, root_dir="releases", base_dir=release_name)
 
 def sass(minify = False):
 	sass_cmd = "sass "
@@ -375,10 +368,10 @@ if __name__ == "__main__":
 		args = parser.parse_args()
 		install(args.prefix, args.documentroot, args.js, args.css, args.templates)
 	elif action == "js":
-		parser.add_argument("--minify", action = "store_true", help = "create a minified gochan.js")
+		parser.add_argument("--nominify", action = "store_true", help = "Don't minify gochan.js")
 		parser.add_argument("--watch", action = "store_true", help = "automatically rebuild when you change a file (keeps running)")
 		args = parser.parse_args()
-		js(args.minify, args.watch)
+		js(args.nominify, args.watch)
 	elif action == "release":
 		parser.add_argument("--all", help = "build releases for Windows, macOS, and Linux", action = "store_true")
 		args = parser.parse_args()
