@@ -24,7 +24,7 @@
 <fieldset><legend>Staff actions (role: administrator)</legend>
 	<ul>
 	{{range $a, $action := $.actions}}
-		{{if ne $action.Title "Dashboard"}}<li><a href="{{$.webroot}}manage?action=$action.ID">{{$action.Title}}</a> </li>{{end}}
+		{{if ne $action.Title "Dashboard"}}<li><a href="{{$.webroot}}manage?action={{$action.ID}}">{{$action.Title}}</a> </li>{{end}}
 	{{end}}
 	</ul>
 </fieldset>
