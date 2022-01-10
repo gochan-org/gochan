@@ -70,7 +70,7 @@ func BuildBoardListJSON() error {
 	defer boardListFile.Close()
 
 	boardsMap := map[string][]gcsql.Board{
-		"boards": []gcsql.Board{},
+		"boards": {},
 	}
 
 	boardCfg := config.GetBoardConfig("")

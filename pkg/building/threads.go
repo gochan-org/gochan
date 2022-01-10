@@ -61,11 +61,6 @@ func BuildThreadPages(op *gcsql.Post) error {
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
 
-	var repliesInterface []interface{}
-	for _, reply := range replies {
-		repliesInterface = append(repliesInterface, reply)
-	}
-
 	threadPageFilepath := path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
 	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
@@ -75,12 +70,13 @@ func BuildThreadPages(op *gcsql.Post) error {
 
 	// render thread page
 	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
-		"webroot":  criticalCfg.WebRoot,
-		"boards":   gcsql.AllBoards,
-		"board":    board,
-		"sections": gcsql.AllSections,
-		"posts":    replies,
-		"op":       op,
+		"webroot":      criticalCfg.WebRoot,
+		"boards":       gcsql.AllBoards,
+		"board":        board,
+		"board_config": config.GetBoardConfig(board.Dir),
+		"sections":     gcsql.AllSections,
+		"posts":        replies,
+		"op":           op,
 	}, threadPageFile, "text/html"); err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
 			"Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error()))

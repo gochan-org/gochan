@@ -3,13 +3,13 @@
 /log/
 /releases/
 /vagrant/.vagrant/
-/vagrant/*.log
 /html/boards.json
 /html/index.html
 /html/test*
 /html/javascript/consts.js
+/html/js/consts.js
 /templates/override
-**/*.bak
+*.bak
 *.log
 *.swp
 __debug_bin

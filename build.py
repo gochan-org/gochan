@@ -110,8 +110,6 @@ def set_vars(goos = ""):
 	global exe
 	global gochan_bin
 	global gochan_exe
-	global migration_bin
-	global migration_exe
 	global version
 
 	if goos != "":
@@ -128,14 +126,13 @@ def set_vars(goos = ""):
 
 	gochan_bin = "gochan"
 	gochan_exe = "gochan" + exe
-	migration_bin = "gochan-migration"
-	migration_exe = "gochan-migration" + exe
 
 	version_file = open("version", "r")
 	version = version_file.read().strip()
 	version_file.close()
 
 def build(debugging = False):
+	"""Build the gochan executable for the current GOOS"""
 	pwd = os.getcwd()
 	trimpath = "-trimpath=" + pwd
 	gcflags = " -gcflags=\"" + trimpath + "{}\""
@@ -157,13 +154,6 @@ def build(debugging = False):
 		print("Failed building gochan, see command output for details")
 		exit(1)
 	print("Built gochan successfully\n")
-
-	# print("Note: gochan-migration has been put on indefinite suspention. See README.md")
-	# status = run_cmd(build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration", realtime = True, print_command = True)[1]
-	# if status != 0:
-	# 	print("Failed building gochan-migration, see command output for details")
-	# 	exit(1)
-	# print("Build gochan-migration successfully\n")
 
 def clean():
 	print("Cleaning up")
@@ -188,6 +178,7 @@ def docker(option = "guestdb", attached = False):
 	status = run_cmd(cmd, print_output = True, realtime = True, print_command = True)[1]
 	if status != 0:
 		print("Failed starting a docker container, exited with status code", status) 
+		exit(1)
 
 def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css_only = False, templates_only = False):
 	if gcos == "windows" or gcos == "darwin":
@@ -210,7 +201,6 @@ def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css
 		done = True
 	if templates_only:
 		print("Installing template files")
-		print(document_root)
 		templates_install_dir = path.join(document_root, "templates")
 		if not path.exists(templates_install_dir):
 			fs_action("mkdir", templates_install_dir)
@@ -223,7 +213,6 @@ def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css
 				path.join(document_root, "templates", template))
 		done = True
 	if done:
-		print("done.")
 		return
 	
 	fs_action("mkdir", "/etc/gochan")
@@ -238,17 +227,11 @@ def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css
 		print("Installing", file, "to", out_path)
 		fs_action("copy", file, out_path)
 
-
-	# print("installing sample-configs/gochan.example.json to /etc/gochan/gochan.example.json")
-	# fs_action("copy")
-	if(path.exists(gochan_exe) == False or path.exists(migration_exe)):
+	if path.exists(gochan_exe) == False:
 		build()
 	print("Installing",gochan_exe,"to",path.join(prefix, "bin", gochan_exe))
 	fs_action("copy", gochan_exe, path.join(prefix, "bin", gochan_exe))
 	print("Note: gochan-migration has been put on indefinite suspention. See README.md")
-	# print("Installing",migration_exe,"to",path.join(prefix, "bin", migration_exe))
-	# fs_action("copy", migration_exe, path.join(prefix, "bin", migration_exe))
-
 
 	print(
 		"gochan successfully installed. If you haven't already, you should copy\n",
@@ -275,6 +258,7 @@ def js(nominify = False, watch = False):
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
 		print("JS transpiling failed with status", status)
+		exit(status)
 
 def release(goos):
 	set_vars(goos)
@@ -297,6 +281,7 @@ def sass(minify = False):
 	status = run_cmd(sass_cmd, realtime = True, print_command = True)[1]
 	if status != 0:
 		print("Failed running sass with status", status)
+		exit(status)
 
 def test():
 	pkgs = os.listdir("pkg")

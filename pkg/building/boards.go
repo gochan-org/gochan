@@ -140,11 +140,12 @@ func BuildBoardPages(board *gcsql.Board) error {
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"webroot":  criticalCfg.WebRoot,
-			"boards":   gcsql.AllBoards,
-			"sections": gcsql.AllSections,
-			"threads":  threads,
-			"board":    board,
+			"webroot":      criticalCfg.WebRoot,
+			"boards":       gcsql.AllBoards,
+			"sections":     gcsql.AllSections,
+			"threads":      threads,
+			"board":        board,
+			"board_config": config.GetBoardConfig(board.Dir),
 		}, boardPageFile, "text/html"); err != nil {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				"Failed building /%s/: %s", board.Dir, err.Error()))
@@ -183,11 +184,12 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		// Render the boardpage template
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"webroot":  criticalCfg.WebRoot,
-			"boards":   gcsql.AllBoards,
-			"sections": gcsql.AllSections,
-			"threads":  pageThreads,
-			"board":    board,
+			"webroot":      criticalCfg.WebRoot,
+			"boards":       gcsql.AllBoards,
+			"sections":     gcsql.AllSections,
+			"threads":      pageThreads,
+			"board":        board,
+			"board_config": config.GetBoardConfig(board.Dir),
 			"posts": []interface{}{
 				gcsql.Post{BoardID: board.ID},
 			},
@@ -286,11 +288,12 @@ func BuildCatalog(boardID int) string {
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
-		"boards":   gcsql.AllBoards,
-		"webroot":  criticalCfg.WebRoot,
-		"board":    board,
-		"sections": gcsql.AllSections,
-		"threads":  threadInterfaces,
+		"boards":       gcsql.AllBoards,
+		"webroot":      criticalCfg.WebRoot,
+		"board":        board,
+		"board_config": config.GetBoardConfig(board.Dir),
+		"sections":     gcsql.AllSections,
+		"threads":      threadInterfaces,
 	}, catalogFile, "text/html"); err != nil {
 		return gclog.Printf(gclog.LErrorLog,
 			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
