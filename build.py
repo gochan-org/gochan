@@ -26,7 +26,7 @@ gc_dependencies = (
 )
 
 release_files = (
-	"html/banned.jpg",
+	"html/banned.png",
 	"html/css",
 	"html/error",
 	"html/favicon2.png",
