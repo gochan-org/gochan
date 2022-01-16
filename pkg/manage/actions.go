@@ -381,7 +381,7 @@ var actions = []Action{
 			switch requestType {
 			case "create":
 				// create button clicked, create the board with the request fields
-				board.ChangeFromRequest(request)
+				board.ChangeFromRequest(request, false)
 				err = board.Create()
 			case "delete":
 				// delete button clicked, delete the board
@@ -401,7 +401,9 @@ var actions = []Action{
 				if err != nil {
 					return "", err
 				}
-				board.ChangeFromRequest(request)
+				if err = board.ChangeFromRequest(request, true); err != nil {
+					return "", err
+				}
 			case "cancel":
 				// cancel button was clicked
 				fallthrough

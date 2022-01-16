@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -943,8 +945,65 @@ func createUser(username, passwordEncrypted string, globalRank int) (userID int,
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. (Just bad design in general, try to avoid directly mutating state like this)
 func (board *Board) UpdateID() error {
-	const sql = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
-	return QueryRowSQL(sql, interfaceSlice(board.Dir), interfaceSlice(&board.ID))
+	const query = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
+	return QueryRowSQL(query, interfaceSlice(board.Dir), interfaceSlice(&board.ID))
+}
+
+// ChangeFromRequest takes values from a HTTP request
+func (board *Board) ChangeFromRequest(request *http.Request, dbUpdate bool) error {
+	if request.FormValue("docreate") != "" {
+		// prevent directory changes if the board already exists
+		board.Dir = request.FormValue("dir")
+	}
+	board.Title = request.FormValue("title")
+	board.Subtitle = request.FormValue("subtitle")
+	board.Description = request.FormValue("description")
+	board.Type, _ = strconv.Atoi(request.FormValue("boardtype"))
+	board.UploadType, _ = strconv.Atoi(request.FormValue("uploadtype"))
+	board.Section, _ = strconv.Atoi(request.FormValue("section"))
+	board.MaxFilesize, _ = strconv.Atoi(request.FormValue("maxfilesize"))
+	board.MaxPages, _ = strconv.Atoi(request.FormValue("maxpages"))
+	board.DefaultStyle = request.FormValue("defaultstyle")
+	board.Locked = len(request.Form["locked"]) > 0
+	board.Anonymous = request.FormValue("anonname")
+	board.ForcedAnon = len(request.Form["forcedanon"]) > 0
+	board.MaxAge, _ = strconv.Atoi(request.FormValue("maxage"))
+	board.AutosageAfter, _ = strconv.Atoi(request.FormValue("autosageafter"))
+	board.NoImagesAfter, _ = strconv.Atoi(request.FormValue("nouploadsafter"))
+	board.MaxMessageLength, _ = strconv.Atoi(request.FormValue("maxmessagelength"))
+	board.EmbedsAllowed = len(request.Form["embedsallowed"]) > 0
+	board.RedirectToThread = len(request.Form["redirecttothread"]) > 0
+	board.ShowID = len(request.Form["showid"]) > 0
+	board.RequireFile = len(request.Form["requirefile"]) > 0
+	board.EnableCatalog = len(request.Form["enablecatalog"]) > 0
+	board.EnableSpoileredImages = len(request.Form["enablefilespoilers"]) > 0
+	board.EnableSpoileredThreads = len(request.Form["enablethreadspoilers"]) > 0
+	board.Worksafe = len(request.Form["worksafe"]) > 0
+	board.Cooldowns.NewThread, _ = strconv.Atoi(request.FormValue("threadcooldown"))
+	board.Cooldowns.Reply, _ = strconv.Atoi(request.FormValue("replycooldown"))
+	board.Cooldowns.ImageReply, _ = strconv.Atoi(request.FormValue("imagecooldown"))
+	board.ThreadsPerPage, _ = strconv.Atoi(request.FormValue("threadsperpage"))
+	if !dbUpdate {
+		return nil
+	}
+	id, err := getBoardIDFromURI(board.Dir)
+	if err != nil {
+		return err
+	}
+	const query = `UPDATE DBPREFIXboards SET 
+	section_id = ?,navbar_position = ?,
+	title = ?,subtitle = ?,description = ?,max_file_size = ?,default_style = ?,
+	locked = ?,anonymous_name = ?,force_anonymous = ?,autosage_after = ?,no_images_after = ?,
+	max_message_length = ?,allow_embeds = ?,redirect_to_thread = ?,require_file = ?,
+	enable_catalog = ? WHERE id = ?`
+
+	_, err = ExecSQL(query,
+		board.Section, board.ListOrder,
+		board.Title, board.Subtitle, board.Description, board.MaxFilesize, board.DefaultStyle,
+		board.Locked, board.Anonymous, board.ForcedAnon, board.AutosageAfter, board.NoImagesAfter,
+		board.MaxMessageLength, board.EmbedsAllowed, board.RedirectToThread, board.RequireFile,
+		board.EnableCatalog, id)
+	return err
 }
 
 // PopulateData gets the board data from the database, according to its id, and sets the respective properties.

@@ -23,7 +23,7 @@
 {{end}}
 <form action="{{$.webroot}}manage?action=boards" method="GET">
 	<input type="hidden" name="action" value="boards">
-
+	<input type="hidden" name="board" value="{{$.board.ID}}"/>
 <table>
 <tr>
 	<th>Option</th>
