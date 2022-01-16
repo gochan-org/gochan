@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"html"
 	"net/http"
-	"os"
 	"path"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -70,7 +68,6 @@ type Action struct {
 	Callback func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) `json:"-"`
 }
 
-// var actions = map[string]Action{
 var actions = []Action{
 	{
 		ID:          "logout",
@@ -584,7 +581,26 @@ var actions = []Action{
 		Title:       "Boards",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			var outputStr string
+			pageBuffer := bytes.NewBufferString("")
+			tmpBoard := gcsql.Board{}
+			tmpBoard.SetDefaults("", "", "")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
+				map[string]interface{}{
+					"webroot":      config.GetSystemCriticalConfig().WebRoot,
+					"site_config":  config.GetSiteConfig(),
+					"sections":     gcsql.AllSections,
+					"boards":       gcsql.AllBoards,
+					"board_config": config.GetBoardConfig(""),
+					"editing":      true,
+					"board":        tmpBoard,
+				}, pageBuffer, "text/html"); err != nil {
+				gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
+					"Error executing manage boards template: %q", err.Error())
+				return "", err
+			}
+
+			return pageBuffer.String(), nil
+			/* 	var outputStr string
 			do := request.FormValue("do")
 			var done bool
 			board := new(gcsql.Board)
@@ -744,21 +760,9 @@ var actions = []Action{
 				manageBoardsBuffer := bytes.NewBufferString("")
 				gcsql.AllSections, _ = gcsql.GetAllSectionsOrCreateDefault()
 
-				boardConfig := config.GetBoardConfig("")
-
-				if err = serverutil.MinifyTemplate(gctemplates.ManageStaff,
-					map[string]interface{}{
-						"boardConfig": boardConfig,
-						"board":       board,
-						"section_arr": gcsql.AllSections,
-					},
-					manageBoardsBuffer, "text/html"); err != nil {
-					return "", errors.New(gclog.Print(gclog.LErrorLog,
-						"Error executing board management page template: ", err.Error()))
-				}
 				return outputStr + manageBoardsBuffer.String(), nil
 			}
-			gcsql.ResetBoardSectionArrays()
+			gcsql.ResetBoardSectionArrays() */
 			return
 		}},
 	{

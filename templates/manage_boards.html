@@ -1,30 +1,180 @@
-<form action="/manage?action=boards" method="POST">
-<input type="hidden" name="do" value="add" />
-<table id="board-options">
-	<tr><th class="option-column">Option</th><th class="value-column">Value</th></tr>
-	<tr><td>Directory</td><td><input type="text" name="dir" value="" /></td></tr>
-	<tr><td>Section</td><td><select name="section">{{range $_, $section := .section_arr}}
-		<option value="{{$section.ID}}">{{$section.Name}}</option>{{end}}
-	</select></td></tr>
-	<tr><td>Order</td><td><input type="text" name="order" value="0" /></td></tr>
-	<tr><td>Title</td><td><input type="text" name="title" value="{{$.board.Title}}" /></td></tr>
-	<tr><td>Subtitle</td><td><input type="text" name="subtitle" value="{{$.board.Subtitle}}" /></td></tr>
-	<tr><td>Description</td><td><input type="text" name="description" value="{{$.board.Description}}" /></td></tr>
-	<tr><td>Max image size</td><td><input type="text" name="maximagesize" value="{{$.board.MaxFilesize}}" /></td></tr>
-	<tr><td>Max pages</td><td><input type="text" name="maxpages" value="{{$.board.MaxPages}}" /></td></tr>
-	<tr><td>Default style</td><td><select name="defaultstyle">{{range $_, $style := $.boardConfig.Styles}}
-		<option value="{{$style.Filename}}">{{$style.Name}} ({{$style.Filename}})</option>{{end}}
-	</select></td></tr>
-	<tr><td>Locked</td><td><input type="checkbox" name="locked" {{if $.board.Locked}}checked{{end}}/></td></tr>
-	<tr><td>Forced anonymity</td><td><input type="checkbox" name="forcedanon" {{if .board.ForcedAnon}}checked{{end}}/></td></tr>
-	<tr><td>Anonymous name</td><td><input type="text" name="anonymous" value="{{.board.Anonymous}}" /></td></tr>
-	<tr><td>Max age</td><td><input type="text" name="maxage" value="{{.board.MaxAge}}"/></td></tr>
-	<tr><td>Bump limit<sup title="After this many posts, the thread will stop being bumped when a new post is made. ">[?]</sup></td><td><input type="text" name="autosageafter" value="{{.board.AutosageAfter}}"/></td></tr>
-	<tr><td>No images after</td><td><input type="text" name="noimagesafter" value="{{.board.NoImagesAfter}}"/></td></tr>
-	<tr><td>Max message length</td><td><input type="text" name="maxmessagelength" value="{{.board.MaxMessageLength}}"/></td></tr>
-	<tr><td>Embeds allowed</td><td><input type="checkbox" name="embedsallowed" {{if .board.EmbedsAllowed}}checked{{end}}/></td></tr>
-	<tr><td>Redirect to thread<sup title="If checked, posts will redirect to the thread by default without requiring 'noko' in the email">[?]</sup></td><td><input type="checkbox" name="redirecttothread" {{if .board.RedirectToThread}}checked{{end}}/></td></tr>
-	<tr><td>Require an uploaded file</td><td><input type="checkbox" name="require_file" {{if .board.RequireFile}}checked{{end}}/></td></tr>
-	<tr><td>Enable catalog</td><td><input type="checkbox" name="enablecatalog" {{if .board.EnableCatalog}}checked{{end}}/></td></tr>
+<h2>Manage Boards</h2>
+<form action="{{$.webroot}}manage?action=boards" method="GET">
+	<input type="hidden" name="action" value="boards">
+	<input type="hidden" name="do" value="select">
+	{{with $.boards}}{{else}}
+	<input type="hidden" name="noboards" value="1">
+	{{end}}
+	{{/* <input type="hidden" name="confirm" value="1"> */}}
+	<select name="board" id="modifyboard">
+	{{range $_, $board := $.boards}}
+		<option value="{{$board.Dir}}">/{{$board.Dir}}/ - {{$board.Title}}</option>
+	{{else}}
+		<option value="" selected="true" disabled="disabled">No boards</option>
+	{{end}}
+	</select><br>
+	<input type="submit" name="editsubmit" value="Edit" >
+	<input type="submit" name="delsubmit" value="Delete" onclick="return confirm('Are you sure you want to delete this board? This cannot be undone.');"><br>
+</form>
+<hr />
+{{if $.editing}}
+<h2>Edit board</h2>
+{{else}}
+<h2>Create new board</h2>
+{{end}}
+<form action="{{$.webroot}}manage?action=boards" method="GET">
+	<input type="hidden" name="action" value="boards">
+	{{if $.editing}}
+	<input type="hidden" name="do" value="edit">
+	{{else}}
+	<input type="hidden" name="do" value="create">
+	{{end}}
+
+<table>
+<tr>
+	<th>Option</th>
+	<th>Value</th>
+</tr>
+{{/* <tr>
+	<td>List order</td>
+	<td><input type="number" min="0" name="listorder"></td>
+</tr>*/}}
+<tr>
+	<td>Directory</td>
+	<td><input type="text" name="dir" {{if $.editing}}disabled="disabled"{{end}} value="{{$.board.Dir}}"/></td>
+</tr>
+<tr>
+	<td>Title</td>
+	<td><input type="text" name="title" value="{{$.board.Title}}"></td>
+</tr>
+<tr>
+	<td>Subtitle</td>
+	<td><input type="text" name="subtitle" value="{{$.board.Subtitle}}"></td>
+</tr>
+<tr>
+	<td>Description</td>
+	<td><input type="text" name="description" value="{{$.board.Description}}"></td>
+</tr>
+<tr>
+	<td>Type</td>
+	<td><input type="number" min="0" name="boardtype" value="{{$.board.Type}}"></td>
+</tr>
+<tr>
+	<td>Upload type</td>
+	<td><input type="number" min="0" name="uploadtype" value="{{$.board.UploadType}}"></td>
+</tr>
+<tr>
+	<td>Section</td>
+	<td><select name="section">
+	{{- range $_, $section := $.sections -}}
+		<option value="{{$section.ID}}">{{$section.Name}}</option>
+	{{- end -}}
+	</select></td>
+</tr>
+<tr>
+	<td>Max filesize</td>
+	<td><input type="number" min="0" name="maxfilesize" value="{{$.board.MaxFilesize}}"></td>
+</tr>
+<tr>
+	<td>Max number of pages</td>
+	<td><input type="number" min="0" name="numpages" value="{{$.board.MaxPages}}"></td>
+</tr>
+<tr>
+	<td>Default style</td>
+	<td><select name="defaultstyle">
+	{{range $_, $style := $.board_config.Styles}}
+		<option value="{{$style.Filename}}" {{if eq $style.Filename $.board.DefaultStyle -}}
+			selected="selected"
+		{{- end}}>{{$style.Name}}</option>
+	{{- end -}}
+	</select></td>
+</tr>
+<tr>
+	<td>Locked board</td>
+	<td><input type="checkbox" name="locked" {{if $.board.Locked}}checked="checked"{{end}}/></td>
+</tr>
+<tr>
+	<td>Anonymous name</td>
+	<td><input type="text" name="anonname" value="{{$.board.Anonymous}}"/></td>
+</tr>
+<tr>
+	<td>Forced anonymous</td>
+	<td><input type="checkbox" name="locked" {{- if $.board.ForcedAnon}}checked="checked"{{end}}/></td>
+</tr>
+<tr>
+	<td>Max age</td>
+	<td><input type="number" min="0" name="maxage" value="{{$.board.MaxAge}}"></td>
+</tr>
+<tr>
+	<td>Autosage after # replies</td>
+	<td><input type="number" min="0" name="autosageafter" value="{{$.board.AutosageAfter}}"></td>
+</tr>
+<tr>
+	<td>Don't allow uploads after # replies</td>
+	<td><input type="number" min="0" name="noimagesafter" value="{{$.board.NoImagesAfter}}"></td>
+</tr>
+<tr>
+	<td>Max message length (in characters)</td>
+	<td><input type="number" min="0" name="maxmessagelength" value="{{$.board.MaxMessageLength}}"></td>
+</tr>
+<tr>
+	<td>Embeds allowed</td>
+	<td><input type="checkbox" name="embedsallowed" {{if $.board.EmbedsAllowed}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Redirect to thread by default</td>
+	<td><input type="checkbox" name="redirecttothread" {{if $.board.RedirectToThread}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Show user ID tag</td>
+	<td><input type="checkbox" name="showid" {{if $.board.ShowID}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Require file in OP</td>
+	<td><input type="checkbox" name="requirefile" {{if $.board.RequireFile}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Create catalog</td>
+	<td><input type="checkbox" name="enablecatalog" {{if $.board.EnableCatalog}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Allow file spoilers</td>
+	<td><input type="checkbox" name="enablespoileredimages" {{if $.board.EnableSpoileredImages}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Enable spoilered threads</td>
+	<td><input type="checkbox" name="enablespoileredthreads" {{if $.board.ForcedAnon}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>Worksafe board (no NSFW threads)</td>
+	<td><input type="checkbox" name="worksafe" {{if $.board.Worksafe}}checked="checked"{{end}}/>
+	</td>
+</tr>
+<tr>
+	<td>New thread cooldown</td>
+	<td><input type="number" min="0" name="threadcooldown" value="{{$.board.Cooldowns.NewThread}}"></td>
+</tr>
+<tr>
+	<td>Reply cooldown</td>
+	<td><input type="number" min="0" name="replycooldown" value="{{$.board.Cooldowns.Reply}}"></td>
+</tr>
+<tr>
+	<td>Image reply cooldown</td>
+	<td><input type="number" min="0" name="imagecooldown" value="{{$.board.Cooldowns.ImageReply}}"></td>
+</tr>
+<tr>
+	<td>Threads per page</td>
+	<td><input type="number" min="0" name="threadsperpage" value="{{$.board.ThreadsPerPage}}"></td>
+</tr>
 </table>
-<input type="submit" /></form>
+<input type="submit" name="submitchanges" value="
+{{- if $.editing}}Save changes{{else}}Create new board
+{{- end}}" onclick="return confirm('Click ok to confirm')"/></form>
+

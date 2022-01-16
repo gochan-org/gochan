@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -891,18 +892,14 @@ func CreateDefaultBoardIfNoneExist() error {
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
-	var board = Board{
-		Dir:         "test",
-		Title:       "Testing board",
-		Subtitle:    "Board for testing",
-		Description: "Board for testing",
-		Section:     defaultSectionID}
-	board.SetDefaults()
-	err = CreateBoard(&board)
-	if err != nil {
-		panic(err)
+	board := Board{}
+	board.SetDefaults("", "", "")
+	board.Section = defaultSectionID
+	if err = CreateBoard(&board); err != nil {
+		gclog.Println(gclog.LFatal|gclog.LStdLog, err.Error())
+		return err
 	}
-	return nil // CreateBoard(&board)
+	return nil
 }
 
 //CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist

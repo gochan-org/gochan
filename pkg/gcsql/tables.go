@@ -185,20 +185,40 @@ func (board *Board) PagePath(pageNum interface{}) string {
 	return board.WebPath(page+".html", "boardPage")
 }
 
-func (board *Board) SetDefaults() {
+func (board *Board) SetDefaults(title string, subtitle string, description string) {
+	board.CurrentPage = 1
+	board.NumPages = 15
 	board.ListOrder = 0
+	board.Dir = "test"
+	board.Type = 0
+	board.UploadType = 0
+	if title == "" {
+		board.Title = "Testing board"
+	} else {
+		board.Title = title
+	}
+	if subtitle == "" {
+		board.Subtitle = "Board for testing stuff"
+	} else {
+		board.Subtitle = subtitle
+	}
+	if description == "" {
+		board.Description = "/test/ board description"
+	} else {
+		board.Description = description
+	}
 	board.Section = 1
-	board.MaxFilesize = 4096
-	board.MaxPages = 11
+	board.MaxFilesize = 10000
+	board.MaxPages = 16
 	board.DefaultStyle = config.GetBoardConfig("").DefaultStyle
 	board.Locked = false
+	board.CreatedOn = time.Now()
 	board.Anonymous = "Anonymous"
 	board.ForcedAnon = false
-	board.MaxAge = 0
 	board.AutosageAfter = 200
-	board.NoImagesAfter = 0
+	board.NoImagesAfter = 500
 	board.MaxMessageLength = 8192
-	board.EmbedsAllowed = true
+	board.EmbedsAllowed = false
 	board.RedirectToThread = false
 	board.ShowID = false
 	board.RequireFile = false
@@ -206,7 +226,12 @@ func (board *Board) SetDefaults() {
 	board.EnableSpoileredImages = true
 	board.EnableSpoileredThreads = true
 	board.Worksafe = true
-	board.ThreadsPerPage = 10
+	board.Cooldowns = BoardCooldowns{
+		NewThread:  30,
+		Reply:      7,
+		ImageReply: 7,
+	}
+	board.ThreadsPerPage = 20
 }
 
 type BoardSection struct {
