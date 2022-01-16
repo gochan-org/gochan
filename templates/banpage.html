@@ -33,7 +33,7 @@
 						<input type="submit" value="Submit" /><br />
 					</form>{{else}}You may <b>not</b> appeal this ban.<br />{{end}}
 				</div>{{if bannedForever .ban}}
-				<img id="banpage-image" src="/permabanned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />
+				<img id="banpage-image" src="/permabanned.png" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
 					<source src="{{.systemCritical.WebRoot}}hittheroad.ogg" />
 					<source src="{{.systemCritical.WebRoot}}hittheroad.wav" />
@@ -42,7 +42,7 @@
 				<script type="text/javascript">
 					document.getElementById("jack").play();
 				</script>{{else if isBanned .ban .banBoards}}
-				<img id="banpage-image" src="/banned.jpg" style="float:right; margin: 4px 8px 8px 4px"/><br />{{end}}
+				<img id="banpage-image" src="/banned.png" style="float:right; margin: 4px 8px 8px 4px"/><br />{{end}}
 			{{end}}</div>
 		</div>
 	{{template "page_footer.html" .}}

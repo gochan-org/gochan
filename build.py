@@ -39,7 +39,7 @@ release_files = (
 	"html/notbanned.png",
 	"html/permabanned.jpg",
 	"sample-configs",
-	"sql",
+	# "sql",
 	"templates",
 	"initdb_master.sql",
 	"initdb_mysql.sql",
