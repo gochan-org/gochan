@@ -201,7 +201,7 @@ def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css
 		done = True
 	if templates_only:
 		print("Installing template files")
-		templates_install_dir = path.join(document_root, "templates")
+		templates_install_dir = path.join(prefix, "share/gochan/templates")
 		if not path.exists(templates_install_dir):
 			fs_action("mkdir", templates_install_dir)
 		template_files = os.listdir("templates")
@@ -210,13 +210,13 @@ def install(prefix = "/usr", document_root = "/srv/gochan", js_only = False, css
 				continue
 			fs_action("copy",
 				path.join("templates", template),
-				path.join(document_root, "templates", template))
+				path.join(templates_install_dir, template))
 		done = True
 	if done:
 		return
 	
 	fs_action("mkdir", "/etc/gochan")
-	fs_action("mkdir", path.join(prefix, "/share/gochan"))
+	fs_action("mkdir", path.join(prefix, "share/gochan"))
 	fs_action("mkdir", document_root)
 	fs_action("mkdir", "/var/log/gochan")
 	for file in release_files:
