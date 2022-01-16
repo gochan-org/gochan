@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	dirIsAFileStr = `unable to create "%s", path exists and is a file`
-	genericErrStr = `unable to create "%s": %s`
-	pathExistsStr = `unable to create "%s", path already exists`
+	dirIsAFileStr = `unable to create %q, path exists and is a file`
+	genericErrStr = `unable to create %q: %s`
+	pathExistsStr = `unable to create %q, path already exists`
 )
 
 var (
@@ -133,7 +133,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		boardPageFile, err = os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"Failed opening /%s/board.html: %s",
+				"failed opening /%s/board.html: %s",
 				board.Dir, err.Error()))
 		}
 
@@ -164,7 +164,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Failed opening /%s/catalog.json: %s", board.Dir, err.Error()))
+			"failed opening /%s/catalog.json: %s", board.Dir, err.Error()))
 	}
 	defer catalogJSONFile.Close()
 
@@ -177,7 +177,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
 			err = errors.New(gclog.Printf(gclog.LErrorLog,
-				"Failed opening /%s/%s: %s", board.Dir, pageFilename, err.Error()))
+				"failed opening /%s/%s: %s", board.Dir, pageFilename, err.Error()))
 			continue
 		}
 		defer currentPageFile.Close()

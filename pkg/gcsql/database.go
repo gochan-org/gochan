@@ -10,7 +10,7 @@ import (
 
 const (
 	UnsupportedSQLVersionMsg = `Received syntax error while preparing a SQL string.
-	This means that either there is a bug in gochan's code (hopefully not) or that you are using an unsupported My/Postgre version.
+	This means that either there is a bug in gochan's code (hopefully not) or that you are using an unsupported MySQL/PostgreSQL version.
 	Before reporting an error, make sure that you are using the up to date version of your selected SQL server.
 	Error text: %s`
 	mysqlConnStr    = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
@@ -68,7 +68,7 @@ func (db *GCDB) PrepareSQL(query string) (*sql.Stmt, error) {
 	}
 	stmt, err := db.db.Prepare(db.replacer.Replace((preparedStr)))
 	if err != nil {
-		return stmt, fmt.Errorf("Error preparing sql query:\n%s\n%s", query, err.Error())
+		return stmt, fmt.Errorf("error preparing sql query:\n%s\n%s", query, err.Error())
 	}
 	return stmt, sqlVersionError(err, db.driver, &preparedStr)
 }

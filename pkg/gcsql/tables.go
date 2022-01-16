@@ -237,7 +237,10 @@ func (board *Board) SetDefaults(title string, subtitle string, description strin
 
 // ChangeFromRequest takes values from a HTTP request
 func (board *Board) ChangeFromRequest(request *http.Request) {
-	board.Dir = request.FormValue("dir")
+	if request.FormValue("docreate") != "" {
+		// prevent directory changes if the board already exists
+		board.Dir = request.FormValue("dir")
+	}
 	board.Title = request.FormValue("title")
 	board.Subtitle = request.FormValue("subtitle")
 	board.Description = request.FormValue("description")

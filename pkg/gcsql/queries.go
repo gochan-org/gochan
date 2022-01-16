@@ -958,7 +958,10 @@ func (board *Board) PopulateData(id int) error {
 func (board *Board) Delete() error {
 	exists := DoesBoardExistByID(board.ID)
 	if !exists {
-		return errors.New("board does not exist")
+		return ErrBoardDoesNotExist
+	}
+	if board.ID == 0 {
+		return ErrNilBoard
 	}
 	const delSql = `DELETE FROM DBPREFIXboards WHERE id = ?`
 	_, err := ExecSQL(delSql, board.ID)

@@ -21,7 +21,7 @@ const (
 var (
 	// ErrInvalidVersion is used when the db contains a database_version table
 	// but zero or more than one versions were found
-	ErrInvalidVersion = errors.New("Database contains database_version table but zero or more than one versions were found")
+	ErrInvalidVersion = errors.New("database contains database_version table but zero or more than one versions were found")
 )
 
 // GetCompleteDatabaseVersion checks the database for any versions and errors that may exist.

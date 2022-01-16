@@ -413,7 +413,17 @@ var actions = []Action{
 			if err != nil {
 				return "", err
 			}
-
+			if requestType == "create" || requestType == "modify" && err != nil {
+				if err = building.BuildBoardListJSON(); err != nil {
+					return "", err
+				}
+				if err = building.BuildBoards(false, board.ID); err != nil {
+					return "", err
+				}
+				if err = building.BuildBoardPages(&board); err != nil {
+					return "", err
+				}
+			}
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
 				map[string]interface{}{
 					"webroot":      config.GetSystemCriticalConfig().WebRoot,
