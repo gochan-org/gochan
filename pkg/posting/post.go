@@ -224,12 +224,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		post.Filename = getNewFilename() + "." + ext
-		boardExists, err := gcsql.DoesBoardExistByID(
+		boardExists := gcsql.DoesBoardExistByID(
 			gcutil.HackyStringToInt(request.FormValue("boardid")))
-		if err != nil {
-			serverutil.ServeErrorPage(writer, "Server error: "+err.Error())
-			return
-		}
 		if !boardExists {
 			serverutil.ServeErrorPage(writer, "No boards have been created yet")
 			return

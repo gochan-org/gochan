@@ -1,20 +1,19 @@
 <h2>Manage Boards</h2>
 <form action="{{$.webroot}}manage?action=boards" method="GET">
 	<input type="hidden" name="action" value="boards">
-	<input type="hidden" name="do" value="select">
 	{{with $.boards}}{{else}}
 	<input type="hidden" name="noboards" value="1">
 	{{end}}
 	{{/* <input type="hidden" name="confirm" value="1"> */}}
 	<select name="board" id="modifyboard">
 	{{range $_, $board := $.boards}}
-		<option value="{{$board.Dir}}">/{{$board.Dir}}/ - {{$board.Title}}</option>
+		<option value="{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}}</option>
 	{{else}}
 		<option value="" selected="true" disabled="disabled">No boards</option>
 	{{end}}
 	</select><br>
-	<input type="submit" name="editsubmit" value="Edit" >
-	<input type="submit" name="delsubmit" value="Delete" onclick="return confirm('Are you sure you want to delete this board? This cannot be undone.');"><br>
+	<input type="submit" name="doedit" value="Edit" >
+	<input type="submit" name="dodelete" value="Delete" onclick="return confirm('Are you sure you want to delete this board? This cannot be undone.');"><br>
 </form>
 <hr />
 {{if $.editing}}
@@ -24,11 +23,6 @@
 {{end}}
 <form action="{{$.webroot}}manage?action=boards" method="GET">
 	<input type="hidden" name="action" value="boards">
-	{{if $.editing}}
-	<input type="hidden" name="do" value="edit">
-	{{else}}
-	<input type="hidden" name="do" value="create">
-	{{end}}
 
 <table>
 <tr>
@@ -77,7 +71,7 @@
 </tr>
 <tr>
 	<td>Max number of pages</td>
-	<td><input type="number" min="0" name="numpages" value="{{$.board.MaxPages}}"></td>
+	<td><input type="number" min="0" name="maxpages" value="{{$.board.MaxPages}}"></td>
 </tr>
 <tr>
 	<td>Default style</td>
@@ -99,7 +93,7 @@
 </tr>
 <tr>
 	<td>Forced anonymous</td>
-	<td><input type="checkbox" name="locked" {{- if $.board.ForcedAnon}}checked="checked"{{end}}/></td>
+	<td><input type="checkbox" name="forcedanon" {{- if $.board.ForcedAnon}}checked="checked"{{end}}/></td>
 </tr>
 <tr>
 	<td>Max age</td>
@@ -111,7 +105,7 @@
 </tr>
 <tr>
 	<td>Don't allow uploads after # replies</td>
-	<td><input type="number" min="0" name="noimagesafter" value="{{$.board.NoImagesAfter}}"></td>
+	<td><input type="number" min="0" name="nouploadsafter" value="{{$.board.NoImagesAfter}}"></td>
 </tr>
 <tr>
 	<td>Max message length (in characters)</td>
@@ -144,12 +138,12 @@
 </tr>
 <tr>
 	<td>Allow file spoilers</td>
-	<td><input type="checkbox" name="enablespoileredimages" {{if $.board.EnableSpoileredImages}}checked="checked"{{end}}/>
+	<td><input type="checkbox" name="enablefilespoilers" {{if $.board.EnableSpoileredImages}}checked="checked"{{end}}/>
 	</td>
 </tr>
 <tr>
 	<td>Enable spoilered threads</td>
-	<td><input type="checkbox" name="enablespoileredthreads" {{if $.board.ForcedAnon}}checked="checked"{{end}}/>
+	<td><input type="checkbox" name="enablethreadspoilers" {{if $.board.ForcedAnon}}checked="checked"{{end}}/>
 	</td>
 </tr>
 <tr>
@@ -174,7 +168,11 @@
 	<td><input type="number" min="0" name="threadsperpage" value="{{$.board.ThreadsPerPage}}"></td>
 </tr>
 </table>
-<input type="submit" name="submitchanges" value="
-{{- if $.editing}}Save changes{{else}}Create new board
-{{- end}}" onclick="return confirm('Click ok to confirm')"/></form>
+{{- if $.editing -}}
+<input type="submit" name="domodify" value="Save changes" onclick="return confirm('Click ok to confirm')"/>
+<input type="submit" name="docancel" value="Cancel" onclick="window.location = './manage?action=boards'; return false"/>
+{{- else -}}
+<input type="submit" name="docreate" value="Create new board" onclick="return confirm('Click ok to confirm')"/>
+{{- end -}}
+</form>
 

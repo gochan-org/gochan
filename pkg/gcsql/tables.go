@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"net/http"
 	"path"
 	"strconv"
 	"strings"
@@ -209,7 +210,7 @@ func (board *Board) SetDefaults(title string, subtitle string, description strin
 	}
 	board.Section = 1
 	board.MaxFilesize = 10000
-	board.MaxPages = 16
+	board.MaxPages = 21
 	board.DefaultStyle = config.GetBoardConfig("").DefaultStyle
 	board.Locked = false
 	board.CreatedOn = time.Now()
@@ -232,6 +233,43 @@ func (board *Board) SetDefaults(title string, subtitle string, description strin
 		ImageReply: 7,
 	}
 	board.ThreadsPerPage = 20
+}
+
+// ChangeFromRequest takes values from a HTTP request
+func (board *Board) ChangeFromRequest(request *http.Request) {
+	board.Dir = request.FormValue("dir")
+	board.Title = request.FormValue("title")
+	board.Subtitle = request.FormValue("subtitle")
+	board.Description = request.FormValue("description")
+	board.Type, _ = strconv.Atoi(request.FormValue("boardtype"))
+	board.UploadType, _ = strconv.Atoi(request.FormValue("uploadtype"))
+	board.Section, _ = strconv.Atoi(request.FormValue("section"))
+	board.MaxFilesize, _ = strconv.Atoi(request.FormValue("maxfilesize"))
+	board.MaxPages, _ = strconv.Atoi(request.FormValue("maxpages"))
+	board.DefaultStyle = request.FormValue("defaultstyle")
+	board.Locked = len(request.Form["locked"]) > 0
+	board.Anonymous = request.FormValue("anonname")
+	board.ForcedAnon = len(request.Form["forcedanon"]) > 0
+	board.MaxAge, _ = strconv.Atoi(request.FormValue("maxage"))
+	board.AutosageAfter, _ = strconv.Atoi(request.FormValue("autosageafter"))
+	board.NoImagesAfter, _ = strconv.Atoi(request.FormValue("nouploadsafter"))
+	board.MaxMessageLength, _ = strconv.Atoi(request.FormValue("maxmessagelength"))
+	board.EmbedsAllowed = len(request.Form["embedsallowed"]) > 0
+	board.RedirectToThread = len(request.Form["redirecttothread"]) > 0
+	board.ShowID = len(request.Form["showid"]) > 0
+	board.RequireFile = len(request.Form["requirefile"]) > 0
+	board.EnableCatalog = len(request.Form["enablecatalog"]) > 0
+	board.EnableSpoileredImages = len(request.Form["enablefilespoilers"]) > 0
+	board.EnableSpoileredThreads = len(request.Form["enablethreadspoilers"]) > 0
+	board.Worksafe = len(request.Form["worksafe"]) > 0
+	board.Cooldowns.NewThread, _ = strconv.Atoi(request.FormValue("threadcooldown"))
+	board.Cooldowns.Reply, _ = strconv.Atoi(request.FormValue("replycooldown"))
+	board.Cooldowns.ImageReply, _ = strconv.Atoi(request.FormValue("imagecooldown"))
+	board.ThreadsPerPage, _ = strconv.Atoi(request.FormValue("threadsperpage"))
+}
+
+func (board *Board) Create() error {
+	return CreateBoard(board)
 }
 
 type BoardSection struct {

@@ -58,8 +58,8 @@ type Action struct {
 	// and 3 is only accessible by admins
 	Permissions int `json:"perms"`
 
-	// JSONoutput sets what the action can output. If it is 0, it will throw an error
-	// if JSON is requested. If it is 1, it can output JSON if requested, and if 2, it always
+	// JSONoutput sets what the action can output. If it is 0, it will throw an error if
+	// JSON is requested. If it is 1, it can output JSON if requested, and if 2, it always
 	// outputs JSON whether it is requested or not
 	JSONoutput int `json:"jsonOutput"` // if it can sometimes return JSON, this should still be false
 
@@ -250,219 +250,6 @@ var actions = []Action{
 			return outputStr, nil
 		}},
 	{
-		ID:          "config",
-		Title:       "Configuration",
-		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			// do := request.FormValue("do")
-			// siteCfg := config.GetSiteConfig()
-			// boardCfg := config.GetBoardConfig("")
-			// var status string
-			// if do == "save" {
-			// 	configJSON, err := json.MarshalIndent(config.Config, "", "\t")
-			// 	if err != nil {
-			// 		status += gclog.Println(gclog.LErrorLog, err.Error()) + "<br />"
-			// 	} else if err = ioutil.WriteFile("gochan.json", configJSON, 0777); err != nil {
-			// 		status += gclog.Println(gclog.LErrorLog,
-			// 			"Error backing up old gochan.json, cancelling save:", err.Error())
-			// 	} else {
-			// 		siteCfg.CookieMaxAge = request.PostFormValue("CookieMaxAge")
-			// 		if _, err = gcutil.ParseDurationString(config.Config.CookieMaxAge); err != nil {
-			// 			status += err.Error()
-			// 			siteCfg.CookieMaxAge = "1y"
-			// 		}
-			// 		siteCfg.Lockdown = (request.PostFormValue("Lockdown") == "on")
-			// 		siteCfg.LockdownMessage = request.PostFormValue("LockdownMessage")
-			// 		SillytagsArr := strings.Split(request.PostFormValue("Sillytags"), "\n")
-			// 		var Sillytags []string
-			// 		for _, tag := range SillytagsArr {
-			// 			Sillytags = append(Sillytags, strings.Trim(tag, " \n\r"))
-			// 		}
-
-			// 		boardCfg.Sillytags = Sillytags
-			// 		boardCfg.UseSillytags = (request.PostFormValue("UseSillytags") == "on")
-			// 		siteCfg.Modboard = request.PostFormValue("Modboard")
-			// 		siteCfg.SiteName = request.PostFormValue("SiteName")
-			// 		siteCfg.SiteSlogan = request.PostFormValue("SiteSlogan")
-			// 		// boardCfg.WebRoot = request.PostFormValue("WebRoot")
-			// 		// TODO: Change this to match the new Style type in gochan.json
-			// 		/* Styles_arr := strings.Split(request.PostFormValue("Styles"), "\n")
-			// 		var Styles []string
-			// 		for _, style := range Styles_arr {
-			// 			Styles = append(Styles, strings.Trim(style, " \n\r"))
-			// 		}
-			// 		config.Styles = Styles */
-			// 		boardCfg.DefaultStyle = request.PostFormValue("DefaultStyle")
-			// 		boardCfg.RejectDuplicateImages = (request.PostFormValue("RejectDuplicateImages") == "on")
-			// 		NewThreadDelay, err := strconv.Atoi(request.PostFormValue("NewThreadDelay"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.NewThreadDelay = NewThreadDelay
-			// 		}
-
-			// 		ReplyDelay, err := strconv.Atoi(request.PostFormValue("ReplyDelay"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ReplyDelay = ReplyDelay
-			// 		}
-
-			// 		MaxLineLength, err := strconv.Atoi(request.PostFormValue("MaxLineLength"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.MaxLineLength = MaxLineLength
-			// 		}
-
-			// 		ReservedTripsArr := strings.Split(request.PostFormValue("ReservedTrips"), "\n")
-			// 		var ReservedTrips []string
-			// 		for _, trip := range ReservedTripsArr {
-			// 			ReservedTrips = append(ReservedTrips, strings.Trim(trip, " \n\r"))
-
-			// 		}
-			// 		boardCfg.ReservedTrips = ReservedTrips
-
-			// 		ThumbWidth, err := strconv.Atoi(request.PostFormValue("ThumbWidth"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ThumbWidth = ThumbWidth
-			// 		}
-
-			// 		ThumbHeight, err := strconv.Atoi(request.PostFormValue("ThumbHeight"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ThumbHeight = ThumbHeight
-			// 		}
-
-			// 		ThumbWidthReply, err := strconv.Atoi(request.PostFormValue("ThumbWidthReply"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ThumbWidthReply = ThumbWidthReply
-			// 		}
-
-			// 		ThumbHeightReply, err := strconv.Atoi(request.PostFormValue("ThumbHeightReply"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ThumbHeightReply = ThumbHeightReply
-			// 		}
-
-			// 		ThumbWidthCatalog, err := strconv.Atoi(request.PostFormValue("ThumbWidthCatalog"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ThumbWidthCatalog = ThumbWidthCatalog
-			// 		}
-
-			// 		ThumbHeightCatalog, err := strconv.Atoi(request.PostFormValue("ThumbHeightCatalog"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.ThumbHeightCatalog = ThumbHeightCatalog
-			// 		}
-
-			// 		RepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("RepliesOnBoardPage"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.RepliesOnBoardPage = RepliesOnBoardPage
-			// 		}
-
-			// 		StickyRepliesOnBoardPage, err := strconv.Atoi(request.PostFormValue("StickyRepliesOnBoardPage"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.StickyRepliesOnBoardPage = StickyRepliesOnBoardPage
-			// 		}
-
-			// 		boardCfg.BanMessage = request.PostFormValue("BanMessage")
-			// 		EmbedWidth, err := strconv.Atoi(request.PostFormValue("EmbedWidth"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.EmbedWidth = EmbedWidth
-			// 		}
-
-			// 		EmbedHeight, err := strconv.Atoi(request.PostFormValue("EmbedHeight"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.EmbedHeight = EmbedHeight
-			// 		}
-
-			// 		boardCfg.EnableEmbeds = (request.PostFormValue("EnableEmbeds") == "on")
-			// 		boardCfg.ImagesOpenNewTab = (request.PostFormValue("ImagesOpenNewTab") == "on")
-			// 		boardCfg.NewTabOnOutlinks = (request.PostFormValue("NewTabOnOutlinks") == "on")
-			// 		boardCfg.DateTimeFormat = request.PostFormValue("DateTimeFormat")
-			// 		siteCfg.MinifyHTML = (request.PostFormValue("MinifyHTML") == "on")
-			// 		siteCfg.MinifyJS = (request.PostFormValue("MinifyJS") == "on")
-			// 		AkismetAPIKey := request.PostFormValue("AkismetAPIKey")
-
-			// 		if err = serverutil.CheckAkismetAPIKey(AkismetAPIKey); err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			siteCfg.AkismetAPIKey = AkismetAPIKey
-			// 		}
-
-			// 		boardCfg.UseCaptcha = (request.PostFormValue("UseCaptcha") == "on")
-			// 		CaptchaWidth, err := strconv.Atoi(request.PostFormValue("CaptchaWidth"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.CaptchaWidth = CaptchaWidth
-			// 		}
-			// 		CaptchaHeight, err := strconv.Atoi(request.PostFormValue("CaptchaHeight"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			boardCfg.CaptchaHeight = CaptchaHeight
-			// 		}
-
-			// 		boardCfg.EnableGeoIP = (request.PostFormValue("EnableGeoIP") == "on")
-			// 		siteCfg.GeoIPDBlocation = request.PostFormValue("GeoIPDBlocation")
-
-			// 		MaxRecentPosts, err := strconv.Atoi(request.PostFormValue("MaxRecentPosts"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			siteCfg.MaxRecentPosts = MaxRecentPosts
-			// 		}
-
-			// 		MaxLogDays, err := strconv.Atoi(request.PostFormValue("MaxLogDays"))
-			// 		if err != nil {
-			// 			status += err.Error() + "<br />"
-			// 		} else {
-			// 			siteCfg.MaxLogDays = MaxLogDays
-			// 		}
-
-			// 		if err = config.WriteConfig(); err != nil {
-			// 			status = gclog.Print(gclog.LErrorLog, "Error writing gochan.json: ", err.Error()) + "<br />"
-			// 		} else {
-			// 			status = "Wrote gochan.json successfully<br />"
-			// 		}
-			// 	}
-			// }
-			// manageConfigBuffer := bytes.NewBufferString("")
-			// if err = serverutil.MinifyTemplate(gctemplates.ManageConfig,
-			// 	map[string]interface{}{
-			// 		"siteCfg":  siteCfg,
-			// 		"boardCfg": boardCfg,
-			// 		"status":   status,
-			// 	},
-			// 	manageConfigBuffer, "text/html"); err != nil {
-			// 	return "", errors.New(gclog.Print(gclog.LErrorLog,
-			// 		"Error executing config management page: ", err.Error()))
-			// }
-			// output += manageConfigBuffer.String()
-			// return output, nil
-			errStr := "web-based configuration tool has been temporarily disabled"
-			return errStr, errors.New(errStr)
-		}},
-	{
 		ID:          "staff",
 		Title:       "Staff",
 		Permissions: AdminPerms,
@@ -580,10 +367,53 @@ var actions = []Action{
 		ID:          "boards",
 		Title:       "Boards",
 		Permissions: AdminPerms,
+		JSONoutput:  NoJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			pageBuffer := bytes.NewBufferString("")
-			tmpBoard := gcsql.Board{}
-			tmpBoard.SetDefaults("", "", "")
+			var board gcsql.Board
+			requestType, boardID, err := boardsRequestType(request)
+			if err != nil {
+				return "", err
+			}
+			if requestType == "cancel" || requestType == "" {
+				board.SetDefaults("", "", "")
+			}
+			switch requestType {
+			case "create":
+				// create button clicked, create the board with the request fields
+				board.ChangeFromRequest(request)
+				err = board.Create()
+			case "delete":
+				// delete button clicked, delete the board
+				if board, err = gcsql.GetBoardFromID(boardID); err != nil {
+					return "", err
+				}
+				err = board.Delete()
+			case "edit":
+				// edit button clicked, fill the input fields with board data to be edited
+				board, err = gcsql.GetBoardFromID(boardID)
+				if err != nil {
+					return "", err
+				}
+			case "modify":
+				// save changes button clicked, apply changes to the board based on the request fields
+				board, err = gcsql.GetBoardFromID(boardID)
+				if err != nil {
+					return "", err
+				}
+				board.ChangeFromRequest(request)
+			case "cancel":
+				// cancel button was clicked
+				fallthrough
+			case "":
+				fallthrough
+			default:
+				board.SetDefaults("", "", "")
+			}
+			if err != nil {
+				return "", err
+			}
+
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
 				map[string]interface{}{
 					"webroot":      config.GetSystemCriticalConfig().WebRoot,
@@ -591,8 +421,8 @@ var actions = []Action{
 					"sections":     gcsql.AllSections,
 					"boards":       gcsql.AllBoards,
 					"board_config": config.GetBoardConfig(""),
-					"editing":      true,
-					"board":        tmpBoard,
+					"editing":      requestType == "edit",
+					"board":        board,
 				}, pageBuffer, "text/html"); err != nil {
 				gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
 					"Error executing manage boards template: %q", err.Error())
@@ -600,170 +430,6 @@ var actions = []Action{
 			}
 
 			return pageBuffer.String(), nil
-			/* 	var outputStr string
-			do := request.FormValue("do")
-			var done bool
-			board := new(gcsql.Board)
-			var boardCreationStatus string
-			systemCritical := config.GetSystemCriticalConfig()
-
-			for !done {
-				switch {
-				case do == "add":
-					board.Dir = request.FormValue("dir")
-					if board.Dir == "" {
-						boardCreationStatus = `Error: "Directory" cannot be blank`
-						do = ""
-						continue
-					}
-					orderStr := request.FormValue("order")
-					if board.ListOrder, err = strconv.Atoi(orderStr); err != nil {
-						board.ListOrder = 0
-					}
-					board.Title = request.FormValue("title")
-					if board.Title == "" {
-						boardCreationStatus = `Error: "Title" cannot be blank`
-						do = ""
-						continue
-					}
-					board.Subtitle = request.FormValue("subtitle")
-					board.Description = request.FormValue("description")
-					sectionStr := request.FormValue("section")
-					if sectionStr == "none" {
-						sectionStr = "0"
-					}
-
-					board.CreatedOn = time.Now()
-					board.Section, err = strconv.Atoi(sectionStr)
-					if err != nil {
-						board.Section = 0
-					}
-					board.MaxFilesize, err = strconv.Atoi(request.FormValue("maximagesize"))
-					if err != nil {
-						board.MaxFilesize = 1024 * 4
-					}
-
-					board.MaxPages, err = strconv.Atoi(request.FormValue("maxpages"))
-					if err != nil {
-						board.MaxPages = 11
-					}
-
-					board.DefaultStyle = strings.Trim(request.FormValue("defaultstyle"), "\n")
-					board.Locked = (request.FormValue("locked") == "on")
-					board.ForcedAnon = (request.FormValue("forcedanon") == "on")
-
-					board.Anonymous = request.FormValue("anonymous")
-					if board.Anonymous == "" {
-						board.Anonymous = "Anonymous"
-					}
-
-					board.MaxAge, err = strconv.Atoi(request.FormValue("maxage"))
-					if err != nil {
-						board.MaxAge = 0
-					}
-
-					board.AutosageAfter, err = strconv.Atoi(request.FormValue("autosageafter"))
-					if err != nil {
-						board.AutosageAfter = 200
-					}
-
-					board.NoImagesAfter, err = strconv.Atoi(request.FormValue("noimagesafter"))
-					if err != nil {
-						board.NoImagesAfter = 0
-					}
-
-					board.MaxMessageLength, err = strconv.Atoi(request.FormValue("maxmessagelength"))
-					if err != nil {
-						board.MaxMessageLength = 1024 * 8
-					}
-
-					board.EmbedsAllowed = (request.FormValue("embedsallowed") == "on")
-					board.RedirectToThread = (request.FormValue("redirecttothread") == "on")
-					board.RequireFile = (request.FormValue("require_file") == "on")
-					board.EnableCatalog = (request.FormValue("enablecatalog") == "on")
-
-					//actually start generating stuff
-
-					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir), 0666); err != nil {
-						do = ""
-						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/ already exists.",
-							systemCritical.DocumentRoot, board.Dir)
-						break
-					}
-
-					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir, "res"), 0666); err != nil {
-						do = ""
-						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/res/ already exists.",
-							systemCritical.DocumentRoot, board.Dir)
-						break
-					}
-
-					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir, "src"), 0666); err != nil {
-						do = ""
-						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/src/ already exists.",
-							systemCritical.DocumentRoot, board.Dir)
-						break
-					}
-
-					if err = os.Mkdir(path.Join(systemCritical.DocumentRoot, board.Dir, "thumb"), 0666); err != nil {
-						do = ""
-						boardCreationStatus = gclog.Printf(gclog.LStaffLog|gclog.LErrorLog, "Directory %s/%s/thumb/ already exists.",
-							systemCritical.DocumentRoot, board.Dir)
-						break
-					}
-
-					if err = gcsql.CreateBoard(board); err != nil {
-						do = ""
-						boardCreationStatus = gclog.Print(gclog.LErrorLog, "Error creating board: ", err.Error())
-						break
-					}
-					boardCreationStatus = "Board created successfully"
-					building.BuildBoards(false)
-					gcsql.ResetBoardSectionArrays()
-					gclog.Print(gclog.LStaffLog, "Boards rebuilt successfully")
-					done = true
-				case do == "del":
-					// resetBoardSectionArrays()
-				case do == "edit":
-					// resetBoardSectionArrays()
-				default:
-					boardConfig := config.GetBoardConfig("")
-					// put the default column values in the text boxes
-					board.Section = 1
-					board.MaxFilesize = 4718592
-					board.MaxPages = 11
-					board.DefaultStyle = "pipes.css"
-					board.Anonymous = "Anonymous"
-					board.AutosageAfter = 200
-					board.MaxMessageLength = 8192
-					board.EmbedsAllowed = true
-					board.EnableCatalog = true
-					board.Worksafe = true
-					board.ThreadsPerPage = boardConfig.ThreadsPerPage
-				}
-
-				output = `<h1 class="manage-header">Manage boards</h1><form action="/manage?action=boards" method="POST"><input type="hidden" name="do" value="existing" /><select name="boardselect"><option>Select board...</option>`
-				var boards []string
-				boards, err = gcsql.GetBoardUris()
-				if err != nil {
-					err = errors.New(gclog.Print(gclog.LErrorLog,
-						"Error getting board list: ", err.Error()))
-					return "", err
-				}
-				for _, boardDir := range boards {
-					outputStr += "<option>" + boardDir + "</option>"
-				}
-
-				outputStr += `</select><input type="submit" value="Edit" /><input type="submit" value="Delete" /></form><hr />` +
-					`<h2 class="manage-header">Create new board</h2><span id="board-creation-message">` + boardCreationStatus + `</span><br />`
-
-				manageBoardsBuffer := bytes.NewBufferString("")
-				gcsql.AllSections, _ = gcsql.GetAllSectionsOrCreateDefault()
-
-				return outputStr + manageBoardsBuffer.String(), nil
-			}
-			gcsql.ResetBoardSectionArrays() */
-			return
 		}},
 	{
 		ID:          "rebuildfront",

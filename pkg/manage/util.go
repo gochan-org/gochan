@@ -3,6 +3,7 @@ package manage
 import (
 	"bytes"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -97,7 +98,7 @@ func GetStaffRank(request *http.Request) int {
 
 // returns the action by its ID, or nil if it doesn't exist
 func getAction(id string, rank int) *Action {
-	for a, _ := range actions {
+	for a := range actions {
 		if rank == NoPerms && actions[a].Permissions > NoPerms {
 			id = "login"
 		}
@@ -164,4 +165,28 @@ func getStaffActions(writer http.ResponseWriter, request *http.Request, wantsJSO
 	rank := GetStaffRank(request)
 	availableActions := getAvailableActions(rank, false)
 	return availableActions, nil
+}
+
+// bordsRequestType takes the request and returns "cancel", "create", "delete",
+// "edit", or "modify" and the board's ID according to the request
+func boardsRequestType(request *http.Request) (string, int, error) {
+	var requestType string
+	var boardID int
+	var err error
+	if request.FormValue("docancel") != "" {
+		requestType = "cancel"
+	} else if request.FormValue("docreate") != "" {
+		requestType = "create"
+	} else if request.FormValue("dodelete") != "" {
+		requestType = "delete"
+	} else if request.FormValue("doedit") != "" {
+		requestType = "edit"
+	} else if request.FormValue("domodify") != "" {
+		requestType = "modify"
+	}
+	boardIDstr := request.FormValue("board")
+	if boardIDstr != "" {
+		boardID, err = strconv.Atoi(boardIDstr)
+	}
+	return requestType, boardID, err
 }

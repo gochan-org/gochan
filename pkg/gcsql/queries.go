@@ -18,7 +18,9 @@ import (
 const GochanVersionKeyConstant = "gochan"
 
 var (
-	ErrNilBoard = errors.New("Board is nil")
+	ErrNilBoard          = errors.New("board is nil")
+	ErrBoardExists       = errors.New("board already exists")
+	ErrBoardDoesNotExist = errors.New("board does not exist")
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
@@ -315,8 +317,13 @@ func GetAllAccouncements() ([]Announcement, error) {
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func CreateBoard(values *Board) error {
+	exists := DoesBoardExistByDir(values.Dir)
+	if exists {
+		return ErrBoardExists
+	}
 	const maxThreads = 300
-	const sqlINSERT = `INSERT INTO DBPREFIXboards (navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
+	const sqlINSERT = `INSERT INTO DBPREFIXboards (
+		navbar_position, dir, uri, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog, section_id)
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	const sqlSELECT = "SELECT id FROM DBPREFIXboards WHERE dir = ?"
 	//Excecuted in two steps this way because last row id functions arent thread safe, dir and uri is unique
@@ -324,7 +331,12 @@ func CreateBoard(values *Board) error {
 	if values == nil {
 		return ErrNilBoard
 	}
-	_, err := ExecSQL(sqlINSERT, values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle, values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle, values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter, values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed, values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section)
+	_, err := ExecSQL(sqlINSERT,
+		values.ListOrder, values.Dir, values.Dir, values.Title, values.Subtitle,
+		values.Description, values.MaxFilesize, maxThreads, values.DefaultStyle,
+		values.Locked, values.Anonymous, values.ForcedAnon, values.AutosageAfter,
+		values.NoImagesAfter, values.MaxMessageLength, 1, values.EmbedsAllowed,
+		values.RedirectToThread, values.RequireFile, values.EnableCatalog, values.Section)
 	if err != nil {
 		return err
 	}
@@ -582,7 +594,8 @@ func SinceLastPost(postID int) (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	return int(time.Now().Sub(when).Seconds()), nil
+
+	return int(time.Since(when).Seconds()), nil
 }
 
 // InsertPost insersts prepared post object into the SQL table so that it can be rendered
@@ -942,12 +955,36 @@ func (board *Board) PopulateData(id int) error {
 	return QueryRowSQL(sql, interfaceSlice(id), interfaceSlice(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog))
 }
 
+func (board *Board) Delete() error {
+	exists := DoesBoardExistByID(board.ID)
+	if !exists {
+		return errors.New("board does not exist")
+	}
+	const delSql = `DELETE FROM DBPREFIXboards WHERE id = ?`
+	_, err := ExecSQL(delSql, board.ID)
+	if err != nil {
+		return err
+	}
+	absPath := board.AbsolutePath()
+	gclog.Printf(gclog.LStaffLog,
+		"Deleting board /%s/, absolute path: %s\n", board.Dir, absPath)
+	err = os.RemoveAll(absPath)
+	return err
+}
+
 //DoesBoardExistByID returns a bool indicating whether a board with a given id exists
-func DoesBoardExistByID(ID int) (bool, error) {
-	const sql = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
+func DoesBoardExistByID(ID int) bool {
+	const query = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
 	var count int
-	err := QueryRowSQL(sql, interfaceSlice(ID), interfaceSlice(&count))
-	return count > 0, err
+	QueryRowSQL(query, interfaceSlice(ID), interfaceSlice(&count))
+	return count > 0
+}
+
+func DoesBoardExistByDir(dir string) bool {
+	const query = `SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?`
+	var count int
+	QueryRowSQL(query, interfaceSlice(dir), interfaceSlice(&count))
+	return count > 0
 }
 
 //GetAllBoards gets a list of all existing boards
