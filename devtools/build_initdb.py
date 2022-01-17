@@ -24,7 +24,7 @@ def compileOutIfs(text, flag):
 	doCompile = True
 	for i in lines:
 		if "#IF" in i:
-			doCompile = True if flag in i else False
+			doCompile = flag in i
 		elif "#ENDIF" in i:
 			doCompile = True
 		elif doCompile:
