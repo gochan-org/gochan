@@ -1,41 +1,48 @@
 from os import path
-#
-# Use a macro like this {exact macro name}
-#
+
+
 class macro():
+	""" Use a macro like this {exact macro name} """
 	def __init__(self, macroname, postgres, mysql):
 		self.macroname = macroname
 		self.postgres = postgres
 		self.mysql = mysql
-	
+
+
 # macros
 macros = [
-	macro("serial pk", "BIGSERIAL PRIMARY KEY", "BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
+	macro("serial pk","BIGSERIAL PRIMARY KEY",
+		"BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
 	macro("fk to serial", "BIGINT", "BIGINT"),
 	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY")
-]	
+]
+
 
 def compileOutIfs(text, flag):
 	lines = text.splitlines()
 	newText = ""
-	compile = True
+	doCompile = True
 	for i in lines:
 		if "#IF" in i:
-			if flag in i:
-				compile = True
-			else:
-				compile = False
+			doCompile = True if flag in i else False
 		elif "#ENDIF" in i:
-				compile = True
-		elif compile:
+			doCompile = True
+		elif doCompile:
 			newText += i + "\n"
 	return newText
 
+
+def hasError(text):
+	if '{' in text or '}' in text:
+		return True
+	return False
+
+
 def dofile(filestart):
 	print("building " + filestart + " sql file")
-	masterfileIn = open(filestart + "master.sql", 'r')
-	masterfile = masterfileIn.read()
-	masterfileIn.close()
+	masterfile = ""
+	with open(filestart + "master.sql", 'r') as masterfileIn:
+		masterfile = masterfileIn.read()
 
 	postgresProcessed = compileOutIfs(masterfile, "POSTGRES")
 	mysqlProcessed = compileOutIfs(masterfile, "MYSQL")
@@ -44,25 +51,23 @@ def dofile(filestart):
 		macroCode = "{" + item.macroname + "}"
 		postgresProcessed = postgresProcessed.replace(macroCode, item.postgres)
 		mysqlProcessed = mysqlProcessed.replace(macroCode, item.mysql)
-		
-	def hasError(text):
-		if '{' in text or '}' in text:
-			return True
-			
+
 	error = hasError(postgresProcessed)
 	error = error or hasError(mysqlProcessed)
 
-	i = open(filestart + "postgres.sql", 'w')
-	i.write(postgresProcessed)
-	i.close()
+	with open(filestart + "postgres.sql", 'w') as i:
+		i.write(postgresProcessed)
 
-	i = open(filestart + "mysql.sql", 'w')
-	i.write(mysqlProcessed)
-	i.close()
-		
+	with open(filestart + "mysql.sql", 'w') as i:
+		i.write(mysqlProcessed)
+
 	if error:
-		input("Error processing macros, files still contain curly braces (might be in comments?), press any key to continue")
-	
-dofile(path.join("..", "initdb_"))
-dofile(path.join("..", "sql", "preapril2020migration", "initdb_"))
-dofile(path.join("..", "sql", "preapril2020migration", "oldDBMigration_"))
+		input(
+			"Error processing macros, files still contain curly braces (might be in comments?)\n",
+			"press any key to continue")
+
+
+if __name__ == "__main__":
+	dofile(path.join("..", "initdb_"))
+	dofile(path.join("..", "sql", "preapril2020migration", "initdb_"))
+	dofile(path.join("..", "sql", "preapril2020migration", "oldDBMigration_"))
