@@ -1,16 +1,24 @@
 version = 1
 
-test_patterns = [
-    "src/*.go",
-    "html/javascript/gochan.js",
-    "frontend/src/*.js"
-]
-
-exclude_patterns = ["src/*_test.go"]
+[[analyzers]]
+name = "javascript"
+enabled = true
 
 [[analyzers]]
 name = "go"
 enabled = true
 
   [analyzers.meta]
-  import_path = "./src"
+  import_root = "github.com/gochan-org/gochan"
+  dependencies_vendored = false
+
+[[analyzers]]
+name = "python"
+enabled = true
+
+  [analyzers.meta]
+  runtime_version = "3.x.x"
+
+[[analyzers]]
+name = "sql"
+enabled = true
