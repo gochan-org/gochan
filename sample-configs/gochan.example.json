@@ -39,7 +39,8 @@
 		{ "Name": "Dark", "Filename": "dark.css" },
 		{ "Name": "Photon", "Filename": "photon.css" },
 		{ "Name": "Yotsuba", "Filename": "yotsuba.css" },
-		{ "Name": "Yotsuba B", "Filename": "yotsubab.css" }
+		{ "Name": "Yotsuba B", "Filename": "yotsubab.css" },
+		{ "Name": "Windows 9x", "Filename": "win9x.css"}
 	],
 	"DefaultStyle": "pipes.css",
 

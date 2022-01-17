@@ -85,8 +85,7 @@ var actions = []Action{
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			// TODO: make a proper JSON output for this, possibly /manage?action=cleanup&json=1&confirmed=1
-			outputStr := `<h2 class="manage-header">Cleanup</h2><br />`
+			outputStr := `<h2>Cleanup</h2><br />`
 			if request.FormValue("run") == "Run Cleanup" {
 				outputStr += "Removing deleted posts from the database.<hr />"
 				if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
@@ -591,22 +590,17 @@ var actions = []Action{
 		ID:          "postinfo",
 		Title:       "Post info",
 		Permissions: ModPerms,
+		JSONoutput:  AlwaysJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			var post gcsql.Post
-			post, err = gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
-			if err != nil {
-				output, _ = gcutil.MarshalJSON(err, false)
-				return output, nil
-			}
-			jsonStr, _ := gcutil.MarshalJSON(post, false)
-			return jsonStr, nil
+			post, err := gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
+			return post, err
 		}},
 	{
 		ID:          "tempposts",
 		Title:       "Temporary posts lists",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			outputStr := `<h1 class="manage-header">Temporary posts</h1>`
+			outputStr := `<h1>Temporary posts</h1>`
 			if len(gcsql.TempPosts) == 0 {
 				outputStr += "No temporary posts<br />"
 				return

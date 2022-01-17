@@ -1,0 +1,176 @@
+@import 'win9x/vars';
+
+@font-face {
+	@include mssans-font(400, normal);
+	
+}
+@font-face {
+	@include mssans-font(700, normal);
+}
+
+body {
+	font-size: $fontsize;
+	color: white;
+	background: $bgcol;
+}
+
+a {
+	color: $txtcol;
+	text-decoration: none;
+}
+
+input {
+	color: $txtcol;
+	font-size: $fontsize!important;
+	font-family: "Pixelated MS Sans Serif", Arial;
+	outline: none;
+}
+
+
+div#topbar {
+	height: 26px;
+	background: silver!important;
+	box-shadow: $bar-shadow;
+	box-sizing: border-box;
+	border: none!important;
+	border-radius: 0!important;
+	a:active {
+		box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080!important;
+	}
+	a[href="/"] {
+		font-family: "Pixelated MS Sans Serif", Arial;
+		font-size: $fontsize;
+		content: "Start"!important;
+		background: $start_path!important;
+		background-repeat: no-repeat!important;
+		background-position-x: 3px!important;
+		background-position-y: 4px!important;
+		padding-left: 24px;
+		padding-bottom: 4px;
+		/* padding: 3px 4px; */
+	}
+}
+
+div#topbar,
+div#topbar a {
+	background: silver!important;
+	box-shadow: $bar-shadow;
+	box-sizing: border-box;
+	border: none!important;
+	border-radius: 0!important;
+	height:24px;
+	color: $txtcol!important;
+	font-family: "Pixelated MS Sans Serif", Arial;
+	font-size: 11px;
+	cursor: default;
+}
+
+button,
+input[type=button],
+input[role=pushbutton],
+input[type=submit] {
+	color: $txtcol!important;
+	/* font-size: 12px!important; */
+	background: silver!important;
+	box-shadow: $bar-shadow;
+	box-sizing: border-box;
+	border: none!important;
+	border-radius: 0!important;
+	min-width: 75px;
+	min-height: 22px;
+	padding: 0 12px;
+}
+
+button:active,
+input[type=button]:active,
+input[type=submit]:active {
+	box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080!important;
+}
+
+div#qr-title {
+	background: linear-gradient(90deg,navy,#1084d0);
+	a {
+		font-family: Arial, Helvetica, sans-serif;
+		box-shadow: $bar-shadow;
+		min-width: 16px;
+		min-height: 14px;
+		display: block;
+		padding-left: 2px;
+		padding-right: 2px;
+		text-align: center;
+		background-position: top 3px left 40px!important;
+	}
+	a:hover {
+		color:$txtcol;
+	}
+	span#qr-buttons * {
+		display: inline-block;
+	}
+}
+
+
+div#qr-box {
+	box-shadow: inset -1px -1px #0a0a0a,inset 1px 1px #dfdfdf,inset -2px -2px grey,inset 2px 2px #fff;
+	background: silver;
+	padding: 3px;
+	border: none!important;
+	border-radius: 0!important;
+	textarea, input[typ=text] {
+		display: block;
+		background: #fff;
+		box-shadow: inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a;
+		margin: 0;
+		font-family: "Pixelated MS Sans Serif",Arial;
+		color: $txtcol;
+		appearance: none;
+	}
+}
+
+input[type=text] {
+	padding: 3px 4px;
+}
+
+/* div#qrmove a:nth-child(1) {
+	content:"d"!important;
+	background-repeat: no-repeat;
+} */
+
+a.boardlistactive {
+	color: $txtcol!important;
+	padding: 6px 3px!important;
+	outline: 1px dotted #000;
+	outline-offset: -4px;
+}
+
+
+h1, h2, div.subtitle, a#qrDisplayButton {
+	color: $txtcol;
+	font-family: Arial, sans-serif;
+}
+
+select {
+	background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M15 0H0v16h1V1h14V0z' fill='%23DFDFDF'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 1H1v14h1V2h12V1H2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 17H0v-1h15V0h1v17z' fill='%23000'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M15 1h-1v14H1v1h14V1z' fill='gray'/%3E%3Cpath fill='silver' d='M2 2h12v13H2z'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M11 6H4v1h1v1h1v1h1v1h1V9h1V8h1V7h1V6z' fill='%23000'/%3E%3C/svg%3E");
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	position: relative;
+	padding-right: 32px;
+	background-position: top 2px right 2px;
+	background-repeat: no-repeat;
+	border-radius: 0;
+	height: 21px;
+	border: none;
+	padding: 3px 4px;
+	padding-right: 4px;
+	box-shadow: inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a;
+	background-color: #fff;
+	box-sizing: border-box;
+}
+
+div.pages {
+	background: $bgcol;
+	border: none;
+	color: white;
+	/* border-right: black;
+	border-bottom: black; */
+}

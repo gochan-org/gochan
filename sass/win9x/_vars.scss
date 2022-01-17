@@ -1,0 +1,24 @@
+$bgcol: #008080;
+$txtcol: #000;
+$fontsize: 11px;
+$start_path: url("res/win9x/startlogo.png");
+$bar-shadow: inset -1px -1px #0a0a0a,inset 1px 1px #fff,inset -2px -2px grey,inset 2px 2px #dfdfdf;
+
+@mixin winbutton() {
+	background: silver;
+	box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px grey, inset 2px 2px #dfdfdf;
+	box-sizing: border-box;
+	border: none;
+	border-radius: 0;
+	color: #000;
+	cursor: default;
+}
+
+@mixin mssans-font($size, $style) {
+	font-family: "Pixelated MS Sans Serif";
+	src: url(res/font/ms_sans_serif.woff) format("woff");
+	src: url(res/font/ms_sans_serif.woff2) format("woff2");
+	font-weight: $size;
+	font-style: $style;
+}
+
