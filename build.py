@@ -323,7 +323,7 @@ if __name__ == "__main__":
 	if action in ('--help', '-h'):
 		parser.print_help()
 		sys.exit(2)
-		
+
 	if action == "build":
 		parser.add_argument(
 			"--debug",
