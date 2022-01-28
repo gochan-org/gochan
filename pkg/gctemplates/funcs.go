@@ -19,6 +19,7 @@ import (
 var (
 	ErrInvalidKey = errors.New("template map expects string keys")
 	ErrInvalidMap = errors.New("invalid template map call")
+	maxFilename   = 10
 )
 
 var funcMap = template.FuncMap{
@@ -85,6 +86,21 @@ var funcMap = template.FuncMap{
 			appended += str
 		}
 		return appended
+	},
+	"truncateFilename": func(filename string) string {
+		if len(filename) <= maxFilename {
+			return filename
+		}
+		arr := strings.Split(filename, ".")
+		if len(arr) == 1 {
+			return arr[0][:maxFilename]
+		}
+		base := strings.Join(arr[:len(arr)-1], ".")
+		if len(base) >= maxFilename {
+			base = base[:maxFilename]
+		}
+		ext := arr[len(arr)-1:][0]
+		return base + "." + ext
 	},
 	"truncateMessage": func(msg string, limit int, maxLines int) string {
 		var truncated bool
