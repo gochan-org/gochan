@@ -44,6 +44,9 @@ gochan-migration has been a gargantuan time sink and has wasted a lot of time th
 # Theme development
 See [`sass/README.md`](sass/README.md) for information on working with Sass and stylesheets.
 
+# Javascript development
+See [`frontend/README.md`](frontend/README.md) for information about developing gochan's JavaScript frontend.
+
 # Development
 
 ## Style guide
@@ -61,15 +64,12 @@ All features that are to be realised for the near future are found in the issues
 
 ### Lower priority
 * Improve moderation tools heavily
-* Rework board creation to correctly use new fields.
 * Rework any legacy structs that uses comma separated fields to use a slice instead.
-* Replace all occurrences of “interfaceslice(items)” with []interface{}{items} notation, then remove interfaceslice.
 * Remove all references/code related to sqlite
 * RSS feeds from boards/specific threads/specific usernames+tripcodes (such as newsanon)
 * Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclical thread.
 
 ### Later down the line
-* Look into the possibility of a plugin system, preferably in go, a scripting language if that is not possible
 * Move frontend to its own git to allow easier frontend swapping
 * API support for existing chan browing phone apps
 * Social credit system to deal with tor/spam posters in a better way

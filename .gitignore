@@ -14,3 +14,5 @@
 *.swp
 __debug_bin
 node_modules
+/frontend/coverage
+/frontend/tests/coverage
