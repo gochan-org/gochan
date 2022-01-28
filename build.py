@@ -115,7 +115,7 @@ def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 def set_vars(goos=""):
 	""" Sets version and GOOS-related variables to be used globally"""
 	global gcos
-	global gcos_name # used for release, since macOS GOOS is "darwin"
+	global gcos_name  # used for release, since macOS GOOS is "darwin"
 	global exe
 	global gochan_bin
 	global gochan_exe
@@ -158,7 +158,8 @@ def build(debugging=False):
 		print("Building for", gcos)
 	build_cmd += gcflags + ldflags
 
-	status = run_cmd(build_cmd + " -o " + gochan_exe + " ./cmd/gochan",
+	status = run_cmd(
+		build_cmd + " -o " + gochan_exe + " ./cmd/gochan",
 		realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed building gochan, see command output for details")
@@ -175,7 +176,7 @@ def clean():
 
 def dependencies():
 	for dep in gc_dependencies:
-		run_cmd("go get -v " + dep, realtime = True, print_command = True)
+		run_cmd("go get -v " + dep, realtime=True, print_command=True)
 
 
 def docker(option="guestdb", attached=False):
@@ -188,7 +189,7 @@ def docker(option="guestdb", attached=False):
 		cmd = cmd.format("docker/docker-compose-syncForMac.yaml")
 	if attached is False:
 		cmd += " --detach"
-	status = run_cmd(cmd, print_output = True, realtime = True, print_command = True)[1]
+	status = run_cmd(cmd, print_output=True, realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed starting a docker container, exited with status code", status)
 		sys.exit(1)
@@ -297,7 +298,7 @@ def sass(minify=False, watch=False):
 	if watch:
 		sass_cmd += "--watch "
 	sass_cmd += "sass:html/css"
-	status = run_cmd(sass_cmd, realtime = True, print_command = True)[1]
+	status = run_cmd(sass_cmd, realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed running sass with status", status)
 		sys.exit(status)
@@ -306,7 +307,7 @@ def sass(minify=False, watch=False):
 def test():
 	pkgs = os.listdir("pkg")
 	for pkg in pkgs:
-		run_cmd("go test " + path.join("./pkg", pkg), realtime = True, print_command = True)
+		run_cmd("go test " + path.join("./pkg", pkg), realtime=True, print_command=True)
 
 
 if __name__ == "__main__":
@@ -357,7 +358,8 @@ if __name__ == "__main__":
 		except KeyboardInterrupt:
 			print("Received keyboard interrupt, exiting")
 	elif action == "install":
-		parser.add_argument("--js",
+		parser.add_argument(
+			"--js",
 			action="store_true",
 			help="only install JavaScript (useful for frontend development)")
 		parser.add_argument(

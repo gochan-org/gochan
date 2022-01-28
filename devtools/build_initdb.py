@@ -11,7 +11,8 @@ class macro():
 
 # macros
 macros = [
-	macro("serial pk","BIGSERIAL PRIMARY KEY",
+	macro(
+		"serial pk","BIGSERIAL PRIMARY KEY",
 		"BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
 	macro("fk to serial", "BIGINT", "BIGINT"),
 	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY")
