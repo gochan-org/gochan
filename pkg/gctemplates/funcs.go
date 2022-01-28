@@ -1,6 +1,7 @@
 package gctemplates
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -13,6 +14,11 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	x_html "golang.org/x/net/html"
+)
+
+var (
+	ErrInvalidKey = errors.New("template map expects string keys")
+	ErrInvalidMap = errors.New("invalid template map call")
 )
 
 var funcMap = template.FuncMap{
@@ -129,13 +135,30 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
-
+	"map": func(values ...interface{}) (map[string]interface{}, error) {
+		dict := make(map[string]interface{})
+		if len(values)%2 != 0 {
+			return nil, ErrInvalidMap
+		}
+		for k := 0; k < len(values); k += 2 {
+			key, ok := values[k].(string)
+			if !ok {
+				fmt.Printf("%q\n\n", key)
+				return nil, ErrInvalidKey
+			}
+			dict[key] = values[k+1]
+		}
+		return dict, nil
+	},
 	// Imageboard functions
 	"bannedForever": func(banInfo *gcsql.BanInfo) bool {
 		return banInfo.BannedForever()
 	},
 	"isBanned": func(banInfo *gcsql.BanInfo, board string) bool {
 		return banInfo.IsBanned(board)
+	},
+	"isOP": func(post gcsql.Post) bool {
+		return post.ParentID == 0
 	},
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)

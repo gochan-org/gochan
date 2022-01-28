@@ -250,21 +250,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		// Calculate image checksum
 		post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
-		var allowsVids bool
-		if allowsVids, err = gcsql.GetEmbedsAllowed(post.BoardID); err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-				"Couldn't get board info: ", err.Error()))
-			return
-		}
-
 		if ext == "webm" || ext == "mp4" {
-			if !allowsVids {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LAccessLog,
-					"Video uploading is not currently enabled for this board."))
-				os.Remove(filePath)
-				return
-			}
-
 			gclog.Printf(gclog.LAccessLog, "Receiving post with video: %s from %s, referrer: %s",
 				handler.Filename, post.IP, request.Referer())
 			if post.ParentID == 0 {

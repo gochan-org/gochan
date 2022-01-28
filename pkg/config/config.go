@@ -35,7 +35,7 @@ var (
 		"MaxLogDays":      14,
 
 		// BoardConfig
-		"DateTimeFormat":        "Mon, January 02, 2006 15:04 PM",
+		"DateTimeFormat":        "Mon, January 02, 2006 3:04:05 PM",
 		"CaptchaWidth":          240,
 		"CaptchaHeight":         80,
 		"CaptchaMinutesTimeout": 15,

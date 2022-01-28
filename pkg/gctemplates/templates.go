@@ -106,13 +106,13 @@ func templateLoading(t string, buildAll bool) error {
 		}
 	}
 	if buildAll || t == "boardpage" {
-		BoardPage, err = loadTemplate("boardpage.html", "page_header.html", "postbox.html", "page_footer.html")
+		BoardPage, err = loadTemplate("boardpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
 		if err != nil {
 			return templateError("boardpage.html", err)
 		}
 	}
 	if buildAll || t == "threadpage" {
-		ThreadPage, err = loadTemplate("threadpage.html", "page_header.html", "postbox.html", "page_footer.html")
+		ThreadPage, err = loadTemplate("threadpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
 		if err != nil {
 			return templateError("threadpage.html", err)
 		}

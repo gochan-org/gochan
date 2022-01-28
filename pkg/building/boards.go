@@ -176,8 +176,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 		currentPageFilepath = path.Join(criticalCfg.DocumentRoot, board.Dir, pageFilename)
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			err = errors.New(gclog.Printf(gclog.LErrorLog,
-				"failed opening /%s/%s: %s", board.Dir, pageFilename, err.Error()))
+			gclog.Printf(gclog.LErrorLog,
+				"failed opening /%s/%s: %s", board.Dir, pageFilename, err.Error())
 			continue
 		}
 		defer currentPageFile.Close()
