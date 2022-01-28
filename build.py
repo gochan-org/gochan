@@ -82,10 +82,11 @@ def fs_action(action_str, sourcefile, destfile=""):
 def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 	if print_command:
 		print(cmd)
-	proc = subprocess.Popen(cmd,
-		stdout = subprocess.PIPE,
-		stderr = subprocess.STDOUT,
-		shell = True)
+	proc = subprocess.Popen(
+		cmd,
+		stdout=subprocess.PIPE,
+		stderr=subprocess.STDOUT,
+		shell=True)
 	output = ""
 	status = 0
 	if realtime:  # print the command's output in real time, ignores print_output
@@ -123,8 +124,8 @@ def set_vars(goos=""):
 	if goos != "":
 		os.environ["GOOS"] = goos
 
-	gcos, gcos_status = run_cmd("go env GOOS", print_output = False)
-	exe, exe_status = run_cmd("go env GOEXE", print_output = False)
+	gcos, gcos_status = run_cmd("go env GOOS", print_output=False)
+	exe, exe_status = run_cmd("go env GOEXE", print_output=False)
 	if gcos_status + exe_status != 0:
 		print("Invalid GOOS value, check your GOOS environment variable")
 		sys.exit(1)
@@ -158,7 +159,7 @@ def build(debugging=False):
 	build_cmd += gcflags + ldflags
 
 	status = run_cmd(build_cmd + " -o " + gochan_exe + " ./cmd/gochan",
-		realtime = True, print_command = True)[1]
+		realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed building gochan, see command output for details")
 		sys.exit(1)
@@ -221,7 +222,8 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 		for template in template_files:
 			if template == "override":
 				continue
-			fs_action("copy",
+			fs_action(
+				"copy",
 				path.join("templates", template),
 				path.join(templates_install_dir, template))
 		done = True
@@ -259,7 +261,7 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 			"systemctl start gochan.service")
 
 
-def js(nominify = False, watch = False):
+def js(nominify=False, watch=False):
 	print("Transpiling JS")
 	npm_cmd = "npm --prefix frontend/ run build"
 	if nominify is False:
@@ -287,11 +289,14 @@ def release(goos):
 	shutil.make_archive(release_dir, archive_type, root_dir="releases", base_dir=release_name)
 
 
-def sass(minify = False):
+def sass(minify=False, watch=False):
 	sass_cmd = "sass "
 	if minify:
 		sass_cmd += "--style compressed "
-	sass_cmd += "--no-source-map sass:html/css"
+	sass_cmd += "--no-source-map "
+	if watch:
+		sass_cmd += "--watch "
+	sass_cmd += "sass:html/css"
 	status = run_cmd(sass_cmd, realtime = True, print_command = True)[1]
 	if status != 0:
 		print("Failed running sass with status", status)
@@ -318,8 +323,8 @@ if __name__ == "__main__":
 	valid_actions = [
 		"build", "clean", "dependencies", "docker", "install", "js", "release", "sass", "test"
 	]
-	parser = argparse.ArgumentParser(description = "gochan build script")
-	parser.add_argument("action", nargs = 1, default = "build", choices = valid_actions)
+	parser = argparse.ArgumentParser(description="gochan build script")
+	parser.add_argument("action", nargs=1, default="build", choices=valid_actions)
 	if action in ('--help', '-h'):
 		parser.print_help()
 		sys.exit(2)
@@ -399,8 +404,13 @@ if __name__ == "__main__":
 			release(gcos)
 	elif action == "sass":
 		parser.add_argument("--minify", action="store_true")
+		parser.add_argument(
+			"--watch",
+			action="store_true",
+			help="automatically rebuild when you change a file (keeps running)")
+
 		args = parser.parse_args()
-		sass(args.minify)
+		sass(args.minify, args.watch)
 	elif action == "test":
 		test()
 
