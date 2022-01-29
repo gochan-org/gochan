@@ -20,14 +20,16 @@ test("Checks BBCode application", () => {
 	$(document).on("keydown", handleKeydown);
 	let e = $.Event("keydown");
 	e.ctrlKey = true;
-	e.which = e.keyCode = 85;
+	e.which = 85;
+	e.keyCode = 85;
 	$mockTextArea.text("text here");
 	$mockTextArea[0].selectionStart = 0;
 	$mockTextArea[0].selectionEnd = 4;
 	$mockTextArea.trigger(e);
 	expect($mockTextArea.text()).toEqual("[u]text[/u] here");
 
-	e.which = 66 = e.keyCode = 66;
+	e.which = 66;
+	e.keyCode = 66;
 	$mockTextArea[0].selectionStart = 12;
 	$mockTextArea[0].selectionEnd = 16;
 	$mockTextArea.trigger(e);
