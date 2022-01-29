@@ -10,7 +10,7 @@ To install your gochan.js after building it, run `./build.py install --js`.
 ## Testing
 Gochan unit testing with [Jest](https://jestjs.io) is still in its early stages and can be run by calling `npm run test` from the frontend directory.
 
-Depending on your npm version, you may need to run this if you get an error saying something like "Missing required argument #1" when you run `npm install` if you have the most up to date npm version available in your distro's repo.
+Depending on your npm version, you may need to run this if you have the most up to date npm version available in your distro's repo but still get an error saying something like "Missing required argument #1" when you run `npm install`.
 ```
 sudo npm install -g n
 sudo n latest

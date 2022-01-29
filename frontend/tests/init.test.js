@@ -1,6 +1,9 @@
 import {test, expect} from "@jest/globals";
 import "./inittests";
 
+// tests to make sure that the initial variables and stuff have been set correctly and are
+// usable by the tests
+
 test("Checks for valid mock server timezone (serverTZ)", () => {
 	expect(isNaN(serverTZ)).toBe(false);
 });
