@@ -1,3 +1,5 @@
+import { jest } from "@jest/globals";
+
 // mock variables the browser would normally get from {webroot}js/consts.js
 global.styles=[
 	{Name: "Pipes", Filename: "pipes.css"},
@@ -14,3 +16,12 @@ global.styles=[
 global.defaultStyle = "pipes.css";
 global.webroot = "/";
 global.serverTZ = -8;
+
+global.simpleHTML = `<!DOCTYPE html>
+<html>
+<body>
+<form id="postform">
+<textarea id="postmsg" name="postmsg"></textarea>
+</form>
+</body>
+</html>`;
