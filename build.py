@@ -148,6 +148,18 @@ def build(debugging=False):
 	ldflags = " -ldflags=\"-X main.versionStr=" + version + "{}\""
 	build_cmd = "go build -v -asmflags=" + trimpath
 
+	print("Building error pages from templates")
+	with open("templates/404.html", "r") as tmpl404:
+		tmpl404str = tmpl404.read().strip()
+		with open("html/error/404.html", "w") as page404:
+			page404.write(tmpl404str.format(version))
+	with open("templates/5xx.html", "r") as tmpl5xx:
+		tmpl5xxStr = tmpl5xx.read().strip()
+		with open("html/error/500.html", "w") as page500:
+			page500.write(tmpl5xxStr.format(version=version, title="Error 500: Internal Server error"))
+		with open("html/error/502.html", "w") as page502:
+			page502.write(tmpl5xxStr.format(version=version, title="Error 502: Bad gateway"))
+
 	if debugging:
 		print("Building for", gcos, "with debugging symbols")
 		gcflags = gcflags.format(" -l -N")
