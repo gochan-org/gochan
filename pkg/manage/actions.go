@@ -235,7 +235,7 @@ var actions = []Action{
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
-			if err = serverutil.MinifyTemplate(gctemplates.ManageConfig,
+			if err = serverutil.MinifyTemplate(gctemplates.ManageBans,
 				map[string]interface{}{
 					// "systemCritical": config.GetSystemCriticalConfig(),
 					"banlist": banlist,
@@ -446,11 +446,18 @@ var actions = []Action{
 		ID:          "rebuildfront",
 		Title:       "Rebuild front page",
 		Permissions: AdminPerms,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
 			}
-			return "Built front page successfully", building.BuildFrontPage()
+			err = building.BuildFrontPage()
+			if wantsJSON {
+				return map[string]string{
+					"front": "Built front page successfully",
+				}, err
+			}
+			return "<h2>Build front page</h2>Built front page successfully", err
 		}},
 	{
 		ID:          "rebuildall",
@@ -506,7 +513,7 @@ var actions = []Action{
 			if wantsJSON {
 				return buildMap, nil
 			}
-			buildStr := ""
+			buildStr := "<h2>Rebuilding everything</h2>"
 			for _, msg := range buildMap {
 				buildStr += fmt.Sprintln(msg, "<hr />")
 			}
@@ -548,7 +555,7 @@ var actions = []Action{
 					"message": "Boards built successfully",
 				}, building.BuildBoards(false)
 			}
-			return "Boards built successfully", building.BuildBoards(false)
+			return "<h2>Rebuild boards</h2>Boards built successfully", building.BuildBoards(false)
 		}},
 	{
 		ID:          "reparsehtml",

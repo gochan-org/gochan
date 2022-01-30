@@ -100,9 +100,10 @@ func BuildBoardListJSON() error {
 
 // BuildPageHeader is a convenience function for automatically generating the top part
 // of every normal HTML page
-func BuildPageHeader(writer io.Writer) error {
+func BuildPageHeader(writer io.Writer, pageTitle string) error {
 	return serverutil.MinifyTemplate(gctemplates.PageHeader,
 		map[string]interface{}{
+			"page_title":   pageTitle,
 			"webroot":      config.GetSystemCriticalConfig().WebRoot,
 			"site_config":  config.GetSiteConfig(),
 			"sections":     gcsql.AllSections,

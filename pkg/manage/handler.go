@@ -115,7 +115,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		serverutil.MinifyWriter(writer, []byte(outputJSON), "application/json")
 		return
 	}
-	if err = building.BuildPageHeader(&managePageBuffer); err != nil {
+	if err = building.BuildPageHeader(&managePageBuffer, action.Title); err != nil {
 		serveError(writer, "error", actionID,
 			gclog.Print(gclog.LErrorLog, "Failed writing page header: ", err.Error()), false)
 		return

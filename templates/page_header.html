@@ -9,7 +9,7 @@
 			{{- else if ne $.op.MessageHTML "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
 			{{- else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
 		{{- else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
-	{{- else}}<title>{{.site_config.SiteName}}</title>{{end}}
+	{{- else}}<title>{{with $.page_title}}{{$.page_title}} - {{end}}{{.site_config.SiteName}}</title>{{end}}
 	<link rel="stylesheet" href="{{.webroot}}css/global.css" />
 	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board_config.DefaultStyle}}" />
 	<link rel="shortcut icon" href="{{.webroot}}favicon.png">
