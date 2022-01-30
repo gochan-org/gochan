@@ -1,3 +1,5 @@
+import $ from "jquery";
+
 /**
  * @param {string} name
  */
@@ -23,7 +25,6 @@ export function getCookie(name, options = {type: "string"}) {
 		case "boolean":
 			return val == "true" || val == "1";
 		case "json":
-			// console.log(val);
 			try {
 				return JSON.parse(val);
 			} catch(e) {
@@ -49,7 +50,9 @@ export function initCookies() {
  * @param {string} value
  * @param {string} expires
  */
-export function setCookie(name, value, expires) {
+export function setCookie(name, value, expires, root) {
+	if(!root)
+		root == webroot;
 	let expiresStr = "";
 	if(expires) {
 		expiresStr = ";expires="
@@ -57,5 +60,5 @@ export function setCookie(name, value, expires) {
 		d.setTime(d.getTime() + 1000*60*60*24*expires)
 		expiresStr += d.toUTCString();
 	}
-	document.cookie = `${name}=${escape(value)}${expiresStr};path=${webroot};sameSite=strict`;
+	document.cookie = `${name}=${escape(value)}${expiresStr};path=${root};sameSite=strict`;
 }

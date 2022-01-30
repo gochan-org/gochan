@@ -1,6 +1,5 @@
 'use strict';
 import {test, expect, jest} from "@jest/globals";
-// jest.dontMock("jquery");
 
 import $ from "jquery";
 import "./inittests";
@@ -8,13 +7,6 @@ import "./inittests";
 import { applyBBCode, handleKeydown } from "../src/boardevents";
 
 document.documentElement.innerHTML = simpleHTML;
-
-let $mockTextArea = $("form#postform textarea#postmsg");
-
-
-test("Checks to make sure post form is ready for testing", () => {
-	expect($mockTextArea.length).toBeGreaterThan(0);
-});
 
 function doBBCode(keycode, text, start, end) {
 	let $ta = $("<textarea/>")
