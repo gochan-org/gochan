@@ -256,14 +256,13 @@ CREATE TABLE DBPREFIXfile_ban(
 
 CREATE TABLE DBPREFIXwordfilters(
 	id {serial pk},
-	board_id {fk to serial},
+	board_dir VARCHAR(255) DEFAULT '*',
 	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	search VARCHAR(75) NOT NULL,
 	is_regex BOOL NOT NULL,
 	change_to VARCHAR(75) NOT NULL,
-	CONSTRAINT wordfilters_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
 	CONSTRAINT wordfilters_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT wordfilters_search_check CHECK (search <> '')
 );
