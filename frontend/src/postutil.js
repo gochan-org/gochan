@@ -157,9 +157,10 @@ export function prepareThumbnails() {
 
 			fileInfoElement.append($("<a />")
 			.prop("href", "javascript:;")
-			.on("click", e =>{
+			.on("click", function(e) {
 				video.remove();
 				thumb.show();
+				console.log(thumb);
 				this.remove();
 				thumb.prop({
 					src: thumbURL,
