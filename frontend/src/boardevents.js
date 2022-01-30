@@ -8,11 +8,11 @@ export function handleKeydown(e) {
 	if(!inForm && !e.ctrlKey) {
 		openQR();
 	} else if(isPostMsg && e.ctrlKey) {
-		applyBBCode(e, ta);
+		applyBBCode(e);
 	}
 }
 
-export function applyBBCode(e, ta) {
+export function applyBBCode(e) {
 	let tag = "";
 	switch(e.keyCode) {
 		case 10: // Enter key
@@ -38,6 +38,7 @@ export function applyBBCode(e, ta) {
 	if(tag == "") return;
 
 	e.preventDefault();
+	let ta = e.target;
 	let val = ta.value;
 	let ss = ta.selectionStart;
 	let se = ta.selectionEnd;
