@@ -206,25 +206,22 @@ func getSpecificPostStringDecorated(ID string, onlyNotDeleted bool) (Post, error
 // getRecentPostsInternal returns the most recent N posts, on a specific board if specified, only with files if specified
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
+// TODO: rework so it uses all features/better sql
+// get recent posts
 func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecificBoard bool) ([]RecentPost, error) {
-	//TODO: rework so it uses all features/better sql
-	//get recent posts
-	recentQueryStr := `
-	/*
-	recentposts = join all non-deleted posts with the post id of their thread and the board it belongs on, sort by date and grab top x posts
-	singlefiles = the top file per post id
-	
-	Left join singlefiles on recentposts where recentposts.selfid = singlefiles.post_id
-	Coalesce filenames to "" (if filename = null -> "" else filename)
-	
-	Query might benefit from [filter on posts with at least one file -> ] filter N most recent -> manually loop N results for file/board/parentthreadid
-	*/
-	
-	Select 
+	// recentposts = join all non-deleted posts with the post id of their thread and the board it belongs on, sort by date and grab top x posts
+	// singlefiles = the top file per post id
+
+	// Left join singlefiles on recentposts where recentposts.selfid = singlefiles.post_id
+	// Coalesce filenames to "" (if filename = null -> "" else filename)
+
+	// Query might benefit from [filter on posts with at least one file -> ] filter N most recent -> manually loop N results for file/board/parentthreadid
+	recentQueryStr := `SELECT 
 		recentposts.selfid AS id,
 		recentposts.toppostid AS parentid,
 		recentposts.boardname,
 		recentposts.boardid,
+		recentposts.ip,
 		recentposts.name,
 		recentposts.tripcode,
 		recentposts.message,
@@ -237,11 +234,12 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 			topposts.id AS toppostid,
 			boards.dir AS boardname,
 			boards.id AS boardid,
+			posts.ip,
 			posts.name,
 			posts.tripcode,
 			posts.message,
 			posts.email,
-			 posts.created_on
+			posts.created_on
 		FROM
 			DBPREFIXposts AS posts
 		JOIN DBPREFIXthreads AS threads 
@@ -252,7 +250,6 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 			ON threads.board_id = boards.id
 		WHERE 
 			topposts.is_top_post = TRUE AND posts.is_deleted = FALSE
-		
 		) as recentposts
 	LEFT JOIN 
 		(SELECT files.post_id, filename, files.thumbnail_width, files.thumbnail_height
@@ -299,7 +296,8 @@ func getRecentPostsInternal(amount int, onlyWithFile bool, boardID int, onSpecif
 		var formattedHTML template.HTML
 		if err = rows.Scan(
 			&recentPost.PostID, &recentPost.ParentID, &recentPost.BoardName, &recentPost.BoardID,
-			&recentPost.Name, &recentPost.Tripcode, &formattedHTML, &recentPost.Filename, &recentPost.ThumbW, &recentPost.ThumbH,
+			&recentPost.IP, &recentPost.Name, &recentPost.Tripcode, &formattedHTML, &recentPost.Filename,
+			&recentPost.ThumbW, &recentPost.ThumbH,
 		); err != nil {
 			return nil, err
 		}

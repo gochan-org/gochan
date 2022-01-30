@@ -21,6 +21,7 @@ import (
 
 	"github.com/aquilax/tripcode"
 	"golang.org/x/crypto/bcrypt"
+	x_html "golang.org/x/net/html"
 )
 
 const (
@@ -256,6 +257,22 @@ func RandomString(length int) string {
 		str += fmt.Sprintf("%c", num)
 	}
 	return str
+}
+
+func StripHTML(htmlIn string) string {
+	dom := x_html.NewTokenizer(strings.NewReader(htmlIn))
+	for tokenType := dom.Next(); tokenType != x_html.ErrorToken; {
+		if tokenType != x_html.TextToken {
+			tokenType = dom.Next()
+			continue
+		}
+		txtContent := strings.TrimSpace(x_html.UnescapeString(string(dom.Text())))
+		if len(txtContent) > 0 {
+			return x_html.EscapeString(txtContent)
+		}
+		tokenType = dom.Next()
+	}
+	return ""
 }
 
 func ThumbnailExtension(filename string) string {

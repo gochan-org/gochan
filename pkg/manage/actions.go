@@ -85,7 +85,7 @@ var actions = []Action{
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			outputStr := `<h2>Cleanup</h2><br />`
+			outputStr := ""
 			if request.FormValue("run") == "Run Cleanup" {
 				outputStr += "Removing deleted posts from the database.<hr />"
 				if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
@@ -117,46 +117,25 @@ var actions = []Action{
 		Permissions: JanitorPerms,
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			var outputStr string
-			systemCritical := config.GetSystemCriticalConfig()
 			limit := gcutil.HackyStringToInt(request.FormValue("limit"))
 			if limit == 0 {
 				limit = 50
 			}
-			output = `<h1 class="manage-header">Recent posts</h1>` +
-				`Limit by: <select id="limit">` +
-				`<option>25</option><option>50</option><option>100</option><option>200</option>` +
-				`</select><br /><table width="100%%d" border="1">` +
-				`<colgroup><col width="25%%" /><col width="50%%" /><col width="17%%" /></colgroup>` +
-				`<tr><th></th><th>Message</th><th>Time</th></tr>`
 			recentposts, err := gcsql.GetRecentPostsGlobal(limit, false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
-			if wantsJSON {
+			if wantsJSON || err != nil {
 				return recentposts, err
 			}
-
-			if err != nil {
-				errMsg := gclog.Println(gclog.LErrorLog, "Error getting recent posts:", err.Error())
-				err = errors.New(errMsg)
-				if wantsJSON {
-					return ErrStaffAction{
-						ErrorField: "recentpostserror",
-						Action:     "recentposts",
-						Message:    errMsg,
-					}, err
-				}
-				return errMsg, err
+			manageRecentsBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageRecentPosts,
+				map[string]interface{}{
+					"recentposts": recentposts,
+					"webroot":     config.GetSystemCriticalConfig().WebRoot,
+				},
+				manageRecentsBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing ban management page template: "+err.Error()))
 			}
-
-			for _, recentpost := range recentposts {
-				outputStr += fmt.Sprintf(
-					`<tr><td><b>Post:</b> <a href="%s">%s/%d</a><br /><b>IP:</b> %s</td><td>%s</td><td>%s</td></tr>`,
-					path.Join(systemCritical.WebRoot, recentpost.BoardName, "/res/", strconv.Itoa(recentpost.ParentID)+".html#"+strconv.Itoa(recentpost.PostID)),
-					recentpost.BoardName, recentpost.PostID, recentpost.IP, string(recentpost.Message),
-					recentpost.Timestamp.Format("01/02/06, 15:04"),
-				)
-			}
-			outputStr += "</table>"
-			return
+			return manageRecentsBuffer.String(), nil
 		}},
 	{
 		ID:          "bans",
@@ -457,7 +436,7 @@ var actions = []Action{
 					"front": "Built front page successfully",
 				}, err
 			}
-			return "<h2>Build front page</h2>Built front page successfully", err
+			return "Built front page successfully", err
 		}},
 	{
 		ID:          "rebuildall",
@@ -513,33 +492,32 @@ var actions = []Action{
 			if wantsJSON {
 				return buildMap, nil
 			}
-			buildStr := "<h2>Rebuilding everything</h2>"
+			buildStr := ""
 			for _, msg := range buildMap {
 				buildStr += fmt.Sprintln(msg, "<hr />")
 			}
 			return buildStr, nil
 		}},
-	{
-		ID:          "rebuildboard",
-		Title:       "Rebuild board",
-		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			return "Not implemented (yet)", gcutil.ErrNotImplemented
-			// if err = gctemplates.InitTemplates(); err != nil {
-			// 	return "", err
-			// }
+	// {
+	// 	ID:          "rebuildboard",
+	// 	Title:       "Rebuild board",
+	// 	Permissions: AdminPerms,
+	// 	Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+	// 		if err = gctemplates.InitTemplates(); err != nil {
+	// 			return "", err
+	// 		}
 
-			// for b, board := range request.Form {
-			// 	if b == "board" {
-			// 		return board[0], nil
-			// 	}
-			// }
-			// return "", &ErrStaffAction{
-			// 	ErrorField: "staffaction",
-			// 	Action:     "rebuildboard",
-			// 	Message:    fmt.Sprintf("/%s/ is not a board"),
-			// }
-		}},
+	// 		for b, board := range request.Form {
+	// 			if b == "board" {
+	// 				return board[0], nil
+	// 			}
+	// 		}
+	// 		return "", &ErrStaffAction{
+	// 			ErrorField: "staffaction",
+	// 			Action:     "rebuildboard",
+	// 			Message:    fmt.Sprintf("/%s/ is not a board"),
+	// 		}
+	// 	}},
 	{
 		ID:          "rebuildboards",
 		Title:       "Rebuild boards",
@@ -555,7 +533,7 @@ var actions = []Action{
 					"message": "Boards built successfully",
 				}, building.BuildBoards(false)
 			}
-			return "<h2>Rebuild boards</h2>Boards built successfully", building.BuildBoards(false)
+			return "Boards built successfully", building.BuildBoards(false)
 		}},
 	{
 		ID:          "reparsehtml",
@@ -607,7 +585,7 @@ var actions = []Action{
 		Title:       "Temporary posts lists",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			outputStr := `<h1>Temporary posts</h1>`
+			outputStr := ""
 			if len(gcsql.TempPosts) == 0 {
 				outputStr += "No temporary posts<br />"
 				return

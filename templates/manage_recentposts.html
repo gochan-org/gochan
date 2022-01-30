@@ -1,0 +1,24 @@
+<!-- Limit by: <select id="limitby">
+	<option>25</option>
+	<option>50</option>
+	<option>100</option>
+	<option>200</option>
+</select><br /><br /> -->
+<table width="100%" border="1">
+	<colgroup><col width="5%"><col width="15%"><col width="60%"><col width="15%"></colgroup>
+	<tr><th></th><th>Name</th><th>Message</th><th>Thumb</th></tr>
+{{range $rp, $post := $.recentposts}}
+<tr><td><a href="{{$post.BoardName}}/res/{{if eq $post.ParentID 0}}{{$post.ID}}{{else}}{{$post.ParentID}}{{end}}.html#{{$post.PostID}}" class="centered">Post</a></td>
+<td><b>Name: </b> {{- if and (eq $post.Name "") (eq $post.Tripcode "")}}<span class="postername">Anonymous</span>{{end}}
+	{{- if ne $post.Name ""}}<span class="postername">{{$post.Name}}</span>{{end -}}
+	{{- if ne $post.Tripcode ""}}!<span class="tripcode">{{$post.Tripcode}}</span>{{end -}}<br />
+	<b>IP: </b> {{$post.IP}}</td>
+<td>{{truncateMessage (stripHTML $post.Message) 300 16}}</td><td>
+	{{- if eq $post.Filename "deleted" -}}
+	<div class="file-deleted-box centered" style="text-align:center;">File removed</div>
+	{{- else if ne $post.Filename "" -}}
+	{{- $thumbURL := stringAppend $.webroot $post.BoardName "/thumb/" (getThreadThumbnail $post.Filename) -}}
+	{{- $uploadURL := stringAppend $.webroot $post.BoardName "/src/" $post.Filename -}}
+	<a href="{{$uploadURL}}" target="_blank" class="centered"><img src="{{$thumbURL}}"></a>
+{{end}}</td></tr>{{end}}
+</table>

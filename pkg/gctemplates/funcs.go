@@ -13,7 +13,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	x_html "golang.org/x/net/html"
 )
 
 var (
@@ -63,7 +62,6 @@ var funcMap = template.FuncMap{
 	},
 
 	// String functions
-	// "arrToString": arrToString,
 	"intToString":  strconv.Itoa,
 	"escapeString": html.EscapeString,
 	"formatFilesize": func(sizeInt int) string {
@@ -128,19 +126,7 @@ var funcMap = template.FuncMap{
 	},
 	"truncateHTMLMessage": truncateHTML,
 	"stripHTML": func(htmlStr template.HTML) string {
-		dom := x_html.NewTokenizer(strings.NewReader(string(htmlStr)))
-		for tokenType := dom.Next(); tokenType != x_html.ErrorToken; {
-			if tokenType != x_html.TextToken {
-				tokenType = dom.Next()
-				continue
-			}
-			txtContent := strings.TrimSpace(x_html.UnescapeString(string(dom.Text())))
-			if len(txtContent) > 0 {
-				return x_html.EscapeString(txtContent)
-			}
-			tokenType = dom.Next()
-		}
-		return ""
+		return gcutil.StripHTML(string(htmlStr))
 	},
 	"truncateString": func(msg string, limit int, ellipsis bool) string {
 		if len(msg) > limit {

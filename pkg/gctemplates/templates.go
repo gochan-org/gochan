@@ -11,23 +11,24 @@ import (
 )
 
 var (
-	Banpage         *template.Template
-	Captcha         *template.Template
-	Catalog         *template.Template
-	ErrorPage       *template.Template
-	FrontPage       *template.Template
-	BoardPage       *template.Template
-	JsConsts        *template.Template
-	ManageBans      *template.Template
-	ManageBoards    *template.Template
-	ManageConfig    *template.Template
-	ManageDashboard *template.Template
-	ManageLogin     *template.Template
-	ManageStaff     *template.Template
-	PageHeader      *template.Template
-	PageFooter      *template.Template
-	PostEdit        *template.Template
-	ThreadPage      *template.Template
+	Banpage           *template.Template
+	Captcha           *template.Template
+	Catalog           *template.Template
+	ErrorPage         *template.Template
+	FrontPage         *template.Template
+	BoardPage         *template.Template
+	JsConsts          *template.Template
+	ManageBans        *template.Template
+	ManageBoards      *template.Template
+	ManageConfig      *template.Template
+	ManageDashboard   *template.Template
+	ManageRecentPosts *template.Template
+	ManageLogin       *template.Template
+	ManageStaff       *template.Template
+	PageHeader        *template.Template
+	PageFooter        *template.Template
+	PostEdit          *template.Template
+	ThreadPage        *template.Template
 )
 
 func loadTemplate(files ...string) (*template.Template, error) {
@@ -151,6 +152,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageLogin, err = loadTemplate("manage_login.html")
 		if err != nil {
 			return templateError("manage_login.html", err)
+		}
+	}
+	if buildAll || t == "managerecents" {
+		ManageRecentPosts, err = loadTemplate("manage_recentposts.html")
+		if err != nil {
+			return templateError("manage_recentposts.html", err)
 		}
 	}
 	if buildAll || t == "managestaff" {

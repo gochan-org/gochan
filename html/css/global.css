@@ -534,6 +534,11 @@ div.section-block div.section-body {
   padding: 8px;
 }
 
+.centered {
+  display: block;
+  text-align: center;
+}
+
 #footer {
   bottom: 0px;
   clear: both;
