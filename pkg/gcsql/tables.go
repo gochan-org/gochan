@@ -445,7 +445,7 @@ type UsernameBan struct {
 //WordFilter contains the information associated with a specific wordfilter
 type WordFilter struct {
 	ID        int       `json:"id"`
-	BoardID   *int      `json:"board"`
+	BoardDirs []string  `json:"boards"`
 	StaffID   int       `json:"staff_id"`
 	StaffNote string    `json:"staff_note"`
 	IssuedAt  time.Time `json:"issued_at"`

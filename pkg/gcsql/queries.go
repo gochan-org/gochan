@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -1034,7 +1035,23 @@ func (board *Board) Delete() error {
 	return err
 }
 
-//DoesBoardExistByID returns a bool indicating whether a board with a given id exists
+// WordFilters gets an array of wordfilters that should be applied to new posts on
+// this board
+func (board *Board) WordFilters() ([]WordFilter, error) {
+	wfs, err := GetWordFilters()
+	if err != nil {
+		return wfs, err
+	}
+	var applicable []WordFilter
+	for _, filter := range wfs {
+		if filter.OnBoard(board.Dir) {
+			applicable = append(applicable, filter)
+		}
+	}
+	return applicable, nil
+}
+
+// DoesBoardExistByID returns a bool indicating whether a board with a given id exists
 func DoesBoardExistByID(ID int) bool {
 	const query = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
 	var count int
@@ -1042,6 +1059,7 @@ func DoesBoardExistByID(ID int) bool {
 	return count > 0
 }
 
+// DoesBoardExistByDir returns a bool indicating whether a board with a given directory exists
 func DoesBoardExistByDir(dir string) bool {
 	const query = `SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?`
 	var count int
@@ -1084,6 +1102,62 @@ func getBoardIDFromURI(URI string) (id int, err error) {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE uri = ?`
 	err = QueryRowSQL(sql, interfaceSlice(URI), interfaceSlice(&id))
 	return id, err
+}
+
+// GetWordFilters gets a list of wordfilters from the database and returns an array of them and any errors
+// encountered
+func GetWordFilters() ([]WordFilter, error) {
+	var wfs []WordFilter
+	query := `SELECT id,board_dirs,staff_id,staff_note,issued_at,search,is_regex,change_to FROM DBPREFIXwordfilters`
+	rows, err := QuerySQL(query)
+	if err != nil {
+		return wfs, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var dirsStr string
+		var wf WordFilter
+		if err = rows.Scan(
+			&wf.ID,
+			&dirsStr,
+			&wf.StaffID,
+			&wf.StaffNote,
+			&wf.IssuedAt,
+			&wf.Search,
+			&wf.IsRegex,
+			&wf.ChangeTo,
+		); err != nil {
+			return wfs, err
+		}
+		if dirsStr == "*" {
+			// wordfilter applies to all boards
+			continue
+		}
+		wf.BoardDirs = strings.Split(dirsStr, ",")
+		wfs = append(wfs, wf)
+	}
+	return wfs, err
+}
+
+// BoardString returns a string representing the boards that this wordfilter applies to,
+// or "*" if the filter should be applied to posts on all boards
+func (wf *WordFilter) BoardsString() string {
+	if wf.BoardDirs == nil {
+		return "*"
+	}
+	return strings.Join(wf.BoardDirs, ",")
+}
+
+func (wf *WordFilter) OnBoard(dir string) bool {
+	if dir == "*" {
+		return true
+	}
+	for _, board := range wf.BoardDirs {
+		if dir == board {
+			return true
+		}
+	}
+	return false
 }
 
 //getDatabaseVersion gets the version of the database, or an error if none or multiple exist
