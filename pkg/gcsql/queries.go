@@ -374,11 +374,9 @@ func GetWordFilters() ([]WordFilter, error) {
 		); err != nil {
 			return wfs, err
 		}
-		if dirsStr == "*" {
-			// wordfilter applies to all boards
-			continue
+		if dirsStr != "*" {
+			wf.BoardDirs = strings.Split(dirsStr, ",")
 		}
-		wf.BoardDirs = strings.Split(dirsStr, ",")
 		wfs = append(wfs, wf)
 	}
 	return wfs, err
@@ -403,6 +401,14 @@ func (wf *WordFilter) OnBoard(dir string) bool {
 		}
 	}
 	return false
+}
+
+func (wf *WordFilter) StaffName() string {
+	staff, err := getStaffByID(wf.StaffID)
+	if err != nil {
+		return "?"
+	}
+	return staff.Username
 }
 
 //getDatabaseVersion gets the version of the database, or an error if none or multiple exist

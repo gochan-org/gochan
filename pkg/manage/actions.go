@@ -580,19 +580,51 @@ var actions = []Action{
 			post, err := gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
 			return post, err
 		}},
+	// {
+	// 	ID:          "tempposts",
+	// 	Title:       "Temporary posts lists",
+	// 	Permissions: AdminPerms,
+	// 	Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+	// 		outputStr := ""
+	// 		if len(gcsql.TempPosts) == 0 {
+	// 			outputStr += "No temporary posts<br />"
+	// 			return
+	// 		}
+	// 		for p, post := range gcsql.TempPosts {
+	// 			outputStr += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
+	// 		}
+	// 		return outputStr, nil
+	// 	}},
 	{
-		ID:          "tempposts",
-		Title:       "Temporary posts lists",
+		ID:          "wordfilters",
+		Title:       "Wordfilters",
 		Permissions: AdminPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			outputStr := ""
-			if len(gcsql.TempPosts) == 0 {
-				outputStr += "No temporary posts<br />"
-				return
+			managePageBuffer := bytes.NewBufferString("")
+			editIDstr := request.FormValue("edit")
+			wordfilters, err := gcsql.GetWordFilters()
+			if err != nil {
+				return wordfilters, nil
 			}
-			for p, post := range gcsql.TempPosts {
-				outputStr += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
+			var editFilter *gcsql.WordFilter
+			if editIDstr != "" {
+				editID := gcutil.HackyStringToInt(editIDstr)
+				for _, filter := range wordfilters {
+					if filter.ID == editID {
+						editFilter = &filter
+						break
+					}
+				}
 			}
-			return outputStr, nil
-		}},
+			filterMap := map[string]interface{}{
+				"wordfilters": wordfilters,
+				"edit":        editFilter,
+			}
+
+			err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters,
+				filterMap, managePageBuffer, "text/html")
+
+			return managePageBuffer.String(), err
+		},
+	},
 }

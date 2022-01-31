@@ -23,6 +23,7 @@ var (
 	ManageConfig      *template.Template
 	ManageDashboard   *template.Template
 	ManageRecentPosts *template.Template
+	ManageWordfilters *template.Template
 	ManageLogin       *template.Template
 	ManageStaff       *template.Template
 	PageHeader        *template.Template
@@ -158,6 +159,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageRecentPosts, err = loadTemplate("manage_recentposts.html")
 		if err != nil {
 			return templateError("manage_recentposts.html", err)
+		}
+	}
+	if buildAll || t == "managewordfilters" {
+		ManageWordfilters, err = loadTemplate("manage_wordfilters.html")
+		if err != nil {
+			return templateError("manage_wordfilters.html", err)
 		}
 	}
 	if buildAll || t == "managestaff" {

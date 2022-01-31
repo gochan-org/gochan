@@ -1,0 +1,21 @@
+(currently a work in progress)
+<h2>{{with $.edit}}Edit filter{{else}}Create new{{end}}</h2>
+<form action="{{.webroot}}manage?action=wordfilters" method="GET">
+	<input type="hidden" name="action" value="boards">
+	{{with $.edit}}<input type="hidden" name="edit" value="{{$.edit.ID}}">{{end}}
+	<table>
+	<tr><td>Find text:</td><td><input type="text" name="find" id="findfilter" value="{{with $.edit}}{{$.edit.Search}}{{end}}"/></td></tr>
+	<tr><td>Replace with:</td><td><input type="text" name="replace" id="replacefilter" value="{{with $.edit}}{{$.edit.ChangeTo}}{{end}}"/></td></tr>
+	<tr><td>Is regular expression:</td><td><input type="checkbox" name="isregex" id="isregex" {{with $.edit}}{{if $.edit.IsRegex}}checked="checked"{{end}}{{end}}/></td></tr>
+	<tr><td>Board dirs(ex: dir1,dir2. * for all):</td><td><input type="text" name="boarddirs" id="boarddirs" value="{{with $.edit}}{{$.edit.BoardsString}}{{end}}"/></td></tr>
+	<tr><td><input type="submit" value="" disabled="disabled"/></td></tr>
+	</table>
+</form>
+<hr/>
+<table width="100%" border="1">
+	<colgroup><col width="5%"><col width="10%"><col width="10%"><col width="5%"><col width="15%"><col width="10%"></colgroup>
+	<tr><th></th><th>Search</th><th>Replace with</th><th>Regex</th><th>Dirs</th><th>Staff</th></tr>
+{{- range $f,$filter := .wordfilters}}
+	<tr><td><a href="{{$.webroot}}manage?action=wordfilters&edit={{$filter.ID}}">Edit</a></td><td>{{$filter.Search}}</td><td>{{$filter.ChangeTo}}</td><td>{{if $filter.IsRegex}}yes{{else}}no{{end}}</td><td>{{$filter.BoardsString}}</td><td>{{$filter.StaffName}}</td></tr>
+{{end -}}
+</table>
