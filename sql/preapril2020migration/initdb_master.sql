@@ -256,7 +256,7 @@ CREATE TABLE DBPREFIXfile_ban(
 
 CREATE TABLE DBPREFIXwordfilters(
 	id {serial pk},
-	board_dir VARCHAR(255) DEFAULT '*',
+	board_dirs VARCHAR(255) DEFAULT '*',
 	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

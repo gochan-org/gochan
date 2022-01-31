@@ -1,5 +1,6 @@
-from os import path
+#!/usr/bin/env python3
 
+from os import path
 
 class macro():
 	""" Use a macro like this {exact macro name} """
