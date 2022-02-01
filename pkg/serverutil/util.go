@@ -3,6 +3,7 @@ package serverutil
 import (
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
@@ -35,4 +36,17 @@ func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 		MinifyWriter(writer, errorPage, "text/html")
 	}
 	gclog.Printf(gclog.LAccessLog, "Error: 404 Not Found from %s @ %s", gcutil.GetRealIP(request), request.URL.Path)
+}
+
+// DeleteCookie deletes the given cookie if it exists. It returns true if it exists and false
+// with no errors if it doesn't
+func DeleteCookie(writer http.ResponseWriter, request *http.Request, cookieName string) bool {
+	cookie, err := request.Cookie(cookieName)
+	if err != nil {
+		return false
+	}
+	cookie.MaxAge = 0
+	cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
+	http.SetCookie(writer, cookie)
+	return true
 }

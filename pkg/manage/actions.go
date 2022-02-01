@@ -2,6 +2,7 @@ package manage
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"html"
@@ -63,8 +64,11 @@ type Action struct {
 	// outputs JSON whether it is requested or not
 	JSONoutput int `json:"jsonOutput"` // if it can sometimes return JSON, this should still be false
 
-	// Callback executes the staff page. if wantsJSON is true, it returns an object to be marshalled
-	// into JSON. Otherwise, a string assumed to be valid HTML is returned.
+	// Callback executes the staff page. if wantsJSON is true, it should return an object
+	// to be marshalled into JSON. Otherwise, a string assumed to be valid HTML is returned.
+	//
+	// IMPORTANT: the writer parameter should only be written to if absolutely necessary (for example,
+	// if a redirect wouldn't work in handler.go) and even then, it should be done sparingly
 	Callback func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) `json:"-"`
 }
 
@@ -74,12 +78,58 @@ var actions = []Action{
 		Title:       "Logout",
 		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			cookie, _ := request.Cookie("sessiondata")
-			cookie.MaxAge = 0
-			cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
-			http.SetCookie(writer, cookie)
-			return "<br />Logged out successfully", nil
+			gcsql.EndStaffSession(writer, request)
+			http.Redirect(writer, request,
+				config.GetSystemCriticalConfig().WebRoot+"manage",
+				http.StatusSeeOther)
+			return "Logged out successfully", nil
 		}},
+	{
+		ID:          "clearmysessions",
+		Title:       "Log me out everywhere",
+		Permissions: JanitorPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			session, err := request.Cookie("sessiondata")
+			if err != nil {
+				// doesn't have a login session cookie, return with no errors
+				if !wantsJSON {
+					http.Redirect(writer, request,
+						config.GetSystemCriticalConfig().WebRoot+"manage",
+						http.StatusSeeOther)
+					return
+				}
+				return "You are not logged in", nil
+			}
+
+			staff, err := gcsql.GetStaffBySession(session.Value)
+			if err != nil {
+				// staff session doesn't exist, probably a stale cookie
+				if !wantsJSON {
+					http.Redirect(writer, request,
+						config.GetSystemCriticalConfig().WebRoot+"manage",
+						http.StatusSeeOther)
+					return
+				}
+				return "You are not logged in", err
+			}
+			numSessions, err := staff.CleanSessions()
+			if err != nil && err != sql.ErrNoRows {
+				// something went wrong when trying to clean out sessions for this user, return the
+				// number of sessions cleared
+				return nil, err
+			}
+			serverutil.DeleteCookie(writer, request, "sessiondata")
+			gclog.Printf(gclog.LStaffLog, "Logging %s out of all sessions (%d cleared)", staff.Username, numSessions)
+			if !wantsJSON {
+				http.Redirect(writer, request,
+					config.GetSystemCriticalConfig().WebRoot+"manage",
+					http.StatusSeeOther)
+				return "", nil
+			}
+			return "Logged out successfully", nil
+		},
+	},
 	{
 		ID:          "cleanup",
 		Title:       "Cleanup",
@@ -581,13 +631,14 @@ var actions = []Action{
 			return post, err
 		}},
 	// {
+	// 	may end up deleting this
 	// 	ID:          "tempposts",
 	// 	Title:       "Temporary posts lists",
 	// 	Permissions: AdminPerms,
 	// 	Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 	// 		outputStr := ""
 	// 		if len(gcsql.TempPosts) == 0 {
-	// 			outputStr += "No temporary posts<br />"
+	// 			outputStr += "No temporary posts"
 	// 			return
 	// 		}
 	// 		for p, post := range gcsql.TempPosts {

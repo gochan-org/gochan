@@ -52,17 +52,18 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 			"Error parsing form data: ", err.Error()))
 		return
 	}
-	wantsJSON := isRequestingJSON(request)
 	actionID := request.FormValue("action")
 	staffRank := GetStaffRank(request)
 
 	if actionID == "" {
 		if staffRank == NoPerms {
+			// no action requested and user is not logged in, have them go to login page
 			actionID = "login"
 		} else {
 			actionID = "dashboard"
 		}
 	}
+	wantsJSON := isRequestingJSON(request)
 
 	var managePageBuffer bytes.Buffer
 	action := getAction(actionID, staffRank)
@@ -104,7 +105,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		serveError(writer, "actionerror", actionID, err.Error(), wantsJSON || (action.JSONoutput > NoJSON))
 		return
 	}
-	if action.JSONoutput == AlwaysJSON || wantsJSON {
+	if action.JSONoutput == AlwaysJSON || (action.JSONoutput > NoJSON && wantsJSON) {
 		writer.Header().Add("Content-Type", "application/json")
 		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
 		outputJSON, err := gcutil.MarshalJSON(output, true)

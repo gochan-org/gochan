@@ -340,6 +340,18 @@ type Staff struct {
 	LastActive       time.Time
 }
 
+// CleanSessions clears out all of the sessions with this
+// staff ID, regardless of cookie data
+func (s *Staff) CleanSessions() (int64, error) {
+	var err error
+	query := `DELETE FROM DBPREFIXsessions WHERE staff_id = ?`
+	result, err := ExecSQL(query, s.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 func (s *Staff) RankString() string {
 	switch s.Rank {
 	case 3:

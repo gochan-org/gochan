@@ -1,13 +1,16 @@
 package gcsql
 
 import (
+	"database/sql"
 	"fmt"
 	"html/template"
+	"net/http"
 	"os"
 	"path"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -40,6 +43,39 @@ func GetStaffBySession(session string) (*Staff, error) {
 	staff := new(Staff)
 	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
 	return staff, err
+}
+
+// EndStaffSession deletes any session rows associated with the requests session cookie and then
+// makes the cookie expire, essentially deleting it
+func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
+	session, err := request.Cookie("sessiondata")
+	if err != nil {
+		// No staff session cookie, presumably not logged in so nothing to do
+		return nil
+	}
+	// make it so that the next time the page is loaded, the browser will delete it
+	sessionVal := session.Value
+	session.MaxAge = 0
+	session.Expires = time.Now().Add(-7 * 24 * time.Hour)
+	http.SetCookie(writer, session)
+
+	staffID := 0
+	if err = QueryRowSQL(`SELECT staff_id FROM DBPREFIXsessions WHERE data = ?`,
+		[]interface{}{session.Value}, []interface{}{&staffID}); err != nil && err != sql.ErrNoRows {
+		// something went wrong with the query and it's not caused by no rows being returned
+		gclog.Printf(gclog.LStaffLog|gclog.LErrorLog,
+			"Failed getting staff ID for deletion with cookie data %q", sessionVal)
+		return err
+	}
+
+	_, err = ExecSQL(`DELETE FROM DBPREFIXsessions WHERE data = ?`, sessionVal)
+	if err != nil && err != sql.ErrNoRows {
+		gclog.Println(gclog.LStaffLog|gclog.LErrorLog,
+			// something went wrong when trying to delete the rows and it's not caused by no rows being returned
+			"Failed deleting session for staff with id", staffID)
+		return err
+	}
+	return nil
 }
 
 // GetStaffByName gets the staff with a given name
