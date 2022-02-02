@@ -6,6 +6,12 @@ import (
 	"fmt"
 )
 
+const (
+	VersionEqual = 0
+	VersionNewer = 1
+	VersionOlder = -1
+)
+
 type GochanVersion struct {
 	Major    int
 	Minor    int
@@ -20,6 +26,7 @@ func ParseVersion(vStr string) *GochanVersion {
 	return &v
 }
 
+// Normalize checks to make sure that the version is legitimate, i.e. fields > 0
 func (v *GochanVersion) Normalize() bool {
 	valid := true
 	if v.Major < 0 {
@@ -33,31 +40,37 @@ func (v *GochanVersion) Normalize() bool {
 	if v.Revision < 0 {
 		v.Revision = 0
 	}
+	if v.Revision > 0 && v.Minor == 0 && v.Major == 0 {
+		v.Minor = 1
+		valid = false
+	}
 	return valid
 }
 
+// Compare compares v to v2 and returns 1 if it is newer, -1 if it older, and 0
+// if they are equal
 func (v *GochanVersion) Compare(v2 *GochanVersion) int {
 	v.Normalize()
 	v2.Normalize()
 	if v.Major > v2.Major {
-		return 1
+		return VersionNewer
 	}
 	if v.Major < v2.Major {
-		return -1
+		return VersionOlder
 	}
 	if v.Minor > v2.Minor {
-		return 1
+		return VersionNewer
 	}
 	if v.Minor < v2.Minor {
-		return -1
+		return VersionOlder
 	}
 	if v.Revision > v2.Revision {
-		return 1
+		return VersionNewer
 	}
 	if v.Revision < v2.Revision {
-		return -1
+		return VersionOlder
 	}
-	return 0
+	return VersionEqual
 }
 
 func (v *GochanVersion) CompareString(v2str string) int {
