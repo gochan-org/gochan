@@ -1,11 +1,11 @@
 package config
 
 import (
-	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"net"
 	"reflect"
+	"strings"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -64,7 +64,8 @@ var (
 		"ThumbHeightCatalog": 50,
 	}
 
-	boardConfigs = map[string]BoardConfig{}
+	boardConfigs    = map[string]BoardConfig{}
+	acceptedDrivers = []string{"mysql", "postgres"}
 )
 
 type GochanConfig struct {
@@ -73,6 +74,7 @@ type GochanConfig struct {
 	BoardConfig
 	BoardListConfig
 	jsonLocation string `json:"-"`
+	testing      bool
 }
 
 func (gcfg *GochanConfig) setField(field string, value interface{}) {
@@ -142,20 +144,19 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	if gcfg.DBtype == "postgresql" {
 		gcfg.DBtype = "postgres"
 	}
-	drivers := sql.Drivers()
 	found := false
-	driverlist := ""
-	for d, driver := range drivers {
+	for _, driver := range acceptedDrivers {
 		if gcfg.DBtype == driver {
 			found = true
-		}
-		driverlist += driver
-		if d < len(drivers)-1 {
-			driverlist += ","
+			break
 		}
 	}
+
 	if !found {
-		return &ErrInvalidValue{Field: "DBtype", Value: gcfg.DBtype, Details: "currently supported values: " + driverlist}
+		return &ErrInvalidValue{
+			Field:   "DBtype",
+			Value:   gcfg.DBtype,
+			Details: "currently supported values: " + strings.Join(acceptedDrivers, ",")}
 	}
 	if len(gcfg.Styles) == 0 {
 		return &ErrInvalidValue{Field: "Styles", Value: gcfg.Styles}
@@ -251,6 +252,10 @@ func (gcfg *GochanConfig) Write() error {
 	str, err := json.MarshalIndent(gcfg, "", "\t")
 	if err != nil {
 		return err
+	}
+	if gcfg.testing {
+		// don't try to write anything if we're doing a test
+		return nil
 	}
 	return ioutil.WriteFile(gcfg.jsonLocation, str, 0777)
 }

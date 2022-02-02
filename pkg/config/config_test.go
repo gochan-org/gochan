@@ -17,21 +17,6 @@ func TestBadTypes(t *testing.T) {
 	}
 }
 
-func TestMissingRequired(t *testing.T) {
-	_, missing, err := ParseJSON([]byte(missingRequiredJSON))
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	if len(missing) == 0 {
-		t.Fatal("JSON string with deliberately missing fields passed validation (this shouldn't happen for this test)")
-	}
-	fieldsStr := "Missing fields:\n"
-	for _, field := range missing {
-		fieldsStr += fmt.Sprintf("field name: %s\ndescription: %s\ncritical: %t\n\n", field.Name, field.Description, field.Critical)
-	}
-	t.Log(fieldsStr)
-}
-
 func TestBareMinimumJSON(t *testing.T) {
 	_, missing, err := ParseJSON([]byte(bareMinimumJSON))
 	if err != nil {
@@ -67,6 +52,7 @@ func TestValidValues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+	cfg.testing = true
 	if err := cfg.ValidateValues(); err != nil {
 		t.Fatal(err)
 	}

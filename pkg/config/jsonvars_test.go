@@ -118,6 +118,5 @@ const (
 )
 
 var (
-	missingRequiredJSON = strings.ReplaceAll(validCfgJSON, `"ListenIP": "127.0.0.1",`, "")
-	badTypeJSON         = strings.ReplaceAll(validCfgJSON, `"RandomSeed": ""`, `"RandomSeed": 32`)
+	badTypeJSON = strings.ReplaceAll(validCfgJSON, `"RandomSeed": ""`, `"RandomSeed": 32`)
 )
