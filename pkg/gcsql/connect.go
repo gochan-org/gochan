@@ -26,10 +26,6 @@ func ConnectToDB(host, driver, dbName, username, password, prefix string) {
 		return
 	}
 	gclog.Print(gclog.LStdLog, "Connected to database")
-	if err = tmpSqlAdjust(); err != nil {
-		gclog.Print(FatalSQLFlags, "Failed updating database structure: ", err.Error())
-		return
-	}
 }
 
 func initDB(initFile string) error {
@@ -71,26 +67,29 @@ func RunSQLFile(path string) error {
 	return nil
 }
 
-// oh god what the fuck this is super hacky, gochan-migration needs to actually be useful
+// TODO: get gocha-migration working so this doesn't have to sit here
 func tmpSqlAdjust() error {
 	// first update the crappy wordfilter table structure
-
-	query := `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+	var err error
+	var query string
+	if gcdb.driver == "mysql" {
+		query = `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
 		WHERE CONSTRAINT_NAME = 'wordfilters_staff_id_fk'
 		AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
-
-	numConstraints := 3
-	err := gcdb.QueryRowSQL(query,
-		interfaceSlice(),
-		interfaceSlice(&numConstraints))
-	if err != nil {
-		return err
-	}
-	if numConstraints > 0 {
-		query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY IF EXISTS wordfilters_board_id_fk`
-		if _, err = gcdb.ExecSQL(query); err != nil {
+		numConstraints := 3
+		if err = gcdb.QueryRowSQL(query,
+			interfaceSlice(),
+			interfaceSlice(&numConstraints)); err != nil {
 			return err
 		}
+		if numConstraints > 0 {
+			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY IF EXISTS wordfilters_board_id_fk`
+		}
+	} else {
+		query = `ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`
+	}
+	if _, err = gcdb.ExecSQL(query); err != nil {
+		return err
 	}
 	query = `ALTER TABLE DBPREFIXwordfilters DROP COLUMN IF EXISTS board_id`
 	if _, err = gcdb.ExecSQL(query); err != nil {

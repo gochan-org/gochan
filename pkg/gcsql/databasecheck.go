@@ -73,7 +73,16 @@ func CheckAndInitializeDatabase(dbType string) {
 	if err != nil {
 		gclog.Printf(FatalSQLFlags, "Failed to initialise database: %s", err.Error())
 	}
-
+	good := false
+	defer func() {
+		if !good {
+			return
+		}
+		if err = tmpSqlAdjust(); err != nil {
+			gclog.Print(FatalSQLFlags, "Failed updating database structure: ", err.Error())
+			return
+		}
+	}()
 	switch versionFlag {
 	case DBIsPreApril:
 		fallthrough
@@ -82,8 +91,10 @@ func CheckAndInitializeDatabase(dbType string) {
 			"Database layout is deprecated. Please run gochan-migrate. Target version is %d", targetDatabaseVersion) //TODO give exact command
 	case DBClean:
 		buildNewDatabase(dbType)
+		good = true
 		return
 	case DBUpToDate:
+		good = true
 		return
 	case DBCorrupted:
 		gclog.Println(FatalSQLFlags,
