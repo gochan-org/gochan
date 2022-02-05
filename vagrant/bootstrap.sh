@@ -109,17 +109,7 @@ if [ "$DBTYPE" = "postgresql" ]; then
 fi
 
 # a convenient script for connecting to the db, whichever type we're using
-cat << EOF >/home/vagrant/dbconnect.sh
-#!/usr/bin/env bash
-
-if [ "$DBTYPE" = "mysql" ] || [ -z "$DBTYPE" ]; then
-	mysql -stu gochan -D gochan -pgochan
-elif [ "$DBTYPE" = "postgresql" ]; then
-	psql -U gochan -h 127.0.0.1 gochan
-else
-	echo "DB type '$DBTYPE' not supported"
-fi
-EOF
+cp /vagrant/devtools/dbconnect.sh /home/vagrant/dbconnect.sh
 chmod +x /home/vagrant/dbconnect.sh
 
 cat <<EOF >>/home/vagrant/.bashrc
@@ -147,10 +137,12 @@ cd /vagrant
 # fi
 
 cat - <<EOF
-Server set up. To access the virtual machine, run 'vagrant ssh'. Then, to start the gochan server,
-run 'sudo systemctl start gochan.service'. The virtual machine is set to run gochan on startup, so you
-will not need to do this every time you start it. You can access it from a browser at http://172.27.0.3/
+Server set up. To access the virtual machine, run 'vagrant ssh'.
+To start the gochan server, run 'sudo systemctl start gochan.service'.
+To have gochan run at startup, run 'sudo systemctl enable gochan.service'
+
+You can access it from a browser at http://192.168.56.3/
 The first time gochan is run, it will create a simple /test/ board.
 
-If you want to do frontend development, you'll need to run 'apt install npm'
+If you want to do frontend development, see frontend/README.md
 EOF

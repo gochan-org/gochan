@@ -15,5 +15,6 @@ Depending on your npm version, you may need to run this if you have the most up 
 sudo npm install -g n
 sudo n latest
 sudo npm install -g npm
+hash -d npm
 npm install
 ```
