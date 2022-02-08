@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
+	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/pre2021"
+	"github.com/gochan-org/gochan/pkg/config"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -24,7 +24,6 @@ the README and/or the -h command line flag before you use it.
 
 var (
 	versionStr string
-	bufIn      = bufio.NewReader(os.Stdin)
 )
 
 func fatalPrintln(args ...interface{}) {
@@ -32,81 +31,46 @@ func fatalPrintln(args ...interface{}) {
 	os.Exit(1)
 }
 
-func readConfig(filename string, options *common.DBOptions) {
-	ba, err := ioutil.ReadFile(filename)
-	if err != nil {
-		fatalPrintln(err)
+func main() {
+	var options common.MigrationOptions
+
+	config.InitConfig(versionStr)
+
+	flag.StringVar(&options.ChanType, "oldchan", "", "The imageboard we are migrating from (currently only pre2021 is supported, but more are coming")
+	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
+	flag.Parse()
+
+	if options.ChanType == "" || options.OldChanConfig == "" {
+		flag.PrintDefaults()
+		fmt.Println("Missing required database connection info")
+		os.Exit(1)
 		return
 	}
-	if err = json.Unmarshal(ba, options); err != nil {
-		fatalPrintln(err)
+
+	fmt.Printf(banner, versionStr)
+	var migrator common.DBMigrator
+	switch options.ChanType {
+	case "pre2021":
+		migrator = &pre2021.Pre2021Migrator{}
+	case "kusabax":
+		fallthrough
+	case "tinyboard":
+		fallthrough
+	default:
+		fmt.Printf(
+			"Unsupported chan type %q, Currently only pre2021 database migration is supported\n",
+			options.ChanType)
+		os.Exit(1)
 	}
-}
-
-func main() {
-	fmt.Println(
-		"gochan-migration has been a gargantuan time sink and has wasted a lot of time that would be much better",
-		"spent working on other features, so I am putting its development on indefinite hiatus as of 12/18/2021.",
-		"It may or may not come back, but for the time being, RIP gochan-migration, we hardly knew ya.",
-	)
-	os.Exit(1)
-
-	// var options common.DBOptions
-	// var migrationConfigFile string
-
-	// flag.StringVar(&migrationConfigFile, "migrationconfig", "", "a JSON file to use for supplying the required migration information (ignores all other set arguments if used)")
-	// flag.StringVar(&options.OldChanType, "oldchan", "", "The imageboard we are migrating from (currently only pre2021 is supported, but more are coming")
-	// flag.StringVar(&options.Host, "dbhost", "", "The database host or socket file to connect to")
-	// flag.StringVar(&options.DBType, "dbtype", "mysql", "The kind of database server we are connecting to (currently only mysql is supported)")
-	// flag.StringVar(&options.Username, "dbusername", "", "The database username")
-	// flag.StringVar(&options.Password, "dbpassword", "", "The database password (if required by SQL account)")
-	// flag.StringVar(&options.OldDBName, "olddbname", "", "The name of the old database")
-	// flag.StringVar(&options.NewDBName, "newdbname", "", "The name of the new database")
-	// flag.StringVar(&options.TablePrefix, "tableprefix", "", "Prefix for the SQL tables' names")
-	// flag.Parse()
-
-	// if migrationConfigFile != "" {
-	// 	readConfig(migrationConfigFile, &options)
-	// }
-
-	// if options.OldChanType == "" || options.Host == "" || options.DBType == "" || options.Username == "" || options.OldDBName == "" || options.NewDBName == "" {
-	// 	flag.PrintDefaults()
-	// 	fmt.Println("Missing required database connection info")
-	// 	os.Exit(1)
-	// 	return
-	// }
-
-	// fmt.Printf(banner, versionStr)
-
-	// var migrator common.DBMigrator
-	// switch options.OldChanType {
-	// case "kusabax":
-	// 	migrator = &kusabax.KusabaXMigrator{}
-	// case "pre2021":
-	// 	migrator = &pre2021.Pre2021Migrator{}
-	// case "tinyboard":
-	// 	migrator = &tinyboard.TinyBoardMigrator{}
-	// default:
-	// 	fatalPrintln("Invalid oldchan value")
-	// }
-
-	// err := migrator.Init(options)
-	// if err != nil {
-	// 	fatalPrintln("Error initializing migrator:", err)
-	// }
-	// defer migrator.Close()
-
-	// // config.InitConfig(versionStr)
-	// /* gclog.Printf(gclog.LStdLog, "Starting gochan migration (gochan v%s)", versionStr)
-	// err := gcmigrate.Entry(1) //TEMP, get correct database version from command line or some kind of table. 1 Is the current version we are working towards
-	// if err != nil {
-	// 	gclog.Printf(gclog.LErrorLog, "Error while migrating: %s", err)
-	// } */
-	// if options.OldDBName == options.NewDBName {
-	// 	fatalPrintln("The old database name must not be the same as the new one.")
-	// }
-	// if err = migrator.MigrateDB(); err != nil {
-	// 	fatalPrintln(err)
-	// }
-	// fmt.Println("Database migration successful!")
+	err := migrator.Init(options)
+	if err != nil {
+		fmt.Printf("Unable to initialize %s migrator: %s\n", options.ChanType, err.Error())
+		os.Exit(1)
+	}
+	defer migrator.Close()
+	if err = migrator.MigrateDB(); err != nil {
+		fmt.Println("Error migrating database: ", err.Error())
+		os.Exit(1)
+	}
+	fmt.Println("Database migration successful!")
 }

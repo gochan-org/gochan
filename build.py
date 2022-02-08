@@ -50,6 +50,8 @@ gcos_name = ""  # used for release, since macOS GOOS is "darwin"
 exe = ""
 gochan_bin = ""
 gochan_exe = ""
+migration_bin = ""
+migration_exe = ""
 version = ""
 
 
@@ -119,6 +121,8 @@ def set_vars(goos=""):
 	global exe
 	global gochan_bin
 	global gochan_exe
+	global migration_bin
+	global migration_exe
 	global version
 
 	if goos != "":
@@ -135,7 +139,9 @@ def set_vars(goos=""):
 
 	gochan_bin = "gochan"
 	gochan_exe = "gochan" + exe
-
+	migration_bin = "gochan-migration"
+	migration_exe = "gochan-migration" + exe
+	
 	with open("version", "r") as version_file:
 		version = version_file.read().strip()
 
@@ -178,6 +184,13 @@ def build(debugging=False):
 		sys.exit(1)
 	print("Built gochan successfully")
 
+	status = run_cmd(
+		build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration",
+		realtime=True, print_command=True)[1]
+	if status != 0:
+		print("Failed building gochan-migration, see command output for details")
+		sys.exit(1)
+	print("Built gochan-migration successfully")
 
 def clean():
 	print("Cleaning up")
@@ -259,7 +272,11 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 		build()
 	print("Installing", gochan_exe, "to", path.join(prefix, "bin", gochan_exe))
 	fs_action("copy", gochan_exe, path.join(prefix, "bin", gochan_exe))
-	print("Note: gochan-migration has been put on indefinite suspention. See README.md")
+
+	if path.exists(migration_exe) is False:
+		build()
+	print("Installing ", migration_exe, "to", path.join(prefix, "bin", migration_exe))
+
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",

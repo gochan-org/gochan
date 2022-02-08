@@ -109,8 +109,12 @@ if [ "$DBTYPE" = "postgresql" ]; then
 fi
 
 # a convenient script for connecting to the db, whichever type we're using
-cp /vagrant/devtools/dbconnect.sh /home/vagrant/dbconnect.sh
+ln -s {/vagrant/devtools,/home/vagrant}/dbconnect.sh
 chmod +x /home/vagrant/dbconnect.sh
+
+# used for testing migration from the pre-2021 db schema
+ln -s {/vagrant/devtools,/home/vagrant}/get_pre2021.sh
+chmod +x get_pre2021.sh
 
 cat <<EOF >>/home/vagrant/.bashrc
 export DBTYPE=$DBTYPE

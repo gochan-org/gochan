@@ -33,22 +33,19 @@ func NewMigrationError(oldChanType string, errMessage string) *MigrationError {
 	return &MigrationError{oldChanType: oldChanType, errMessage: errMessage}
 }
 
-type DBOptions struct {
-	Host        string `json:"dbhost"`
-	DBType      string `json:"dbtype"`
-	Username    string `json:"dbusername"`
-	Password    string `json:"dbpassword"`
-	OldDBName   string `json:"olddbname"`
-	OldChanType string `json:"oldchan"`
-	NewDBName   string `json:"newdbname"`
-	TablePrefix string `json:"tableprefix"`
+type MigrationOptions struct {
+	ChanType      string
+	OldChanRoot   string
+	OldChanConfig string
+	OldDBName     string
+	NewDBName     string
 }
 
 // DBMigrator is used for handling the migration from one database type to a
 // database compatible with gochan 3.x onward
 type DBMigrator interface {
 	// Init sets the variables for connecting to the databases
-	Init(options DBOptions) error
+	Init(options MigrationOptions) error
 
 	// MigrateDB migrates the imageboard data (posts, boards, etc) to the new database
 	MigrateDB() error

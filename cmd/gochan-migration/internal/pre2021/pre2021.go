@@ -2,8 +2,11 @@
 package pre2021
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
-	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
@@ -16,49 +19,63 @@ const (
 		(SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?) as num_tables`
 )
 
-type Pre2021Migrator struct {
-	db      *gcsql.GCDB
-	options common.DBOptions
+type Pre2021Config struct {
+	DBtype     string
+	DBhost     string
+	DBname     string
+	DBusername string
+	DBpassword string
+	DBprefix   string
 }
 
-func (m *Pre2021Migrator) Init(options common.DBOptions) error {
+type Pre2021Migrator struct {
+	db      *gcsql.GCDB
+	options common.MigrationOptions
+	config  Pre2021Config
+}
+
+func (m *Pre2021Migrator) readConfig() error {
+	ba, err := ioutil.ReadFile(m.options.OldChanConfig)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(ba, &m.config)
+}
+
+func (m *Pre2021Migrator) Init(options common.MigrationOptions) error {
 	m.options = options
-	var err error
+	err := m.readConfig()
+	if err != nil {
+		return err
+	}
 	m.db, err = gcsql.Open(
-		m.options.Host, m.options.DBType, "", m.options.Username,
-		m.options.Password, options.TablePrefix)
+		m.config.DBhost, m.config.DBtype, m.config.DBname, m.config.DBusername,
+		m.config.DBpassword, m.config.DBprefix)
 	return err
 }
 
 func (m *Pre2021Migrator) MigrateDB() error {
-	chkDbStmt, err := m.db.PrepareSQL(mysqlDbInfoSQL)
+	// select id,thread_id,name,tripcode,email,subject,message from gc_posts;
+	rows, err := m.db.QuerySQL(`SELECT id,parentid,name,tripcode,email,subject,message FROM DBPREFIXposts`)
 	if err != nil {
 		return err
 	}
-	defer chkDbStmt.Close()
-	var olddb []byte
-	var newdb []byte
-	var numTables int
-
-	if err = chkDbStmt.QueryRow(m.options.OldDBName, m.options.NewDBName, m.options.NewDBName).Scan(&olddb, &newdb, &numTables); err != nil {
-		return common.NewMigrationError("pre2021", err.Error())
+	var id int
+	var thread int
+	var name string
+	var tripcode string
+	var email string
+	var subject string
+	var message string
+	for rows.Next() {
+		if err = rows.Scan(&id, &thread, &name, &tripcode, &email, &subject, &message); err != nil {
+			return err
+		}
+		fmt.Printf(
+			"Post #%d in %d by %s!%s, email %q, subject %q, message: %q\n",
+			id, thread, name, tripcode, email, subject, message,
+		)
 	}
-	if olddb == nil {
-		return common.NewMigrationError("pre2021", "old database doesn't exist")
-	}
-	if newdb == nil {
-		return common.NewMigrationError("pre2021", "new database doesn't exist")
-	}
-	if numTables > 0 {
-		return common.NewMigrationError("pre2021", "new database must be empty")
-	}
-	gcsql.ConnectToDB(
-		m.options.Host, m.options.DBType, m.options.NewDBName,
-		m.options.Username, m.options.Password, m.options.TablePrefix)
-	cfg := config.GetSystemCriticalConfig()
-	gcsql.CheckAndInitializeDatabase(cfg.DBtype)
-
-	GetPosts(m.db)
 
 	return nil
 }
