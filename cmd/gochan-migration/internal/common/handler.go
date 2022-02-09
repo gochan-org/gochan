@@ -26,7 +26,7 @@ func (me *MigrationError) Error() string {
 	if from != "" {
 		from = " from " + from
 	}
-	return "unable to migrate" + from + ": " + me.errMessage
+	return "unable to migrate " + from + ": " + me.errMessage
 }
 
 func NewMigrationError(oldChanType string, errMessage string) *MigrationError {
@@ -49,6 +49,28 @@ type DBMigrator interface {
 
 	// MigrateDB migrates the imageboard data (posts, boards, etc) to the new database
 	MigrateDB() error
+
+	// MigrateBoards gets info about the old boards in the board table and inserts each one
+	// into the new database if they don't already exist
+	MigrateBoards() error
+
+	// MigratePosts gets the threads and replies in the old database, and inserts them into
+	// the new database, creating new threads to avoid putting replies in threads that already
+	// exist
+	MigratePosts() error
+
+	// MigrateStaff gets the staff list in the old board and inserts them into the new board if
+	// the username doesn't already exist. It sets the starting password to the given password
+	MigrateStaff(password string) error
+
+	// MigrateBans gets the list of bans and appeals in the old database and inserts them into the
+	// new one if, for each entry, the IP/name/etc isn't already banned for the same length
+	// e.g. 1.1.1.1 is permabanned on both, 1.1.2.2 is banned for 5 days on both, etc
+	MigrateBans() error
+
+	// MigrateAnnouncements gets the list of public and staff announcements in the old database
+	// and inserts them into the new database,
+	MigrateAnnouncements() error
 
 	// Close closes the database if initialized
 	Close() error

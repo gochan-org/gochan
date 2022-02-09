@@ -20,7 +20,43 @@ func (m *TinyBoardMigrator) Init(options common.MigrationOptions) error {
 }
 
 func (m *TinyBoardMigrator) MigrateDB() error {
+	var err error
+	if err = m.MigrateBoards(); err != nil {
+		return err
+	}
+	if err = m.MigratePosts(); err != nil {
+		return err
+	}
+	if err = m.MigrateStaff("password"); err != nil {
+		return err
+	}
+	if err = m.MigrateBans(); err != nil {
+		return err
+	}
+	if err = m.MigrateAnnouncements(); err != nil {
+		return err
+	}
 	return unimplemented
+}
+
+func (m *TinyBoardMigrator) MigrateBoards() error {
+	return nil
+}
+
+func (m *TinyBoardMigrator) MigratePosts() error {
+	return nil
+}
+
+func (m *TinyBoardMigrator) MigrateStaff(password string) error {
+	return nil
+}
+
+func (m *TinyBoardMigrator) MigrateBans() error {
+	return nil
+}
+
+func (m *TinyBoardMigrator) MigrateAnnouncements() error {
+	return nil
 }
 
 func (m *TinyBoardMigrator) Close() error {

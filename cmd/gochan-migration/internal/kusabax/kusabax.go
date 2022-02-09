@@ -20,7 +20,43 @@ func (m *KusabaXMigrator) Init(options common.MigrationOptions) error {
 }
 
 func (m *KusabaXMigrator) MigrateDB() error {
+	var err error
+	if err = m.MigrateBoards(); err != nil {
+		return err
+	}
+	if err = m.MigratePosts(); err != nil {
+		return err
+	}
+	if err = m.MigrateStaff("password"); err != nil {
+		return err
+	}
+	if err = m.MigrateBans(); err != nil {
+		return err
+	}
+	if err = m.MigrateAnnouncements(); err != nil {
+		return err
+	}
 	return unimplemented
+}
+
+func (m *KusabaXMigrator) MigrateBoards() error {
+	return nil
+}
+
+func (m *KusabaXMigrator) MigratePosts() error {
+	return nil
+}
+
+func (m *KusabaXMigrator) MigrateStaff(password string) error {
+	return nil
+}
+
+func (m *KusabaXMigrator) MigrateBans() error {
+	return nil
+}
+
+func (m *KusabaXMigrator) MigrateAnnouncements() error {
+	return nil
 }
 
 func (m *KusabaXMigrator) Close() error {

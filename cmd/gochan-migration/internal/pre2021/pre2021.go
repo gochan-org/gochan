@@ -3,7 +3,6 @@ package pre2021
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
@@ -55,28 +54,43 @@ func (m *Pre2021Migrator) Init(options common.MigrationOptions) error {
 }
 
 func (m *Pre2021Migrator) MigrateDB() error {
-	// select id,thread_id,name,tripcode,email,subject,message from gc_posts;
-	rows, err := m.db.QuerySQL(`SELECT id,parentid,name,tripcode,email,subject,message FROM DBPREFIXposts`)
-	if err != nil {
+	var err error
+	if err := m.MigrateBoards(); err != nil {
 		return err
 	}
-	var id int
-	var thread int
-	var name string
-	var tripcode string
-	var email string
-	var subject string
-	var message string
-	for rows.Next() {
-		if err = rows.Scan(&id, &thread, &name, &tripcode, &email, &subject, &message); err != nil {
-			return err
-		}
-		fmt.Printf(
-			"Post #%d in %d by %s!%s, email %q, subject %q, message: %q\n",
-			id, thread, name, tripcode, email, subject, message,
-		)
+	if err = m.MigratePosts(); err != nil {
+		return err
+	}
+	if err = m.MigrateStaff("password"); err != nil {
+		return err
+	}
+	if err = m.MigrateBans(); err != nil {
+		return err
+	}
+	if err = m.MigrateAnnouncements(); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+func (m *Pre2021Migrator) MigrateBoards() error {
+	return nil
+}
+
+func (m *Pre2021Migrator) MigratePosts() error {
+	return nil
+}
+
+func (m *Pre2021Migrator) MigrateStaff(password string) error {
+	return nil
+}
+
+func (m *Pre2021Migrator) MigrateBans() error {
+	return nil
+}
+
+func (m *Pre2021Migrator) MigrateAnnouncements() error {
 	return nil
 }
 
