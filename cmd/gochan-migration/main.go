@@ -2,15 +2,13 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/pre2021"
 	"github.com/gochan-org/gochan/pkg/config"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
 const (
@@ -20,16 +18,12 @@ several changes before it can be considered "stable", so make sure you check
 the README and/or the -h command line flag before you use it.
 
 `
+	fatalLogFlags = gclog.LFatal | gclog.LErrorLog | gclog.LStdLog
 )
 
 var (
 	versionStr string
 )
-
-func fatalPrintln(args ...interface{}) {
-	fmt.Println(args...)
-	os.Exit(1)
-}
 
 func main() {
 	var options common.MigrationOptions
@@ -42,12 +36,12 @@ func main() {
 
 	if options.ChanType == "" || options.OldChanConfig == "" {
 		flag.PrintDefaults()
-		fmt.Println("Missing required database connection info")
+		gclog.Println(fatalLogFlags, "Missing required database connection info")
 		os.Exit(1)
 		return
 	}
 
-	fmt.Printf(banner, versionStr)
+	gclog.Printf(gclog.LAccessLog, banner, versionStr)
 	var migrator common.DBMigrator
 	switch options.ChanType {
 	case "pre2021":
@@ -57,20 +51,30 @@ func main() {
 	case "tinyboard":
 		fallthrough
 	default:
-		fmt.Printf(
+		gclog.Printf(fatalLogFlags,
 			"Unsupported chan type %q, Currently only pre2021 database migration is supported\n",
 			options.ChanType)
 		os.Exit(1)
 	}
+	config.InitConfig(versionStr)
+	systemCritical := config.GetSystemCriticalConfig()
+
+	gcsql.ConnectToDB(
+		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
+		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
+	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
+	defer gcsql.Close()
+
 	err := migrator.Init(options)
 	if err != nil {
-		fmt.Printf("Unable to initialize %s migrator: %s\n", options.ChanType, err.Error())
+		gclog.Printf(fatalLogFlags,
+			"Unable to initialize %s migrator: %s\n", options.ChanType, err.Error())
 		os.Exit(1)
 	}
 	defer migrator.Close()
 	if err = migrator.MigrateDB(); err != nil {
-		fmt.Println("Error migrating database: ", err.Error())
+		gclog.Printf(fatalLogFlags, "Error migrating database: ", err.Error())
 		os.Exit(1)
 	}
-	fmt.Println("Database migration successful!")
+	gclog.Println(gclog.LStdLog, "Database migration successful!")
 }

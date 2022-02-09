@@ -19,12 +19,13 @@ const (
 )
 
 type Pre2021Config struct {
-	DBtype     string
-	DBhost     string
-	DBname     string
-	DBusername string
-	DBpassword string
-	DBprefix   string
+	DBtype       string
+	DBhost       string
+	DBname       string
+	DBusername   string
+	DBpassword   string
+	DBprefix     string
+	DocumentRoot string
 }
 
 type Pre2021Migrator struct {
@@ -43,8 +44,8 @@ func (m *Pre2021Migrator) readConfig() error {
 
 func (m *Pre2021Migrator) Init(options common.MigrationOptions) error {
 	m.options = options
-	err := m.readConfig()
-	if err != nil {
+	var err error
+	if err = m.readConfig(); err != nil {
 		return err
 	}
 	m.db, err = gcsql.Open(
@@ -71,10 +72,6 @@ func (m *Pre2021Migrator) MigrateDB() error {
 		return err
 	}
 
-	return nil
-}
-
-func (m *Pre2021Migrator) MigrateBoards() error {
 	return nil
 }
 
