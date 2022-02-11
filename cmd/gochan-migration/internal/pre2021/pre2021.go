@@ -95,5 +95,5 @@ func (m *Pre2021Migrator) Close() error {
 	if m.db != nil {
 		return m.db.Close()
 	}
-	return gcsql.Close()
+	return nil
 }

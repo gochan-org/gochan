@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"os"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/pre2021"
@@ -18,7 +17,14 @@ several changes before it can be considered "stable", so make sure you check
 the README and/or the -h command line flag before you use it.
 
 `
-	fatalLogFlags = gclog.LFatal | gclog.LErrorLog | gclog.LStdLog
+	migrateCompleteTxt = `Database migration successful!
+To migrate the uploads for each board, move or copy the uploads to /path/to/gochan/document/root/<boardname>/src/
+Then copy the thumbnails to /path/to/gochan/documentroot/<boardname>/thumb/
+Then start the gochan server and go to http://yoursite/manage?action=rebuildall to generate the html files
+for the threads and board pages`
+
+	fatalLogFlags     = gclog.LFatal | gclog.LErrorLog | gclog.LStdLog
+	allowedDirActions = "Valid values are noaction, copy, and move (defaults to noaction if unset)"
 )
 
 var (
@@ -29,16 +35,30 @@ func main() {
 	var options common.MigrationOptions
 
 	config.InitConfig(versionStr)
-
+	var dirAction string
 	flag.StringVar(&options.ChanType, "oldchan", "", "The imageboard we are migrating from (currently only pre2021 is supported, but more are coming")
 	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
+	/* flag.StringVar(&dirAction, "diraction", "",
+	"Action taken on each board directory after it has been migrated. "+allowedDirActions) */
+
 	flag.Parse()
 
 	if options.ChanType == "" || options.OldChanConfig == "" {
 		flag.PrintDefaults()
-		gclog.Println(fatalLogFlags, "Missing required database connection info")
-		os.Exit(1)
+		gclog.Println(fatalLogFlags, "Missing required oldchan value")
 		return
+	}
+	switch dirAction {
+	case "":
+		fallthrough
+	case "noaction":
+		options.DirAction = common.DirNoAction
+	case "copy":
+		options.DirAction = common.DirCopy
+	case "move":
+		options.DirAction = common.DirMove
+	default:
+		gclog.Println(fatalLogFlags, "Invalid diraction value. "+allowedDirActions)
 	}
 
 	gclog.Printf(gclog.LAccessLog, banner, versionStr)
@@ -54,7 +74,7 @@ func main() {
 		gclog.Printf(fatalLogFlags,
 			"Unsupported chan type %q, Currently only pre2021 database migration is supported\n",
 			options.ChanType)
-		os.Exit(1)
+		return
 	}
 	config.InitConfig(versionStr)
 	systemCritical := config.GetSystemCriticalConfig()
@@ -69,12 +89,12 @@ func main() {
 	if err != nil {
 		gclog.Printf(fatalLogFlags,
 			"Unable to initialize %s migrator: %s\n", options.ChanType, err.Error())
-		os.Exit(1)
+		return
 	}
 	defer migrator.Close()
 	if err = migrator.MigrateDB(); err != nil {
 		gclog.Printf(fatalLogFlags, "Error migrating database: ", err.Error())
-		os.Exit(1)
+		return
 	}
-	gclog.Println(gclog.LStdLog, "Database migration successful!")
+	gclog.Println(gclog.LStdLog, migrateCompleteTxt)
 }

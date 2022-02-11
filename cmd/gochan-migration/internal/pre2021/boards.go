@@ -1,10 +1,6 @@
 package pre2021
 
 import (
-	"os"
-	"path"
-
-	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
@@ -127,19 +123,22 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 			return err
 		}
 		gclog.Printf(gclog.LStdLog, "/%s/ successfully migrated in the database")
+		// switch m.options.DirAction {
+		// case common.DirCopy:
 
-		// move the old directory (probably should copy instead) to the new one
-		newDocumentRoot := config.GetSystemCriticalConfig().DocumentRoot
-		gclog.Println(gclog.LStdLog, "Old board path:", path.Join(m.config.DocumentRoot, dir))
-		gclog.Println(gclog.LStdLog, "Old board path:", path.Join(newDocumentRoot, dir))
-		if err = os.Rename(
-			path.Join(m.config.DocumentRoot, dir),
-			path.Join(newDocumentRoot, dir),
-		); err != nil {
-			return err
-		}
-		gclog.Printf(gclog.LStdLog, "/%s/ directory/files successfully moved")
+		// case common.DirMove:
+		// 	// move the old directory (probably should copy instead) to the new one
+		// 	newDocumentRoot := config.GetSystemCriticalConfig().DocumentRoot
+		// 	gclog.Println(gclog.LStdLog, "Old board path:", path.Join(m.config.DocumentRoot, dir))
+		// 	gclog.Println(gclog.LStdLog, "Old board path:", path.Join(newDocumentRoot, dir))
+		// 	if err = os.Rename(
+		// 		path.Join(m.config.DocumentRoot, dir),
+		// 		path.Join(newDocumentRoot, dir),
+		// 	); err != nil {
+		// 		return err
+		// 	}
+		// 	gclog.Printf(gclog.LStdLog, "/%s/ directory/files successfully moved")
+		// }
 	}
-
 	return nil
 }

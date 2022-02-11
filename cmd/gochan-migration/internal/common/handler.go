@@ -7,6 +7,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const (
+	DirNoAction = iota
+	DirCopy
+	DirMove
+)
+
 var (
 	ErrInvalidSchema     = errors.New("invalid database schema for old database")
 	ErrUnsupportedDBType = errors.New("unsupported SQL driver, currently only MySQL and Postgres are supported")
@@ -39,6 +45,7 @@ type MigrationOptions struct {
 	OldChanConfig string
 	OldDBName     string
 	NewDBName     string
+	DirAction     int
 }
 
 // DBMigrator is used for handling the migration from one database type to a
