@@ -32,6 +32,10 @@ type Pre2021Migrator struct {
 	db      *gcsql.GCDB
 	options common.MigrationOptions
 	config  Pre2021Config
+
+	posts     []postTable
+	oldBoards map[int]string // map[boardid]dir
+	newBoards map[int]string // map[board]dir
 }
 
 func (m *Pre2021Migrator) readConfig() error {
@@ -72,10 +76,6 @@ func (m *Pre2021Migrator) MigrateDB() error {
 		return err
 	}
 
-	return nil
-}
-
-func (m *Pre2021Migrator) MigratePosts() error {
 	return nil
 }
 

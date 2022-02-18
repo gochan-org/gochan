@@ -14,6 +14,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 
 	// get boards from old db
 	rows, err := m.db.QuerySQL(`SELECT
+	id,
 	dir,
 	type,
 	upload_type,
@@ -40,6 +41,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		return err
 	}
 	for rows.Next() {
+		var id int
 		var dir string
 		var board_type int
 		var upload_type int
@@ -86,6 +88,9 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		}
 		found := false
 		for _, board := range boards {
+			if _, ok := m.oldBoards[id]; !ok {
+				m.oldBoards[id] = dir
+			}
 			if board.Dir == dir {
 				gclog.Printf(gclog.LStdLog, "Board /%s/ already exists in new db, moving on\n", dir)
 				found = true
@@ -122,6 +127,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		}); err != nil {
 			return err
 		}
+		m.newBoards[id] = dir
 		gclog.Printf(gclog.LStdLog, "/%s/ successfully migrated in the database")
 		// switch m.options.DirAction {
 		// case common.DirCopy:
