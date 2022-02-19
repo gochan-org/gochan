@@ -1,9 +1,11 @@
 package pre2021
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
 type postTable struct {
@@ -75,7 +77,7 @@ func (m *Pre2021Migrator) migrateThreads() error {
 	bumped,
 	stickied,
 	locked,
-	reviewed from DBPREFIXposts WHERE is_deleted = 0`)
+	reviewed from DBPREFIXposts WHERE deleted_timestamp = NULL`)
 	if err != nil {
 		return err
 	}
@@ -111,7 +113,7 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			&post.locked,
 			&post.reviewed,
 		); err != nil {
-			return err
+			// return err
 		}
 		_, ok := m.oldBoards[post.boardid]
 		if !ok {
@@ -120,12 +122,40 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			continue
 		}
 
+		// var stmt *sql.Stmt
+		// var err error
 		// gcsql.QueryRowSQL(`SELECT id FROM DBPREFIXboards WHERE uri = ?`, []interface{}{})
-		m.posts = append(m.posts, post)
 		if post.parentid == 0 {
 			// post is a thread, save it to the DBPREFIXthreads table
+			// []interfaceP{{post.newParentID}
+
+			if err = gcsql.QueryRowSQL(
+				`SELECT board_id FROM DBPREFIXthreads ORDER BY board_id LIMIT 1`,
+				nil,
+				[]interface{}{&post.newParentID},
+			); err != nil {
+				return err
+			}
+			fmt.Println("Current board ID:", post.newParentID)
+
+			// 			// stmt, err := db.Prepare("INSERT table SET unique_id=? ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)")
+			// 			gcsql.ExecSQL(`INSERT INTO DBPREFIXthreads (board_id) VALUES(?)`, post.newBoardID)
+
+			// 			/*
+			// id
+			// board_id
+			// locked
+			// stickied
+			// anchored
+			// cyclical
+			// last_bump
+			// deleted_at
+			// is_deleted
+
+			// 			*/
 
 		}
+		m.posts = append(m.posts, post)
 	}
 	return nil
 }

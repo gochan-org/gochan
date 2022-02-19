@@ -54,8 +54,14 @@ type DBMigrator interface {
 	// Init sets the variables for connecting to the databases
 	Init(options MigrationOptions) error
 
+	// IsMigrated checks to see if the database has already been migrated and quits if it has
+	// and returns any errors that aren't "table doesn't exist". if the boolean value is true,
+	// it can be assumed that the database has already been migrated and gochan-migration
+	// will exit
+	IsMigrated() (bool, error)
+
 	// MigrateDB migrates the imageboard data (posts, boards, etc) to the new database
-	MigrateDB() error
+	MigrateDB() (bool, error)
 
 	// MigrateBoards gets info about the old boards in the board table and inserts each one
 	// into the new database if they don't already exist

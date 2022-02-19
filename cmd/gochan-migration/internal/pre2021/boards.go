@@ -6,6 +6,12 @@ import (
 )
 
 func (m *Pre2021Migrator) MigrateBoards() error {
+	if m.oldBoards == nil {
+		m.oldBoards = map[int]string{}
+	}
+	if m.newBoards == nil {
+		m.newBoards = map[int]string{}
+	}
 	// get all boards from new db
 	boards, err := gcsql.GetAllBoards()
 	if err != nil {
@@ -63,7 +69,9 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		var redirect_to_thread bool
 		var require_file bool
 		var enable_catalog bool
-		if err = rows.Scan(&dir,
+		if err = rows.Scan(
+			&id,
+			&dir,
 			&board_type,
 			&upload_type,
 			&title,

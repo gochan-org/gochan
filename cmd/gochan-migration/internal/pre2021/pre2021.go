@@ -9,15 +9,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-const (
-	// check to see if the old db exists, if the new db exists, and the number of tables
-	// in the new db
-	mysqlDbInfoSQL = `SELECT
-		(SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?) AS olddb,
-		(SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?) as newdb,
-		(SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ?) as num_tables`
-)
-
 type Pre2021Config struct {
 	DBtype       string
 	DBhost       string
@@ -58,25 +49,52 @@ func (m *Pre2021Migrator) Init(options common.MigrationOptions) error {
 	return err
 }
 
-func (m *Pre2021Migrator) MigrateDB() error {
+func (m *Pre2021Migrator) IsMigrated() (bool, error) {
+	var migrated bool
 	var err error
-	if err := m.MigrateBoards(); err != nil {
-		return err
+	var query string
+	switch m.config.DBtype {
+	case "mysql":
+		fallthrough
+	case "postgres":
+		query = `SELECT COUNT(*) > 0 FROM INFORMATION_SCHEMA.TABLES
+		WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?`
 	}
-	if err = m.MigratePosts(); err != nil {
-		return err
+	if err = m.db.QueryRowSQL(query,
+		[]interface{}{m.config.DBprefix + "migrated", m.config.DBname},
+		[]interface{}{&migrated}); err != nil {
+		return migrated, err
 	}
-	if err = m.MigrateStaff("password"); err != nil {
-		return err
+	return migrated, err
+}
+
+func (m *Pre2021Migrator) MigrateDB() (bool, error) {
+	migrated, err := m.IsMigrated()
+	if err != nil {
+		return false, err
 	}
-	if err = m.MigrateBans(); err != nil {
-		return err
-	}
-	if err = m.MigrateAnnouncements(); err != nil {
-		return err
+	if migrated {
+		// db is already migrated, stop
+		return true, nil
 	}
 
-	return nil
+	if err := m.MigrateBoards(); err != nil {
+		return false, err
+	}
+	if err = m.MigratePosts(); err != nil {
+		return false, err
+	}
+	if err = m.MigrateStaff("password"); err != nil {
+		return false, err
+	}
+	if err = m.MigrateBans(); err != nil {
+		return false, err
+	}
+	if err = m.MigrateAnnouncements(); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (m *Pre2021Migrator) MigrateStaff(password string) error {
