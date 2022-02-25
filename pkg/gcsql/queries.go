@@ -46,7 +46,7 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 	const sql = `UPDATE DBPREFIXposts
 	SET message = ?
 	WHERE id = ?`
-	stmt, err := PrepareSQL(sql)
+	stmt, err := PrepareSQL(sql, nil)
 	if err != nil {
 		return err
 	}

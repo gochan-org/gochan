@@ -50,34 +50,7 @@ func (m *Pre2021Migrator) MigratePosts() error {
 }
 
 func (m *Pre2021Migrator) migrateThreads() error {
-	rows, err := m.db.QuerySQL(`SELECT
-	id,
-	boardid,
-	parentid,
-	name,
-	tripcode,
-	email,
-	subject,
-	message,
-	message_raw,
-	password,
-	filename,
-	filename_original,
-	file_checksum,
-	filesize,
-	image_w,
-	image_h,
-	thumb_w,
-	thumb_h,
-	ip,
-	tag,
-	timestamp,
-	autosage,
-	deleted_timestamp,
-	bumped,
-	stickied,
-	locked,
-	reviewed from DBPREFIXposts WHERE deleted_timestamp = NULL`)
+	rows, err := m.db.QuerySQL(postsQuery)
 	if err != nil {
 		return err
 	}
@@ -113,7 +86,7 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			&post.locked,
 			&post.reviewed,
 		); err != nil {
-			// return err
+			return err
 		}
 		_, ok := m.oldBoards[post.boardid]
 		if !ok {

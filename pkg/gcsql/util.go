@@ -16,11 +16,11 @@ var (
 )
 
 // PrepareSQL is used for generating a prepared SQL statement formatted according to the configured database driver
-func PrepareSQL(query string) (*sql.Stmt, error) {
+func PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
-	return gcdb.PrepareSQL(query)
+	return gcdb.PrepareSQL(query, tx)
 }
 
 // Close closes the connection to the SQL database
@@ -83,6 +83,13 @@ func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
 		return nil, ErrNotConnected
 	}
 	return gcdb.QuerySQL(query, a...)
+}
+
+func BeginTx() (*sql.Tx, error) {
+	if gcdb == nil {
+		return nil, ErrNotConnected
+	}
+	return gcdb.BeginTx()
 }
 
 // ResetBoardSectionArrays is run when the board list needs to be changed

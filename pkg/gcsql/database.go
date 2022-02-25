@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -48,7 +49,7 @@ func (db *GCDB) Close() error {
 	return nil
 }
 
-func (db *GCDB) PrepareSQL(query string) (*sql.Stmt, error) {
+func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	var preparedStr string
 
 	switch db.driver {
@@ -66,7 +67,13 @@ func (db *GCDB) PrepareSQL(query string) (*sql.Stmt, error) {
 	default:
 		return nil, ErrUnsupportedDB
 	}
-	stmt, err := db.db.Prepare(db.replacer.Replace((preparedStr)))
+	var stmt *sql.Stmt
+	var err error
+	if tx != nil {
+		stmt, err = tx.Prepare(db.replacer.Replace(preparedStr))
+	} else {
+		stmt, err = db.db.Prepare(db.replacer.Replace(preparedStr))
+	}
 	if err != nil {
 		return stmt, fmt.Errorf("error preparing sql query:\n%s\n%s", query, err.Error())
 	}
@@ -81,12 +88,21 @@ Example:
 	result, err := db.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
 */
 func (db *GCDB) ExecSQL(query string, values ...interface{}) (sql.Result, error) {
-	stmt, err := db.PrepareSQL(query)
+	stmt, err := db.PrepareSQL(query, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	return stmt.Exec(values...)
+}
+
+/*
+BeginTx creates and returns a new SQL transaction. Note that it doesn't use gochan's database variables,
+e.g. DBPREFIX, DBNAME, etc so it should be used sparingly
+*/
+func (db *GCDB) BeginTx() (*sql.Tx, error) {
+	tx, err := db.db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
+	return tx, err
 }
 
 /*
@@ -101,7 +117,7 @@ Example:
 		[]interface{}{&intVal, &stringVal})
 */
 func (db *GCDB) QueryRowSQL(query string, values, out []interface{}) error {
-	stmt, err := db.PrepareSQL(query)
+	stmt, err := db.PrepareSQL(query, nil)
 	if err != nil {
 		return err
 	}
@@ -124,7 +140,7 @@ Example:
 	}
 */
 func (db *GCDB) QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
-	stmt, err := db.PrepareSQL(query)
+	stmt, err := db.PrepareSQL(query, nil)
 	if err != nil {
 		return nil, err
 	}

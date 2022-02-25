@@ -19,30 +19,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 	}
 
 	// get boards from old db
-	rows, err := m.db.QuerySQL(`SELECT
-	id,
-	dir,
-	type,
-	upload_type,
-	title,
-	subtitle,
-	description,
-	section,
-	max_file_size,
-	max_pages,
-	default_style,
-	locked,
-	anonymous,
-	forced_anon,
-	max_age,
-	autosage_after,
-	no_images_after,
-	max_message_length,
-	embeds_allowed,
-	redirect_to_thread,
-	require_file,
-	enable_catalog
-	FROM DBPREFIXboards`)
+	rows, err := m.db.QuerySQL(boardsQuery)
 	if err != nil {
 		return err
 	}
