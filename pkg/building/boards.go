@@ -313,6 +313,16 @@ func buildBoard(board *gcsql.Board, newBoard, force bool) error {
 		return ErrNoBoardTitle
 	}
 
+	if newBoard {
+		board.CreatedOn = time.Now()
+		err := gcsql.CreateBoard(board)
+		if err != nil {
+			return err
+		}
+	} else if err = board.UpdateID(); err != nil {
+		return err
+	}
+
 	dirPath := board.AbsolutePath()
 	resPath := board.AbsolutePath("res")
 	srcPath := board.AbsolutePath("src")
@@ -378,15 +388,6 @@ func buildBoard(board *gcsql.Board, newBoard, force bool) error {
 			genericErrStr, thumbPath, err.Error()))
 	}
 
-	if newBoard {
-		board.CreatedOn = time.Now()
-		err := gcsql.CreateBoard(board)
-		if err != nil {
-			return err
-		}
-	} else if err = board.UpdateID(); err != nil {
-		return err
-	}
 	BuildBoardPages(board)
 	BuildThreads(true, board.ID, 0)
 	gcsql.ResetBoardSectionArrays()
