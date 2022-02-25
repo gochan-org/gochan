@@ -3,6 +3,7 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -21,6 +22,33 @@ func PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 		return nil, ErrNotConnected
 	}
 	return gcdb.PrepareSQL(query, tx)
+}
+
+// PrepareSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
+// type (MySQL, Postgres, etc)
+func PrepareSQLString(query string, dbConn *GCDB) (string, error) {
+	var prepared string
+	var err error
+	if dbConn == nil {
+		return "", ErrNotConnected
+	}
+	switch dbConn.driver {
+	case "mysql":
+		prepared = query
+	case "postgres":
+		arr := strings.Split(query, "?")
+		for i := range arr {
+			if i == len(arr)-1 {
+				break
+			}
+			arr[i] += fmt.Sprintf("$%d", i+1)
+		}
+		prepared = strings.Join(arr, "")
+	default:
+		return "", ErrUnsupportedDB
+	}
+
+	return prepared, err
 }
 
 // Close closes the connection to the SQL database

@@ -50,34 +50,21 @@ func (db *GCDB) Close() error {
 }
 
 func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
-	var preparedStr string
-
-	switch db.driver {
-	case "mysql":
-		preparedStr = query
-	case "postgres":
-		arr := strings.Split(query, "?")
-		for i := range arr {
-			if i == len(arr)-1 {
-				break
-			}
-			arr[i] += fmt.Sprintf("$%d", i+1)
-		}
-		preparedStr = strings.Join(arr, "")
-	default:
-		return nil, ErrUnsupportedDB
+	var prepared string
+	var err error
+	if prepared, err = PrepareSQLString(query, db); err != nil {
+		return nil, err
 	}
 	var stmt *sql.Stmt
-	var err error
 	if tx != nil {
-		stmt, err = tx.Prepare(db.replacer.Replace(preparedStr))
+		stmt, err = tx.Prepare(db.replacer.Replace(prepared))
 	} else {
-		stmt, err = db.db.Prepare(db.replacer.Replace(preparedStr))
+		stmt, err = db.db.Prepare(db.replacer.Replace(prepared))
 	}
 	if err != nil {
-		return stmt, fmt.Errorf("error preparing sql query:\n%s\n%s", query, err.Error())
+		return stmt, err
 	}
-	return stmt, sqlVersionError(err, db.driver, &preparedStr)
+	return stmt, sqlVersionError(err, db.driver, &prepared)
 }
 
 /*
