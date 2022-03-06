@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -24,9 +25,9 @@ func PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	return gcdb.PrepareSQL(query, tx)
 }
 
-// PrepareSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
-// type (MySQL, Postgres, etc)
-func PrepareSQLString(query string, dbConn *GCDB) (string, error) {
+// SetupSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
+// type (MySQL, Postgres, etc) to be passed to PrepareSQL
+func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	var prepared string
 	var err error
 	if dbConn == nil {
@@ -117,7 +118,11 @@ func BeginTx() (*sql.Tx, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
-	return gcdb.BeginTx()
+	var ctx context.Context
+	return gcdb.BeginTx(ctx, &sql.TxOptions{
+		Isolation: 0,
+		ReadOnly:  false,
+	})
 }
 
 // ResetBoardSectionArrays is run when the board list needs to be changed

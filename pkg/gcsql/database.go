@@ -52,7 +52,7 @@ func (db *GCDB) Close() error {
 func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	var prepared string
 	var err error
-	if prepared, err = PrepareSQLString(query, db); err != nil {
+	if prepared, err = SetupSQLString(query, db); err != nil {
 		return nil, err
 	}
 	var stmt *sql.Stmt
@@ -84,12 +84,21 @@ func (db *GCDB) ExecSQL(query string, values ...interface{}) (sql.Result, error)
 }
 
 /*
-BeginTx creates and returns a new SQL transaction. Note that it doesn't use gochan's database variables,
-e.g. DBPREFIX, DBNAME, etc so it should be used sparingly
+Begin creates and returns a new SQL transaction using the GCDB. Note that it doesn't use gochan's
+database variables, e.g. DBPREFIX, DBNAME, etc so it should be used sparingly or with
+gcsql.SetupSQLString
 */
-func (db *GCDB) BeginTx() (*sql.Tx, error) {
-	tx, err := db.db.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelSerializable})
-	return tx, err
+func (db *GCDB) Begin() (*sql.Tx, error) {
+	return db.db.Begin()
+}
+
+/*
+BeginTx creates and returns a new SQL transaction using the GCDB with the specified context
+and transaction options. Note that it doesn't use gochan's database variables, e.g. DBPREFIX,
+DBNAME, etc so it should be used sparingly or with gcsql.SetupSQLString
+*/
+func (db *GCDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	return db.db.BeginTx(ctx, opts)
 }
 
 /*

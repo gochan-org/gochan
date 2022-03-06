@@ -1,6 +1,7 @@
 package pre2021
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -38,7 +39,7 @@ type postTable struct {
 	reviewed          bool
 
 	newBoardID  int
-	newParentID int
+	oldParentID int
 }
 
 func (m *Pre2021Migrator) MigratePosts() error {
@@ -50,11 +51,22 @@ func (m *Pre2021Migrator) MigratePosts() error {
 }
 
 func (m *Pre2021Migrator) migrateThreads() error {
-	rows, err := m.db.QuerySQL(postsQuery)
+	tx, err := m.db.Begin()
 	if err != nil {
 		return err
 	}
 
+	stmt, err := m.db.PrepareSQL(postsQuery, tx)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	rows, err := stmt.Query()
+	if err != nil && err != sql.ErrNoRows {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
 	for rows.Next() {
 		var post postTable
 		if err = rows.Scan(
@@ -86,17 +98,28 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			&post.locked,
 			&post.reviewed,
 		); err != nil {
+			tx.Rollback()
 			return err
 		}
 		_, ok := m.oldBoards[post.boardid]
 		if !ok {
 			// board doesn't exist
-			gclog.Printf(gclog.LStdLog|gclog.LErrorLog, "Pre-migrated post #%d has an invalid boardid %d (board doesn't exist), skipping", post.id, post.boardid)
+			gclog.Printf(gclog.LStdLog|gclog.LErrorLog,
+				"Pre-migrated post #%d has an invalid boardid %d (board doesn't exist), skipping",
+				post.id, post.boardid)
 			continue
 		}
 
 		// var stmt *sql.Stmt
 		// var err error
+		preparedStr, _ := gcsql.SetupSQLString(`SELECT id FROM DBPREFIXboards WHERE ui = ?`, m.db)
+		stmt, err := tx.Prepare(preparedStr)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		stmt.QueryRow(post.boardid).Scan(&post.newBoardID)
+
 		// gcsql.QueryRowSQL(`SELECT id FROM DBPREFIXboards WHERE uri = ?`, []interface{}{})
 		if post.parentid == 0 {
 			// post is a thread, save it to the DBPREFIXthreads table
@@ -105,12 +128,22 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			if err = gcsql.QueryRowSQL(
 				`SELECT board_id FROM DBPREFIXthreads ORDER BY board_id LIMIT 1`,
 				nil,
-				[]interface{}{&post.newParentID},
+				[]interface{}{&post.newBoardID},
 			); err != nil {
+				tx.Rollback()
 				return err
 			}
-			fmt.Println("Current board ID:", post.newParentID)
-
+			fmt.Println("Current board ID:", post.newBoardID)
+			prepareStr, _ := gcsql.SetupSQLString(
+				`INSERT INTO DBPREFIXthreads
+				(board_id, locked, stickied)
+				VALUES(?, ?, ?)`, m.db)
+			stmt, err = tx.Prepare(prepareStr)
+			if err != nil {
+				tx.Rollback()
+				return err
+			}
+			stmt.Exec(post.newBoardID, post.locked, post.stickied)
 			// 			// stmt, err := db.Prepare("INSERT table SET unique_id=? ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)")
 			// 			gcsql.ExecSQL(`INSERT INTO DBPREFIXthreads (board_id) VALUES(?)`, post.newBoardID)
 
@@ -130,7 +163,7 @@ func (m *Pre2021Migrator) migrateThreads() error {
 		}
 		m.posts = append(m.posts, post)
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (m *Pre2021Migrator) migratePostsUtil() error {

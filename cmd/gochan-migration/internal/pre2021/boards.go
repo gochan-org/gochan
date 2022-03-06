@@ -113,7 +113,9 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 			return err
 		}
 		m.newBoards[id] = dir
-		gclog.Printf(gclog.LStdLog, "/%s/ successfully migrated in the database")
+		gclog.Printf(gclog.LStdLog, "/%s/ successfully migrated in the database", dir)
+		// Automatic directory migration has the potential to go horribly wrong, so I'm leaving this
+		// commented out for now
 		// switch m.options.DirAction {
 		// case common.DirCopy:
 

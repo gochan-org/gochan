@@ -95,7 +95,7 @@ func main() {
 	var migrated bool
 
 	if migrated, err = migrator.MigrateDB(); err != nil {
-		gclog.Printf(fatalLogFlags, "Error migrating database: ", err.Error())
+		gclog.Println(fatalLogFlags, "Error migrating database:", err.Error())
 		return
 	}
 	if migrated {
