@@ -313,14 +313,12 @@ func (p *Post) Sanitize() {
 }
 
 type Report struct {
-	ID        uint
-	Board     string
-	PostID    uint
-	Timestamp time.Time
-	IP        string
-	Reason    string
-	Cleared   bool
-	IsTemp    bool
+	ID               int
+	HandledByStaffID int
+	PostID           int
+	IP               string
+	Reason           string
+	IsCleared        bool
 }
 
 type LoginSession struct {

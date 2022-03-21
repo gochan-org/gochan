@@ -187,6 +187,14 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			postsArr = append(postsArr, key[5:])
 		}
 	}
+	var err error
+	if reportBtn == "Report" {
+		// submitted request appears to be a report
+		if err = posting.HandleReport(request); err != nil {
+			gclog.Printf(gclog.LErrorLog|gclog.LStdLog, "Error from HandleReport: %v\n", err)
+		}
+		return
+	}
 
 	if editBtn == "Edit" {
 		var err error
