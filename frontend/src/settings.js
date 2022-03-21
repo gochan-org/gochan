@@ -100,7 +100,7 @@ export function initSettings() {
 		settings[0].options.push({text: style.Name, val: style.Filename});
 	}
 	for(const setting of settings) {
-		settingsHTML += `<tr><td><b>${setting.text};</b></td><td>${setting.html()}</td></tr>`
+		settingsHTML += `<tr><td><b>${setting.text}:</b></td><td>${setting.html()}</td></tr>`
 	}
 	settingsHTML += "</table></div><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
 
