@@ -2,6 +2,21 @@
  * Objects/constants stored in /js/consts.js
  */
 
+declare interface StaffAction {
+	id: string;
+	title: string;
+	perms: number;
+	jsonOutput: number;
+}
+
+declare interface StaffInfo {
+	ID: number;
+	Username: string;
+	Rank: number;
+	AddedOn: string;
+	LastActive: string;
+}
+
 declare interface Style {
 	Name: string;
 	Filename: string;
@@ -18,4 +33,9 @@ interface Window {
 	defaultStyle: string;
 	webroot: string;
 	serverTZ: number;
+
+	openQR: () => void;
+	closeQR: () => void;
+	toTop: () => void;
+	toBottom: () => void;
 }

@@ -11,6 +11,9 @@ const notAStaff = {
 	Rank: 0
 };
 
+/**
+ * @type StaffAction[]
+ */
 export let staffActions = [];
 export let staffInfo = notAStaff;
 
@@ -35,6 +38,9 @@ export async function initStaff() {
 		async: true,
 		cache: true,
 		dataType: "json",
+		/** 
+		 * @param {StaffAction[]} result
+		*/
 		success: result => {
 			staffActions = result;
 		},
@@ -90,7 +96,7 @@ export function banSelectedPost() {
 
 /**
  * A helper function for creating a menu item
- * @param {StaffAction} action
+ * @param {StaffInfo} action
  */
 function menuItem(action, isCategory = false) {
 	if(isCategory) {
