@@ -33,9 +33,9 @@ release_files = (
 	"html/hittheroad.mp3",
 	"html/hittheroad.ogg",
 	"html/hittheroad.wav",
-	"html/js/maps",
-	"html/js/maps/gochan.js.map",
+	"html/js/",
 	"html/js/gochan.js",
+	"html/js/gochan.js.map",
 	"html/notbanned.png",
 	"html/permabanned.jpg",
 	"sample-configs",
@@ -234,7 +234,7 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 		if path.exists(js_install_dir) is False:
 			fs_action("mkdir", js_install_dir)
 		fs_action("copy", "html/js/gochan.js", path.join(js_install_dir, "gochan.js"))
-		fs_action("copy", "html/js/maps", path.join(js_install_dir, "maps"))
+		fs_action("copy", "html/js/gochan.js.map", path.join(js_install_dir, "gochan.js.map"))
 		done = True
 	if css_only:
 		print("Installing gochan CSS files")
@@ -293,13 +293,16 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 			"systemctl start gochan.service")
 
 
-def js(nominify=False, watch=False):
+def js(watch=False):
 	print("Transpiling JS")
-	npm_cmd = "npm --prefix frontend/ run build"
-	if nominify is False:
-		npm_cmd += "-minify"
+	fs_action("mkdir", "html/js/")
+	fs_action("delete", "html/js/gochan.js")
+	fs_action("delete", "html/js/gochan.js.map")
+	npm_cmd = "npm --prefix frontend/ run"
 	if watch:
-		npm_cmd += "-watch"
+		npm_cmd += " watch"
+	else:
+		npm_cmd += " build"
 
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
@@ -413,15 +416,11 @@ if __name__ == "__main__":
 		install(args.prefix, args.documentroot, args.js, args.css, args.templates)
 	elif action == "js":
 		parser.add_argument(
-			"--nominify",
-			action="store_true",
-			help="Don't minify gochan.js")
-		parser.add_argument(
 			"--watch",
 			action="store_true",
 			help="automatically rebuild when you change a file (keeps running)")
 		args = parser.parse_args()
-		js(args.nominify, args.watch)
+		js(args.watch)
 	elif action == "release":
 		parser.add_argument(
 			"--all",

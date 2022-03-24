@@ -1,7 +1,3 @@
-// needed for Promise stuff
-import "core-js/stable";
-import "regenerator-runtime/runtime";
-
 import { handleActions, handleKeydown } from "./boardevents";
 import { initCookies, getCookie } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";
