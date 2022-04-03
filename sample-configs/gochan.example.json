@@ -87,7 +87,7 @@
 	"CaptchaMinutesTimeout": 15,
 	"EnableGeoIP": true,
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
-	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
+	"GeoIPDBlocation": "/usr/local/share/GeoIP/GeoIP.dat",
 	"MaxRecentPosts": 3,
 	"RecentPostsWithNoFile": false,
 	"Verbosity": 0,

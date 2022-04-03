@@ -267,8 +267,8 @@ def docker(option="guestdb", attached=False):
 
 
 def install(prefix="/usr/local", document_root="/srv/gochan", js_only=False, css_only=False, templates_only=False):
-	if gcos in ('windows', 'darwin'):
-		print("Installation is not currently supported for Windows and macOS, use the respective directory created by running `python build.py release`")
+	if gcos is  "windows":
+		print("Installation is not currently supported for Windows, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
 	mkdir(document_root)
 	mkdir(path.join(prefix, "share/gochan"))
