@@ -125,7 +125,10 @@ func ParseJSON(ba []byte) (*GochanConfig, []MissingField, error) {
 
 // InitConfig loads and parses gochan.json on startup and verifies its contents
 func InitConfig(versionStr string) {
-	cfgPath = gcutil.FindResource("gochan.json", "/etc/gochan/gochan.json")
+	cfgPath = gcutil.FindResource(
+		"gochan.json",
+		"/usr/local/etc/gochan/gochan.json",
+		"/etc/gochan/gochan.json")
 	if cfgPath == "" {
 		fmt.Println("gochan.json not found")
 		os.Exit(1)
