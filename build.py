@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-# This script replaces both the Makefile and build.ps1
-# to provide a simple cross-platform build tool
+# This script replaces both the Makefile and build.ps1 and can be used as
+# a simple cross-platform build, installation, and release packaging multitool
 
 import argparse
+import errno
 import os
 from os import path
 import shutil
@@ -25,8 +26,8 @@ gc_dependencies = (
 
 release_files = (
 	"html/banned.png",
-	"html/css",
-	"html/error",
+	"html/css/",
+	"html/error/",
 	"html/favicon2.png",
 	"html/favicon.png",
 	"html/firstrun.html",
@@ -34,12 +35,10 @@ release_files = (
 	"html/hittheroad.ogg",
 	"html/hittheroad.wav",
 	"html/js/",
-	"html/js/gochan.js",
-	"html/js/gochan.js.map",
 	"html/notbanned.png",
 	"html/permabanned.jpg",
-	"sample-configs",
-	"templates",
+	"sample-configs/",
+	"templates/",
 	"initdb_master.sql",
 	"initdb_mysql.sql",
 	"initdb_postgres.sql",
@@ -56,31 +55,75 @@ migration_bin = ""
 migration_exe = ""
 version = ""
 
+PATH_NOTHING = -1
+PATH_UNKNOWN = 0
+PATH_FILE = 1
+PATH_DIR = 2
+PATH_LINK = 4
 
-def fs_action(action_str, sourcefile, destfile=""):
-	isfile = path.isfile(sourcefile) or path.islink(sourcefile)
-	isdir = path.isdir(sourcefile)
-	if action_str == "copy":
-		fs_action("delete", destfile)
-		if isfile:
-			shutil.copy(sourcefile, destfile)
-		elif isdir:
-			shutil.copytree(sourcefile, destfile)
-	elif action_str == "move":
-		fs_action("delete", destfile)
-		shutil.move(sourcefile, destfile)
-	elif action_str == "mkdir":
-		if isfile:
-			fs_action("delete", sourcefile)
-		elif isdir is False:
-			os.makedirs(sourcefile)
-	elif action_str == "delete":
-		if isfile:
-			os.remove(sourcefile)
-		elif isdir:
-			shutil.rmtree(sourcefile)
+
+def pathinfo(loc):
+	i = PATH_UNKNOWN
+	if not path.exists(loc):
+		return PATH_NOTHING
+	if path.islink(loc):
+		i |= PATH_LINK
+	if path.isfile(loc):
+		i |= PATH_FILE
+	elif path.isdir(loc):
+		i |= PATH_DIR
 	else:
-		raise Exception("Invalid action, must be 'copy', 'move', 'mkdir', or 'delete'")
+		i = PATH_UNKNOWN
+	return i
+
+
+def delete(delpath):
+	"""
+	Deletes the given file, link, or directory and silently fail if nothing exists.
+	Returns the path info as well
+	"""
+	pinfo = pathinfo(delpath)
+	if pinfo == PATH_NOTHING:
+		return PATH_NOTHING
+	if pinfo & PATH_FILE > 0 or pinfo & PATH_LINK > 0:
+		os.remove(delpath)
+		return pinfo
+	return PATH_UNKNOWN
+
+
+def mkdir(dir, force = False):
+	if path.exists(dir):
+		if force:
+			delete(dir)
+		else:
+			return
+	os.makedirs(dir)
+
+
+def copy(source, dest):
+	"""
+	Copy source to dest, overwriting dest if source and dest are files, and merging
+	them if source is a directory and dest is a directory that already exists, overwriting
+	any conflicting files
+	"""
+	srcinfo = pathinfo(source)
+	destinfo = pathinfo(dest)
+	if srcinfo == PATH_NOTHING:
+		raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), source)
+	if srcinfo & PATH_FILE > 0 or srcinfo & PATH_LINK > 0:
+		delete(dest)
+		shutil.copy(source, dest)
+		return
+	if srcinfo & PATH_DIR > 0:
+		if destinfo == PATH_NOTHING:
+			mkdir(dest)
+		else:
+			for root, dirs, files in os.walk(source):
+				mkdir(path.join(dest, root))
+				for dir in dirs:
+					mkdir(path.join(dest, root, dir))
+				for file in files:
+					shutil.copy(path.join(root, file), path.join(dest, root, file))
 
 
 def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
@@ -194,11 +237,12 @@ def build(debugging=False):
 		sys.exit(1)
 	print("Built gochan-migration successfully")
 
+
 def clean():
 	print("Cleaning up")
-	del_files = ["gochan", "gochan.exe", "gochan-migration", "gochan-migration.exe", "releases/", "pkg/gclog/logtest/"]
+	del_files = ("gochan", "gochan.exe", "gochan-migration", "gochan-migration.exe", "releases/", "pkg/gclog/logtest/")
 	for del_file in del_files:
-		fs_action("delete", del_file)
+		delete(del_file)
 
 
 def dependencies():
@@ -226,59 +270,61 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 	if gcos in ('windows', 'darwin'):
 		print("Installation is not currently supported for Windows and macOS, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
+	mkdir(document_root)
+	mkdir(path.join(prefix, "share/gochan"))
 
+	start_dir = path.abspath(path.curdir)
 	done = False
-	if js_only:
-		print("Installing gochan JavaScript files")
-		js_install_dir = path.join(document_root, "js")
-		if path.exists(js_install_dir) is False:
-			fs_action("mkdir", js_install_dir)
-		fs_action("copy", "html/js/gochan.js", path.join(js_install_dir, "gochan.js"))
-		fs_action("copy", "html/js/gochan.js.map", path.join(js_install_dir, "gochan.js.map"))
+	if js_only == True:
+		# args contains --js, install the JavaScript files
+		os.chdir(path.join(start_dir,"html/"))
+		copy("js/", document_root)
+		os.chdir(start_dir)
 		done = True
-	if css_only:
-		print("Installing gochan CSS files")
-		css_install_dir = path.join(document_root, "css")
-		fs_action("copy", "html/css", css_install_dir)
+		print("JavaScript files installed")
+	if css_only == True:
+		# args contains --js, install the CSS files
+		os.chdir(path.join(start_dir,"html/"))
+		copy("css/", document_root)
+		os.chdir(start_dir)
 		done = True
-	if templates_only:
-		print("Installing template files")
-		templates_install_dir = path.join(prefix, "share/gochan/templates")
-		if path.exists(templates_install_dir) is False:
-			fs_action("mkdir", templates_install_dir)
-		template_files = os.listdir("templates")
-		for template in template_files:
-			if template == "override":
-				continue
-			fs_action(
-				"copy",
-				path.join("templates", template),
-				path.join(templates_install_dir, template))
+		print("CSS files installed")
+	if templates_only == True:
+		# args contains --js, install the templates
+		os.chdir(start_dir)
+		copy("templates/", path.join(prefix, "share/gochan"))
+		mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		done = True
-	if done:
+		print("Templates installed")
+	if done == True:
+		print("Done installing specific stuff")
 		return
 
-	fs_action("mkdir", "/etc/gochan")
-	fs_action("mkdir", path.join(prefix, "share/gochan"))
-	fs_action("mkdir", document_root)
-	fs_action("mkdir", "/var/log/gochan")
-	for file in release_files:
-		out_path = path.join(prefix, "share", "gochan", file)
-		if file.startswith("html/"):
-			out_path = path.join(document_root, file.replace("html/", ""))
+	mkdir("/etc/gochan")
+	mkdir("/var/log/gochan")
 
-		print("Installing", file, "to", out_path)
-		fs_action("copy", file, out_path)
+	for file in release_files:
+		if file.startswith("html/"):
+			trimmed = path.relpath(file, "html/")
+			os.chdir(path.join(start_dir, "html/"))
+			print("copying", trimmed,"to", path.join(document_root, trimmed))
+			copy(trimmed, document_root)
+			os.chdir(start_dir)
+		else:
+			os.chdir(start_dir)
+			copy(file, path.join(prefix, "share/gochan"))
+			mkdir(path.join(prefix, "share/gochan/templates/override/"))
+
 
 	if path.exists(gochan_exe) is False:
 		build()
 	print("Installing", gochan_exe, "to", path.join(prefix, "bin", gochan_exe))
-	fs_action("copy", gochan_exe, path.join(prefix, "bin", gochan_exe))
+	copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
 
 	if path.exists(migration_exe) is False:
 		build()
 	print("Installing ", migration_exe, "to", path.join(prefix, "bin", migration_exe))
-
+	copy(migration_exe, path.join(prefix, "bin", gochan_exe))
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
@@ -295,9 +341,9 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 
 def js(watch=False):
 	print("Transpiling JS")
-	fs_action("mkdir", "html/js/")
-	fs_action("delete", "html/js/gochan.js")
-	fs_action("delete", "html/js/gochan.js.map")
+	mkdir("html/js/")
+	delete("html/js/gochan.js")
+	delete("html/js/gochan.js.map")
 	npm_cmd = "npm --prefix frontend/ run"
 	if watch:
 		npm_cmd += " watch"
@@ -315,11 +361,20 @@ def release(goos):
 	build(False)
 	release_name = gochan_bin + "-v" + version + "_" + gcos_name
 	release_dir = path.join("releases", release_name)
+	delete(release_dir)
 	print("Creating release for", gcos_name, "\n")
-	fs_action("mkdir", path.join(release_dir, "html"))
+
+
+	mkdir(path.join(release_dir, "html"))
 	for file in release_files:
-		fs_action("copy", file, path.join(release_dir, file))
-	fs_action("copy", gochan_exe, path.join(release_dir, gochan_exe))
+		srcinfo = pathinfo(file)
+		if srcinfo == PATH_NOTHING:
+			raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
+		if srcinfo & PATH_FILE > 0:
+			shutil.copy(file, path.join(release_dir, file))
+		if srcinfo & PATH_DIR > 0:
+			shutil.copytree(file, path.join(release_dir, file))
+	copy(gochan_exe, path.join(release_dir, gochan_exe))
 	archive_type = "zip" if goos in ('windows', 'darwin') else "gztar"
 	shutil.make_archive(release_dir, archive_type, root_dir="releases", base_dir=release_name)
 
@@ -355,9 +410,9 @@ if __name__ == "__main__":
 	if action != "dependencies":
 		set_vars()
 
-	valid_actions = [
+	valid_actions = (
 		"build", "clean", "dependencies", "docker", "install", "js", "release", "sass", "test"
-	]
+	)
 	parser = argparse.ArgumentParser(description="gochan build script")
 	parser.add_argument("action", nargs=1, default="build", choices=valid_actions)
 	if action in ('--help', '-h'):
@@ -427,7 +482,7 @@ if __name__ == "__main__":
 			help="build releases for Windows, macOS, and Linux",
 			action="store_true")
 		args = parser.parse_args()
-		fs_action("mkdir", "releases")
+		mkdir("releases")
 		if args.all:
 			release("windows")
 			release("darwin")
