@@ -266,7 +266,7 @@ def docker(option="guestdb", attached=False):
 		sys.exit(1)
 
 
-def install(prefix="/usr/local", document_root="/srv/gochan", js_only=False, css_only=False, templates_only=False):
+def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=False, templates_only=False):
 	if gcos is  "windows":
 		print("Installation is not currently supported for Windows, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
@@ -461,7 +461,7 @@ if __name__ == "__main__":
 			help="install the template files")
 		parser.add_argument(
 			"--prefix",
-			default="/usr/local",
+			default="/usr",
 			help="install gochan to this directory and its subdirectories")
 		parser.add_argument(
 			"--documentroot",
