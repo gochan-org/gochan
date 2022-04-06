@@ -63,7 +63,6 @@ func HandleReport(request *http.Request) error {
 		if count > 0 {
 			// post has already been reported, and for the same reason, moving on
 			continue
-			// return ErrDuplicateReport
 		}
 		_, err := gcsql.ExecSQL(reportInsertSQL, postID, ip, reason)
 		if err != nil {

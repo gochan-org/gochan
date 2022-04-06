@@ -191,8 +191,16 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	if reportBtn == "Report" {
 		// submitted request appears to be a report
 		if err = posting.HandleReport(request); err != nil {
-			gclog.Printf(gclog.LErrorLog|gclog.LStdLog, "Error from HandleReport: %v\n", err)
+			serverutil.ServeErrorPage(writer, gclog.Println(gclog.LErrorLog,
+				"Error submitting report:", err.Error()))
+			return
 		}
+		redirectTo := request.Referer()
+		if redirectTo == "" {
+			// request doesn't have a referer for some reason, redirect to board
+			redirectTo = path.Join(systemCritical.WebRoot, board)
+		}
+		http.Redirect(writer, request, redirectTo, http.StatusFound)
 		return
 	}
 
