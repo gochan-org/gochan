@@ -113,7 +113,6 @@ def copy(source, dest):
 	if srcinfo == PATH_NOTHING:
 		raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), source)
 	if srcinfo & PATH_FILE > 0 or srcinfo & PATH_LINK > 0:
-		delete(dest)
 		shutil.copy(source, dest)
 		return
 	if srcinfo & PATH_DIR > 0:
@@ -339,6 +338,7 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 			"systemctl daemon-reload\n",
 			"systemctl enable gochan.service\n",
 			"systemctl start gochan.service")
+	print("")
 
 
 def js(watch=False):
