@@ -201,23 +201,17 @@ window.quote = quote;
 
 export function reportPost(id, board) {
 	let reason = prompt("Reason");
-	if(reason == "") return;
-	// let xhrFields = {
-	// 	board: board,
-	// 	report_btn: "Report",
-	// 	reason: reason
-	// }
-	// xhrFields[`check${id}`] = "on";
-	// $.ajax({
-	// 	url: webroot + "/util",
-	// 	method: "POST",
-	// 	xhrFields: xhrFields,
-	// 	success: function() {
-	// 		console.log(arguments);
-	// 	},
-	// 	error: function() {
-	// 		console.log(arguments);
-	// 	}
-	// });
+	if(reason == "" || reason == null) return;
+	let xhrFields = {
+		board: board,
+		report_btn: "Report",
+		reason: reason,
+		json: "1"
+	}
+	xhrFields[`check${id}`] = "on";
+	$.post(webroot + "util", xhrFields).fail(data => {
+		alert(`Report failed: ${data.error}`);
+	}).done(data => {
+		alert("Report sent");
+	}, "json");
 }
-window.reportPost = reportPost;

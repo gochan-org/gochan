@@ -1,5 +1,8 @@
+import { currentBoard, deletePost, reportPost } from './postutil';
 import { watchThread } from "./watcher";
 import { openQR } from "./qr";
+
+const idRe = /^((reply)|(op))(\d)/;
 
 export function handleKeydown(e) {
 	let ta = e.target;
@@ -52,15 +55,15 @@ export function applyBBCode(e) {
 	$(ta).text(ta.value);
 }
 
-export function handleActions(action, postID) {
+export function handleActions(action, postIDStr) {
 	// console.log(`Action for ${postID}: ${action}`);
+	let idArr = idRe.exec(postIDStr);
+	if(!idArr) return;
+	let postID = idArr[4]
+	let board = currentBoard();
 	switch(action) {
 		case "Watch thread":
-			let idArr = idRe.exec(postID);
-			if(!idArr) break;
-			let threadID = idArr[4];
-			let board = currentBoard();
-			console.log(`Watching thread ${threadID} on board /${board}/`);
+			console.log(`Watching thread ${postID} on board /${board}/`);
 			watchThread(threadID, board);
 			break;
 		case "Show/hide thread":
@@ -69,8 +72,7 @@ export function handleActions(action, postID) {
 			hidePost(postID);
 			break;
 		case "Report post":
-			reportPost(postID);
-			console.log(`Reporting ${postID}`);
+			reportPost(postID, board);
 			break;
 		case "Delete thread":
 		case "Delete post":

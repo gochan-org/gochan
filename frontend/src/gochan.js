@@ -10,7 +10,6 @@ import { opRegex } from "./vars";
 import { initWatcher, watchThread } from "./watcher";
 
 let $watchedThreadsBtn = null;
-let idRe = /^((reply)|(op))(\d)/;
 
 export function toTop() {
 	window.scrollTo(0,0);
@@ -58,9 +57,9 @@ $(() => {
 	let passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
-	$watchedThreadsBtn = new TopBarButton("WT", () => {
-		alert("Watched threads yet implemented");
-	});
+	// $watchedThreadsBtn = new TopBarButton("WT", () => {
+	// 	alert("Watched threads yet implemented");
+	// });
 
 	if(pageThread.board != "") {
 		prepareThumbnails();

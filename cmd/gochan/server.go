@@ -163,6 +163,11 @@ func initServer() {
 	}
 }
 
+func serveJSON(data map[string]interface{}, writer http.ResponseWriter, request *http.Request) {
+	jsonStr, _ := gcutil.MarshalJSON(data, false)
+	serverutil.MinifyWriter(writer, []byte(jsonStr), "application/json")
+}
+
 // handles requests to /util
 func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	action := request.FormValue("action")
@@ -175,22 +180,48 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	editBtn := request.PostFormValue("edit_btn")
 	doEdit := request.PostFormValue("doedit")
 	systemCritical := config.GetSystemCriticalConfig()
+	wantsJSON := request.PostFormValue("json") == "1"
+	if wantsJSON {
+		writer.Header().Set("Content-Type", "application/json")
+	}
 
 	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
 		gclog.Printf(gclog.LAccessLog, "Received invalid /util request from %q", request.Host)
-		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusFound)
+		if wantsJSON {
+			serveJSON(map[string]interface{}{
+				"error": "invalid /util request",
+			}, writer, request)
+		} else {
+			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusFound)
+		}
+
 		return
 	}
-	var postsArr []string
-	for key := range request.PostForm {
-		if strings.Index(key, "check") == 0 {
-			postsArr = append(postsArr, key[5:])
-		}
-	}
+
 	var err error
+	var id int
+	var checkedPosts []int
+	for key, val := range request.Form {
+		// get checked posts into an array
+		if _, err = fmt.Sscanf(key, "check%d", &id); err != nil || val[0] != "on" {
+			err = nil
+			continue
+		}
+		checkedPosts = append(checkedPosts, id)
+	}
+
 	if reportBtn == "Report" {
 		// submitted request appears to be a report
-		if err = posting.HandleReport(request); err != nil {
+		err = posting.HandleReport(request)
+		if wantsJSON {
+			serveJSON(map[string]interface{}{
+				"error": err,
+				"posts": checkedPosts,
+				"board": board,
+			}, writer, request)
+			return
+		}
+		if err != nil {
 			serverutil.ServeErrorPage(writer, gclog.Println(gclog.LErrorLog,
 				"Error submitting report:", err.Error()))
 			return
@@ -206,10 +237,10 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 
 	if editBtn == "Edit" {
 		var err error
-		if len(postsArr) == 0 {
+		if len(checkedPosts) == 0 {
 			serverutil.ServeErrorPage(writer, "You need to select one post to edit.")
 			return
-		} else if len(postsArr) > 1 {
+		} else if len(checkedPosts) > 1 {
 			serverutil.ServeErrorPage(writer, "You can only edit one post at a time.")
 			return
 		} else {
@@ -221,8 +252,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			passwordMD5 := gcutil.Md5Sum(password)
 
 			var post gcsql.Post
-			postid, _ := strconv.Atoi(postsArr[0])
-			post, err = gcsql.GetSpecificPost(postid, true)
+			post, err = gcsql.GetSpecificPost(checkedPosts[0], true)
 			if err != nil {
 				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 					"Error getting post information: ", err.Error()))
@@ -241,8 +271,16 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				"post":           post,
 				"referrer":       request.Referer(),
 			}); err != nil {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-					"Error executing edit post template: ", err.Error()))
+				gclog.Print(gclog.LErrorLog,
+					"Error executing edit post template: ", err.Error())
+				if wantsJSON {
+					serveJSON(map[string]interface{}{
+						"error": "Error executing edit post template",
+					}, writer, request)
+				} else {
+					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+						"Error executing edit post template: ", err.Error()))
+				}
 				return
 			}
 		}
@@ -309,10 +347,10 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		for _, checkedPostID := range postsArr {
+		for _, checkedPostID := range checkedPosts {
 			var post gcsql.Post
 			var err error
-			post.ID, _ = strconv.Atoi(checkedPostID)
+			post.ID = checkedPostID
 			post.BoardID, _ = strconv.Atoi(boardid)
 
 			if post, err = gcsql.GetSpecificPost(post.ID, true); err == sql.ErrNoRows {
