@@ -88,6 +88,8 @@ def delete(delpath):
 	if pinfo & PATH_FILE > 0 or pinfo & PATH_LINK > 0:
 		os.remove(delpath)
 		return pinfo
+	elif pinfo & PATH_DIR > 0:
+		shutil.rmtree(delpath)
 	return PATH_UNKNOWN
 
 
@@ -267,7 +269,7 @@ def docker(option="guestdb", attached=False):
 
 
 def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=False, templates_only=False):
-	if gcos is  "windows":
+	if gcos == "windows":
 		print("Installation is not currently supported for Windows, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
 	mkdir(document_root)
