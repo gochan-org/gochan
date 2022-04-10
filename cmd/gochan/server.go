@@ -163,11 +163,6 @@ func initServer() {
 	}
 }
 
-func serveJSON(data map[string]interface{}, writer http.ResponseWriter, request *http.Request) {
-	jsonStr, _ := gcutil.MarshalJSON(data, false)
-	serverutil.MinifyWriter(writer, []byte(jsonStr), "application/json")
-}
-
 // handles requests to /util
 func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	action := request.FormValue("action")
@@ -188,13 +183,10 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
 		gclog.Printf(gclog.LAccessLog, "Received invalid /util request from %q", request.Host)
 		if wantsJSON {
-			serveJSON(map[string]interface{}{
-				"error": "invalid /util request",
-			}, writer, request)
+			serverutil.ServeJSON(writer, map[string]interface{}{"error": "Invalid /util request"})
 		} else {
 			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusFound)
 		}
-
 		return
 	}
 
@@ -214,11 +206,11 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		// submitted request appears to be a report
 		err = posting.HandleReport(request)
 		if wantsJSON {
-			serveJSON(map[string]interface{}{
+			serverutil.ServeJSON(writer, map[string]interface{}{
 				"error": err,
 				"posts": checkedPosts,
 				"board": board,
-			}, writer, request)
+			})
 			return
 		}
 		if err != nil {
@@ -274,9 +266,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				gclog.Print(gclog.LErrorLog,
 					"Error executing edit post template: ", err.Error())
 				if wantsJSON {
-					serveJSON(map[string]interface{}{
+					serverutil.ServeJSON(writer, map[string]interface{}{
 						"error": "Error executing edit post template",
-					}, writer, request)
+					})
 				} else {
 					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 						"Error executing edit post template: ", err.Error()))
@@ -351,8 +343,11 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			var post gcsql.Post
 			var err error
 			post.ID = checkedPostID
-			post.BoardID, _ = strconv.Atoi(boardid)
+			post.BoardID, err = strconv.Atoi(boardid)
+			if err != nil {
 
+			}
+			// post, err = gcsql.GetSpecificPost(post.ID)
 			if post, err = gcsql.GetSpecificPost(post.ID, true); err == sql.ErrNoRows {
 				//the post has already been deleted
 				writer.Header().Add("refresh", "4;url="+request.Referer())

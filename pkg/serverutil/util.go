@@ -11,6 +11,12 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+// ServeJSON serves data as a JSON string
+func ServeJSON(writer http.ResponseWriter, data map[string]interface{}) {
+	jsonStr, _ := gcutil.MarshalJSON(data, false)
+	MinifyWriter(writer, []byte(jsonStr), "application/json")
+}
+
 // ServeErrorPage shows a general error page if something goes wrong
 func ServeErrorPage(writer http.ResponseWriter, err string) {
 	MinifyTemplate(gctemplates.ErrorPage, map[string]interface{}{
