@@ -334,7 +334,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		passwordMD5 := gcutil.Md5Sum(password)
 		rank := manage.GetStaffRank(request)
 
-		if passwordMD5 == "" && rank == 0 {
+		if password == "" && rank == 0 {
 			serverutil.ServeErrorPage(writer, "Password required for post deletion")
 			return
 		}
@@ -345,31 +345,76 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			post.ID = checkedPostID
 			post.BoardID, err = strconv.Atoi(boardid)
 			if err != nil {
-
+				gclog.Printf(gclog.LErrorLog, "Invalid board ID in deletion request")
+				if wantsJSON {
+					serverutil.ServeJSON(writer, map[string]interface{}{
+						"error":   err,
+						"boardid": post.BoardID,
+					})
+					return
+				} else {
+					serverutil.ServeErrorPage(writer,
+						fmt.Sprintf("Invalid boardid '%s' in request (got error '%s')", boardid, err))
+					return
+				}
 			}
-			// post, err = gcsql.GetSpecificPost(post.ID)
-			if post, err = gcsql.GetSpecificPost(post.ID, true); err == sql.ErrNoRows {
-				//the post has already been deleted
-				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "%d has already been deleted or is a post in a deleted thread.\n", post.ID)
-				continue
+
+			post, err = gcsql.GetSpecificPost(post.ID, true)
+			if err == sql.ErrNoRows {
+				if wantsJSON {
+					serverutil.ServeJSON(writer, map[string]interface{}{
+						"error":   "Post does not exist",
+						"postid":  post.ID,
+						"boardid": post.BoardID,
+					})
+					return
+				} else {
+					serverutil.ServeErrorPage(writer, fmt.Sprintf(
+						"Post #%d has already been deleted or is a post in a deleted thread", post.ID))
+					return
+				}
 			} else if err != nil {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-					"Error deleting post: ", err.Error()))
-				return
+				if wantsJSON {
+					serverutil.ServeJSON(writer, map[string]interface{}{
+						"error":   err,
+						"postid":  post.ID,
+						"boardid": post.BoardID,
+					})
+					return
+				} else {
+					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+						"Error deleting post: ", err.Error()))
+					return
+				}
 			}
 
 			if passwordMD5 != post.Password && rank == 0 {
-				fmt.Fprintf(writer, "Incorrect password for %d\n", post.ID)
-				continue
+				if wantsJSON {
+					serverutil.ServeJSON(writer, map[string]interface{}{
+						"error":   "incorrect password",
+						"postid":  post.ID,
+						"boardid": post.BoardID,
+					})
+				} else {
+					serverutil.ServeErrorPage(writer,
+						fmt.Sprintf("Incorrect password for #%d", post.ID))
+				}
+				return
 			}
 
 			if fileOnly {
 				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
 					if err = gcsql.DeleteFilesFromPost(post.ID); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-							"Error deleting files from post: ", err.Error()))
+						if wantsJSON {
+							serverutil.ServeJSON(writer, map[string]interface{}{
+								"error":  err,
+								"postid": post.ID,
+							})
+						} else {
+							serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+								"Error deleting files from post: ", err.Error()))
+						}
 						return
 					}
 				}
@@ -377,14 +422,21 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				building.BuildBoardPages(&_board)
 				postBoard, _ := gcsql.GetSpecificPost(post.ID, true)
 				building.BuildThreadPages(&postBoard)
-
-				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "Attached image from %d deleted successfully\n", post.ID)
+				http.Redirect(writer, request, request.Referer(), http.StatusFound)
+				// writer.Header().Add("refresh", "4;url="+request.Referer())
 			} else {
 				// delete the post
 				if err = gcsql.DeletePost(post.ID, true); err != nil {
-					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-						"Error deleting post: ", err.Error()))
+					if wantsJSON {
+						serverutil.ServeJSON(writer, map[string]interface{}{
+							"error":  err,
+							"postid": post.ID,
+						})
+					} else {
+						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+							"Error deleting post: ", err.Error()))
+					}
+					return
 				}
 				if post.ParentID == 0 {
 					os.Remove(path.Join(
@@ -394,10 +446,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					building.BuildBoardPages(&_board)
 				}
 				building.BuildBoards(false, post.BoardID)
-
-				writer.Header().Add("refresh", "4;url="+request.Referer())
-				fmt.Fprintf(writer, "%d deleted successfully\n", post.ID)
+				http.Redirect(writer, request, request.Referer(), http.StatusFound)
+				// writer.Header().Add("refresh", "4;url="+request.Referer())
 			}
+			gclog.Printf(gclog.LAccessLog,
+				"Post #%d on boardid %d deleted by %s, file only: %t",
+				post.ID, post.BoardID, post.IP, fileOnly)
 		}
 	}
 }
