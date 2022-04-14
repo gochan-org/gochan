@@ -51,10 +51,10 @@ export function initCookies() {
  * @param {string} expires
  */
 export function setCookie(name, value, expires, root) {
-	if(!root)
-		root == webroot;
+	if(root === undefined || root === "")
+		root = webroot;
 	let expiresStr = "";
-	if(expires) {
+	if(expires !== undefined && expires !== "") {
 		expiresStr = ";expires="
 		let d = new Date();
 		d.setTime(d.getTime() + 1000*60*60*24*expires)
