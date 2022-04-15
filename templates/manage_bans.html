@@ -1,4 +1,3 @@
-<div id="content">
 <form method="POST" action="/manage?action=bans">
 <input type="hidden" name="do" value="add" />
 <b>User filter:</b><br />
@@ -31,4 +30,3 @@
 	<tr><th>IP</th><th>Name!Tripcode</th><th>Reason</th><th>Staff note</th><th>Boards</th><th>Staff</th><th>Set</th><th>Expires</th><th>Permaban</th></tr>
 {{range $b, $ban := $.banlist}}	<tr><td>{{$ban.IP}}</td><td>{{$ban.Name}}</td><td>{{$ban.Reason}}</td><td>{{$ban.StaffNote}}</td><td>{{if eq $ban.Boards ""}}<i>all boards</i>{{else}}{{$ban.Boards}}{{end}}</td><td>{{$ban.Staff}}</td><td>{{$ban.Timestamp}}</td><td>{{if $ban.Permaban}}never{{else}}{{$ban.Expires}}{{end}}</td><td>{{$ban.Permaban}}</td></tr>
 {{end}}</table>
-</div>

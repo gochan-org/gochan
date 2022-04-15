@@ -117,8 +117,7 @@ div#topbar,
 .topbar-item,
 .topbar-item:visited,
 .dropdown-button,
-.dropdown-menu,
-.dropdown-menu a {
+.dropdown-menu {
   background: #000A89;
   color: #EEF2FF;
 }

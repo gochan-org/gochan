@@ -81,10 +81,10 @@ img.thumbnail {
   color: #FC0;
 }
 
-input:not([type=submit]):not([type=button]),
-textarea,
-select#changepage,
-select.post-actions {
+div#content input:not([type=submit]):not([type=button]),
+div#content textarea,
+div#content select#changepage,
+div#content select.post-actions {
   background: #25272D;
   border: 1px solid #8C94AB;
   color: #FFF;

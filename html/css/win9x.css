@@ -68,10 +68,10 @@ div#topbar a {
   cursor: default;
 }
 
-button,
-input[type=button],
-input[role=pushbutton],
-input[type=submit] {
+div#content button,
+div#content input[type=button],
+div#content input[role=pushbutton],
+div#content input[type=submit] {
   color: #000 !important;
   /* font-size: 12px!important; */
   background: silver !important;
@@ -84,9 +84,9 @@ input[type=submit] {
   padding: 0 12px;
 }
 
-button:active,
-input[type=button]:active,
-input[type=submit]:active {
+div#content button:active,
+div#content input[type=button]:active,
+div#content input[type=submit]:active {
   box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080 !important;
 }
 
@@ -148,7 +148,7 @@ h1, h2, div.subtitle, a#qrDisplayButton {
   font-family: Arial, sans-serif;
 }
 
-select {
+div#content select {
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='16' height='17' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M15 0H0v16h1V1h14V0z' fill='%23DFDFDF'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M2 1H1v14h1V2h12V1H2z' fill='%23fff'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M16 17H0v-1h15V0h1v17z' fill='%23000'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M15 1h-1v14H1v1h14V1z' fill='gray'/%3E%3Cpath fill='silver' d='M2 2h12v13H2z'/%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M11 6H4v1h1v1h1v1h1v1h1V9h1V8h1V7h1V6z' fill='%23000'/%3E%3C/svg%3E");
   appearance: none;
   -webkit-appearance: none;

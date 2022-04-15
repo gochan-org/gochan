@@ -7,7 +7,6 @@
 	<a href="{{.webroot}}{{.board.Dir}}/catalog.html">Board catalog</a><br />
 </div>
 {{- template "postbox.html" . -}}<hr />
-<div id="content">
 <form action="/util" method="POST" id="main-form">
 {{$global := .}}
 {{- range $t, $thread := .threads}}{{$op := $thread.OP}}
@@ -59,6 +58,5 @@
 			{{- if gt $i 0}}/{{end}} <a href="{{$boardlink.WebPath `` `boardPage`}}/">{{$boardlink.Dir}}</a>
 		{{- end}}]
 	</span>
-</div>
 </div>
 {{- template "page_footer.html" .}}

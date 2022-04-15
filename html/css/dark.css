@@ -22,8 +22,8 @@ header {
   color: #32DD72;
 }
 
-input:not(div#qrbuttons input),
-textarea {
+div#content input:not(div#qrbuttons input),
+div#content textarea, div#content select {
   background: #333;
   border: 1px solid #666;
   color: #CCC;
@@ -36,14 +36,9 @@ th.postblock {
   text-align: left;
 }
 
-select.post-actions {
-  color: #999;
-}
-
 div.reply,
 div.postprev,
-div.inlinepostprev,
-select.post-actions {
+div.inlinepostprev {
   background: #333;
   border: 1px solid #555;
   border-radius: 5px;

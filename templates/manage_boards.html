@@ -1,4 +1,3 @@
-<div id="content">
 <form action="{{$.webroot}}manage?action=boards" method="GET">
 	<input type="hidden" name="action" value="boards">
 	{{with $.boards}}{{else}}
@@ -175,4 +174,3 @@
 <input type="submit" name="docreate" value="Create new board" onclick="return confirm('Click ok to confirm')"/>
 {{- end -}}
 </form>
-</div>

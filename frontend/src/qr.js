@@ -120,7 +120,7 @@ export function initQR(pageThread) {
 }
 
 export function openQR() {
-	if($qr) $qr.insertAfter("div#footer");
+	if($qr) $qr.insertAfter("div#content");
 }
 window.openQR = openQR;
 

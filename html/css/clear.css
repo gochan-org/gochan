@@ -27,22 +27,20 @@ hr {
   height: 0;
 }
 
-input, select, textarea {
+div#content input, div#content select, div#content textarea {
   border: 1px double #07371F;
   border-radius: 5px;
   background: #DDD;
   color: #000;
 }
-
-input:active, select:active, textarea:active {
+div#content input:active, div#content select:active, div#content textarea:active {
   -webkit-filter: drop-shadow(0px 0px 5px #117743);
   filter: drop-shadow(0px 0px 5px #117743);
 }
-
-input[type=button],
-input[type=submit],
-input[type=file]::file-selector-button,
-input[type=file]::-webkit-file-upload-button {
+div#content input[type=button],
+div#content input[type=submit],
+div#content input[type=file]::file-selector-button,
+div#content input[type=file]::webkit-file-upload-button {
   background: #A7A7A7;
   border: 3px double #07371F;
   border-radius: 5px;

@@ -30,27 +30,29 @@ hr {
 	height: 0;
 }
 
-input, select, textarea {
-	border: 1px double $inputshadow;
-	border-radius: 5px;
-	background: $inputcol;
-	color: #000;
+div#content {
+	input, select, textarea {
+		border: 1px double $inputshadow;
+		border-radius: 5px;
+		background: $inputcol;
+		color: #000;
+	}
+	input:active, select:active, textarea:active {
+		// box-shadow: 0px 0px 5px $replyborder;
+		@include shadow-filter(0px 0px 5px $replyborder);
+	}
+	input[type="button"],
+	input[type="submit"],
+	input[type="file"]::file-selector-button,
+	input[type="file"]::webkit-file-upload-button {
+		background: #A7A7A7;
+		border: 3px double $inputshadow;
+		border-radius: 5px;
+		color: #000;
+	}
 }
 
-input:active, select:active, textarea:active {
-	// box-shadow: 0px 0px 5px $replyborder;
-	@include shadow-filter(0px 0px 5px $replyborder);
-}
 
-input[type="button"],
-input[type="submit"],
-input[type="file"]::file-selector-button,
-input[type="file"]::-webkit-file-upload-button {
-	background: #A7A7A7;
-	border: 3px double $inputshadow;
-	border-radius: 5px;
-	color: #000;
-}
 
 div.reply,
 div.section-block,

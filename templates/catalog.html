@@ -14,7 +14,7 @@
 			<option value="replies">Reply count</option>
 		</select>
 	</div><hr />
-	<div id="content">{{range $_,$thread := .threads}}
+	{{range $_,$thread := .threads}}
 		<div class="catalog-thread">
 			<a href="{{$.webroot}}{{$.board.Dir}}/res/{{$thread.ID}}.html">
 				{{if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else}}
@@ -22,6 +22,5 @@
 			{{end}}</a><br />
 			<b>{{if eq $thread.Name ""}}Anonymous{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}<br />
 			{{$thread.MessageHTML}}
-		</div>{{end}}
-	</div><hr />
+	</div>{{end}}<hr />
 {{template "page_footer.html" .}}

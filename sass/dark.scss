@@ -24,12 +24,14 @@ header {
 	color: $headercol;
 }
 
-// input:not([type=submit]):not([type=button]),
-input:not(div#qrbuttons input),
-textarea {
-	background: $inputbg;
-	border: 1px solid $topbarbg;
-	color: $linkcol;
+div#content {
+	// input:not([type=submit]):not([type=button]),
+	input:not(div#qrbuttons input),
+	textarea, select {
+		background: $inputbg;
+		border: 1px solid $topbarbg;
+		color: $linkcol;
+	}
 }
 
 th.postblock {
@@ -39,14 +41,13 @@ th.postblock {
 	text-align: left;
 }
 
-select.post-actions {
-	color: $color;
-}
+// select.post-actions {
+// 	color: $color;
+// }
 
 div.reply,
 div.postprev,
-div.inlinepostprev,
-select.post-actions {
+div.inlinepostprev {
 	background: $inputbg;
 	border: 1px solid $replyborder;
 	border-radius: 5px;
