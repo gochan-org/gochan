@@ -1,3 +1,4 @@
+<div id="content">
 (currently a work in progress)
 <h2>{{with $.edit}}Edit filter{{else}}Create new{{end}}</h2>
 <form action="{{.webroot}}manage?action=wordfilters" method="GET">
@@ -19,3 +20,4 @@
 	<tr><td><a href="{{$.webroot}}manage?action=wordfilters&edit={{$filter.ID}}">Edit</a></td><td>{{$filter.Search}}</td><td>{{$filter.ChangeTo}}</td><td>{{if $filter.IsRegex}}yes{{else}}no{{end}}</td><td>{{$filter.BoardsString}}</td><td>{{$filter.StaffName}}</td></tr>
 {{end -}}
 </table>
+</div>
