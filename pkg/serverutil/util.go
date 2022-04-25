@@ -14,11 +14,13 @@ import (
 // ServeJSON serves data as a JSON string
 func ServeJSON(writer http.ResponseWriter, data map[string]interface{}) {
 	jsonStr, _ := gcutil.MarshalJSON(data, false)
+	writer.Header().Set("Content-Type", "application/json")
 	MinifyWriter(writer, []byte(jsonStr), "application/json")
 }
 
 // ServeErrorPage shows a general error page if something goes wrong
 func ServeErrorPage(writer http.ResponseWriter, err string) {
+	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	MinifyTemplate(gctemplates.ErrorPage, map[string]interface{}{
 		"systemCritical": config.GetSystemCriticalConfig(),
 		"siteConfig":     config.GetSiteConfig(),
@@ -32,7 +34,7 @@ func ServeErrorPage(writer http.ResponseWriter, err string) {
 
 // ServeNotFound shows an error page if a requested file is not found
 func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Add("Content-Type", "text/html; charset=utf-8")
+	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(404)
 	systemCritical := config.GetSystemCriticalConfig()
 	errorPage, err := ioutil.ReadFile(systemCritical.DocumentRoot + "/error/404.html")
