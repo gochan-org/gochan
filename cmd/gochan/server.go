@@ -348,15 +348,14 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				gclog.Printf(gclog.LErrorLog, "Invalid board ID in deletion request")
 				if wantsJSON {
 					serverutil.ServeJSON(writer, map[string]interface{}{
-						"error":   err,
-						"boardid": post.BoardID,
+						"error":   "invalid boardid string",
+						"boardid": boardid,
 					})
-					return
 				} else {
 					serverutil.ServeErrorPage(writer,
 						fmt.Sprintf("Invalid boardid '%s' in request (got error '%s')", boardid, err))
-					return
 				}
+				return
 			}
 
 			post, err = gcsql.GetSpecificPost(post.ID, true)
