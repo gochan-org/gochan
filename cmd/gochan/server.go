@@ -414,15 +414,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 							serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 								"Error deleting files from post: ", err.Error()))
 						}
-						return
 					}
 				}
 				_board, _ := gcsql.GetBoardFromID(post.BoardID)
 				building.BuildBoardPages(&_board)
 				postBoard, _ := gcsql.GetSpecificPost(post.ID, true)
 				building.BuildThreadPages(&postBoard)
-				http.Redirect(writer, request, request.Referer(), http.StatusFound)
-				// writer.Header().Add("refresh", "4;url="+request.Referer())
 			} else {
 				// delete the post
 				if err = gcsql.DeletePost(post.ID, true); err != nil {
@@ -435,7 +432,6 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 							"Error deleting post: ", err.Error()))
 					}
-					return
 				}
 				if post.ParentID == 0 {
 					os.Remove(path.Join(
@@ -445,12 +441,11 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					building.BuildBoardPages(&_board)
 				}
 				building.BuildBoards(false, post.BoardID)
-				http.Redirect(writer, request, request.Referer(), http.StatusFound)
-				// writer.Header().Add("refresh", "4;url="+request.Referer())
 			}
 			gclog.Printf(gclog.LAccessLog,
 				"Post #%d on boardid %d deleted by %s, file only: %t",
 				post.ID, post.BoardID, post.IP, fileOnly)
+			http.Redirect(writer, request, request.Referer(), http.StatusFound)
 		}
 	}
 }

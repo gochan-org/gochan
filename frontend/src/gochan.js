@@ -88,6 +88,7 @@ $(() => {
 	$postInfo.each((i, elem) => {
 		let $elem = $(elem);
 		let isOP = $elem.parents("div.reply-container").length == 0;
+		let hasUpload = $elem.siblings("div.file-info").length > 0;
 		let postID = $elem.parent().attr("id");
 		let threadPost = isOP?"thread":"post";
 
@@ -106,13 +107,14 @@ $(() => {
 			`<option>Show/hide ${threadPost}</option>`,
 			`<option>Report post</option>`,
 			`<option>Delete ${threadPost}</option>`,
-			`<option>Delete file</option>`
 		).insertAfter($elem)
 		.on("click", event => {
 			if(event.target.nodeName != "OPTION")
 				return;
 			handleActions($ddownMenu.val(), postID);
 		});
+		if(hasUpload)
+			$ddownMenu.append(`<option>Delete file</option>`);
 	});
 	$(document).on("keydown", handleKeydown);
 });

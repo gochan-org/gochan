@@ -215,7 +215,7 @@ export function deletePost(id, board, fileOnly) {
 			alertLightbox(`Delete failed: ${data["error"]}`, "Error");
 		}).done(data => {
 			if(data["error"] == undefined) {
-				alertLightbox(`Post #${id} deleted`, "Success");
+				alertLightbox(`${fileOnly?"File from post":"Post"} #${id} deleted`, "Success");
 			} else {
 				alertLightbox(`Error deleting post #${id}: ${data["error"]}`, "Error");
 			}
