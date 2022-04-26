@@ -1,3 +1,6 @@
+import { getCookie } from "./cookies";
+import { alertLightbox, promptLightbox } from "./lightbox";
+
 let movablePostPreviews = null;
 let expandablePostrefs = true;
 let threadRE = /^\d+/;
@@ -12,31 +15,8 @@ function deleteCheckedPosts() {
 	}
 	return false;
 }
-window.deleteCheckedPosts = deleteCheckedPosts;
+// window.deleteCheckedPosts = deleteCheckedPosts;
 
-export function deletePost(id, board) {
-	let password = prompt("Password");
-	// if(password == "") return;
-	// let xhrFields = {
-	// 	board: board,
-	// 	report_btn: "Report",
-	// 	password: password
-	// }
-	// xhrFields[`check${id}`] = "on";
-	// $.ajax({
-	// 	url: webroot + "/util",
-	// 	method: "POST",
-	// 	xhrFields: xhrFields,
-	// 	success: function() {
-	// 		console.log(arguments);
-	// 	},
-	// 	error: function() {
-	// 		console.log(arguments);
-	// 	}
-	// });
-	//window.location = webroot + "util?action=delete&posts="+id+"&board="+board+"&password";
-}
-window.deletePost = deletePost;
 
 export function getUploadPostID(upload, container) {
 	// if container, upload is div.upload-container
@@ -207,11 +187,39 @@ export function reportPost(id, board) {
 		report_btn: "Report",
 		reason: reason,
 		json: "1"
-	}
+	};
 	xhrFields[`check${id}`] = "on";
 	$.post(webroot + "util", xhrFields).fail(data => {
-		alert(`Report failed: ${data.error}`);
+		alertLightbox(`Report failed: ${data.error}`, "Error");
 	}).done(data => {
-		alert("Report sent");
+		alertLightbox("Report sent", "Success");
 	}, "json");
 }
+window.reportPost = reportPost;
+
+export function deletePost(id, board, fileOnly) {
+	let cookiePass = getCookie("password");
+	promptLightbox(cookiePass, true, ($lb, password) => {
+		let xhrFields = {
+			board: board,
+			boardid: $("input[name=boardid]").val(),
+			delete_btn: "Delete",
+			password: password,
+			json: "1"
+		};
+		xhrFields[`check${id}`] = "on";
+		if(fileOnly) {
+			xhrFields["fileonly"] = "on";
+		}
+		$.post(webroot + "util", xhrFields).fail(data => {
+			alertLightbox(`Delete failed: ${data["error"]}`, "Error");
+		}).done(data => {
+			if(data["error"] == undefined) {
+				alertLightbox(`Post #${id} deleted`, "Success");
+			} else {
+				alertLightbox(`Error deleting post #${id}: ${data["error"]}`, "Error");
+			}
+		}, "json");
+	}, "Password");
+}
+window.deletePost = deletePost;

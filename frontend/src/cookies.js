@@ -31,6 +31,8 @@ export function getCookie(name, options = {type: "string"}) {
 				return {};
 			}
 	}
+	if(val == undefined)
+		val = "";
 	return val;
 }
 

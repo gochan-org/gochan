@@ -22,13 +22,13 @@
   "license": "BSD-2-Clause",
   "dependencies": {
     "jquery": "^3.5.1",
-    "jqueryui": "^1.11.1"
+    "jquery-ui-dist": "^1.13.1"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.16.11",
     "@jest/globals": "^27.4.6",
     "@types/jquery": "^3.3.38",
-    "@types/jqueryui": "^1.12.13",
+    "@types/jqueryui": "^1.12.16",
     "babel-jest": "^27.5.1",
     "jest": "^27.4.7",
     "parcel": "^2.4.0",

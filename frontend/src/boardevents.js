@@ -2,7 +2,7 @@ import { currentBoard, deletePost, reportPost } from './postutil';
 import { watchThread } from "./watcher";
 import { openQR } from "./qr";
 
-const idRe = /^((reply)|(op))(\d)/;
+const idRe = /^((reply)|(op))(\d+)/;
 
 export function handleKeydown(e) {
 	let ta = e.target;
@@ -56,7 +56,6 @@ export function applyBBCode(e) {
 }
 
 export function handleActions(action, postIDStr) {
-	// console.log(`Action for ${postID}: ${action}`);
 	let idArr = idRe.exec(postIDStr);
 	if(!idArr) return;
 	let postID = idArr[4]
@@ -74,10 +73,12 @@ export function handleActions(action, postIDStr) {
 		case "Report post":
 			reportPost(postID, board);
 			break;
+		case "Delete file":
+			deletePost(postID, board, true);
+			break;
 		case "Delete thread":
 		case "Delete post":
-			console.log(`Deleting ${postID}`);
-			deletePost(postID);
+			deletePost(postID, board);
 			break;
 	}
 }

@@ -1,3 +1,6 @@
+import { opRegex } from "./vars";
+import "jquery-ui-dist/jquery-ui";
+
 import { handleActions, handleKeydown } from "./boardevents";
 import { initCookies, getCookie } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";
@@ -6,7 +9,6 @@ import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hideP
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton } from "./topbar";
 import { initQR, openQR } from "./qr";
-import { opRegex } from "./vars";
 import { initWatcher, watchThread } from "./watcher";
 
 let $watchedThreadsBtn = null;
@@ -51,7 +53,11 @@ $(() => {
 	initCookies();
 	initTopBar();
 	initSettings();
-	initStaff().then(createStaffMenu);
+	initStaff()
+		.then(createStaffMenu)
+	.catch(() => {
+		// not logged in
+	});
 	initWatcher();
 
 	let passwordText = $("input#postpassword").val();
@@ -99,7 +105,8 @@ $(() => {
 		$ddownMenu.append(
 			`<option>Show/hide ${threadPost}</option>`,
 			`<option>Report post</option>`,
-			`<option>Delete ${threadPost}</option>`
+			`<option>Delete ${threadPost}</option>`,
+			`<option>Delete file</option>`
 		).insertAfter($elem)
 		.on("click", event => {
 			if(event.target.nodeName != "OPTION")
