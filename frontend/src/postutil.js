@@ -180,20 +180,21 @@ export function quote(e) {
 window.quote = quote;
 
 export function reportPost(id, board) {
-	let reason = prompt("Reason");
-	if(reason == "" || reason == null) return;
-	let xhrFields = {
-		board: board,
-		report_btn: "Report",
-		reason: reason,
-		json: "1"
-	};
-	xhrFields[`check${id}`] = "on";
-	$.post(webroot + "util", xhrFields).fail(data => {
-		alertLightbox(`Report failed: ${data.error}`, "Error");
-	}).done(data => {
-		alertLightbox("Report sent", "Success");
-	}, "json");
+	promptLightbox("", false, ($lb, reason) => {
+		if(reason == "" || reason == null) return;
+		let xhrFields = {
+			board: board,
+			report_btn: "Report",
+			reason: reason,
+			json: "1"
+		};
+		xhrFields[`check${id}`] = "on";
+		$.post(webroot + "util", xhrFields).fail(data => {
+			alertLightbox(`Report failed: ${data.error}`, "Error");
+		}).done(data => {
+			alertLightbox("Report sent", "Success");
+		}, "json");
+	}, "Report post");
 }
 window.reportPost = reportPost;
 
