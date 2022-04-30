@@ -2,13 +2,18 @@ import $ from "jquery";
 
 const emptyFunc = () => {};
 
+export function removeLightbox(...customs) {
+	$(".lightbox, .lightbox-bg").remove();
+	for(const custom of customs) {
+		$(custom).remove();
+	}
+}
+
 export function showLightBox(title, innerHTML) {
 	$(document.body).prepend(
 		`<div class="lightbox-bg"></div><div class="lightbox"><div class="lightbox-title">${title}<a href="#" class="lightbox-x">X</a><hr /></div>${innerHTML}</div>`
 	);
-	$("a.lightbox-x, .lightbox-bg").on("click", () => {
-		$(".lightbox, .lightbox-bg").remove();
-	});
+	$("a.lightbox-x, .lightbox-bg").on("click", removeLightbox);
 }
 
 function simpleLightbox(properties = {}, customCSS = {}, $elements = []) {
@@ -33,8 +38,7 @@ function simpleLightbox(properties = {}, customCSS = {}, $elements = []) {
 	let boxBg = $("<div />").prop({
 		class: "lightbox-bg"
 	}).on("click", function() {
-		this.remove();
-		$box.remove();
+		removeLightbox(this);
 	}).prependTo(document.body);
 
 	return $box;
@@ -65,18 +69,14 @@ export function promptLightbox(defVal = "", isMasked = false, onOk = emptyFunc, 
 		$cancel
 	);
 	let $lb = simpleLightbox({}, {}, [$form]);
-
+	$promptInput.trigger("focus");
 	$ok.on("click", function() {
 		if(onOk($lb, $promptInput.val()) == false)
 			return;
-		this.remove();
-		$lb.remove();
-		$(".lightbox-bg").remove();
+		removeLightbox(this, $lb);
 	});
 	$cancel.on("click", function() {
-	this.remove();
-		$lb.remove();
-		$(".lightbox-bg").remove();
+		removeLightbox(this, $lb);
 	});
 	return $lb;
 }
@@ -92,11 +92,10 @@ export function alertLightbox(msg = "", title = location.hostname, onOk = emptyF
 		"<br/>",
 		$ok
 	]);
+	$ok.trigger("focus");
 	$ok.on("click", function() {
 		onOk($lb);
-		this.remove();
-		$lb.remove();
-		$(".lightbox-bg").remove();
+		removeLightbox(this, $lb);
 	});
 	return $lb;
 }
