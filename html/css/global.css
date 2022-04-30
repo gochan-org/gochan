@@ -247,13 +247,14 @@ div#recent-posts {
   display: block;
   width: 90%;
 }
-div#recent-posts div.recent-post {
+
+div.recent-post {
   vertical-align: top;
   display: inline-block;
   word-wrap: break-word;
   overflow: hidden;
   margin-top: 5px;
-  padding: 5px 0 3px;
+  padding: 6px;
   position: relative;
   width: 200px;
   max-height: 320px;
