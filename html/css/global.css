@@ -327,7 +327,6 @@ input.config-text {
   top: 5%;
   z-index: 9001;
   overflow: auto;
-  display: hidden;
 }
 
 .lightbox * {
