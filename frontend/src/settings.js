@@ -1,114 +1,242 @@
 import { LightBox, showLightBox } from "./lightbox";
 import { TopBarButton } from "./topbar";
 import { getCookie, setCookie } from "./cookies";
-export let $settingsMenu = null;
-export let settings = [];
-let settingsLB = null;
 
-export function getSetting(id) {
-	for(let s = 0; s < settings.length; s++) {
-		if(settings[s].id == id) return settings[s];
-	}
-	return {};
+const validTypes = ["text", "textarea", "password", "number", "checkbox", "select"];
+const genericOptions = {
+	type: "text",
+	dropdownOptions: null, // [{val: "", text: ""}]
+	defaultVal: null,
+	onSave: () => {},
+	customProperties: {},
+	customCSS: {}
+};
+
+export let $settingsMenu = null;
+let $settingsTable = null;
+export let settings = [];
+
+function getStorageVal(key, defaultVal) {
+	if(localStorage == undefined)
+		return getCookie(key, {default: defaultVal});
+	let val = localStorage.getItem(key);
+	if(val === null && defaultVal !== undefined)
+		return defaultVal;
+	return val;
 }
 
-class Setting {
-	constructor(id, text, type, defaultVal, cb, options) {
-		this.id = id;
-		this.text = text;
-		this.type = type; // text, textarea, checkbox, select
-		this.defaultVal = defaultVal;
-		this.options = [];
-		if(getCookie(this.id) == undefined) {
-			this.setCookie(this.defaultVal, 7);
+function setStorageVal(key, val) {
+	if(localStorage == undefined)
+		setCookie(key, val);
+	else
+		localStorage.setItem(key, val);
+}
+
+function genericDefaultVal(type, options = []) {
+	switch(type) {
+		case "text":
+		case "textarea":
+		case "password":
+			return "";
+		case "number":
+			return 0;
+		case "checkbox":
+			return false;
+		case "select":
+			if(Array.isArray(options) && options.length > 0)
+				return options[0];
+			return "";
+		default:
+			return "";;
+	}
+}
+
+function fixOptions(options) {
+	let fixed = {}
+
+	if(validTypes.indexOf(options.type) > -1)
+		fixed.type = options.type;
+	else
+		fixed.type = validTypes[0];
+
+	fixed.defaultVal = options.defaultVal;
+	if(fixed.defaultVal == undefined)
+		fixed.defaultVal = genericDefaultVal(fixed, options.dropdownOptions);
+
+	if(options.hasOwnProperty("onSave"))
+		fixed.onSave = options.onSave;
+	else
+		fixed.onSave = () => {};
+
+	if(options.hasOwnProperty("customProperties"))
+		fixed.customProperties = options.customProperties;
+	else
+		fixed.customProperties = genericOptions.customProperties;
+
+	if(options.hasOwnProperty("dropdownOptions"))
+		fixed.dropdownOptions = options.dropdownOptions;
+	else
+		fixed.dropdownOptions = genericOptions.dropdownOptions;
+
+	if(options.hasOwnProperty("customCSS"))
+		fixed.customCSS = options.customCSS;
+	else
+		fixed.customCSS = genericOptions.customCSS;
+
+	return fixed;
+}
+
+
+export class Setting {
+	/**
+	 * @param {string} key The name of the setting
+	 * @param {string} title text that gets shown in the Settings lightbox
+	 */
+	constructor(key, title, options = genericOptions) {
+		this.key = key;
+		this.title = title;
+		
+		let fixedOpts = fixOptions(options);
+		this.type = fixedOpts.type;
+		this.defaultVal = fixedOpts.defaultVal;
+		this.onSave = fixedOpts.onSave;
+		this.customProperties = fixedOpts.customProperties;
+		this.dropdownOptions = fixedOpts.dropdownOptions;
+		this.customCSS = fixedOpts.customCSS;
+		this.element = this.createElement();
+	}
+	saveElementValue() {
+		let val = this.element.val();
+		if(this.type == "checkbox") {
+			val = this.element.prop("checked");
 		}
-		if(this.type == "select") this.options = options;
-		this.cb = () => {};
-		if(cb) this.cb = cb;
+		console.log(this.key);
+		console.log(this.element[0]);
+		console.log(val);
+		setStorageVal(this.key, val);
 	}
-
-	save(newVal, expires) {
-		setCookie(this.id, newVal, expires);
-		this.cb();
+	setValue(newVal) {
+		setStorageVal(this.key, newVal);
 	}
-
-	getCookie(type = "string", defaultVal) {
-		let val = getCookie(this.id, {type: type, default: defaultVal});
-
-		if(this.type == "checkbox") val = (val == "true");
-		return val;
+	getValue() {
+		return getStorageVal(this.key, this.defaultVal);
 	}
-	
-	setCookie(val,expires) {
-		setCookie(this.id, val,expires);
-	}
-
-	getVal() {
-		let elem = document.getElementById(this.id);
-		if(elem != null) {
-			if(elem.type == "checkbox") return elem.checked;
-			return elem.value;
+	createElement() {
+		let selector = "<input/>";
+		let props = {
+			id: this.key,
+			name: this.key
 		}
-	}
+		let propKeys = Object.keys(this.customProperties);
+		for(const key in propKeys) {
+			props[key] = this.customProperties[key];
+		}
 
-	html() {
-		let html = "";
-		switch(this.type) {
-			case "checkbox":
-				if(this.getCookie() == true)
-					html = `<input id="${this.id}" type="checkbox" checked="checked" />`;
-				else
-					html = `<input id="${this.id}" type="checkbox" />`;
-				break;
-			case "select":
-				html = `<select id="${this.id}" name="${this.id}" style="min-width:50%">`;
-				for(const option of this.options) {
-					html += `<option value="${option.val}"`;
-					if(this.getCookie() == option.val) html += `selected="${this.getCookie()}"`;
-					html += `>${option.text}</option>`;
-				}
-				html += "</select>";
+		switch (this.type) {
+			case "text":
+				props.type = "text";
+				if(this.defaultVal === null)
+					this.defaultVal = "";
 				break;
 			case "textarea":
-				html = `<textarea id="${this.id}" name="${this.id}">${this.getCookie()}</textarea>`;
+				selector = "<textarea/>"
+				if(this.defaultVal === null)
+					this.defaultVal = "";
+				break;
+			case "number":
+				props.type = "number";
+				if(this.defaultVal === null)
+					this.defaultVal = 0;
+				break;
+			case "checkbox":
+				props.type = "checkbox";
+				if(this.defaultVal === null)
+					this.defaultVal = false;
+				break;
+			case "select":
+				if(this.dropdownOptions === null)
+					break;
+				selector = "<select/>";
 				break;
 			default:
-				html = `<input id="${this.id}" type="checkbox" val="${this.getCookie()}" />`;
 				break;
 		}
-		return html;
+		let $elem = $(selector);
+		if(this.type == "select") {
+			for(const option of this.dropdownOptions) {
+				$("<option/>").val(option.val).text(option.text).appendTo($elem);
+			}
+		}
+		$elem.prop(props);
+		if(Object.keys(this.customCSS).length > 0)
+			$elem.css(this.customCSS);
+
+		let val = this.getValue();
+		// console.log(this.key, "=>", val, "default:", this.defaultVal);
+		if(this.type == "checkbox") {
+			console.log(this.key, val, "checked:", val == "true");
+			$elem.prop({checked: val == "true" || val == true});
+		} else {
+			$elem.val(val);
+		}
+		return $elem;
 	}
 }
 
 export function initSettings() {
 	let settingsHTML =
 		`<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup>`;
-
+	
+	let styleOptions = [];
+	for(const style of styles) {
+		styleOptions.push({text: style.Name, val: style.Filename});
+	}
 	settings.push(
-		new Setting("style", "Style", "select", defaultStyle, function() {
-			document.getElementById("theme").setAttribute("href",
-				`${webroot}css/${this.getCookie(defaultStyle)}`
-			)
-		}, []),
-		new Setting("pintopbar", "Pin top bar", "checkbox", true),
-		new Setting("enableposthover", "Preview post on hover", "checkbox", true),
-		new Setting("enablepostclick", "Preview post on click", "checkbox", true),
-		new Setting("useqr", "Use Quick Reply box", "checkbox", true)
+		new Setting("style", "Style", {
+			type: "select",
+			dropdownOptions: styleOptions,
+			defaultVal: defaultStyle
+		}),
+		new Setting("pintopbar", "Pin top bar", {
+			type: "checkbox",
+			defaultVal: true
+		}),
+		new Setting("enableposthover", "Preview post on hover", {
+			type: "checkbox",
+			defaultVal: false
+		}),
+		new Setting("enablepostclick", "Preview post on click", {
+			type: "checkbox",
+			defaultVal: true
+		}),
+		new Setting("useqr", "Use Quick Reply box", {
+			type: "checkbox",
+			defaultVal: true
+		})
 	);
 
-	for(const style of styles) {
-		settings[0].options.push({text: style.Name, val: style.Filename});
-	}
-	for(const setting of settings) {
-		settingsHTML += `<tr><td><b>${setting.text}:</b></td><td>${setting.html()}</td></tr>`
-	}
-	settingsHTML += "</table></div><div class=\"lightbox-footer\"><hr /><button id=\"save-settings-button\">Save Settings</button></div>";
-
+	settingsHTML += `</table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>`;
 	$settingsMenu = new TopBarButton("Settings", () => {
 		showLightBox("Settings", settingsHTML);
+		if($settingsTable === null) {
+			$settingsTable = $("#settings-container table");
+			for(const setting of settings) {
+				let $tr = $("<tr/>").appendTo($settingsTable);
+				$("<td/>").append($("<b/>").text(setting.title)).appendTo($tr);
+				$("<td/>").append(setting.element).appendTo($tr);
+			}
+		}
+		
+		$("#settings-container").find("input,select,textarea").on("change", function(e) {
+			let key = e.currentTarget.id;
+			let val = e.currentTarget.value;
+			let type = e.currentTarget.attributes.getNamedItem("type")
+			console.log(type);
+			console.log(key, "=>", val);
+		})
 		$("button#save-settings-button").on("click", () => {
 			for(const setting of settings) {
-				setting.save(setting.getVal());
+				setting.saveElementValue();
 			}
 		});
 	});
