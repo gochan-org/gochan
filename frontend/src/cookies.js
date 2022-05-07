@@ -36,14 +36,32 @@ export function getCookie(name, options = {type: "string"}) {
 	return val;
 }
 
+function randomPassword(len = 8) {
+	const printableStart = 33;
+	const printableEnd = 126;
+	
+	let pass = "";
+	for(let p = 0; p < len; p++) {
+		pass += String.fromCharCode(
+			Math.floor(Math.random() * (printableEnd-printableStart+1)) + printableStart
+		);
+	}
+	return pass;
+}
+
 /**
  * gets cookies ready to be used elsewhere
  */
 export function initCookies() {
+	let pwCookie = getCookie("password");
+	if(pwCookie == "") {
+		pwCookie = randomPassword();
+		setCookie("password", pwCookie);
+	}
 	$("input[name=postname]").val(getCookie("name"));
 	$("input[name=postemail]").val(getCookie("email"));
-	$("input[name=postpassword]").val(getCookie("password"));
-	$("input[name=delete-password]").val(getCookie("password"));
+	$("input[name=postpassword]").val(pwCookie);
+	$("input[name=delete-password]").val(pwCookie);
 }
 
 /**
@@ -62,5 +80,5 @@ export function setCookie(name, value, expires, root) {
 		d.setTime(d.getTime() + 1000*60*60*24*expires)
 		expiresStr += d.toUTCString();
 	}
-	document.cookie = `${name}=${escape(value)}${expiresStr};path=${root};sameSite=strict`;
+	document.cookie = `${name}=${value}${expiresStr};path=${root};sameSite=strict`;
 }
