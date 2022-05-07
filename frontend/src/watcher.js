@@ -1,6 +1,5 @@
-import { getCookie, setCookie } from "./cookies";
 import { currentBoard } from "./postutil";
-
+import { getJsonStorageVal, setStorageVal } from "./storage";
 let watching = false;
 
 export function getWatchedThreads() {
@@ -26,38 +25,24 @@ export function getWatchedThreads() {
 }
 
 export function watchThread(threadID, board) {
-	watchedCookie = getCookie("watched", {type: "json", default: {}});
-
-	if(!(watchedCookie[board] instanceof Array))
-		watchedCookie[board] = [];
-	for(const id of watchedCookie[board]) {
+	let watched = getJsonStorageVal("watched", {});
+	if(!(watched[board] instanceof Array))
+		watched[board] = [];
+	for(const id of watched[board]) {
 		if(id == threadID) return; // thread is already in the watched list
 	}
-	watchedCookie[board].push(threadID);
-	setCookie("watched", JSON.stringify(watchedCookie));
+	watched[board].push(threadID);
+	setStorageVal("watched", JSON.stringify(watched));
 }
 
 export function initWatcher() {
-	let watched = {}
-	let localWatched = localStorage.getItem("watched");
-	if(localWatched) {
-		try {
-			watched = JSON.parse(localWatched);
-		} catch(e) {
-			console.log(`Error parsing watched thread setting: ${e}`);
-			localStorage.setItem("watched", "{}");
-		}
-	} else {
-		localStorage.setItem("watched", "{}");
-	}
+	let watched = getJsonStorageVal("watched", {});
 
-	// watchedCookie = getCookie("watched", {type: "json", default: {}});
 	let board = currentBoard();
-	watching = watched[board] instanceof Array;
+	watching = watched != null && watched[board] instanceof Array;
 
 	if(watching) {
 		getWatchedThreads();
 		// setInterval(getWatchedThreads, 1000);
 	}
-
 }

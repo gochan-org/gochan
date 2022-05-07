@@ -1,6 +1,7 @@
 import { upArrow, downArrow } from "./vars";
 import { getCookie, setCookie } from "./cookies";
 import { $topbar, topbarHeight } from "./topbar";
+import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "./storage";
 
 export let $qr = null;
 
@@ -78,13 +79,15 @@ export function initQR(pageThread) {
 	);
 
 	let qrTop = 32;
-	if(!getCookie("pintopbar",{default: true, type: "bool"}))
+	
+	if(getBooleanStorageVal("pintopbar", true))
 		qrTop = $topbar.outerHeight() + 16;
+	let qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16})
+	if(!(qrPos.top > -1))
+		qrPos.top = qrTop;
+	if(!(qrPos.left > -1))
+		qrPos.left = 16;
 
-	let qrPos = getCookie("qrpos", {
-		type: "json",
-		default: JSON.stringify({top: qrTop, left: 16})
-	});
 	$qr = $("<div />").prop({
 		id: "qr-box",
 	}).css({
@@ -99,7 +102,7 @@ export function initQR(pageThread) {
 		containment: "window",
 		drag: (event, ui) => {
 			ui.position.top = Math.max(ui.position.top, topbarHeight);
-			setCookie("qrpos", JSON.stringify(ui.position),7);
+			setStorageVal("qrpos", JSON.stringify(ui.position));
 		}
 	});
 

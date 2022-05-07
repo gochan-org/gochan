@@ -2,14 +2,15 @@ import { opRegex } from "./vars";
 import "jquery-ui-dist/jquery-ui";
 
 import { handleActions, handleKeydown } from "./boardevents";
-import { initCookies, getCookie } from "./cookies";
+import { initCookies } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";
 // import { notify } from './notifications';
 import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton } from "./topbar";
-import { initQR, openQR } from "./qr";
+import { initQR } from "./qr";
 import { initWatcher, watchThread } from "./watcher";
+import { getBooleanStorageVal, getStorageVal } from "./storage";
 
 let $watchedThreadsBtn = null;
 
@@ -47,7 +48,7 @@ export function getPageThread() {
 
 $(() => {
 	let pageThread = getPageThread();
-	let style = getCookie("style", {default: defaultStyle});
+	let style = getStorageVal("style", defaultStyle)
 	let themeElem = document.getElementById("theme");
 	if(themeElem) themeElem.setAttribute("href", `${webroot}css/${style}`);
 	initCookies();
@@ -69,7 +70,7 @@ $(() => {
 
 	if(pageThread.board != "") {
 		prepareThumbnails();
-		if(getCookie("useqr", {type: "bool"})) initQR(pageThread);
+		if(getBooleanStorageVal("useqr", true)) initQR(pageThread);
 	}
 
 	preparePostPreviews(false);

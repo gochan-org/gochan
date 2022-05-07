@@ -1,6 +1,4 @@
-import { downArrow, upArrow } from "./vars";
-import { getCookie } from "./cookies";
-
+import { getBooleanStorageVal } from "./storage";
 
 /**
  * @type {JQuery<HTMLElement>}
@@ -37,14 +35,13 @@ export class TopBarButton {
  */
 export function initTopBar() {
 	$topbar = $("div#topbar");
-	if(!getCookie("pintopbar", {default: true, type: "bool"})) {
+	if(getBooleanStorageVal("pintopbar", true)) {
+		$topbar.css({"z-index": "9001"});
+	} else {
 		$topbar.css({
 			"position": "absolute",
-			"top": "0px",
-			"padding-left": "0px",
-			"padding-right": "0px",
+			"top": "0px"
 		});
 	}
-
 	topbarHeight = $topbar.outerHeight() + 4;
 }

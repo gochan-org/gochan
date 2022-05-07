@@ -1,6 +1,6 @@
-import { LightBox, showLightBox } from "./lightbox";
-import { TopBarButton } from "./topbar";
-import { getCookie, setCookie } from "./cookies";
+import { showLightBox } from "./lightbox";
+import { initTopBar, TopBarButton } from "./topbar";
+import { getBooleanStorageVal, getNumberStorageVal, getStorageVal, setStorageVal } from "./storage";
 
 const validTypes = ["text", "textarea", "password", "number", "checkbox", "select"];
 const genericOptions = {
@@ -16,21 +16,6 @@ export let $settingsMenu = null;
 let $settingsTable = null;
 export let settings = [];
 
-function getStorageVal(key, defaultVal) {
-	if(localStorage == undefined)
-		return getCookie(key, {default: defaultVal});
-	let val = localStorage.getItem(key);
-	if(val === null && defaultVal !== undefined)
-		return defaultVal;
-	return val;
-}
-
-function setStorageVal(key, val) {
-	if(localStorage == undefined)
-		setCookie(key, val);
-	else
-		localStorage.setItem(key, val);
-}
 
 function genericDefaultVal(type, options = []) {
 	switch(type) {
@@ -99,6 +84,7 @@ export class Setting {
 		let fixedOpts = fixOptions(options);
 		this.type = fixedOpts.type;
 		this.defaultVal = fixedOpts.defaultVal;
+		this.val = this.defaultVal;
 		this.onSave = fixedOpts.onSave;
 		this.customProperties = fixedOpts.customProperties;
 		this.dropdownOptions = fixedOpts.dropdownOptions;
@@ -110,9 +96,9 @@ export class Setting {
 		if(this.type == "checkbox") {
 			val = this.element.prop("checked");
 		}
-		console.log(this.key);
-		console.log(this.element[0]);
-		console.log(val);
+		// console.log(this.key);
+		// console.log(this.element[0]);
+		// console.log(val);
 		setStorageVal(this.key, val);
 	}
 	setValue(newVal) {
@@ -120,6 +106,12 @@ export class Setting {
 	}
 	getValue() {
 		return getStorageVal(this.key, this.defaultVal);
+	}
+	getBooleanVal() {
+		return getBooleanStorageVal(this.key, this.defaultVal);
+	}
+	getNumberVal() {
+		return getNumberStorageVal(this.key, this.defaultVal);
 	}
 	createElement() {
 		let selector = "<input/>";
@@ -172,9 +164,7 @@ export class Setting {
 			$elem.css(this.customCSS);
 
 		let val = this.getValue();
-		// console.log(this.key, "=>", val, "default:", this.defaultVal);
 		if(this.type == "checkbox") {
-			console.log(this.key, val, "checked:", val == "true");
 			$elem.prop({checked: val == "true" || val == true});
 		} else {
 			$elem.val(val);
@@ -230,14 +220,30 @@ export function initSettings() {
 		$("#settings-container").find("input,select,textarea").on("change", function(e) {
 			let key = e.currentTarget.id;
 			let val = e.currentTarget.value;
-			let type = e.currentTarget.attributes.getNamedItem("type")
-			console.log(type);
-			console.log(key, "=>", val);
-		})
+			let type = e.currentTarget.type
+			let setting = null;
+			for(const s in settings) {
+				if(settings[s].key == key) {
+					setting = settings[s];
+					break;
+				}
+			}
+			if(setting === null) return;
+			if(type == "checkbox")
+				setting.val = val == "on";
+			else
+				setting.val = val;
+		});
 		$("button#save-settings-button").on("click", () => {
 			for(const setting of settings) {
+				if(setting.key == "style") {
+					document.getElementById("theme").setAttribute("href",
+						`${webroot}css/${setting.val}`
+					);
+				}
 				setting.saveElementValue();
 			}
+			initTopBar();
 		});
 	});
 }
