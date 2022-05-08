@@ -154,12 +154,11 @@ div.file-deleted-box {
 	width: 120px;
 	height: 120px;
 	border-style: dashed;
-	vertical-align: middle;
+	border-width: 2px;
 	text-align: center;
 	line-height: 120px;
-	float: left;
-	margin:4px 8px;
-	border-width: 2px;
+	text-align: center;
+	margin: auto;
 }
 
 input[type=file] {
