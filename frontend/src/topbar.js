@@ -36,7 +36,10 @@ export class TopBarButton {
 export function initTopBar() {
 	$topbar = $("div#topbar");
 	if(getBooleanStorageVal("pintopbar", true)) {
-		$topbar.css({"z-index": "9001"});
+		$topbar.css({
+			"z-index": "9001",
+			"position": "fixed"
+		});
 	} else {
 		$topbar.css({
 			"position": "absolute",

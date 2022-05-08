@@ -490,10 +490,10 @@ div#topbar {
   top: 0;
   width: 100%;
   margin-top: 0px;
-  padding-left: 8px;
 }
 div#topbar * {
   padding: 4px;
+  margin-left: 4px;
 }
 div#topbar a.topbar-item {
   display: inline-block;

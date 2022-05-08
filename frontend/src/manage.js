@@ -1,5 +1,5 @@
 import $ from 'jquery';
-import { showLightBox } from "./lightbox";
+import { alertLightbox } from "./lightbox";
 import { $topbar, TopBarButton } from './topbar';
 
 /**
@@ -16,6 +16,7 @@ const notAStaff = {
  */
 export let staffActions = [];
 export let staffInfo = notAStaff;
+let loginChecked = false;
 
 /**
  * @type {JQuery<HTMLElement>}
@@ -50,6 +51,10 @@ export async function initStaff() {
 }
 
 export async function getStaffInfo() {
+	if(loginChecked)
+		// don't make multiple unnecessary AJAX requests if we're already logged in
+		return staffInfo;
+	loginChecked = true;
 	return $.ajax({
 		method: "GET",
 		url: `${webroot}manage`,
@@ -81,7 +86,7 @@ export function banSelectedPost() {
 	let boardDir = boardDirArr[1];
 	let checks = $("input[type=checkbox]");
 	if(checks.length == 0) {
-		alert("No posts selected");
+		alertLightbox("No posts selected");
 		return false;
 	}
 	let postID = 0;

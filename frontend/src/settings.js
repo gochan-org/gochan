@@ -121,7 +121,7 @@ export function initSettings() {
 		document.getElementById("theme").setAttribute("href",
 			`${webroot}css/${this.getElementValue()}`);
 	}));
-	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, () => initTopBar));
+	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
 	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover"));
 	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true));
 	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true));
