@@ -18,7 +18,7 @@ const qrTitleBar =
 
 export function initQR(pageThread) {
 	if($qr != null) {
-		console.log("QR box already initialized");
+		// QR box already initialized
 		return;
 	}
 
@@ -30,10 +30,10 @@ export function initQR(pageThread) {
 	const nameCookie = getCookie("name");
 	const emailCookie = getCookie("email");
 
-	let $qrbuttons = $("<div />")
+	let $qrbuttons = $("<div/>")
 		.prop("id", "qrbuttons")
 		.append(qrButtonHTML);
-	let $postform = $("<form />").prop({
+	let $postform = $("<form/>").prop({
 		id: "qrpostform",
 		name: "qrpostform",
 		action: "/post",
@@ -50,27 +50,27 @@ export function initQR(pageThread) {
 			name: "boardid",
 			value: 1
 		}),
-		$("<div id=\"qrpostname\"/>").append($("<input/>").prop({
+		$("<div/>").append($("<input/>").prop({
 			id: "qrpostname",
 			type: "text",
 			name: "postname",
 			value: nameCookie,
 			placeholder: "Name"
 		})),
-		$("<div id=\"qrpostemail\"/>").append($("<input/>").prop({
+		$("<div/>").append($("<input/>").prop({
 			id: "qrpostemail",
 			type: "text",
 			name: "postemail",
 			value: emailCookie,
 			placeholder: "Email"
 		})),
-		$("<div id=\"qrpostsubject\"/>").append($("<input/>").prop({
+		$("<div/>").append($("<input/>").prop({
 			id: "qrpostsubject",
 			type: "text",
 			name: "postsubject",
 			placeholder: "Subject"
 		})),
-		$("<div id=\"qrpostmsg\"/>").append($("<textarea/>").prop({
+		$("<div/>").append($("<textarea/>").prop({
 			id: "qrpostmsg",
 			name: "postmsg",
 			placeholder: "Message"
@@ -80,7 +80,8 @@ export function initQR(pageThread) {
 
 	let qrTop = 32;
 	
-	if(getBooleanStorageVal("pintopbar", true))
+	let pintopbar = getBooleanStorageVal("pintopbar", true);
+	if(pintopbar)
 		qrTop = $topbar.outerHeight() + 16;
 	let qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16})
 	if(!(qrPos.top > -1))
