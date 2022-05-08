@@ -190,7 +190,10 @@ export function reportPost(id, board) {
 		};
 		xhrFields[`check${id}`] = "on";
 		$.post(webroot + "util", xhrFields).fail(data => {
-			alertLightbox(`Report failed: ${data.error}`, "Error");
+			let errStr = data.error;
+			if(errStr == undefined)
+				errStr = data.statusText;
+			alertLightbox(`Report failed: ${errStr}`, "Error");
 		}).done(data => {
 			alertLightbox("Report sent", "Success");
 		}, "json");

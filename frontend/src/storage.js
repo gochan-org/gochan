@@ -1,14 +1,11 @@
 import { getCookie, setCookie } from "./cookies";
 
 
-/**
- * @returns {string}
- */
-export function getStorageVal(key, defaultVal) {
+export function getStorageVal(key, defaultVal = "") {
 	if(localStorage == undefined)
-		return getCookie(key, {default: defaultVal, type: "string"});
+		return getCookie(key, defaultVal);
 	let val = localStorage.getItem(key);
-	if(val === null && defaultVal !== undefined)
+	if(val === null)
 		return defaultVal;
 	return val;
 }
