@@ -276,28 +276,28 @@ def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=
 
 	start_dir = path.abspath(path.curdir)
 	done = False
-	if js_only == True:
+	if js_only is True:
 		# args contains --js, install the JavaScript files
 		os.chdir(path.join(start_dir,"html/"))
 		copy("js/", document_root)
 		os.chdir(start_dir)
 		done = True
 		print("JavaScript files installed")
-	if css_only == True:
+	if css_only is True:
 		# args contains --js, install the CSS files
 		os.chdir(path.join(start_dir,"html/"))
 		copy("css/", document_root)
 		os.chdir(start_dir)
 		done = True
 		print("CSS files installed")
-	if templates_only == True:
+	if templates_only is True:
 		# args contains --js, install the templates
 		os.chdir(start_dir)
 		copy("templates/", path.join(prefix, "share/gochan"))
 		mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		done = True
 		print("Templates installed")
-	if done == True:
+	if done is True:
 		print("Done installing specific stuff")
 		return
 
