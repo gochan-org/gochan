@@ -3,6 +3,12 @@ version = 1
 [[analyzers]]
 name = "javascript"
 enabled = true
+exclude_patterns = [
+  "html/js/**"
+  "**/node_modules/"
+  "templates/**"
+  "releases/**"
+]
 
 [[analyzers]]
 name = "go"
@@ -22,3 +28,6 @@ enabled = true
 [[analyzers]]
 name = "sql"
 enabled = true
+exclude_patterns = [
+  "sql/preapril2020migration/**"
+]
