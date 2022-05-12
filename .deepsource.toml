@@ -11,6 +11,8 @@ exclude_patterns = [
 [[analyzers]]
 name = "javascript"
 enabled = true
+  [analyzers.meta]
+    environment = ["jquery"]
 
 [[analyzers]]
 name = "go"
