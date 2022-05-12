@@ -1,22 +1,31 @@
+import { opRegex } from "./vars";
 import { getCookie } from "./cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
+import { getBooleanStorageVal } from "./storage";
+import { handleActions } from "./boardevents";
 
-let movablePostPreviews = null;
-let expandablePostrefs = true;
+let doClickPreview = false;
+let doHoverPreview = false;
+let $hoverPreview = null;
+
 let threadRE = /^\d+/;
 let videoTestRE = /\.(mp4)|(webm)$/;
+const postrefRE = /\/([^\s\/]+)\/res\/(\d+)\.html(#(\d+))?/;
 
-function deleteCheckedPosts() {
-	if(confirm('Are you sure you want to delete these posts?')) {
-		let form = $("form#main-form");
-		form.append("<input type=\"hidden\" name=\"action\" value=\"delete\" ");
-		form.get(0).submit();
-		return true;
-	}
-	return false;
+export function getPageThread() {
+	let arr = opRegex.exec(window.location.pathname);
+	let info = {
+		board: currentBoard(),
+		boardID: -1,
+		op: -1,
+		page: 0
+	};
+	if(arr == null) return info;
+	if(arr.length > 1) info.op = arr[1];
+	if(arr.length > 3) info.page = arr[3];
+	if(arr.board != "") info.boardID = $("form#postform input[name=boardid]").val() -1;
+	return info;
 }
-// window.deleteCheckedPosts = deleteCheckedPosts;
-
 
 export function getUploadPostID(upload, container) {
 	// if container, upload is div.upload-container
@@ -60,54 +69,92 @@ export function insideOP(elem) {
 	return $(elem).parents("div.op-post").length > 0;
 }
 
-export function preparePostPreviews(isInline) {
-	let mType = "mousemove";
-	if(!movablePostPreviews) mType = "mouseover";
+function createPostPreview(e, $post, inline = true) {
+	let $preview = $post.clone();
+	if(inline) $preview = addPostDropdown($post.clone());
+	$preview
+		.prop({class: "inlinepostprev"})
+		.find("div.inlinepostprev").remove()
+		.find("a.postref").on("click", expandPost);
+	if(inline) {
+		$preview.insertAfter(e.target);
+	}
+	initPostPreviews($preview);
+	return $preview;
+}
 
-	var hvrStr = "a.postref";
-	if(isInline) hvrStr = "div.inlinepostprev " + hvrStr;
-
-	let $hover = $(hvrStr)
-	$hover.on("mouseenter", function() {
-		console.log("mouseenter");
-		let replaced = $hover[0].innerHTML.replace("&gt;&gt;","");
-		let postID = `div.reply#reply${replaced},div.op-post#op${replaced}`;
-		let $clone = $(postID).clone();
-		$(document.body).append($clone.attr({
-			class: "postprev",
-			id: postID + "preview"
-		}));
-		$clone.find(".inlinepostprev").remove();
-		$(document).on(mType, e => {
-			$('.postprev').css({
-				left:	e.pageX + 8,
-				top:	e.pageY + 8
-			});
-		});
-	}).on("mouseleave", () => {
-		console.log("mouseleave")
-		$(".postprev").remove();
+function previewMoveHandler(e) {
+	if($hoverPreview == null) return;
+	$hoverPreview.css({position: "absolute"}).offset({
+		top: e.pageY + 8,
+		left: e.pageX + 8
 	});
+}
 
-	if(expandablePostrefs) {
-		let clkStr = "a.postref";
-		if(isInline) clkStr = "div.inlinepostprev " + clkStr;
-		$(clkStr).on("click", function() {
-			let $this = $(this);
-			if($this.next().attr("class") != "inlinepostprev") {
-				$(".postprev").remove();
-				let replaced = this.innerHTML.replace("&gt;&gt;","");
-				let postID = `div.reply#reply${replaced},div.op-post#op${replaced}`;
-				let $clone = $(postID).clone()
-				$clone.find("postprev").remove();
-				$this.after(
-					$clone.attr("class", "inlinepostprev")
-				);
-			} else {
-				$this.next().remove();
-			}
-			return false;
+function expandPost(e) {
+	e.preventDefault();
+	if($hoverPreview != null) $hoverPreview.remove();
+	let $next = $(e.target).next();
+	if($next.prop("class") == "inlinepostprev" && e.type == "click") {
+		// inline preview is already opened, close it
+		$next.remove();
+		return;
+	}
+	let url = e.target.href
+	let urlArr = postrefRE.exec(url);
+	if(urlArr == null) return; // not actually a link to a post, abort
+	let postBoard = urlArr[1];
+	let postOP = urlArr[2];
+	let postID = urlArr[4]?urlArr[4]:urlArr[2];
+
+	let pageThread = getPageThread();
+	let $post = null;
+	
+	if(pageThread.board == postBoard && pageThread.op == postOP) {
+		$post = $(`div#op${postID}, div#reply${postID}`).first();
+		if($post.length < 1) return; // post not on this page.
+		$preview = createPostPreview(e, $post, e.type == "click");
+		if(e.type == "mouseenter") {
+			$hoverPreview = $preview.insertAfter(e.target);
+			$(document.body).on("mousemove", previewMoveHandler);
+		}
+	} else if(e.type == "click") {
+		$.get(e.target.href, data => {
+			$post = $(data).find(`div#op${postID}, div#reply${postID}`).first();
+			if($post.length < 1) return; // post not on this page.
+			createPostPreview(e, $post, true);
+		}).catch((t, u, v) => {
+			alertLightbox(v, "Error");
+			return;
 		});
+	}
+}
+
+export function initPostPreviews($post = null) {
+	if(getPageThread().board == "" && $post == null) return;
+	doClickPreview = getBooleanStorageVal("enablepostclick", true);
+	doHoverPreview = getBooleanStorageVal("enableposthover", false);
+	let $refs = null;
+	if($post == null) {
+		$refs = $("a.postref");
+	} else {
+		$refs = $post.find("a.postref");
+	}
+
+	if(doClickPreview) {
+		$refs.on("click", expandPost);
+	} else {
+		$refs.off("click", expandPost);
+	}
+
+	if(doHoverPreview) {
+		$refs.on("mouseenter", expandPost).on("mouseleave", () => {
+			if($hoverPreview != null) $hoverPreview.remove();
+			$hoverPreview = null;
+			$(document.body).off("mousemove", previewMoveHandler);
+		});
+	} else {
+		$refs.off("mouseenter").off("mouseleave").off("mousemove");
 	}
 }
 
@@ -140,7 +187,6 @@ export function prepareThumbnails() {
 			.on("click", function(e) {
 				video.remove();
 				thumb.show();
-				console.log(thumb);
 				this.remove();
 				thumb.prop({
 					src: thumbURL,
@@ -178,6 +224,40 @@ export function quote(e) {
 	window.scroll(0,msgbox.offsetTop - 48);
 }
 window.quote = quote;
+
+export function addPostDropdown($post) {
+	if($post.find("select.post-actions").length > 0)
+		return $post;
+	let $postInfo = $post.find("label.post-info");
+	let isOP = $postInfo.parents("div.reply-container").length == 0;
+	let hasUpload = $postInfo.siblings("div.file-info").length > 0;
+	let postID = $postInfo.parent().attr("id");
+	let threadPost = isOP?"thread":"post";
+	let $ddownMenu = $("<select />", {
+		class: "post-actions",
+		id: postID
+	}).append(
+		"<option disabled selected>Actions</option>",
+	);
+	if(isOP) {
+		$ddownMenu.append(
+			"<option>Watch thread</option>"
+		);
+	}
+	$ddownMenu.append(
+		`<option>Show/hide ${threadPost}</option>`,
+		`<option>Report post</option>`,
+		`<option>Delete ${threadPost}</option>`,
+	).insertAfter($postInfo)
+	.on("click", event => {
+		if(event.target.nodeName != "OPTION")
+			return;
+		handleActions($ddownMenu.val(), postID);
+	});
+	if(hasUpload)
+		$ddownMenu.append(`<option>Delete file</option>`);
+	return $post;
+}
 
 export function reportPost(id, board) {
 	promptLightbox("", false, ($lb, reason) => {

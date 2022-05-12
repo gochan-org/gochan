@@ -1,11 +1,11 @@
 import { opRegex } from "./vars";
 import "jquery-ui-dist/jquery-ui";
 
-import { handleActions, handleKeydown } from "./boardevents";
+import { handleKeydown } from "./boardevents";
 import { initCookies } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";
 // import { notify } from './notifications';
-import { currentBoard, prepareThumbnails, preparePostPreviews, deletePost, hidePost, reportPost } from "./postutil";
+import { prepareThumbnails, initPostPreviews, getPageThread, addPostDropdown } from "./postutil";
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton } from "./topbar";
 import { initQR } from "./qr";
@@ -29,21 +29,6 @@ export function changePage(sel) {
 	if(info.board == "" || info.op == -1) return;
 	if(sel.value != "")
 		window.location = webroot + info.board + "/res/" + info.op + "p" + sel.value + ".html";
-}
-
-export function getPageThread() {
-	let arr = opRegex.exec(window.location.pathname);
-	let info = {
-		board: currentBoard(),
-		boardID: -1,
-		op: -1,
-		page: 0
-	};
-	if(arr == null) return info;
-	if(arr.length > 1) info.op = arr[1];
-	if(arr.length > 3) info.page = arr[3];
-	if(arr.board != "") info.boardID = $("form#postform input[name=boardid]").val() -1;
-	return info;
 }
 
 $(() => {
@@ -70,52 +55,13 @@ $(() => {
 
 	if(pageThread.board != "") {
 		prepareThumbnails();
-		if(getBooleanStorageVal("useqr", true)) initQR(pageThread);
+		if(getBooleanStorageVal("useqr", true))
+			initQR(pageThread);
+		initPostPreviews();
 	}
 
-	preparePostPreviews(false);
-	$("plus").on("click", function() {
-		let block = $(this).parent().next();
-		if(block.css("display") == "none") {
-			block.show();
-			$(this).html("-");
-		} else {
-			block.hide();
-			$(this).html("+");
-		}
-	});
-
-	let $postInfo = $("label.post-info");
-	$postInfo.each((i, elem) => {
-		let $elem = $(elem);
-		let isOP = $elem.parents("div.reply-container").length == 0;
-		let hasUpload = $elem.siblings("div.file-info").length > 0;
-		let postID = $elem.parent().attr("id");
-		let threadPost = isOP?"thread":"post";
-
-		let $ddownMenu = $("<select />", {
-			class: "post-actions",
-			id: postID
-		}).append(
-			"<option disabled selected>Actions</option>",
-		);
-		if(isOP) {
-			$ddownMenu.append(
-				"<option>Watch thread</option>"
-			);
-		}
-		$ddownMenu.append(
-			`<option>Show/hide ${threadPost}</option>`,
-			`<option>Report post</option>`,
-			`<option>Delete ${threadPost}</option>`,
-		).insertAfter($elem)
-		.on("click", event => {
-			if(event.target.nodeName != "OPTION")
-				return;
-			handleActions($ddownMenu.val(), postID);
-		});
-		if(hasUpload)
-			$ddownMenu.append(`<option>Delete file</option>`);
+	$("div.post, div.reply").each((i, elem) => {
+		addPostDropdown($(elem));
 	});
 	$(document).on("keydown", handleKeydown);
 });

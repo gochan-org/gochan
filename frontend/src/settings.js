@@ -1,6 +1,8 @@
 import { showLightBox } from "./lightbox";
 import { initTopBar, TopBarButton } from "./topbar";
 import { getStorageVal, setStorageVal } from "./storage";
+import { initPostPreviews } from "./postutil";
+import { initQR } from "./qr";
 
 /**
  * @type {TopBarButton}
@@ -122,9 +124,9 @@ export function initSettings() {
 			`${webroot}css/${this.getElementValue()}`);
 	}));
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
-	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover"));
-	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true));
-	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true));
+	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", false, initPostPreviews));
+	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true, initPostPreviews));
+	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, initQR));
 
 	if($settingsButton == null)
 		$settingsButton = new TopBarButton("Settings", createLightbox);
