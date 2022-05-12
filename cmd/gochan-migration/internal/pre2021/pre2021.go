@@ -21,7 +21,7 @@ type Pre2021Config struct {
 
 type Pre2021Migrator struct {
 	db      *gcsql.GCDB
-	options common.MigrationOptions
+	options *common.MigrationOptions
 	config  Pre2021Config
 
 	posts     []postTable
@@ -37,7 +37,7 @@ func (m *Pre2021Migrator) readConfig() error {
 	return json.Unmarshal(ba, &m.config)
 }
 
-func (m *Pre2021Migrator) Init(options common.MigrationOptions) error {
+func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 	m.options = options
 	var err error
 	if err = m.readConfig(); err != nil {

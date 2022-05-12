@@ -31,8 +31,9 @@ func BuildThreads(all bool, boardid, threadid int) error {
 		return err
 	}
 
-	for _, op := range threads {
-		if err = BuildThreadPages(&op); err != nil {
+	for t := range threads {
+		op := &threads[t]
+		if err = BuildThreadPages(op); err != nil {
 			return err
 		}
 	}

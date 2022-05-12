@@ -72,11 +72,11 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 			return err
 		}
 		found := false
-		for _, board := range boards {
+		for b := range boards {
 			if _, ok := m.oldBoards[id]; !ok {
 				m.oldBoards[id] = dir
 			}
-			if board.Dir == dir {
+			if boards[b].Dir == dir {
 				gclog.Printf(gclog.LStdLog, "Board /%s/ already exists in new db, moving on\n", dir)
 				found = true
 				break

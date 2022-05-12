@@ -52,7 +52,7 @@ type MigrationOptions struct {
 // database compatible with gochan 3.x onward
 type DBMigrator interface {
 	// Init sets the variables for connecting to the databases
-	Init(options MigrationOptions) error
+	Init(options *MigrationOptions) error
 
 	// IsMigrated checks to see if the database has already been migrated and quits if it has
 	// and returns any errors that aren't "table doesn't exist". if the boolean value is true,

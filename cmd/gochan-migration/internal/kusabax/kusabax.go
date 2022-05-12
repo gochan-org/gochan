@@ -11,10 +11,10 @@ var (
 
 type KusabaXMigrator struct {
 	db      *gcsql.GCDB
-	options common.MigrationOptions
+	options *common.MigrationOptions
 }
 
-func (m *KusabaXMigrator) Init(options common.MigrationOptions) error {
+func (m *KusabaXMigrator) Init(options *common.MigrationOptions) error {
 	m.options = options
 	return unimplemented
 }

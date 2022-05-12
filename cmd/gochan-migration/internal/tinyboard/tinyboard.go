@@ -11,10 +11,10 @@ var (
 
 type TinyBoardMigrator struct {
 	db      *gcsql.GCDB
-	options common.MigrationOptions
+	options *common.MigrationOptions
 }
 
-func (m *TinyBoardMigrator) Init(options common.MigrationOptions) error {
+func (m *TinyBoardMigrator) Init(options *common.MigrationOptions) error {
 	m.options = options
 	return unimplemented
 }

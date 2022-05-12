@@ -17,7 +17,8 @@ func tempCleaner() {
 	for {
 		select {
 		case <-tempCleanerTicker.C:
-			for p, post := range gcsql.TempPosts {
+			for p := range gcsql.TempPosts {
+				post := &gcsql.TempPosts[p]
 				if !time.Now().After(post.Timestamp.Add(time.Minute * 5)) {
 					continue
 				}

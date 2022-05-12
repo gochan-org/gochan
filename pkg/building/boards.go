@@ -50,7 +50,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 	}
 
 	// For each top level post, start building a Thread struct
-	for _, op := range opPosts {
+	for p := range opPosts {
+		op := &opPosts[p]
 		var thread gcsql.Thread
 		var postsInThread []gcsql.Post
 
@@ -70,7 +71,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		}
 		thread.NumImages = fileCount
 
-		thread.OP = op
+		thread.OP = *op
 
 		var numRepliesOnBoardPage int
 		// postCfg := config.getpo
@@ -103,7 +104,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 			// Count number of images on board page
 			imageCount := 0
-			for _, reply := range postsInThread {
+			for p := range postsInThread {
+				reply := &postsInThread[p]
 				if reply.Filesize != 0 {
 					imageCount++
 				}
@@ -240,8 +242,9 @@ func BuildBoards(verbose bool, which ...int) error {
 		return nil
 	}
 
-	for _, board := range boards {
-		if err = buildBoard(&board, false, true); err != nil {
+	for b := range boards {
+		board := &boards[b]
+		if err = buildBoard(board, false, true); err != nil {
 			return errors.New(gclog.Printf(gclog.LErrorLog,
 				"Error building /%s/: %s", board.Dir, err.Error()))
 		}
@@ -282,18 +285,13 @@ func BuildCatalog(boardID int) string {
 			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
 	}
 
-	var threadInterfaces []interface{}
-	for _, thread := range threadOPs {
-		threadInterfaces = append(threadInterfaces, thread)
-	}
-
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
 		"boards":       gcsql.AllBoards,
 		"webroot":      criticalCfg.WebRoot,
 		"board":        board,
 		"board_config": config.GetBoardConfig(board.Dir),
 		"sections":     gcsql.AllSections,
-		"threads":      threadInterfaces,
+		"threads":      threadOPs,
 	}, catalogFile, "text/html"); err != nil {
 		return gclog.Printf(gclog.LErrorLog,
 			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"

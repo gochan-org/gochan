@@ -85,7 +85,7 @@ func main() {
 	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
 	defer gcsql.Close()
 
-	err := migrator.Init(options)
+	err := migrator.Init(&options)
 	if err != nil {
 		gclog.Printf(fatalLogFlags,
 			"Unable to initialize %s migrator: %s\n", options.ChanType, err.Error())
