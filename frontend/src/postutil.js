@@ -100,26 +100,22 @@ function expandPost(e) {
 		$next.remove();
 		return;
 	}
-	let url = e.target.href
-	let urlArr = postrefRE.exec(url);
-	if(urlArr == null) return; // not actually a link to a post, abort
-	let postBoard = urlArr[1];
-	let postOP = urlArr[2];
-	let postID = urlArr[4]?urlArr[4]:urlArr[2];
+	let href = e.target.href
+	let hrefArr = postrefRE.exec(href);
+	if(hrefArr == null) return; // not actually a link to a post, abort
+	let postID = hrefArr[4]?hrefArr[4]:hrefArr[2];
 
-	let pageThread = getPageThread();
-	let $post = null;
-	
-	if(pageThread.board == postBoard && pageThread.op == postOP) {
-		$post = $(`div#op${postID}, div#reply${postID}`).first();
-		if($post.length < 1) return; // post not on this page.
+	let $post = $(`div#op${postID}, div#reply${postID}`).first();
+	if($post.length > 0) {
 		$preview = createPostPreview(e, $post, e.type == "click");
 		if(e.type == "mouseenter") {
 			$hoverPreview = $preview.insertAfter(e.target);
 			$(document.body).on("mousemove", previewMoveHandler);
 		}
-	} else if(e.type == "click") {
-		$.get(e.target.href, data => {
+		return
+	}
+	if(e.type == "click") {
+		$.get(href, data => {
 			$post = $(data).find(`div#op${postID}, div#reply${postID}`).first();
 			if($post.length < 1) return; // post not on this page.
 			createPostPreview(e, $post, true);
