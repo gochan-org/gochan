@@ -4,7 +4,7 @@ import {test, expect, jest} from "@jest/globals";
 import $ from "jquery";
 import "./inittests";
 
-import { applyBBCode, handleKeydown } from "../src/boardevents";
+import { applyBBCode, handleKeydown } from "../js/boardevents";
 
 document.documentElement.innerHTML = simpleHTML;
 
