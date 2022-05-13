@@ -31,8 +31,7 @@ export function getUploadPostID(upload, container) {
 	// if container, upload is div.upload-container
 	// otherwise it's img or video
 	let jqu = container? $(upload) : $(upload).parent();
-	if(insideOP(jqu)) return jqu.siblings().eq(4).text();
-	else return jqu.siblings().eq(3).text();
+	return insideOP(jqu) ? jqu.siblings().eq(4).text() : jqu.siblings().eq(3).text();
 }
 
 export function currentBoard() {
@@ -131,11 +130,7 @@ export function initPostPreviews($post = null) {
 	doClickPreview = getBooleanStorageVal("enablepostclick", true);
 	doHoverPreview = getBooleanStorageVal("enableposthover", false);
 	let $refs = null;
-	if($post == null) {
-		$refs = $("a.postref");
-	} else {
-		$refs = $post.find("a.postref");
-	}
+	$refs = $post == null ? $("a.postref") : $post.find("a.postref");
 
 	if(doClickPreview) {
 		$refs.on("click", expandPost);
