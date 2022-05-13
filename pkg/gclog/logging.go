@@ -1,15 +1,14 @@
 package gclog
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"os"
-	"runtime"
-	"time"
+
+	"github.com/gochan-org/gzlog"
 )
 
 const (
+	logMaxSize   = 1000000 // 1 MB (TODO: make this configurable)
 	logTimeFmt   = "2006/01/02 15:04:05 "
 	logFileFlags = os.O_APPEND | os.O_CREATE | os.O_RDWR
 	// LAccessLog should be used for incoming requests
@@ -25,35 +24,30 @@ const (
 )
 
 var (
-	accessFile *os.File
-	errorFile  *os.File
-	staffFile  *os.File
-	debugLog   bool
+	accessLog *gzlog.GzLog
+	errorLog  *gzlog.GzLog
+	staffLog  *gzlog.GzLog
+	debugLog  bool
 )
 
-func selectLogs(flags int) []*os.File {
-	var logs []*os.File
-	if flags&LAccessLog > 0 {
-		logs = append(logs, accessFile)
-	}
-	if flags&LErrorLog > 0 {
-		logs = append(logs, errorFile)
-	}
-	if flags&LStaffLog > 0 {
-		logs = append(logs, staffFile)
-	}
-	if (flags&LStdLog > 0) || debugLog {
-		logs = append(logs, os.Stdout)
-	}
-	return logs
+func wantStdout(flags int) bool {
+	return debugLog || flags&LStdLog > 0
 }
 
-func getPrefix() string {
-	prefix := time.Now().Format(logTimeFmt)
-	_, file, line, _ := runtime.Caller(2)
-	prefix += fmt.Sprint(file, ":", line, ": ")
-
-	return prefix
+// selectLogs returns an array of GzLogs that we should loop through given
+// the flags passed to it
+func selectLogs(flags int) []*gzlog.GzLog {
+	var logs []*gzlog.GzLog
+	if flags&LAccessLog > 0 {
+		logs = append(logs, accessLog)
+	}
+	if flags&LErrorLog > 0 {
+		logs = append(logs, errorLog)
+	}
+	if flags&LStaffLog > 0 {
+		logs = append(logs, staffLog)
+	}
+	return logs
 }
 
 // Print is comparable to log.Print but takes binary flags
@@ -61,11 +55,11 @@ func Print(flags int, v ...interface{}) string {
 	str := fmt.Sprint(v...)
 	logs := selectLogs(flags)
 	for _, l := range logs {
-		if l == os.Stdout {
-			io.WriteString(l, str+"\n")
-		} else {
-			io.WriteString(l, getPrefix()+str+"\n")
-		}
+		l.Print(v...)
+	}
+	if wantStdout(flags) {
+		fmt.Print(v...)
+		fmt.Println()
 	}
 	if flags&LFatal > 0 {
 		os.Exit(1)
@@ -78,11 +72,10 @@ func Printf(flags int, format string, v ...interface{}) string {
 	str := fmt.Sprintf(format, v...)
 	logs := selectLogs(flags)
 	for _, l := range logs {
-		if l == os.Stdout {
-			io.WriteString(l, str+"\n")
-		} else {
-			io.WriteString(l, getPrefix()+str+"\n")
-		}
+		l.Printf(format, v...)
+	}
+	if wantStdout(flags) {
+		fmt.Printf(format+"\n", v...)
 	}
 	if flags&LFatal > 0 {
 		os.Exit(1)
@@ -95,11 +88,10 @@ func Println(flags int, v ...interface{}) string {
 	str := fmt.Sprintln(v...)
 	logs := selectLogs(flags)
 	for _, l := range logs {
-		if l == os.Stdout {
-			io.WriteString(l, str)
-		} else {
-			io.WriteString(l, getPrefix()+str)
-		}
+		l.Println(v...)
+	}
+	if wantStdout(flags) {
+		fmt.Println(v...)
 	}
 	if flags&LFatal > 0 {
 		os.Exit(1)
@@ -107,32 +99,32 @@ func Println(flags int, v ...interface{}) string {
 	return str[:len(str)-1]
 }
 
-// Close closes the log file handles
+// Close closes the log files
 func Close() {
-	if accessFile != nil {
-		accessFile.Close()
+	if accessLog != nil {
+		accessLog.Close()
 	}
-	if errorFile != nil {
-		errorFile.Close()
+	if errorLog != nil {
+		errorLog.Close()
 	}
-	if staffFile != nil {
-		staffFile.Close()
+	if staffLog != nil {
+		staffLog.Close()
 	}
 }
 
 // InitLogs initializes the log files to be used by gochan
-func InitLogs(accessLogPath, errorLogPath, staffLogPath string, debugMode bool) error {
+func InitLogs(accessLogBasePath, errorLogBasePath, staffLogBasePath string, debugMode bool) error {
 	debugLog = debugMode
 	var err error
-	if accessFile, err = os.OpenFile(accessLogPath, logFileFlags, 0777); err != nil {
-		return errors.New("Error loading " + accessLogPath + ": " + err.Error())
-	}
-	if errorFile, err = os.OpenFile(errorLogPath, logFileFlags, 0777); err != nil {
-		return errors.New("Error loading " + errorLogPath + ": " + err.Error())
-	}
-	if staffFile, err = os.OpenFile(staffLogPath, logFileFlags, 0777); err != nil {
-		return errors.New("Error loading " + staffLogPath + ": " + err.Error())
 
+	if accessLog, err = gzlog.OpenFile(accessLogBasePath, logMaxSize, 0640); err != nil {
+		return err
+	}
+	if errorLog, err = gzlog.OpenFile(errorLogBasePath, logMaxSize, 0640); err != nil {
+		return err
+	}
+	if staffLog, err = gzlog.OpenFile(staffLogBasePath, logMaxSize, 0640); err != nil {
+		return err
 	}
 	return nil
 }

@@ -13,7 +13,7 @@ func TestGochanLog(t *testing.T) {
 		}
 	}
 
-	err = InitLogs("./logtest/access.log", "./logtest/error.log", "./logtest/staff.log", true)
+	err = InitLogs("./logtest/access", "./logtest/error", "./logtest/staff", true)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

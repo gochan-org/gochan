@@ -7,6 +7,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/gochan-org/gzlog v1.0.2
 	github.com/lib/pq v1.10.2
 	github.com/mojocn/base64Captcha v1.3.4
 	github.com/tdewolff/minify v2.3.6+incompatible
