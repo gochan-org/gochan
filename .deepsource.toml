@@ -8,6 +8,11 @@ exclude_patterns = [
   "sql/preapril2020migration/**"
 ]
 
+test_patterns = [
+  "frontend/tests/*.test.js",
+  "**/*_test.go"
+]
+
 [[analyzers]]
 name = "javascript"
 enabled = true
