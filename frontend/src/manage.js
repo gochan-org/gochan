@@ -104,15 +104,11 @@ export function banSelectedPost() {
  * @param {StaffInfo} action
  */
 function menuItem(action, isCategory = false) {
-	if(isCategory) {
-		return $("<div/>").append($("<b/>").text(action));
-	} else {
-		return $("<div/>").append(
+	return isCategory ? $("<div/>").append($("<b/>").text(action)) : $("<div/>").append(
 			$("<a/>").prop({
 				href: `${webroot}manage?action=${action.id}`
 			}).text(action.title)
 		);
-	}
 }
 
 function getAction(id) {
