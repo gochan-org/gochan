@@ -15,11 +15,11 @@ Demo installation: https://gochan.org
 	1. If you aren't using a distro with systemd, you can start a screen session and run `/path/to/gochan`
 5. Go to http://[gochan url]/manage?action=staff, log in (default username/password is admin/password), and create a new admin user (and any other staff users as necessary). Then delete the admin user for security.
 
-## Configuration
-See [config.md](config.md)
-
 ## Installation using Docker
 See [`docker/README.md`](docker/README.md)
+
+## Configuration
+See [config.md](config.md)
 
 ## Migration
 <s>If you run gochan and get a message telling you your database is out of data, please run gochan-migration. If this does not work, please contact the developers.</s>
@@ -41,13 +41,10 @@ gochan-migration has been a gargantuan time sink and has wasted a lot of time th
 5. (Optional) Change go extention configs. Examples: save all files on start debugging
 6. Press F5 or "Start Debugging" to debug.
 
-# Theme development
-See [`sass/README.md`](sass/README.md) for information on working with Sass and stylesheets.
+## Frontend development - (S)CSS or JavaScript
+See [`frontend/README.md`](frontend/README.md) for information on working with Sass and developing gochan's JavaScript frontend.
 
-# Javascript development
-See [`frontend/README.md`](frontend/README.md) for information about developing gochan's JavaScript frontend.
-
-# Development
+## Backend development
 
 ## Style guide
 * For Go source, follow the standard Go [style guide](https://github.com/golang/go/wiki/CodeReviewComments).
@@ -65,14 +62,12 @@ All features that are to be realised for the near future are found in the issues
 ### Lower priority
 * Improve moderation tools heavily
 * Rework any legacy structs that uses comma separated fields to use a slice instead.
-* Remove all references/code related to sqlite
+* Readd sqlite support
 * RSS feeds from boards/specific threads/specific usernames+tripcodes (such as newsanon)
 * Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclical thread.
 
 ### Later down the line
-* Move frontend to its own git to allow easier frontend swapping
-* API support for existing chan browing phone apps
-* Social credit system to deal with tor/spam posters in a better way
+* Improve API support for existing chan browing phone apps
 * Better image fingerpringing and banning system (as opposed to a hash)
 
 ### Possible experimental features:

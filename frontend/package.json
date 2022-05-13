@@ -3,20 +3,23 @@
   "version": "3.0.0",
   "description": "",
   "type": "module",
-  "source": "src/gochan.js",
+  "source": "js/gochan.js",
   "main": "../html/js/gochan.js",
   "targets": {
     "frontend": {
-      "source": "src/gochan.js",
+      "source": "js/gochan.js",
       "distDir": "../html/js/"
     }
   },
   "browserslist": "> 0.5%, last 2 versions, not dead",
   "private": true,
   "scripts": {
-    "build": "parcel build --no-cache",
-    "watch": "parcel watch",
-    "test": "jest --verbose"
+    "build-js": "parcel build --no-cache",
+    "watch-js": "parcel watch",
+    "test": "jest --verbose",
+    "build-sass": "sass --no-source-map sass:../html/css",
+    "minify-sass": "sass --no-source-map sass:../html/css",
+    "watch-sass": "sass --watch sass:../html/css"
   },
   "author": "Eggbertx",
   "license": "BSD-2-Clause",
@@ -32,6 +35,7 @@
     "babel-jest": "^27.5.1",
     "jest": "^27.4.7",
     "parcel": "^2.4.0",
+    "sass": "^1.51.0",
     "yargs-parser": ">=5.0.0-security.0"
   }
 }

@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 
-# This script replaces both the Makefile and build.ps1 and can be used as
-# a simple cross-platform build, installation, and release packaging multitool
+"""
+Gochan build/install/maintenance script
+For a list of commands, run 
+    python3 build.py --help
+For information on a specific command, run
+    python3 build.py <command> --help
+See README.md for more info
+"""
 
 import argparse
 import errno
@@ -348,9 +354,9 @@ def js(watch=False):
 	delete("html/js/gochan.js.map")
 	npm_cmd = "npm --prefix frontend/ run"
 	if watch:
-		npm_cmd += " watch"
+		npm_cmd += " watch-js"
 	else:
-		npm_cmd += " build"
+		npm_cmd += " build-js"
 
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
@@ -382,18 +388,16 @@ def release(goos):
 
 
 def sass(minify=False, watch=False):
-	sass_cmd = "sass "
-	if minify:
-		sass_cmd += "--style compressed "
-	sass_cmd += "--no-source-map "
+	npm_cmd = "npm --prefix frontend/ run"
 	if watch:
-		sass_cmd += "--watch "
-	sass_cmd += "sass:html/css"
-	status = run_cmd(sass_cmd, realtime=True, print_command=True)[1]
+		npm_cmd += " watch-sass"
+	else:
+		npm_cmd += " build-sass"
+
+	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
 		print("Failed running sass with status", status)
 		sys.exit(status)
-
 
 def test():
 	pkgs = os.listdir("pkg")
@@ -424,7 +428,7 @@ if __name__ == "__main__":
 	if action == "build":
 		parser.add_argument(
 			"--debug",
-			help="build gochan and gochan-frontend with debugging symbols",
+			help="build gochan and gochan-migrate with debugging symbols",
 			action="store_true")
 		args = parser.parse_args()
 		build(args.debug)
