@@ -12,11 +12,21 @@ import (
 const (
 	versionStr = `return _GOCHAN_VERSION
 `
+	structPassingStr = `print(string.format("Receiving post from %q", post.Name))
+print(string.format("Message before changing: %q", post.MessageText))
+post.MessageText = "Message modified by a plugin\n"
+post.MessageHTML = "Message modified by a plugin<br />"
+print(string.format("Modified message text: %q", post.MessageText))
+`
 )
 
-func TestVersionFunction(t *testing.T) {
+func initPluginTests() {
 	config.SetVersion("3.1")
 	initLua()
+}
+
+func TestVersionFunction(t *testing.T) {
+	initPluginTests()
 	err := lState.DoString(versionStr)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -28,7 +38,7 @@ func TestVersionFunction(t *testing.T) {
 }
 
 func TestStructPassing(t *testing.T) {
-	initLua()
+	initPluginTests()
 	p := &gcsql.Post{
 		Name:        "Joe Poster",
 		Email:       "joeposter@gmail.com",
@@ -36,14 +46,12 @@ func TestStructPassing(t *testing.T) {
 		MessageText: "Message text\n",
 	}
 	lState.SetGlobal("post", luar.New(lState, p))
-	err := lState.DoString(`print(string.format("Receiving post from %q", post.Name))
-print(string.format("Message before changing: %q", post.MessageText))
-post.MessageText = "Modified message text\n"
-post.MessageHTML = "Modified message HTML<br />"
-print(string.format("Modified message text: %q", post.MessageText))
-`)
+	err := lState.DoString(structPassingStr)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 	t.Logf("Modified message text after Lua: %q", p.MessageText)
+	if p.MessageText != "Message modified by a plugin\n" || p.MessageHTML != "Message modified by a plugin<br />" {
+		t.Fatal("message was not properly modified by plugin")
+	}
 }
