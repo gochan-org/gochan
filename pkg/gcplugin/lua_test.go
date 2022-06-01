@@ -35,13 +35,9 @@ func TestStructPassing(t *testing.T) {
 		MessageHTML: "Message test<br />",
 		MessageText: "Message text\n",
 	}
-	uData := lState.NewUserData()
-	uData.Value = p
 	lState.SetGlobal("post", luar.New(lState, p))
-	err := lState.DoString(`print("Receiving post from " .. post["Name"])`)
-
+	err := lState.DoString(`print(string.format("Receiving post from %q", post.Name))`)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-
 }
