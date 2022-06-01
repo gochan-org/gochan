@@ -10,6 +10,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcplugin"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/posting"
@@ -36,6 +37,11 @@ func main() {
 
 	systemCritical := config.GetSystemCriticalConfig()
 
+	err := gcplugin.LoadPlugins(systemCritical.Plugins)
+	if err != nil {
+		gclog.Println(stdFatal|gclog.LErrorLog, "Failed loading plugins:", err.Error())
+	}
+
 	gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
@@ -45,7 +51,7 @@ func main() {
 
 	posting.InitCaptcha()
 	if err := gctemplates.InitTemplates(); err != nil {
-		gclog.Printf(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal, err.Error())
+		gclog.Printf(stdFatal|gclog.LErrorLog, err.Error())
 	}
 
 	sc := make(chan os.Signal, 1)

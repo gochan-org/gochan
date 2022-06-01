@@ -272,6 +272,7 @@ type SystemCriticalConfig struct {
 	DocumentRoot string `critical:"true"`
 	TemplateDir  string `critical:"true"`
 	LogDir       string `critical:"true"`
+	Plugins      []string
 
 	SiteHeaderURL string
 	WebRoot       string `description:"The HTTP root appearing in the browser (e.g. '/', 'https://yoursite.net/', etc) that all internal links start with"`
@@ -402,4 +403,12 @@ func GetBoardConfig(board string) *BoardConfig {
 
 func GetVersion() *GochanVersion {
 	return cfg.Version
+}
+
+// SetVersion should (in most cases) only be used for tests, where a config file wouldn't be loaded
+func SetVersion(version string) {
+	if cfg == nil {
+		cfg = &GochanConfig{}
+		cfg.Version = ParseVersion(version)
+	}
 }
