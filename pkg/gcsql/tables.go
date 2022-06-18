@@ -278,6 +278,20 @@ type Post struct {
 	Stickied         bool          `json:"-"`
 	Locked           bool          `json:"-"`
 	Reviewed         bool          `json:"-"`
+
+	boardDir string
+}
+
+func (p *Post) GetBoardDir() (string, error) {
+	if p.boardDir != "" {
+		return p.boardDir, nil
+	}
+	const sql = `SELECT dir FROM DBPREFIXboards WHERE id = (
+		SELECT board_id FROM DBPREFIXthreads WHERE id = (
+			SELECT thread_id FROM DBPREFIXposts WHERE id = ? LIMIT 1) LIMIT 1)`
+
+	err := QueryRowSQL(sql, []interface{}{p.ParentID}, interfaceSlice(&p.boardDir))
+	return p.boardDir, err
 }
 
 func (p *Post) GetURL(includeDomain bool) string {

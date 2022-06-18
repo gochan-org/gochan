@@ -3,7 +3,9 @@ package posting
 import (
 	"errors"
 	"image"
+	"image/gif"
 	"math/rand"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -11,6 +13,7 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 func createImageThumbnail(imageObj image.Image, size string) image.Image {
@@ -109,4 +112,21 @@ func getThumbnailSize(w, h int, size string) (newWidth, newHeight int) {
 		newHeight = int(float32(h) * percent)
 	}
 	return
+}
+
+func numImageFrames(imgPath string) (int, error) {
+	ext := strings.ToLower(gcutil.GetFileExtension(imgPath))
+	if ext != "gif" {
+		return 1, nil
+	}
+	fi, err := os.Open(imgPath)
+	if err != nil {
+		return 0, err
+	}
+	defer fi.Close()
+	g, err := gif.DecodeAll(fi)
+	if err != nil {
+		return 0, err
+	}
+	return len(g.Image), nil
 }

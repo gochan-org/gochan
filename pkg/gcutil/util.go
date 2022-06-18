@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	// DefaultMaxAge is used for cookies that have an invalid or unset max age (default is 1 year)
+	// DefaultMaxAge is used for cookies that have an invalid or unset max age (default is 1 month)
 	DefaultMaxAge = 60 * 60 * 24 * 31
 )
 

@@ -342,7 +342,22 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					serverutil.ServeErrorPage(writer, err.Error())
 					return
 				}
-			} else if boardConfig.ThumbWidth >= post.ImageW && boardConfig.ThumbHeight >= post.ImageH {
+			}
+			shouldThumb := false
+			if boardConfig.ThumbWidth >= post.ImageW && boardConfig.ThumbHeight >= post.ImageH {
+				if ext == "gif" {
+					// upload is a GIF, check if it's animated and thumbnail it if it is
+					numFrames, err := numImageFrames(filePath)
+					if err != nil {
+						serverutil.ServeErrorPage(writer, err.Error())
+						return
+					}
+					if numFrames > 1 {
+						shouldThumb = true
+					}
+				}
+			}
+			if !shouldThumb {
 				// If image fits in thumbnail size, symlink thumbnail to original
 				post.ThumbW = img.Bounds().Max.X
 				post.ThumbH = img.Bounds().Max.Y
