@@ -37,7 +37,6 @@ const (
 func MakePost(writer http.ResponseWriter, request *http.Request) {
 	var maxMessageLength int
 	var post gcsql.Post
-	// domain := request.Host
 	var formName string
 	var nameCookie string
 	var formEmail string
@@ -49,8 +48,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
 		return
 	}
-	// fix new cookie domain for when you use a port number
-	// domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
@@ -296,11 +293,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 						post.Filesize = value
 					}
 				}
+				thumbType := "reply"
 				if post.ParentID == 0 {
-					post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "op")
-				} else {
-					post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
+					thumbType = "op"
 				}
+				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
 			}
 		} else {
 			// Attempt to load uploaded file with imaging library
@@ -323,11 +320,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			// Get image width and height, as well as thumbnail width and height
 			post.ImageW = img.Bounds().Max.X
 			post.ImageH = img.Bounds().Max.Y
+			thumbType := "reply"
 			if post.ParentID == 0 {
-				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "op")
-			} else {
-				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, "reply")
+				thumbType = "op"
 			}
+			post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
 
 			gclog.Printf(gclog.LAccessLog, "Receiving post with image: %q from %s, referrer: %s",
 				handler.Filename, post.IP, request.Referer())
@@ -335,7 +332,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			if request.FormValue("spoiler") == "on" {
 				// If spoiler is enabled, symlink thumbnail to spoiler image
 				if _, err := os.Stat(path.Join(systemCritical.DocumentRoot, "spoiler.png")); err != nil {
-					serverutil.ServeErrorPage(writer, "missing /spoiler.png")
+					serverutil.ServeErrorPage(writer, "missing spoiler.png")
 					return
 				}
 				if err = syscall.Symlink(path.Join(systemCritical.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
@@ -343,47 +340,44 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					return
 				}
 			}
-			shouldThumb := false
-			if boardConfig.ThumbWidth >= post.ImageW && boardConfig.ThumbHeight >= post.ImageH {
-				if ext == "gif" {
-					// upload is a GIF, check if it's animated and thumbnail it if it is
-					numFrames, err := numImageFrames(filePath)
-					if err != nil {
-						serverutil.ServeErrorPage(writer, err.Error())
-						return
-					}
-					if numFrames > 1 {
-						shouldThumb = true
-					}
-				}
-			}
-			if !shouldThumb {
-				// If image fits in thumbnail size, symlink thumbnail to original
-				post.ThumbW = img.Bounds().Max.X
-				post.ThumbH = img.Bounds().Max.Y
-				if err := syscall.Symlink(filePath, thumbPath); err != nil {
-					serverutil.ServeErrorPage(writer, err.Error())
-					return
-				}
-			} else {
+
+			shouldThumb := shouldCreateThumbnail(filePath, post.ImageW, post.ImageH, post.ThumbW, post.ThumbH)
+			if shouldThumb {
 				var thumbnail image.Image
 				var catalogThumbnail image.Image
 				if post.ParentID == 0 {
 					// If this is a new thread, generate thumbnail and catalog thumbnail
-					thumbnail = createImageThumbnail(img, "op")
-					catalogThumbnail = createImageThumbnail(img, "catalog")
+					thumbnail = createImageThumbnail(img, boardDir, "op")
+					catalogThumbnail = createImageThumbnail(img, boardDir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
 						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 							"Couldn't generate catalog thumbnail: ", err.Error()))
 						return
 					}
 				} else {
-					thumbnail = createImageThumbnail(img, "reply")
+					thumbnail = createImageThumbnail(img, boardDir, "reply")
 				}
 				if err = imaging.Save(thumbnail, thumbPath); err != nil {
 					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 						"Couldn't save thumbnail: ", err.Error()))
 					return
+				}
+			} else {
+				// If image fits in thumbnail size, symlink thumbnail to original
+				post.ThumbW = img.Bounds().Max.X
+				post.ThumbH = img.Bounds().Max.Y
+				if err := syscall.Symlink(filePath, thumbPath); err != nil {
+					serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
+					return
+				}
+				if post.ParentID == 0 {
+					// Generate catalog thumbnail
+					catalogThumbnail := createImageThumbnail(img, boardDir, "catalog")
+					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
+						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+							"Couldn't generate catalog thumbnail: ", err.Error()))
+						return
+					}
 				}
 			}
 		}

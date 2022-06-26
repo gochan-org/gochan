@@ -7,39 +7,58 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-func createImageThumbnail(imageObj image.Image, size string) image.Image {
-	var thumbWidth int
-	var thumbHeight int
-	boardCfg := config.GetBoardConfig("")
-
-	switch size {
+func getBoardThumbnailSize(boardDir string, thumbType string) (int, int) {
+	boardCfg := config.GetBoardConfig(boardDir)
+	switch thumbType {
 	case "op":
-		thumbWidth = boardCfg.ThumbWidth
-		thumbHeight = boardCfg.ThumbHeight
+		return boardCfg.ThumbWidth, boardCfg.ThumbHeight
 	case "reply":
-		thumbWidth = boardCfg.ThumbWidthReply
-		thumbHeight = boardCfg.ThumbHeightReply
+		return boardCfg.ThumbWidthReply, boardCfg.ThumbHeightReply
 	case "catalog":
-		thumbWidth = boardCfg.ThumbWidthCatalog
-		thumbHeight = boardCfg.ThumbHeightCatalog
+		return boardCfg.ThumbWidth, boardCfg.ThumbHeight
 	}
+	// todo: use reflect package to print location to error log, because this shouldn't happen
+	return -1, -1
+}
+
+func createImageThumbnail(imageObj image.Image, boardDir string, thumbType string) image.Image {
+	thumbWidth, thumbHeight := getBoardThumbnailSize(boardDir, thumbType)
+
 	oldRect := imageObj.Bounds()
 	if thumbWidth >= oldRect.Max.X && thumbHeight >= oldRect.Max.Y {
 		return imageObj
 	}
 
-	thumbW, thumbH := getThumbnailSize(oldRect.Max.X, oldRect.Max.Y, size)
+	thumbW, thumbH := getThumbnailSize(oldRect.Max.X, oldRect.Max.Y, boardDir, thumbType)
 	imageObj = imaging.Resize(imageObj, thumbW, thumbH, imaging.CatmullRom) // resize to 600x400 px using CatmullRom cubic filter
 	return imageObj
+}
+
+func shouldCreateThumbnail(imgPath string, imgWidth int, imgHeight int, thumbWidth int, thumbHeight int) bool {
+	ext := strings.ToLower(path.Ext(imgPath))
+	if ext == ".gif" {
+		numFrames, err := numImageFrames(imgPath)
+		if err != nil {
+			gclog.Printf(gclog.LErrorLog, "Error processing %q: %s", imgPath, err.Error())
+			return true
+		}
+		if numFrames > 1 {
+			return true
+		}
+	}
+
+	return imgWidth > thumbWidth || imgHeight > thumbHeight
 }
 
 func createVideoThumbnail(video, thumb string, size int) error {
@@ -83,33 +102,23 @@ func getNewFilename() string {
 }
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
-func getThumbnailSize(w, h int, size string) (newWidth, newHeight int) {
-	var thumbWidth int
-	var thumbHeight int
-	boardCfg := config.GetBoardConfig("")
-	switch {
-	case size == "op":
-		thumbWidth = boardCfg.ThumbWidth
-		thumbHeight = boardCfg.ThumbHeight
-	case size == "reply":
-		thumbWidth = boardCfg.ThumbWidthReply
-		thumbHeight = boardCfg.ThumbHeightReply
-	case size == "catalog":
-		thumbWidth = boardCfg.ThumbWidthCatalog
-		thumbHeight = boardCfg.ThumbHeightCatalog
-	}
-	if w == h {
+func getThumbnailSize(uploadWidth, uploadHeight int, boardDir string, thumbType string) (newWidth, newHeight int) {
+	thumbWidth, thumbHeight := getBoardThumbnailSize(boardDir, thumbType)
+	if uploadWidth < thumbWidth && uploadHeight < thumbHeight {
+		newWidth = uploadWidth
+		newHeight = uploadHeight
+	} else if uploadWidth == uploadHeight {
 		newWidth = thumbWidth
 		newHeight = thumbHeight
 	} else {
 		var percent float32
-		if w > h {
-			percent = float32(thumbWidth) / float32(w)
+		if uploadWidth > uploadHeight {
+			percent = float32(thumbWidth) / float32(uploadWidth)
 		} else {
-			percent = float32(thumbHeight) / float32(h)
+			percent = float32(thumbHeight) / float32(uploadHeight)
 		}
-		newWidth = int(float32(w) * percent)
-		newHeight = int(float32(h) * percent)
+		newWidth = int(float32(uploadWidth) * percent)
+		newHeight = int(float32(uploadHeight) * percent)
 	}
 	return
 }
