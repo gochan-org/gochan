@@ -3,14 +3,17 @@ import { getCookie } from "./cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
 import { getBooleanStorageVal } from "./storage";
 import { handleActions } from "./boardevents";
+import { isThreadWatched } from "./watcher";
 
 let doClickPreview = false;
 let doHoverPreview = false;
 let $hoverPreview = null;
 
-let threadRE = /^\d+/;
-let videoTestRE = /\.(mp4)|(webm)$/;
+const threadRE = /^\d+/;
+const videoTestRE = /\.(mp4)|(webm)$/;
 const postrefRE = /\/([^\s\/]+)\/res\/(\d+)\.html(#(\d+))?/;
+const idRe = /^((reply)|(op))(\d+)/;
+
 
 export function getPageThread() {
 	let arr = opRegex.exec(window.location.pathname);
@@ -35,11 +38,9 @@ export function getUploadPostID(upload, container) {
 }
 
 export function currentBoard() {
-	// may or may not actually return the board. For example, if you're at
-	// /manage?action=whatever, it will return "manage"
-	let splits = location.pathname.split("/");
-	if(splits.length > 1)
-		return splits[1];
+	let board = $("form#main-form input[type=hidden][name=board]").val();
+	if(typeof board == "string")
+		return board;
 	return "";
 }
 
@@ -55,14 +56,14 @@ export function currentThread() {
 	return thread;
 }
 
-export function hidePost(id) {
+/* export function hidePost(id) {
 	let posttext = $("div#"+id+".post .posttext");
 	if(posttext.length > 0) posttext.remove();
 	let fileinfo = $("div#"+id+".post .file-info")
 	if(fileinfo.length > 0) fileinfo.remove();
 	let postimg = $("div#"+id+".post img")
 	if(postimg.length > 0) postimg.remove();
-}
+} */
 
 export function insideOP(elem) {
 	return $(elem).parents("div.op-post").length > 0;
@@ -227,16 +228,17 @@ export function addPostDropdown($post) {
 	let $ddownMenu = $("<select />", {
 		class: "post-actions",
 		id: postID
-	}).append(
-		"<option disabled selected>Actions</option>",
-	);
+	}).append("<option disabled selected>Actions</option>");
 	if(isOP) {
-		$ddownMenu.append(
-			"<option>Watch thread</option>"
-		);
+		let threadID = idRe.exec(postID)[4];
+		if(isThreadWatched(threadID, currentBoard())) {
+			$ddownMenu.append("<option>Unwatch thread</option>");
+		} else {
+			$ddownMenu.append("<option>Watch thread</option>");
+		}
 	}
 	$ddownMenu.append(
-		`<option>Show/hide ${threadPost}</option>`,
+		// `<option>Show/hide ${threadPost}</option>`,
 		`<option>Report post</option>`,
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
@@ -298,3 +300,7 @@ export function deletePost(id, board, fileOnly) {
 	}, "Password");
 }
 window.deletePost = deletePost;
+
+export function getThreadJSON(threadID, board) {
+	return $.getJSON(`${webroot}${board}/res/${threadID}.json`);
+}

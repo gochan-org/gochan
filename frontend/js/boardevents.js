@@ -1,5 +1,5 @@
 import { currentBoard, deletePost, reportPost } from './postutil';
-import { watchThread } from "./watcher";
+import { unwatchThread, watchThread } from "./watcher";
 import { openQR } from "./qr";
 
 const idRe = /^((reply)|(op))(\d+)/;
@@ -62,14 +62,16 @@ export function handleActions(action, postIDStr) {
 	let board = currentBoard();
 	switch(action) {
 		case "Watch thread":
-			console.log(`Watching thread ${postID} on board /${board}/`);
-			watchThread(threadID, board);
+			watchThread(postID, board);
 			break;
-		case "Show/hide thread":
+		case "Unwatch thread":
+			unwatchThread(postID, board);
+			break;
+		/* case "Show/hide thread":
 		case "Show/hide post":
 			console.log(`Showing/hiding ${postID}`);
 			hidePost(postID);
-			break;
+			break; */
 		case "Report post":
 			reportPost(postID, board);
 			break;

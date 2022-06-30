@@ -9,7 +9,7 @@ import { prepareThumbnails, initPostPreviews, getPageThread, addPostDropdown } f
 import { initSettings } from "./settings";
 import { initTopBar, TopBarButton } from "./topbar";
 import { initQR } from "./qr";
-import { initWatcher, watchThread } from "./watcher";
+import { initWatcher } from "./watcher";
 import { getBooleanStorageVal, getStorageVal } from "./storage";
 
 let $watchedThreadsBtn = null;
