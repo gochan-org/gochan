@@ -1,18 +1,12 @@
-import { opRegex } from "./vars";
-import "jquery-ui-dist/jquery-ui";
-
 import { handleKeydown } from "./boardevents";
 import { initCookies } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";
-// import { notify } from './notifications';
 import { prepareThumbnails, initPostPreviews, getPageThread, addPostDropdown } from "./postutil";
 import { initSettings } from "./settings";
-import { initTopBar, TopBarButton } from "./topbar";
+import { initTopBar } from "./topbar";
 import { initQR } from "./qr";
 import { initWatcher } from "./watcher";
 import { getBooleanStorageVal, getStorageVal } from "./storage";
-
-let $watchedThreadsBtn = null;
 
 export function toTop() {
 	window.scrollTo(0,0);
@@ -48,10 +42,6 @@ $(() => {
 
 	let passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
-
-	// $watchedThreadsBtn = new TopBarButton("WT", () => {
-	// 	alert("Watched threads yet implemented");
-	// });
 
 	if(pageThread.board != "") {
 		prepareThumbnails();
