@@ -103,7 +103,7 @@ function expandPost(e) {
 		$next.remove();
 		return;
 	}
-	let href = e.target.href
+	let href = e.target.href;
 	let hrefArr = postrefRE.exec(href);
 	if(hrefArr == null) return; // not actually a link to a post, abort
 	let postID = hrefArr[4]?hrefArr[4]:hrefArr[2];
@@ -115,7 +115,7 @@ function expandPost(e) {
 			$hoverPreview = $preview.insertAfter(e.target);
 			$(document.body).on("mousemove", previewMoveHandler);
 		}
-		return
+		return;
 	}
 	if(e.type == "click") {
 		$.get(href, data => {
@@ -214,7 +214,7 @@ export function quote(e) {
 	} else if(msgbox.selectionStart || "0" == msgbox.selectionStart) {
 		let n = msgbox.selectionStart,
 		o = msgbox.selectionEnd;
-		msgbox.value = msgbox.value.substring(0, n) + ">>" + e + "\n" + msgbox.value.substring(o, msgbox.value.length)
+		msgbox.value = msgbox.value.substring(0, n) + ">>" + e + "\n" + msgbox.value.substring(o, msgbox.value.length);
 	} else msgbox.value += `>>${e}\n`;
 	window.scroll(0,msgbox.offsetTop - 48);
 }

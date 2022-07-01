@@ -60,7 +60,7 @@ export function applyBBCode(e) {
 export function handleActions(action, postIDStr) {
 	let idArr = idRe.exec(postIDStr);
 	if(!idArr) return;
-	let postID = idArr[4]
+	let postID = idArr[4];
 	let board = currentBoard();
 	switch(action) {
 		case "Watch thread":

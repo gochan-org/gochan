@@ -16,13 +16,13 @@ export function getBooleanStorageVal(key, defaultVal = false) {
 }
 
 export function getNumberStorageVal(key, defaultVal = 0) {
-	return Number.parseFloat(getStorageVal(key, defaultVal))
+	return Number.parseFloat(getStorageVal(key, defaultVal));
 }
 
 export function getJsonStorageVal(key, defaultVal) {
 	let val = defaultVal;
 	try {
-		val = JSON.parse(getStorageVal(key, defaultVal))
+		val = JSON.parse(getStorageVal(key, defaultVal));
 	} catch(e) {
 		val = defaultVal;
 	}

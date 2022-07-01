@@ -40,7 +40,7 @@ export function getWatchedThreads() {
 
 export function isThreadWatched(threadID, board) {
 	let watched = getJsonStorageVal("watched", {});
-	let threads = watched[board]
+	let threads = watched[board];
 	if(threads == undefined) return false;
 	for(const thread of threads) {
 		if(thread.id == threadID) return true;

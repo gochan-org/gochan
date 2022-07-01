@@ -92,7 +92,7 @@ export function initQR(pageThread) {
 	let pintopbar = getBooleanStorageVal("pintopbar", true);
 	if(pintopbar)
 		qrTop = $topbar.outerHeight() + 16;
-	let qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16})
+	let qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16});
 	if(!(qrPos.top > -1))
 		qrPos.top = qrTop;
 	if(!(qrPos.left > -1))

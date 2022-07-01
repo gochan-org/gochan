@@ -18,7 +18,7 @@ export function showLightBox(title, innerHTML) {
 
 function simpleLightbox(properties = {}, customCSS = {}, $elements = []) {
 	if(properties["class"] === undefined)
-		properties["class"] = "lightbox"
+		properties["class"] = "lightbox";
 	let defaultCSS = {
 		"display": "inline-block",
 		"top": "50%",
@@ -29,7 +29,7 @@ function simpleLightbox(properties = {}, customCSS = {}, $elements = []) {
 		"right": "auto",
 		"bottom": "auto"
 	};
-	for (const key in defaultCSS) {
+	for(const key in defaultCSS) {
 		if(customCSS[key] === undefined)
 			customCSS[key] = defaultCSS[key];
 	}

@@ -79,7 +79,7 @@ export async function getStaffInfo() {
 
 export async function isLoggedIn() {
 	return getStaffInfo().then(info => {
-		return info.ID > 0
+		return info.ID > 0;
 	});
 }
 
@@ -99,7 +99,7 @@ export function banSelectedPost() {
 			break;
 		}
 	}
-	window.location = `${webroot}manage?action=bans&dir=${boardDir}&postid=${postID}`
+	window.location = `${webroot}manage?action=bans&dir=${boardDir}&postid=${postID}`;
 }
 
 /**
@@ -115,7 +115,7 @@ function menuItem(action, isCategory = false) {
 }
 
 function getAction(id) {
-	for (const action of staffActions) {
+	for(const action of staffActions) {
 		if(action.id == id) {
 			return action;
 		}

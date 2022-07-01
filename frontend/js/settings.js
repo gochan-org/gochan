@@ -77,7 +77,7 @@ class BooleanSetting extends Setting {
 		return this.element.prop("checked");
 	}
 	setElementValue(newVal) {
-		this.element.prop({checked: newVal})
+		this.element.prop({checked: newVal});
 	}
 	getStorageValue() {
 		let val = super.getStorageValue();

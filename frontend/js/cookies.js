@@ -22,7 +22,7 @@ export function getCookie(name, defaultVal = "") {
 }
 
 export function getNumberCookie(name, defaultVal = "0") {
-	return parseFloat(getCookie(name, defaultVal))
+	return parseFloat(getCookie(name, defaultVal));
 }
 
 export function getBooleanCookie(name, defaultVal = "true") {
@@ -68,9 +68,9 @@ export function setCookie(name, value, expires, root) {
 		root = webroot;
 	let expiresStr = "";
 	if(expires !== undefined && expires !== "") {
-		expiresStr = ";expires="
+		expiresStr = ";expires=";
 		let d = new Date();
-		d.setTime(d.getTime() + 1000*60*60*24*expires)
+		d.setTime(d.getTime() + 1000*60*60*24*expires);
 		expiresStr += d.toUTCString();
 	}
 	document.cookie = `${name}=${value}${expiresStr};path=${root};sameSite=strict`;
