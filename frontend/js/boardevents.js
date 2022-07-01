@@ -1,3 +1,5 @@
+import $ from "jquery";
+
 import { currentBoard, deletePost, reportPost } from './postutil';
 import { unwatchThread, watchThread } from "./watcher";
 import { openQR } from "./qr";

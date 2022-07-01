@@ -1,4 +1,7 @@
+/* global webroot */
+
 import $ from 'jquery';
+
 import { alertLightbox } from "./lightbox";
 import { $topbar, TopBarButton } from './topbar';
 
@@ -45,7 +48,7 @@ export async function initStaff() {
 		success: result => {
 			staffActions = result;
 		},
-		error: (xhr, status, err) => {
+		error: () => {
 		}
 	}).then(getStaffInfo);
 }
@@ -166,7 +169,7 @@ export function createStaffMenu(rank = staffInfo.Rank) {
 	for(const action of adminActions) {
 		$staffMenu.append(menuItem(action));
 	}
-	$staffBtn = new TopBarButton("Staff", () => {
+	if($staffBtn === null) $staffBtn = new TopBarButton("Staff", () => {
 		let exists = $(document).find($staffMenu).length > 0;
 		if(exists)
 			$staffMenu.remove();

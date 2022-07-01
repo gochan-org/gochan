@@ -1,3 +1,5 @@
+import $ from "jquery";
+
 import { getBooleanStorageVal } from "./storage";
 
 /**
@@ -23,7 +25,8 @@ export class TopBarButton {
 			"id": title.toLowerCase()
 		}).text(title + "▼");
 		$topbar.append(this.button);
-		this.button.on("click", event => {
+		this.button.on("click", e => {
+			e.preventDefault();
 			this.buttonAction();
 			return false;
 		});

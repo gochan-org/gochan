@@ -1,18 +1,20 @@
-import $ from "jquery"
+/* global webroot */
+
+import $ from "jquery";
 
 const noteCloseTime = 4*1000; // 4 seconds
-const noteIcon = "/favicon.png";
+const noteIcon = webroot + "/favicon.png";
 
 function canNotify() {
 	return (location.protocol == "https:")
 		&& (typeof Notification !== "undefined");
 }
 
-export function notify(title, body, img) {
+export function notify(title, body, img = noteIcon) {
 	let n = new Notification(title, {
 		body: body,
 		image: img,
-		icon: img
+		icon: noteIcon
 	});
 	setTimeout(() => {
 		n.close();

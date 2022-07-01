@@ -1,3 +1,7 @@
+/* global webroot, defaultStyle, styles */
+
+import $ from "jquery";
+
 import { showLightBox } from "./lightbox";
 import { initTopBar, TopBarButton } from "./topbar";
 import { getStorageVal, setStorageVal } from "./storage";
@@ -90,7 +94,7 @@ class NumberSetting extends Setting {
 	}
 	getStorageValue() {
 		let val = Number.parseFloat(super.getStorageValue());
-		if(val == NaN)
+		if(isNaN(val))
 			val = this.defaultVal;
 		return val;
 	}
@@ -101,13 +105,13 @@ function createLightbox() {
 		`<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>`;
 	showLightBox("Settings", settingsHTML);
 	$("button#save-settings-button").on("click", () => {
-		settings.forEach((setting, key, map) => {
+		settings.forEach((setting, key) => {
 			setStorageVal(key, setting.getElementValue());
 			setting.onSave();
 		});
 	});
 	let $settingsTable = $("#settings-container table");
-	settings.forEach((setting, key, map) => {
+	settings.forEach((setting) => {
 		let $tr = $("<tr/>").appendTo($settingsTable);
 		$("<td/>").append($("<b/>").text(setting.title)).appendTo($tr);
 		$("<td/>").append(setting.element).appendTo($tr);

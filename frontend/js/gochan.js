@@ -1,3 +1,7 @@
+/* global webroot, defaultStyle */
+
+import "./vars";
+import $ from "jquery";
 import { handleKeydown } from "./boardevents";
 import { initCookies } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";

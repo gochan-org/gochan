@@ -1,3 +1,5 @@
+/* global webroot */
+
 import $ from "jquery";
 
 /**

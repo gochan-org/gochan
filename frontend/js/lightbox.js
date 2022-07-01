@@ -19,7 +19,7 @@ export function showLightBox(title, innerHTML) {
 function simpleLightbox(properties = {}, customCSS = {}, $elements = []) {
 	if(properties["class"] === undefined)
 		properties["class"] = "lightbox"
-	defaultCSS = {
+	let defaultCSS = {
 		"display": "inline-block",
 		"top": "50%",
 		"left": "50%",
@@ -35,7 +35,7 @@ function simpleLightbox(properties = {}, customCSS = {}, $elements = []) {
 	}
 
 	let $box = $("<div/>").prop(properties).css(customCSS).prependTo(document.body).append($elements);
-	let boxBg = $("<div />").prop({
+	$("<div />").prop({
 		class: "lightbox-bg"
 	}).on("click", function() {
 		removeLightbox(this);

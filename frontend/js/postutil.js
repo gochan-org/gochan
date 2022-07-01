@@ -1,4 +1,7 @@
-import { opRegex } from "./vars";
+/* global webroot */
+
+import $ from "jquery";
+
 import { getCookie } from "./cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
 import { getBooleanStorageVal } from "./storage";
@@ -11,9 +14,9 @@ let $hoverPreview = null;
 
 const threadRE = /^\d+/;
 const videoTestRE = /\.(mp4)|(webm)$/;
-const postrefRE = /\/([^\s\/]+)\/res\/(\d+)\.html(#(\d+))?/;
+const postrefRE = /\/([^\s/]+)\/res\/(\d+)\.html(#(\d+))?/;
 const idRe = /^((reply)|(op))(\d+)/;
-
+const opRegex = /(\d+)(p(\d)+)?.html$/;
 
 export function getPageThread() {
 	let arr = opRegex.exec(window.location.pathname);
@@ -107,7 +110,7 @@ function expandPost(e) {
 
 	let $post = $(`div#op${postID}, div#reply${postID}`).first();
 	if($post.length > 0) {
-		$preview = createPostPreview(e, $post, e.type == "click");
+		let $preview = createPostPreview(e, $post, e.type == "click");
 		if(e.type == "mouseenter") {
 			$hoverPreview = $preview.insertAfter(e.target);
 			$(document.body).on("mousemove", previewMoveHandler);
@@ -176,7 +179,7 @@ export function prepareThumbnails() {
 
 			fileInfoElement.append($("<a />")
 			.prop("href", "javascript:;")
-			.on("click", function(e) {
+			.on("click", function() {
 				video.remove();
 				thumb.show();
 				this.remove();
@@ -267,7 +270,7 @@ export function reportPost(id, board) {
 			if(errStr == undefined)
 				errStr = data.statusText;
 			alertLightbox(`Report failed: ${errStr}`, "Error");
-		}).done(data => {
+		}).done(() => {
 			alertLightbox("Report sent", "Success");
 		}, "json");
 	}, "Report post");

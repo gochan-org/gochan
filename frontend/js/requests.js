@@ -1,3 +1,5 @@
+/* global webroot */
+
 import { currentBoard, currentThread } from "./postutil";
 
 export function getBoardList() {
