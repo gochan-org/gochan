@@ -277,6 +277,23 @@ export function reportPost(id, board) {
 }
 window.reportPost = reportPost;
 
+function deletePostFile(id) {
+	let $elem = $(`div#op${id}.op-post`);
+	alertLightbox("File deleted", "Success");
+	// TODO: Replace this with a thing that replaces the image element with a File Deleted block
+	return;
+}
+
+function deletePostElement(id) {
+	let $elem = $(`div#op${id}.op-post`);
+	if($elem.length > 0) {
+		$elem.parent().next().remove(); // also removes the <hr> element after
+		$elem.parent().remove();
+	} else {
+		$(`div#replycontainer${id}`).remove();
+	}
+}
+
 export function deletePost(id, board, fileOnly) {
 	let cookiePass = getCookie("password");
 	promptLightbox(cookiePass, true, ($lb, password) => {
@@ -289,15 +306,27 @@ export function deletePost(id, board, fileOnly) {
 		};
 		xhrFields[`check${id}`] = "on";
 		if(fileOnly) {
-			xhrFields["fileonly"] = "on";
+			xhrFields.fileonly = "on";
 		}
 		$.post(webroot + "util", xhrFields).fail(data => {
-			alertLightbox(`Delete failed: ${data["error"]}`, "Error");
+			if(data !== "");
+				alertLightbox(`Delete failed: ${data.error}`, "Error");
 		}).done(data => {
-			if(data["error"] == undefined) {
-				alertLightbox(`${fileOnly?"File from post":"Post"} #${id} deleted`, "Success");
+			if(data.error == undefined || data == "") {
+				if(location.href.indexOf(`/${board}/res/${id}.html`) > -1) {
+					alertLightbox("Thread deleted", "Success");
+				} else if(fileOnly) {
+					deletePostFile(id);
+				} else {
+					deletePostElement(id);
+				}
 			} else {
-				alertLightbox(`Error deleting post #${id}: ${data["error"]}`, "Error");
+				if(data.boardid == 0 && data.postid == 0) {
+					alertLightbox(`Error deleting post #${id}: Post doesn't exist`, "Error");
+				} else if(data !== "") {
+					alertLightbox(`Error deleting post #${id}`, "Error");
+					console.log(data);
+				}
 			}
 		}, "json");
 	}, "Password");

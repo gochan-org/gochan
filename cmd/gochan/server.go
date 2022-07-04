@@ -445,7 +445,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			gclog.Printf(gclog.LAccessLog,
 				"Post #%d on boardid %d deleted by %s, file only: %t",
 				post.ID, post.BoardID, post.IP, fileOnly)
-			http.Redirect(writer, request, request.Referer(), http.StatusFound)
+			if !wantsJSON {
+				http.Redirect(writer, request, request.Referer(), http.StatusFound)
+			}
 		}
 	}
 }
