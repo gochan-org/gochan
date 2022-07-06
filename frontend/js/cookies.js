@@ -30,14 +30,11 @@ export function getBooleanCookie(name, defaultVal = "true") {
 }
 
 function randomPassword(len = 8) {
-	const printableStart = 33;
-	const printableEnd = 126;
+	const validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'*+-.^_`|~";
 	
 	let pass = "";
 	for(let p = 0; p < len; p++) {
-		pass += String.fromCharCode(
-			Math.floor(Math.random() * (printableEnd-printableStart+1)) + printableStart
-		);
+		pass += validChars[Math.floor(Math.random() * validChars.length)];
 	}
 	return pass;
 }
