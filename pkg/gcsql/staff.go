@@ -247,7 +247,7 @@ func getThreadID(postID int) (ID int, err error) {
 
 //GetPostPassword gets the password associated with a given post
 func GetPostPassword(postID int) (password string, err error) {
-	const sql = `SELECT password_checksum FROM DBPREFIXposts WHERE id = ?`
+	const sql = `SELECT password FROM DBPREFIXposts WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&password))
 	return password, err
 }
@@ -257,7 +257,7 @@ func GetPostPassword(postID int) (password string, err error) {
 // The code should be changed to reflect the new database design
 func UpdatePost(postID int, email, subject string, message template.HTML, messageRaw string) error {
 	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
-	_, err := ExecSQL(sql, email, subject, string(message), messageRaw)
+	_, err := ExecSQL(sql, email, subject, string(message), messageRaw, postID)
 	return err
 }
 

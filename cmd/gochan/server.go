@@ -318,6 +318,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		building.BuildBoards(false, boardid)
+		building.BuildFrontPage()
 		if request.FormValue("parentid") == "0" {
 			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
 		} else {
