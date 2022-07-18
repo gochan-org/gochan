@@ -253,7 +253,9 @@ var funcMap = template.FuncMap{
 		}
 		return board.Dir
 	},
-
+	"webPath": func(part ...string) string {
+		return config.WebPath(part...)
+	},
 	// Template convenience functions
 	"makeLoop": func(n int, offset int) []int {
 		loopArr := make([]int, n)

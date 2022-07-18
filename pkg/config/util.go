@@ -231,6 +231,11 @@ func fieldIsCritical(field string) bool {
 	return false
 }
 
+// WebPath returns an absolute path, starting at the web root (which is "/" by default)
+func WebPath(part ...string) string {
+	return path.Join(cfg.WebRoot, path.Join(part...))
+}
+
 // UpdateFromMap updates the configuration with the given key->values for use in things like the
 // config editor page and possibly others
 func UpdateFromMap(m map[string]interface{}, validate bool) error {

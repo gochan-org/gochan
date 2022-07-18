@@ -291,6 +291,8 @@ type SystemCriticalConfig struct {
 	TimeZone   int            `json:"-"`
 }
 
+// SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),
+// the first page to look for if a directory is requested, etc
 type SiteConfig struct {
 	FirstPage       []string
 	Username        string
@@ -314,6 +316,8 @@ type SiteConfig struct {
 	AkismetAPIKey   string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
 }
 
+// BoardConfig contains information about a specific board to be stored in /path/to/board/board.json
+// If a board doesn't have board.json, the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
 	InheritGlobalStyles bool     `description:"If checked, a board uses the global Styles array + the board config's styles (with duplicates removed)"`
 	Styles              []Style  `description:"List of styles (one per line) that should be accessed online at <SiteWebFolder>/css/<Style>"`
@@ -382,6 +386,9 @@ func WriteConfig() error {
 }
 
 // GetSystemCriticalConfig returns system-critical configuration options like listening IP
+// Unlike the other functions returning the sub-configs (GetSiteConfig, GetBoardConfig, etc),
+// GetSystemCriticalConfig returns the value instead of a pointer to it, because it is not usually
+// safe to edit while Gochan is running.
 func GetSystemCriticalConfig() SystemCriticalConfig {
 	return cfg.SystemCriticalConfig
 }
