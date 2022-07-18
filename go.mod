@@ -16,5 +16,5 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20220504180219-658193537a64
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
-	layeh.com/gopher-luar v1.0.10 // indirect
+	layeh.com/gopher-luar v1.0.10
 )
