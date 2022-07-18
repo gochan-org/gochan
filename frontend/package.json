@@ -27,7 +27,7 @@
   "license": "BSD-2-Clause",
   "dependencies": {
     "jquery": "^3.5.1",
-    "jquery-ui": "^1.13.1"
+    "jquery-ui": "^1.13.2"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.16.11",
