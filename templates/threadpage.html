@@ -33,7 +33,7 @@
 		<span id="boardmenu-bottom">
 			[<a href="{{$.webroot}}">home</a>]&nbsp;
 			[{{range $i, $boardlink := .boards -}}
-				{{if gt $i 0}}/{{end -}} <a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a>
+				{{if gt $i 0}}/{{end -}}&nbsp;<a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a>&nbsp;
 			{{- end}}]
 		</span>
 	</div>

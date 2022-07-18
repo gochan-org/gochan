@@ -107,9 +107,8 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 }
 
 func (s gochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	systemCritical := config.GetSystemCriticalConfig()
 	for name, namespaceFunction := range s.namespaces {
-		if request.URL.Path == systemCritical.WebRoot+name {
+		if request.URL.Path == config.WebPath(name) {
 			namespaceFunction(writer, request)
 			return
 		}
