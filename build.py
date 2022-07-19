@@ -13,6 +13,7 @@ import argparse
 import errno
 import os
 from os import path
+from pathlib import Path
 import shutil
 import subprocess
 import sys
@@ -119,6 +120,20 @@ def copy(source, dest):
 					mkdir(path.join(dest, root, dir))
 				for file in files:
 					shutil.copy(path.join(root, file), path.join(dest, root, file))
+
+def symlink(target, link):
+	"""Create symbolic link at `link` that points to `target`"""
+	targetinfo = pathinfo(target)
+	linkinfo = pathinfo(link)
+	if target == PATH_NOTHING:
+		raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), target)
+	if linkinfo != PATH_NOTHING:
+		delete(link)
+	elif linkinfo == PATH_DIR and targetinfo == PATH_FILE:
+		target = path.join(link, path.basename(target))
+	target = path.abspath(target)
+	print("Creating a symbolic link at", link, "pointing to", target)
+	Path(link).symlink_to(target)
 
 
 def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
@@ -241,7 +256,8 @@ def clean():
 
 
 def dependencies():
-	run_cmd("go get -v ", realtime=True, print_command=True)
+	print("Installing dependencies for gochan")
+	run_cmd("go get", realtime=True, print_command=True)
 
 
 def docker(option="guestdb", attached=False):
@@ -260,34 +276,43 @@ def docker(option="guestdb", attached=False):
 		sys.exit(1)
 
 
-def install(prefix="/usr", document_root="/srv/gochan", symlink=False, js_only=False, css_only=False, templates_only=False):
+def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=False, css_only=False, templates_only=False):
 	if gcos == "windows":
 		print("Installation is not currently supported for Windows, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
 	mkdir(document_root)
 	mkdir(path.join(prefix, "share/gochan"))
-	print("Creating symbolic links: ", symlink)
+	print("Creating symbolic links: ", symlinks)
 
 	start_dir = path.abspath(path.curdir)
 	done = False
 	if js_only is True:
 		# args contains --js, install the JavaScript files
 		os.chdir(path.join(start_dir,"html/"))
-		copy("js/", document_root)
+		if symlinks:
+			symlink("js", path.join(document_root, "js"))
+		else:
+			copy("js/", document_root)
 		os.chdir(start_dir)
 		done = True
 		print("JavaScript files installed")
 	if css_only is True:
 		# args contains --js, install the CSS files
 		os.chdir(path.join(start_dir,"html/"))
-		copy("css/", document_root)
+		if symlinks:
+			symlink("css/", path.join(document_root, "css"))
+		else:
+			copy("css/", document_root)
 		os.chdir(start_dir)
 		done = True
 		print("CSS files installed")
 	if templates_only is True:
 		# args contains --js, install the templates
 		os.chdir(start_dir)
-		copy("templates/", path.join(prefix, "share/gochan"))
+		if symlinks:
+			symlink("templates/", path.join(prefix, "share/gochan/templates"))
+		else:
+			copy("templates/", path.join(prefix, "share/gochan"))
 		mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		done = True
 		print("Templates installed")
@@ -314,12 +339,18 @@ def install(prefix="/usr", document_root="/srv/gochan", symlink=False, js_only=F
 	if path.exists(gochan_exe) is False:
 		build()
 	print("Installing", gochan_exe, "to", path.join(prefix, "bin", gochan_exe))
-	copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
+	if symlinks:
+		symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
+	else:
+		copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
 
 	if path.exists(migration_exe) is False:
 		build()
 	print("Installing ", migration_exe, "to", path.join(prefix, "bin", migration_exe))
-	copy(migration_exe, path.join(prefix, "bin", gochan_exe))
+	if symlinks:
+		symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
+	else:
+		copy(migration_exe, path.join(prefix, "bin", gochan_exe))
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
