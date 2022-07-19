@@ -258,7 +258,11 @@ export function addPostDropdown($post) {
 
 export function editPost(id, board) {
 	let cookiePass = getCookie("password");
-	alertLightbox("Not yet implemented", "Coming soon");
+	promptLightbox(cookiePass, true, () => {
+		$("input[type=checkbox]").prop("checked", false);
+		$(`input#check${id}`).prop("checked", true);
+		$("input[name=edit_btn]").trigger("click");
+	}, "Edit post");
 }
 
 export function reportPost(id, board) {
