@@ -17,18 +17,6 @@ import shutil
 import subprocess
 import sys
 
-gc_dependencies = (
-	"github.com/disintegration/imaging",
-	"github.com/nranchev/go-libGeoIP",
-	"github.com/go-sql-driver/mysql",
-	"github.com/lib/pq",
-	"golang.org/x/net/html",
-	"github.com/aquilax/tripcode",
-	"golang.org/x/crypto/bcrypt",
-	"github.com/frustra/bbcode",
-	"github.com/tdewolff/minify",
-	"github.com/mojocn/base64Captcha"
-)
 
 release_files = (
 	"html/banned.png",
@@ -253,8 +241,7 @@ def clean():
 
 
 def dependencies():
-	for dep in gc_dependencies:
-		run_cmd("go get -v " + dep, realtime=True, print_command=True)
+	run_cmd("go get -v ", realtime=True, print_command=True)
 
 
 def docker(option="guestdb", attached=False):
@@ -273,12 +260,13 @@ def docker(option="guestdb", attached=False):
 		sys.exit(1)
 
 
-def install(prefix="/usr", document_root="/srv/gochan", js_only=False, css_only=False, templates_only=False):
+def install(prefix="/usr", document_root="/srv/gochan", symlink=False, js_only=False, css_only=False, templates_only=False):
 	if gcos == "windows":
 		print("Installation is not currently supported for Windows, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
 	mkdir(document_root)
 	mkdir(path.join(prefix, "share/gochan"))
+	print("Creating symbolic links: ", symlink)
 
 	start_dir = path.abspath(path.curdir)
 	done = False
@@ -473,8 +461,13 @@ if __name__ == "__main__":
 			"--documentroot",
 			default="/srv/gochan",
 			help="install files in ./html/ to this directory to be requested by a browser")
+		parser.add_argument(
+			"--symlinks",
+			action="store_true",
+			help="create symbolic links instead of copying the files (may require admin/root privileges)"
+		)
 		args = parser.parse_args()
-		install(args.prefix, args.documentroot, args.js, args.css, args.templates)
+		install(args.prefix, args.documentroot, args.symlinks, args.js, args.css, args.templates)
 	elif action == "js":
 		parser.add_argument(
 			"--watch",
