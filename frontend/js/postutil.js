@@ -242,6 +242,7 @@ export function addPostDropdown($post) {
 	}
 	$ddownMenu.append(
 		// `<option>Show/hide ${threadPost}</option>`,
+		`<option>Edit post</option>`,
 		`<option>Report post</option>`,
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
@@ -253,6 +254,11 @@ export function addPostDropdown($post) {
 	if(hasUpload)
 		$ddownMenu.append(`<option>Delete file</option>`);
 	return $post;
+}
+
+export function editPost(id, board) {
+	let cookiePass = getCookie("password");
+	alertLightbox("Not yet implemented", "Coming soon");
 }
 
 export function reportPost(id, board) {

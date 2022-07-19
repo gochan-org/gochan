@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-import { currentBoard, deletePost, reportPost } from './postutil';
+import { currentBoard, deletePost, editPost, reportPost } from './postutil';
 import { unwatchThread, watchThread } from "./watcher";
 import { openQR } from "./qr";
 
@@ -74,6 +74,9 @@ export function handleActions(action, postIDStr) {
 			console.log(`Showing/hiding ${postID}`);
 			hidePost(postID);
 			break; */
+		case "Edit post":
+			editPost(postID, board)
+			break;
 		case "Report post":
 			reportPost(postID, board);
 			break;
