@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"html/template"
+	"regexp"
 	"strings"
 	"time"
 
@@ -382,6 +383,20 @@ func GetWordFilters() ([]WordFilter, error) {
 	return wfs, err
 }
 
+func GetBoardWordFilters(board string) ([]WordFilter, error) {
+	wfs, err := GetWordFilters()
+	if err != nil {
+		return wfs, err
+	}
+	var boardFilters []WordFilter
+	for _, wf := range wfs {
+		if wf.OnBoard(board) {
+			boardFilters = append(boardFilters, wf)
+		}
+	}
+	return boardFilters, nil
+}
+
 // BoardString returns a string representing the boards that this wordfilter applies to,
 // or "*" if the filter should be applied to posts on all boards
 func (wf *WordFilter) BoardsString() string {
@@ -409,6 +424,21 @@ func (wf *WordFilter) StaffName() string {
 		return "?"
 	}
 	return staff.Username
+}
+
+// Apply runs the current wordfilter on the given post, without checking the board or (re)building the post
+// It returns an error if it is a regular expression and regexp.Compile failed to parse it
+func (wf *WordFilter) Apply(p *Post) error {
+	if wf.IsRegex {
+		re, err := regexp.Compile(wf.Search)
+		if err != nil {
+			return err
+		}
+		p.MessageText = re.ReplaceAllString(p.MessageText, wf.ChangeTo)
+	} else {
+		p.MessageText = strings.Replace(p.MessageText, wf.Search, wf.ChangeTo, -1)
+	}
+	return nil
 }
 
 //getDatabaseVersion gets the version of the database, or an error if none or multiple exist
