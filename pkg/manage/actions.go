@@ -653,6 +653,37 @@ var actions = []Action{
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			managePageBuffer := bytes.NewBufferString("")
 			editIDstr := request.FormValue("edit")
+
+			submitBtn := request.FormValue("dowordfilter")
+			switch submitBtn {
+			case "Edit wordfilter":
+				regexCheckStr := request.FormValue("isregex")
+				if regexCheckStr == "on" {
+					regexCheckStr = "1"
+				} else {
+					regexCheckStr = "0"
+				}
+				_, err = gcsql.ExecSQL(`UPDATE DBPREFIXwordfilters
+					SET board_dirs = ?,
+					staff_note = ?,
+					search = ?,
+					is_regex = ?,
+					change_to = ?
+					WHERE id = ?`,
+					request.FormValue("boarddirs"),
+					request.FormValue("staffnote"),
+					request.FormValue("find"),
+					regexCheckStr,
+					request.FormValue("replace"),
+					editIDstr,
+				)
+			case "Create new wordfilter":
+
+			}
+			if err != nil {
+				return err, err
+			}
+
 			wordfilters, err := gcsql.GetWordFilters()
 			if err != nil {
 				return wordfilters, nil
