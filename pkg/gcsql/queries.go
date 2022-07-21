@@ -344,10 +344,31 @@ func CreateDefaultAdminIfNoStaff() error {
 	return err
 }
 
-func NewWordFilter() *WordFilter {
-	var wf *WordFilter
+// CreateWordFilter inserts the given wordfilter data into the database and returns a pointer to a new WordFilter struct
+func CreateWordFilter(from string, to string, isRegex bool, boards []string, staffID int, staffNote string) (*WordFilter, error) {
+	var err error
+	if isRegex {
+		_, err = regexp.Compile(from)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return wf
+	_, err = ExecSQL(`INSERT INTO DBPREFIXwordfilters
+		(board_dirs,staff_id,staff_note,search,is_regex,change_to)
+		VALUES(?,?,?,?,?,?)`, strings.Join(boards, ","), staffID, staffNote, from, isRegex, to)
+	if err != nil {
+		return nil, err
+	}
+	return &WordFilter{
+		BoardDirs: boards,
+		StaffID:   staffID,
+		StaffNote: staffNote,
+		IssuedAt:  time.Now(),
+		Search:    from,
+		IsRegex:   isRegex,
+		ChangeTo:  to,
+	}, err
 }
 
 // GetWordFilters gets a list of wordfilters from the database and returns an array of them and any errors
