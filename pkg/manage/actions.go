@@ -10,6 +10,7 @@ import (
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -675,10 +676,19 @@ var actions = []Action{
 					request.FormValue("find"),
 					regexCheckStr,
 					request.FormValue("replace"),
-					editIDstr,
-				)
+					editIDstr)
 			case "Create new wordfilter":
-
+				staff, err2 := getCurrentFullStaff(request)
+				if err2 != nil {
+					return err2, err2
+				}
+				_, err = gcsql.CreateWordFilter(
+					request.FormValue("find"),
+					request.FormValue("replace"),
+					request.FormValue("isregex") == "on",
+					strings.Split(request.FormValue("boarddirs"), ","),
+					staff.ID,
+					request.FormValue("staffnote"))
 			}
 			if err != nil {
 				return err, err

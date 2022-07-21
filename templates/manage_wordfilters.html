@@ -1,13 +1,15 @@
 <h2>{{with $.edit}}Edit filter{{else}}Create new{{end}}</h2>
-<form action="{{.webroot}}manage?action=wordfilters" method="POST">
-	{{with $.edit}}<input type="hidden" name="edit" value="{{$.edit.ID}}">{{end}}
+<form id="wordfilterform" action="{{.webroot}}manage?action=wordfilters{{with $.edit}}&edit={{$.edit.ID}}{{end}}" method="POST">
 	<table>
 	<tr><td>Search for:</td><td><input type="text" name="find" id="findfilter" value="{{with $.edit}}{{$.edit.Search}}{{end}}"/></td></tr>
 	<tr><td>Replace with:</td><td><input type="text" name="replace" id="replacefilter" value="{{with $.edit}}{{$.edit.ChangeTo}}{{end}}"/></td></tr>
 	<tr><td>Is regular expression:</td><td><input type="checkbox" name="isregex" id="isregex" {{with $.edit}}{{if $.edit.IsRegex}}checked="checked"{{end}}{{end}}/></td></tr>
 	<tr><td>Board dirs (ex: dir1,dir2. * for all):</td><td><input type="text" name="boarddirs" id="boarddirs" value="{{with $.edit}}{{$.edit.BoardsString}}{{else}}*{{end}}"/></td></tr>
 	<tr><td>Staff note</td><td><input type="text" name="staffnote" value="{{with $.edit}}{{$.edit.StaffNote}}{{end}}"/></td></tr>
-	<tr><td><input type="submit" name="dowordfilter" value="{{with $.edit}}Edit{{else}}Create new{{end}} wordfilter"/></td></tr>
+	<tr><td>
+		<input type="submit" name="dowordfilter" value="{{with $.edit}}Edit{{else}}Create new{{end}} wordfilter"/>
+		<input type="button" onclick="document.getElementById('wordfilterform').reset()" value="Reset"/>
+	</td></tr>
 	</table>
 </form>
 <hr/>
