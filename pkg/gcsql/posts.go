@@ -1,6 +1,14 @@
 package gcsql
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"path"
+	"time"
+
+	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil"
+)
 
 //SinceLastPost returns the seconds since the last post by the ip address that made this post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
@@ -100,4 +108,53 @@ func GetReplyFileCount(postID int) (int, error) {
 	var count int
 	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&count))
 	return count, err
+}
+
+func (p *Post) DeleteFiles(leaveDeletedBox bool) error {
+	board, boardWasFound, err := GetBoardFromPostID(p.ID)
+	if err != nil {
+		return err
+	}
+	if !boardWasFound {
+		return fmt.Errorf("could not find board for post %v", p.ID)
+	}
+	const filenameSQL = `SELECT filename FROM DBPREFIXfiles WHERE post_id = ?`
+	rows, err := QuerySQL(filenameSQL, p.ID)
+	if err != nil {
+		return err
+	}
+	var filenames []string
+	for rows.Next() {
+		var filename string
+		if err = rows.Scan(&filename); err != nil {
+			return err
+		}
+		filenames = append(filenames, filename)
+	}
+
+	systemCriticalCfg := config.GetSystemCriticalConfig()
+	//Remove files from disk
+	for _, filename := range filenames {
+		_, filenameBase, fileExt := gcutil.GetFileParts(filename)
+		thumbExt := fileExt
+		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
+			thumbExt = "jpg"
+		}
+		uploadPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/src/", filenameBase+"."+fileExt)
+		thumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"t."+thumbExt)
+		catalogThumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"c."+thumbExt)
+		os.Remove(uploadPath)
+		os.Remove(thumbPath)
+		os.Remove(catalogThumbPath)
+	}
+
+	var sqlStr string
+	if leaveDeletedBox {
+		// leave a "File Deleted" box
+		sqlStr = `UPDATE DBPREFIXfiles SET filename = 'deleted', original_filename = 'deleted' WHERE post_id = ?`
+	} else {
+		sqlStr = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
+	}
+	_, err = ExecSQL(sqlStr, p.ID)
+	return err
 }

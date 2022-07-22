@@ -144,7 +144,7 @@ a.upload-container {
   outline: none;
 }
 
-.upload {
+.upload, div.file-deleted-box {
   float: left;
   max-width: 100%;
   margin: 5px 10px 10px 0px;
@@ -155,10 +155,8 @@ div.file-deleted-box {
   height: 120px;
   border-style: dashed;
   border-width: 2px;
-  text-align: center;
   line-height: 120px;
   text-align: center;
-  margin: auto;
 }
 
 input[type=file] {

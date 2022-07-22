@@ -404,7 +404,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			if fileOnly {
 				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
-					if err = gcsql.DeleteFilesFromPost(post.ID); err != nil {
+					if err = post.DeleteFiles(true); err != nil {
 						if wantsJSON {
 							serverutil.ServeJSON(writer, map[string]interface{}{
 								"error":  err,
@@ -418,8 +418,15 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 				_board, _ := gcsql.GetBoardFromID(post.BoardID)
 				building.BuildBoardPages(&_board)
-				postBoard, _ := gcsql.GetSpecificPost(post.ID, true)
-				building.BuildThreadPages(&postBoard)
+
+				var opPost gcsql.Post
+				if post.ParentID > 0 {
+					// post is a reply, get the OP
+					opPost, _ = gcsql.GetSpecificPost(post.ParentID, true)
+				} else {
+					opPost = post
+				}
+				building.BuildThreadPages(&opPost)
 			} else {
 				// delete the post
 				if err = gcsql.DeletePost(post.ID, true); err != nil {

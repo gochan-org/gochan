@@ -2,14 +2,10 @@ package gcsql
 
 import (
 	"database/sql"
-	"fmt"
 	"html/template"
 	"net/http"
-	"os"
-	"path"
 	"time"
 
-	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -257,60 +253,16 @@ func GetPostPassword(postID int) (password string, err error) {
 // The code should be changed to reflect the new database design
 func UpdatePost(postID int, email, subject string, message template.HTML, messageRaw string) error {
 	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
-	_, err := ExecSQL(sql, email, subject, string(message), messageRaw, postID)
+	_, err := ExecSQL(sql, email, subject, string(message), messageRaw)
 	return err
 }
 
-//DeleteFilesFromPost deletes all files belonging to a given post
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design. Should be implemented to delete files individually
-func DeleteFilesFromPost(postID int) error {
-	board, boardWasFound, err := GetBoardFromPostID(postID)
-	if err != nil {
-		return err
+// DeleteFilesFromPost deletes all files belonging to a given post
+func DeleteFilesFromPost(postID int, leaveDeletedBox bool) error {
+	post := &Post{
+		ID: postID,
 	}
-	if !boardWasFound {
-		return fmt.Errorf("could not find board for post %v", postID)
-	}
-
-	//Get all filenames
-	const filenameSQL = `SELECT filename FROM DBPREFIXfiles WHERE post_id = ?`
-	rows, err := QuerySQL(filenameSQL, postID)
-	if err != nil {
-		return err
-	}
-	var filenames []string
-	for rows.Next() {
-		var filename string
-		if err = rows.Scan(&filename); err != nil {
-			return err
-		}
-		filenames = append(filenames, filename)
-	}
-
-	systemCriticalCfg := config.GetSystemCriticalConfig()
-
-	//Remove files from disk
-	for _, fileName := range filenames {
-		_, filenameBase, fileExt := gcutil.GetFileParts(fileName)
-
-		thumbExt := fileExt
-		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
-			thumbExt = "jpg"
-		}
-
-		uploadPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/src/", filenameBase+"."+fileExt)
-		thumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"t."+thumbExt)
-		catalogThumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"c."+thumbExt)
-
-		os.Remove(uploadPath)
-		os.Remove(thumbPath)
-		os.Remove(catalogThumbPath)
-	}
-
-	const removeFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
-	_, err = ExecSQL(removeFilesSQL, postID)
-	return err
+	return post.DeleteFiles(leaveDeletedBox)
 }
 
 //DeletePost deletes a post with a given ID
@@ -329,7 +281,7 @@ func DeletePost(postID int, checkIfTopPost bool) error {
 		}
 	}
 
-	DeleteFilesFromPost(postID)
+	DeleteFilesFromPost(postID, false)
 	const sql = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := ExecSQL(sql, postID)
 	return err
