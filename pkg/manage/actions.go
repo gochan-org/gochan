@@ -654,6 +654,23 @@ var actions = []Action{
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
 			managePageBuffer := bytes.NewBufferString("")
 			editIDstr := request.FormValue("edit")
+			deleteIDstr := request.FormValue("delete")
+			var staff *gcsql.Staff
+			if staff, err = getCurrentFullStaff(request); err != nil {
+				return err, err
+			}
+			if deleteIDstr != "" {
+				var result sql.Result
+				if result, err = gcsql.ExecSQL(`DELETE FROM DBPREFIXwordfilters WHERE id = ?`, deleteIDstr); err != nil {
+					return err, err
+				}
+				if numRows, _ := result.RowsAffected(); numRows < 1 {
+					err = invalidWordfilterID(deleteIDstr)
+					gclog.Println(gclog.LErrorLog|gclog.LStaffLog, err.Error())
+					return err, err
+				}
+				gclog.Printf(gclog.LStaffLog, "%s deleted wordfilter with id #%s", staff.Username, deleteIDstr)
+			}
 
 			submitBtn := request.FormValue("dowordfilter")
 			switch submitBtn {
@@ -678,10 +695,6 @@ var actions = []Action{
 					request.FormValue("replace"),
 					editIDstr)
 			case "Create new wordfilter":
-				staff, err2 := getCurrentFullStaff(request)
-				if err2 != nil {
-					return err2, err2
-				}
 				_, err = gcsql.CreateWordFilter(
 					request.FormValue("find"),
 					request.FormValue("replace"),

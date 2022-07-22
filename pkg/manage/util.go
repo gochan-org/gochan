@@ -2,6 +2,7 @@ package manage
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -189,4 +190,8 @@ func boardsRequestType(request *http.Request) (string, int, error) {
 		boardID, err = strconv.Atoi(boardIDstr)
 	}
 	return requestType, boardID, err
+}
+
+func invalidWordfilterID(id interface{}) error {
+	return fmt.Errorf("wordfilter with id %q does not exist", id)
 }
