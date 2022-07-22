@@ -9,6 +9,7 @@
 	<tr><td>
 		<input type="submit" name="dowordfilter" value="{{with $.edit}}Edit{{else}}Create new{{end}} wordfilter"/>
 		<input type="button" onclick="document.getElementById('wordfilterform').reset()" value="Reset"/>
+		{{with $.edit}}<input type="button" onclick="window.location='{{$.webroot}}manage?action=wordfilters'" value="Cancel"/>{{end}}
 	</td></tr>
 	</table>
 </form>
