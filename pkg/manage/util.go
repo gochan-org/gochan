@@ -134,11 +134,22 @@ func dashboardCallback(writer http.ResponseWriter, request *http.Request, wantsJ
 		return nil, err
 	}
 	rank := GetStaffRank(request)
+	rankString := ""
+	switch rank {
+	case AdminPerms:
+		rankString = "administrator"
+	case ModPerms:
+		rankString = "moderator"
+	case JanitorPerms:
+		rankString = "janitor"
+	}
+
 	availableActions := getAvailableActions(rank, true)
 	if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
 		map[string]interface{}{
 			"actions":       availableActions,
 			"rank":          rank,
+			"rankString":    rankString,
 			"announcements": announcements,
 			"boards":        gcsql.AllBoards,
 			"webroot":       config.GetSystemCriticalConfig().WebRoot,

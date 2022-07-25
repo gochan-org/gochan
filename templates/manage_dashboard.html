@@ -20,7 +20,7 @@
 	<i>No boards</i>
 {{end}}
 </fieldset><br />
-<fieldset><legend>Staff actions (role: administrator)</legend>
+<fieldset><legend>Staff actions (role: {{$.rankString}})</legend>
 	<ul>
 	{{range $a, $action := $.actions}}
 		{{if ne $action.Title "Dashboard"}}<li><a href="{{$.webroot}}manage?action={{$action.ID}}">{{$action.Title}}</a> </li>{{end}}
