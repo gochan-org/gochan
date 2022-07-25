@@ -159,13 +159,15 @@ export function createStaffMenu(rank = staffInfo.Rank) {
 	}
 	if(rank < 2) return $staffMenu;
 
-	$staffMenu.append(menuItem("Moderation", true));
+	if(modActions.length > 0)
+		$staffMenu.append(menuItem("Moderation", true));
 	for(const action of modActions) {
 		$staffMenu.append(menuItem(action));
 	}
 	if(rank < 3) return $staffMenu;
 
-	$staffMenu.append(menuItem("Administration", true));
+	if(adminActions.length > 0)
+		$staffMenu.append(menuItem("Administration", true));
 	for(const action of adminActions) {
 		$staffMenu.append(menuItem(action));
 	}
