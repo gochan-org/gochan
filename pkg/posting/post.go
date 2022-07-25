@@ -90,10 +90,17 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if maxMessageLength, err = gcsql.GetMaxMessageLength(post.BoardID); err != nil {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 			"Error getting board info: ", err.Error()))
+		return
 	}
 
 	if len(post.MessageText) > maxMessageLength {
 		serverutil.ServeErrorPage(writer, "Post body is too long")
+		return
+	}
+
+	if post.MessageText, err = ApplyWordFilters(post.MessageText, postBoard.Dir); err != nil {
+		serverutil.ServeErrorPage(writer, "Error formatting post: "+err.Error())
+		gclog.Print(gclog.LErrorLog, "Error applying wordfilters: ", err.Error())
 		return
 	}
 

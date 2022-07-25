@@ -67,6 +67,10 @@ func (mf *MessageFormatter) Compile(msg string, boardDir string) string {
 	return mf.bbCompiler.Compile(msg)
 }
 
+func ApplyWordFilters(message string, boardDir string) (string, error) {
+	return msgfmtr.ApplyWordFilters(message, boardDir)
+}
+
 func FormatMessage(message string, boardDir string) template.HTML {
 	message = msgfmtr.Compile(message, boardDir)
 	// prepare each line to be formatted

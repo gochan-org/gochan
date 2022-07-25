@@ -397,9 +397,7 @@ func GetWordFilters() ([]WordFilter, error) {
 		); err != nil {
 			return wfs, err
 		}
-		if dirsStr != "*" {
-			wf.BoardDirs = strings.Split(dirsStr, ",")
-		}
+		wf.BoardDirs = strings.Split(dirsStr, ",")
 		wfs = append(wfs, wf)
 	}
 	return wfs, err
@@ -422,7 +420,7 @@ func GetBoardWordFilters(board string) ([]WordFilter, error) {
 // BoardString returns a string representing the boards that this wordfilter applies to,
 // or "*" if the filter should be applied to posts on all boards
 func (wf *WordFilter) BoardsString() string {
-	if wf.BoardDirs == nil {
+	if len(wf.BoardDirs) == 0 {
 		return "*"
 	}
 	return strings.Join(wf.BoardDirs, ",")
@@ -433,7 +431,7 @@ func (wf *WordFilter) OnBoard(dir string) bool {
 		return true
 	}
 	for _, board := range wf.BoardDirs {
-		if dir == board {
+		if board == "*" || dir == board {
 			return true
 		}
 	}
