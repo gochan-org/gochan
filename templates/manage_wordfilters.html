@@ -15,6 +15,7 @@
 </form>
 <hr/>
 <h2>Wordfilters</h2>
+{{if eq 0 (len .wordfilters)}}<i>No wordfilters</i>{{else -}}
 <table width="100%" border="1">
 	<colgroup><col width="10%"><col width="10%"><col width="10%"><col width="5%"><col width="15%"><col width="10%"></colgroup>
 	<tr><th>Actions</th><th>Search</th><th>Replace with</th><th>Is regex</th><th>Dirs</th><th>Created by</th><th>Staff note</th></tr>
@@ -30,3 +31,4 @@
 	</tr>
 {{end -}}
 </table>
+{{- end}}
