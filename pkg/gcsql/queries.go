@@ -23,8 +23,9 @@ var (
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
 func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
-	const sql = `select posts.id, posts.message, posts.message_raw from DBPREFIXposts as posts
-	WHERE posts.is_deleted = FALSE`
+	const sql = `SELECT posts.id, posts.message, posts.message_raw, DBPREFIXboards.dir as dir
+	FROM DBPREFIXposts as posts, DBPREFIXboards
+	where posts.is_deleted = FALSE`
 	rows, err := QuerySQL(sql)
 	if err != nil {
 		return nil, err
@@ -33,7 +34,7 @@ func GetAllNondeletedMessageRaw() ([]MessagePostContainer, error) {
 	for rows.Next() {
 		var message MessagePostContainer
 		var formattedHTML template.HTML
-		if err = rows.Scan(&message.ID, &formattedHTML, &message.MessageRaw); err != nil {
+		if err = rows.Scan(&message.ID, &formattedHTML, &message.MessageRaw, &message.Board); err != nil {
 			return nil, err
 		}
 		message.Message = template.HTML(formattedHTML)
@@ -447,19 +448,19 @@ func (wf *WordFilter) StaffName() string {
 	return staff.Username
 }
 
-// Apply runs the current wordfilter on the given post, without checking the board or (re)building the post
+// Apply runs the current wordfilter on the given string, without checking the board or (re)building the post
 // It returns an error if it is a regular expression and regexp.Compile failed to parse it
-func (wf *WordFilter) Apply(p *Post) error {
+func (wf *WordFilter) Apply(message string) (string, error) {
 	if wf.IsRegex {
 		re, err := regexp.Compile(wf.Search)
 		if err != nil {
-			return err
+			return message, err
 		}
-		p.MessageText = re.ReplaceAllString(p.MessageText, wf.ChangeTo)
+		message = re.ReplaceAllString(message, wf.ChangeTo)
 	} else {
-		p.MessageText = strings.Replace(p.MessageText, wf.Search, wf.ChangeTo, -1)
+		message = strings.Replace(message, wf.Search, wf.ChangeTo, -1)
 	}
-	return nil
+	return message, nil
 }
 
 //getDatabaseVersion gets the version of the database, or an error if none or multiple exist

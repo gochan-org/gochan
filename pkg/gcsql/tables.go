@@ -386,6 +386,7 @@ type MessagePostContainer struct {
 	ID         int
 	MessageRaw string
 	Message    template.HTML
+	Board      string
 }
 
 // Deprecated. Struct was made for use with old database, deprecated since refactor of april 2020.

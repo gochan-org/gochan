@@ -311,7 +311,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		if err = gcsql.UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
-			posting.FormatMessage(request.FormValue("editmsg")), request.FormValue("editmsg")); err != nil {
+			posting.FormatMessage(request.FormValue("editmsg"), board.Dir), request.FormValue("editmsg")); err != nil {
 			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 				"Unable to edit post: ", err.Error()))
 			return

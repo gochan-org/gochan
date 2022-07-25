@@ -599,7 +599,7 @@ var actions = []Action{
 			}
 
 			for i := range messages {
-				messages[i].Message = posting.FormatMessage(messages[i].MessageRaw)
+				messages[i].Message = posting.FormatMessage(messages[i].MessageRaw, messages[i].Board)
 			}
 			if err = gcsql.SetFormattedInDatabase(messages); err != nil {
 				return "", err

@@ -32,9 +32,6 @@ type MessageFormatter struct {
 }
 
 func (mf *MessageFormatter) InitBBcode() {
-	if config.GetBoardConfig("").DisableBBcode {
-		return
-	}
 	mf.bbCompiler = bbcode.NewCompiler(true, true)
 	mf.bbCompiler.SetTag("center", nil)
 	mf.bbCompiler.SetTag("code", nil)
@@ -44,15 +41,34 @@ func (mf *MessageFormatter) InitBBcode() {
 	mf.bbCompiler.SetTag("size", nil)
 }
 
-func (mf *MessageFormatter) Compile(msg string) string {
-	if config.GetBoardConfig("").DisableBBcode {
+func (mf *MessageFormatter) ApplyWordFilters(message string, boardDir string) (string, error) {
+	var filters []gcsql.WordFilter
+	var err error
+	if boardDir == "" {
+		filters, err = gcsql.GetWordFilters()
+	} else {
+		filters, err = gcsql.GetBoardWordFilters(boardDir)
+	}
+	if err != nil {
+		return message, err
+	}
+	for _, wf := range filters {
+		if message, err = wf.Apply(message); err != nil {
+			return message, err
+		}
+	}
+	return message, nil
+}
+
+func (mf *MessageFormatter) Compile(msg string, boardDir string) string {
+	if config.GetBoardConfig(boardDir).DisableBBcode {
 		return msg
 	}
 	return mf.bbCompiler.Compile(msg)
 }
 
-func FormatMessage(message string) template.HTML {
-	message = msgfmtr.Compile(message)
+func FormatMessage(message string, boardDir string) template.HTML {
+	message = msgfmtr.Compile(message, boardDir)
 	// prepare each line to be formatted
 	postLines := strings.Split(message, "<br>")
 	for i, line := range postLines {

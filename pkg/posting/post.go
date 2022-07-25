@@ -51,6 +51,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
+	var postBoard gcsql.Board
+	postBoard, err := gcsql.GetBoardFromID(post.BoardID)
+	if err != nil {
+		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
+			"Error getting board info: ", err.Error()))
+		return
+	}
 
 	var emailCommand string
 	formName = request.FormValue("postname")
@@ -79,7 +86,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	post.Subject = request.FormValue("postsubject")
 	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
-	var err error
+
 	if maxMessageLength, err = gcsql.GetMaxMessageLength(post.BoardID); err != nil {
 		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
 			"Error getting board info: ", err.Error()))
@@ -89,7 +96,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		serverutil.ServeErrorPage(writer, "Post body is too long")
 		return
 	}
-	post.MessageHTML = FormatMessage(post.MessageText)
+
+	post.MessageHTML = FormatMessage(post.MessageText, postBoard.Dir)
 	password := request.FormValue("postpassword")
 	if password == "" {
 		password = gcutil.RandomString(8)
@@ -159,7 +167,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	boards, _ := gcsql.GetAllBoards()
 
-	postBoard, _ := gcsql.GetBoardFromID(post.BoardID)
 	if banStatus != nil && banStatus.IsBanned(postBoard.Dir) {
 		var banpageBuffer bytes.Buffer
 
