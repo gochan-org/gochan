@@ -7,6 +7,7 @@ import { initTopBar, TopBarButton } from "./topbar";
 import { getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
 import { initQR } from "./qr";
+import { initWatcher } from "./watcher";
 
 /**
  * @type {TopBarButton}
@@ -86,11 +87,16 @@ class BooleanSetting extends Setting {
 }
 
 class NumberSetting extends Setting {
-	constructor(key, title, defaultVal = 0, onSave = () => {}) {
+	constructor(key, title, defaultVal = 0, minMax = {min: null, max: null}, onSave = () => {}) {
 		super(key, title, defaultVal, onSave);
-		this.element = this.createElement("<input />", {
+		let props = {
 			type: "number"
-		}).val(this.getStorageValue());
+		};
+		if(typeof minMax.min == "number" && !isNaN(minMax.min))
+			props.min = minMax.min;
+		if(typeof minMax.max == "number" && !isNaN(minMax.max))
+			props.max = minMax.max;
+		this.element = this.createElement("<input />", props).val(this.getStorageValue());
 	}
 	getStorageValue() {
 		let val = Number.parseFloat(super.getStorageValue());
@@ -131,6 +137,9 @@ export function initSettings() {
 	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", false, initPostPreviews));
 	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true, initPostPreviews));
 	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, initQR));
+	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 10, {
+		min: 2
+	}, initWatcher))
 
 	if($settingsButton == null)
 		$settingsButton = new TopBarButton("Settings", createLightbox);

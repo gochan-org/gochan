@@ -1,6 +1,7 @@
 import { currentBoard, getThreadJSON } from "./postutil";
-import { getJsonStorageVal, setStorageVal } from "./storage";
+import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "./storage";
 let watching = false;
+let watcherInterval = -1;
 
 export function getWatchedThreads() {
 	if(!watching) {
@@ -80,11 +81,13 @@ export function unwatchThread(threadID, board) {
 
 export function initWatcher() {
 	let watched = getJsonStorageVal("watched", {});
-
+	if(watcherInterval > -1) {
+		clearInterval(watcherInterval);
+	}
 	let board = currentBoard();
 	watching = watched != null && watched[board] instanceof Array;
 	if(watching) {
 		getWatchedThreads();
-		setInterval(getWatchedThreads, 10000);
+		watcherInterval = setInterval(getWatchedThreads, getNumberStorageVal("watcherseconds", 10) * 1000);
 	}
 }
