@@ -62,6 +62,65 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 	return err
 }
 
+func CreateReport(postID int, ip string, reason string) (*Report, error) {
+	currentTime := time.Now()
+	sql := `INSERT INTO DBPREFIXreports (post_id, ip, reason) VALUES(?, ?, ?)`
+	result, err := ExecSQL(sql, postID, ip, reason)
+	if err != nil {
+		return nil, err
+	}
+	reportID, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	sql = `INSERT INTO gc_reports_audit (report_id,timestamp) VALUES(?, ?)`
+	if _, err = ExecSQL(sql, reportID, currentTime); err != nil {
+		return nil, err
+	}
+	return &Report{
+		ID:               int(reportID),
+		HandledByStaffID: -1,
+		PostID:           postID,
+		IP:               ip,
+		Reason:           reason,
+		IsCleared:        false,
+	}, nil
+}
+
+func CheckDuplicateReport(postID int, reason string) (bool, error) {
+	sql := `SELECT COUNT(*) FROM DBPREFIXreports
+		WHERE post_id = ? AND reason = ?`
+	var num int
+	err := QueryRowSQL(sql, interfaceSlice(postID, reason), interfaceSlice(&num))
+	return num > 0, err
+}
+
+func GetReports(includeCleared bool) ([]Report, error) {
+	sql := `SELECT id,handled_by_staff_id,post_id,ip,reason,is_cleared FROM DBPREFIXreports`
+	if !includeCleared {
+		sql += ` WHERE is_cleared = 0`
+	}
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	var reports []Report
+	for rows.Next() {
+		var report Report
+		var staffID interface{}
+		err = rows.Scan(&report.ID, &staffID, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
+		if err != nil {
+			return nil, err
+		}
+
+		staffID64, _ := (staffID.(int64))
+		report.HandledByStaffID = int(staffID64)
+		reports = append(reports, report)
+	}
+	return reports, nil
+}
+
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
 func PermanentlyRemoveDeletedPosts() error {
 	const sql1 = `DELETE FROM DBPREFIXposts WHERE is_deleted`

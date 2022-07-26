@@ -105,7 +105,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	if err = serverutil.MinifyTemplate(gctemplates.Captcha, captchaStruct, writer, "text/html"); err != nil {
-		fmt.Fprintf(writer,
+		fmt.Fprint(writer,
 			gclog.Print(gclog.LErrorLog, "Error executing captcha template: ", err.Error()))
 	}
 }

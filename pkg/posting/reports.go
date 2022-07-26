@@ -10,12 +10,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-const (
-	reportInsertSQL   = `INSERT INTO DBPREFIXreports (post_id,ip,reason) VALUES(?,?,?)`
-	duplicateCheckSQL = `SELECT COUNT(*) FROM DBPREFIXreports
-	WHERE post_id = ? AND reason = ?`
-)
-
 var (
 	ErrInvalidReport   = errors.New("invalid report submitted")
 	ErrInvalidPost     = errors.New("post does not exist")
@@ -52,20 +46,17 @@ func HandleReport(request *http.Request) error {
 	}
 
 	for _, postID := range reportedPosts {
-		var count int
 		// check to see if the post has already been reported with this report string
-		err = gcsql.QueryRowSQL(duplicateCheckSQL,
-			[]interface{}{&postID, reason},
-			[]interface{}{&count})
+		isDuplicate, err := gcsql.CheckDuplicateReport(postID, reason)
 		if err != nil {
 			return err
 		}
-		if count > 0 {
+		if isDuplicate {
 			// post has already been reported, and for the same reason, moving on
 			continue
 		}
-		_, err := gcsql.ExecSQL(reportInsertSQL, postID, ip, reason)
-		if err != nil {
+
+		if _, err = gcsql.CreateReport(postID, ip, reason); err != nil {
 			return err
 		}
 	}

@@ -335,6 +335,16 @@ type Report struct {
 	IsCleared        bool
 }
 
+func (r *Report) Timestamp() (*time.Time, error) {
+	sql := `SELECT timestamp FROM DBPREFIXreports_audit WHERE report_id = ?`
+	timestamp := new(time.Time)
+	err := QueryRowSQL(sql, interfaceSlice(r.ID), interfaceSlice(timestamp))
+	if err != nil {
+		return nil, err
+	}
+	return timestamp, nil
+}
+
 type LoginSession struct {
 	ID      uint
 	Name    string
@@ -373,7 +383,7 @@ func (s *Staff) RankString() string {
 	case 1:
 		return "Janitor"
 	}
-	return ""
+	return "Unknown"
 }
 
 type BoardCooldowns struct {
