@@ -279,6 +279,63 @@ var actions = []Action{
 			return outputStr, nil
 		}},
 	{
+		ID:          "reports",
+		Title:       "Reports",
+		Permissions: ModPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			rows, err := gcsql.QuerySQL(`SELECT id,
+				handled_by_staff_id as staff_id,
+				(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
+				post_id, ip, reason, is_cleared from DBPREFIXreports WHERE is_cleared = 0`)
+			if err != nil {
+				return nil, err
+			}
+			var reports []map[string]interface{}
+			for rows.Next() {
+				var id int
+				var staff_id interface{}
+				var staff_user []byte
+				var post_id int
+				var ip string
+				var reason string
+				var is_cleared bool
+				err = rows.Scan(&id, &staff_id, &staff_user, &post_id, &ip, &reason, &is_cleared)
+				if err != nil {
+					return nil, err
+				}
+				post, err := gcsql.GetSpecificPost(post_id, true)
+				if err != nil {
+					return nil, err
+				}
+				post.GetURL(false)
+				staff_id_int, _ := staff_id.(int64)
+				reports = append(reports, map[string]interface{}{
+					"id":         id,
+					"staff_id":   int(staff_id_int),
+					"staff_user": string(staff_user),
+					"post_link":  post.GetURL(false),
+					"ip":         ip,
+					"reason":     reason,
+					"is_cleared": is_cleared,
+				})
+			}
+			if wantsJSON {
+				return reports, err
+			}
+			reportsBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageReports,
+				map[string]interface{}{
+					"reports": reports,
+				}, reportsBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Print(gclog.LErrorLog,
+					"Error executing managereports page template: ", err.Error()))
+			}
+			output = reportsBuffer.String()
+
+			return
+		}},
+	{
 		ID:          "staff",
 		Title:       "Staff",
 		Permissions: AdminPerms,
