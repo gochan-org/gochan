@@ -46,12 +46,13 @@ func HandleReport(request *http.Request) error {
 	}
 
 	for _, postID := range reportedPosts {
-		// check to see if the post has already been reported with this report string
-		isDuplicate, err := gcsql.CheckDuplicateReport(postID, reason)
+		// check to see if the post has already been reported with this report string or if it can't be reported
+		isDuplicate, isBlocked, err := gcsql.CheckPostReports(postID, reason)
 		if err != nil {
 			return err
 		}
-		if isDuplicate {
+		fmt.Println(isDuplicate, isBlocked)
+		if isDuplicate || isBlocked {
 			// post has already been reported, and for the same reason, moving on
 			continue
 		}

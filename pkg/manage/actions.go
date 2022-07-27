@@ -284,6 +284,33 @@ var actions = []Action{
 		Permissions: ModPerms,
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			staff, err := getCurrentFullStaff(request)
+			if err != nil {
+				return nil, err
+			}
+			dismissIDstr := request.FormValue("dismiss")
+			if dismissIDstr != "" {
+				// staff is dismissing a report
+				dismissID := gcutil.HackyStringToInt(dismissIDstr)
+				block := request.FormValue("block")
+				if block != "" && staff.Rank != 3 {
+					serveError(writer, "permission", "reports", "Only the administrator can block reports", wantsJSON)
+					gclog.Printf(gclog.LStaffLog, "Request by staff %s to block reports to post %d rejected (not an admin)",
+						staff.Username, dismissID,
+					)
+					return "", nil
+				}
+				found, err := gcsql.ClearReport(dismissID, staff.ID, block != "" && staff.Rank == 3)
+				if err != nil {
+					return nil, err
+				}
+				if !found {
+					return nil, errors.New("no matching reports")
+				}
+				gclog.Printf(gclog.LStaffLog, "Report id %d cleared by %s, future reports blocked for this post: %t",
+					dismissID, staff.Username, block != "",
+				)
+			}
 			rows, err := gcsql.QuerySQL(`SELECT id,
 				handled_by_staff_id as staff_id,
 				(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
@@ -291,7 +318,7 @@ var actions = []Action{
 			if err != nil {
 				return nil, err
 			}
-			var reports []map[string]interface{}
+			reports := make([]map[string]interface{}, 0)
 			for rows.Next() {
 				var id int
 				var staff_id interface{}
@@ -299,7 +326,7 @@ var actions = []Action{
 				var post_id int
 				var ip string
 				var reason string
-				var is_cleared bool
+				var is_cleared int
 				err = rows.Scan(&id, &staff_id, &staff_user, &post_id, &ip, &reason, &is_cleared)
 				if err != nil {
 					return nil, err
@@ -324,15 +351,15 @@ var actions = []Action{
 				return reports, err
 			}
 			reportsBuffer := bytes.NewBufferString("")
-			if err = serverutil.MinifyTemplate(gctemplates.ManageReports,
+			err = serverutil.MinifyTemplate(gctemplates.ManageReports,
 				map[string]interface{}{
 					"reports": reports,
-				}, reportsBuffer, "text/html"); err != nil {
-				return "", errors.New(gclog.Print(gclog.LErrorLog,
-					"Error executing managereports page template: ", err.Error()))
+					"staff":   staff,
+				}, reportsBuffer, "text/html")
+			if err != nil {
+				return "", err
 			}
 			output = reportsBuffer.String()
-
 			return
 		}},
 	{

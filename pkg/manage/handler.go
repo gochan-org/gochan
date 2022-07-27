@@ -102,7 +102,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		// writer.WriteHeader(500)
 		gclog.Printf(gclog.LStaffLog|gclog.LErrorLog,
 			"Error accessing manage page %s by %s: %s", actionID, staffName, err.Error())
-		serveError(writer, "actionerror", actionID, err.Error(), wantsJSON || (action.JSONoutput > NoJSON))
+		serveError(writer, "actionerror", actionID, err.Error(), wantsJSON || (action.JSONoutput == AlwaysJSON))
 		return
 	}
 	if action.JSONoutput == AlwaysJSON || (action.JSONoutput > NoJSON && wantsJSON) {
