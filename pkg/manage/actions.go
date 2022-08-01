@@ -335,7 +335,7 @@ var actions = []Action{
 				if err != nil {
 					return nil, err
 				}
-				post.GetURL(false)
+
 				staff_id_int, _ := staff_id.(int64)
 				reports = append(reports, map[string]interface{}{
 					"id":         id,

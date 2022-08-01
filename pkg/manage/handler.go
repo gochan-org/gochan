@@ -69,7 +69,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	action := getAction(actionID, staffRank)
 	if action == nil {
 		if wantsJSON {
-			serveError(writer, "notfound", actionID, "action not found", wantsJSON)
+			serveError(writer, "notfound", actionID, "action not found", wantsJSON || (action.JSONoutput == AlwaysJSON))
 		} else {
 			serverutil.ServeNotFound(writer, request)
 		}
@@ -82,7 +82,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		gclog.Printf(gclog.LStaffLog,
 			"Rejected request to manage page %s from %s (insufficient permissions)",
 			actionID, staffName)
-		serveError(writer, "permission", actionID, "You do not have permission to access this page", wantsJSON || (action.JSONoutput > NoJSON))
+		serveError(writer, "permission", actionID, "You do not have permission to access this page", wantsJSON || (action.JSONoutput == AlwaysJSON))
 		return
 	}
 
@@ -116,7 +116,14 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		serverutil.MinifyWriter(writer, []byte(outputJSON), "application/json")
 		return
 	}
-	if err = building.BuildPageHeader(&managePageBuffer, action.Title); err != nil {
+
+	headerMap := map[string]interface{}{
+		"page_type": "manage",
+	}
+	if action.ID != "dashboard" && action.ID != "login" && action.ID != "logout" {
+		headerMap["include_dashboard_link"] = true
+	}
+	if err = building.BuildPageHeader(&managePageBuffer, action.Title, "", headerMap); err != nil {
 		serveError(writer, "error", actionID,
 			gclog.Print(gclog.LErrorLog, "Failed writing page header: ", err.Error()), false)
 		return

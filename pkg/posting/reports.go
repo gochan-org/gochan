@@ -51,7 +51,6 @@ func HandleReport(request *http.Request) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(isDuplicate, isBlocked)
 		if isDuplicate || isBlocked {
 			// post has already been reported, and for the same reason, moving on
 			continue

@@ -100,16 +100,19 @@ func BuildBoardListJSON() error {
 
 // BuildPageHeader is a convenience function for automatically generating the top part
 // of every normal HTML page
-func BuildPageHeader(writer io.Writer, pageTitle string) error {
-	return serverutil.MinifyTemplate(gctemplates.PageHeader,
-		map[string]interface{}{
-			"page_title":   pageTitle,
-			"webroot":      config.GetSystemCriticalConfig().WebRoot,
-			"site_config":  config.GetSiteConfig(),
-			"sections":     gcsql.AllSections,
-			"boards":       gcsql.AllBoards,
-			"board_config": config.GetBoardConfig(""),
-		}, writer, "text/html")
+func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]interface{}) error {
+	phMap := map[string]interface{}{
+		"page_title":   pageTitle,
+		"webroot":      config.GetSystemCriticalConfig().WebRoot,
+		"site_config":  config.GetSiteConfig(),
+		"sections":     gcsql.AllSections,
+		"boards":       gcsql.AllBoards,
+		"board_config": config.GetBoardConfig(board),
+	}
+	for k, val := range misc {
+		phMap[k] = val
+	}
+	return serverutil.MinifyTemplate(gctemplates.PageHeader, phMap, writer, "text/html")
 }
 
 // BuildPageFooter is a convenience function for automatically generating the bottom
