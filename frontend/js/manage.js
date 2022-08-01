@@ -14,6 +14,8 @@ const notAStaff = {
 	Rank: 0
 };
 
+const reportsTextRE = /^Reports( \(\d+\))?/;
+
 /**
  * @type StaffAction[]
  */
@@ -177,5 +179,36 @@ export function createStaffMenu(rank = staffInfo.Rank) {
 			$staffMenu.remove();
 		else
 			$topbar.after($staffMenu);
+	});
+
+	getReports().then(r => {
+		// append " (#)" to the Reports link, replacing # with the number of reports
+		$staffMenu.find("a").each((e, elem) => {
+			if(elem.text.search(reportsTextRE) != 0) return;
+			let $span = $("<span/>").text(` (${r.length})`).appendTo(elem);
+			if(r.length > 0) {
+				// make it bold and red if there are reports
+				$span.css({
+					"font-weight": "bold",
+					"color": "red"
+				});
+			}
+		});
+	});
+}
+
+function getReports() {
+	return $.ajax({
+		method: "GET",
+		url: `${webroot}manage`,
+		data: {
+			action: "reports",
+			json: "1"
+		},
+		async: true,
+		cache: true,
+		dataType: "json"
+	}).catch(e => {
+		return e;
 	});
 }
