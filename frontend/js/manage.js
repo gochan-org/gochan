@@ -138,62 +138,70 @@ function filterAction(action, perms) {
 /**
  * Creates a list of staff actions accessible to the user if they are logged in.
  * It is shown when the user clicks the Staff button
- * @param {number} rank 0 = not logged in, 1 = janitor, 2 = moderator
- * 3 = administrator
+ * @param {StaffInfo} staff an object representing the staff's username and rank
  */
-export function createStaffMenu(rank = staffInfo.Rank) {
+export function createStaffMenu(staff = staffInfo) {
+	let rank = staff.Rank
 	if(rank == 0) return;
 	$staffMenu = $("<div/>").prop({
 		id: "staffmenu",
 		class: "dropdown-menu"
 	});
-	let adminActions = staffActions.filter(val => filterAction(val, 3));
-	let modActions = staffActions.filter(val => filterAction(val, 2));
-	let janitorActions = staffActions.filter(val => filterAction(val, 1));
-	
+
 	$staffMenu.append(
 		menuItem(getAction("logout")),
 		menuItem(getAction("dashboard")));
 
+	let janitorActions = staffActions.filter(val => filterAction(val, 1));
 	$staffMenu.append(menuItem("Janitorial", true));
 	for(const action of janitorActions) {
 		$staffMenu.append(menuItem(action));
 	}
-	if(rank < 2) return $staffMenu;
 
-	if(modActions.length > 0)
-		$staffMenu.append(menuItem("Moderation", true));
-	for(const action of modActions) {
-		$staffMenu.append(menuItem(action));
+	if(rank >= 2) {
+		let modActions = staffActions.filter(val => filterAction(val, 2));
+		if(modActions.length > 0)
+			$staffMenu.append(menuItem("Moderation", true));
+		for(const action of modActions) {
+			$staffMenu.append(menuItem(action));
+		}
+		getReports().then(updateReports);
 	}
-	if(rank < 3) return $staffMenu;
+	if(rank == 3) {
+		let adminActions = staffActions.filter(val => filterAction(val, 3));
+		if(adminActions.length > 0)
+			$staffMenu.append(menuItem("Administration", true));
+		for(const action of adminActions) {
+			$staffMenu.append(menuItem(action));
+		}
+	}
+	createStaffButton();
+}
 
-	if(adminActions.length > 0)
-		$staffMenu.append(menuItem("Administration", true));
-	for(const action of adminActions) {
-		$staffMenu.append(menuItem(action));
-	}
-	if($staffBtn === null) $staffBtn = new TopBarButton("Staff", () => {
+function createStaffButton() {
+	if($staffBtn !== null || staffInfo.Rank == 0)
+		return;
+	$staffBtn = new TopBarButton("Staff", () => {
 		let exists = $(document).find($staffMenu).length > 0;
 		if(exists)
 			$staffMenu.remove();
 		else
 			$topbar.after($staffMenu);
 	});
+}
 
-	getReports().then(r => {
-		// append " (#)" to the Reports link, replacing # with the number of reports
-		$staffMenu.find("a").each((e, elem) => {
-			if(elem.text.search(reportsTextRE) != 0) return;
-			let $span = $("<span/>").text(` (${r.length})`).appendTo(elem);
-			if(r.length > 0) {
-				// make it bold and red if there are reports
-				$span.css({
-					"font-weight": "bold",
-					"color": "red"
-				});
-			}
-		});
+function updateReports(reports) {
+	// append " (#)" to the Reports link, replacing # with the number of reports
+	$staffMenu.find("a").each((e, elem) => {
+		if(elem.text.search(reportsTextRE) != 0) return;
+		let $span = $("<span/>").text(` (${reports.length})`).appendTo(elem);
+		if(reports.length > 0) {
+			// make it bold and red if there are reports
+			$span.css({
+				"font-weight": "bold",
+				"color": "red"
+			});
+		}
 	});
 }
 
