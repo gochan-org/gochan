@@ -85,6 +85,14 @@ export function insideOP(elem) {
 	return $(elem).parents("div.op-post").length > 0;
 }
 
+/**
+ * Formats the timestamp strings from JSON into a more readable format
+ * @param 
+ */
+function formatDateString(dateStr) {
+	let date = new Date(dateStr);
+	return date.toDateString() + ", " + date.toLocaleTimeString();
+}
 
 /**
  * creates an element from the given post data
@@ -105,7 +113,7 @@ function createPostElement(post, boardDir, elementClass = "inlinepostprev") {
 			.prop({
 				class: "post-info",
 				for: `check${post.no}`
-			}).append(post.time),
+			}).append(formatDateString(post.time)),
 		" ",
 		$("<a/>")
 			.prop({
