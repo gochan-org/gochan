@@ -137,8 +137,9 @@ function createPostElement(post, boardDir, elementClass = "inlinepostprev") {
 		" ",
 		$("<a/>")
 			.prop({
+				class: "backlink-click",
 				href: `javascript:quote(${post.no})`
-			}).text(post.no),
+			}).text(post.no), "<br/>",
 	);
 	let $postInfo = $post.find("label.post-info");
 	let postName = (post.name == "" && post.trip == "")?"Anonymous":post.name;
@@ -193,11 +194,11 @@ function createPostElement(post, boardDir, elementClass = "inlinepostprev") {
 		);
 	}
 	$post.append(
-		"<br/>",
 		$("<div/>").prop({
 			class: "post-text"
 		}).html(post.com)
 	)
+	addPostDropdown($post);
 	return $post;
 }
 
@@ -413,7 +414,7 @@ export function addPostDropdown($post) {
 	if($post.find("select.post-actions").length > 0)
 		return $post;
 	let $postInfo = $post.find("label.post-info");
-	let isOP = $postInfo.parents("div.reply-container").length == 0;
+	let isOP = $post.prop("class").split(" ").indexOf("op-post") > -1; // $postInfo.parents("div.reply-container").length == 0;
 	let hasUpload = $postInfo.siblings("div.file-info").length > 0;
 	let postID = $postInfo.parent().attr("id");
 	let threadPost = isOP?"thread":"post";
@@ -545,8 +546,6 @@ $(() => {
 	if(pageThread.op < 1) return; // not in a thread
 
 	threadWatcherInterval = setInterval(() => {
-		updateThreadJSON().then(updateThreadHTML).catch(e => {
-			console.error(`Error updating current thread: ${e}`);
-		});
+		updateThreadJSON().then(updateThreadHTML);
 	}, getNumberStorageVal("watcherseconds", 10) * 1000);
 })
