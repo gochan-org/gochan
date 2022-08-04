@@ -118,6 +118,10 @@ function createPostElement(post, boardDir, elementClass = "inlinepostprev") {
 	let $post = $("<div/>")
 		.prop({class: elementClass});
 	$post.append(
+		$("<a/>").prop({
+			id: post.no.toString(),
+			class: "anchor"
+		}),
 		$("<input/>")
 			.prop({
 				type: "checkbox",
