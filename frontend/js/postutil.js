@@ -1,22 +1,35 @@
 /* global webroot */
+/**
+ * @typedef { import("./types/gochan").BoardThread } BoardThread
+ * @typedef { import("./types/gochan").ThreadPost } ThreadPost
+ */
+
 
 import $ from "jquery";
 
 import { getCookie } from "./cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
-import { getBooleanStorageVal } from "./storage";
+import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
 import { handleActions } from "./boardevents";
 import { isThreadWatched } from "./watcher";
 
 let doClickPreview = false;
 let doHoverPreview = false;
 let $hoverPreview = null;
+let threadWatcherInterval = 0;
 
 const threadRE = /^\d+/;
 const videoTestRE = /\.(mp4)|(webm)$/;
 const postrefRE = /\/([^\s/]+)\/res\/(\d+)\.html(#(\d+))?/;
 const idRe = /^((reply)|(op))(\d+)/;
-const opRegex = /(\d+)(p(\d)+)?.html$/;
+const opRegex = /\/res\/(\d+)(p(\d)+)?.html$/;
+
+
+// data retrieved from /<board>/res/<thread>.json
+/** @type {BoardThread} */
+let currentThreadJSON = {
+	posts: []
+};
 
 export function getPageThread() {
 	let arr = opRegex.exec(window.location.pathname);
@@ -70,6 +83,159 @@ export function currentThread() {
 
 export function insideOP(elem) {
 	return $(elem).parents("div.op-post").length > 0;
+}
+
+
+/**
+ * creates an element from the given post data
+ * @param {ThreadPost} post
+ * @param {string} boardDir
+ */
+function createPostElement(post, boardDir, elementClass = "inlinepostprev") {
+	let $post = $("<div/>")
+		.prop({class: elementClass});
+	$post.append(
+		$("<input/>")
+			.prop({
+				type: "checkbox",
+				id: `check${post.no}`,
+				name: `check${post.no}`
+			}),
+		$("<label/>")
+			.prop({
+				class: "post-info",
+				for: `check${post.no}`
+			}).append(post.time),
+		" ",
+		$("<a/>")
+			.prop({
+				href: webroot + boardDir + "/res/" + ((post.resto > 0)?post.resto:post.no) + ".html#" + post.no
+			}).text("No."),
+		" ",
+		$("<a/>")
+			.prop({
+				href: `javascript:quote(${post.no})`
+			}).text(post.no),
+	);
+	let $postInfo = $post.find("label.post-info");
+	let postName = (post.name == "" && post.trip == "")?"Anonymous":post.name;
+	let $postName = $("<span/>").prop({class: "postername"});
+	if(post.email == "") {
+		$postName.text(postName);
+	} else {
+		$postName.append($("<a/>").prop({
+			href: "mailto:" + post.email
+		}).text(post.name));
+	}
+	$postInfo.prepend($postName);
+	if(post.trip != "") {
+		$postInfo.prepend($postName, $("<span/>").prop({class: "tripcode"}).text("!" + post.trip), " ");
+	} else {
+		$postInfo.prepend($postName, " ");
+	}
+
+	if(post.sub != "")
+		$postInfo.prepend($("<span/>").prop({class:"subject"}).text(post.sub), " ");
+
+
+	if(post.filename != "" && post.filename != "deleted") {
+		let thumbFile = getThumbFilename(post.tim);
+		$post.append(
+			$("<div/>").prop({class: "file-info"})
+				.append(
+					"File: ",
+					$("<a/>").prop({
+						href: webroot + boardDir + "/src/" + post.tim,
+						target: "_blank"
+					}).text(post.tim),
+					` - (## MB , ${post.w}x${post.h},`,
+					$("<a/>").prop({
+						class: "file-orig",
+						href: webroot + boardDir + "/src/" + post.tim,
+						download: post.filename,
+					}).text(post.filename),
+					")"
+				),
+			$("<a/>").prop({class: "upload-container", href: webroot + boardDir + "/src/" + post.tim})
+				.append(
+					$("<img/>")
+						.prop({
+							class: "upload",
+							src: webroot + boardDir + "/thumb/" + thumbFile,
+							alt: webroot + boardDir + "/src/" + post.tim,
+							width: post.tn_w,
+							height: post.tn_h
+						})
+				)	
+		);
+	}
+	$post.append(
+		"<br/>",
+		$("<div/>").prop({
+			class: "post-text"
+		}).html(post.com)
+	)
+	return $post;
+}
+
+/**
+ * Return the appropriate thumbnail filename for the given upload filename (replacing gif/webm with jpg, etc)
+ * @param {string} filename
+ */
+function getThumbFilename(filename) {
+	let nameParts = /([^.]+)\.([^.]+)$/.exec(filename);
+	if(nameParts === null) return filename;
+	let name = nameParts[1] + "t";
+	let ext = nameParts[2];
+	if(ext == "gif" || ext == "webm")
+		ext = "jpg";
+
+	return name + "." + ext;
+}
+
+function isPostLoaded(id) {
+	return currentThreadJSON.posts.filter((post, p) => post.no == id).length > 0;
+}
+
+export function updateThreadJSON() {
+	let thread = currentThread();
+	if(thread.thread === 0) return; // not in a thread
+	return getThreadJSON(thread.thread, thread.board).then((json) => {
+		if(!(json.posts instanceof Array) || json.posts.length == 0)
+			return;
+		currentThreadJSON = json;
+	}).catch(e => {
+		console.error(`Failed updating current thread: ${e}`);
+		clearInterval(threadWatcherInterval);
+	});
+}
+
+function updateThreadHTML() {
+	let thread = currentThread();
+	if(thread.thread === 0) return; // not in a thread
+	let numAdded = 0;
+	for(const post of currentThreadJSON.posts) {
+		let selector = "";
+		if(post.resto == 0)
+			selector += `div#${post.no}.thread`;
+		else
+			selector += `a#${post.no}.anchor`;
+		let elementExists = $(selector).length > 0;
+		if(elementExists)
+			continue; // TODO: check for edits
+		
+		let $replyContainer = $("<div/>").prop({
+			id: `replycontainer${post.no}`,
+			class: "reply-container"
+		}).append(
+			createPostElement(post, thread.board, "reply")
+		);
+
+		$replyContainer.appendTo(`div#${post.resto}.thread`);
+		console.log(`added post #${post.no}`);
+		numAdded++;
+	}
+	console.log(`Added ${numAdded} posts`);
 }
 
 function createPostPreview(e, $post, inline = true) {
@@ -344,5 +510,20 @@ export function deletePost(id, board, fileOnly) {
 window.deletePost = deletePost;
 
 export function getThreadJSON(threadID, board) {
-	return $.getJSON(`${webroot}${board}/res/${threadID}.json`);
+	return $.ajax({
+		url: `${webroot}${board}/res/${threadID}.json`,
+		cache: false,
+		dataType: "json"
+	});
 }
+
+$(() => {
+	let pageThread = getPageThread();
+	if(pageThread.op < 1) return; // not in a thread
+
+	threadWatcherInterval = setInterval(() => {
+		updateThreadJSON().then(updateThreadHTML).catch(e => {
+			console.error(`Error updating current thread: ${e}`);
+		});
+	}, getNumberStorageVal("watcherseconds", 10) * 1000);
+})

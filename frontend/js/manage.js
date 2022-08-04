@@ -42,7 +42,7 @@ export async function initStaff() {
 			action: "actions"
 		},
 		async: true,
-		cache: true,
+		cache: false,
 		dataType: "json",
 		/** 
 		 * @param {StaffAction[]} result
@@ -214,7 +214,7 @@ function getReports() {
 			json: "1"
 		},
 		async: true,
-		cache: true,
+		cache: false,
 		dataType: "json"
 	}).catch(e => {
 		return e;

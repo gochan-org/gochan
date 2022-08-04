@@ -1,4 +1,4 @@
-import { currentBoard, getThreadJSON } from "./postutil";
+import { currentBoard } from "./postutil";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "./storage";
 let watching = false;
 let watcherInterval = -1;
