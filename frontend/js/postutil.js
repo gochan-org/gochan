@@ -201,7 +201,7 @@ function createPostElement(post, boardDir, elementClass = "inlinepostprev") {
 		$("<div/>").prop({
 			class: "post-text"
 		}).html(post.com)
-	)
+	);
 	addPostDropdown($post);
 	return $post;
 }
@@ -264,7 +264,10 @@ function updateThreadHTML() {
 		numAdded++;
 	}
 	if(numAdded == 0) return;
-	console.log(`Added ${numAdded} posts`);
+}
+
+export function updateThread() {
+	return updateThreadJSON().then(updateThreadHTML);
 }
 
 function createPostPreview(e, $post, inline = true) {
@@ -550,7 +553,5 @@ $(() => {
 	let pageThread = getPageThread();
 	if(pageThread.op < 1) return; // not in a thread
 
-	threadWatcherInterval = setInterval(() => {
-		updateThreadJSON().then(updateThreadHTML);
-	}, getNumberStorageVal("watcherseconds", 10) * 1000);
-})
+	threadWatcherInterval = setInterval(updateThread, getNumberStorageVal("watcherseconds", 10) * 1000);
+});

@@ -5,13 +5,18 @@ import "jquery-ui/ui/safe-active-element";
 import "jquery-ui/ui/widget";
 import "jquery-ui/ui/scroll-parent";
 import "jquery-ui/ui/widgets/mouse";
+import "jquery-ui/ui/safe-blur";
 import "jquery-ui/ui/widgets/draggable";
 
 import { upArrow, downArrow } from "./vars";
 import { getCookie } from "./cookies";
 import { $topbar, topbarHeight } from "./topbar";
 import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "./storage";
+import { currentThread, updateThread } from "./postutil";
 
+/**
+ * @type {JQuery<HTMLElement>}
+ */
 export let $qr = null;
 
 const qrButtonHTML = 
@@ -53,6 +58,11 @@ export function initQR(pageThread) {
 			type: "hidden",
 			name: "threadid",
 			value: pageThread.op
+		}),
+		$("<input/>").prop({
+			type: "hidden",
+			name: "json",
+			value: 1
 		}),
 		$("<input/>").prop({
 			type: "hidden",
@@ -115,9 +125,10 @@ export function initQR(pageThread) {
 			setStorageVal("qrpos", JSON.stringify(ui.position));
 		}
 	});
+	openQR();
+	if(currentThread().thread < 1) return; 
 
-	// Thread updating needs to be implemented for this to be useful
-	/* $("form#qrpostform").submit(e => {
+	$("form#qrpostform").on("submit", function(e) {
 		let $form = $(this);
 		e.preventDefault();
 		$.ajax({
@@ -125,11 +136,18 @@ export function initQR(pageThread) {
 			url: $form.attr("action"),
 			data: $form.serialize(),
 			success: data => {
+				updateThread().then(clearQR);
 			}
-		})
+		});
 		return false;
-	}); */
-	openQR();
+	});
+}
+
+function clearQR() {
+	if(!$qr) return;
+	$qr.find("input[name=postsubject]").val("");
+	$qr.find("textarea[name=postmsg]").val("");
+	$qr.find("input[type=file]").val("");
 }
 
 export function openQR() {
