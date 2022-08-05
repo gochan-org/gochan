@@ -24,7 +24,7 @@ export function getCatalog(board = "") {
 		}).then((/** @type {CatalogBoard[]} */ data) => {
 			if(data.length == 0)
 				return [];
-			if(data[0] == null)
+			if(data[0] === null)
 				data.shift();
 			return data;
 		});

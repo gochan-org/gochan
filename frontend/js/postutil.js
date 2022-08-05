@@ -39,7 +39,7 @@ export function getPageThread() {
 		op: -1,
 		page: 0
 	};
-	if(arr == null) return info;
+	if(arr === null) return info;
 	if(arr.length > 1) info.op = arr[1];
 	if(arr.length > 3) info.page = arr[3];
 	if(arr.board != "") info.boardID = $("form#postform input[name=boardid]").val() -1;
@@ -285,7 +285,7 @@ function createPostPreview(e, $post, inline = true) {
 }
 
 function previewMoveHandler(e) {
-	if($hoverPreview == null) return;
+	if($hoverPreview === null) return;
 	$hoverPreview.css({position: "absolute"}).offset({
 		top: e.pageY + 8,
 		left: e.pageX + 8
@@ -294,7 +294,7 @@ function previewMoveHandler(e) {
 
 function expandPost(e) {
 	e.preventDefault();
-	if($hoverPreview != null) $hoverPreview.remove();
+	if($hoverPreview !== null) $hoverPreview.remove();
 	let $next = $(e.target).next();
 	if($next.prop("class") == "inlinepostprev" && e.type == "click") {
 		// inline preview is already opened, close it
@@ -303,7 +303,7 @@ function expandPost(e) {
 	}
 	let href = e.target.href;
 	let hrefArr = postrefRE.exec(href);
-	if(hrefArr == null) return; // not actually a link to a post, abort
+	if(hrefArr === null) return; // not actually a link to a post, abort
 	let postID = hrefArr[4]?hrefArr[4]:hrefArr[2];
 
 	let $post = $(`div#op${postID}, div#reply${postID}`).first();
@@ -328,11 +328,11 @@ function expandPost(e) {
 }
 
 export function initPostPreviews($post = null) {
-	if(getPageThread().board == "" && $post == null) return;
+	if(getPageThread().board == "" && $post === null) return;
 	doClickPreview = getBooleanStorageVal("enablepostclick", true);
 	doHoverPreview = getBooleanStorageVal("enableposthover", false);
 	let $refs = null;
-	$refs = $post == null ? $("a.postref") : $post.find("a.postref");
+	$refs = $post === null ? $("a.postref") : $post.find("a.postref");
 
 	if(doClickPreview) {
 		$refs.on("click", expandPost);
@@ -342,7 +342,7 @@ export function initPostPreviews($post = null) {
 
 	if(doHoverPreview) {
 		$refs.on("mouseenter", expandPost).on("mouseleave", () => {
-			if($hoverPreview != null) $hoverPreview.remove();
+			if($hoverPreview !== null) $hoverPreview.remove();
 			$hoverPreview = null;
 			$(document.body).off("mousemove", previewMoveHandler);
 		});
@@ -465,7 +465,7 @@ export function editPost(id, board) {
 
 export function reportPost(id, board) {
 	promptLightbox("", false, ($lb, reason) => {
-		if(reason == "" || reason == null) return;
+		if(reason == "" || reason === null) return;
 		let xhrFields = {
 			board: board,
 			report_btn: "Report",
