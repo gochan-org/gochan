@@ -263,6 +263,7 @@ function updateThreadHTML() {
 		console.log(`added post #${post.no}`);
 		numAdded++;
 	}
+	if(numAdded == 0) return;
 	console.log(`Added ${numAdded} posts`);
 }
 
