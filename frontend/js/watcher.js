@@ -85,7 +85,7 @@ export function initWatcher() {
 		clearInterval(watcherInterval);
 	}
 	let board = currentBoard();
-	watching = watched != null && watched[board] instanceof Array;
+	watching = watched !== null && watched[board] instanceof Array;
 	if(watching) {
 		getWatchedThreads();
 		watcherInterval = setInterval(getWatchedThreads, getNumberStorageVal("watcherseconds", 10) * 1000);

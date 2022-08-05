@@ -34,11 +34,11 @@ class Setting {
 		this.element = null;
 	}
 	getElementValue() {
-		if(this.element == null) return "";
+		if(this.element === null) return "";
 		return this.element.val();
 	}
 	setElementValue(newVal) {
-		if(this.element == null) return;
+		if(this.element === null) return;
 		this.element.val(newVal);
 	}
 	getStorageValue() {
@@ -141,6 +141,6 @@ export function initSettings() {
 		min: 2
 	}, initWatcher))
 
-	if($settingsButton == null)
+	if($settingsButton === null)
 		$settingsButton = new TopBarButton("Settings", createLightbox);
 }

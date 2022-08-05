@@ -31,7 +31,7 @@ const qrTitleBar =
 	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
 
 export function initQR(pageThread) {
-	if($qr != null) {
+	if($qr !== null) {
 		// QR box already initialized
 		return;
 	}
