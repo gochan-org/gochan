@@ -121,6 +121,7 @@ def copy(source, dest):
 				for file in files:
 					shutil.copy(path.join(root, file), path.join(dest, root, file))
 
+
 def symlink(target, link):
 	"""Create symbolic link at `link` that points to `target`"""
 	targetinfo = pathinfo(target)
@@ -335,7 +336,6 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 			copy(file, path.join(prefix, "share/gochan"))
 			mkdir(path.join(prefix, "share/gochan/templates/override/"))
 
-
 	if path.exists(gochan_exe) is False:
 		build()
 	print("Installing", gochan_exe, "to", path.join(prefix, "bin", gochan_exe))
@@ -382,6 +382,7 @@ def js(watch=False):
 		print("JS transpiling failed with status", status)
 		sys.exit(status)
 
+
 def eslint(fix=False):
 	print("Running eslint")
 	npm_cmd = "npm --prefix frontend/ run eslint"
@@ -392,6 +393,7 @@ def eslint(fix=False):
 	if status != 0:
 		print("ESLint failed with status", status)
 		sys.exit(status)
+
 
 def release(goos):
 	set_vars(goos)
@@ -513,7 +515,8 @@ if __name__ == "__main__":
 		parser.add_argument(
 			"--watch",
 			action="store_true",
-			help="automatically rebuild when you change a file (keeps running)")
+			help="automatically rebuild when you change a file (keeps running)"
+		)
 		parser.add_argument(
 			"--eslint",
 			action="store_true",
@@ -521,9 +524,10 @@ if __name__ == "__main__":
 		parser.add_argument(
 			"--eslint-fix",
 			action="store_true",
-			help="Run eslint on the JavaScript code to check for and try to fix possible problems (overrides --eslint)")
+			help="Run eslint on the JS code to try to fix detected problems"
+		)
 		args = parser.parse_args()
-		if(args.eslint or args.eslint_fix):
+		if args.eslint or args.eslint_fix:
 			eslint(args.eslint_fix)
 		else:
 			js(args.watch)
