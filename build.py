@@ -382,6 +382,16 @@ def js(watch=False):
 		print("JS transpiling failed with status", status)
 		sys.exit(status)
 
+def eslint(fix=False):
+	print("Running eslint")
+	npm_cmd = "npm --prefix frontend/ run eslint"
+	if fix:
+		npm_cmd += " --fix"
+
+	status = run_cmd(npm_cmd, True, True, True)[1]
+	if status != 0:
+		print("ESLint failed with status", status)
+		sys.exit(status)
 
 def release(goos):
 	set_vars(goos)
@@ -504,8 +514,19 @@ if __name__ == "__main__":
 			"--watch",
 			action="store_true",
 			help="automatically rebuild when you change a file (keeps running)")
+		parser.add_argument(
+			"--eslint",
+			action="store_true",
+			help="Run eslint on the JavaScript code to check for possible problems")
+		parser.add_argument(
+			"--eslint-fix",
+			action="store_true",
+			help="Run eslint on the JavaScript code to check for and try to fix possible problems (overrides --eslint)")
 		args = parser.parse_args()
-		js(args.watch)
+		if(args.eslint or args.eslint_fix):
+			eslint(args.eslint_fix)
+		else:
+			js(args.watch)
 	elif action == "release":
 		parser.add_argument(
 			"--all",
