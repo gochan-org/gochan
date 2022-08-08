@@ -557,6 +557,31 @@ var actions = []Action{
 			return pageBuffer.String(), nil
 		}},
 	{
+		ID:          "boardsections",
+		Title:       "Board sections",
+		Permissions: AdminPerms,
+		JSONoutput:  NoJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			sections, err := gcsql.GetAllSections()
+			if err != nil {
+				return "", err
+			}
+
+			for i, input := range request.Form {
+				fmt.Printf("Form input %q: %#v\n", i, input)
+			}
+			pageBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageSections, map[string]interface{}{
+				"webroot":     config.GetSystemCriticalConfig().WebRoot,
+				"site_config": config.GetSiteConfig(),
+				"sections":    sections,
+			}, pageBuffer, "text/html"); err != nil {
+				return "", err
+			}
+			output = pageBuffer.String()
+			return
+		}},
+	{
 		ID:          "rebuildfront",
 		Title:       "Rebuild front page",
 		Permissions: AdminPerms,

@@ -20,6 +20,7 @@ var (
 	JsConsts          *template.Template
 	ManageBans        *template.Template
 	ManageBoards      *template.Template
+	ManageSections    *template.Template
 	ManageConfig      *template.Template
 	ManageDashboard   *template.Template
 	ManageRecentPosts *template.Template
@@ -136,6 +137,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageBoards, err = loadTemplate("manage_boards.html")
 		if err != nil {
 			return templateError("manage_boards.html", err)
+		}
+	}
+	if buildAll || t == "managesections" {
+		ManageSections, err = loadTemplate("manage_sections.html")
+		if err != nil {
+			return templateError("manage_sections.html", err)
 		}
 	}
 	if buildAll || t == "manageconfig" {

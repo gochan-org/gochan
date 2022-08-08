@@ -1,0 +1,25 @@
+<form action="{{.webroot}}manage?action=boardsections" method="POST">
+<h2>New section</h2>
+<table>
+	<tr><td>Name:</td><td><input type="text" name="newname" id="newname"></td></tr>
+	<tr><td>Abbreviation:</td><td><input type="text" name="newabbr" id="newabbr"></td></tr>
+	<tr><td>Hidden:</td><td><input type="checkbox" name="newhidden" id="newhidden"></td></tr>
+</table>
+<input type="submit" name="create_section_btn" value="Create section">
+</form>
+<br/><hr/>
+<h2>Current sections</h2>
+
+<form action="{{.webroot}}manage?action=boardsections" id="sectionslist" method="POST">
+<table border="1">
+	<tr><th>Name</th><th>Abbreviation</th><th>List order</th><th>Hidden</th></tr>
+{{range $s, $section := .sections}}<tr>
+	<td><input type="text" name="editname{{$section.ID}}" value="{{$section.Name}}"/></td>
+	<td><input type="text" name="editabbr{{$section.ID}}" value="{{$section.Abbreviation}}"/></td>
+	<td><input type="number" name="editposition{{$section.ID}}" value="{{$section.ListOrder}}"/></td>
+	<td><input type="checkbox" name="edithidden{{$section.ID}}" {{if eq $section.Hidden true}}checked="checked"{{end}}/></td></tr>
+{{end}}
+</table>
+<input type="submit" name="edit_sections_btn" value="Save changes">
+<input type="button" value="Reset" onclick="document.getElementById('sectionslist').reset();"/>
+</form>
