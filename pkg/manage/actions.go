@@ -562,25 +562,66 @@ var actions = []Action{
 		Permissions: AdminPerms,
 		JSONoutput:  NoJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			if request.PostForm.Get("create_section_btn") != "" {
+			section := &gcsql.BoardSection{}
+			editID := request.Form.Get("edit")
+			updateID := request.Form.Get("updatesection")
+			deleteID := request.Form.Get("delete")
+			if editID != "" {
+				if section, err = gcsql.GetSectionFromID(gcutil.HackyStringToInt(editID)); err != nil {
+					return "", &ErrStaffAction{
+						ErrorField: "db",
+						Action:     "boardsections",
+						Message:    err.Error(),
+					}
+				}
+			} else if updateID != "" {
+				if section, err = gcsql.GetSectionFromID(gcutil.HackyStringToInt(updateID)); err != nil {
+					return "", &ErrStaffAction{
+						ErrorField: "db",
+						Action:     "boardsections",
+						Message:    err.Error(),
+					}
+				}
+			} else if deleteID != "" {
+				if err = gcsql.DeleteSection(gcutil.HackyStringToInt(deleteID)); err != nil {
+					return "", &ErrStaffAction{
+						ErrorField: "db",
+						Action:     "boardsections",
+						Message:    err.Error(),
+					}
+				}
+			}
+
+			if request.PostForm.Get("save_section") != "" {
 				// user is creating a new board section
-				sName := request.PostForm.Get("newname")
-				sAbbr := request.PostForm.Get("newabbr")
-				sHidden := request.PostForm.Get("newhidden")
-				sPosition, err := strconv.Atoi(request.PostForm.Get("newposition"))
-				if sName == "" || sAbbr == "" || sHidden == "" || err != nil {
+				if section == nil {
+					section = &gcsql.BoardSection{}
+				}
+				section.Name = request.PostForm.Get("sectionname")
+				section.Abbreviation = request.PostForm.Get("sectionabbr")
+				section.Hidden = request.PostForm.Get("sectionhidden") == "on"
+				section.ListOrder, err = strconv.Atoi(request.PostForm.Get("sectionpos"))
+				if section.Name == "" || section.Abbreviation == "" || request.PostForm.Get("sectionpos") == "" {
 					return "", &ErrStaffAction{
 						ErrorField: "formerror",
 						Action:     "boardsections",
-						Message:    "Missing section title, abbreviation, or hidden status data, or invalid position",
+						Message:    "Missing section title, abbreviation, or hidden status data",
+					}
+				} else if err != nil {
+					return "", &ErrStaffAction{
+						ErrorField: "formerror",
+						Action:     "boardsections",
+						Message:    err.Error(),
 					}
 				}
-				if err = gcsql.CreateSection(&gcsql.BoardSection{
-					Name:         sName,
-					Abbreviation: sAbbr,
-					Hidden:       sHidden == "on",
-					ListOrder:    sPosition,
-				}); err != nil {
+				if updateID != "" {
+					// submitting changes to the section
+					err = section.UpdateValues()
+				} else {
+					// creating a new section
+					err = gcsql.CreateSection(section)
+				}
+				if err != nil {
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -590,15 +631,16 @@ var actions = []Action{
 				gcsql.ResetBoardSectionArrays()
 			}
 
-			for i, input := range request.Form {
-				fmt.Printf("Form input %q: %#v\n", i, input)
-			}
 			pageBuffer := bytes.NewBufferString("")
-			if err = serverutil.MinifyTemplate(gctemplates.ManageSections, map[string]interface{}{
+			pageMap := map[string]interface{}{
 				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 				"site_config": config.GetSiteConfig(),
 				"sections":    gcsql.AllSections,
-			}, pageBuffer, "text/html"); err != nil {
+			}
+			if section.ID > 0 {
+				pageMap["edit_section"] = section
+			}
+			if err = serverutil.MinifyTemplate(gctemplates.ManageSections, pageMap, pageBuffer, "text/html"); err != nil {
 				return "", err
 			}
 			output = pageBuffer.String()

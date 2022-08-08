@@ -445,7 +445,7 @@ type Thread struct {
 	ThreadPage    int    `json:"-"`
 }
 
-//FileBan contains the information associated with a specific file ban
+// FileBan contains the information associated with a specific file ban
 type FileBan struct {
 	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
@@ -455,7 +455,7 @@ type FileBan struct {
 	Checksum  string    `json:"checksum"`
 }
 
-//FilenameBan contains the information associated with a specific filename ban
+// FilenameBan contains the information associated with a specific filename ban
 type FilenameBan struct {
 	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
@@ -466,7 +466,7 @@ type FilenameBan struct {
 	IsRegex   bool      `json:"is_regex"`
 }
 
-//UsernameBan contains the information associated with a specific username ban
+// UsernameBan contains the information associated with a specific username ban
 type UsernameBan struct {
 	ID        int       `json:"id"`
 	BoardID   *int      `json:"board"`
@@ -477,7 +477,7 @@ type UsernameBan struct {
 	IsRegex   bool      `json:"is_regex"`
 }
 
-//WordFilter contains the information associated with a specific wordfilter
+// WordFilter contains the information associated with a specific wordfilter
 type WordFilter struct {
 	ID        int       `json:"id"`
 	BoardDirs []string  `json:"boards"`
@@ -489,7 +489,7 @@ type WordFilter struct {
 	ChangeTo  string    `json:"change_to"`
 }
 
-//IPBan contains the information association with a specific ip ban
+// IPBan contains the information association with a specific ip ban
 type IPBan struct {
 	ID              int           `json:"id"`
 	BoardID         *int          `json:"board"`
