@@ -139,7 +139,8 @@ export function initSettings() {
 	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, initQR));
 	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 10, {
 		min: 2
-	}, initWatcher))
+	}, initWatcher));
+	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 
 	if($settingsButton === null)
 		$settingsButton = new TopBarButton("Settings", createLightbox);

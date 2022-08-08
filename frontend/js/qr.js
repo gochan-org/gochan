@@ -136,7 +136,10 @@ export function initQR(pageThread) {
 			url: $form.attr("action"),
 			data: $form.serialize(),
 			success: data => {
-				updateThread().then(clearQR);
+				updateThread().then(clearQR).then(() => {
+					let persist = getBooleanStorageVal("persistentqr", false);
+					if(!persist) closeQR();
+				});
 			}
 		});
 		return false;
