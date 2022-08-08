@@ -562,9 +562,32 @@ var actions = []Action{
 		Permissions: AdminPerms,
 		JSONoutput:  NoJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			sections, err := gcsql.GetAllSections()
-			if err != nil {
-				return "", err
+			if request.PostForm.Get("create_section_btn") != "" {
+				// user is creating a new board section
+				sName := request.PostForm.Get("newname")
+				sAbbr := request.PostForm.Get("newabbr")
+				sHidden := request.PostForm.Get("newhidden")
+				sPosition, err := strconv.Atoi(request.PostForm.Get("newposition"))
+				if sName == "" || sAbbr == "" || sHidden == "" || err != nil {
+					return "", &ErrStaffAction{
+						ErrorField: "formerror",
+						Action:     "boardsections",
+						Message:    "Missing section title, abbreviation, or hidden status data, or invalid position",
+					}
+				}
+				if err = gcsql.CreateSection(&gcsql.BoardSection{
+					Name:         sName,
+					Abbreviation: sAbbr,
+					Hidden:       sHidden == "on",
+					ListOrder:    sPosition,
+				}); err != nil {
+					return "", &ErrStaffAction{
+						ErrorField: "db",
+						Action:     "boardsections",
+						Message:    err.Error(),
+					}
+				}
+				gcsql.ResetBoardSectionArrays()
 			}
 
 			for i, input := range request.Form {
@@ -574,7 +597,7 @@ var actions = []Action{
 			if err = serverutil.MinifyTemplate(gctemplates.ManageSections, map[string]interface{}{
 				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 				"site_config": config.GetSiteConfig(),
-				"sections":    sections,
+				"sections":    gcsql.AllSections,
 			}, pageBuffer, "text/html"); err != nil {
 				return "", err
 			}

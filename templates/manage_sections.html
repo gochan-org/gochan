@@ -1,9 +1,10 @@
 <form action="{{.webroot}}manage?action=boardsections" method="POST">
 <h2>New section</h2>
 <table>
-	<tr><td>Name:</td><td><input type="text" name="newname" id="newname"></td></tr>
-	<tr><td>Abbreviation:</td><td><input type="text" name="newabbr" id="newabbr"></td></tr>
-	<tr><td>Hidden:</td><td><input type="checkbox" name="newhidden" id="newhidden"></td></tr>
+	<tr><td>Name:</td><td><input type="text" name="newname"></td></tr>
+	<tr><td>Abbreviation:</td><td><input type="text" name="newabbr"></td></tr>
+	<tr><td>List order</td><td><input type="number" name="newposition" value="0"/></td></tr>
+	<tr><td>Hidden:</td><td><input type="checkbox" name="newhidden"></td></tr>
 </table>
 <input type="submit" name="create_section_btn" value="Create section">
 </form>

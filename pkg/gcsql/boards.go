@@ -9,7 +9,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
-//UpdateID takes a board struct and sets the database id according to the dir that is already set
+// UpdateID takes a board struct and sets the database id according to the dir that is already set
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. (Just bad design in general, try to avoid directly mutating state like this)
 func (board *Board) UpdateID() error {
@@ -134,7 +134,7 @@ func DoesBoardExistByDir(dir string) bool {
 	return count > 0
 }
 
-//GetAllBoards gets a list of all existing boards
+// GetAllBoards gets a list of all existing boards
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllBoards() ([]Board, error) {
@@ -156,7 +156,7 @@ func GetAllBoards() ([]Board, error) {
 	return boards, nil
 }
 
-//GetBoardFromID returns the board corresponding to a given id
+// GetBoardFromID returns the board corresponding to a given id
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetBoardFromID(boardID int) (Board, error) {
@@ -165,7 +165,7 @@ func GetBoardFromID(boardID int) (Board, error) {
 	return board, err
 }
 
-//GetBoardFromPostID gets the boardURI that a given postid exists on
+// GetBoardFromPostID gets the boardURI that a given postid exists on
 func GetBoardFromPostID(postID int) (boardURI string, wasFound bool, err error) {
 	const query = `SELECT board.uri FROM DBPREFIXboards as board
 	JOIN (
@@ -186,7 +186,7 @@ func getBoardIDFromURI(URI string) (id int, err error) {
 	return id, err
 }
 
-//CreateDefaultBoardIfNoneExist creates a default board if no boards exist yet
+// CreateDefaultBoardIfNoneExist creates a default board if no boards exist yet
 func CreateDefaultBoardIfNoneExist() error {
 	const sqlStr = `SELECT COUNT(id) FROM DBPREFIXboards`
 	var count int
@@ -208,7 +208,7 @@ func CreateDefaultBoardIfNoneExist() error {
 	return nil
 }
 
-//CreateBoard creates this board in the database if it doesnt exist already, also sets ID to correct value
+// CreateBoard creates this board in the database if it doesnt exist already, also sets ID to correct value
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func CreateBoard(values *Board) error {
@@ -238,7 +238,7 @@ func CreateBoard(values *Board) error {
 	return QueryRowSQL(sqlSELECT, interfaceSlice(values.Dir), interfaceSlice(&values.ID))
 }
 
-//GetBoardUris gets a list of all existing board URIs
+// GetBoardUris gets a list of all existing board URIs
 func GetBoardUris() (URIS []string, err error) {
 	const sql = `SELECT uri FROM DBPREFIXboards`
 	rows, err := QuerySQL(sql)
@@ -256,7 +256,7 @@ func GetBoardUris() (URIS []string, err error) {
 	return uris, nil
 }
 
-//GetAllSections gets a list of all existing sections
+// GetAllSections gets a list of all existing sections
 func GetAllSections() ([]BoardSection, error) {
 	const sql = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections ORDER BY position ASC, name ASC`
 	rows, err := QuerySQL(sql)
@@ -293,7 +293,7 @@ func getNextSectionListOrder() (int, error) {
 	return ID, err
 }
 
-//GetOrCreateDefaultSectionID creates the default section if it does not exist yet, returns default section ID if it exists
+// GetOrCreateDefaultSectionID creates the default section if it does not exist yet, returns default section ID if it exists
 func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 	const SQL = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
 	var ID int
@@ -304,9 +304,9 @@ func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 		if err != nil {
 			return 0, err
 		}
-		board := BoardSection{Name: "Main", Abbreviation: "Main", Hidden: false, ListOrder: ID}
-		err = CreateSection(&board)
-		return board.ID, err
+		section := BoardSection{Name: "Main", Abbreviation: "Main", Hidden: false, ListOrder: ID}
+		err = CreateSection(&section)
+		return section.ID, err
 	}
 	if err != nil {
 		return 0, err //other error
@@ -314,7 +314,7 @@ func GetOrCreateDefaultSectionID() (sectionID int, err error) {
 	return ID, nil
 }
 
-//CreateSection creates a section, setting the newly created id in the given struct
+// CreateSection creates a section, setting the newly created id in the given struct
 func CreateSection(section *BoardSection) error {
 	const sqlINSERT = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)`
 	const sqlSELECT = `SELECT id FROM DBPREFIXsections WHERE position = ?`
