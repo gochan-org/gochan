@@ -129,7 +129,7 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 func GetReports(includeCleared bool) ([]Report, error) {
 	sql := `SELECT id,handled_by_staff_id,post_id,ip,reason,is_cleared FROM DBPREFIXreports`
 	if !includeCleared {
-		sql += ` WHERE is_cleared = 0`
+		sql += ` WHERE is_cleared = FALSE`
 	}
 	rows, err := QuerySQL(sql)
 	if err != nil {
@@ -239,7 +239,7 @@ func CreateUserBan(IP string, threadBan bool, staffName, boardURI string, expire
 	return err
 }
 
-//GetAllAccouncements gets all announcements, newest first
+// GetAllAccouncements gets all announcements, newest first
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllAccouncements() ([]Announcement, error) {
@@ -263,8 +263,8 @@ func GetAllAccouncements() ([]Announcement, error) {
 	return announcements, nil
 }
 
-//GetAllBans gets a list of all bans
-//Warning, currently only gets ip bans, not other types of bans, as the ban functionality needs a major revamp anyway
+// GetAllBans gets a list of all bans
+// Warning, currently only gets ip bans, not other types of bans, as the ban functionality needs a major revamp anyway
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllBans() ([]BanInfo, error) {
@@ -301,7 +301,7 @@ ON ban.board_id = board.id`
 	return bans, nil
 }
 
-//CheckBan returns banentry if a ban was found or a sql.ErrNoRows if not banned
+// CheckBan returns banentry if a ban was found or a sql.ErrNoRows if not banned
 // name, filename and checksum may be empty strings and will be treated as not requested if done so
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
@@ -386,7 +386,7 @@ func checkFileBan(checksum string) (*FileBan, error) {
 	return ban, err
 }
 
-//GetMaxMessageLength returns the max message length on a board
+// GetMaxMessageLength returns the max message length on a board
 func GetMaxMessageLength(boardID int) (length int, err error) {
 	const sql = `SELECT max_message_length FROM DBPREFIXboards
 	WHERE id = ?`
@@ -394,7 +394,7 @@ func GetMaxMessageLength(boardID int) (length int, err error) {
 	return length, err
 }
 
-//GetEmbedsAllowed returns if embeds are allowed on a given board
+// GetEmbedsAllowed returns if embeds are allowed on a given board
 func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
 	const sql = `SELECT allow_embeds FROM DBPREFIXboards
 	WHERE id = ?`
@@ -402,7 +402,7 @@ func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
 	return allowed, err
 }
 
-//AddBanAppeal adds a given appeal to a given ban
+// AddBanAppeal adds a given appeal to a given ban
 func AddBanAppeal(banID uint, message string) error {
 	const sql1 = `
 	/*copy old to audit*/
@@ -422,7 +422,7 @@ func AddBanAppeal(banID uint, message string) error {
 	return err
 }
 
-//CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
+// CreateDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
 func CreateDefaultAdminIfNoStaff() error {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
@@ -550,7 +550,7 @@ func (wf *WordFilter) Apply(message string) (string, error) {
 	return message, nil
 }
 
-//getDatabaseVersion gets the version of the database, or an error if none or multiple exist
+// getDatabaseVersion gets the version of the database, or an error if none or multiple exist
 func getDatabaseVersion(componentKey string) (int, error) {
 	const sql = `SELECT version FROM DBPREFIXdatabase_version WHERE component = ?`
 	var version int
@@ -568,9 +568,18 @@ func getNextFreeID(tableName string) (ID int, err error) {
 }
 
 func doesTableExist(tableName string) (bool, error) {
-	const existQuery = `SELECT COUNT(*)
-	FROM INFORMATION_SCHEMA.TABLES
-	WHERE TABLE_NAME = ?`
+	var existQuery string
+
+	switch config.GetSystemCriticalConfig().DBtype {
+	case "mysql":
+		fallthrough
+	case "postgresql":
+		existQuery = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?`
+	case "sqlite3":
+		existQuery = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`
+	default:
+		return false, ErrUnsupportedDB
+	}
 
 	var count int
 	err := QueryRowSQL(existQuery, []interface{}{config.GetSystemCriticalConfig().DBprefix + tableName}, []interface{}{&count})
@@ -580,15 +589,22 @@ func doesTableExist(tableName string) (bool, error) {
 	return count == 1, nil
 }
 
-//doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
-//Returns false if the prefix is an empty string
+// doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
+// Returns false if the prefix is an empty string
 func doesGochanPrefixTableExist() (bool, error) {
-	if config.GetSystemCriticalConfig().DBprefix == "" {
+	systemCritical := config.GetSystemCriticalConfig()
+	if systemCritical.DBprefix == "" {
 		return false, nil
 	}
-	var prefixTableExist = `SELECT count(*) 
-	FROM INFORMATION_SCHEMA.TABLES
-	WHERE TABLE_NAME LIKE 'DBPREFIX%'`
+	var prefixTableExist string
+	switch systemCritical.DBtype {
+	case "mysql":
+		fallthrough
+	case "postgresql":
+		prefixTableExist = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'DBPREFIX%'`
+	case "sqlite3":
+		prefixTableExist = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name LIKE 'DBPREFIX%'`
+	}
 
 	var count int
 	err := QueryRowSQL(prefixTableExist, []interface{}{}, []interface{}{&count})
