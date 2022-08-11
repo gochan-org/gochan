@@ -15,7 +15,9 @@ npm install
 ## Building
 You can technically use the npm build script directly for building gochan.js, but it's more convenient to just run `./build.py js` from the gochan repo root directory.
 
-If you want to build it without minification, run `./build.py js --nominify`. If you want to have it watch the JS files for changes and rebuild them when you make any in realtime, use the `--watch` flag.
+If you want to have it watch the JS files for changes and rebuild them when you make any in realtime, use the `--watch` flag.
+
+If you want to run [ESLint](https://eslint.org/) on the JS code to find potential issues, use the `--eslint` flag, or the `--eslint-fix` flag to have ESLint try to automatically fix some issues it finds.
 
 To install your gochan.js after building it, run `./build.py install --js`.
 
