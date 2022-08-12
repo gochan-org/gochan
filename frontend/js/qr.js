@@ -12,7 +12,7 @@ import { upArrow, downArrow } from "./vars";
 import { getCookie } from "./cookies";
 import { $topbar, topbarHeight } from "./topbar";
 import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "./storage";
-import { currentThread, updateThread } from "./postutil";
+import { currentThread, getPageThread, updateThread } from "./postutil";
 
 /**
  * @type {JQuery<HTMLElement>}
@@ -35,6 +35,13 @@ export function initQR(pageThread) {
 		// QR box already initialized
 		return;
 	}
+	if(pageThread === undefined)
+		pageThread = getPageThread();
+
+	if(!getBooleanStorageVal("useqr", true)) {
+		return closeQR();
+	}
+
 
 	let onPostingPage = $("form input[name=boardid]").length > 0;
 	// don't open the QR box if we aren't on a board or thread page

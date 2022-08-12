@@ -4,9 +4,9 @@ import $ from "jquery";
 
 import { showLightBox } from "./lightbox";
 import { initTopBar, TopBarButton } from "./topbar";
-import { getStorageVal, setStorageVal } from "./storage";
+import { getBooleanStorageVal, getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
-import { initQR } from "./qr";
+import { closeQR, initQR } from "./qr";
 import { initWatcher } from "./watcher";
 
 /**
@@ -136,7 +136,10 @@ export function initSettings() {
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
 	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", false, initPostPreviews));
 	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true, initPostPreviews));
-	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, initQR));
+	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, () => {
+		if(getBooleanStorageVal("useqr", true)) initQR();
+		else closeQR();
+	}));
 	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 10, {
 		min: 2
 	}, initWatcher));
