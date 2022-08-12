@@ -17,7 +17,7 @@ export function getWatchedThreads() {
 			continue;
 		}
 		for(const thread of watched[board]) {
-			console.log(thread);
+			// console.log(thread);
 		}
 	}
 

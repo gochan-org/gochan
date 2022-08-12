@@ -12,6 +12,7 @@ import { alertLightbox, promptLightbox } from "./lightbox";
 import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
 import { handleActions } from "./boardevents";
 import { isThreadWatched } from "./watcher";
+import { openQR } from "./qr";
 
 let doClickPreview = false;
 let doHoverPreview = false;
@@ -399,22 +400,38 @@ export function prepareThumbnails() {
 	});
 }
 
-// heavily based on 4chan's quote() function, with a few tweaks
-export function quote(e) {
-	let msgboxID = "postmsg";
+function selectedText() {
+	if(!window.getSelection) return "";
+	return window.getSelection().toString();
+}
 
-	let msgbox = document.getElementById(msgboxID);
+export function quote(no) {
+	if(getBooleanStorageVal("useqr", true)) {
+		openQR();
+	}
+	let msgboxID = "postmsg";	
 
-	if(document.selection) {
-		document.getElementById(msgboxID).focus();
-		let t = document.getselection.createRange();
-		t.text = `>>${e}\n`;
-	} else if(msgbox.selectionStart || "0" == msgbox.selectionStart) {
-		let n = msgbox.selectionStart,
-		o = msgbox.selectionEnd;
-		msgbox.value = msgbox.value.substring(0, n) + ">>" + e + "\n" + msgbox.value.substring(o, msgbox.value.length);
-	} else msgbox.value += `>>${e}\n`;
-	window.scroll(0,msgbox.offsetTop - 48);
+	let msgbox = document.getElementById("qr" + msgboxID);
+	if(msgbox == null)
+		msgbox = document.getElementById(msgboxID);
+	let selected = selectedText();
+	let lines = selected.split("\n");
+
+	if(selected != "") {
+		for(const l in lines) {
+			lines[l] = ">" + lines[l];
+		}
+	}
+	let cursor = (msgbox.selectionStart !== undefined)?msgbox.selectionStart:msgbox.value.length;
+	let quoted = lines.join("\n");
+	if(quoted != "") quoted += "\n";
+	msgbox.value = msgbox.value.slice(0, cursor) + `>>${no}\n` +
+		quoted + 
+		msgbox.value.slice(cursor);
+	
+	if(msgbox.id == "postmsg")
+		window.scroll(0,msgbox.offsetTop - 48);
+	msgbox.focus();
 }
 window.quote = quote;
 
