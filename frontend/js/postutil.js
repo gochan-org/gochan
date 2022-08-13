@@ -412,7 +412,7 @@ export function quote(no) {
 	let msgboxID = "postmsg";	
 
 	let msgbox = document.getElementById("qr" + msgboxID);
-	if(msgbox == null)
+	if(msgbox === null)
 		msgbox = document.getElementById(msgboxID);
 	let selected = selectedText();
 	let lines = selected.split("\n");
