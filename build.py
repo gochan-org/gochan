@@ -325,16 +325,19 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 	mkdir("/var/log/gochan")
 
 	for file in release_files:
-		if file.startswith("html/"):
-			trimmed = path.relpath(file, "html/")
-			os.chdir(path.join(start_dir, "html/"))
-			print("copying", trimmed,"to", path.join(document_root, trimmed))
-			copy(trimmed, document_root)
-			os.chdir(start_dir)
-		else:
-			os.chdir(start_dir)
-			copy(file, path.join(prefix, "share/gochan"))
-			mkdir(path.join(prefix, "share/gochan/templates/override/"))
+		try:
+			if file.startswith("html/"):
+				trimmed = path.relpath(file, "html/")
+				os.chdir(path.join(start_dir, "html/"))
+				print("copying", trimmed,"to", path.join(document_root, trimmed))
+				copy(trimmed, document_root)
+				os.chdir(start_dir)
+			else:
+				os.chdir(start_dir)
+				copy(file, path.join(prefix, "share/gochan"))
+				mkdir(path.join(prefix, "share/gochan/templates/override/"))
+		except shutil.SameFileError as err:
+			print(err)
 
 	if path.exists(gochan_exe) is False:
 		build()
