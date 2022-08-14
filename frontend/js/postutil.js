@@ -11,6 +11,7 @@ import { getCookie } from "./cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
 import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
 import { isThreadWatched, unwatchThread, watchThread } from "./watcher";
+import { isPostVisible, setPostVisibility, setThreadVisibility } from "./posthiding";
 import { openQR } from "./qr";
 
 let doClickPreview = false;
@@ -70,66 +71,6 @@ export function currentThread() {
 	if(reArr.length > 0)
 		thread.thread = reArr[0];
 	return thread;
-}
-
-/**
- * isPostVisible returns true if the post exists and is visible, otherwise false
- * @param {number} id the id of the post
- */
-function isPostVisible(id) {
-	let $post = $(`div#op${id}.op-post,div#reply${id}.reply`);
-	if($post.length === 0)
-		return false;
-	return $post.find(".post-text").is(":visible");
-}
-
-/**
- * setPostVisibility sets the visibility of the post with the given ID. It returns true if it finds
- * a post or thread with the given ID, otherwise false
- * @param {number} id the id of the post to be toggled
- * @param {boolean} visibility the visibility to be set
- * @param onComplete called after the visibility is set
- */
-function setPostVisibility(id, visibility, onComplete = () =>{}) {
-	let $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
-	
-	if($post.length === 0)
-		return false;
-	let $toSet = $post.find(".file-info,.post-text,.upload,.file-deleted-box,br");
-	let $backlink = $post.find("a.backlink-click");
-	if(visibility) {
-		$toSet.show(0, onComplete);
-		$post.find("select.post-actions option").each((e, elem) => {
-			elem.text = elem.text.replace("Show", "Hide");
-		});
-		$backlink.text(id);
-	} else {
-		$toSet.hide(0, onComplete);
-		$post.find("select.post-actions option").each((e, elem) => {
-			elem.text = elem.text.replace("Hide", "Show");
-		});
-		$backlink.text(`${id} (hidden)`);
-	}
-	return true;
-}
-
-/**
- * setThreadVisibility sets the visibility of the thread with the given ID, as well as its replies.
- * It returns true if it finds a thread with the given ID, otherwise false
- * @param {number} id the id of the thread to be hidden
- * @param {boolean} visibility the visibility to be set
- */
-function setThreadVisibility(opID, visibility) {
-	let $thread = $(`div#op${opID}.op-post`).parent(".thread");
-	if($thread.length === 0) return false;
-	return setPostVisibility(opID, visibility, () => {
-		let $toSet = $thread.find(".reply-container,b,br");
-		if(visibility) {
-			$toSet.show();
-		} else {
-			$toSet.hide();
-		}
-	});
 }
 
 export function insideOP(elem) {
@@ -657,7 +598,7 @@ export function getThreadJSON(threadID, board) {
 
 $(() => {
 	let pageThread = getPageThread();
-	if(pageThread.op < 1) return; // not in a thread
-
-	threadWatcherInterval = setInterval(updateThread, getNumberStorageVal("watcherseconds", 10) * 1000);
+	if(pageThread.op >= 1) {
+		threadWatcherInterval = setInterval(updateThread, getNumberStorageVal("watcherseconds", 10) * 1000);
+	}
 });

@@ -30,6 +30,7 @@ export function getJsonStorageVal(key, defaultVal) {
 }
 
 export function setStorageVal(key, val) {
+	// console.log(val);
 	if(localStorage == undefined)
 		setCookie(key, val);
 	else
