@@ -52,10 +52,11 @@ CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json 
 	-e "s/\"DBname\".*/\"DBname\": \"${DATABASE_NAME}\",/" \
 	-e "s/\"DBusername\".*/\"DBusername\": \"${DATABASE_USER}\",/" \
 	-e "s/\"DBpassword\".*/\"DBpassword\": \"${DATABASE_PASSWORD}\",/" \
-	&& openssl req -x509 -nodes -days 7305 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=172.27.0.3" \
+	&& openssl req -x509 -nodes -days 7305 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=127.0.0.1" \
 	&& ./build.py \
 	&& ./build.py install \
 	&& nginx \
 	&& echo "pinging db" \
 	&& docker/wait-for.sh $DATABASE_HOST:$DATABASE_PORT -t 30 \
+	&& /opt/gochan/gochan -rebuild all \
 	&& /opt/gochan/gochan
