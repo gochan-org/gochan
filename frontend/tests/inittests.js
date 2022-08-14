@@ -1,5 +1,3 @@
-import { jest } from "@jest/globals";
-
 // mock variables the browser would normally get from {webroot}js/consts.js
 global.styles=[
 	{Name: "Pipes", Filename: "pipes.css"},

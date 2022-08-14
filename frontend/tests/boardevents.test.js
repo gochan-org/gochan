@@ -1,7 +1,9 @@
+/* global simpleHTML */
 'use strict';
-import {test, expect, jest} from "@jest/globals";
+import {test, expect} from "@jest/globals";
 
 import $ from "jquery";
+import "../js/vars";
 import "./inittests";
 
 import { applyBBCode, handleKeydown } from "../js/boardevents";
@@ -9,7 +11,7 @@ import { applyBBCode, handleKeydown } from "../js/boardevents";
 document.documentElement.innerHTML = simpleHTML;
 
 function doBBCode(keycode, text, start, end) {
-	let $ta = $("<textarea/>")
+	let $ta = $("<textarea/>");
 	$ta.text(text);
 	let e = $.Event("keydown");
 	e.ctrlKey = true;
@@ -43,11 +45,11 @@ test("Tests BBCode events", () => {
 });
 
 test("Tests proper form submission via JS", () => {
-	let $form = $("form#postform")
+	let $form = $("form#postform");
 	let text = doBBCode(83, "text", 0, 4);
 	$form.find("textarea#postmsg").text(text);
 	let submitted = false;
-	$form.on("submit", function(e) {
+	$form.on("submit", () => {
 		submitted = true;
 		return false;
 	});

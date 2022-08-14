@@ -17,6 +17,7 @@
     "build-js": "parcel build --no-cache",
     "watch-js": "parcel watch --no-cache --no-hmr",
     "eslint": "eslint ./js/",
+    "eslint-tests": "eslint ./tests/ --env node",
     "eslint-fix": "eslint --fix ./js/",
     "test": "jest --verbose",
     "build-sass": "sass --no-source-map sass:../html/css",

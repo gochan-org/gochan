@@ -1,5 +1,3 @@
-import $ from "jquery";
-
 import { expect, test } from "@jest/globals";
 import { getBooleanCookie, getCookie, getNumberCookie, initCookies, setCookie } from "../js/cookies";
 import { getBooleanStorageVal, getJsonStorageVal, getNumberStorageVal, getStorageVal, setStorageVal } from "../js/storage";
@@ -19,7 +17,7 @@ test("Test cookie types", () => {
 
 	setCookie("boolCookie", true, 100, "/");
 	let boolCookie = getBooleanCookie("boolCookie");
-	expect(boolCookie).toStrictEqual(true)
+	expect(boolCookie).toStrictEqual(true);
 
 });
 
