@@ -197,7 +197,7 @@ def set_vars(goos=""):
 	gochan_exe = "gochan" + exe
 	migration_bin = "gochan-migration"
 	migration_exe = "gochan-migration" + exe
-	
+
 	with open("version", "r") as version_file:
 		version = version_file.read().strip()
 
