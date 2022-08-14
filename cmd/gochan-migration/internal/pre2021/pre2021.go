@@ -59,6 +59,8 @@ func (m *Pre2021Migrator) IsMigrated() (bool, error) {
 	case "postgres":
 		query = `SELECT COUNT(*) > 0 FROM INFORMATION_SCHEMA.TABLES
 		WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?`
+	default:
+		return false, gcsql.ErrUnsupportedDB
 	}
 	if err = m.db.QueryRowSQL(query,
 		[]interface{}{m.config.DBprefix + "migrated", m.config.DBname},
@@ -81,18 +83,18 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	if err := m.MigrateBoards(); err != nil {
 		return false, err
 	}
-	if err = m.MigratePosts(); err != nil {
-		return false, err
-	}
-	if err = m.MigrateStaff("password"); err != nil {
-		return false, err
-	}
-	if err = m.MigrateBans(); err != nil {
-		return false, err
-	}
-	if err = m.MigrateAnnouncements(); err != nil {
-		return false, err
-	}
+	// if err = m.MigratePosts(); err != nil {
+	// 	return false, err
+	// }
+	// if err = m.MigrateStaff("password"); err != nil {
+	// 	return false, err
+	// }
+	// if err = m.MigrateBans(); err != nil {
+	// 	return false, err
+	// }
+	// if err = m.MigrateAnnouncements(); err != nil {
+	// 	return false, err
+	// }
 
 	return true, nil
 }

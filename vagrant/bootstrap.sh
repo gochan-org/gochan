@@ -83,7 +83,7 @@ sed -i 's/WantedBy=multi-user.target/WantedBy=vagrant.mount/' /lib/systemd/syste
 openssl req -x509 -nodes -days 7305 -newkey rsa:2048 \
 	-keyout /etc/ssl/private/nginx-selfsigned.key \
 	-out /etc/ssl/certs/nginx-selfsigned.crt \
-	-subj "/CN=172.27.0.3"
+	-subj "/CN=192.168.56.3"
 
 systemctl daemon-reload
 systemctl enable nginx

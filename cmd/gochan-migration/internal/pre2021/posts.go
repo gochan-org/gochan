@@ -3,9 +3,9 @@ package pre2021
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
@@ -38,8 +38,8 @@ type postTable struct {
 	locked            bool
 	reviewed          bool
 
-	newBoardID  int
-	oldParentID int
+	newBoardID int
+	// oldParentID int
 }
 
 func (m *Pre2021Migrator) MigratePosts() error {
@@ -104,7 +104,7 @@ func (m *Pre2021Migrator) migrateThreads() error {
 		_, ok := m.oldBoards[post.boardid]
 		if !ok {
 			// board doesn't exist
-			gclog.Printf(gclog.LStdLog|gclog.LErrorLog,
+			log.Printf(
 				"Pre-migrated post #%d has an invalid boardid %d (board doesn't exist), skipping",
 				post.id, post.boardid)
 			continue

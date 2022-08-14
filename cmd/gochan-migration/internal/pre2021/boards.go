@@ -1,7 +1,8 @@
 package pre2021
 
 import (
-	"github.com/gochan-org/gochan/pkg/gclog"
+	"log"
+
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
@@ -77,7 +78,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 				m.oldBoards[id] = dir
 			}
 			if boards[b].Dir == dir {
-				gclog.Printf(gclog.LStdLog, "Board /%s/ already exists in new db, moving on\n", dir)
+				log.Printf("Board /%s/ already exists in new db, moving on\n", dir)
 				found = true
 				break
 			}
@@ -113,7 +114,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 			return err
 		}
 		m.newBoards[id] = dir
-		gclog.Printf(gclog.LStdLog, "/%s/ successfully migrated in the database", dir)
+		log.Printf("/%s/ successfully migrated in the database", dir)
 		// Automatic directory migration has the potential to go horribly wrong, so I'm leaving this
 		// commented out for now
 		// switch m.options.DirAction {
@@ -122,15 +123,15 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		// case common.DirMove:
 		// 	// move the old directory (probably should copy instead) to the new one
 		// 	newDocumentRoot := config.GetSystemCriticalConfig().DocumentRoot
-		// 	gclog.Println(gclog.LStdLog, "Old board path:", path.Join(m.config.DocumentRoot, dir))
-		// 	gclog.Println(gclog.LStdLog, "Old board path:", path.Join(newDocumentRoot, dir))
+		// 	log.Println("Old board path:", path.Join(m.config.DocumentRoot, dir))
+		// 	log.Println("Old board path:", path.Join(newDocumentRoot, dir))
 		// 	if err = os.Rename(
 		// 		path.Join(m.config.DocumentRoot, dir),
 		// 		path.Join(newDocumentRoot, dir),
 		// 	); err != nil {
 		// 		return err
 		// 	}
-		// 	gclog.Printf(gclog.LStdLog, "/%s/ directory/files successfully moved")
+		// 	log.Printf("/%s/ directory/files successfully moved")
 		// }
 	}
 	return nil
