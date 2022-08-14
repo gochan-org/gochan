@@ -1,5 +1,8 @@
 import $ from "jquery";
-import { getStorageVal, setStorageVal } from "./storage";
+import { getStorageVal, setStorageVal } from "../storage";
+
+const emptyFunc = () => {};
+
 
 /**
  * isPostVisible returns true if the post exists and is visible, otherwise false
@@ -19,7 +22,7 @@ export function isPostVisible(id) {
  * @param {boolean} visibility the visibility to be set
  * @param onComplete called after the visibility is set
  */
-export function setPostVisibility(id, visibility, onComplete = () =>{}) {
+export function setPostVisibility(id, visibility, onComplete = emptyFunc) {
 	let $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
 	
 	if($post.length === 0)

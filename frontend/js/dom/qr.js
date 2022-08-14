@@ -8,11 +8,12 @@ import "jquery-ui/ui/widgets/mouse";
 import "jquery-ui/ui/safe-blur";
 import "jquery-ui/ui/widgets/draggable";
 
-import { upArrow, downArrow } from "./vars";
-import { getCookie } from "./cookies";
+import { upArrow, downArrow } from "../vars";
+import { getCookie } from "../cookies";
 import { $topbar, topbarHeight } from "./topbar";
-import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "./storage";
-import { currentThread, getPageThread, updateThread } from "./postutil";
+import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../storage";
+import { updateThread } from "../postutil";
+import { currentThread, getPageThread } from "../postinfo";
 
 /**
  * @type {JQuery<HTMLElement>}

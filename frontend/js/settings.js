@@ -2,11 +2,11 @@
 
 import $ from "jquery";
 
-import { showLightBox } from "./lightbox";
-import { initTopBar, TopBarButton } from "./topbar";
+import { showLightBox } from "./dom/lightbox";
+import { initTopBar, TopBarButton } from "./dom/topbar";
 import { getBooleanStorageVal, getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
-import { closeQR, initQR } from "./qr";
+import { closeQR, initQR } from "./dom/qr";
 import { initWatcher } from "./watcher";
 
 /**

@@ -5,10 +5,12 @@ import $ from "jquery";
 import { handleKeydown } from "./boardevents";
 import { initCookies } from "./cookies";
 import { initStaff, createStaffMenu } from "./manage";
-import { prepareThumbnails, initPostPreviews, getPageThread, addPostDropdown } from "./postutil";
+import { getPageThread } from "./postinfo";
+import { prepareThumbnails, initPostPreviews } from "./postutil";
+import { addPostDropdown } from "./dom/postdropdown";
 import { initSettings } from "./settings";
-import { initTopBar } from "./topbar";
-import { initQR } from "./qr";
+import { initTopBar } from "./dom/topbar";
+import { initQR } from "./dom/qr";
 import { initWatcher } from "./watcher";
 import { getBooleanStorageVal, getStorageVal } from "./storage";
 

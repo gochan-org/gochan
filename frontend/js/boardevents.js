@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-import { openQR } from "./qr";
+import { openQR } from "./dom/qr";
 
 export function handleKeydown(e) {
 	let ta = e.target;

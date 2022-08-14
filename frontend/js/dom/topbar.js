@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-import { getBooleanStorageVal } from "./storage";
+import { getBooleanStorageVal } from "../storage";
 
 /**
  * @type {JQuery<HTMLElement>}

@@ -2,8 +2,8 @@
 
 import $ from 'jquery';
 
-import { alertLightbox } from "./lightbox";
-import { $topbar, TopBarButton } from './topbar';
+import { alertLightbox } from "./dom/lightbox";
+import { $topbar, TopBarButton } from './dom/topbar';
 
 /**
  * @type {StaffInfo}

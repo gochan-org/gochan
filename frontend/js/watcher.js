@@ -1,4 +1,4 @@
-import { currentBoard } from "./postutil";
+import { currentBoard } from "./postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "./storage";
 let watching = false;
 let watcherInterval = -1;
@@ -20,23 +20,6 @@ export function getWatchedThreads() {
 			// console.log(thread);
 		}
 	}
-
-	// let threadJsonURL = `${webroot}/res/$`;
-
-	// fetch("/test/res/1.json")
-	// .then(response => {
-	// 	if(!response.ok)
-	// 		throw new Error(response.statusText);
-	// 	return response.json();
-	// })
-	// .then(data => {
-	// 	console.log(data);
-	// })
-	// .catch(err => {
-	// 	console.log(`Error getting watched threads: ${err}`);
-	// 	clearInterval(getWatchedThreads);
-	// 	watching = false;
-	// })
 }
 
 export function isThreadWatched(threadID, board) {
@@ -60,9 +43,6 @@ export function watchThread(threadID, board) {
 		id: threadID
 	});
 	setStorageVal("watched", JSON.stringify(watched));
-	/* getThreadJSON(threadID, board).then(data => {
-
-	}); */
 }
 
 export function unwatchThread(threadID, board) {
