@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-import { currentBoard, deletePost, editPost, reportPost } from './postutil';
+import { currentBoard, deletePost, editPost, reportPost, setPostVisibility, setThreadVisibility } from './postutil';
 import { unwatchThread, watchThread } from "./watcher";
 import { openQR } from "./qr";
 
@@ -69,11 +69,14 @@ export function handleActions(action, postIDStr) {
 		case "Unwatch thread":
 			unwatchThread(postID, board);
 			break;
-		/* case "Show/hide thread":
+		case "Show/hide thread":
+			console.log(`Showing/hiding thread ${postID}`);
+			setThreadVisibility(postID, false);
+			break;
 		case "Show/hide post":
-			console.log(`Showing/hiding ${postID}`);
-			hidePost(postID);
-			break; */
+			console.log(`Showing/hiding post ${postID}`);
+			setPostVisibility(postID, false);
+			break;
 		case "Edit post":
 			editPost(postID, board);
 			break;

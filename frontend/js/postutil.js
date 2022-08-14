@@ -73,14 +73,45 @@ export function currentThread() {
 	return thread;
 }
 
-/* export function hidePost(id) {
-	let posttext = $("div#"+id+".post .posttext");
-	if(posttext.length > 0) posttext.remove();
-	let fileinfo = $("div#"+id+".post .file-info")
-	if(fileinfo.length > 0) fileinfo.remove();
-	let postimg = $("div#"+id+".post img")
-	if(postimg.length > 0) postimg.remove();
-} */
+/**
+ * setPostVisibility sets the visibility of the post with the given ID. It returns true if it finds
+ * a post or thread with the given ID, otherwise false
+ * @param {number} id the id of the post to be toggled
+ * @param {boolean} visibility the visibility to be set
+ * @param onComplete called after the visibility is set
+ */
+export function setPostVisibility(id, visibility, onComplete = () =>{}) {
+	let $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
+	
+	if($post.length == 0)
+		return false;
+	let $toSet = $post.find(".file-info,.post-text,.upload,.file-deleted-box,br");
+	if(visibility) {
+		$toSet.show(0, onComplete);
+	} else {
+		$toSet.hide(0, onComplete);
+	}
+	return true;
+}
+
+/**
+ * setThreadVisibility sets the visibility of the thread with the given ID, as well as its replies.
+ * It returns true if it finds a thread with the given ID, otherwise false
+ * @param {number} id the id of the thread to be hidden
+ * @param {boolean} visibility the visibility to be set
+ */
+export function setThreadVisibility(opID, visibility) {
+	let $thread = $(`div#op${opID}.op-post`).parent(".thread");
+	if($thread.length == 0) return false;
+	return setPostVisibility(opID, visibility, () => {
+		let $toSet = $thread.find(".reply-container,b,br");
+		if(visibility) {
+			$toSet.show();
+		} else {
+			$toSet.hide();
+		}
+	});
+}
 
 export function insideOP(elem) {
 	return $(elem).parents("div.op-post").length > 0;
@@ -451,7 +482,7 @@ export function addPostDropdown($post) {
 		}
 	}
 	$ddownMenu.append(
-		// `<option>Show/hide ${threadPost}</option>`,
+		`<option>Show/hide ${threadPost}</option>`,
 		`<option>Edit post</option>`,
 		`<option>Report post</option>`,
 		`<option>Delete ${threadPost}</option>`,
