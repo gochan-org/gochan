@@ -76,7 +76,7 @@ func CreateReport(postID int, ip string, reason string) (*Report, error) {
 		return nil, err
 	}
 
-	sql = `INSERT INTO gc_reports_audit (report_id,timestamp) VALUES(?, ?)`
+	sql = `INSERT INTO DBPREFIXreports_audit (report_id, timestamp, is_cleared) VALUES(?, ?, FALSE)`
 	if _, err = ExecSQL(sql, reportID, currentTime); err != nil {
 		return nil, err
 	}

@@ -34,7 +34,7 @@ export function reportPost(id, board) {
 				errStr = data.statusText;
 			alertLightbox(`Report failed: ${errStr}`, "Error");
 		}).done(data => {
-			if(data.error !== undefined) {
+			if(data.error !== undefined && data.error !== null) {
 				alertLightbox(`Report failed: ${data.error.Message}`, "Error");
 			} else {
 				alertLightbox("Report sent", "Success");
