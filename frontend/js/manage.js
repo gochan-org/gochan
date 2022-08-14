@@ -43,14 +43,19 @@ export async function initStaff() {
 		},
 		async: true,
 		cache: false,
-		dataType: "json",
-		/** 
-		 * @param {StaffAction[]} result
-		*/
 		success: result => {
-			staffActions = result;
+			if(typeof result === "string") {
+				try {
+					staffActions = JSON.parse(result);
+				} catch(e) {
+					staffActions = [];
+				}
+			} else if(typeof result === "object") {
+				staffActions = result;
+			}
 		},
-		error: () => {
+		error: (e) => {
+			console.error("Error getting actions list:", e);
 		}
 	}).then(getStaffInfo);
 }

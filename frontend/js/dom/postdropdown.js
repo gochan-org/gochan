@@ -30,11 +30,15 @@ export function reportPost(id, board) {
 		xhrFields[`check${id}`] = "on";
 		$.post(webroot + "util", xhrFields).fail(data => {
 			let errStr = data.error;
-			if(errStr == undefined)
+			if(errStr === undefined)
 				errStr = data.statusText;
 			alertLightbox(`Report failed: ${errStr}`, "Error");
-		}).done(() => {
-			alertLightbox("Report sent", "Success");
+		}).done(data => {
+			if(data.error !== undefined) {
+				alertLightbox(`Report failed: ${data.error.Message}`, "Error");
+			} else {
+				alertLightbox("Report sent", "Success");
+			}
 		}, "json");
 	}, "Report post");
 }
