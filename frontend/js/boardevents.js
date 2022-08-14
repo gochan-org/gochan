@@ -1,10 +1,6 @@
 import $ from "jquery";
 
-import { currentBoard, deletePost, editPost, reportPost, setPostVisibility, setThreadVisibility } from './postutil';
-import { unwatchThread, watchThread } from "./watcher";
 import { openQR } from "./qr";
-
-const idRe = /^((reply)|(op))(\d+)/;
 
 export function handleKeydown(e) {
 	let ta = e.target;
@@ -55,40 +51,4 @@ export function applyBBCode(e) {
 		val.slice(se);
 	ta.setSelectionRange(r, r);
 	$(ta).text(ta.value);
-}
-
-export function handleActions(action, postIDStr) {
-	let idArr = idRe.exec(postIDStr);
-	if(!idArr) return;
-	let postID = idArr[4];
-	let board = currentBoard();
-	switch(action) {
-		case "Watch thread":
-			watchThread(postID, board);
-			break;
-		case "Unwatch thread":
-			unwatchThread(postID, board);
-			break;
-		case "Show/hide thread":
-			console.log(`Showing/hiding thread ${postID}`);
-			setThreadVisibility(postID, false);
-			break;
-		case "Show/hide post":
-			console.log(`Showing/hiding post ${postID}`);
-			setPostVisibility(postID, false);
-			break;
-		case "Edit post":
-			editPost(postID, board);
-			break;
-		case "Report post":
-			reportPost(postID, board);
-			break;
-		case "Delete file":
-			deletePost(postID, board, true);
-			break;
-		case "Delete thread":
-		case "Delete post":
-			deletePost(postID, board);
-			break;
-	}
 }

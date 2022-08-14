@@ -10,8 +10,7 @@ import $ from "jquery";
 import { getCookie } from "./cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
 import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
-import { handleActions } from "./boardevents";
-import { isThreadWatched } from "./watcher";
+import { isThreadWatched, unwatchThread, watchThread } from "./watcher";
 import { openQR } from "./qr";
 
 let doClickPreview = false;
@@ -74,22 +73,42 @@ export function currentThread() {
 }
 
 /**
+ * isPostVisible returns true if the post exists and is visible, otherwise false
+ * @param {number} id the id of the post
+ */
+function isPostVisible(id) {
+	let $post = $(`div#op${id}.op-post,div#reply${id}.reply`);
+	if($post.length === 0)
+		return false;
+	return $post.find(".post-text").is(":visible");
+}
+
+/**
  * setPostVisibility sets the visibility of the post with the given ID. It returns true if it finds
  * a post or thread with the given ID, otherwise false
  * @param {number} id the id of the post to be toggled
  * @param {boolean} visibility the visibility to be set
  * @param onComplete called after the visibility is set
  */
-export function setPostVisibility(id, visibility, onComplete = () =>{}) {
+function setPostVisibility(id, visibility, onComplete = () =>{}) {
 	let $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
 	
-	if($post.length == 0)
+	if($post.length === 0)
 		return false;
 	let $toSet = $post.find(".file-info,.post-text,.upload,.file-deleted-box,br");
+	let $backlink = $post.find("a.backlink-click");
 	if(visibility) {
 		$toSet.show(0, onComplete);
+		$post.find("select.post-actions option").each((e, elem) => {
+			elem.text = elem.text.replace("Show", "Hide");
+		});
+		$backlink.text(id);
 	} else {
 		$toSet.hide(0, onComplete);
+		$post.find("select.post-actions option").each((e, elem) => {
+			elem.text = elem.text.replace("Hide", "Show");
+		});
+		$backlink.text(`${id} (hidden)`);
 	}
 	return true;
 }
@@ -100,9 +119,9 @@ export function setPostVisibility(id, visibility, onComplete = () =>{}) {
  * @param {number} id the id of the thread to be hidden
  * @param {boolean} visibility the visibility to be set
  */
-export function setThreadVisibility(opID, visibility) {
+function setThreadVisibility(opID, visibility) {
 	let $thread = $(`div#op${opID}.op-post`).parent(".thread");
-	if($thread.length == 0) return false;
+	if($thread.length === 0) return false;
 	return setPostVisibility(opID, visibility, () => {
 		let $toSet = $thread.find(".reply-container,b,br");
 		if(visibility) {
@@ -461,6 +480,46 @@ export function quote(no) {
 }
 window.quote = quote;
 
+function handleActions(action, postIDStr) {
+	let idArr = idRe.exec(postIDStr);
+	if(!idArr) return;
+	let postID = idArr[4];
+	let board = currentBoard();
+	switch(action) {
+		case "Watch thread":
+			watchThread(postID, board);
+			break;
+		case "Unwatch thread":
+			unwatchThread(postID, board);
+			break;
+		case "Show thread":
+			setThreadVisibility(postID, true);
+			break;
+		case "Hide thread":
+			setThreadVisibility(postID, false);
+			break;
+		case "Show post":
+			setPostVisibility(postID, true);
+			break;
+		case "Hide post":
+			setPostVisibility(postID, false);
+			break;
+		case "Edit post":
+			editPost(postID, board);
+			break;
+		case "Report post":
+			reportPost(postID, board);
+			break;
+		case "Delete file":
+			deletePost(postID, board, true);
+			break;
+		case "Delete thread":
+		case "Delete post":
+			deletePost(postID, board);
+			break;
+	}
+}
+
 export function addPostDropdown($post) {
 	if($post.find("select.post-actions").length > 0)
 		return $post;
@@ -473,22 +532,24 @@ export function addPostDropdown($post) {
 		class: "post-actions",
 		id: postID
 	}).append("<option disabled selected>Actions</option>");
+	let idNum = idRe.exec(postID)[4];
 	if(isOP) {
-		let threadID = idRe.exec(postID)[4];
-		if(isThreadWatched(threadID, currentBoard())) {
+		if(isThreadWatched(idNum, currentBoard())) {
 			$ddownMenu.append("<option>Unwatch thread</option>");
 		} else {
 			$ddownMenu.append("<option>Watch thread</option>");
 		}
 	}
+	let showHide = isPostVisible(idNum)?"Hide":"Show";
 	$ddownMenu.append(
-		`<option>Show/hide ${threadPost}</option>`,
+		`<option>${showHide} ${threadPost}</option>`,
 		`<option>Edit post</option>`,
 		`<option>Report post</option>`,
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
-	.on("change", event => {
+	.on("change", e => {
 		handleActions($ddownMenu.val(), postID);
+		$ddownMenu.val("Actions");
 	});
 	if(hasUpload)
 		$ddownMenu.append(`<option>Delete file</option>`);
