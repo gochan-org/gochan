@@ -66,7 +66,7 @@ func SetFormattedInDatabase(messages []MessagePostContainer) error {
 // errors encountered
 func CreateReport(postID int, ip string, reason string) (*Report, error) {
 	currentTime := time.Now()
-	sql := `INSERT INTO DBPREFIXreports (post_id, ip, reason) VALUES(?, ?, ?)`
+	sql := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, ?, ?, FALSE)`
 	result, err := ExecSQL(sql, postID, ip, reason)
 	if err != nil {
 		return nil, err
