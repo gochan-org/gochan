@@ -222,15 +222,11 @@ function getThumbFilename(filename) {
 	return name + "." + ext;
 }
 
-function isPostLoaded(id) {
-	return currentThreadJSON.posts.filter((post, p) => post.no == id).length > 0;
-}
-
 export function updateThreadJSON() {
 	let thread = currentThread();
 	if(thread.thread === 0) return; // not in a thread
 	return getThreadJSON(thread.thread, thread.board).then((json) => {
-		if(!(json.posts instanceof Array) || json.posts.length == 0)
+		if(!(json.posts instanceof Array) || json.posts.length === 0)
 			return;
 		currentThreadJSON = json;
 	}).catch(e => {
@@ -245,7 +241,7 @@ function updateThreadHTML() {
 	let numAdded = 0;
 	for(const post of currentThreadJSON.posts) {
 		let selector = "";
-		if(post.resto == 0)
+		if(post.resto === 0)
 			selector += `div#${post.no}.thread`;
 		else
 			selector += `a#${post.no}.anchor`;
@@ -261,10 +257,9 @@ function updateThreadHTML() {
 		);
 
 		$replyContainer.appendTo(`div#${post.resto}.thread`);
-		console.log(`added post #${post.no}`);
 		numAdded++;
 	}
-	if(numAdded == 0) return;
+	if(numAdded === 0) return;
 }
 
 export function updateThread() {
@@ -417,8 +412,8 @@ export function quote(no) {
 	let selected = selectedText();
 	let lines = selected.split("\n");
 
-	if(selected != "") {
-		for(const l in lines) {
+	if(selected !== "") {
+		for(let l = 0; l < lines.length; l++) {
 			lines[l] = ">" + lines[l];
 		}
 	}
@@ -439,7 +434,7 @@ export function addPostDropdown($post) {
 	if($post.find("select.post-actions").length > 0)
 		return $post;
 	let $postInfo = $post.find("label.post-info");
-	let isOP = $post.prop("class").split(" ").indexOf("op-post") > -1; // $postInfo.parents("div.reply-container").length == 0;
+	let isOP = $post.prop("class").split(" ").indexOf("op-post") > -1;
 	let hasUpload = $postInfo.siblings("div.file-info").length > 0;
 	let postID = $postInfo.parent().attr("id");
 	let threadPost = isOP?"thread":"post";
@@ -461,9 +456,7 @@ export function addPostDropdown($post) {
 		`<option>Report post</option>`,
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
-	.on("click", event => {
-		if(event.target.nodeName != "OPTION")
-			return;
+	.on("change", event => {
 		handleActions($ddownMenu.val(), postID);
 	});
 	if(hasUpload)
@@ -503,10 +496,14 @@ export function reportPost(id, board) {
 window.reportPost = reportPost;
 
 function deletePostFile(id) {
-	let $elem = $(`div#op${id}.op-post`);
+	let $elem = $(`div#op${id}.op-post, div#reply${id}.reply`);
+	if($elem.length === 0) return;
+	$elem.find(".file-info,.upload-container").remove();
+	$("<div/>").prop({
+		class: "file-deleted-box",
+		style: "text-align: center;"
+	}).text("File removed").insertBefore($elem.find("div.post-text"));
 	alertLightbox("File deleted", "Success");
-	// TODO: Replace this with a thing that replaces the image element with a File Deleted block
-	return;
 }
 
 function deletePostElement(id) {
@@ -546,7 +543,7 @@ export function deletePost(id, board, fileOnly) {
 					deletePostElement(id);
 				}
 			} else {
-				if(data.boardid == 0 && data.postid == 0) {
+				if(data.boardid === 0 && data.postid === 0) {
 					alertLightbox(`Error deleting post #${id}: Post doesn't exist`, "Error");
 				} else if(data !== "") {
 					alertLightbox(`Error deleting post #${id}`, "Error");

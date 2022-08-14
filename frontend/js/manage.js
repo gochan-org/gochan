@@ -90,13 +90,13 @@ export function banSelectedPost() {
 	if(boardDirArr.length < 2) return;
 	let boardDir = boardDirArr[1];
 	let checks = $("input[type=checkbox]");
-	if(checks.length == 0) {
+	if(checks.length === 0) {
 		alertLightbox("No posts selected");
 		return false;
 	}
 	let postID = 0;
 	for(let i = 0; i < checks.length; i++) {
-		if(checks[i].id.indexOf("check") == 0) {
+		if(checks[i].id.indexOf("check") === 0) {
 			postID = checks[i].id.replace("check", "");
 			break;
 		}
@@ -141,8 +141,8 @@ function filterAction(action, perms) {
  * @param {StaffInfo} staff an object representing the staff's username and rank
  */
 export function createStaffMenu(staff = staffInfo) {
-	let rank = staff.Rank
-	if(rank == 0) return;
+	let rank = staff.Rank;
+	if(rank === 0) return;
 	$staffMenu = $("<div/>").prop({
 		id: "staffmenu",
 		class: "dropdown-menu"
@@ -179,7 +179,7 @@ export function createStaffMenu(staff = staffInfo) {
 }
 
 function createStaffButton() {
-	if($staffBtn !== null || staffInfo.Rank == 0)
+	if($staffBtn !== null || staffInfo.Rank === 0)
 		return;
 	$staffBtn = new TopBarButton("Staff", () => {
 		let exists = $(document).find($staffMenu).length > 0;

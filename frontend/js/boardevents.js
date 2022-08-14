@@ -75,7 +75,7 @@ export function handleActions(action, postIDStr) {
 			hidePost(postID);
 			break; */
 		case "Edit post":
-			editPost(postID, board)
+			editPost(postID, board);
 			break;
 		case "Report post":
 			reportPost(postID, board);
