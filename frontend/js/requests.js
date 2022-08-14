@@ -39,9 +39,7 @@ export function getThread(board = "", thread = 0) {
 	
 	if(threadInfo.board == "" || threadInfo.thread < 1) 
 		// return a Promise with the board info
-		return new Promise((resolve, reject) => {
-			reject(threadInfo);
-		});
+		return Promise.reject(threadInfo);
 
 	return fetch(`${webroot}${threadInfo.board}/res/${threadInfo.thread}.json`)
 		.then(response => {
