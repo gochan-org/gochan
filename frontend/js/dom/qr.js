@@ -13,23 +13,60 @@ import { getCookie } from "../cookies";
 import { $topbar, topbarHeight } from "./topbar";
 import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../storage";
 import { updateThread } from "../postutil";
-import { currentThread, getPageThread } from "../postinfo";
+import { currentBoard, currentThread, getPageThread } from "../postinfo";
+import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
 
 /**
  * @type {JQuery<HTMLElement>}
  */
 export let $qr = null;
+let threadCooldown = 0;
+let replyCooldown = 0;
 
 const qrButtonHTML = 
 	`<input type="file" id="imagefile" name="imagefile" style="display: none;" />` +
 	`<input name="imagefilebtn" type="button" onclick="document.getElementById('imagefile').click();" value="Browse...">` +
-	`<input type="submit" value="Post" style="float:right;"/>`;
+	`<input type="submit" value="Post" style="float:right;width:50px"/>`;
 
 const qrTitleBar =
 	`<div id="qr-title">` +
 	`<span id="qr-message"></span>` +
 	`<span id="qr-buttons"><a href="javascript:toBottom();">${downArrow}</a>` +
 	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
+
+
+
+function setSubmitButtonText(text) {
+	$qr.find("input[type=submit]").attr("value", text);
+}
+
+function setSubmitButtonEnabled(enabled = true) {
+	let $submit = $qr.find("input[type=submit]");
+	if(enabled) {
+		$submit.removeAttr("disabled");
+	} else {
+		$submit.attr("disabled", "disabled");
+	}
+}
+
+
+
+function setButtonTimeout(prefix = "", cooldown = 5) {
+	let currentSeconds = cooldown;
+	let interval = 0;
+	const timeoutCB = () => {
+		if(currentSeconds == 0) {
+			setSubmitButtonEnabled(true);
+			setSubmitButtonText("Post");
+			clearInterval(interval);
+		} else {
+			setSubmitButtonEnabled(false);
+			setSubmitButtonText(currentSeconds--);
+		}
+	};
+	interval = setInterval(timeoutCB, 1000);
+	timeoutCB();
+}
 
 export function initQR(pageThread) {
 	if($qr !== null) {
@@ -144,6 +181,7 @@ export function initQR(pageThread) {
 			url: $form.attr("action"),
 			data: $form.serialize(),
 			success: data => {
+				setButtonTimeout("", replyCooldown);
 				updateThread().then(clearQR).then(() => {
 					let persist = getBooleanStorageVal("persistentqr", false);
 					if(!persist) closeQR();
@@ -170,3 +208,10 @@ export function closeQR() {
 	if($qr) $qr.remove();
 }
 window.closeQR = closeQR;
+
+$(() => {
+	let board = currentBoard();
+	if(board == "") return; // not on a board
+	getThreadCooldown(board).then(cd => threadCooldown = cd);
+	getReplyCooldown(board).then(cd => replyCooldown = cd);
+})
