@@ -147,7 +147,7 @@ func CreateSession(key, username string) error {
 	return err
 }
 
-//GetAllStaffNopass gets all staff accounts without their password
+// GetAllStaffNopass gets all staff accounts without their password
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func GetAllStaffNopass(onlyactive bool) ([]Staff, error) {
@@ -218,7 +218,7 @@ func appendFile(postID int, originalFilename, filename, checksum string, fileSiz
 	return err
 }
 
-//GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
+// GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design. Posts do not directly reference their post post anymore.
 func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
@@ -241,19 +241,19 @@ func getThreadID(postID int) (ID int, err error) {
 	return ID, err
 }
 
-//GetPostPassword gets the password associated with a given post
+// GetPostPassword gets the password associated with a given post
 func GetPostPassword(postID int) (password string, err error) {
 	const sql = `SELECT password FROM DBPREFIXposts WHERE id = ?`
 	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&password))
 	return password, err
 }
 
-//UpdatePost updates a post with new information
+// UpdatePost updates a post with new information
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
 func UpdatePost(postID int, email, subject string, message template.HTML, messageRaw string) error {
 	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
-	_, err := ExecSQL(sql, email, subject, string(message), messageRaw)
+	_, err := ExecSQL(sql, email, subject, string(message), messageRaw, postID)
 	return err
 }
 
@@ -265,7 +265,7 @@ func DeleteFilesFromPost(postID int, leaveDeletedBox bool) error {
 	return post.DeleteFiles(leaveDeletedBox)
 }
 
-//DeletePost deletes a post with a given ID
+// DeletePost deletes a post with a given ID
 func DeletePost(postID int, checkIfTopPost bool) error {
 	if checkIfTopPost {
 		isTopPost, err := isTopPost(postID)
