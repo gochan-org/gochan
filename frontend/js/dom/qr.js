@@ -26,7 +26,7 @@ let replyCooldown = 0;
 const qrButtonHTML = 
 	`<input type="file" id="imagefile" name="imagefile" style="display: none;" />` +
 	`<input name="imagefilebtn" type="button" onclick="document.getElementById('imagefile').click();" value="Browse...">` +
-	`<input type="submit" value="Post" style="float:right;width:50px"/>`;
+	`<input type="submit" value="Post" style="float:right;min-width:50px"/>`;
 
 const qrTitleBar =
 	`<div id="qr-title">` +
@@ -35,6 +35,13 @@ const qrTitleBar =
 	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
 
 
+function resetSubmitButtonText() {
+	if(currentThread().thread < 1) {
+		setSubmitButtonText("New Thread");
+	} else {
+		setSubmitButtonText("Reply");
+	}
+}
 
 function setSubmitButtonText(text) {
 	$qr.find("input[type=submit]").attr("value", text);
@@ -57,11 +64,11 @@ function setButtonTimeout(prefix = "", cooldown = 5) {
 	const timeoutCB = () => {
 		if(currentSeconds == 0) {
 			setSubmitButtonEnabled(true);
-			setSubmitButtonText("Post");
+			resetSubmitButtonText();
 			clearInterval(interval);
 		} else {
 			setSubmitButtonEnabled(false);
-			setSubmitButtonText(currentSeconds--);
+			setSubmitButtonText(`${prefix}${currentSeconds--}`);
 		}
 	};
 	interval = setInterval(timeoutCB, 1000);
@@ -171,6 +178,7 @@ export function initQR(pageThread) {
 		}
 	});
 	openQR();
+	resetSubmitButtonText();
 	if(currentThread().thread < 1) return; 
 
 	$("form#qrpostform").on("submit", function(e) {
@@ -181,7 +189,8 @@ export function initQR(pageThread) {
 			url: $form.attr("action"),
 			data: $form.serialize(),
 			success: data => {
-				setButtonTimeout("", replyCooldown);
+				let cooldown = (currentThread().thread > 0)?replyCooldown:threadCooldown;
+				setButtonTimeout("", cooldown);
 				updateThread().then(clearQR).then(() => {
 					let persist = getBooleanStorageVal("persistentqr", false);
 					if(!persist) closeQR();

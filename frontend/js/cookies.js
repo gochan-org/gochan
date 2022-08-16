@@ -15,6 +15,7 @@ export function getCookie(name, defaultVal = "") {
 		try {
 			val = decodeURIComponent(pair[1]);
 		} catch(err) {
+			console.error(`Error parsing cookie value for "${name}": ${err}`);
 			return defaultVal;
 		}
 	}
