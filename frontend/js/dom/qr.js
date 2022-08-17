@@ -17,7 +17,7 @@ import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../stora
 import { updateThread } from "../postutil";
 import { currentBoard, currentThread, getPageThread } from "../postinfo";
 import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
-import { updateUploadImage } from "./getuploadimage";
+import { getUploadFilename, updateUploadImage } from "./uploaddata";
 
 /**
  * @type {JQuery<HTMLElement>}
@@ -27,7 +27,7 @@ let threadCooldown = 0;
 let replyCooldown = 0;
 
 const qrButtonHTML = 
-	`<input type="file" id="imagefile" name="imagefile"/>` +
+	`<input type="file" id="imagefile" name="imagefile" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"/>` +
 	`<input type="submit" value="Post" style="float:right;min-width:50px"/>`;
 
 const qrTitleBar =
@@ -56,13 +56,6 @@ function setSubmitButtonEnabled(enabled = true) {
 	} else {
 		$submit.attr("disabled", "disabled");
 	}
-}
-
-function getUploadFilename() {
-	let elem = document.getElementById("imagefile");
-	if(elem === null) return "";
-	if(elem.files === undefined || elem.files.length < 1) return "";
-	return elem.files[0].name;
 }
 
 function unsetQrUpload() {
