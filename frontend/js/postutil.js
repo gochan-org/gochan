@@ -12,6 +12,7 @@ import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
 import { currentThread, getPageThread, insideOP } from "./postinfo";
 import { addPostDropdown } from "./dom/postdropdown";
 import { createPostElement } from "./dom/postelement";
+import { getThreadJSON } from "./api/threads"
 import { openQR } from "./dom/qr";
 
 let doClickPreview = false;
@@ -28,8 +29,6 @@ let currentThreadJSON = {
 	posts: []
 };
 
-
-
 export function getUploadPostID(upload, container) {
 	// if container, upload is div.upload-container
 	// otherwise it's img or video
@@ -44,9 +43,6 @@ export function updateThreadJSON() {
 		if(!(json.posts instanceof Array) || json.posts.length === 0)
 			return;
 		currentThreadJSON = json;
-	}).catch(e => {
-		console.error(`Failed updating current thread: ${e}`);
-		clearInterval(threadWatcherInterval);
 	});
 }
 
@@ -243,15 +239,6 @@ export function quote(no) {
 	msgbox.focus();
 }
 window.quote = quote;
-
-
-export function getThreadJSON(threadID, board) {
-	return $.ajax({
-		url: `${webroot}${board}/res/${threadID}.json`,
-		cache: false,
-		dataType: "json"
-	});
-}
 
 $(() => {
 	let pageThread = getPageThread();
