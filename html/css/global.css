@@ -415,7 +415,6 @@ div#qr-box {
   min-width: 300px;
   background: lightgray;
   border: 1px solid #000;
-  display: table;
 }
 div#qr-box input[type=text], div#qr-box textarea {
   display: table-cell;
@@ -429,9 +428,15 @@ div#qr-box input[type=text], div#qr-box textarea {
 }
 div#qr-box input[type=file] {
   background: lightgray;
+  max-width: 250px;
   border: none;
   color: #000;
   width: auto;
+}
+div#qr-box div#upload-container {
+  text-align: center;
+  width: 100%;
+  max-height: 150px;
 }
 div#qr-box label {
   color: #000;

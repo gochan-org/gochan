@@ -1,3 +1,5 @@
+/* global webroot */
+
 import $ from "jquery";
 import "jquery-ui/ui/version";
 import "jquery-ui/ui/plugin";
@@ -15,6 +17,7 @@ import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../stora
 import { updateThread } from "../postutil";
 import { currentBoard, currentThread, getPageThread } from "../postinfo";
 import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
+import { updateUploadImage } from "./getuploadimage";
 
 /**
  * @type {JQuery<HTMLElement>}
@@ -24,8 +27,7 @@ let threadCooldown = 0;
 let replyCooldown = 0;
 
 const qrButtonHTML = 
-	`<input type="file" id="imagefile" name="imagefile" style="display: none;" />` +
-	`<input name="imagefilebtn" type="button" onclick="document.getElementById('imagefile').click();" value="Browse...">` +
+	`<input type="file" id="imagefile" name="imagefile"/>` +
 	`<input type="submit" value="Post" style="float:right;min-width:50px"/>`;
 
 const qrTitleBar =
@@ -56,7 +58,34 @@ function setSubmitButtonEnabled(enabled = true) {
 	}
 }
 
+function getUploadFilename() {
+	let elem = document.getElementById("imagefile");
+	if(elem === null) return "";
+	if(elem.files === undefined || elem.files.length < 1) return "";
+	return elem.files[0].name;
+}
 
+function unsetQrUpload() {
+	$("#imagefile").val("");
+	let $uploadContainer = $qr.find("div#upload-container");
+	$uploadContainer.empty();
+	$uploadContainer.css("display","none");
+}
+
+function qrUploadChange() {
+	let $uploadContainer = $qr.find("div#upload-container");
+	$uploadContainer.empty();
+	let filename = getUploadFilename();
+	$uploadContainer.append($(this).prop({
+		"title": filename
+	}).css({
+		"max-width": "100%",
+		"max-height": "inherit",
+	}).on("click", e => {
+		if(e.shiftKey) unsetQrUpload();
+	}));
+	$uploadContainer.css("display", "");
+}
 
 function setButtonTimeout(prefix = "", cooldown = 5) {
 	let currentSeconds = cooldown;
@@ -102,7 +131,7 @@ export function initQR(pageThread) {
 	let $postform = $("<form/>").prop({
 		id: "qrpostform",
 		name: "qrpostform",
-		action: "/post",
+		action: webroot + "post",
 		method: "POST",
 		enctype:"multipart/form-data"
 	}).append(
@@ -167,7 +196,13 @@ export function initQR(pageThread) {
 		left: qrPos.left,
 		position: "fixed"
 	}).append(
-		$(qrTitleBar), $postform
+		$(qrTitleBar),
+		$postform,
+		$("<div/>").prop({
+			id: "upload-container"
+		}).css({
+			"display": "none"
+		})
 	).draggable({
 		handle: "div#qr-title",
 		scroll: false,
@@ -178,17 +213,24 @@ export function initQR(pageThread) {
 		}
 	});
 	openQR();
+	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
 	if(currentThread().thread < 1) return; 
 
 	$("form#qrpostform").on("submit", function(e) {
 		let $form = $(this);
 		e.preventDefault();
+		let data = new FormData(this);
+
 		$.ajax({
 			type: "POST",
 			url: $form.attr("action"),
-			data: $form.serialize(),
-			success: data => {
+			enctype: "multipart/form-data",
+			data: data, // $form.serialize(),
+			processData: false,
+			contentType: false,
+			success: () => {
+				clearQR();
 				let cooldown = (currentThread().thread > 0)?replyCooldown:threadCooldown;
 				setButtonTimeout("", cooldown);
 				updateThread().then(clearQR).then(() => {
@@ -206,6 +248,7 @@ function clearQR() {
 	$qr.find("input[name=postsubject]").val("");
 	$qr.find("textarea[name=postmsg]").val("");
 	$qr.find("input[type=file]").val("");
+	$qr.find("div#upload-container").empty();
 }
 
 export function openQR() {
@@ -223,4 +266,4 @@ $(() => {
 	if(board == "") return; // not on a board
 	getThreadCooldown(board).then(cd => threadCooldown = cd);
 	getReplyCooldown(board).then(cd => replyCooldown = cd);
-})
+});
