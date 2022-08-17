@@ -10,10 +10,11 @@
 		<input name="parentid" type="hidden" value="{{.post.ParentID}}" />
 		<input name="password" type="hidden" value="{{.post.Password}}" />
 		<input name="doedit" type="hidden" value="1" />
-		<table id="postbox-static" align="center">
+		<table id="postbox-static">
 			<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "#" .post.Tripcode}}</td></tr>
 			<tr><th class="postblock">Email</th><td>{{.post.Email}}</td></tr>
-			<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="28" autocomplete="off" value="{{.post.Subject}}"/><input type="submit" value="{{with .op}}Reply{{else}}Post{{end}}"/></td></tr>
+			<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="28" autocomplete="off" value="{{.post.Subject}}"/>
+				<input type="submit" value="Submit changes"/></td></tr>
 			<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="editmsg" id="editmsg">{{.post.MessageText}}</textarea></td></tr>
 		</table>
 	</form><br />
