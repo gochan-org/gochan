@@ -154,7 +154,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	default:
 	}
 
-	postDelay, _ := gcsql.SinceLastPost(post.ID)
+	postDelay, _ := gcsql.SinceLastPost(post.IP)
 	if postDelay > -1 {
 		if post.ParentID == 0 && postDelay < boardConfig.NewThreadDelay {
 			serverutil.ServeErrorPage(writer, "Please wait before making a new thread.")

@@ -10,20 +10,15 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-//SinceLastPost returns the seconds since the last post by the ip address that made this post
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func SinceLastPost(postID int) (int, error) {
-	const sql = `SELECT MAX(created_on) FROM DBPREFIXposts as posts
-	JOIN (SELECT ip FROM DBPREFIXposts as sp
-		 WHERE sp.id = ?) as ip
-	ON posts.ip = ip.ip`
+// SinceLastPost returns the number of seconds since the given IP address created a post
+// (used for checking against the new thread/new reply cooldown)
+func SinceLastPost(postIP string) (int, error) {
+	const sql = `SELECT MAX(created_on) FROM DBPREFIXposts WHERE ip = ?`
 	var when time.Time
-	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&when))
+	err := QueryRowSQL(sql, interfaceSlice(postIP), interfaceSlice(&when))
 	if err != nil {
 		return -1, err
 	}
-
 	return int(time.Since(when).Seconds()), nil
 }
 
