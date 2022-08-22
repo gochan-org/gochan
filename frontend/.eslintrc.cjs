@@ -19,6 +19,7 @@ module.exports = {
         "block-spacing": ["error", "always"],
         "func-call-spacing": ["error", "never"],
         "space-before-blocks": ["warn", "always"],
+        "no-undef": "error",
         "keyword-spacing": ["warn", {
             "overrides": {
                 "if": {"after": false},

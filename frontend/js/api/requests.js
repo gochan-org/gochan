@@ -1,11 +1,14 @@
+/* eslint no-unused-vars: ["warn", {"args":"none"}] */
 /* global webroot */
+
+import $ from "jquery";
 
 import { currentBoard, currentThread } from "../postinfo";
 
 const nullBoardsList = {
 	boards: [],
 	currentBoard: ""
-}
+};
 
 export async function getBoardList() {
 	try {
@@ -20,7 +23,7 @@ export async function getBoardList() {
 			},
 		});
 		return { boards: data.boards, currentBoard: currentBoard() };
-	} catch (e) {
+	} catch(e) {
 		return nullBoardsList;
 	}
 }
@@ -32,14 +35,14 @@ export async function getCatalog(board = "") {
 		url: webroot + useBoard + "/catalog.json",
 		cache: false,
 		dataType: "json",
-		success: (d2_1 => { }),
+		success: (() => { }),
 		error: function (err, status, statusText) {
 			console.error(`Error getting catalog for /${board}/: ${statusText}`);
 		}
 	});
-	if (data.length === 0)
+	if(data.length === 0)
 		return [];
-	if (data[0] === null)
+	if(data[0] === null)
 		data.shift();
 	return data;
 }

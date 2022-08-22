@@ -1,4 +1,3 @@
-/* global webroot */
 /**
  * @typedef { import("./types/gochan").BoardThread } BoardThread
  * @typedef { import("./types/gochan").ThreadPost } ThreadPost
@@ -12,7 +11,7 @@ import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
 import { currentThread, getPageThread, insideOP } from "./postinfo";
 import { addPostDropdown } from "./dom/postdropdown";
 import { createPostElement } from "./dom/postelement";
-import { getThreadJSON } from "./api/threads"
+import { getThreadJSON } from "./api/threads";
 import { openQR } from "./dom/qr";
 
 let doClickPreview = false;
@@ -239,6 +238,10 @@ export function quote(no) {
 	msgbox.focus();
 }
 window.quote = quote;
+
+export function stopThreadWatcher() {
+	clearInterval(threadWatcherInterval);
+}
 
 $(() => {
 	let pageThread = getPageThread();

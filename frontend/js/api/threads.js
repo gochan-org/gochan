@@ -1,3 +1,4 @@
+/* eslint no-unused-vars: ["warn", {"args":"none"}] */
 /* global webroot */
 
 import $ from "jquery";
