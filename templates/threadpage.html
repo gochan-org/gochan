@@ -4,7 +4,7 @@
 		<span id="board-subtitle">{{$.board.Subtitle}}</span>
 	</header><hr />
 	<div id="threadlinks-top">
-		<a href="{{$.webroot}}{{$.board.Dir}}/1.html" >Return</a><br />
+		<a href="{{$.webroot}}{{$.board.Dir}}/1.html" >Return</a> | <a href="#footer">Scroll to bottom</a><br />
 	</div>
 	<div id="right-sidelinks">
 		<a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Board catalog</a><br />
@@ -29,7 +29,7 @@
 		</div>
 	</form>
 	<div id="left-bottom-content">
-		<a href="{{.webroot}}{{.board.Dir}}/">Return</a><br /><br />
+		<a href="{{.webroot}}{{.board.Dir}}/">Return</a> | <a href="#">Scroll to top</a><br /><br />
 		<span id="boardmenu-bottom">
 			[<a href="{{$.webroot}}">home</a>]&nbsp;
 			[{{range $i, $boardlink := .boards -}}

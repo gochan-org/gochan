@@ -21,7 +21,8 @@
 	<a href="{{$.webroot}}" class="topbar-item">home</a>
 	{{range $i, $board := .boards}}<a href="{{$.webroot}}{{$board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>{{end}}
 </div>
+{{with $.page_title  }}<header>
+<h1 id="board-title">{{$.page_title}}</h1>
+{{with $.include_dashboard_link}}<a href="{{$.webroot}}manage" class="board-subtitle">Return to dashboard</a><br/>{{end}}
+</header>{{end}}
 <div id="content">
-{{with $.page_title  }}<br /><h1>{{$.page_title}}</h1>
-{{with $.include_dashboard_link}}<a href="{{$.webroot}}manage">Return to dashboard</a><br/>{{end}}
-{{end}}

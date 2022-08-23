@@ -4,8 +4,7 @@
 		<span id="board-subtitle">Catalog</span>
 	</header><hr />
 	<div id="catalog-links" style="float: left;">
-		[<a href="{{$.webroot}}{{$.board.Dir}}">Return</a>]
-		[<a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Refresh</a>]
+		<a href="{{$.webroot}}{{$.board.Dir}}">Return</a> | <a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Refresh</a> | <a href="#footer">Scroll to bottom</a>
 	</div>
 	<div id="catalog-controls" style="float: right;">
 		Sort by: <select>
@@ -23,4 +22,5 @@
 			<b>{{if eq $thread.Name ""}}Anonymous{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}<br />
 			{{$thread.MessageHTML}}
 	</div>{{end}}<hr />
+<a href="#">Scroll to top</a>
 {{template "page_footer.html" .}}
