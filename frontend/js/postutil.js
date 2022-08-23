@@ -66,6 +66,8 @@ function updateThreadHTML() {
 		}).append($post);
 		$replyContainer.appendTo(`div#${post.resto}.thread`);
 		addPostDropdown($post);
+		prepareThumbnails($post);
+		initPostPreviews($post);
 		numAdded++;
 	}
 	if(numAdded === 0) return;
@@ -156,17 +158,22 @@ export function initPostPreviews($post = null) {
 	}
 }
 
-export function prepareThumbnails() {
-	// set thumbnails to expand when clicked
-	$("a.upload-container").on("click", function(e) {
+/**
+ * Sets thumbnails to expand when clicked. If a parent is provided, prepareThumbnails will only
+ * be applied to that parent
+ * @param {JQuery<HTMLElement>} $post the post (if set) to prepare the thumbnails for
+ */
+export function prepareThumbnails($parent = null) {
+	let $container = $parent === null ? $("a.upload-container") : $parent.find("a")
+	$container.on("click", function(e) {
 		e.preventDefault();
-		let a = $(this);
-		let thumb = a.find("img.upload");
+		let $a = $(this);
+		let thumb = $a.find("img.upload");
 		let thumbURL = thumb.attr("src");
 		let uploadURL = thumb.attr("alt");
 		thumb.removeAttr("width").removeAttr("height");
 
-		var fileInfoElement = a.prevAll(".file-info:first");
+		var fileInfoElement = $a.prevAll(".file-info:first");
 		
 		if(videoTestRE.test(thumbURL + uploadURL)) {
 			// Upload is a video
@@ -243,9 +250,14 @@ export function stopThreadWatcher() {
 	clearInterval(threadWatcherInterval);
 }
 
+export function resetThreadWatcherInterval() {
+	stopThreadWatcher();
+	threadWatcherInterval = setInterval(updateThread, getNumberStorageVal("watcherseconds", 10) * 1000);
+}
+
 $(() => {
 	let pageThread = getPageThread();
 	if(pageThread.op >= 1) {
-		threadWatcherInterval = setInterval(updateThread, getNumberStorageVal("watcherseconds", 10) * 1000);
+		resetThreadWatcherInterval();
 	}
 });
