@@ -18,7 +18,8 @@ export function applyBBCode(e) {
 	switch(e.keyCode) {
 		case 10: // Enter key
 		case 13: // Enter key in Chrome/IE
-			document.getElementById("postform").submit();
+			// trigger the form submit event, whether the QR post box or the static post box is currently
+			$(e.target).parents("form#postform,form#qrpostform").trigger("submit");
 		break;
 		case 66: // B
 			tag = "b"; // bold

@@ -428,7 +428,7 @@ div#qr-box input[type=text], div#qr-box textarea {
 }
 div#qr-box input[type=file] {
   background: lightgray;
-  max-width: 250px;
+  max-width: 200px;
   border: none;
   color: #000;
   width: auto;
