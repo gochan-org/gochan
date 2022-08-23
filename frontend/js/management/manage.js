@@ -1,9 +1,15 @@
 /* global webroot */
 
+/**
+ * @typedef { import("../types/gochan").StaffAction } StaffAction
+ * @typedef { import("../types/gochan").StaffInfo } StaffInfo
+ */
+
 import $ from 'jquery';
 
-import { alertLightbox } from "./dom/lightbox";
-import { $topbar, TopBarButton } from './dom/topbar';
+import { alertLightbox } from "../dom/lightbox";
+import { $topbar, TopBarButton } from '../dom/topbar';
+import "./sections";
 
 /**
  * @type {StaffInfo}
@@ -111,7 +117,7 @@ export function banSelectedPost() {
 
 /**
  * A helper function for creating a menu item
- * @param {StaffInfo} action
+ * @param {StaffAction} action
  */
 function menuItem(action, isCategory = false) {
 	return isCategory ? $("<div/>").append($("<b/>").text(action)) : $("<div/>").append(

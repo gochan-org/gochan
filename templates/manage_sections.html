@@ -17,9 +17,9 @@
 <br/><hr/>
 <h2>Current sections</h2>
 
-<table border="1">
+<table id="sections" border="1">
 	<tr><th>Name</th><th>Abbreviation</th><th>List order</th><th>Hidden</th><th>Action</th></tr>
-{{range $s, $section := .sections}}<tr>
+{{range $s, $section := .sections}}<tr id="section{{$section.ID}}" class="sectionrow">
 	<td>{{$section.Name}}</td>
 	<td>{{$section.Abbreviation}}</td>
 	<td>{{$section.ListOrder}}</td>

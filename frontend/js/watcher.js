@@ -1,11 +1,19 @@
+/* global webroot */
+
+import $ from "jquery";
+
+import { $topbar, TopBarButton } from "./dom/topbar";
 import { currentBoard } from "./postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "./storage";
 let watching = false;
 let watcherInterval = -1;
+let watcherBtn = null;
+/** @type {JQuery<HTMLElement>} */
+let $watcherMenu = null;
 
 export function getWatchedThreads() {
 	if(!watching) {
-		clearInterval(getWatchedThreads);
+		clearInterval(watcherInterval);
 		return;
 	}
 	let watched = getJsonStorageVal("watched", {});
@@ -59,8 +67,41 @@ export function unwatchThread(threadID, board) {
 	}
 }
 
+function createWatcherMenu() {
+	let watched = getJsonStorageVal("watched", {});
+	let boards = Object.keys(watched);
+
+	$watcherMenu = $("<div/>").prop({
+		id: "watchermenu",
+		class: "dropdown-menu"
+	}).append("<b>Watched threads</b><br/>");
+
+	let numWatched = 0;
+	for(const board of boards) {
+		for(const thread of watched[board]) {
+			$watcherMenu.append(
+				$("<a/>").prop({href: webroot + board + "/res/" + thread.id + ".html"}).text(`/${board}/${thread.id}`)
+			);
+			numWatched++;
+		}
+	}
+	if(numWatched == 0) {
+		$watcherMenu.append("<i/>").text("no watched threads");
+	}
+	if(watcherBtn === null) {
+		watcherBtn = new TopBarButton("Watcher", () => {
+			let exists = $(document).find($watcherMenu).length > 0;
+			if(exists)
+				$watcherMenu.remove();
+			else
+				$topbar.after($watcherMenu);
+		});
+	}
+}
+
 export function initWatcher() {
 	let watched = getJsonStorageVal("watched", {});
+	// createWatcherMenu();
 	if(watcherInterval > -1) {
 		clearInterval(watcherInterval);
 	}

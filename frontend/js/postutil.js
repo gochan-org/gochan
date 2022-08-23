@@ -164,7 +164,7 @@ export function initPostPreviews($post = null) {
  * @param {JQuery<HTMLElement>} $post the post (if set) to prepare the thumbnails for
  */
 export function prepareThumbnails($parent = null) {
-	let $container = $parent === null ? $("a.upload-container") : $parent.find("a")
+	let $container = $parent === null ? $("a.upload-container") : $parent.find("a");
 	$container.on("click", function(e) {
 		e.preventDefault();
 		let $a = $(this);

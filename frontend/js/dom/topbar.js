@@ -40,7 +40,7 @@ export function initTopBar() {
 	$topbar = $("div#topbar");
 	if(getBooleanStorageVal("pintopbar", true)) {
 		$topbar.css({
-			"z-index": "9001",
+			// "z-index": "9001",
 			"position": "fixed"
 		});
 	} else {

@@ -4,7 +4,7 @@ import "./vars";
 import $ from "jquery";
 import { handleKeydown } from "./boardevents";
 import { initCookies } from "./cookies";
-import { initStaff, createStaffMenu } from "./manage";
+import { initStaff, createStaffMenu } from "./management/manage";
 import { getPageThread } from "./postinfo";
 import { prepareThumbnails, initPostPreviews } from "./postutil";
 import { addPostDropdown } from "./dom/postdropdown";
