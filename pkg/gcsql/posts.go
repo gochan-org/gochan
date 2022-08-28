@@ -105,22 +105,48 @@ func GetReplyFileCount(postID int) (int, error) {
 	return count, err
 }
 
-func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
-	sql := `SELECT
-		DBPREFIXposts.id,
-		thread_id AS threadid,
-		(SELECT id FROM DBPREFIXposts WHERE is_top_post = TRUE AND thread_id = threadid LIMIT 1),
-		(SELECT board_id FROM DBPREFIXthreads WHERE id = DBPREFIXposts.thread_id) as board_id,
-		created_on,name,tripcode,email,subject,message,message_raw,password,
+const selectPostsQuery = `SELECT
+	DBPREFIXposts.id,
+	thread_id AS threadid,
+	(SELECT id FROM DBPREFIXposts WHERE is_top_post = TRUE AND thread_id = threadid LIMIT 1),
+	(SELECT board_id FROM DBPREFIXthreads WHERE id = DBPREFIXposts.thread_id) as board_id,
+	ip,created_on,name,tripcode,email,subject,message,message_raw,password,
 
-		COALESCE(files.filename,''),
-		COALESCE(files.original_filename,''),
-		COALESCE(files.thumbnail_width, 0),
-		COALESCE(files.thumbnail_height, 0),
-		COALESCE(files.width, 0),
-		COALESCE(files.height, 0)
-			FROM DBPREFIXposts LEFT OUTER JOIN DBPREFIXfiles AS files ON files.post_id = DBPREFIXposts.id
-		WHERE ip = ?`
+	COALESCE(files.filename,''),
+	COALESCE(files.original_filename,''),
+	COALESCE(files.file_size, 0),
+	COALESCE(files.checksum, ''),
+	COALESCE(files.thumbnail_width, 0),
+	COALESCE(files.thumbnail_height, 0),
+	COALESCE(files.width, 0),
+	COALESCE(files.height, 0)
+		FROM DBPREFIXposts LEFT OUTER JOIN DBPREFIXfiles AS files ON files.post_id = DBPREFIXposts.id`
+
+// GetPostFromID gets the post from the database with a matching ID,
+// optionally requiring it to not be deleted
+func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
+	sql := selectPostsQuery + ` WHERE DBPREFIXposts.id = ?`
+	if onlyNotDeleted {
+		sql += " AND is_deleted = 0"
+	}
+	var drop int
+	post := new(Post)
+	err := QueryRowSQL(sql, []interface{}{id}, []interface{}{
+		&post.ID, &drop, &post.ParentID,
+		&post.BoardID,
+		&post.IP, &post.Timestamp, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password,
+		&post.Filename, &post.FilenameOriginal, &post.Filesize, &post.FileChecksum, &post.ThumbW, &post.ThumbH, &post.ImageW, &post.ImageH,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return post, err
+}
+
+// GetPostsFromIP gets the posts from the database with a matching IP address, specifying
+// optionally requiring them to not be deleted
+func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
+	sql := selectPostsQuery + ` WHERE DBPREFIXposts.ip = ?`
 	if onlyNotDeleted {
 		sql += " AND is_deleted = 0"
 	}
@@ -133,13 +159,12 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		post.IP = ip
 		var drop int
 		if err = rows.Scan(
 			&post.ID, &drop, &post.ParentID,
 			&post.BoardID,
-			&post.Timestamp, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password,
-			&post.Filename, &post.FilenameOriginal, &post.ThumbW, &post.ThumbH, &post.ImageW, &post.ImageH,
+			&post.IP, &post.Timestamp, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password,
+			&post.Filename, &post.FilenameOriginal, &post.Filesize, &post.FileChecksum, &post.ThumbW, &post.ThumbH, &post.ImageW, &post.ImageH,
 		); err != nil {
 			return nil, err
 		}

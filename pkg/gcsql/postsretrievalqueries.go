@@ -7,15 +7,12 @@ import (
 	"strconv"
 )
 
-var abstractSelectPosts = `
 /*
 Left join singlefiles on recentposts where recentposts.selfid = singlefiles.post_id
 Coalesce filenames to "" (if filename = null -> "" else filename)
-
-
 */
-
-Select 
+var abstractSelectPosts = `
+SELECT 
 	recentposts.selfid AS id,
 	recentposts.toppostid AS parentid,
 	recentposts.boardid,
@@ -171,8 +168,8 @@ func GetSpecificTopPost(ID int) (Post, error) {
 // GetSpecificPostByString gets a specific post for a given string id.
 // Deprecated: This method was created to support old functionality during the database refactor of april 2020
 // The code should be changed to reflect the new database design
-func GetSpecificPostByString(ID string) (Post, error) {
-	return getSpecificPostStringDecorated(ID, false)
+func GetSpecificPostByString(ID string, onlyNotDeleted bool) (Post, error) {
+	return getSpecificPostStringDecorated(ID, onlyNotDeleted)
 }
 
 // GetSpecificPost gets a specific post for a given id.
@@ -184,7 +181,7 @@ func GetSpecificPost(ID int, onlyNotDeleted bool) (Post, error) {
 }
 
 var specificPostSQL = abstractSelectPosts + "\nWHERE recentposts.selfid = ?"
-var specificPostSQLNotDeleted = specificPostSQL + "\nWHERE recentposts.is_deleted = FALSE"
+var specificPostSQLNotDeleted = specificPostSQL + "\nAND recentposts.is_deleted = FALSE"
 
 func getSpecificPostStringDecorated(ID string, onlyNotDeleted bool) (Post, error) {
 	var sql string

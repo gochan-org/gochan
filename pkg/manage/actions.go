@@ -252,7 +252,7 @@ var actions = []Action{
 
 			if request.FormValue("postid") != "" {
 				var err error
-				post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"))
+				post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"), true)
 				if err != nil {
 					err = errors.New("Error getting post: " + err.Error())
 					return "", err
@@ -850,8 +850,30 @@ var actions = []Action{
 		Permissions: ModPerms,
 		JSONoutput:  AlwaysJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			post, err := gcsql.GetSpecificPost(gcutil.HackyStringToInt(request.FormValue("postid")), false)
-			return post, err
+			postIDstr := request.FormValue("postid")
+			if postIDstr == "" {
+				return "", errors.New("invalid request (missing postid)")
+			}
+			var postID int
+			if postID, err = strconv.Atoi(postIDstr); err != nil {
+				return "", err
+			}
+			post, err := gcsql.GetPostFromID(postID, true)
+			if err != nil {
+				return "", err
+			}
+
+			postInfo := map[string]interface{}{
+				"post": post,
+				"ip":   post.IP,
+			}
+			names, err := net.LookupAddr(post.IP)
+			if err == nil {
+				postInfo["ipFQDN"] = names
+			} else {
+				postInfo["ipFQDN"] = []string{err.Error()}
+			}
+			return postInfo, nil
 		}},
 	// {
 	// 	may end up deleting this
