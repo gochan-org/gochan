@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"net"
 	"net/http"
 	"path"
 	"regexp"
@@ -277,6 +278,53 @@ var actions = []Action{
 			}
 			outputStr += manageBansBuffer.String()
 			return outputStr, nil
+		}},
+	{
+		ID:          "ipsearch",
+		Title:       "IP Search",
+		Permissions: ModPerms,
+		JSONoutput:  NoJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var staff *gcsql.Staff
+			staff, err = getCurrentFullStaff(request)
+			if err != nil {
+				gclog.Printf(gclog.LErrorLog, "Error parsing request: %s", err.Error())
+				return "", err
+			}
+
+			ipQuery := request.Form.Get("ip")
+			limitStr := request.Form.Get("limit")
+			data := map[string]interface{}{
+				"webroot": config.GetSystemCriticalConfig().WebRoot,
+				"ipQuery": ipQuery,
+				"limit":   10,
+			}
+
+			if ipQuery != "" && limitStr != "" {
+				var limit int
+				if limit, err = strconv.Atoi(request.Form.Get("limit")); err != nil || limit < 1 {
+					limit = 20
+				}
+				data["limit"] = limit
+				var names []string
+				if names, err = net.LookupAddr(ipQuery); err == nil {
+					data["reverseAddrs"] = names
+				} else {
+					data["reverseAddrs"] = []string{err.Error()}
+				}
+				data["posts"], err = gcsql.GetPostsFromIP(ipQuery, limit, true)
+				if err != nil {
+					return "", errors.New(gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
+						"Error getting list of posts from %q by staff %s: %s", ipQuery, staff.Username, err.Error()))
+				}
+			}
+
+			manageIpBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageIPSearch, data, manageIpBuffer, "text/html"); err != nil {
+				return "", errors.New(gclog.Println(gclog.LErrorLog,
+					"Error executing IP search page template:", err.Error()))
+			}
+			return manageIpBuffer.String(), nil
 		}},
 	{
 		ID:          "reports",

@@ -1,0 +1,53 @@
+{{define "uploadinfo" -}}
+<div class="file-info">
+	File: <a href="../{{.GetBoardDir}}/src/{{.Filename}}" target="_blank">{{.Filename}}</a> - ({{formatFilesize .Filesize}} , {{.ImageW}}x{{.ImageH}}, <a href="../{{.GetBoardDir}}/src/{{.Filename}}" class="file-orig" download="{{.FilenameOriginal}}">{{.FilenameOriginal}}</a>)
+</div>
+{{- end -}}
+<fieldset>
+	<legend>Search</legend>
+	<form method="GET" action="{{.webroot}}manage" class="staff-form">
+		<input type="hidden" name="action" value="ipsearch"/>
+		<label for="ip">IP Address</label>
+		<input type="text" name="ip" id="ipquery" value="{{.ipQuery}}"><br />
+		<label for="number">Max results</label>
+		<input type="number" name="limit" min="1" max="200" value="{{.limit}}"/><br/>
+		<input type="submit" value="Search">
+	</form>
+</fieldset>
+{{with .reverseAddrs}}
+<fieldset>
+	<legend>Info for IP address {{$.ipQuery}}</legend>
+	<b>Reverse address results:</b>
+	<ul>
+		{{range $a, $addr := .}}<li>{{$addr}}</li>{{end}}
+	</ul>
+</fieldset>
+{{- end -}}
+{{with .posts -}}
+<hr/>
+<header><h2>Posts from IP</h2></header>
+{{range $p, $post := .}}
+<div id="replycontainer{{.ID}}" class="reply-container">
+<div id="reply{{.ID}}" class="reply">
+	<a class="anchor" id="{{.ID}}"></a>
+	<input type="checkbox" id="check{{.ID}}" name="check{{.ID}}">
+	<label class="post-info" for="check39">
+		<span class="subject">{{.Subject}}</span>
+		<span class="postername">
+			{{- if ne .Email ""}}<a href="mailto:{{.Email}}">{{end}}
+				{{- if and (eq .Name "") (eq .Tripcode "") -}}Anonymous{{else}}{{.Name}}{{end}}
+				{{- if ne .Email ""}}</a>{{end -}}
+		</span>
+		{{- if ne .Tripcode ""}}<span class="tripcode">!{{.Tripcode}}</span>{{end}} {{formatTimestamp .Timestamp}}</label>
+		<a href="{{$.webroot}}{{.GetBoardDir}}/res/{{if isOP .}}{{.ID}}{{else}}{{.ParentID}}{{end}}.html#{{.ID}}" target="_blank">No. {{.ID}}</a><br/>
+		{{- if eq .Filename "deleted" -}}
+			<div class="file-deleted-box" style="text-align:center;">File removed</div>
+		{{- else if ne .Filename "" -}}
+			{{- template "uploadinfo" . -}}
+			<a class="upload-container" href="{{$.webroot}}{{.GetBoardDir}}/src/{{.Filename}}"><img src="{{$.webroot}}{{.GetBoardDir}}/thumb/{{getThreadThumbnail .Filename}}" alt="{{$.webroot}}{{.GetBoardDir}}/src/{{.Filename}}" width="{{.ThumbW}}" height="{{.ThumbH}}" class="upload" /></a>
+		{{- end -}}
+		{{.MessageHTML}}
+	
+</div>
+</div>
+{{- end}}{{end}}
