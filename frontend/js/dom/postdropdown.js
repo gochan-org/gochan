@@ -6,10 +6,11 @@ import { isPostVisible, setPostVisibility, setThreadVisibility } from "./posthid
 import { currentBoard } from "../postinfo";
 import { getCookie } from "../cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
+import { getPostInfo } from "../management/manage";
 
 const idRe = /^((reply)|(op))(\d+)/;
 
-function editPost(id, board) {
+function editPost(id, _board) {
 	let cookiePass = getCookie("password");
 	promptLightbox(cookiePass, true, () => {
 		$("input[type=checkbox]").prop("checked", false);
@@ -139,6 +140,14 @@ function handleActions(action, postIDStr) {
 		case "Delete post":
 			deletePost(postID, board);
 			break;
+		// manage stuff
+		case "Posts from this IP":
+			getPostInfo(postID).then(info => {
+				window.open(`${webroot}manage?action=ipsearch&limit=100&ip=${info.ip}`);
+			}).catch(reason => {
+				alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
+			});
+			break;
 	}
 }
 
@@ -169,11 +178,15 @@ export function addPostDropdown($post) {
 		`<option>Report post</option>`,
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
-	.on("change", e => {
+	.on("change", _e => {
 		handleActions($ddownMenu.val(), postID);
 		$ddownMenu.val("Actions");
 	});
 	if(hasUpload)
 		$ddownMenu.append(`<option>Delete file</option>`);
+	$post.trigger("postDropdownAdded", {
+		post: $post,
+		dropdown: $ddownMenu
+	});
 	return $post;
 }

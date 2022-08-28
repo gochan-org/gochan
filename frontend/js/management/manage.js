@@ -40,6 +40,26 @@ let $staffMenu = null;
  */
 let $staffBtn = null;
 
+/**
+ * @param {HTMLElement} dropdown
+ * @param {string} item
+ */
+function dropdownHasItem(dropdown, item) {
+	return [...dropdown.children].filter(v => v.text === item).length > 0;
+}
+
+function setupManagementEvents() {
+	$("select.post-actions").each((_i, el) => {
+		if(!dropdownHasItem(el, "Posts from this IP")) {
+			$(el).append("<option>Posts from this IP</option>");
+		}
+	});
+	$(document).on("postDropdownAdded", function(_e, data) {
+		if(!data.dropdown) return;
+		data.dropdown.append("<option>Posts from this IP</option>");
+	});
+}
+
 export async function initStaff() {
 	return $.ajax({
 		method: "GET",
@@ -53,7 +73,9 @@ export async function initStaff() {
 			if(typeof result === "string") {
 				try {
 					staffActions = JSON.parse(result);
+
 				} catch(e) {
+					// presumably not logged in
 					staffActions = [];
 				}
 			} else if(typeof result === "object") {
@@ -63,7 +85,13 @@ export async function initStaff() {
 		error: (e) => {
 			console.error("Error getting actions list:", e);
 		}
-	}).then(getStaffInfo);
+	}).then(getStaffInfo).then(info => {
+		if(info.Rank > 0) {
+			setupManagementEvents();
+		}
+		return info;
+	});
+	
 }
 
 export async function getStaffInfo() {
@@ -87,6 +115,20 @@ export async function getStaffInfo() {
 			return notAStaff;
 		staffInfo = info;
 		return info;
+	});
+}
+
+export async function getPostInfo(id) {
+	return $.ajax({
+		method: "GET",
+		url: `${webroot}manage`,
+		data: {
+			action: "postinfo",
+			postid: id
+		},
+		async: true,
+		cache: true,
+		dataType: "json"
 	});
 }
 

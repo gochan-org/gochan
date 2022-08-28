@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-const opRegex = /\/res\/(\d+)(p(\d)+)?.html$/;
+const opRE = /\/res\/(\d+)(p(\d)+)?.html$/;
 const threadRE = /^\d+/;
 
 export function currentBoard() {
@@ -11,7 +11,7 @@ export function currentBoard() {
 }
 
 export function getPageThread() {
-	let arr = opRegex.exec(window.location.pathname);
+	let arr = opRE.exec(window.location.pathname);
 	let info = {
 		board: currentBoard(),
 		boardID: -1,

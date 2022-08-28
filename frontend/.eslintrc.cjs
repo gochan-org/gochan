@@ -9,7 +9,9 @@ module.exports = {
         "sourceType": "module"
     },
     "rules": {
-        "no-unused-vars": "warn",
+        "no-unused-vars": ["warn", {
+            "argsIgnorePattern": "^_"
+        }],
         "semi": "warn",
         "no-constant-condition": "warn",
         "no-whitespace-before-property": "warn",
