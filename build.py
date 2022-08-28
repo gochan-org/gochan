@@ -433,10 +433,16 @@ def sass(minify=False, watch=False):
 		print("Failed running sass with status", status)
 		sys.exit(status)
 
-def test():
+def test(verbose = False, coverage = False):
 	pkgs = os.listdir("pkg")
 	for pkg in pkgs:
-		run_cmd("go test " + path.join("./pkg", pkg), realtime=True, print_command=True)
+		cmd = "go test "
+		if verbose:
+			cmd += "-v "
+		if coverage:
+			cmd += "-cover "
+		cmd += path.join("./pkg", pkg)
+		run_cmd(cmd, realtime=True, print_command=True)
 
 
 if __name__ == "__main__":
@@ -460,8 +466,7 @@ if __name__ == "__main__":
 		sys.exit(2)
 
 	if action == "build":
-		parser.add_argument(
-			"--debug",
+		parser.add_argument("--debug",
 			help="build gochan and gochan-migrate with debugging symbols",
 			action="store_true")
 		args = parser.parse_args()
@@ -472,13 +477,11 @@ if __name__ == "__main__":
 	elif action == "dependencies":
 		dependencies()
 	elif action == "docker":
-		parser.add_argument(
-			"--option",
+		parser.add_argument("--option",
 			default="guestdb",
 			choices=["guestdb", "hostdb", "macos"],
 			help="create a Docker container, see docker/README.md for more info")
-		parser.add_argument(
-			"--attached",
+		parser.add_argument("--attached",
 			action="store_true",
 			help="keep the command line attached to the container while it runs")
 		args = parser.parse_args()
@@ -487,36 +490,29 @@ if __name__ == "__main__":
 		except KeyboardInterrupt:
 			print("Received keyboard interrupt, exiting")
 	elif action == "install":
-		parser.add_argument(
-			"--js",
+		parser.add_argument("--js",
 			action="store_true",
 			help="only install JavaScript (useful for frontend development)")
-		parser.add_argument(
-			"--css",
+		parser.add_argument("--css",
 			action="store_true",
 			help="only install CSS")
-		parser.add_argument(
-			"--templates",
+		parser.add_argument("--templates",
 			action="store_true",
 			help="install the template files")
-		parser.add_argument(
-			"--prefix",
+		parser.add_argument("--prefix",
 			default="/usr",
 			help="install gochan to this directory and its subdirectories")
-		parser.add_argument(
-			"--documentroot",
+		parser.add_argument("--documentroot",
 			default="/srv/gochan",
 			help="install files in ./html/ to this directory to be requested by a browser")
-		parser.add_argument(
-			"--symlinks",
+		parser.add_argument("--symlinks",
 			action="store_true",
 			help="create symbolic links instead of copying the files (may require admin/root privileges)"
 		)
 		args = parser.parse_args()
 		install(args.prefix, args.documentroot, args.symlinks, args.js, args.css, args.templates)
 	elif action == "js":
-		parser.add_argument(
-			"--watch",
+		parser.add_argument("--watch", "-w",
 			action="store_true",
 			help="automatically rebuild when you change a file (keeps running)"
 		)
@@ -524,8 +520,7 @@ if __name__ == "__main__":
 			"--eslint",
 			action="store_true",
 			help="Run eslint on the JavaScript code to check for possible problems")
-		parser.add_argument(
-			"--eslint-fix",
+		parser.add_argument("--eslint-fix",
 			action="store_true",
 			help="Run eslint on the JS code to try to fix detected problems"
 		)
@@ -535,8 +530,7 @@ if __name__ == "__main__":
 		else:
 			js(args.watch)
 	elif action == "release":
-		parser.add_argument(
-			"--all",
+		parser.add_argument("--all", "-a",
 			help="build releases for Windows, macOS, and Linux",
 			action="store_true")
 		args = parser.parse_args()
@@ -548,15 +542,23 @@ if __name__ == "__main__":
 		else:
 			release(gcos)
 	elif action == "sass":
-		parser.add_argument("--minify", action="store_true")
-		parser.add_argument(
-			"--watch",
+		parser.add_argument("--minify", "-m", action="store_true")
+		parser.add_argument("--watch", "-w",
 			action="store_true",
 			help="automatically rebuild when you change a file (keeps running)")
 
 		args = parser.parse_args()
 		sass(args.minify, args.watch)
 	elif action == "test":
-		test()
+		parser.add_argument("--verbose","-v",
+			action="store_true",
+			help="Print log messages in the tests"
+		)
+		parser.add_argument("--coverage",
+			action="store_true",
+			help="Print unit test coverage"
+		)
+		args = parser.parse_args()
+		test(args.verbose, args.coverage)
 
 	args = parser.parse_args()
