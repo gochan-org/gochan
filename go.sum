@@ -1,3 +1,5 @@
+github.com/DATA-DOG/go-sqlmock v1.5.0 h1:Shsta01QNfFxHCfpW6YH2STWB0MudeXXEWMr20OEh60=
+github.com/DATA-DOG/go-sqlmock v1.5.0/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
 github.com/aquilax/tripcode v1.0.0 h1:uPW1T2brVth0t6YiDPlouncHXFGneflsAvkh4zEBN58=
 github.com/aquilax/tripcode v1.0.0/go.mod h1:Tucn/H6BM/DEmxzj/tnmR7Vs/NV/bgCKo8Wi0yXrtzQ=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=

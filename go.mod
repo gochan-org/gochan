@@ -3,6 +3,7 @@ module github.com/gochan-org/gochan
 go 1.13
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/aquilax/tripcode v1.0.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8

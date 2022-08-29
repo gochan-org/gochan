@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"net"
 	"reflect"
@@ -261,9 +262,9 @@ func (gcfg *GochanConfig) Write() error {
 }
 
 /*
- SystemCriticalConfig contains configuration options that are extremely important, and fucking with them while
- the server is running could have site breaking consequences. It should only be changed by modifying the configuration
- file and restarting the server.
+SystemCriticalConfig contains configuration options that are extremely important, and fucking with them while
+the server is running could have site breaking consequences. It should only be changed by modifying the configuration
+file and restarting the server.
 */
 type SystemCriticalConfig struct {
 	ListenIP     string `critical:"true"`
@@ -406,6 +407,14 @@ func GetBoardConfig(board string) *BoardConfig {
 		return &cfg.BoardConfig
 	}
 	return &bc
+}
+
+func GetDebugMode() bool {
+	if flag.Lookup("test.v") != nil {
+		// running with go test
+		return true
+	}
+	return cfg.SystemCriticalConfig.DebugMode
 }
 
 func GetVersion() *GochanVersion {

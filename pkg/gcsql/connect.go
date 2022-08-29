@@ -39,7 +39,7 @@ func initDB(initFile string) error {
 	return RunSQLFile(filePath)
 }
 
-//RunSQLFile cuts a given sql file into individual statements and runs it.
+// RunSQLFile cuts a given sql file into individual statements and runs it.
 func RunSQLFile(path string) error {
 	sqlBytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -49,7 +49,7 @@ func RunSQLFile(path string) error {
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
 	sqlArr := strings.Split(gcdb.replacer.Replace(sqlStr), ";")
 
-	debugMode := config.GetSystemCriticalConfig().DebugMode
+	debugMode := config.GetDebugMode()
 	for _, statement := range sqlArr {
 		statement = strings.Trim(statement, " \n\r\t")
 		if len(statement) > 0 {

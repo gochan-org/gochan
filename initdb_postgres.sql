@@ -126,7 +126,7 @@ CREATE TABLE DBPREFIXboard_staff(
 	staff_id BIGINT NOT NULL,
 	CONSTRAINT board_staff_board_id_fk FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
 	CONSTRAINT board_staff_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id) ON DELETE CASCADE,
-    CONSTRAINT board_staff_pk PRIMARY KEY (board_id,staff_id)
+	CONSTRAINT board_staff_pk PRIMARY KEY (board_id,staff_id)
 );
 
 CREATE TABLE DBPREFIXannouncements(

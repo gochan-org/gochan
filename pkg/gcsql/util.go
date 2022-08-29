@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/gochan-org/gochan/pkg/config"
 )
 
 const (
@@ -45,6 +47,12 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 			arr[i] += fmt.Sprintf("$%d", i+1)
 		}
 		prepared = strings.Join(arr, "")
+	case "sqlmock":
+		if config.GetDebugMode() {
+			prepared = query
+			break
+		}
+		fallthrough
 	default:
 		return "", ErrUnsupportedDB
 	}
@@ -63,6 +71,7 @@ func Close() error {
 /*
 ExecSQL automatically escapes the given values and caches the statement
 Example:
+
 	var intVal int
 	var stringVal string
 	result, err := gcsql.ExecSQL(db, "mysql",
@@ -79,6 +88,7 @@ func ExecSQL(query string, values ...interface{}) (sql.Result, error) {
 QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
 Example:
+
 	id := 32
 	var intVal int
 	var stringVal string
@@ -97,6 +107,7 @@ func QueryRowSQL(query string, values, out []interface{}) error {
 QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
 Example:
+
 	rows, err := sqlutil.QuerySQL("SELECT * FROM table")
 	if err == nil {
 		for rows.Next() {
