@@ -183,9 +183,6 @@ def set_vars(goos=""):
 
 	if goos != "":
 		os.environ["GOOS"] = goos
-	if os.getenv("CGO_ENABLED") is None:
-		# CGO_ENABLED is not explicitly enabled, disable it
-		os.environ["CGO_ENABLED"] = "0"
 
 	gcos, gcos_status = run_cmd("go env GOOS", print_output=False)
 	exe, exe_status = run_cmd("go env GOEXE", print_output=False)

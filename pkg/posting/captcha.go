@@ -36,9 +36,9 @@ func InitCaptcha() {
 		return
 	}
 	driver = base64Captcha.NewDriverString(
-		boardConfig.CaptchaHeight, boardConfig.CaptchaWidth, 0, 0, 6,
+		boardConfig.CaptchaHeight, boardConfig.CaptchaWidth, int(0), int(0), int(6),
 		"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		&color.RGBA{0, 0, 0, 0}, nil).ConvertFonts()
+		&color.RGBA{0, 0, 0, 0}, nil, nil).ConvertFonts()
 }
 
 // ServeCaptcha handles requests to /captcha if UseCaptcha is enabled in gochan.json

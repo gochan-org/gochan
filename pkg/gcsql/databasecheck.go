@@ -67,7 +67,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 	return 0, DBClean, nil
 }
 
-//CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
+// CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
 func CheckAndInitializeDatabase(dbType string) {
 	dbVersion, versionFlag, err := GetCompleteDatabaseVersion()
 	if err != nil {

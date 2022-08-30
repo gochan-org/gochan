@@ -38,6 +38,8 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	switch dbConn.driver {
 	case "mysql":
 		prepared = query
+	case "sqlite3":
+		fallthrough
 	case "postgres":
 		arr := strings.Split(query, "?")
 		for i := range arr {

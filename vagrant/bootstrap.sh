@@ -3,6 +3,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+export GO_VERSION=1.16
 
 if [ -z "$DBTYPE" ]; then
 	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql'."
@@ -11,7 +12,7 @@ if [ -z "$DBTYPE" ]; then
 fi
 echo "Using DBTYPE $DBTYPE"
 
-add-apt-repository -y ppa:gophers/archive
+add-apt-repository -y ppa:longsleep/golang-backports
 apt-get -y update && apt-get -y upgrade
 
 if [ "$DBTYPE" == "mysql" ]; then
@@ -54,6 +55,8 @@ elif [ "$DBTYPE" == "postgresql" ]; then
 		systemctl daemon-reload
 		systemctl enable gochan.service
 	fi
+elif [ "$DBTYPE" == "sqlite3" ]; then
+	apt install sqlite3
 elif [ "$DBTYPE" == "mssql" ]; then
 	# using Microsoft SQL Server (currently unsupported)
 	echo "Microsoft SQL Server not supported yet";
@@ -63,9 +66,9 @@ else
 	exit 1
 fi
 
-apt-get -y install git subversion mercurial nginx ffmpeg golang-1.11
+apt-get -y install git subversion mercurial nginx ffmpeg golang-${GO_VERSION}
 
-ln -s /usr/lib/go-1.11/bin/* /usr/local/bin/
+ln -sf /usr/lib/go-${GO_VERSION}/bin/* /usr/local/bin/
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/sample-configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx

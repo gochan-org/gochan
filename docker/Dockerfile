@@ -1,4 +1,4 @@
-FROM golang:1.13.9-alpine3.11
+FROM golang:1.16-alpine3.15
 
 RUN apk --no-cache add \
 						postgresql-client	\
@@ -13,7 +13,7 @@ RUN apk --no-cache add \
 						bash
 
 RUN mkdir -p /root/bin \
-	&& ln -s /usr/lib/go-1.13/bin/* /root/bin/ \
+	&& ln -s /usr/lib/go-1.16/bin/* /root/bin/ \
 	&& export PATH=$PATH:/root/bin \
 	&& echo "export PATH=$PATH:/root/bin" >> /root/.bashrc \
 	&& rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/* \
@@ -27,8 +27,8 @@ WORKDIR /opt/gochan
 COPY build.py .
 RUN ./build.py dependencies
 
-RUN rm /etc/nginx/conf.d/default.conf
-COPY sample-configs/gochan-fastcgi.nginx /etc/nginx/conf.d/gochan.conf
+RUN rm -f /etc/nginx/http.d/default.conf
+COPY sample-configs/gochan-fastcgi.nginx /etc/nginx/http.d/gochan.conf
 COPY sample-configs/gochan.example.json /etc/gochan/gochan.json
 
 # Get all
@@ -42,7 +42,6 @@ EXPOSE 9000
 CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
-	-e 's/"DomainRegex": ".*"/"DomainRegex": "(https|http):\\\/\\\/(.*)\\\/(.*)"/' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
@@ -52,6 +51,7 @@ CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json 
 	-e "s/\"DBname\".*/\"DBname\": \"${DATABASE_NAME}\",/" \
 	-e "s/\"DBusername\".*/\"DBusername\": \"${DATABASE_USER}\",/" \
 	-e "s/\"DBpassword\".*/\"DBpassword\": \"${DATABASE_PASSWORD}\",/" \
+	&& mkdir -p /etc/ssl/private \
 	&& openssl req -x509 -nodes -days 7305 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/CN=127.0.0.1" \
 	&& ./build.py \
 	&& ./build.py install \

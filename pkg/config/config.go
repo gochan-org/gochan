@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"flag"
 	"io/ioutil"
 	"net"
 	"reflect"
@@ -66,7 +65,7 @@ var (
 	}
 
 	boardConfigs    = map[string]BoardConfig{}
-	acceptedDrivers = []string{"mysql", "postgres"}
+	acceptedDrivers = []string{"mysql", "postgres", "sqlite3"}
 )
 
 type GochanConfig struct {
@@ -410,11 +409,7 @@ func GetBoardConfig(board string) *BoardConfig {
 }
 
 func GetDebugMode() bool {
-	if flag.Lookup("test.v") != nil {
-		// running with go test
-		return true
-	}
-	return cfg.SystemCriticalConfig.DebugMode
+	return cfg.testing || cfg.SystemCriticalConfig.DebugMode
 }
 
 func GetVersion() *GochanVersion {

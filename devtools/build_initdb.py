@@ -4,19 +4,21 @@ from os import path
 
 class macro():
 	""" Use a macro like this {exact macro name} """
-	def __init__(self, macroname, postgres, mysql):
+	def __init__(self, macroname, postgres, mysql, sqlite3):
 		self.macroname = macroname
 		self.postgres = postgres
 		self.mysql = mysql
+		self.sqlite3 = sqlite3
 
 
 # macros
 macros = [
 	macro(
 		"serial pk","BIGSERIAL PRIMARY KEY",
-		"BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY"),
-	macro("fk to serial", "BIGINT", "BIGINT"),
-	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY")
+		"BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY",
+		"INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"),
+	macro("fk to serial", "BIGINT", "BIGINT", "BIGINT"),
+	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY", "DROP CONSTRAINT")
 ]
 
 
@@ -48,17 +50,22 @@ def dofile(filestart):
 
 	postgresProcessed = compileOutIfs(masterfile, "POSTGRES")
 	mysqlProcessed = compileOutIfs(masterfile, "MYSQL")
+	sqlite3Processed = compileOutIfs(masterfile, "SQLITE3")
 
 	for item in macros:
 		macroCode = "{" + item.macroname + "}"
 		postgresProcessed = postgresProcessed.replace(macroCode, item.postgres)
 		mysqlProcessed = mysqlProcessed.replace(macroCode, item.mysql)
+		sqlite3Processed = sqlite3Processed.replace(macroCode, item.sqlite3)
 
 	error = hasError(postgresProcessed)
 	error = error or hasError(mysqlProcessed)
 
 	with open(filestart + "postgres.sql", 'w') as i:
 		i.write(postgresProcessed)
+
+	with open(filestart + "sqlite3.sql", 'w') as i:
+		i.write(sqlite3Processed)
 
 	with open(filestart + "mysql.sql", 'w') as i:
 		i.write(mysqlProcessed)

@@ -16,6 +16,7 @@ const (
 	Error text: %s`
 	mysqlConnStr    = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
 	postgresConnStr = "postgres://%s:%s@%s/%s?sslmode=disable"
+	sqlite3ConnStr  = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
 )
 
 type GCDB struct {
@@ -70,6 +71,7 @@ func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 /*
 ExecSQL automatically escapes the given values and caches the statement
 Example:
+
 	var intVal int
 	var stringVal string
 	result, err := db.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
@@ -105,6 +107,7 @@ func (db *GCDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, erro
 QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
 Example:
+
 	id := 32
 	var intVal int
 	var stringVal string
@@ -125,6 +128,7 @@ func (db *GCDB) QueryRowSQL(query string, values, out []interface{}) error {
 QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
 Example:
+
 	rows, err := db.QuerySQL("SELECT * FROM table")
 	if err == nil {
 		for rows.Next() {
@@ -153,22 +157,26 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 			"\n", " "),
 	}
 
-	addrMatches := tcpHostIsolator.FindAllStringSubmatch(host, -1)
-	if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
-		host = addrMatches[0][2]
+	if dbDriver != "sqlite3" {
+		addrMatches := tcpHostIsolator.FindAllStringSubmatch(host, -1)
+		if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
+			host = addrMatches[0][2]
+		}
 	}
 
 	switch dbDriver {
 	case "mysql":
 		db.connStr = fmt.Sprintf(mysqlConnStr, username, password, host, dbName)
 		// db.nilTimestamp = "0000-00-00 00:00:00"
+	case "sqlite3":
+		db.connStr = fmt.Sprintf(sqlite3ConnStr, host, username, password)
 	case "postgres":
 		db.connStr = fmt.Sprintf(postgresConnStr, username, password, host, dbName)
 		// db.nilTimestamp = "0001-01-01 00:00:00"
 	default:
 		return nil, ErrUnsupportedDB
 	}
-
+	fmt.Printf("connStr: %q\nhost: %q\n", db.connStr, host)
 	db.db, err = sql.Open(db.driver, db.connStr)
 	return db, err
 }

@@ -67,12 +67,13 @@ func RunSQLFile(path string) error {
 	return nil
 }
 
-// TODO: get gocha-migration working so this doesn't have to sit here
+// TODO: get gochan-migration working so this doesn't have to sit here
 func tmpSqlAdjust() error {
 	// first update the crappy wordfilter table structure
 	var err error
 	var query string
-	if gcdb.driver == "mysql" {
+	switch gcdb.driver {
+	case "mysql":
 		query = `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
 		WHERE CONSTRAINT_NAME = 'wordfilters_staff_id_fk'
 		AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
@@ -85,8 +86,10 @@ func tmpSqlAdjust() error {
 		if numConstraints > 0 {
 			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY IF EXISTS wordfilters_board_id_fk`
 		}
-	} else {
+	case "postgres":
 		query = `ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`
+	case "sqlite3":
+		return nil
 	}
 	if _, err = gcdb.ExecSQL(query); err != nil {
 		return err

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -125,6 +126,92 @@ func ParseJSON(ba []byte) (*GochanConfig, []MissingField, error) {
 
 // InitConfig loads and parses gochan.json on startup and verifies its contents
 func InitConfig(versionStr string) {
+	if flag.Lookup("test.v") != nil {
+		// create a dummy config for testing if we're using go test
+		cfg = &GochanConfig{
+			testing: true,
+			SystemCriticalConfig: SystemCriticalConfig{
+				ListenIP:     "127.0.0.1",
+				Port:         8080,
+				UseFastCGI:   true,
+				DebugMode:    true,
+				DocumentRoot: "html",
+				TemplateDir:  "templates",
+				LogDir:       "",
+				DBtype:       "sqlmock",
+				DBhost:       "127.0.0.1:3306",
+				DBname:       "gochan",
+				DBusername:   "gochan",
+				DBpassword:   "",
+				DBprefix:     "gc_",
+				SiteDomain:   "127.0.0.1",
+				WebRoot:      "/",
+				RandomSeed:   "abcd",
+				Version:      ParseVersion(versionStr),
+			},
+			SiteConfig: SiteConfig{
+				Username:        "gochan",
+				FirstPage:       []string{"index.html", "firstrun.html", "1.html"},
+				Lockdown:        false,
+				LockdownMessage: "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
+				SiteName:        "Gochan",
+				SiteSlogan:      "Gochan testing",
+				MinifyHTML:      true,
+				MinifyJS:        true,
+				EnableAppeals:   true,
+				MaxLogDays:      14,
+				Verbosity:       1,
+
+				MaxRecentPosts:        3,
+				RecentPostsWithNoFile: false,
+			},
+			BoardConfig: BoardConfig{
+				Sillytags:    []string{"Admin", "Mod", "Janitor", "Dweeb", "Kick me", "Troll", "worst pony"},
+				UseSillytags: false,
+				Styles: []Style{
+					{Name: "Pipes", Filename: "pipes.css"},
+					{Name: "BunkerChan", Filename: "bunkerchan.css"},
+					{Name: "Burichan", Filename: "burichan.css"},
+					{Name: "Clear", Filename: "clear.css"},
+					{Name: "Dark", Filename: "dark.css"},
+					{Name: "Photon", Filename: "photon.css"},
+					{Name: "Yotsuba", Filename: "yotsuba.css"},
+					{Name: "Yotsuba B", Filename: "yotsubab.css"},
+					{Name: "Windows 9x", Filename: "win9x.css"},
+				},
+				DefaultStyle: "pipes.css",
+
+				PostConfig: PostConfig{
+					NewThreadDelay:           30,
+					ReplyDelay:               7,
+					ThreadsPerPage:           15,
+					PostsPerThreadPage:       50,
+					RepliesOnBoardPage:       3,
+					StickyRepliesOnBoardPage: 1,
+					BanColors: []string{
+						"admin:#0000A0",
+						"somemod:blue",
+					},
+					BanMessage:       "USER WAS BANNED FOR THIS POST",
+					EnableEmbeds:     true,
+					EmbedWidth:       200,
+					EmbedHeight:      164,
+					ImagesOpenNewTab: true,
+					NewTabOnOutlinks: true,
+				},
+				UploadConfig: UploadConfig{
+					ThumbWidth:         200,
+					ThumbHeight:        200,
+					ThumbWidthReply:    125,
+					ThumbHeightReply:   125,
+					ThumbWidthCatalog:  50,
+					ThumbHeightCatalog: 50,
+				},
+				DateTimeFormat: "Mon, January 02, 2006 3:04 PM",
+			},
+		}
+		return
+	}
 	cfgPath = gcutil.FindResource(
 		"gochan.json",
 		"/usr/local/etc/gochan/gochan.json",
