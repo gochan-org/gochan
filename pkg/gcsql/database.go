@@ -176,7 +176,6 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 	default:
 		return nil, ErrUnsupportedDB
 	}
-	fmt.Printf("connStr: %q\nhost: %q\n", db.connStr, host)
 	db.db, err = sql.Open(db.driver, db.connStr)
 	return db, err
 }
