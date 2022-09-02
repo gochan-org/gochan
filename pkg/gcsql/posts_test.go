@@ -2,27 +2,10 @@ package gcsql
 
 import (
 	"testing"
-
-	_ "github.com/DATA-DOG/go-sqlmock"
 )
 
-func makeTestPost(post *Post, bump bool) (err error) {
-	sqm.ExpectPrepare(prepTestQueryString(
-		`SELECT COALESCE(MAX(id), 0) + 1 FROM gc_threads`,
-	)).ExpectQuery().WillReturnRows(
-		sqm.NewRows([]string{"a"}).AddRow(1),
-	)
-
-	err = InsertPost(post, bump)
-
-	if err != nil {
-		return err
-	}
-	return sqm.ExpectationsWereMet()
-}
-
 func TestInsertPosts(t *testing.T) {
-	err := makeTestPost(&Post{
+	err := InsertPost(&Post{
 		ParentID:         0,
 		BoardID:          1,
 		Name:             "Joe Poster",

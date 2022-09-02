@@ -12,6 +12,7 @@
 *.bak
 *.log
 *.swp
+*.db
 __debug_bin
 node_modules
 /frontend/coverage

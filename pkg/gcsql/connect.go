@@ -56,9 +56,7 @@ func RunSQLFile(path string) error {
 			if _, err = gcdb.db.Exec(statement); err != nil {
 				if debugMode {
 					gclog.Printf(gclog.LStdLog, "Error excecuting sql: %s\n", err.Error())
-					gclog.Printf(gclog.LStdLog, "Length sql: %d\n", len(statement))
 					gclog.Printf(gclog.LStdLog, "Statement: %s\n", statement)
-					fmt.Printf("%08b", []byte(statement))
 				}
 				return err
 			}
