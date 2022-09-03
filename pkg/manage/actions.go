@@ -81,7 +81,9 @@ var actions = []Action{
 		Title:       "Logout",
 		Permissions: JanitorPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-			gcsql.EndStaffSession(writer, request)
+			if err = gcsql.EndStaffSession(writer, request); err != nil {
+				return "", err
+			}
 			http.Redirect(writer, request,
 				config.GetSystemCriticalConfig().WebRoot+"manage",
 				http.StatusSeeOther)

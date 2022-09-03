@@ -23,19 +23,11 @@ func (esa *ErrStaffAction) Error() string {
 }
 
 func serveError(writer http.ResponseWriter, field string, action string, message string, isJSON bool) {
-	if isJSON {
-		writer.Header().Add("Content-Type", "application/json")
-		writer.Header().Add("Cache-Control", "max-age=5, must-revalidate")
-		errJSON, _ := gcutil.MarshalJSON(ErrStaffAction{
-			ErrorField: field,
-			Action:     action,
-			Message:    message,
-		}, true)
-
-		serverutil.MinifyWriter(writer, []byte(errJSON), "application/json")
-		return
-	}
-	serverutil.ServeErrorPage(writer, message)
+	serverutil.ServeError(writer, message, isJSON, map[string]interface{}{
+		"error":   field,
+		"action":  action,
+		"message": message,
+	})
 }
 
 func isRequestingJSON(request *http.Request) bool {
@@ -98,10 +90,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		output, err = action.Callback(writer, request, wantsJSON)
 	}
 	if err != nil {
-		staffName, _ := getCurrentStaff(request)
 		// writer.WriteHeader(500)
-		gclog.Printf(gclog.LStaffLog|gclog.LErrorLog,
-			"Error accessing manage page %s by %s: %s", actionID, staffName, err.Error())
 		serveError(writer, "actionerror", actionID, err.Error(), wantsJSON || (action.JSONoutput == AlwaysJSON))
 		return
 	}

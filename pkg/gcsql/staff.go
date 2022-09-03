@@ -2,11 +2,12 @@ package gcsql
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"time"
 
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -59,17 +60,12 @@ func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
 	if err = QueryRowSQL(`SELECT staff_id FROM DBPREFIXsessions WHERE data = ?`,
 		[]interface{}{session.Value}, []interface{}{&staffID}); err != nil && err != sql.ErrNoRows {
 		// something went wrong with the query and it's not caused by no rows being returned
-		gclog.Printf(gclog.LStaffLog|gclog.LErrorLog,
-			"Failed getting staff ID for deletion with cookie data %q", sessionVal)
-		return err
+		return errors.New("failed getting staff ID: " + err.Error())
 	}
 
 	_, err = ExecSQL(`DELETE FROM DBPREFIXsessions WHERE data = ?`, sessionVal)
 	if err != nil && err != sql.ErrNoRows {
-		gclog.Println(gclog.LStaffLog|gclog.LErrorLog,
-			// something went wrong when trying to delete the rows and it's not caused by no rows being returned
-			"Failed deleting session for staff with id", staffID)
-		return err
+		return fmt.Errorf("failed clearing session for staff with id %d", staffID)
 	}
 	return nil
 }
