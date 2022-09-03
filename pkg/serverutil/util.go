@@ -18,6 +18,20 @@ func ServeJSON(writer http.ResponseWriter, data map[string]interface{}) {
 	MinifyWriter(writer, []byte(jsonStr), "application/json")
 }
 
+// ServeError serves the given map as a JSON file (with the error string included) if wantsJSON is true,
+// otherwise it serves a regular HTML error page
+func ServeError(writer http.ResponseWriter, err string, wantsJSON bool, data map[string]interface{}) {
+	if wantsJSON {
+		servedMap := data
+		if _, ok := servedMap["error"]; !ok {
+			servedMap["error"] = err
+		}
+		ServeJSON(writer, servedMap)
+	} else {
+		ServeErrorPage(writer, err)
+	}
+}
+
 // ServeErrorPage shows a general error page if something goes wrong
 func ServeErrorPage(writer http.ResponseWriter, err string) {
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")

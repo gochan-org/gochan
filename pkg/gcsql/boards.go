@@ -3,7 +3,6 @@ package gcsql
 import (
 	"database/sql"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/gclog"
@@ -82,6 +81,8 @@ func (board *Board) PopulateData(id int) error {
 	return QueryRowSQL(sql, interfaceSlice(id), interfaceSlice(&board.ID, &board.Section, &board.Dir, &board.ListOrder, &board.Title, &board.Subtitle, &board.Description, &board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedOn, &board.Anonymous, &board.ForcedAnon, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.EmbedsAllowed, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog))
 }
 
+// Delete deletes the board from the database (if a row with the struct's ID exists) and
+// returns any errors. It does not remove the board directory or its files
 func (board *Board) Delete() error {
 	exists := DoesBoardExistByID(board.ID)
 	if !exists {
@@ -92,13 +93,6 @@ func (board *Board) Delete() error {
 	}
 	const delSql = `DELETE FROM DBPREFIXboards WHERE id = ?`
 	_, err := ExecSQL(delSql, board.ID)
-	if err != nil {
-		return err
-	}
-	absPath := board.AbsolutePath()
-	gclog.Printf(gclog.LStaffLog,
-		"Deleting board /%s/, absolute path: %s\n", board.Dir, absPath)
-	err = os.RemoveAll(absPath)
 	return err
 }
 

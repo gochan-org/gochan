@@ -8,6 +8,7 @@ import (
 	"html"
 	"net"
 	"net/http"
+	"os"
 	"path"
 	"regexp"
 	"strconv"
@@ -530,6 +531,13 @@ var actions = []Action{
 		Permissions: AdminPerms,
 		JSONoutput:  NoJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var currentUser string
+			currentUser, err = getCurrentStaff(request)
+			if err != nil {
+				return "", errors.New(gclog.Println(gclog.LErrorLog,
+					"Error parsing current user:", err.Error()))
+			}
+
 			pageBuffer := bytes.NewBufferString("")
 			var board gcsql.Board
 			requestType, boardID, err := boardsRequestType(request)
@@ -550,6 +558,13 @@ var actions = []Action{
 					return "", err
 				}
 				err = board.Delete()
+				if err != nil {
+					return "", err
+				}
+				absPath := board.AbsolutePath()
+				gclog.Printf(gclog.LStaffLog,
+					"Board /%s/ deleted by %s, absolute path: %s\n", board.Dir, currentUser, absPath)
+				err = os.RemoveAll(absPath)
 			case "edit":
 				// edit button clicked, fill the input fields with board data to be edited
 				board, err = gcsql.GetBoardFromID(boardID)

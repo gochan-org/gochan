@@ -290,7 +290,7 @@ func (p *Post) GetBoardDir() (string, error) {
 		SELECT board_id FROM DBPREFIXthreads WHERE id = (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ? LIMIT 1) LIMIT 1)`
 
-	err := QueryRowSQL(sql, []interface{}{p.ParentID}, interfaceSlice(&p.boardDir))
+	err := QueryRowSQL(sql, []interface{}{p.ID}, interfaceSlice(&p.boardDir))
 	return p.boardDir, err
 }
 

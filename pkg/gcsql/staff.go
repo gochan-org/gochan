@@ -257,14 +257,6 @@ func UpdatePost(postID int, email, subject string, message template.HTML, messag
 	return err
 }
 
-// DeleteFilesFromPost deletes all files belonging to a given post
-func DeleteFilesFromPost(postID int, leaveDeletedBox bool) error {
-	post := &Post{
-		ID: postID,
-	}
-	return post.DeleteFiles(leaveDeletedBox)
-}
-
 // DeletePost deletes a post with a given ID
 func DeletePost(postID int, checkIfTopPost bool) error {
 	if checkIfTopPost {
@@ -281,7 +273,6 @@ func DeletePost(postID int, checkIfTopPost bool) error {
 		}
 	}
 
-	DeleteFilesFromPost(postID, false)
 	const sql = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := ExecSQL(sql, postID)
 	return err

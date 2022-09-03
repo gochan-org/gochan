@@ -407,15 +407,35 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			if fileOnly {
 				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
-					if err = post.DeleteFiles(true); err != nil {
-						if wantsJSON {
-							serverutil.ServeJSON(writer, map[string]interface{}{
-								"error":  err,
+					var files []string
+					var errStr string
+
+					if files, err = post.GetFilePaths(); err != nil {
+						errStr = gclog.Print(gclog.LErrorLog, "Error getting file upload info: ", err.Error())
+						serverutil.ServeError(writer, errStr, wantsJSON, map[string]interface{}{
+							"postid": post.ID,
+						})
+						return
+					}
+
+					if err = post.UnlinkUploads(true); err != nil {
+						gclog.Printf(gclog.LErrorLog,
+							"Error unlinking post uploads for #%d: %s", post.ID, err.Error())
+						serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+							"postid": post.ID,
+						})
+						return
+					}
+
+					for _, filePath := range files {
+						if err = os.Remove(filePath); err != nil {
+							fileBase := path.Base(filePath)
+							errStr = gclog.Printf(gclog.LErrorLog, "Error deleting %s: %s", fileBase, err.Error())
+							serverutil.ServeError(writer, errStr, wantsJSON, map[string]interface{}{
 								"postid": post.ID,
+								"file":   fileBase,
 							})
-						} else {
-							serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-								"Error deleting files from post: ", err.Error()))
+							return
 						}
 					}
 				}

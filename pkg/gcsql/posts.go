@@ -1,8 +1,7 @@
 package gcsql
 
 import (
-	"fmt"
-	"os"
+	"database/sql"
 	"path"
 	"time"
 
@@ -173,44 +172,47 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	return posts, nil
 }
 
-func (p *Post) DeleteFiles(leaveDeletedBox bool) error {
-	board, boardWasFound, err := GetBoardFromPostID(p.ID)
+// GetFilePaths returns an array of absolute paths to uploaded files and thumbnails associated
+// with this post, and any errors that occurred
+func (p *Post) GetFilePaths() ([]string, error) {
+	boardDir, err := p.GetBoardDir()
 	if err != nil {
-		return err
-	}
-	if !boardWasFound {
-		return fmt.Errorf("could not find board for post %v", p.ID)
+		return nil, err
 	}
 	const filenameSQL = `SELECT filename FROM DBPREFIXfiles WHERE post_id = ?`
 	rows, err := QuerySQL(filenameSQL, p.ID)
-	if err != nil {
-		return err
+	var paths []string
+	if err == sql.ErrNoRows {
+		return paths, nil
+	} else if err != nil {
+		return nil, err
 	}
-	var filenames []string
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	for rows.Next() {
 		var filename string
 		if err = rows.Scan(&filename); err != nil {
-			return err
+			return paths, err
 		}
-		filenames = append(filenames, filename)
-	}
-
-	systemCriticalCfg := config.GetSystemCriticalConfig()
-	//Remove files from disk
-	for _, filename := range filenames {
 		_, filenameBase, fileExt := gcutil.GetFileParts(filename)
 		thumbExt := fileExt
 		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
 			thumbExt = "jpg"
 		}
-		uploadPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/src/", filenameBase+"."+fileExt)
-		thumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"t."+thumbExt)
-		catalogThumbPath := path.Join(systemCriticalCfg.DocumentRoot, board, "/thumb/", filenameBase+"c."+thumbExt)
-		os.Remove(uploadPath)
-		os.Remove(thumbPath)
-		os.Remove(catalogThumbPath)
+		paths = append(paths,
+			path.Join(documentRoot, boardDir, "/src/", filenameBase+"."+fileExt),
+			path.Join(documentRoot, boardDir, "/thumb/", filenameBase+"t."+thumbExt), // thumbnail path
+		)
+		if p.ParentID == 0 {
+			paths = append(paths, path.Join(documentRoot, boardDir, "/thumb/", filenameBase+"c."+thumbExt)) // catalog thumbnail path
+		}
 	}
+	return paths, nil
+}
 
+// UnlinkUploads disassociates the post with any uploads in DBPREFIXfiles
+// that may have been uploaded with it, optionally leaving behind a "File Deleted"
+// frame where the thumbnail appeared
+func (p *Post) UnlinkUploads(leaveDeletedBox bool) error {
 	var sqlStr string
 	if leaveDeletedBox {
 		// leave a "File Deleted" box
@@ -218,6 +220,6 @@ func (p *Post) DeleteFiles(leaveDeletedBox bool) error {
 	} else {
 		sqlStr = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
 	}
-	_, err = ExecSQL(sqlStr, p.ID)
+	_, err := ExecSQL(sqlStr, p.ID)
 	return err
 }
