@@ -2,9 +2,9 @@ package gcsql
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
 const (
@@ -21,7 +21,10 @@ const (
 var (
 	// ErrInvalidVersion is used when the db contains a database_version table
 	// but zero or more than one versions were found
-	ErrInvalidVersion = errors.New("database contains database_version table but zero or more than one versions were found")
+	ErrInvalidVersion   = errors.New("database contains database_version table but zero or more than one versions were found")
+	ErrCorruptedDB      = errors.New("database contains gochan prefixed tables but is missing versioning tables (possibly corrupted)")
+	ErrDeprecatedDB     = errors.New("database layout is deprecated, please run gochan-migrate")
+	ErrInvalidDBVersion = errors.New("invalid version flag returned by GetCompleteDatabaseVersion()")
 )
 
 // GetCompleteDatabaseVersion checks the database for any versions and errors that may exist.
@@ -68,62 +71,44 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 }
 
 // CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
-func CheckAndInitializeDatabase(dbType string) {
+func CheckAndInitializeDatabase(dbType string) error {
 	dbVersion, versionFlag, err := GetCompleteDatabaseVersion()
 	if err != nil {
-		gclog.Printf(FatalSQLFlags, "Failed to initialise database: %s", err.Error())
+		return err
 	}
-	good := false
-	defer func() {
-		if !good {
-			return
-		}
-		if err = tmpSqlAdjust(); err != nil {
-			gclog.Print(FatalSQLFlags, "Failed updating database structure: ", err.Error())
-			return
-		}
-	}()
 	switch versionFlag {
 	case DBIsPreApril:
 		fallthrough
 	case DBModernButBehind:
-		gclog.Printf(FatalSQLFlags,
-			"Database layout is deprecated. Please run gochan-migrate. Target version is %d", targetDatabaseVersion) //TODO give exact command
+		err = ErrDeprecatedDB
 	case DBClean:
-		buildNewDatabase(dbType)
-		good = true
-		return
+		err = buildNewDatabase(dbType)
 	case DBUpToDate:
-		good = true
-		return
+		err = nil
 	case DBCorrupted:
-		gclog.Println(FatalSQLFlags,
-			"Database contains gochan prefixed tables but is missing versioning tables. Database is possible corrupted. Please contact the devs for help.")
-		return
+		err = ErrCorruptedDB
 	case DBModernButAhead:
-		gclog.Printf(gclog.LFatal,
-			"Database layout is ahead of current version. Current version %d, target version: %d.\n"+
-				"Are you running an old gochan version?", dbVersion, targetDatabaseVersion)
-		return
+		// Uer might be running an old gochan version
+		err = fmt.Errorf("database layout is ahead of current version (%d), target version: %d", dbVersion, targetDatabaseVersion)
 	default:
-		gclog.Printf(FatalSQLFlags,
-			"Failed to initialise database: Checkdatabase, none of paths matched. Should never be executed. Check for outcome of GetCompleteDatabaseVersion()")
-		return
+		err = ErrInvalidDBVersion
 	}
+	if err != nil {
+		return err
+	}
+	return tmpSqlAdjust()
 }
 
-func buildNewDatabase(dbType string) {
+func buildNewDatabase(dbType string) error {
 	var err error
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
-		gclog.Print(FatalSQLFlags, "Failed initializing DB: ", err.Error())
+		return err
 	}
-	err = CreateDefaultBoardIfNoneExist()
-	if err != nil {
-		gclog.Print(FatalSQLFlags, "Failed creating default board: ", err.Error())
+	if err = CreateDefaultBoardIfNoneExist(); err != nil {
+		return errors.New("Failed creating default board if non already exists: " + err.Error())
 	}
-	err = CreateDefaultAdminIfNoStaff()
-	if err != nil {
-		gclog.Print(FatalSQLFlags, "Failed creating default admin account: ", err.Error())
+	if err = CreateDefaultAdminIfNoStaff(); err != nil {
+		return errors.New("failed creating default admin account: " + err.Error())
 	}
-	gclog.Print(gclog.LStdLog|gclog.LErrorLog, "Finished building database...")
+	return nil
 }

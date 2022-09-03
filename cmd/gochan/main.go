@@ -43,9 +43,13 @@ func main() {
 		gclog.Println(stdFatal|gclog.LErrorLog, "Failed loading plugins:", err.Error())
 	}
 
-	gcsql.ConnectToDB(
+	if err = gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
-		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
+		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix,
+	); err != nil {
+		gclog.Print(stdFatal|gclog.LErrorLog, "Failed to connect to the database: ", err.Error())
+	}
+	gclog.Print(gclog.LStdLog, "Connected to database")
 	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
 	parseCommandLine()
 	serverutil.InitMinifier()

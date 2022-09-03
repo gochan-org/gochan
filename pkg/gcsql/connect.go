@@ -6,26 +6,19 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 var (
-	gcdb *GCDB
-	//FatalSQLFlags is used to log a fatal sql error and then close gochan
-	FatalSQLFlags   = gclog.LErrorLog | gclog.LStdLog | gclog.LFatal
+	gcdb            *GCDB
 	tcpHostIsolator = regexp.MustCompile(`\b(tcp\()?([^\(\)]*)\b`)
 )
 
 // ConnectToDB initializes the database connection and exits if there are any errors
-func ConnectToDB(host, driver, dbName, username, password, prefix string) {
+func ConnectToDB(host, driver, dbName, username, password, prefix string) error {
 	var err error
-	if gcdb, err = Open(host, driver, dbName, username, password, prefix); err != nil {
-		gclog.Print(FatalSQLFlags, "Failed to connect to the database: ", err.Error())
-		return
-	}
-	gclog.Print(gclog.LStdLog, "Connected to database")
+	gcdb, err = Open(host, driver, dbName, username, password, prefix)
+	return err
 }
 
 func initDB(initFile string) error {
@@ -49,15 +42,10 @@ func RunSQLFile(path string) error {
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
 	sqlArr := strings.Split(gcdb.replacer.Replace(sqlStr), ";")
 
-	debugMode := config.GetDebugMode()
 	for _, statement := range sqlArr {
 		statement = strings.Trim(statement, " \n\r\t")
 		if len(statement) > 0 {
 			if _, err = gcdb.db.Exec(statement); err != nil {
-				if debugMode {
-					gclog.Printf(gclog.LStdLog, "Error excecuting sql: %s\n", err.Error())
-					gclog.Printf(gclog.LStdLog, "Statement: %s\n", statement)
-				}
 				return err
 			}
 		}

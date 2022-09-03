@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-
-	"github.com/gochan-org/gochan/pkg/gclog"
 )
 
 // UpdateID takes a board struct and sets the database id according to the dir that is already set
@@ -196,7 +194,6 @@ func CreateDefaultBoardIfNoneExist() error {
 	board.SetDefaults("", "", "")
 	board.Section = defaultSectionID
 	if err = CreateBoard(&board); err != nil {
-		gclog.Println(gclog.LFatal|gclog.LStdLog, err.Error())
 		return err
 	}
 	return nil

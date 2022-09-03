@@ -80,14 +80,16 @@ func main() {
 	config.InitConfig(versionStr)
 	systemCritical := config.GetSystemCriticalConfig()
 
-	gcsql.ConnectToDB(
+	err := gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
 	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
+	if err != nil {
+		log.Fatalf("Failed to connect to the database: %s", err.Error())
+	}
 	defer gcsql.Close()
 
-	err := migrator.Init(&options)
-	if err != nil {
+	if err = migrator.Init(&options); err != nil {
 		log.Fatalf("Unable to initialize %s migrator: %s\n",
 			options.ChanType, err.Error())
 		return
