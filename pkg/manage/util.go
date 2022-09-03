@@ -73,11 +73,7 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 	if err != nil {
 		return "", err
 	}
-	name, err := gcsql.GetStaffName(sessionCookie.Value)
-	if err == nil {
-		return "", err
-	}
-	return name, nil
+	return gcsql.GetStaffName(sessionCookie.Value)
 }
 
 func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {

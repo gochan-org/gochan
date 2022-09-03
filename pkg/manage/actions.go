@@ -419,6 +419,12 @@ var actions = []Action{
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
+			var currentStaffUsername string
+			currentStaffUsername, err = getCurrentStaff(request)
+			if err != nil {
+				err = errors.New("Error getting current staff username: " + err.Error())
+				return "", err
+			}
 			var outputStr string
 			do := request.FormValue("do")
 			allStaff, err := gcsql.GetAllStaffNopass(true)
@@ -426,7 +432,8 @@ var actions = []Action{
 				return allStaff, err
 			}
 			if err != nil {
-				err = errors.New(gclog.Print(gclog.LErrorLog, "Error getting staff list: ", err.Error()))
+				err = errors.New(gclog.Print(gclog.LErrorLog,
+					"Error getting staff list: ", err.Error()))
 				return "", err
 			}
 
@@ -437,16 +444,22 @@ var actions = []Action{
 				rankI, _ := strconv.Atoi(rank)
 				if do == "add" {
 					if err = gcsql.NewStaff(username, password, rankI); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
-							"Error creating new staff account %q: %s", username, err.Error()))
-						return
+						return "", errors.New(gclog.Printf(gclog.LErrorLog,
+							"Error creating new staff account %q by %q: %s",
+							username, currentStaffUsername, err.Error()))
 					}
 				} else if do == "del" && username != "" {
 					if err = gcsql.DeleteStaff(username); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Printf(gclog.LErrorLog,
-							"Error deleting staff account %q : %s", username, err.Error()))
-						return
+						return "", errors.New(gclog.Printf(gclog.LErrorLog,
+							"Error deleting staff account %q by %q: %s",
+							username, currentStaffUsername, err.Error()))
 					}
+				}
+				allStaff, err = gcsql.GetAllStaffNopass(true)
+				if err != nil {
+					err = errors.New(gclog.Print(gclog.LErrorLog,
+						"Error getting updated staff list: ", err.Error()))
+					return "", err
 				}
 
 				switch {
@@ -462,7 +475,9 @@ var actions = []Action{
 			staffBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageStaff,
 				map[string]interface{}{
-					"allstaff": allStaff,
+					"allstaff":        allStaff,
+					"webroot":         config.GetSystemCriticalConfig().WebRoot,
+					"currentUsername": currentStaffUsername,
 				},
 				staffBuffer, "text/html"); err != nil {
 				return "", errors.New(gclog.Print(gclog.LErrorLog,
