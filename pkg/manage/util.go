@@ -2,13 +2,12 @@ package manage
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -29,19 +28,33 @@ func createSession(key, username, password string, request *http.Request, writer
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !serverutil.ValidReferer(request) {
-		gclog.Print(gclog.LStaffLog, "Rejected login from possible spambot @ "+request.RemoteAddr)
+		gcutil.LogWarning().
+			Str("staff", username).
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("remoteAddr", request.Response.Request.RemoteAddr).
+			Msg("Rejected login from possible spambot")
 		return sOtherError
 	}
 	staff, err := gcsql.GetStaffByName(username)
 	if err != nil {
-		gclog.Print(gclog.LErrorLog, err.Error())
+		if err != sql.ErrNoRows {
+			gcutil.LogError(err).
+				Str("staff", username).
+				Str("IP", gcutil.GetRealIP(request)).
+				Str("remoteAddr", request.RemoteAddr).
+				Msg("Invalid password")
+		}
 		return sInvalidPassword
 	}
 
 	success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 	if success == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
-		gclog.Print(gclog.LStaffLog, "Failed login (password mismatch) from "+request.RemoteAddr+" at "+time.Now().Format(gcsql.MySQLDatetimeFormat))
+		gcutil.LogError(nil).
+			Str("staff", username).
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("remoteAddr", request.Response.Request.RemoteAddr).
+			Msg("Invalid password")
 		return sInvalidPassword
 	}
 
@@ -61,7 +74,10 @@ func createSession(key, username, password string, request *http.Request, writer
 	})
 
 	if err = gcsql.CreateSession(key, username); err != nil {
-		gclog.Print(gclog.LErrorLog, "Error creating new staff session: ", err.Error())
+		gcutil.LogError(err).
+			Str("staff", username).
+			Str("sessionKey", key).
+			Msg("Error creating new staff session")
 		return sOtherError
 	}
 
@@ -123,15 +139,14 @@ func init() {
 		})
 }
 
-func dashboardCallback(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
+func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
 	dashBuffer := bytes.NewBufferString("")
 	announcements, err := gcsql.GetAllAccouncements()
 	if err != nil {
 		return nil, err
 	}
-	rank := GetStaffRank(request)
 	rankString := ""
-	switch rank {
+	switch staff.Rank {
 	case AdminPerms:
 		rankString = "administrator"
 	case ModPerms:
@@ -140,18 +155,19 @@ func dashboardCallback(writer http.ResponseWriter, request *http.Request, wantsJ
 		rankString = "janitor"
 	}
 
-	availableActions := getAvailableActions(rank, true)
-	if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard,
-		map[string]interface{}{
-			"actions":       availableActions,
-			"rank":          rank,
-			"rankString":    rankString,
-			"announcements": announcements,
-			"boards":        gcsql.AllBoards,
-			"webroot":       config.GetSystemCriticalConfig().WebRoot,
-		}, dashBuffer, "text/html"); err != nil {
-		gclog.Printf(gclog.LErrorLog|gclog.LStaffLog,
-			"Error executing dashboard template: %q", err.Error())
+	availableActions := getAvailableActions(staff.Rank, true)
+	if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard, map[string]interface{}{
+		"actions":       availableActions,
+		"rank":          staff.Rank,
+		"rankString":    rankString,
+		"announcements": announcements,
+		"boards":        gcsql.AllBoards,
+		"webroot":       config.GetSystemCriticalConfig().WebRoot,
+	}, dashBuffer, "text/html"); err != nil {
+		gcutil.LogError(err).
+			Str("staff", staff.Username).
+			Str("action", "dashboard").
+			Str("template", "manage_dashboard.html").Send()
 		return "", err
 	}
 	return dashBuffer.String(), nil
@@ -169,9 +185,8 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	return available
 }
 
-func getStaffActions(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (interface{}, error) {
-	rank := GetStaffRank(request)
-	availableActions := getAvailableActions(rank, false)
+func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+	availableActions := getAvailableActions(staff.Rank, false)
 	return availableActions, nil
 }
 

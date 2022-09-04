@@ -5,15 +5,15 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	x_html "golang.org/x/net/html"
 )
 
-//TruncateHTML truncates a template.HTML string to a certain visible character limit and line limit
+// TruncateHTML truncates a template.HTML string to a certain visible character limit and line limit
 func truncateHTML(htmlText template.HTML, characterLimit, maxLines int) template.HTML {
 	dom, err := x_html.Parse(strings.NewReader(string(htmlText)))
 	if err != nil {
-		gclog.Println(gclog.LErrorLog, err.Error())
+		gcutil.LogError(err).Send()
 		return template.HTML("Server error truncating HTML, failed to parse html")
 	}
 	truncateHTMLNodes(dom, characterLimit, maxLines)
@@ -70,6 +70,8 @@ func truncateHTMLNodes(node *x_html.Node, charactersLeft, linesLeft int) (charsL
 		charactersLeft -= len(node.Data)
 		return truncateHTMLNodes(node.NextSibling, charactersLeft, linesLeft)
 	}
-	gclog.Println(gclog.LErrorLog, "Did not match any known node type, possible error?: ", node)
+	gcutil.LogError(nil).
+		Interface("node", node).
+		Msg("Did not match any known node type, possible unhandled error?")
 	return charactersLeft, linesLeft
 }

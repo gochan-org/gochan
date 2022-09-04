@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 var (
@@ -53,14 +53,16 @@ func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent st
 		req, err := http.NewRequest("POST", "https://"+siteCfg.AkismetAPIKey+".rest.akismet.com/1.1/comment-check",
 			strings.NewReader(data.Encode()))
 		if err != nil {
-			gclog.Print(gclog.LErrorLog, err.Error())
+			gcutil.Logger().Err(err).
+				Str("subject", "akismet").Send()
 			return "other_failure"
 		}
 		req.Header.Set("User-Agent", "gochan/1.0 | Akismet/0.1")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		resp, err := client.Do(req)
 		if err != nil {
-			gclog.Print(gclog.LErrorLog, err.Error())
+			gcutil.Logger().Err(err).
+				Str("subject", "akismet").Send()
 			return "other_failure"
 		}
 		if resp.Body != nil {
@@ -68,19 +70,25 @@ func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent st
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			gclog.Print(gclog.LErrorLog, err.Error())
+			gcutil.Logger().Err(err).
+				Str("subject", "akismet").Send()
 			return "other_failure"
 		}
-		gclog.Print(gclog.LErrorLog, "Response from Akismet: ", string(body))
+		bodyStr := string(body)
+		if config.GetDebugMode() {
+			gcutil.Logger().Info().
+				Str("subject", "akismet").
+				Str("reponse", bodyStr)
+		}
 
-		if string(body) == "true" {
+		if bodyStr == "true" {
 			if proTip, ok := resp.Header["X-akismet-pro-tip"]; ok && proTip[0] == "discard" {
 				return "discard"
 			}
 			return "spam"
-		} else if string(body) == "invalid" {
+		} else if bodyStr == "invalid" {
 			return "invalid"
-		} else if string(body) == "false" {
+		} else if bodyStr == "false" {
 			return "ham"
 		}
 	}
@@ -89,15 +97,16 @@ func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent st
 
 // ValidReferer checks to make sure that the incoming request is from the same domain (or if debug mode is enabled)
 func ValidReferer(request *http.Request) bool {
-	systemCritical := config.GetSystemCriticalConfig()
-	if systemCritical.DebugMode {
+	if config.GetDebugMode() {
 		return true
 	}
-	rURL, err := url.ParseRequestURI(request.Referer())
+	referer := request.Referer()
+	rURL, err := url.ParseRequestURI(referer)
 	if err != nil {
-		gclog.Println(gclog.LAccessLog|gclog.LErrorLog, "Error parsing referer URL:", err.Error())
+		gcutil.Logger().Err(err).
+			Str("referer", referer).
+			Msg("Error parsing referer URL")
 		return false
 	}
-
-	return strings.Index(rURL.Path, systemCritical.WebRoot) == 0
+	return strings.Index(rURL.Path, config.GetSystemCriticalConfig().WebRoot) == 0
 }

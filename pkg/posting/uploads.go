@@ -14,7 +14,6 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -50,7 +49,8 @@ func shouldCreateThumbnail(imgPath string, imgWidth int, imgHeight int, thumbWid
 	if ext == ".gif" {
 		numFrames, err := numImageFrames(imgPath)
 		if err != nil {
-			gclog.Printf(gclog.LErrorLog, "Error processing %q: %s", imgPath, err.Error())
+			gcutil.LogError(err).
+				Str("imgPath", imgPath).Send()
 			return true
 		}
 		if numFrames > 1 {

@@ -251,7 +251,7 @@ def build(debugging=False):
 
 def clean():
 	print("Cleaning up")
-	del_files = ("gochan", "gochan.exe", "gochan-migration", "gochan-migration.exe", "releases/", "pkg/gclog/logtest/")
+	del_files = ("gochan", "gochan.exe", "gochan-migration", "gochan-migration.exe", "releases/")
 	for del_file in del_files:
 		delete(del_file)
 

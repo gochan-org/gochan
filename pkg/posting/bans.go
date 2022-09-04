@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -26,7 +25,7 @@ const (
 // BanHandler is used for serving ban pages
 func BanHandler(writer http.ResponseWriter, request *http.Request) {
 	appealMsg := request.FormValue("appealmsg")
-	// banStatus, err := getBannedStatus(request) TODO refactor to use ipban
+	// banStatus, err := getBannedStatus(request)  // TODO refactor to use ipban
 	var banStatus gcsql.BanInfo
 	var err error
 	systemCritical := config.GetSystemCriticalConfig()
@@ -48,8 +47,8 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err != nil && err != sql.ErrNoRows {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error getting banned status:", err.Error()))
+		gcutil.LogError(err).Msg("Failed getting banned status")
+		serverutil.ServeErrorPage(writer, "Error getting banned status: "+err.Error())
 		return
 	}
 
@@ -61,8 +60,10 @@ func BanHandler(writer http.ResponseWriter, request *http.Request) {
 		"banBoards":      banStatus.Boards,
 		"post":           gcsql.Post{},
 	}, writer, "text/html"); err != nil {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error minifying page template: ", err.Error()))
+		gcutil.LogError(err).
+			Str("template", "banpage").
+			Msg("Failed minifying template")
+		serverutil.ServeErrorPage(writer, "Error minifying page template: "+err.Error())
 		return
 	}
 }

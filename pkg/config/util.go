@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -266,11 +265,7 @@ func InitConfig(versionStr string) {
 	}
 
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
-	if err = gclog.InitLogs(
-		path.Join(cfg.LogDir, "access"),
-		path.Join(cfg.LogDir, "error"),
-		path.Join(cfg.LogDir, "staff"),
-		cfg.DebugMode); err != nil {
+	if err = gcutil.InitLog(path.Join(cfg.LogDir, "gochan.log")); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
@@ -296,7 +291,9 @@ func InitConfig(versionStr string) {
 
 	if cfg.EnableGeoIP {
 		if _, err = os.Stat(cfg.GeoIPDBlocation); err != nil {
-			gclog.Print(gclog.LErrorLog|gclog.LStdLog, "Unable to find GeoIP file location set in gochan.json, disabling GeoIP")
+			gcutil.LogError(err).
+				Str("location", cfg.GeoIPDBlocation).
+				Msg("Unable to load GeoIP file location set in gochan.json, disabling GeoIP")
 		}
 		cfg.EnableGeoIP = false
 	}

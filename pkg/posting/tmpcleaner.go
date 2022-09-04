@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -37,21 +36,24 @@ func tempCleaner() {
 				systemCritical := config.GetSystemCriticalConfig()
 				fileSrc := path.Join(systemCritical.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
 				if err = os.Remove(fileSrc); err != nil {
-					gclog.Printf(errStdLogs,
-						"Error pruning temporary upload for %q: %s", fileSrc, err.Error())
+					gcutil.LogError(err).
+						Str("subject", "tempUpload").
+						Str("filePath", fileSrc).Send()
 				}
 
 				thumbSrc := gcutil.GetThumbnailPath("thread", fileSrc)
 				if err = os.Remove(thumbSrc); err != nil {
-					gclog.Printf(errStdLogs,
-						"Error pruning temporary upload for %q: %s", thumbSrc, err.Error())
+					gcutil.LogError(err).
+						Str("subject", "tempUpload").
+						Str("filePath", thumbSrc).Send()
 				}
 
 				if post.ParentID == 0 {
 					catalogSrc := gcutil.GetThumbnailPath("catalog", fileSrc)
 					if err = os.Remove(catalogSrc); err != nil {
-						gclog.Printf(errStdLogs,
-							"Error pruning temporary upload for %s: %s", catalogSrc, err.Error())
+						gcutil.LogError(err).
+							Str("subject", "tempUpload").
+							Str("filePath", catalogSrc).Send()
 					}
 				}
 			}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -23,6 +22,9 @@ func ServeJSON(writer http.ResponseWriter, data map[string]interface{}) {
 func ServeError(writer http.ResponseWriter, err string, wantsJSON bool, data map[string]interface{}) {
 	if wantsJSON {
 		servedMap := data
+		if servedMap == nil {
+			servedMap = make(map[string]interface{})
+		}
 		if _, ok := servedMap["error"]; !ok {
 			servedMap["error"] = err
 		}
@@ -40,9 +42,8 @@ func ServeErrorPage(writer http.ResponseWriter, err string) {
 		"siteConfig":     config.GetSiteConfig(),
 		"boardConfig":    config.GetBoardConfig(""),
 		"ErrorTitle":     "Error :c",
-		// "ErrorImage":  "/error/lol 404.gif",
-		"ErrorHeader": "Error",
-		"ErrorText":   err,
+		"ErrorHeader":    "Error",
+		"ErrorText":      err,
 	}, writer, "text/html")
 }
 
@@ -57,7 +58,10 @@ func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		MinifyWriter(writer, errorPage, "text/html")
 	}
-	gclog.Printf(gclog.LAccessLog, "Error: 404 Not Found from %s @ %s", gcutil.GetRealIP(request), request.URL.Path)
+	gcutil.Logger().Info().
+		Str("access", request.URL.Path).
+		Int("status", 404).
+		Str("IP", gcutil.GetRealIP(request)).Send()
 }
 
 // DeleteCookie deletes the given cookie if it exists. It returns true if it exists and false
@@ -71,4 +75,10 @@ func DeleteCookie(writer http.ResponseWriter, request *http.Request, cookieName 
 	cookie.Expires = time.Now().Add(-7 * 24 * time.Hour)
 	http.SetCookie(writer, cookie)
 	return true
+}
+
+func IsRequestingJSON(request *http.Request) bool {
+	request.ParseForm()
+	field := request.Form["json"]
+	return len(field) == 1 && (field[0] == "1" || field[0] == "true")
 }

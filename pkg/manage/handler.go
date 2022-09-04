@@ -2,11 +2,12 @@ package manage
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/building"
-	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
@@ -30,35 +31,42 @@ func serveError(writer http.ResponseWriter, field string, action string, message
 	})
 }
 
-func isRequestingJSON(request *http.Request) bool {
-	field := request.Form["json"]
-	return len(field) == 1 && (field[0] == "1" || field[0] == "true")
-}
-
 // CallManageFunction is called when a user accesses /manage to use manage tools
 // or log in to a staff account
 func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	var err error
+	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err = request.ParseForm(); err != nil {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error parsing form data: ", err.Error()))
+		gcutil.LogError(err).
+			Str("IP", gcutil.GetRealIP(request)).
+			Msg("Error parsing form data")
+		serverutil.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, nil)
 		return
 	}
 	actionID := request.FormValue("action")
-	staffRank := GetStaffRank(request)
-
+	var staff *gcsql.Staff
+	staff, err = getCurrentFullStaff(request)
+	if err == http.ErrNoCookie {
+		staff = &gcsql.Staff{}
+		err = nil
+	} else if err != nil && err != sql.ErrNoRows {
+		gcutil.LogError(err).
+			Str("request", "getCurrentFullStaff").
+			Str("action", actionID).Send()
+		serverutil.ServeError(writer, "Error getting staff info from request: "+err.Error(), wantsJSON, nil)
+		return
+	}
 	if actionID == "" {
-		if staffRank == NoPerms {
+		if staff.Rank == NoPerms {
 			// no action requested and user is not logged in, have them go to login page
 			actionID = "login"
 		} else {
 			actionID = "dashboard"
 		}
 	}
-	wantsJSON := isRequestingJSON(request)
 
 	var managePageBuffer bytes.Buffer
-	action := getAction(actionID, staffRank)
+	action := getAction(actionID, staff.Rank)
 	if action == nil {
 		if wantsJSON {
 			serveError(writer, "notfound", actionID, "action not found", wantsJSON || (action.JSONoutput == AlwaysJSON))
@@ -68,12 +76,14 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if staffRank < action.Permissions {
+	if staff.Rank < action.Permissions {
 		writer.WriteHeader(403)
 		staffName, _ := getCurrentStaff(request)
-		gclog.Printf(gclog.LStaffLog,
-			"Rejected request to manage page %s from %s (insufficient permissions)",
-			actionID, staffName)
+		gcutil.LogInfo().
+			Str("staff", "insufficientPerms").
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("username", staffName).
+			Str("action", actionID)
 		serveError(writer, "permission", actionID, "You do not have permission to access this page", wantsJSON || (action.JSONoutput == AlwaysJSON))
 		return
 	}
@@ -87,7 +97,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 			Message:    "Requested mod page does not have a JSON output option",
 		}
 	} else {
-		output, err = action.Callback(writer, request, wantsJSON)
+		output, err = action.Callback(writer, request, staff, wantsJSON)
 	}
 	if err != nil {
 		// writer.WriteHeader(500)
@@ -100,6 +110,8 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		outputJSON, err := gcutil.MarshalJSON(output, true)
 		if err != nil {
 			serveError(writer, "error", actionID, err.Error(), true)
+			gcutil.LogError(err).
+				Str("action", actionID).Send()
 			return
 		}
 		serverutil.MinifyWriter(writer, []byte(outputJSON), "application/json")
@@ -113,14 +125,18 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		headerMap["include_dashboard_link"] = true
 	}
 	if err = building.BuildPageHeader(&managePageBuffer, action.Title, "", headerMap); err != nil {
-		serveError(writer, "error", actionID,
-			gclog.Print(gclog.LErrorLog, "Failed writing page header: ", err.Error()), false)
+		gcutil.LogError(err).
+			Str("action", actionID).
+			Str("staff", "pageHeader").Send()
+		serveError(writer, "error", actionID, "Failed writing page header: "+err.Error(), false)
 		return
 	}
 	managePageBuffer.WriteString("<br />" + fmt.Sprint(output) + "<br /><br />")
 	if err = building.BuildPageFooter(&managePageBuffer); err != nil {
-		serveError(writer, "error", actionID,
-			gclog.Print(gclog.LErrorLog, "Failed writing page footer: ", err.Error()), false)
+		gcutil.LogError(err).
+			Str("action", actionID).
+			Str("staff", "pageFooter").Send()
+		serveError(writer, "error", actionID, "Failed writing page footer: "+err.Error(), false)
 		return
 	}
 	writer.Write(managePageBuffer.Bytes())

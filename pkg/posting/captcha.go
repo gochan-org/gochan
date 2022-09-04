@@ -8,7 +8,6 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -49,7 +48,8 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 	}
 	var err error
 	if err = request.ParseForm(); err != nil {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog, "Error parsing request form: ", err.Error()))
+		gcutil.LogError(err).Msg("Failed parsing request form")
+		serverutil.ServeErrorPage(writer, "Error parsing request form: "+err.Error())
 		return
 	}
 
@@ -105,8 +105,9 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	if err = serverutil.MinifyTemplate(gctemplates.Captcha, captchaStruct, writer, "text/html"); err != nil {
-		fmt.Fprint(writer,
-			gclog.Print(gclog.LErrorLog, "Error executing captcha template: ", err.Error()))
+		gcutil.LogError(err).
+			Str("template", "captcha").Send()
+		fmt.Fprint(writer, "Error executing captcha template: ", err.Error())
 	}
 }
 

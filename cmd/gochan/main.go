@@ -9,7 +9,9 @@ import (
 	"syscall"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
+
 	"github.com/gochan-org/gochan/pkg/gcplugin"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
@@ -23,40 +25,42 @@ import (
 
 var (
 	versionStr string
-	stdFatal   = gclog.LStdLog | gclog.LFatal
 )
 
 func main() {
 	defer func() {
-		gclog.Print(gclog.LStdLog, "Cleaning up")
+		fmt.Println("Cleaning up")
 		//gcsql.ExecSQL("DROP TABLE DBPREFIXsessions")
 		gcsql.Close()
+		gcutil.CloseLog()
 	}()
 
-	gclog.Printf(gclog.LStdLog, "Starting gochan v%s", versionStr)
+	fmt.Printf("Starting gochan v%s\n", versionStr)
 	config.InitConfig(versionStr)
 
 	systemCritical := config.GetSystemCriticalConfig()
 
 	err := gcplugin.LoadPlugins(systemCritical.Plugins)
 	if err != nil {
-		gclog.Println(stdFatal|gclog.LErrorLog, "Failed loading plugins:", err.Error())
+		gcutil.LogFatal().Err(err).Msg("failed loading plugins")
 	}
 
 	if err = gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix,
 	); err != nil {
-		gclog.Print(stdFatal|gclog.LErrorLog, "Failed to connect to the database: ", err.Error())
+		fmt.Println("Failed to connect to the database:", err.Error())
+		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
 	}
-	gclog.Print(gclog.LStdLog, "Connected to database")
+	fmt.Println("Connected to database")
 	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
 	parseCommandLine()
 	serverutil.InitMinifier()
 
 	posting.InitCaptcha()
 	if err := gctemplates.InitTemplates(); err != nil {
-		gclog.Printf(stdFatal|gclog.LErrorLog, err.Error())
+		fmt.Println("Failed initializing templates:", err.Error())
+		gcutil.LogFatal().Err(err).Send()
 	}
 
 	sc := make(chan os.Signal, 1)
@@ -99,10 +103,22 @@ func parseCommandLine() {
 			flag.Usage()
 			os.Exit(1)
 		}
-		gclog.Printf(gclog.LStdLog|gclog.LStaffLog, "Creating new staff: %q, with password: %q and rank: %d from command line", arr[0], arr[1], rank)
+		fmt.Printf("Creating new staff: %q, with password: %q and rank: %d from command line", arr[0], arr[1], rank)
 		if err = gcsql.NewStaff(arr[0], arr[1], rank); err != nil {
-			gclog.Print(stdFatal, err.Error())
+			fmt.Printf("Failed creating new staff account for %q: %s\n", arr[0], err.Error())
+			gcutil.LogFatal().
+				Str("staff", "add").
+				Str("source", "commandLine").
+				Str("username", arr[0]).
+				Err(err).
+				Msg("Failed creating new staff account")
 		}
+		gcutil.LogInfo().
+			Str("staff", "add").
+			Str("source", "commandLine").
+			Str("username", arr[0]).
+			Msg("New staff account created")
+		fmt.Printf("New staff account created: %s\n", arr[0])
 		os.Exit(0)
 	}
 	if delstaff != "" {
@@ -110,16 +126,19 @@ func parseCommandLine() {
 			flag.Usage()
 			os.Exit(1)
 		}
-		gclog.Printf(gclog.LStdLog, "Are you sure you want to delete the staff account %q? [y/N]: ", delstaff)
+		fmt.Printf("Are you sure you want to delete the staff account %q? [y/N]: ", delstaff)
+
 		var answer string
 		fmt.Scanln(&answer)
 		answer = strings.ToLower(answer)
 		if answer == "y" || answer == "yes" {
 			if err = gcsql.DeleteStaff(delstaff); err != nil {
-				gclog.Printf(stdFatal, "Error deleting %q: %s", delstaff, err.Error())
+				fmt.Printf("Error deleting %q: %s", delstaff, err.Error())
+				gcutil.LogFatal().Str("staff", "delete").Err(err).Send()
 			}
+			gcutil.LogInfo().Str("newStaff", delstaff).Send()
 		} else {
-			gclog.Print(stdFatal, "Not deleting.")
+			fmt.Println("Not deleting.")
 		}
 	}
 }

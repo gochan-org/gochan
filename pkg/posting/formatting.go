@@ -8,8 +8,8 @@ import (
 
 	"github.com/frustra/bbcode"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 var (
@@ -90,10 +90,14 @@ func FormatMessage(message string, boardDir string) template.HTML {
 					var boardIDFound bool
 
 					if boardDir, boardIDFound, err = gcsql.GetBoardFromPostID(postID); err != nil {
-						gclog.Print(gclog.LErrorLog, "Error getting board dir for backlink: ", err.Error())
+						gcutil.LogError(err).
+							Int("postid", postID).
+							Msg("Error getting board dir for backlink")
 					}
 					if linkParent, err = gcsql.GetThreadIDZeroIfTopPost(postID); err != nil {
-						gclog.Print(gclog.LErrorLog, "Error getting post parent for backlink: ", err.Error())
+						gcutil.LogError(err).
+							Int("postid", postID).
+							Msg("Error getting post parent for backlink")
 					}
 
 					// get post board dir

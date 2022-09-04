@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -45,8 +44,10 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 	// Get all top level posts for the board.
 	if opPosts, err = gcsql.GetTopPosts(board.ID); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Error getting OP posts for /%s/: %s", board.Dir, err.Error()))
+		gcutil.LogError(err).
+			Str("boardDir", board.Dir).
+			Msg("Failed getting OP posts")
+		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
 	}
 
 	// For each top level post, start building a Thread struct
@@ -57,24 +58,27 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		var replyCount, err = gcsql.GetReplyCount(op.ID)
 		if err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"Error getting replies to /%s/%d: %s",
-				board.Dir, op.ID, err.Error()))
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Int("op", op.ID).
+				Msg("Failed getting thread replies")
+			return fmt.Errorf("Error getting replies to /%s/%d: %s", board.Dir, op.ID, err.Error())
 		}
 		thread.NumReplies = replyCount
 
 		fileCount, err := gcsql.GetReplyFileCount(op.ID)
 		if err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"Error getting file count to /%s/%d: %s",
-				board.Dir, op.ID, err.Error()))
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Int("op", op.ID).
+				Msg("Failed getting file count")
+			return fmt.Errorf("Error getting file count to /%s/%d: %s", board.Dir, op.ID, err.Error())
 		}
 		thread.NumImages = fileCount
 
 		thread.OP = *op
 
 		var numRepliesOnBoardPage int
-		// postCfg := config.getpo
 		postCfg := config.GetBoardConfig("").PostConfig
 		if op.Stickied {
 			// If the thread is stickied, limit replies on the archive page to the
@@ -87,9 +91,11 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		postsInThread, err = gcsql.GetExistingRepliesLimitedRev(op.ID, numRepliesOnBoardPage)
 		if err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"Error getting posts in /%s/%d: %s",
-				board.Dir, op.ID, err.Error()))
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Int("op", op.ID).
+				Msg("Failed getting thread posts")
+			return fmt.Errorf("Error getting posts in /%s/%d: %s", board.Dir, op.ID, err.Error())
 		}
 
 		var reversedPosts []gcsql.Post
@@ -134,9 +140,11 @@ func BuildBoardPages(board *gcsql.Board) error {
 		// Open 1.html for writing to the first page.
 		boardPageFile, err = os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "1.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"failed opening /%s/board.html: %s",
-				board.Dir, err.Error()))
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Str("page", "board.html").
+				Msg("Failed getting board page")
+			return fmt.Errorf("failed opening /%s/board.html: %s", board.Dir, err.Error())
 		}
 
 		// Render board page template to the file,
@@ -149,8 +157,11 @@ func BuildBoardPages(board *gcsql.Board) error {
 			"board":        board,
 			"board_config": config.GetBoardConfig(board.Dir),
 		}, boardPageFile, "text/html"); err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"Failed building /%s/: %s", board.Dir, err.Error()))
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Str("page", "board.html").
+				Msg("Failed building board")
+			return fmt.Errorf("Failed building /%s/: %s", board.Dir, err.Error())
 		}
 		return nil
 	}
@@ -165,8 +176,11 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"failed opening /%s/catalog.json: %s", board.Dir, err.Error()))
+		gcutil.LogError(err).
+			Str("subject", "catalog.json").
+			Str("boardDir", board.Dir).
+			Msg("Failed opening catalog.json")
+		return fmt.Errorf("failed opening /%s/catalog.json: %s", board.Dir, err.Error())
 	}
 	defer catalogJSONFile.Close()
 
@@ -178,8 +192,10 @@ func BuildBoardPages(board *gcsql.Board) error {
 		currentPageFilepath = path.Join(criticalCfg.DocumentRoot, board.Dir, pageFilename)
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			gclog.Printf(gclog.LErrorLog,
-				"failed opening /%s/%s: %s", board.Dir, pageFilename, err.Error())
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Str("page", pageFilename).
+				Msg("Failed getting board page")
 			continue
 		}
 		defer currentPageFile.Close()
@@ -196,9 +212,10 @@ func BuildBoardPages(board *gcsql.Board) error {
 				gcsql.Post{BoardID: board.ID},
 			},
 		}, currentPageFile, "text/html"); err != nil {
-			err = errors.New(gclog.Printf(gclog.LErrorLog,
-				"Failed building /%s/ boardpage: %s", board.Dir, err.Error()))
-			return err
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Msg("Failed building boardpage")
+			return fmt.Errorf("Failed building /%s/ boardpage: %s", board.Dir, err.Error())
 		}
 
 		// Collect up threads for this page.
@@ -211,12 +228,16 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 	var catalogJSON []byte
 	if catalogJSON, err = json.Marshal(pagesArr); err != nil {
-		return errors.New(gclog.Print(gclog.LErrorLog,
-			"Failed to marshal to JSON: ", err.Error()))
+		gcutil.LogError(err).
+			Str("boardDir", board.Dir).
+			Msg("Failed to marshal to JSON")
+		return errors.New("failed to marshal to JSON: " + err.Error())
 	}
 	if _, err = catalogJSONFile.Write(catalogJSON); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Failed writing /%s/catalog.json: %s", board.Dir, err.Error()))
+		gcutil.LogError(err).
+			Str("boardDir", board.Dir).
+			Msg("Failed writing catalog.json")
+		return fmt.Errorf("failed writing /%s/catalog.json: %s", board.Dir, err.Error())
 	}
 	return nil
 }
@@ -233,8 +254,10 @@ func BuildBoards(verbose bool, which ...int) error {
 		for b, id := range which {
 			boards = append(boards, gcsql.Board{})
 			if err = boards[b].PopulateData(id); err != nil {
-				return errors.New(
-					gclog.Printf(gclog.LErrorLog, "Error getting board information (ID: %d): %s", id, err.Error()))
+				gcutil.LogError(err).
+					Int("boardid", id).
+					Msg("Unable to get board information")
+				return fmt.Errorf("Error getting board information (ID: %d): %s", id, err.Error())
 			}
 		}
 	}
@@ -245,17 +268,19 @@ func BuildBoards(verbose bool, which ...int) error {
 	for b := range boards {
 		board := &boards[b]
 		if err = buildBoard(board, false, true); err != nil {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				"Error building /%s/: %s", board.Dir, err.Error()))
+			gcutil.LogError(err).
+				Str("boardDir", board.Dir).
+				Msg("Failed building board")
+			return fmt.Errorf("Error building /%s/: %s", board.Dir, err.Error())
 		}
 		if verbose {
-			gclog.Printf(gclog.LStdLog, "Built /%s/ successfully", board.Dir)
+			fmt.Printf("Built /%s/ successfully\n", board.Dir)
 		}
 	}
 	return nil
 }
 
-//BuildCatalog builds the catalog for a board with a given id
+// BuildCatalog builds the catalog for a board with a given id
 func BuildCatalog(boardID int) string {
 	err := gctemplates.InitTemplates("catalog")
 	if err != nil {
@@ -264,14 +289,19 @@ func BuildCatalog(boardID int) string {
 
 	var board gcsql.Board
 	if err = board.PopulateData(boardID); err != nil {
-		return gclog.Printf(gclog.LErrorLog, "Error getting board information (ID: %d)", boardID)
+		gcutil.LogError(err).
+			Int("boardid", boardID).
+			Msg("Unable to get board information")
+		return fmt.Sprintf("Error getting board information (ID: %d)", boardID)
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	catalogPath := path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.html")
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		return gclog.Printf(gclog.LErrorLog,
-			"Failed opening /%s/catalog.html: %s", board.Dir, err.Error()) + "<br />"
+		gcutil.LogError(err).
+			Str("boardDir", board.Dir).
+			Msg("Failed opening catalog.html")
+		return fmt.Sprintf("Failed opening /%s/catalog.html: %s<br/>", board.Dir, err.Error())
 	}
 
 	threadOPs, err := gcsql.GetTopPosts(boardID)
@@ -281,8 +311,10 @@ func BuildCatalog(boardID int) string {
 	// 	"deleted_timestamp": nilTimestamp,
 	// }, "ORDER BY bumped ASC")
 	if err != nil {
-		return gclog.Printf(gclog.LErrorLog,
-			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
+		gcutil.LogError(err).
+			Str("building", "catalog").
+			Str("boardDir", board.Dir).Send()
+		return fmt.Sprintf("Error building catalog for /%s/: %s<br/>", board.Dir, err.Error())
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
@@ -293,8 +325,10 @@ func BuildCatalog(boardID int) string {
 		"sections":     gcsql.AllSections,
 		"threads":      threadOPs,
 	}, catalogFile, "text/html"); err != nil {
-		return gclog.Printf(gclog.LErrorLog,
-			"Error building catalog for /%s/: %s", board.Dir, err.Error()) + "<br />"
+		gcutil.LogError(err).
+			Str("building", "catalog").
+			Str("boardDir", board.Dir).Send()
+		return fmt.Sprintf("Error building catalog for /%s/: %s<br/>", board.Dir, err.Error())
 	}
 	return fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
 }
@@ -331,59 +365,49 @@ func buildBoard(board *gcsql.Board, newBoard, force bool) error {
 	thumbInfo, _ := os.Stat(thumbPath)
 	if dirInfo != nil {
 		if !force {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				pathExistsStr, dirPath))
+			gcutil.LogError(os.ErrExist).
+				Str("dirPath", dirPath).Send()
+			return fmt.Errorf(pathExistsStr, dirPath)
 		}
 		if !dirInfo.IsDir() {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				dirIsAFileStr, dirPath))
+			return fmt.Errorf(dirIsAFileStr, dirPath)
 		}
 	} else if err = os.Mkdir(dirPath, 0666); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			genericErrStr, dirPath, err.Error()))
+		return fmt.Errorf(genericErrStr, dirPath, err.Error())
 	}
 
 	if resInfo != nil {
 		if !force {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				pathExistsStr, resPath))
+			return fmt.Errorf(pathExistsStr, resPath)
 		}
 		if !resInfo.IsDir() {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				dirIsAFileStr, resPath))
+			return fmt.Errorf(dirIsAFileStr, resPath)
 
 		}
 	} else if err = os.Mkdir(resPath, 0666); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			genericErrStr, resPath, err.Error()))
+		return fmt.Errorf(genericErrStr, resPath, err.Error())
 	}
 
 	if srcInfo != nil {
 		if !force {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				pathExistsStr, srcPath))
+			return fmt.Errorf(pathExistsStr, srcPath)
 		}
 		if !srcInfo.IsDir() {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				dirIsAFileStr, srcPath))
+			return fmt.Errorf(dirIsAFileStr, srcPath)
 		}
 	} else if err = os.Mkdir(srcPath, 0666); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			genericErrStr, srcPath, err.Error()))
+		return fmt.Errorf(genericErrStr, srcPath, err.Error())
 	}
 
 	if thumbInfo != nil {
 		if !force {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				pathExistsStr, thumbPath))
+			return fmt.Errorf(pathExistsStr, thumbPath)
 		}
 		if !thumbInfo.IsDir() {
-			return errors.New(gclog.Printf(gclog.LErrorLog,
-				dirIsAFileStr, thumbPath))
+			return fmt.Errorf(dirIsAFileStr, thumbPath)
 		}
 	} else if err = os.Mkdir(thumbPath, 0666); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			genericErrStr, thumbPath, err.Error()))
+		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
 	}
 
 	BuildBoardPages(board)

@@ -14,7 +14,6 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -32,7 +31,6 @@ type gochanServer struct {
 }
 
 func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Request) {
-
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
 
@@ -67,7 +65,10 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 
 	// serve the requested file
 	fileBytes, _ = ioutil.ReadFile(filePath)
-	gclog.Printf(gclog.LAccessLog, "Success: 200 from %s @ %s", gcutil.GetRealIP(request), request.URL.Path)
+	gcutil.Logger().Info().
+		Str("access", request.URL.Path).
+		Int("status", 200).
+		Str("IP", gcutil.GetRealIP(request)).Send()
 	writer.Write(fileBytes)
 }
 
@@ -125,19 +126,21 @@ func initServer() {
 
 	listener, err := net.Listen("tcp", systemCritical.ListenIP+":"+strconv.Itoa(systemCritical.Port))
 	if err != nil {
-		gclog.Printf(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal,
-			"Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
+		gcutil.Logger().Fatal().
+			Err(err).
+			Str("ListenIP", systemCritical.ListenIP).
+			Int("Port", systemCritical.Port).Send()
+		fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
 	}
 	server = new(gochanServer)
 	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
 
 	// Check if Akismet API key is usable at startup.
 	err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey)
-	if err == serverutil.ErrBlankAkismetKey {
-		gclog.Print(gclog.LStdLog, err.Error(), ". Akismet spam protection won't be used.")
-	} else if err != nil {
-		gclog.Print(gclog.LErrorLog|gclog.LStdLog, ". Akismet spam protection will be disabled.")
-		siteConfig.AkismetAPIKey = ""
+	if err != nil && err != serverutil.ErrBlankAkismetKey {
+		gcutil.Logger().Err(err).
+			Msg("Akismet spam protection will be disabled")
+		fmt.Println("Got error when initializing Akismet spam protection, it will be disabled:", err)
 	}
 
 	server.namespaces["banned"] = posting.BanHandler
@@ -160,8 +163,10 @@ func initServer() {
 	}
 
 	if err != nil {
-		gclog.Print(gclog.LErrorLog|gclog.LStdLog|gclog.LFatal,
-			"Error initializing server: ", err.Error())
+		gcutil.Logger().Fatal().
+			Err(err).
+			Msg("Error initializing server")
+		fmt.Println("Error initializing server:", err.Error())
 	}
 }
 
@@ -183,7 +188,10 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
-		gclog.Printf(gclog.LAccessLog, "Received invalid /util request from %q", request.Host)
+		gcutil.Logger().Info().
+			Str("access", request.URL.Path).
+			Str("IP", gcutil.GetRealIP(request)).
+			Msg("Received invalid /util request")
 		if wantsJSON {
 			serverutil.ServeJSON(writer, map[string]interface{}{"error": "Invalid /util request"})
 		} else {
@@ -206,20 +214,23 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 
 	if reportBtn == "Report" {
 		// submitted request appears to be a report
-		err = posting.HandleReport(request)
-		if wantsJSON {
-			serverutil.ServeJSON(writer, map[string]interface{}{
-				"error": err,
+		if err = posting.HandleReport(request); err != nil {
+			gcutil.LogError(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Ints("posts", checkedPosts).
+				Str("board", board).
+				Msg("Error submitting report")
+			serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"posts": checkedPosts,
 				"board": board,
 			})
 			return
 		}
-		if err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Println(gclog.LErrorLog,
-				"Error submitting report:", err.Error()))
-			return
-		}
+		gcutil.LogWarning().
+			Ints("reportedPosts", checkedPosts).
+			Str("board", board).
+			Str("IP", gcutil.GetRealIP(request)).Send()
+
 		redirectTo := request.Referer()
 		if redirectTo == "" {
 			// request doesn't have a referer for some reason, redirect to board
@@ -248,8 +259,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			var post gcsql.Post
 			post, err = gcsql.GetSpecificPost(checkedPosts[0], true)
 			if err != nil {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-					"Error getting post information: ", err.Error()))
+				gcutil.Logger().Error().
+					Err(err).
+					Msg("Error getting post information")
 				return
 			}
 
@@ -265,16 +277,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				"post":           post,
 				"referrer":       request.Referer(),
 			}); err != nil {
-				gclog.Print(gclog.LErrorLog,
-					"Error executing edit post template: ", err.Error())
-				if wantsJSON {
-					serverutil.ServeJSON(writer, map[string]interface{}{
-						"error": "Error executing edit post template",
-					})
-				} else {
-					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-						"Error executing edit post template: ", err.Error()))
-				}
+				gcutil.Logger().Error().
+					Err(err).
+					Str("IP", gcutil.GetRealIP(request)).
+					Msg("Error executing edit post template")
+
+				serverutil.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
 				return
 			}
 		}
@@ -283,20 +291,28 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-				"Invalid form data: ", err.Error()))
+			gcutil.Logger().Error().
+				Err(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Msg("Invalid form data")
+			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
 			return
 		}
 		boardid, err := strconv.Atoi(request.FormValue("boardid"))
 		if err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-				"Invalid form data: ", err.Error()))
+			gcutil.Logger().Error().
+				Err(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Msg("Invalid form data")
+			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
 			return
 		}
 		password, err = gcsql.GetPostPassword(postid)
 		if err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-				"Invalid form data: ", err.Error()))
+			gcutil.Logger().Error().
+				Err(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Msg("Invalid form data")
 			return
 		}
 
@@ -308,15 +324,21 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 
 		var board gcsql.Board
 		if err = board.PopulateData(boardid); err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-				"Invalid form data: ", err.Error()))
+			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
+			gcutil.Logger().Error().
+				Err(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Msg("Invalid form data")
 			return
 		}
 
 		if err = gcsql.UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
 			posting.FormatMessage(request.FormValue("editmsg"), board.Dir), request.FormValue("editmsg")); err != nil {
-			serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-				"Unable to edit post: ", err.Error()))
+			gcutil.Logger().Error().
+				Err(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Msg("Unable to edit post")
+			serverutil.ServeErrorPage(writer, "Unable to edit post: "+err.Error())
 			return
 		}
 
@@ -327,7 +349,6 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		} else {
 			http.Redirect(writer, request, "/"+board.Dir+"/res/"+request.FormValue("parentid")+".html#"+strconv.Itoa(postid), http.StatusFound)
 		}
-
 		return
 	}
 
@@ -348,59 +369,46 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			post.ID = checkedPostID
 			post.BoardID, err = strconv.Atoi(boardid)
 			if err != nil {
-				gclog.Printf(gclog.LErrorLog, "Invalid board ID in deletion request")
-				if wantsJSON {
-					serverutil.ServeJSON(writer, map[string]interface{}{
-						"error":   "invalid boardid string",
+				gcutil.Logger().Error().
+					Err(err).
+					Str("requestType", "deletePost").
+					Str("IP", gcutil.GetRealIP(request)).
+					Str("boardid", boardid).
+					Int("postid", checkedPostID).Send()
+
+				serverutil.ServeError(writer,
+					fmt.Sprintf("Invalid boardid '%s' in post deletion request (got error '%s')", boardid, err),
+					wantsJSON, map[string]interface{}{
 						"boardid": boardid,
+						"postid":  checkedPostID,
 					})
-				} else {
-					serverutil.ServeErrorPage(writer,
-						fmt.Sprintf("Invalid boardid '%s' in request (got error '%s')", boardid, err))
-				}
 				return
 			}
 
 			post, err = gcsql.GetSpecificPost(post.ID, true)
 			if err == sql.ErrNoRows {
-				if wantsJSON {
-					serverutil.ServeJSON(writer, map[string]interface{}{
-						"error":   "Post does not exist",
-						"postid":  post.ID,
-						"boardid": post.BoardID,
-					})
-					return
-				} else {
-					serverutil.ServeErrorPage(writer, fmt.Sprintf(
-						"Post #%d has already been deleted or is a post in a deleted thread", post.ID))
-					return
-				}
+				serverutil.ServeError(writer, "Post does not exist", wantsJSON, map[string]interface{}{
+					"postid":  post.ID,
+					"boardid": post.BoardID,
+				})
 			} else if err != nil {
-				if wantsJSON {
-					serverutil.ServeJSON(writer, map[string]interface{}{
-						"error":   err,
-						"postid":  post.ID,
-						"boardid": post.BoardID,
-					})
-					return
-				} else {
-					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-						"Error deleting post: ", err.Error()))
-					return
-				}
+				gcutil.Logger().Error().
+					Str("requestType", "deletePost").
+					Err(err).
+					Int("postid", post.ID).
+					Int("boardid", post.BoardID).
+					Msg("Error deleting post")
+				serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
+					"postid":  post.ID,
+					"boardid": post.BoardID,
+				})
 			}
 
 			if passwordMD5 != post.Password && rank == 0 {
-				if wantsJSON {
-					serverutil.ServeJSON(writer, map[string]interface{}{
-						"error":   "incorrect password",
-						"postid":  post.ID,
-						"boardid": post.BoardID,
-					})
-				} else {
-					serverutil.ServeErrorPage(writer,
-						fmt.Sprintf("Incorrect password for #%d", post.ID))
-				}
+				serverutil.ServeError(writer, fmt.Sprintf("Incorrect password for #%d", post.ID), wantsJSON, map[string]interface{}{
+					"postid":  post.ID,
+					"boardid": post.BoardID,
+				})
 				return
 			}
 
@@ -408,19 +416,24 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				fileName := post.Filename
 				if fileName != "" && fileName != "deleted" {
 					var files []string
-					var errStr string
-
 					if files, err = post.GetFilePaths(); err != nil {
-						errStr = gclog.Print(gclog.LErrorLog, "Error getting file upload info: ", err.Error())
-						serverutil.ServeError(writer, errStr, wantsJSON, map[string]interface{}{
+						gcutil.Logger().Error().
+							Str("requestType", "deleteFile").
+							Int("postid", post.ID).
+							Err(err).
+							Msg("Error getting file upload info")
+						serverutil.ServeError(writer, "Error getting file upload info: "+err.Error(), wantsJSON, map[string]interface{}{
 							"postid": post.ID,
 						})
 						return
 					}
 
 					if err = post.UnlinkUploads(true); err != nil {
-						gclog.Printf(gclog.LErrorLog,
-							"Error unlinking post uploads for #%d: %s", post.ID, err.Error())
+						gcutil.Logger().Error().
+							Str("requestType", "deleteFile").
+							Int("postid", post.ID).
+							Err(err).
+							Msg("Error unlinking post uploads")
 						serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 							"postid": post.ID,
 						})
@@ -430,8 +443,13 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					for _, filePath := range files {
 						if err = os.Remove(filePath); err != nil {
 							fileBase := path.Base(filePath)
-							errStr = gclog.Printf(gclog.LErrorLog, "Error deleting %s: %s", fileBase, err.Error())
-							serverutil.ServeError(writer, errStr, wantsJSON, map[string]interface{}{
+							gcutil.Logger().Error().
+								Str("requestType", "deleteFile").
+								Int("postid", post.ID).
+								Str("file", filePath).
+								Err(err).
+								Msg("Error unlinking post uploads")
+							serverutil.ServeError(writer, fmt.Sprintf("Error deleting %s: %s", fileBase, err.Error()), wantsJSON, map[string]interface{}{
 								"postid": post.ID,
 								"file":   fileBase,
 							})
@@ -453,15 +471,14 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			} else {
 				// delete the post
 				if err = gcsql.DeletePost(post.ID, true); err != nil {
-					if wantsJSON {
-						serverutil.ServeJSON(writer, map[string]interface{}{
-							"error":  err,
-							"postid": post.ID,
-						})
-					} else {
-						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-							"Error deleting post: ", err.Error()))
-					}
+					gcutil.Logger().Error().
+						Str("requestType", "deleteFile").
+						Int("postid", post.ID).
+						Err(err).
+						Msg("Error deleting post")
+					serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
+						"postid": post.ID,
+					})
 				}
 				if post.ParentID == 0 {
 					os.Remove(path.Join(
@@ -472,9 +489,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				}
 				building.BuildBoards(false, post.BoardID)
 			}
-			gclog.Printf(gclog.LAccessLog,
-				"Post #%d on boardid %d deleted by %s, file only: %t",
-				post.ID, post.BoardID, post.IP, fileOnly)
+			gcutil.Logger().Info().
+				Str("requestType", "deletePost").
+				Str("IP", post.IP).
+				Int("boardid", post.BoardID).
+				Bool("fileOnly", fileOnly).
+				Msg("Post deleted")
 			if !wantsJSON {
 				http.Redirect(writer, request, request.Referer(), http.StatusFound)
 			}

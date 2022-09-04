@@ -21,7 +21,6 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -30,7 +29,6 @@ import (
 
 const (
 	yearInSeconds = 31536000
-	errStdLogs    = gclog.LErrorLog | gclog.LStdLog
 )
 
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
@@ -48,14 +46,17 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
 		return
 	}
-
+	post.IP = gcutil.GetRealIP(request)
 	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
 	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
 	var postBoard gcsql.Board
 	postBoard, err := gcsql.GetBoardFromID(post.BoardID)
 	if err != nil {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error getting board info: ", err.Error()))
+		gcutil.LogError(err).
+			Int("boardid", post.BoardID).
+			Str("IP", post.IP).
+			Msg("Error getting board info")
+		serverutil.ServeErrorPage(writer, "Error getting board info: "+err.Error())
 		return
 	}
 
@@ -88,8 +89,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
 
 	if maxMessageLength, err = gcsql.GetMaxMessageLength(post.BoardID); err != nil {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error getting board info: ", err.Error()))
+		gcutil.LogError(err).
+			Int("boardid", post.BoardID).
+			Str("IP", post.IP).
+			Msg("Error getting board info")
+		serverutil.ServeErrorPage(writer, "Error getting board info: "+err.Error())
 		return
 	}
 
@@ -99,8 +103,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if post.MessageText, err = ApplyWordFilters(post.MessageText, postBoard.Dir); err != nil {
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Str("boardDir", postBoard.Dir).
+			Msg("Error applying wordfilters")
 		serverutil.ServeErrorPage(writer, "Error formatting post: "+err.Error())
-		gclog.Print(gclog.LErrorLog, "Error applying wordfilters: ", err.Error())
 		return
 	}
 
@@ -128,7 +135,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		MaxAge: yearInSeconds,
 	})
 
-	post.IP = gcutil.GetRealIP(request)
 	post.Timestamp = time.Now()
 	// post.PosterAuthority = getStaffRank(request)
 	post.Bumped = time.Now()
@@ -137,21 +143,31 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
 	if !serverutil.ValidReferer(request) {
-		gclog.Print(gclog.LAccessLog, "Rejected post from possible spambot @ "+post.IP)
+		gcutil.LogWarning().
+			Str("spam", "badReferer").
+			Str("IP", post.IP).
+			Msg("Rejected post from possible spambot")
 		return
 	}
 
-	switch serverutil.CheckPostForSpam(post.IP, request.Header["User-Agent"][0], request.Referer(),
-		post.Name, post.Email, post.MessageText) {
+	akismetResult := serverutil.CheckPostForSpam(
+		post.IP, request.Header.Get("User-Agent"), request.Referer(),
+		post.Name, post.Email, post.MessageText,
+	)
+	logEvent := gcutil.LogInfo().
+		Str("User-Agent", request.Header.Get("User-Agent")).
+		Str("IP", post.IP)
+	switch akismetResult {
 	case "discard":
+		logEvent.Str("akismet", "discard").Send()
 		serverutil.ServeErrorPage(writer, "Your post looks like spam.")
-		gclog.Print(gclog.LAccessLog, "Akismet recommended discarding post from: "+post.IP)
 		return
 	case "spam":
+		logEvent.Str("akismet", "spam").Send()
 		serverutil.ServeErrorPage(writer, "Your post looks like spam.")
-		gclog.Print(gclog.LAccessLog, "Akismet suggested post is spam from "+post.IP)
 		return
 	default:
+		logEvent.Discard()
 	}
 
 	postDelay, _ := gcsql.SinceLastPost(post.IP)
@@ -167,8 +183,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	banStatus, err := getBannedStatus(request)
 	if err != nil && err != sql.ErrNoRows {
-		serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-			"Error getting banned status: ", err.Error()))
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Fields(gcutil.ParseName(formName)).
+			Msg("Error getting banned status")
+		serverutil.ServeErrorPage(writer, "Error getting banned status: "+err.Error())
 		return
 	}
 
@@ -184,8 +203,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			"ban":            banStatus,
 			"banBoards":      boards[post.BoardID-1].Dir,
 		}, writer, "text/html"); err != nil {
-			serverutil.ServeErrorPage(writer,
-				gclog.Print(gclog.LErrorLog, "Error minifying page: ", err.Error()))
+			gcutil.LogError(err).
+				Str("building", "minifier").Send()
+			serverutil.ServeErrorPage(writer, "Error minifying page: "+err.Error())
 			return
 		}
 		writer.Write(banpageBuffer.Bytes())
@@ -217,13 +237,16 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			serverutil.ServeErrorPage(writer, "Post must contain a message if no image is uploaded.")
 			return
 		}
-		gclog.Printf(gclog.LAccessLog,
-			"Receiving post from %s, referred from: %s", post.IP, request.Referer())
+		gcutil.LogInfo().
+			Str("post", "referred").
+			Str("referredFrom", request.Referer()).
+			Str("IP", post.IP)
 	} else {
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
-			serverutil.ServeErrorPage(writer,
-				gclog.Print(gclog.LErrorLog, "Error while trying to read file: ", err.Error()))
+			gcutil.LogError(err).
+				Str("upload", "read").Send()
+			serverutil.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
 			return
 		}
 		defer file.Close()
@@ -244,6 +267,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		var _board = gcsql.Board{}
 		err = _board.PopulateData(gcutil.HackyStringToInt(request.FormValue("boardid")))
 		if err != nil {
+			gcutil.LogError(err).
+				Str("IP", post.IP).
+				Str("posting", "updateBoard").Send()
 			serverutil.ServeErrorPage(writer, "Server error: "+err.Error())
 			return
 		}
@@ -252,9 +278,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		thumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "t."+thumbExt, -1))
 		catalogThumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "c."+thumbExt, -1))
 
-		if err = ioutil.WriteFile(filePath, data, 0777); err != nil {
-			gclog.Printf(gclog.LErrorLog, "Couldn't write file %q: %s", post.Filename, err.Error())
-			serverutil.ServeErrorPage(writer, `Couldn't write file "`+post.FilenameOriginal+`"`)
+		if err = ioutil.WriteFile(filePath, data, 0644); err != nil {
+			gcutil.LogError(err).
+				Str("posting", "upload").
+				Str("IP", post.IP).
+				Str("filename", post.Filename).Send()
+			serverutil.ServeErrorPage(writer, fmt.Sprintf("Couldn't write file %q", post.FilenameOriginal))
 			return
 		}
 
@@ -262,32 +291,48 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
 		if ext == "webm" || ext == "mp4" {
-			gclog.Printf(gclog.LAccessLog, "Receiving post with video: %s from %s, referrer: %s",
-				handler.Filename, post.IP, request.Referer())
+			gcutil.LogInfo().
+				Str("post", "withVideo").
+				Str("IP", post.IP).
+				Str("filename", handler.Filename).
+				Str("referer", request.Referer()).Send()
 			if post.ParentID == 0 {
 				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
-					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-						"Error creating video thumbnail: ", err.Error()))
+					gcutil.LogError(err).
+						Str("filePath", filePath).
+						Str("thumbPath", thumbPath).
+						Int("thumbWidth", boardConfig.ThumbWidth).
+						Msg("Error creating video thumbnail")
+					serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
 					return
 				}
 			} else {
 				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidthReply); err != nil {
-					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-						"Error creating video thumbnail: ", err.Error()))
+					gcutil.LogError(err).
+						Str("filePath", filePath).
+						Str("thumbPath", thumbPath).
+						Int("thumbWidth", boardConfig.ThumbWidthReply).
+						Msg("Error creating video thumbnail for reply")
+					serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
 					return
 				}
 			}
 
 			if err := createVideoThumbnail(filePath, catalogThumbPath, boardConfig.ThumbWidthCatalog); err != nil {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-					"Error creating video thumbnail: ", err.Error()))
+				gcutil.LogError(err).
+					Str("filePath", filePath).
+					Str("thumbPath", thumbPath).
+					Int("thumbWidth", boardConfig.ThumbWidthCatalog).
+					Msg("Error creating video thumbnail for catalog")
+				serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
 				return
 			}
 
 			outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
 			if err != nil {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-					"Error getting video info: ", err.Error()))
+				gcutil.LogError(err).Msg("Error getting video info")
+
+				serverutil.ServeErrorPage(writer, "Error getting video info: "+err.Error())
 				return
 			}
 			if outputBytes != nil {
@@ -318,15 +363,17 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			img, err := imaging.Open(filePath)
 			if err != nil {
 				os.Remove(filePath)
-				gclog.Printf(gclog.LErrorLog, "Couldn't open uploaded file %q: %s", post.Filename, err.Error())
+				gcutil.LogError(err).
+					Str("filePath", filePath).Send()
 				serverutil.ServeErrorPage(writer, "Upload filetype not supported")
 				return
 			}
 			// Get image filesize
 			stat, err := os.Stat(filePath)
 			if err != nil {
-				serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-					"Couldn't get image filesize: "+err.Error()))
+				gcutil.LogError(err).
+					Str("filePath", filePath).Send()
+				serverutil.ServeErrorPage(writer, "Couldn't get image filesize: "+err.Error())
 				return
 			}
 			post.Filesize = int(stat.Size())
@@ -340,8 +387,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			}
 			post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
 
-			gclog.Printf(gclog.LAccessLog, "Receiving post with image: %q from %s, referrer: %s",
-				handler.Filename, post.IP, request.Referer())
+			gcutil.LogInfo().
+				Str("post", "withFile").
+				Str("IP", post.IP).
+				Str("filename", handler.Filename).
+				Str("referer", request.Referer()).Send()
 
 			if request.FormValue("spoiler") == "on" {
 				// If spoiler is enabled, symlink thumbnail to spoiler image
@@ -364,16 +414,22 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					thumbnail = createImageThumbnail(img, boardDir, "op")
 					catalogThumbnail = createImageThumbnail(img, boardDir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-							"Couldn't generate catalog thumbnail: ", err.Error()))
+						gcutil.LogError(err).
+							Str("thumbPath", catalogThumbPath).
+							Str("IP", post.IP).
+							Msg("Couldn't generate catalog thumbnail")
+						serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
 						return
 					}
 				} else {
 					thumbnail = createImageThumbnail(img, boardDir, "reply")
 				}
 				if err = imaging.Save(thumbnail, thumbPath); err != nil {
-					serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-						"Couldn't save thumbnail: ", err.Error()))
+					gcutil.LogError(err).
+						Str("thumbPath", thumbPath).
+						Str("IP", post.IP).
+						Msg("Couldn't generate catalog thumbnail")
+					serverutil.ServeErrorPage(writer, "Couldn't save thumbnail: "+err.Error())
 					return
 				}
 			} else {
@@ -381,6 +437,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				post.ThumbW = img.Bounds().Max.X
 				post.ThumbH = img.Bounds().Max.Y
 				if err := syscall.Symlink(filePath, thumbPath); err != nil {
+					gcutil.LogError(err).
+						Str("thumbPath", thumbPath).
+						Str("IP", post.IP).
+						Msg("Couldn't generate catalog thumbnail")
 					serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
 					return
 				}
@@ -388,8 +448,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					// Generate catalog thumbnail
 					catalogThumbnail := createImageThumbnail(img, boardDir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						serverutil.ServeErrorPage(writer, gclog.Print(gclog.LErrorLog,
-							"Couldn't generate catalog thumbnail: ", err.Error()))
+						gcutil.LogError(err).
+							Str("thumbPath", catalogThumbPath).
+							Str("IP", post.IP).
+							Msg("Couldn't generate catalog thumbnail")
+						serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
 						return
 					}
 				}
@@ -398,13 +461,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err = gcsql.InsertPost(&post, emailCommand != "sage"); err != nil {
+		gcutil.LogError(err).
+			Str("sql", "postInsertion").Send()
 		if post.Filename != "" {
 			os.Remove(filePath)
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)
 		}
-		serverutil.ServeErrorPage(writer,
-			gclog.Print(gclog.LErrorLog, "Error inserting post: ", err.Error()))
 		return
 	}
 

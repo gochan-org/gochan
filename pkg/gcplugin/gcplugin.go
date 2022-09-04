@@ -2,7 +2,8 @@ package gcplugin
 
 import (
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
+	"github.com/gochan-org/gochan/pkg/gcutil"
+
 	lua "github.com/yuin/gopher-lua"
 )
 
@@ -26,11 +27,14 @@ func createLuaLogFunc(which string) lua.LGFunction {
 		}
 		switch which {
 		case "access":
-			gclog.Println(gclog.LAccessLog, args...)
+			gcutil.LogInfo().
+				Interface("pluginAccess", args)
 		case "error":
-			gclog.Println(gclog.LErrorLog, args...)
+			gcutil.LogError(nil).
+				Interface("pluginError", args)
 		case "staff":
-			gclog.Println(gclog.LStaffLog, args...)
+			gcutil.LogInfo().
+				Interface("pluginStaff", args)
 		}
 		return 0
 	}

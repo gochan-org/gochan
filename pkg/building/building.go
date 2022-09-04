@@ -3,14 +3,15 @@ package building
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gclog"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
@@ -18,16 +19,18 @@ import (
 func BuildFrontPage() error {
 	err := gctemplates.InitTemplates("front")
 	if err != nil {
-		return errors.New(gclog.Print(gclog.LErrorLog,
-			"Error loading front page template: ", err.Error()))
+		gcutil.LogError(err).
+			Str("template", "front").Send()
+		return errors.New("Error loading front page template: " + err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, "index.html"))
 	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 
 	if err != nil {
-		return errors.New(gclog.Print(gclog.LErrorLog,
-			"Failed opening front page for writing: ", err.Error()))
+		gcutil.LogError(err).
+			Str("building", "front").Send()
+		return errors.New("Failed opening front page for writing: " + err.Error())
 	}
 	defer frontFile.Close()
 
@@ -35,8 +38,9 @@ func BuildFrontPage() error {
 	siteCfg := config.GetSiteConfig()
 	recentPostsArr, err = gcsql.GetRecentPostsGlobal(siteCfg.MaxRecentPosts, !siteCfg.RecentPostsWithNoFile)
 	if err != nil {
-		return errors.New(gclog.Print(gclog.LErrorLog,
-			"Failed loading recent posts: "+err.Error()))
+		gcutil.LogError(err).
+			Str("building", "recent").Send()
+		return errors.New("Failed loading recent posts: " + err.Error())
 	}
 
 	for b := range gcsql.AllBoards {
@@ -53,8 +57,9 @@ func BuildFrontPage() error {
 		"board_config": config.GetBoardConfig(""),
 		"recent_posts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
-		return errors.New(gclog.Print(gclog.LErrorLog,
-			"Failed executing front page template: "+err.Error()))
+		gcutil.LogError(err).
+			Str("template", "front").Send()
+		return errors.New("Failed executing front page template: " + err.Error())
 	}
 	return nil
 }
@@ -64,8 +69,9 @@ func BuildBoardListJSON() error {
 	criticalCfg := config.GetSystemCriticalConfig()
 	boardListFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		return errors.New(
-			gclog.Print(gclog.LErrorLog, "Failed opening boards.json for writing: ", err.Error()))
+		gcutil.LogError(err).
+			Str("building", "boardsList").Send()
+		return errors.New("Failed opening boards.json for writing: " + err.Error())
 	}
 	defer boardListFile.Close()
 
@@ -87,13 +93,13 @@ func BuildBoardListJSON() error {
 
 	boardJSON, err := json.Marshal(boardsMap)
 	if err != nil {
-		return errors.New(
-			gclog.Print(gclog.LErrorLog, "Failed to create boards.json: ", err.Error()))
+		gcutil.LogError(err).Str("building", "boards.json").Send()
+		return errors.New("Failed to create boards.json: " + err.Error())
 	}
 
 	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
-		return errors.New(
-			gclog.Print(gclog.LErrorLog, "Failed writing boards.json file: ", err.Error()))
+		gcutil.LogError(err).Str("building", "boards.json").Send()
+		return errors.New("Failed writing boards.json file: " + err.Error())
 	}
 	return nil
 }
@@ -129,8 +135,8 @@ func BuildJS() error {
 	// build consts.js from template
 	err := gctemplates.InitTemplates("js")
 	if err != nil {
-		return errors.New(gclog.Println(gclog.LErrorLog,
-			"Error loading consts.js template:", err.Error()))
+		gcutil.LogError(err).Str("template", "consts.js").Send()
+		return errors.New("Error loading consts.js template:" + err.Error())
 	}
 
 	boardCfg := config.GetBoardConfig("")
@@ -138,8 +144,10 @@ func BuildJS() error {
 	constsJSPath := path.Join(criticalCfg.DocumentRoot, "js", "consts.js")
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Error opening %q for writing: %s", constsJSPath, err.Error()))
+		gcutil.LogError(err).
+			Str("building", "consts.js").
+			Str("filePath", constsJSPath).Send()
+		return fmt.Errorf("Error opening %q for writing: %s", constsJSPath, err.Error())
 	}
 	defer constsJSFile.Close()
 
@@ -151,8 +159,10 @@ func BuildJS() error {
 			"timezone":      criticalCfg.TimeZone,
 		},
 		constsJSFile, "text/javascript"); err != nil {
-		return errors.New(gclog.Printf(gclog.LErrorLog,
-			"Error building %q: %s", constsJSPath, err.Error()))
+		gcutil.LogError(err).
+			Str("building", "consts.js").
+			Str("filePath", constsJSPath).Send()
+		return fmt.Errorf("Error building %q: %s", constsJSPath, err.Error())
 	}
 	return nil
 }
