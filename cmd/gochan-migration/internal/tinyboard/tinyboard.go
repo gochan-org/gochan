@@ -39,23 +39,23 @@ func (m *TinyBoardMigrator) MigrateDB() error {
 	return unimplemented
 }
 
-func (m *TinyBoardMigrator) MigrateBoards() error {
+func (*TinyBoardMigrator) MigrateBoards() error {
 	return nil
 }
 
-func (m *TinyBoardMigrator) MigratePosts() error {
+func (*TinyBoardMigrator) MigratePosts() error {
 	return nil
 }
 
-func (m *TinyBoardMigrator) MigrateStaff(password string) error {
+func (*TinyBoardMigrator) MigrateStaff(password string) error {
 	return nil
 }
 
-func (m *TinyBoardMigrator) MigrateBans() error {
+func (*TinyBoardMigrator) MigrateBans() error {
 	return nil
 }
 
-func (m *TinyBoardMigrator) MigrateAnnouncements() error {
+func (*TinyBoardMigrator) MigrateAnnouncements() error {
 	return nil
 }
 

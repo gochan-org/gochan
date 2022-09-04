@@ -166,6 +166,6 @@ func (m *Pre2021Migrator) migrateThreads() error {
 	return tx.Commit()
 }
 
-func (m *Pre2021Migrator) migratePostsUtil() error {
+func (*Pre2021Migrator) migratePostsUtil() error {
 	return nil
 }

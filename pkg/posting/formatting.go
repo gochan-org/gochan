@@ -41,7 +41,7 @@ func (mf *MessageFormatter) InitBBcode() {
 	mf.bbCompiler.SetTag("size", nil)
 }
 
-func (mf *MessageFormatter) ApplyWordFilters(message string, boardDir string) (string, error) {
+func (*MessageFormatter) ApplyWordFilters(message string, boardDir string) (string, error) {
 	var filters []gcsql.WordFilter
 	var err error
 	if boardDir == "" {

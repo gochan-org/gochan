@@ -73,7 +73,7 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 }
 
 // set mime type/cache headers according to the file's extension
-func (s *gochanServer) setFileHeaders(filename string, writer http.ResponseWriter) {
+func (*gochanServer) setFileHeaders(filename string, writer http.ResponseWriter) {
 	extension := strings.ToLower(gcutil.GetFileExtension(filename))
 	switch extension {
 	case "png":
