@@ -99,15 +99,15 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	return true, nil
 }
 
-func (m *Pre2021Migrator) MigrateStaff(password string) error {
+func (*Pre2021Migrator) MigrateStaff(password string) error {
 	return nil
 }
 
-func (m *Pre2021Migrator) MigrateBans() error {
+func (*Pre2021Migrator) MigrateBans() error {
 	return nil
 }
 
-func (m *Pre2021Migrator) MigrateAnnouncements() error {
+func (*Pre2021Migrator) MigrateAnnouncements() error {
 	return nil
 }
 

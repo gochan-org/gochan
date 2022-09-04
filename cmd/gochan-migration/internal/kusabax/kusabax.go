@@ -39,23 +39,23 @@ func (m *KusabaXMigrator) MigrateDB() error {
 	return unimplemented
 }
 
-func (m *KusabaXMigrator) MigrateBoards() error {
+func (*KusabaXMigrator) MigrateBoards() error {
 	return nil
 }
 
-func (m *KusabaXMigrator) MigratePosts() error {
+func (*KusabaXMigrator) MigratePosts() error {
 	return nil
 }
 
-func (m *KusabaXMigrator) MigrateStaff(password string) error {
+func (*KusabaXMigrator) MigrateStaff(password string) error {
 	return nil
 }
 
-func (m *KusabaXMigrator) MigrateBans() error {
+func (*KusabaXMigrator) MigrateBans() error {
 	return nil
 }
 
-func (m *KusabaXMigrator) MigrateAnnouncements() error {
+func (*KusabaXMigrator) MigrateAnnouncements() error {
 	return nil
 }
 
