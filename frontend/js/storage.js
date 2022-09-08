@@ -29,10 +29,10 @@ export function getJsonStorageVal(key, defaultVal) {
 	return val;
 }
 
-export function setStorageVal(key, val) {
-	// console.log(val);
+export function setStorageVal(key, val, isJSON = false) {
+	let storeVal = isJSON?JSON.stringify(val):val;
 	if(localStorage == undefined)
-		setCookie(key, val);
+		setCookie(key, storeVal);
 	else
-		localStorage.setItem(key, val);
+		localStorage.setItem(key, storeVal);
 }

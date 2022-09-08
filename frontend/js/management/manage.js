@@ -235,11 +235,7 @@ function createStaffButton() {
 	if($staffBtn !== null || staffInfo.Rank === 0)
 		return;
 	$staffBtn = new TopBarButton("Staff", () => {
-		let exists = $(document).find($staffMenu).length > 0;
-		if(exists)
-			$staffMenu.remove();
-		else
-			$topbar.after($staffMenu);
+		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length == 0]);
 	});
 }
 

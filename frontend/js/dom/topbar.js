@@ -40,7 +40,7 @@ export function initTopBar() {
 	$topbar = $("div#topbar");
 	if(getBooleanStorageVal("pintopbar", true)) {
 		$topbar.css({
-			// "z-index": "9001",
+			"z-index": "10",
 			"position": "fixed"
 		});
 	} else {
@@ -50,4 +50,12 @@ export function initTopBar() {
 		});
 	}
 	topbarHeight = $topbar.outerHeight() + 4;
+	$topbar.on("menuButtonClick", (e, $menu, open) => {
+		$("div.dropdown-menu").remove();
+		if(open) {
+			$topbar.after($menu);
+		} else {
+			$menu.remove();
+		}
+	});
 }

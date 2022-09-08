@@ -42,7 +42,7 @@ div.dropdown-menu {
 	z-index: 500;
 	padding: 4px 8px 4px 8px;
 	max-height: 100%;
-	overflow-y: scroll;
+	overflow-y: auto;
 	background-color: #999;
 	div {
 		padding: 2px;

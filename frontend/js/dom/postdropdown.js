@@ -53,6 +53,7 @@ function deletePostFile(id) {
 		style: "text-align: center;"
 	}).text("File removed").insertBefore($elem.find("div.post-text"));
 	alertLightbox("File deleted", "Success");
+	$(document).trigger("deletePostFile", id);
 }
 
 function deletePostElement(id) {
@@ -60,6 +61,7 @@ function deletePostElement(id) {
 	if($elem.length > 0) {
 		$elem.parent().next().remove(); // also removes the <hr> element after
 		$elem.parent().remove();
+		$(document).trigger("deletePost", id);
 	} else {
 		$(`div#replycontainer${id}`).remove();
 	}

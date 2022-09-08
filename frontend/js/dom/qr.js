@@ -202,7 +202,7 @@ export function initQR(pageThread) {
 		containment: "window",
 		drag: (event, ui) => {
 			ui.position.top = Math.max(ui.position.top, topbarHeight);
-			setStorageVal("qrpos", JSON.stringify(ui.position));
+			setStorageVal("qrpos", ui.position, true);
 		}
 	});
 	openQR();
