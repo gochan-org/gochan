@@ -481,8 +481,9 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 					})
 				}
 				if post.ParentID == 0 {
-					os.Remove(path.Join(
-						systemCritical.DocumentRoot, board, "/res/"+strconv.Itoa(post.ID)+".html"))
+					threadIndexPath := path.Join(systemCritical.DocumentRoot, board, "/res/", strconv.Itoa(post.ID))
+					os.Remove(threadIndexPath + ".html")
+					os.Remove(threadIndexPath + ".json")
 				} else {
 					_board, _ := gcsql.GetBoardFromID(post.BoardID)
 					building.BuildBoardPages(&_board)
