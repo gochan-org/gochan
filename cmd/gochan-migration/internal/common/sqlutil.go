@@ -2,7 +2,7 @@ package common
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -15,7 +15,7 @@ var (
 )
 
 func RunSQLFile(path string, db *gcsql.GCDB) error {
-	sqlBytes, err := ioutil.ReadFile(path)
+	sqlBytes, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

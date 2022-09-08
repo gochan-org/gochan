@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -64,7 +63,7 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 	s.setFileHeaders(filePath, writer)
 
 	// serve the requested file
-	fileBytes, _ = ioutil.ReadFile(filePath)
+	fileBytes, _ = os.ReadFile(filePath)
 	gcutil.Logger().Info().
 		Str("access", request.URL.Path).
 		Int("status", 200).

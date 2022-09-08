@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"reflect"
@@ -220,14 +219,14 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	jfile, err := ioutil.ReadFile(cfgPath)
+	cfgBytes, err := os.ReadFile(cfgPath)
 	if err != nil {
 		fmt.Printf("Error reading %s: %s\n", cfgPath, err.Error())
 		os.Exit(1)
 	}
 
 	var fields []MissingField
-	cfg, fields, err = ParseJSON(jfile)
+	cfg, fields, err = ParseJSON(cfgBytes)
 	if err != nil {
 		fmt.Printf("Error parsing %s: %s", cfgPath, err.Error())
 	}

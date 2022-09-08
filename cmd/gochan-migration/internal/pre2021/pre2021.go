@@ -3,7 +3,7 @@ package pre2021
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -30,7 +30,7 @@ type Pre2021Migrator struct {
 }
 
 func (m *Pre2021Migrator) readConfig() error {
-	ba, err := ioutil.ReadFile(m.options.OldChanConfig)
+	ba, err := os.ReadFile(m.options.OldChanConfig)
 	if err != nil {
 		return err
 	}

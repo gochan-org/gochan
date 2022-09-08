@@ -1,8 +1,8 @@
 package serverutil
 
 import (
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -52,7 +52,7 @@ func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	writer.WriteHeader(404)
 	systemCritical := config.GetSystemCriticalConfig()
-	errorPage, err := ioutil.ReadFile(systemCritical.DocumentRoot + "/error/404.html")
+	errorPage, err := os.ReadFile(systemCritical.DocumentRoot + "/error/404.html")
 	if err != nil {
 		writer.Write([]byte("Requested page not found, and /error/404.html not found"))
 	} else {

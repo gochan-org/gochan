@@ -2,7 +2,7 @@ package gcsql
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -34,7 +34,7 @@ func initDB(initFile string) error {
 
 // RunSQLFile cuts a given sql file into individual statements and runs it.
 func RunSQLFile(path string) error {
-	sqlBytes, err := ioutil.ReadFile(path)
+	sqlBytes, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

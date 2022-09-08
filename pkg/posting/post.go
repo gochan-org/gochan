@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"html"
 	"image"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -242,7 +242,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			Str("referredFrom", request.Referer()).
 			Str("IP", post.IP)
 	} else {
-		data, err := ioutil.ReadAll(file)
+		data, err := io.ReadAll(file)
 		if err != nil {
 			gcutil.LogError(err).
 				Str("upload", "read").Send()
@@ -278,7 +278,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		thumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "t."+thumbExt, -1))
 		catalogThumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "c."+thumbExt, -1))
 
-		if err = ioutil.WriteFile(filePath, data, 0644); err != nil {
+		if err = os.WriteFile(filePath, data, 0644); err != nil {
 			gcutil.LogError(err).
 				Str("posting", "upload").
 				Str("IP", post.IP).

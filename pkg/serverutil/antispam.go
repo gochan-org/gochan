@@ -2,7 +2,7 @@ package serverutil
 
 import (
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,7 +29,7 @@ func CheckAkismetAPIKey(key string) error {
 		defer resp.Body.Close()
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func CheckPostForSpam(userIP, userAgent, referrer, author, email, postContent st
 		if resp.Body != nil {
 			resp.Body.Close()
 		}
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			gcutil.Logger().Err(err).
 				Str("subject", "akismet").Send()

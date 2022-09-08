@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"html"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -87,7 +87,7 @@ func getBannedStatus(request *http.Request) (*gcsql.BanInfo, error) {
 	file, fileHandler, err := request.FormFile("imagefile")
 	if err == nil {
 		html.EscapeString(fileHandler.Filename)
-		if data, err2 := ioutil.ReadAll(file); err2 == nil {
+		if data, err2 := io.ReadAll(file); err2 == nil {
 			checksum = fmt.Sprintf("%x", md5.Sum(data))
 		}
 		file.Close()

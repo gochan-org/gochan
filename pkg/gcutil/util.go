@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
@@ -70,7 +69,7 @@ func CloseHandle(handle io.Closer) {
 // DeleteMatchingFiles deletes files in a folder (root) that match a given regular expression.
 // Returns the number of files that were deleted, and any error encountered.
 func DeleteMatchingFiles(root, match string) (filesDeleted int, err error) {
-	files, err := ioutil.ReadDir(root)
+	files, err := os.ReadDir(root)
 	if err != nil {
 		return 0, err
 	}

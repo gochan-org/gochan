@@ -2,8 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net"
+	"os"
 	"reflect"
 	"strings"
 
@@ -257,7 +257,7 @@ func (gcfg *GochanConfig) Write() error {
 		// don't try to write anything if we're doing a test
 		return nil
 	}
-	return ioutil.WriteFile(gcfg.jsonLocation, str, 0777)
+	return os.WriteFile(gcfg.jsonLocation, str, 0777)
 }
 
 /*
