@@ -88,6 +88,7 @@ export function watchThread(threadID, board) {
 		}
 		watched[board].push(threadObj);
 		setStorageVal("watched", watched, true);
+		$(document).trigger("watchThread", threadID);
 		updateWatcherMenu();
 	});
 }
@@ -101,6 +102,7 @@ export function unwatchThread(threadID, board) {
 			// console.log(`unwatching thread /${board}/${threadID}`);
 			watched[board].splice(i, 1);
 			setStorageVal("watched", watched, true);
+			$(document).trigger("unwatchThread", threadID);
 			updateWatcherMenu();
 			return;
 		}
@@ -122,20 +124,24 @@ function updateWatcherMenu() {
 	let numWatched = 0;
 	for(const board of boards) {
 		for(const thread of watched[board]) {
-			let infoElem = ` &#8213; <b>OP:</b> ${thread.op}`;
+			let infoElem = ` - <b>OP:</b> ${thread.op}`;
 			if(thread.subject !== undefined) {
 				infoElem += `<br/><b>Subject: </b> ${thread.subject}`;
 			}
+			let $replyCounter = $("<span/>")
+				.prop({id: "reply-counter"})
+				.text(`(Replies: ${thread.posts - 1})`);
 			let $watcherItem = $("<div/>").prop({class: "watcher-item"}).append(
 				$("<a/>").prop({
 					href: `${webroot}${board}/res/${thread.id}.html`
-				}).text(`/${board}/${thread.id}`),"  (",
+				}).text(`/${board}/${thread.id}`)," ",
+				$replyCounter, " - ",
 				$("<a/>").prop({
 					href: "javascript:;",
 					title: `Unwatch thread #${thread.id}`
 				}).on("click", () => {
 					unwatchThread(thread.id, board);
-				}).text("X"), ")  "
+				}).text("X"), " "
 			);
 			if(thread.err !== undefined)
 				$watcherItem.append($("<span/>")

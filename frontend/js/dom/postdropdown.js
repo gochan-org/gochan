@@ -192,3 +192,14 @@ export function addPostDropdown($post) {
 	});
 	return $post;
 }
+
+$(() => {
+	$(document).on("watchThread unwatchThread", (e, threadID) => {
+		$(`div#op${threadID} select.post-actions > option`).each((i, el) => {
+			if(e.type == "watchThread" && el.text == "Watch thread")
+				el.text = "Unwatch thread";
+			else if(e.type == "unwatchThread" && el.text == "Unwatch thread")
+				el.text = "Watch thread";
+		});
+	});
+});
