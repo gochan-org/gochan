@@ -3,6 +3,7 @@
 import $ from "jquery";
 
 import { $topbar, TopBarButton } from "../dom/topbar";
+import { currentThread } from "../postinfo";
 import { getJsonStorageVal } from "../storage";
 import { unwatchThread } from "./watcher";
 
@@ -64,20 +65,30 @@ function removeThreadFromMenu(threadID) {
 }
 
 function updateThreadInWatcherMenu(thread) {
+	let currentPage = currentThread();
+	
 	let $item = $watcherMenu.find(`div#thread${thread.op}`);
 	if($item.length == 0) return; // watched thread isn't in the menu
 	$item.find("span#reply-counter").remove();
-	$("<span>").prop({
+	let $replyCounter = $("<span>").prop({
 		id: "reply-counter"
-	}).append(
-		"(Replies: ", thread.newNumPosts - 1,", ",
-		$("<a/>").prop({
-			href: `${webroot}${thread.board}/res/${thread.op}.html#${thread.newPosts[0].no}`
-		}).css({
-			"font-weight": "bold"
-		}).text(`${thread.newPosts.length} new`),
-		") "
-	).insertBefore($watcherMenu.find(`a#unwatch${thread.op}`));
+	}).insertBefore($item.find(`a#unwatch${thread.op}`));
+
+	if(currentPage.board == thread.board && currentPage.thread == thread.op) {
+		// we're currently in the thread
+		$replyCounter.text(` (Replies: ${thread.newNumPosts - 1}) `);
+	} else {
+		// we aren't currently in the thread, show a link to the first new thread
+		$replyCounter.append(
+			"(Replies: ", thread.newNumPosts - 1,", ",
+			$("<a/>").prop({
+				href: `${webroot}${thread.board}/res/${thread.op}.html#${thread.newPosts[0].no}`
+			}).css({
+				"font-weight": "bold"
+			}).text(`${thread.newPosts.length} new`),
+			") "
+		);
+	}
 }
 
 $(() => {

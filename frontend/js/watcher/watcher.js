@@ -1,6 +1,7 @@
 import $ from "jquery";
 
 import { getThreadJSON } from "../api/threads";
+import { currentThread } from "../postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "../storage";
 import "./menu";
 
@@ -11,6 +12,7 @@ let watcherInterval = -1;
 export function updateWatchedThreads() {
 	let watched = getJsonStorageVal("watched", {});
 	let boards = Object.keys(watched);
+	let currentPage = currentThread();
 	for(const board of boards) {
 		if(!(watched[board] instanceof Array)) {
 			console.error(`Invalid data for board ${board}: expected Array object, deleting.`);
@@ -22,17 +24,19 @@ export function updateWatchedThreads() {
 			if(thread.err !== undefined) continue;
 			getThreadJSON(thread.id, board).then(data => {
 				if(data.posts.length > thread.posts) {
-					// watched thread has new posts
+					// watched thread has new posts, trigger a menu update
+					if(currentPage.board == board && currentPage.thread == thread.id) {
+						// we're currently in the thread, update the cookie
+						watched[board][t].posts = data.posts.length;
+						watched[board][t].latest = data.posts[data.posts.length - 1].no;
+						setStorageVal("watched", watched, true);
+					}
 					$(document).trigger("watcherNewPosts", {
 						newPosts: data.posts.slice(thread.posts),
 						newNumPosts: data.posts.length,
 						op: thread.id,
 						board: board
 					});
-					watched[board][t].posts = data.posts.length;
-					watched[board][t].latest = data.posts[data.posts.length - 1].no;
-					// setStorageVal("watched", watched, true);
-					// console.log(`Thread ${data.no} has ${data.posts.length - thread.posts} new posts`);
 				}
 			}).catch(e => {
 				if(e.status == 404) {
@@ -118,11 +122,8 @@ export function resetThreadWatcherInterval() {
 }
 
 export function initWatcher() {
-	if(watcherInterval > -1) {
-		clearInterval(watcherInterval);
-	}
 	updateWatchedThreads();
-	watcherInterval = setInterval(updateWatchedThreads, getNumberStorageVal("watcherseconds", 10) * 1000);
+	resetThreadWatcherInterval();
 }
 
 $(initWatcher);
