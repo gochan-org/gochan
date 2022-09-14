@@ -6,8 +6,7 @@
 /html/boards.json
 /html/index.html
 /html/test*
-/html/javascript/consts.js
-/html/js/consts.js
+/html/js/
 /templates/override
 *.bak
 *.log
