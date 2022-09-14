@@ -7,7 +7,7 @@ import { initTopBar, TopBarButton } from "./dom/topbar";
 import { getBooleanStorageVal, getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
 import { closeQR, initQR } from "./dom/qr";
-import { initWatcher } from "./watcher";
+import { initWatcher } from "./watcher/watcher";
 
 /**
  * @type {TopBarButton}
@@ -124,7 +124,7 @@ function createLightbox() {
 	});
 }
 
-export function initSettings() {
+$(() => {
 	let styleOptions = [];
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
@@ -146,5 +146,7 @@ export function initSettings() {
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 
 	if($settingsButton === null)
-		$settingsButton = new TopBarButton("Settings", createLightbox);
-}
+		$settingsButton = new TopBarButton("Settings", createLightbox, {
+			before: "a#watcher"
+		});
+});

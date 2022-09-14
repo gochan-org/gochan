@@ -16,7 +16,7 @@ export class TopBarButton {
 	 * @param {string} title The text shown on the button
 	 * @param {()=>any} action The function executed when the button is clicked
 	 */
-	constructor(title, action = () => {}) {
+	constructor(title, action = () => {}, beforeAfter = {}) {
 		this.title = title;
 		this.buttonAction = action;
 		this.button = $("<a/>").prop({
@@ -24,7 +24,17 @@ export class TopBarButton {
 			"class": "dropdown-button",
 			"id": title.toLowerCase()
 		}).text(title + "▼");
-		$topbar.append(this.button);
+
+		let $before = $topbar.find(beforeAfter.before);
+		let $after = $topbar.find(beforeAfter.after);		
+		if($before.length > 0) {
+			this.button.insertBefore($before);
+		} else if($after.length > 0) {
+			this.button.insertAfter($after);
+		} else {
+			$topbar.append(this.button);
+		}
+
 		this.button.on("click", e => {
 			e.preventDefault();
 			this.buttonAction();
@@ -59,3 +69,5 @@ export function initTopBar() {
 		}
 	});
 }
+
+$(initTopBar);

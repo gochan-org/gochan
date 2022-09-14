@@ -1,7 +1,7 @@
 /* global webroot */
 import $ from "jquery";
 
-import { isThreadWatched, watchThread, unwatchThread } from "../watcher";
+import { isThreadWatched, watchThread, unwatchThread } from "../watcher/watcher";
 import { isPostVisible, setPostVisibility, setThreadVisibility } from "./posthiding";
 import { currentBoard } from "../postinfo";
 import { getCookie } from "../cookies";
@@ -194,11 +194,14 @@ export function addPostDropdown($post) {
 }
 
 $(() => {
-	$(document).on("watchThread unwatchThread", (e, threadID) => {
-		$(`div#op${threadID} select.post-actions > option`).each((i, el) => {
-			if(e.type == "watchThread" && el.text == "Watch thread")
+	$(document).on("watchThread", (_e, thread) => {
+		$(`div#op${thread.id} select.post-actions > option`).each((i, el) => {
+			if(el.text == "Watch thread")
 				el.text = "Unwatch thread";
-			else if(e.type == "unwatchThread" && el.text == "Unwatch thread")
+		});
+	}).on("unwatchThread", (_e, threadID) => {
+		$(`div#op${threadID} select.post-actions > option`).each((i, el) => {
+			if(el.text == "Unwatch thread")
 				el.text = "Watch thread";
 		});
 	});

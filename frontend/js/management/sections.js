@@ -3,6 +3,8 @@
 /* global webroot */
 
 import $ from "jquery";
+import "jquery-ui/ui/widget";
+import "jquery-ui/ui/widgets/mouse";
 import "jquery-ui/ui/data";
 import "jquery-ui/ui/widgets/sortable";
 import { alertLightbox } from "../dom/lightbox";

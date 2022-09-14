@@ -21,7 +21,7 @@ export function notify(title, body, img = noteIcon) {
 	}, noteCloseTime);
 }
 
-$(() => {
+$(document).on("ready", () => {
 	if(!canNotify())
 		return;
 

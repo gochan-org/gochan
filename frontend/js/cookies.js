@@ -41,21 +41,6 @@ function randomPassword(len = 8) {
 }
 
 /**
- * gets cookies ready to be used elsewhere
- */
-export function initCookies() {
-	let pwCookie = getCookie("password");
-	if(pwCookie == "") {
-		pwCookie = randomPassword();
-		setCookie("password", pwCookie);
-	}
-	$("input[name=postname]").val(getCookie("name"));
-	$("input[name=postemail]").val(getCookie("email"));
-	$("input[name=postpassword]").val(pwCookie);
-	$("input[name=delete-password]").val(pwCookie);
-}
-
-/**
  * Set a cookie
  * @param {string} name
  * @param {string} value
@@ -73,3 +58,15 @@ export function setCookie(name, value, expires, root) {
 	}
 	document.cookie = `${name}=${value}${expiresStr};path=${root};sameSite=strict`;
 }
+
+$(() => {
+	let pwCookie = getCookie("password");
+	if(pwCookie == "") {
+		pwCookie = randomPassword();
+		setCookie("password", pwCookie);
+	}
+	$("input[name=postname]").val(getCookie("name"));
+	$("input[name=postemail]").val(getCookie("email"));
+	$("input[name=postpassword]").val(pwCookie);
+	$("input[name=delete-password]").val(pwCookie);
+});

@@ -7,7 +7,7 @@
 import $ from "jquery";
 
 import { alertLightbox } from "./dom/lightbox";
-import { getBooleanStorageVal, getNumberStorageVal } from "./storage";
+import { getBooleanStorageVal } from "./storage";
 import { currentThread, getPageThread, insideOP } from "./postinfo";
 import { addPostDropdown } from "./dom/postdropdown";
 import { createPostElement } from "./dom/postelement";
@@ -17,7 +17,6 @@ import { openQR } from "./dom/qr";
 let doClickPreview = false;
 let doHoverPreview = false;
 let $hoverPreview = null;
-let threadWatcherInterval = 0;
 
 const videoTestRE = /\.(mp4)|(webm)$/;
 const postrefRE = /\/([^\s/]+)\/res\/(\d+)\.html(#(\d+))?/;
@@ -245,19 +244,3 @@ export function quote(no) {
 	msgbox.focus();
 }
 window.quote = quote;
-
-export function stopThreadWatcher() {
-	clearInterval(threadWatcherInterval);
-}
-
-export function resetThreadWatcherInterval() {
-	stopThreadWatcher();
-	threadWatcherInterval = setInterval(updateThread, getNumberStorageVal("watcherseconds", 10) * 1000);
-}
-
-$(() => {
-	let pageThread = getPageThread();
-	if(pageThread.op >= 1) {
-		resetThreadWatcherInterval();
-	}
-});
