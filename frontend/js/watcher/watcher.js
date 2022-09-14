@@ -19,6 +19,7 @@ export function updateWatchedThreads() {
 			delete watched[board];
 			continue;
 		}
+		$(document).trigger("beginNewPostsCheck");
 		for(const t in watched[board]) {
 			const thread = watched[board][t];
 			if(thread.err !== undefined) continue;

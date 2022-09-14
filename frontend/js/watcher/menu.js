@@ -6,11 +6,12 @@ import { $topbar, TopBarButton } from "../dom/topbar";
 import { currentThread } from "../postinfo";
 import { getJsonStorageVal } from "../storage";
 import { unwatchThread } from "./watcher";
+import { downArrow } from "../vars";
 
 let watcherBtn = null;
 /** @type {JQuery<HTMLElement>} */
 let $watcherMenu = null;
-
+let numUpdatedThreads = 0; // incremented for each watched thread with new posts, added to the watcher button
 
 function addThreadToMenu(thread) {
 	if($watcherMenu.find(`div#thread${thread.id}.watcher-item`).length > 0) {
@@ -45,11 +46,9 @@ function addThreadToMenu(thread) {
 			unwatchThread(thread.id, thread.board);
 		}).text("X"), " "
 	);
-	let $threadLinks = $watcherItem.find("a#threadlink");
-	console.log($threadLinks.css("font-size"));
 	if(thread.err !== undefined)
 	$watcherItem.append($("<span/>")
-		.css({color: "red"})
+		.prop({class: "warning"})
 		.text(`(${thread.err})`)
 	);
 	$watcherMenu.append(
@@ -88,6 +87,14 @@ function updateThreadInWatcherMenu(thread) {
 			}).text(`${thread.newPosts.length} new`),
 			") "
 		);
+		watcherBtn.button.find(".warning").remove();
+		watcherBtn.button.text("Watcher");
+		watcherBtn.button.append(
+			$("<span/>")
+				.prop({class: "warning"})
+				.text(`(${++numUpdatedThreads})`),
+			downArrow
+		);
 	}
 }
 
@@ -108,7 +115,10 @@ $(() => {
 	$(document)
 		.on("watchThread", (_e,thread) => addThreadToMenu(thread))
 		.on("unwatchThread", (_e, threadID) => removeThreadFromMenu(threadID))
-		.on("watcherNewPosts", (_e, thread) => updateThreadInWatcherMenu(thread));
+		.on("watcherNewPosts", (_e, thread) => updateThreadInWatcherMenu(thread))
+		.on("beginNewPostsCheck", () => {
+			numUpdatedThreads = 0;
+		});
 	let watched = getJsonStorageVal("watched", {});
 	let boards = Object.keys(watched);
 	for(const board of boards) {
