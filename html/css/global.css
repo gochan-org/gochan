@@ -477,6 +477,14 @@ table#qr-postbox textarea {
   color: #000;
 }
 
+.watcher-item a#threadlink {
+  font-weight: bold;
+  font-size: 18px;
+}
+.watcher-item a#newposts {
+  font-weight: bold;
+}
+
 header {
   margin-top: 50px;
   text-align: center;

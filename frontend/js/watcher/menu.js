@@ -33,9 +33,8 @@ function addThreadToMenu(thread) {
 		class: "watcher-item"
 	}).append(
 		$("<a/>").prop({
+			id: "threadlink",
 			href: `${webroot}${thread.board}/res/${thread.id}.html`
-		}).css({
-			"font-weight": "bold"
 		}).text(`/${thread.board}/${thread.id}`)," ",
 		$replyCounter," ",
 		$("<a/>").prop({
@@ -46,6 +45,8 @@ function addThreadToMenu(thread) {
 			unwatchThread(thread.id, thread.board);
 		}).text("X"), " "
 	);
+	let $threadLinks = $watcherItem.find("a#threadlink");
+	console.log($threadLinks.css("font-size"));
 	if(thread.err !== undefined)
 	$watcherItem.append($("<span/>")
 		.css({color: "red"})
@@ -82,9 +83,8 @@ function updateThreadInWatcherMenu(thread) {
 		$replyCounter.append(
 			"(Replies: ", thread.newNumPosts - 1,", ",
 			$("<a/>").prop({
+				id: "newposts",
 				href: `${webroot}${thread.board}/res/${thread.op}.html#${thread.newPosts[0].no}`
-			}).css({
-				"font-weight": "bold"
 			}).text(`${thread.newPosts.length} new`),
 			") "
 		);
