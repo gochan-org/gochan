@@ -3,9 +3,9 @@
 import $ from "jquery";
 
 import "./vars";
-import "./settings";
 import "./cookies";
 import "./notifications";
+import { setCustomCSS, setCustomJS } from "./settings";
 import { handleKeydown } from "./boardevents";
 import { initStaff, createStaffMenu } from "./management/manage";
 import { getPageThread } from "./postinfo";
@@ -48,4 +48,6 @@ $(() => {
 		addPostDropdown($(elem));
 	});
 	$(document).on("keydown", handleKeydown);
+	setCustomCSS();
+	setCustomJS();
 });

@@ -55,6 +55,21 @@ class Setting {
 	}
 }
 
+class TextSetting extends Setting {
+	constructor(key, title, defaultVal = "", onSave = () => {}) {
+		super(key, title, defaultVal, onSave);
+		this.element = this.createElement("<textarea/>");
+		this.element.text(defaultVal);
+		let val = this.getStorageValue();
+		if(val != "") {
+			this.setElementValue(val);
+		}
+	}
+	setElementValue(text = "") {
+		this.element.text(text);
+	}
+}
+
 class DropdownSetting extends Setting {
 	constructor(key, title, options = [], defaultVal = "", onSave = () => {}) {
 		super(key, title, defaultVal, onSave);
@@ -124,6 +139,30 @@ function createLightbox() {
 	});
 }
 
+/**
+ * executes the custom JavaScript set in the settings
+ */
+export function setCustomJS() {
+	let customJS = getStorageVal("customjs");
+	if(customJS != "") {
+		eval(customJS);
+	}
+}
+
+/**
+ * applies the custom CSS set in the settings
+ */
+export function setCustomCSS() {
+	let customCSS = getStorageVal("customcss");
+	if(customCSS != "") {
+		$("style#customCSS").remove();
+		$("<style/>").prop({
+			id: "customCSS"
+		}).html(customCSS)
+		.appendTo(document.head);
+	}
+}
+
 $(() => {
 	let styleOptions = [];
 	for(const style of styles) {
@@ -144,6 +183,9 @@ $(() => {
 		min: 2
 	}, initWatcher));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
+
+	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript (ran on page load)", ""));
+	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));
 
 	if($settingsButton === null)
 		$settingsButton = new TopBarButton("Settings", createLightbox, {
