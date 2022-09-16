@@ -50,10 +50,24 @@ div#topbar {
 
 .dropdown-menu {
 	background: $topbarcol!important;
-	// @include box-shadow(2px 2px 2px 3px $shadowcol);
 	@include shadow-filter(2px 2px 3px $shadowcol);
 	z-index: 0;
 	div:hover {
 		background: $bglight;
 	}
+}
+
+.ui-tabs-tab {
+	background: $topbarcol;
+	border: 1px solid $bglight;
+}
+
+.ui-tabs-active {
+	background: $bgcol;
+}
+
+.ui-tabs-panel {
+	background: $bgcol;
+	border: 1px solid $topbarcol;
+	padding: 8px;
 }

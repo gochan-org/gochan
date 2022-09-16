@@ -187,30 +187,6 @@ func getBoardIDFromURIOrNil(URI string) *int {
 	return &ID
 }
 
-// CreateFileBan creates a new ban on a file. If boards = nil, the ban is global.
-func CreateFileBan(fileChecksum, staffName string, permaban bool, staffNote, boardURI string) error {
-	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
-	staffID, err := getStaffID(staffName)
-	if err != nil {
-		return err
-	}
-	boardID := getBoardIDFromURIOrNil(boardURI)
-	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileChecksum)
-	return err
-}
-
-// CreateFileNameBan creates a new ban on a filename. If boards = nil, the ban is global.
-func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote, boardURI string) error {
-	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, filename = ?, is_regex = ?`
-	staffID, err := getStaffID(staffName)
-	if err != nil {
-		return err
-	}
-	boardID := getBoardIDFromURIOrNil(boardURI)
-	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileName, isRegex)
-	return err
-}
-
 // CreateUserNameBan creates a new ban on a username. If boards = nil, the ban is global.
 func CreateUserNameBan(userName string, isRegex bool, staffName string, permaban bool, staffNote, boardURI string) error {
 	const sql = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, username = ?, is_regex = ?`
@@ -367,22 +343,6 @@ func checkUsernameBan(name string) (*UsernameBan, error) {
 	FROM DBPREFIXusername_ban WHERE username = ?`
 	var ban = new(UsernameBan)
 	err := QueryRowSQL(sql, interfaceSlice(name), interfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username, &ban.IsRegex))
-	return ban, err
-}
-
-func checkFilenameBan(filename string) (*FilenameBan, error) {
-	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, filename, is_regex 
-	FROM DBPREFIXfilename_ban WHERE filename = ?`
-	var ban = new(FilenameBan)
-	err := QueryRowSQL(sql, interfaceSlice(filename), interfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex))
-	return ban, err
-}
-
-func checkFileBan(checksum string) (*FileBan, error) {
-	const sql = `SELECT id, board_id, staff_id, staff_note, issued_at, checksum 
-	FROM DBPREFIXfile_ban WHERE checksum = ?`
-	var ban = new(FileBan)
-	err := QueryRowSQL(sql, interfaceSlice(checksum), interfaceSlice(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum))
 	return ban, err
 }
 

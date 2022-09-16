@@ -198,6 +198,56 @@ var actions = []Action{
 			return manageRecentsBuffer.String(), nil
 		}},
 	{
+		ID:          "filebans",
+		Title:       "File bans",
+		Permissions: ModPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+			filenameBans, err := gcsql.GetFilenameBans("", false)
+			if err != nil {
+				return "", err
+			}
+			checksumBans, err := gcsql.GetFileChecksumBans("")
+			if err != nil {
+				return "", err
+			}
+			if wantsJSON {
+				return map[string]interface{}{
+					"filenameBans": filenameBans,
+					"checksumBans": checksumBans,
+				}, nil
+			}
+			boardURIs, err := gcsql.GetBoardUris()
+			if err != nil {
+				return "", err
+			}
+			manageBansBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageFileBans, map[string]interface{}{
+				"webroot":      config.GetSystemCriticalConfig().WebRoot,
+				"filenameBans": filenameBans,
+				"checksumBans": checksumBans,
+				"boardURIs":    boardURIs,
+			}, manageBansBuffer, "text/html"); err != nil {
+				gcutil.LogError(err).
+					Str("staff", staff.Username).
+					Str("action", "filebans").
+					Str("template", "manage_filebans.html").
+					Msg("failed executing file ban management page template")
+				return "", errors.New("failed executing file ban management page template: " + err.Error())
+			}
+			return manageBansBuffer.String(), nil
+		},
+	},
+	{
+		ID:          "ipbans",
+		Title:       "IP Bans",
+		Permissions: ModPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+			return "", gcutil.ErrNotImplemented
+		},
+	},
+	{
 		ID:          "bans",
 		Title:       "Bans",
 		Permissions: ModPerms,
@@ -1066,6 +1116,7 @@ var actions = []Action{
 				}
 			}
 			filterMap := map[string]interface{}{
+				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 				"wordfilters": wordfilters,
 				"edit":        editFilter,
 			}

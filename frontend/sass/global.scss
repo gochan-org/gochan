@@ -83,3 +83,18 @@ select.post-actions {
 	margin-right: 4px;
 	margin-left: 4px;
 }
+
+.ui-tabs-nav {
+	list-style: none;
+	padding-left: 0px;
+}
+
+.ui-tabs-tab {
+	float: left;
+	text-decoration: none;
+	padding: 8px;
+}
+
+.ui-tabs-panel {
+	clear: both;
+}

@@ -23,6 +23,7 @@ var (
 	ManageSections    *template.Template
 	ManageConfig      *template.Template
 	ManageDashboard   *template.Template
+	ManageFileBans    *template.Template
 	ManageIPSearch    *template.Template
 	ManageRecentPosts *template.Template
 	ManageWordfilters *template.Template
@@ -168,6 +169,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageReports, err = loadTemplate("manage_reports.html")
 		if err != nil {
 			return templateError("manage_reports.html", err)
+		}
+	}
+	if buildAll || t == "managefilebans" {
+		ManageFileBans, err = loadTemplate("manage_filebans.html")
+		if err != nil {
+			return templateError("manage_filebans.html", err)
 		}
 	}
 	if buildAll || t == "manageipsearch" {

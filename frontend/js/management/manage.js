@@ -10,6 +10,7 @@ import $ from 'jquery';
 import { alertLightbox } from "../dom/lightbox";
 import { $topbar, TopBarButton } from '../dom/topbar';
 import "./sections";
+import "./filebans";
 
 /**
  * @type {StaffInfo}

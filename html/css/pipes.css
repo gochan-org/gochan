@@ -142,3 +142,18 @@ div#topbar li:hover {
 .dropdown-menu div:hover {
   background: #404040;
 }
+
+.ui-tabs-tab {
+  background: #202020;
+  border: 1px solid #404040;
+}
+
+.ui-tabs-active {
+  background: #363942;
+}
+
+.ui-tabs-panel {
+  background: #363942;
+  border: 1px solid #202020;
+  padding: 8px;
+}

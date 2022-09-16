@@ -455,6 +455,26 @@ type FileBan struct {
 	Checksum  string    `json:"checksum"`
 }
 
+func (fb *FileBan) BoardURI() string {
+	if fb.BoardID == nil {
+		return ""
+	}
+	var uri string
+	err := QueryRowSQL(`SELECT uri FROM DBPREFIXboards WHERE id = ?`, interfaceSlice(fb.BoardID), interfaceSlice(&uri))
+	if err != nil {
+		return ""
+	}
+	return uri
+}
+
+func (fb *FileBan) StaffName() string {
+	staff, err := getStaffByID(fb.StaffID)
+	if err != nil {
+		return ""
+	}
+	return staff.Username
+}
+
 // FilenameBan contains the information associated with a specific filename ban
 type FilenameBan struct {
 	ID        int       `json:"id"`
@@ -464,6 +484,26 @@ type FilenameBan struct {
 	IssuedAt  time.Time `json:"issued_at"`
 	Filename  string    `json:"filename"`
 	IsRegex   bool      `json:"is_regex"`
+}
+
+func (fnb *FilenameBan) BoardURI() string {
+	if fnb.BoardID == nil {
+		return ""
+	}
+	var uri string
+	err := QueryRowSQL(`SELECT uri FROM DBPREFIXboards WHERE id = ?`, interfaceSlice(fnb.BoardID), interfaceSlice(&uri))
+	if err != nil {
+		return ""
+	}
+	return uri
+}
+
+func (fnb *FilenameBan) StaffName() string {
+	staff, err := getStaffByID(fnb.StaffID)
+	if err != nil {
+		return ""
+	}
+	return staff.Username
 }
 
 // UsernameBan contains the information associated with a specific username ban
