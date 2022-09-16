@@ -324,7 +324,7 @@ func CheckBan(ip, name, filename, checksum string) (*BanInfo, error) {
 		return ban, nil
 	}
 
-	//TODO implement other types of bans or refactor banning code
+	// TODO implement other types of bans or refactor banning code
 	return nil, gcutil.ErrNotImplemented
 }
 

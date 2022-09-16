@@ -203,6 +203,101 @@ var actions = []Action{
 		Permissions: ModPerms,
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+			errorEv := gcutil.LogError(nil).
+				Str("action", "filebans").
+				Str("staff", staff.Username)
+			defer errorEv.Discard()
+			var err error
+			fileBanType := request.PostForm.Get("bantype")
+			delFnbStr := request.Form.Get("delfnb")
+			if delFnbStr != "" {
+				var delFilenameBanID int
+				if delFilenameBanID, err = strconv.Atoi(delFnbStr); err != nil {
+					errorEv.Err(err).
+						Str("delfnb", delFnbStr).Send()
+					return "", err
+				}
+				if err = gcsql.DeleteFilenameBanByID(delFilenameBanID); err != nil {
+					errorEv.Err(err).
+						Int("delfnb", delFilenameBanID).Send()
+					return "", err
+				}
+				gcutil.LogInfo().
+					Str("action", "filebans").
+					Str("staff", staff.Username).
+					Int("delFilenameBan", delFilenameBanID).Send()
+			}
+			delCsbStr := request.Form.Get("delcsb")
+			if delCsbStr != "" {
+				var delChecksumBanID int
+				if delChecksumBanID, err = strconv.Atoi(delCsbStr); err != nil {
+					errorEv.Err(err).
+						Str("delcsb", delCsbStr).Send()
+					return "", err
+				}
+				if err = gcsql.DeleteFileBanByID(delChecksumBanID); err != nil {
+					errorEv.Err(err).
+						Int("delcsb", delChecksumBanID).Send()
+					return "", err
+				}
+				gcutil.LogInfo().
+					Str("action", "filebans").
+					Str("staff", staff.Username).
+					Int("delChecksumBan", delChecksumBanID).Send()
+			}
+			switch fileBanType {
+			case "filename":
+				// filename form used
+				filename := request.PostForm.Get("filename")
+				isWildcard := request.PostForm.Get("iswildcard") == "on"
+				board := request.PostForm.Get("board")
+				staffNote := request.PostForm.Get("staffnote")
+				if filename == "" {
+					err = errors.New("missing filename field in filename ban creation")
+					errorEv.Err(err).Send()
+					return "", err
+				}
+				if err = gcsql.CreateFileNameBan(filename, isWildcard, staff.Username, staffNote, board); err != nil {
+					errorEv.Err(err).
+						Str("filename", filename).
+						Bool("iswildcard", isWildcard).
+						Str("board", board).
+						Str("staffnote", staffNote).Send()
+					return "", err
+				}
+				gcutil.LogInfo().
+					Str("action", "filebans").
+					Str("staff", staff.Username).
+					Str("newBanType", "filename").Send()
+			case "checksum":
+				// file checksum form used
+				checksum := request.PostForm.Get("checksum")
+				board := request.PostForm.Get("board")
+				staffNote := request.PostForm.Get("staffnote")
+				if checksum == "" {
+					err = errors.New("missing checksum field in filename ban creation")
+					errorEv.Err(err).Send()
+					return "", err
+				}
+				if err = gcsql.CreateFileBan(checksum, staff.Username, staffNote, board); err != nil {
+					errorEv.Err(err).
+						Str("checksum", checksum).
+						Str("board", board).
+						Str("staffnote", staffNote).Send()
+					return "", err
+				}
+				gcutil.LogInfo().
+					Str("action", "filebans").
+					Str("staff", staff.Username).
+					Str("newBanType", "checksum").Send()
+			case "":
+				// no POST data sent
+			default:
+				err = fmt.Errorf(`invalid bantype value %q, valid values are "filename" and "checksum"`, fileBanType)
+				errorEv.Err(err).Send()
+				return "", err
+			}
+
 			filenameBans, err := gcsql.GetFilenameBans("", false)
 			if err != nil {
 				return "", err
@@ -217,6 +312,7 @@ var actions = []Action{
 					"checksumBans": checksumBans,
 				}, nil
 			}
+
 			boardURIs, err := gcsql.GetBoardUris()
 			if err != nil {
 				return "", err
@@ -226,6 +322,7 @@ var actions = []Action{
 				"webroot":      config.GetSystemCriticalConfig().WebRoot,
 				"filenameBans": filenameBans,
 				"checksumBans": checksumBans,
+				"currentStaff": staff.Username,
 				"boardURIs":    boardURIs,
 			}, manageBansBuffer, "text/html"); err != nil {
 				gcutil.LogError(err).
@@ -269,6 +366,7 @@ var actions = []Action{
 				permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
 				duration, err := gcutil.ParseDurationString(durationForm)
 				if err != nil {
+					errorEv.Err(err).Send()
 					return "", err
 				}
 				expires := time.Now().Add(duration)
@@ -278,10 +376,11 @@ var actions = []Action{
 				staffNote := html.EscapeString(request.FormValue("staffnote"))
 
 				if filename != "" {
-					err = gcsql.CreateFileNameBan(filename, nameIsRegex, staff.Username, permaban, staffNote, boards)
+					err = gcsql.CreateFileNameBan(filename, nameIsRegex, staff.Username, staffNote, boards)
 				}
 				if err != nil {
 					outputStr += err.Error()
+					errorEv.Err(err).Send()
 					err = nil
 				}
 				if name != "" {
@@ -334,7 +433,7 @@ var actions = []Action{
 							Str("bannedFromBoards", boards).Send()
 					}
 					if request.FormValue("imageban") == "on" {
-						err = gcsql.CreateFileBan(checksum, staff.Username, permaban, staffNote, boards)
+						err = gcsql.CreateFileBan(checksum, staff.Username, staffNote, boards)
 						if err != nil {
 							errorEv.
 								Str("banType", "fileBan").

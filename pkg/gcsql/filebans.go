@@ -37,8 +37,8 @@ func GetFilenameBans(matchFilename string, exactMatch bool) ([]FilenameBan, erro
 
 // CreateFileNameBan creates a new ban on a filename. If boards is an empty string
 // or the resulting query = nil, the ban is global, whether or not allBoards is set
-func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban bool, staffNote, boardURI string) error {
-	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES board_id = ?, staff_id = ?, staff_note = ?, filename = ?, is_regex = ?`
+func CreateFileNameBan(fileName string, isRegex bool, staffName string, staffNote, boardURI string) error {
+	const sql = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES(?,?,?,?,?)`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
 		return err
@@ -48,6 +48,12 @@ func CreateFileNameBan(fileName string, isRegex bool, staffName string, permaban
 		boardID = getBoardIDFromURIOrNil(boardURI)
 	}
 	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileName, isRegex)
+	return err
+}
+
+// DeleteFilenameBanByID deletes the ban, given the id column value
+func DeleteFilenameBanByID(id int) error {
+	_, err := ExecSQL("DELETE FROM DBPREFIXfilename_ban WHERE id = ?", id)
 	return err
 }
 
@@ -81,14 +87,20 @@ func GetFileChecksumBans(matchChecksum string) ([]FileBan, error) {
 }
 
 // CreateFileBan creates a new ban on a file. If boards = nil, the ban is global.
-func CreateFileBan(fileChecksum, staffName string, permaban bool, staffNote, boardURI string) error {
-	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES board_id = ?, staff_id = ?, staff_note = ?, checksum = ?`
+func CreateFileBan(fileChecksum, staffName string, staffNote, boardURI string) error {
+	const sql = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES(?,?,?,?)`
 	staffID, err := getStaffID(staffName)
 	if err != nil {
 		return err
 	}
 	boardID := getBoardIDFromURIOrNil(boardURI)
 	_, err = ExecSQL(sql, boardID, staffID, staffNote, fileChecksum)
+	return err
+}
+
+// DeleteFileBanByID deletes the ban, given the id column value
+func DeleteFileBanByID(id int) error {
+	_, err := ExecSQL("DELETE FROM DBPREFIXfile_ban WHERE id = ?", id)
 	return err
 }
 
