@@ -6,7 +6,7 @@ import { isPostVisible, setPostVisibility, setThreadVisibility } from "./posthid
 import { currentBoard } from "../postinfo";
 import { getCookie } from "../cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
-import { getPostInfo } from "../management/manage";
+import { banFile, getPostInfo } from "../management/manage";
 
 const idRe = /^((reply)|(op))(\d+)/;
 
@@ -150,6 +150,21 @@ function handleActions(action, postIDStr) {
 				alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
 			});
 			break;
+		case "Ban filename":
+		case "Ban file checksum": {
+			let banType = (action == "Ban filename")?"filename":"checksum";
+			getPostInfo(postID).then(info =>
+				banFile(banType, info.post.filename, info.post.md5, `Added from post dropdown for post /${board}/${postID}`)
+			).then(result => {
+				if(result.error !== undefined && result.error != "") {
+					alertLightbox(`Failed applying ${banType} ban: ${result.error}`, "Error");
+				} else {
+					alertLightbox(`Successfully applied ${banType} ban`, "Success");
+				}
+			}).catch(reason => {
+				alertLightbox(`Failed getting post info: ${reason.statusText}`, "Error");
+			});
+		}
 	}
 }
 

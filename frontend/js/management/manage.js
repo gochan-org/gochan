@@ -51,13 +51,49 @@ function dropdownHasItem(dropdown, item) {
 
 function setupManagementEvents() {
 	$("select.post-actions").each((_i, el) => {
+		let $el = $(el);
+		if(!dropdownHasItem(el, "Staff Actions")) {
+			$el.append(`<option disabled="disabled">Staff Actions</option>`);
+		}
 		if(!dropdownHasItem(el, "Posts from this IP")) {
-			$(el).append("<option>Posts from this IP</option>");
+			$el.append("<option>Posts from this IP</option>");
+		}
+		let $post = $(el.parentElement);
+		let filenameOrig = $post.find("div.file-info a.file-orig").text();
+		if(filenameOrig != "" && !dropdownHasItem(el, "Ban filename")) {
+			$el.append(
+				"<option>Ban filename</option>",
+				"<option>Ban file checksum</option>"
+			);
 		}
 	});
 	$(document).on("postDropdownAdded", function(_e, data) {
 		if(!data.dropdown) return;
 		data.dropdown.append("<option>Posts from this IP</option>");
+	});
+}
+
+export function banFile(banType, filename, checksum, staffNote = "") {
+	let xhrFields = {
+		bantype: banType,
+		board: "",
+		staffnote: staffNote,
+		json: 1
+	};
+	switch(banType) {
+		case "filename":
+			xhrFields.filename = filename;
+			break;
+		case "checksum":
+			xhrFields.checksum = checksum;
+			break;
+		default:
+			break;
+	}
+	return $.ajax({
+		method: "POST",
+		url: `${webroot}manage?action=filebans`,
+		data: xhrFields
 	});
 }
 
