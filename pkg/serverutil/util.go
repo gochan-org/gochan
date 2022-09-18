@@ -58,10 +58,7 @@ func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 	} else {
 		MinifyWriter(writer, errorPage, "text/html")
 	}
-	gcutil.Logger().Info().
-		Str("access", request.URL.Path).
-		Int("status", 404).
-		Str("IP", gcutil.GetRealIP(request)).Send()
+	gcutil.LogAccess(request).Int("status", 404).Msg("requested page or resource not found")
 }
 
 // DeleteCookie deletes the given cookie if it exists. It returns true if it exists and false

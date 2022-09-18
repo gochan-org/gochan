@@ -26,24 +26,24 @@ func createLuaLogFunc(which string) lua.LGFunction {
 			args = append(args, l.Get(v))
 		}
 		switch which {
-		case "access":
+		case "info":
 			gcutil.LogInfo().
-				Interface("pluginAccess", args)
+				Interface("pluginInfo", args)
+		case "warn":
+			gcutil.LogWarning().
+				Interface("pluginWarning", args)
 		case "error":
 			gcutil.LogError(nil).
 				Interface("pluginError", args)
-		case "staff":
-			gcutil.LogInfo().
-				Interface("pluginStaff", args)
 		}
 		return 0
 	}
 }
 
 func registerLuaFunctions() {
-	lState.Register("access_log", createLuaLogFunc("access"))
+	lState.Register("info_log", createLuaLogFunc("info"))
+	lState.Register("warn_log", createLuaLogFunc("warn"))
 	lState.Register("error_log", createLuaLogFunc("error"))
-	lState.Register("staff_log", createLuaLogFunc("staff"))
 	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GetVersion().String()))
 }
 

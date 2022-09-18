@@ -1,14 +1,17 @@
 package gcutil
 
 import (
+	"net/http"
 	"os"
 
 	"github.com/rs/zerolog"
 )
 
 var (
-	logFile *os.File
-	logger  zerolog.Logger
+	logFile      *os.File
+	accessFile   *os.File
+	logger       zerolog.Logger
+	accessLogger zerolog.Logger
 )
 
 type logHook struct{}
@@ -24,11 +27,24 @@ func InitLog(logPath string) (err error) {
 		// log file already initialized, skip
 		return nil
 	}
-	logFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
 	if err != nil {
 		return err
 	}
 	logger = zerolog.New(logFile).Hook(&logHook{})
+	return nil
+}
+
+func InitAccessLog(logPath string) (err error) {
+	if accessFile != nil {
+		// access log already initialized, skip
+		return nil
+	}
+	accessFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	if err != nil {
+		return err
+	}
+	accessLogger = zerolog.New(accessFile).Hook(&logHook{})
 	return nil
 }
 
@@ -42,6 +58,16 @@ func LogInfo() *zerolog.Event {
 
 func LogWarning() *zerolog.Event {
 	return logger.Warn()
+}
+
+func LogAccess(request *http.Request) *zerolog.Event {
+	ev := accessLogger.Info()
+	if request != nil {
+		return ev.
+			Str("access", request.URL.Path).
+			Str("IP", GetRealIP(request))
+	}
+	return ev
 }
 
 func LogError(err error) *zerolog.Event {

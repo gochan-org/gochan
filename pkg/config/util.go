@@ -268,6 +268,10 @@ func InitConfig(versionStr string) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	if err = gcutil.InitAccessLog(path.Join(cfg.LogDir, "gochan_access.log")); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 
 	if cfg.Port == 0 {
 		cfg.Port = 80

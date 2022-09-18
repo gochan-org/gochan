@@ -64,10 +64,7 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 
 	// serve the requested file
 	fileBytes, _ = os.ReadFile(filePath)
-	gcutil.Logger().Info().
-		Str("access", request.URL.Path).
-		Int("status", 200).
-		Str("IP", gcutil.GetRealIP(request)).Send()
+	gcutil.LogAccess(request).Int("status", 200).Send()
 	writer.Write(fileBytes)
 }
 
@@ -187,14 +184,12 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
-		gcutil.Logger().Info().
-			Str("access", request.URL.Path).
-			Str("IP", gcutil.GetRealIP(request)).
-			Msg("Received invalid /util request")
+		gcutil.LogAccess(request).Int("status", 400).Msg("received invalid /util request")
 		if wantsJSON {
+			writer.WriteHeader(400)
 			serverutil.ServeJSON(writer, map[string]interface{}{"error": "Invalid /util request"})
 		} else {
-			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusFound)
+			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusBadRequest)
 		}
 		return
 	}
