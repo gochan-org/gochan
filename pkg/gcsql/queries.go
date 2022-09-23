@@ -16,9 +16,11 @@ import (
 const GochanVersionKeyConstant = "gochan"
 
 var (
-	ErrNilBoard          = errors.New("board is nil")
-	ErrBoardExists       = errors.New("board already exists")
-	ErrBoardDoesNotExist = errors.New("board does not exist")
+	ErrNilBoard           = errors.New("board is nil")
+	ErrBoardExists        = errors.New("board already exists")
+	ErrBoardDoesNotExist  = errors.New("board does not exist")
+	ErrThreadExists       = errors.New("thread already exists")
+	ErrThreadDoesNotExist = errors.New("thread does not exist")
 )
 
 // GetAllNondeletedMessageRaw gets all the raw message texts from the database, saved per id
@@ -177,6 +179,35 @@ func OptimizeDatabase() error {
 		}
 	}
 	return nil
+}
+
+// ChangeThreadBoardID updates the given thread's post ID and the destination board ID
+func ChangeThreadBoardID(postID int, newBoardID int) error {
+	if !DoesBoardExistByID(newBoardID) {
+		return ErrBoardDoesNotExist
+	}
+	var threadRowID int
+	err := QueryRowSQL(`SELECT thread_id FROM DBPREFIXposts WHERE id = ?`,
+		interfaceSlice(postID),
+		interfaceSlice(&threadRowID))
+	if err != nil {
+		return err
+	}
+	if threadRowID < 1 {
+		return ErrThreadDoesNotExist
+	}
+	_, err = ExecSQL(`UPDATE DBPREFIXthreads SET board_id = ? WHERE id = ?`, newBoardID, threadRowID)
+	return err
+}
+
+// ChangeThreadBoardByURI updates a thread's board ID, given the thread's post ID and
+// the destination board's uri
+func ChangeThreadBoardByURI(postID int, uri string) error {
+	boardID, err := getBoardIDFromURI(uri)
+	if err != nil {
+		return err
+	}
+	return ChangeThreadBoardID(postID, boardID)
 }
 
 func getBoardIDFromURIOrNil(URI string) *int {
@@ -364,16 +395,14 @@ func GetEmbedsAllowed(boardID int) (allowed bool, err error) {
 
 // AddBanAppeal adds a given appeal to a given ban
 func AddBanAppeal(banID uint, message string) error {
+	// copy old to audit
 	const sql1 = `
-	/*copy old to audit*/
 	INSERT INTO DBPREFIXip_ban_appeals_audit (appeal_id, staff_id, appeal_text, staff_response, is_denied)
 	SELECT id, staff_id, appeal_text, staff_response, is_denied
 	FROM DBPREFIXip_ban_appeals
 	WHERE DBPREFIXip_ban_appeals.ip_ban_id = ?`
-	const sql2 = `
-	/*update old values to new values*/
-	UPDATE DBPREFIXip_ban_appeals SET appeal_text = ? WHERE ip_ban_id = ?
-	`
+	// update old values to new values
+	const sql2 = `UPDATE DBPREFIXip_ban_appeals SET appeal_text = ? WHERE ip_ban_id = ?`
 	_, err := ExecSQL(sql1, banID)
 	if err != nil {
 		return err

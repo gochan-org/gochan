@@ -30,6 +30,7 @@ var (
 	ManageLogin       *template.Template
 	ManageReports     *template.Template
 	ManageStaff       *template.Template
+	MoveThreadPage    *template.Template
 	PageHeader        *template.Template
 	PageFooter        *template.Template
 	PostEdit          *template.Template
@@ -199,6 +200,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageStaff, err = loadTemplate("manage_staff.html")
 		if err != nil {
 			return templateError("manage_staff.html", err)
+		}
+	}
+	if buildAll || t == "movethreadpage" {
+		MoveThreadPage, err = loadTemplate("movethreadpage.html", "page_header.html", "page_footer.html")
+		if err != nil {
+			return templateError("movethreadpage.html", err)
 		}
 	}
 	if buildAll || t == "pageheader" {

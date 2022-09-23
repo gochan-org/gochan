@@ -10,7 +10,7 @@
 	<a href="#footer">Scroll to bottom</a>
 </div>
 {{- template "postbox.html" . -}}<hr />
-<form action="/util" method="POST" id="main-form">
+<form action="{{.webroot}}util" method="POST" id="main-form">
 {{$global := .}}
 {{- range $t, $thread := .threads}}{{$op := $thread.OP}}
 	<div class="thread">
@@ -28,8 +28,9 @@
 			<input type="hidden" name="board" value="{{.board.Dir}}" />
 			<input type="hidden" name="boardid" value="{{.board.ID}}" />
 			<label>[<input type="checkbox" name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /> <input type="submit" name="delete_btn" value="Delete" onclick="return confirm('Are you sure you want to delete these posts?')" /><br />
-			Reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" name="report_btn" value="Report" /><br />
-			Edit post <input type="submit" name="edit_btn" value="Edit" />
+			Report reason: <input type="text" size="10" name="reason" id="reason" /> <input type="submit" name="report_btn" value="Report" /><br />
+			<input type="submit" name="edit_btn" value="Edit post" />&nbsp;
+			<input type="submit" name="move_btn" value="Move thread" />
 		</div>
 	</div>
 </form>

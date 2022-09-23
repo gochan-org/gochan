@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,10 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
 	"github.com/gochan-org/gochan/pkg/posting"
@@ -149,7 +145,7 @@ func initServer() {
 			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
 		}
 	}
-	// Eventually plugins will be able to register new namespaces or they will be restricted to something
+	// Eventually plugins might be able to register new namespaces or they might be restricted to something
 	// like /plugin
 
 	if systemCritical.UseFastCGI {
@@ -169,24 +165,22 @@ func initServer() {
 // handles requests to /util
 func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	action := request.FormValue("action")
-	password := request.FormValue("password")
 	board := request.FormValue("board")
-	boardid := request.FormValue("boardid")
-	fileOnly := request.FormValue("fileonly") == "on"
 	deleteBtn := request.PostFormValue("delete_btn")
 	reportBtn := request.PostFormValue("report_btn")
 	editBtn := request.PostFormValue("edit_btn")
 	doEdit := request.PostFormValue("doedit")
+	moveBtn := request.PostFormValue("move_btn")
+	doMove := request.PostFormValue("domove")
 	systemCritical := config.GetSystemCriticalConfig()
-	wantsJSON := request.PostFormValue("json") == "1"
+	wantsJSON := serverutil.IsRequestingJSON(request)
 	if wantsJSON {
 		writer.Header().Set("Content-Type", "application/json")
 	}
-
-	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit" && doEdit != "1" {
+	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit post" && doEdit != "1" && moveBtn != "Move thread" && doMove != "1" {
 		gcutil.LogAccess(request).Int("status", 400).Msg("received invalid /util request")
 		if wantsJSON {
-			writer.WriteHeader(400)
+			writer.WriteHeader(http.StatusBadRequest)
 			serverutil.ServeJSON(writer, map[string]interface{}{"error": "Invalid /util request"})
 		} else {
 			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusBadRequest)
@@ -234,265 +228,18 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if editBtn == "Edit" {
-		var err error
-		if len(checkedPosts) == 0 {
-			serverutil.ServeErrorPage(writer, "You need to select one post to edit.")
-			return
-		} else if len(checkedPosts) > 1 {
-			serverutil.ServeErrorPage(writer, "You can only edit one post at a time.")
-			return
-		} else {
-			rank := manage.GetStaffRank(request)
-			if password == "" && rank == 0 {
-				serverutil.ServeErrorPage(writer, "Password required for post editing")
-				return
-			}
-			passwordMD5 := gcutil.Md5Sum(password)
-
-			var post gcsql.Post
-			post, err = gcsql.GetSpecificPost(checkedPosts[0], true)
-			if err != nil {
-				gcutil.Logger().Error().
-					Err(err).
-					Msg("Error getting post information")
-				return
-			}
-
-			if post.Password != passwordMD5 && rank == 0 {
-				serverutil.ServeErrorPage(writer, "Wrong password")
-				return
-			}
-
-			if err = gctemplates.PostEdit.Execute(writer, map[string]interface{}{
-				"systemCritical": config.GetSystemCriticalConfig(),
-				"siteConfig":     config.GetSiteConfig(),
-				"boardConfig":    config.GetBoardConfig(""),
-				"post":           post,
-				"referrer":       request.Referer(),
-			}); err != nil {
-				gcutil.Logger().Error().
-					Err(err).
-					Str("IP", gcutil.GetRealIP(request)).
-					Msg("Error executing edit post template")
-
-				serverutil.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
-				return
-			}
-		}
+	if editBtn != "" || doEdit == "1" {
+		editPost(checkedPosts, editBtn, doEdit, writer, request)
+		return
 	}
-	if doEdit == "1" {
-		var password string
-		postid, err := strconv.Atoi(request.FormValue("postid"))
-		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Invalid form data")
-			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
-			return
-		}
-		boardid, err := strconv.Atoi(request.FormValue("boardid"))
-		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Invalid form data")
-			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
-			return
-		}
-		password, err = gcsql.GetPostPassword(postid)
-		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Invalid form data")
-			return
-		}
 
-		rank := manage.GetStaffRank(request)
-		if request.FormValue("password") != password && rank == 0 {
-			serverutil.ServeErrorPage(writer, "Wrong password")
-			return
-		}
-
-		var board gcsql.Board
-		if err = board.PopulateData(boardid); err != nil {
-			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Invalid form data")
-			return
-		}
-
-		if err = gcsql.UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
-			posting.FormatMessage(request.FormValue("editmsg"), board.Dir), request.FormValue("editmsg")); err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Unable to edit post")
-			serverutil.ServeErrorPage(writer, "Unable to edit post: "+err.Error())
-			return
-		}
-
-		building.BuildBoards(false, boardid)
-		building.BuildFrontPage()
-		if request.FormValue("parentid") == "0" {
-			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
-		} else {
-			http.Redirect(writer, request, "/"+board.Dir+"/res/"+request.FormValue("parentid")+".html#"+strconv.Itoa(postid), http.StatusFound)
-		}
+	if moveBtn != "" || doMove == "1" {
+		moveThread(checkedPosts, moveBtn, doMove, writer, request)
 		return
 	}
 
 	if deleteBtn == "Delete" {
-		// Delete a post or thread
-		writer.Header().Add("Content-Type", "text/plain")
-		passwordMD5 := gcutil.Md5Sum(password)
-		rank := manage.GetStaffRank(request)
-
-		if password == "" && rank == 0 {
-			serverutil.ServeErrorPage(writer, "Password required for post deletion")
-			return
-		}
-
-		for _, checkedPostID := range checkedPosts {
-			var post gcsql.Post
-			var err error
-			post.ID = checkedPostID
-			post.BoardID, err = strconv.Atoi(boardid)
-			if err != nil {
-				gcutil.Logger().Error().
-					Err(err).
-					Str("requestType", "deletePost").
-					Str("IP", gcutil.GetRealIP(request)).
-					Str("boardid", boardid).
-					Int("postid", checkedPostID).Send()
-
-				serverutil.ServeError(writer,
-					fmt.Sprintf("Invalid boardid '%s' in post deletion request (got error '%s')", boardid, err),
-					wantsJSON, map[string]interface{}{
-						"boardid": boardid,
-						"postid":  checkedPostID,
-					})
-				return
-			}
-
-			post, err = gcsql.GetSpecificPost(post.ID, true)
-			if err == sql.ErrNoRows {
-				serverutil.ServeError(writer, "Post does not exist", wantsJSON, map[string]interface{}{
-					"postid":  post.ID,
-					"boardid": post.BoardID,
-				})
-			} else if err != nil {
-				gcutil.Logger().Error().
-					Str("requestType", "deletePost").
-					Err(err).
-					Int("postid", post.ID).
-					Int("boardid", post.BoardID).
-					Msg("Error deleting post")
-				serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
-					"postid":  post.ID,
-					"boardid": post.BoardID,
-				})
-			}
-
-			if passwordMD5 != post.Password && rank == 0 {
-				serverutil.ServeError(writer, fmt.Sprintf("Incorrect password for #%d", post.ID), wantsJSON, map[string]interface{}{
-					"postid":  post.ID,
-					"boardid": post.BoardID,
-				})
-				return
-			}
-
-			if fileOnly {
-				fileName := post.Filename
-				if fileName != "" && fileName != "deleted" {
-					var files []string
-					if files, err = post.GetFilePaths(); err != nil {
-						gcutil.Logger().Error().
-							Str("requestType", "deleteFile").
-							Int("postid", post.ID).
-							Err(err).
-							Msg("Error getting file upload info")
-						serverutil.ServeError(writer, "Error getting file upload info: "+err.Error(), wantsJSON, map[string]interface{}{
-							"postid": post.ID,
-						})
-						return
-					}
-
-					if err = post.UnlinkUploads(true); err != nil {
-						gcutil.Logger().Error().
-							Str("requestType", "deleteFile").
-							Int("postid", post.ID).
-							Err(err).
-							Msg("Error unlinking post uploads")
-						serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
-							"postid": post.ID,
-						})
-						return
-					}
-
-					for _, filePath := range files {
-						if err = os.Remove(filePath); err != nil {
-							fileBase := path.Base(filePath)
-							gcutil.Logger().Error().
-								Str("requestType", "deleteFile").
-								Int("postid", post.ID).
-								Str("file", filePath).
-								Err(err).
-								Msg("Error unlinking post uploads")
-							serverutil.ServeError(writer, fmt.Sprintf("Error deleting %s: %s", fileBase, err.Error()), wantsJSON, map[string]interface{}{
-								"postid": post.ID,
-								"file":   fileBase,
-							})
-							return
-						}
-					}
-				}
-				_board, _ := gcsql.GetBoardFromID(post.BoardID)
-				building.BuildBoardPages(&_board)
-
-				var opPost gcsql.Post
-				if post.ParentID > 0 {
-					// post is a reply, get the OP
-					opPost, _ = gcsql.GetSpecificPost(post.ParentID, true)
-				} else {
-					opPost = post
-				}
-				building.BuildThreadPages(&opPost)
-			} else {
-				// delete the post
-				if err = gcsql.DeletePost(post.ID, true); err != nil {
-					gcutil.Logger().Error().
-						Str("requestType", "deleteFile").
-						Int("postid", post.ID).
-						Err(err).
-						Msg("Error deleting post")
-					serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
-						"postid": post.ID,
-					})
-				}
-				if post.ParentID == 0 {
-					threadIndexPath := path.Join(systemCritical.DocumentRoot, board, "/res/", strconv.Itoa(post.ID))
-					os.Remove(threadIndexPath + ".html")
-					os.Remove(threadIndexPath + ".json")
-				} else {
-					_board, _ := gcsql.GetBoardFromID(post.BoardID)
-					building.BuildBoardPages(&_board)
-				}
-				building.BuildBoards(false, post.BoardID)
-			}
-			gcutil.Logger().Info().
-				Str("requestType", "deletePost").
-				Str("IP", post.IP).
-				Int("boardid", post.BoardID).
-				Bool("fileOnly", fileOnly).
-				Msg("Post deleted")
-			if !wantsJSON {
-				http.Redirect(writer, request, request.Referer(), http.StatusFound)
-			}
-		}
+		deletePosts(checkedPosts, writer, request)
+		return
 	}
 }
