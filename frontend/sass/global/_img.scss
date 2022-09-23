@@ -144,10 +144,15 @@ a.upload-container {
 	outline: none;
 }
 
+.upload {
+	margin: 5px 10px 10px 0px;
+}
+div.file-deleted-box {
+	margin: auto;
+}
 .upload, div.file-deleted-box {
 	float:left;
 	max-width: 100%;
-	margin: 5px 10px 10px 0px;
 }
 
 div.file-deleted-box {
