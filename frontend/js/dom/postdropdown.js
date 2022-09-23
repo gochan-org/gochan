@@ -19,7 +19,16 @@ function editPost(id, _board) {
 	}, "Edit post");
 }
 
-export function reportPost(id, board) {
+function moveThread(id, _board) {
+	let cookiePass = getCookie("password");
+	promptLightbox(cookiePass, true, () => {
+		$("input[type=checkbox]").prop("checked", false);
+		$(`input#check${id}`).prop("checked", true);
+		$("input[name=move_btn]").trigger("click");
+	}, "Move thread");
+}
+
+function reportPost(id, board) {
 	promptLightbox("", false, ($lb, reason) => {
 		if(reason == "" || reason === null) return;
 		let xhrFields = {
@@ -123,6 +132,9 @@ function handleActions(action, postIDStr) {
 		case "Hide thread":
 			setThreadVisibility(postID, false);
 			break;
+		case "Move thread":
+			moveThread(postID, board);
+			break;
 		case "Show post":
 			setPostVisibility(postID, true);
 			break;
@@ -187,6 +199,7 @@ export function addPostDropdown($post) {
 		} else {
 			$ddownMenu.append("<option>Watch thread</option>");
 		}
+		$ddownMenu.append("<option>Move thread</option>");
 	}
 	let showHide = isPostVisible(idNum)?"Hide":"Show";
 	$ddownMenu.append(
