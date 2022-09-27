@@ -17,3 +17,4 @@ node_modules
 /frontend/coverage
 /frontend/tests/coverage
 .parcel-cache
+__pycache__
