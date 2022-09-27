@@ -5,12 +5,8 @@
 # by the server
 
 import argparse
-from lib2to3.pgen2 import driver
 from os import path
-import os
-from pickletools import optimize
 import re
-import sys
 import unittest
 from urllib.parse import urljoin
 from selenium import webdriver
@@ -26,8 +22,8 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from util.localstorage import LocalStorage
-from util.qr import openQR,closeQR,qrIsVisible
+from .util.localstorage import LocalStorage
+from .util.qr import openQR,closeQR,qrIsVisible
 
 testingSite = "http://192.168.56.3"
 testingName = "Selenium"
@@ -39,7 +35,6 @@ testingPassword = "12345"
 testingBoard = "test"
 
 threadRE = re.compile('.*/(\S+)/(\d+)(\+50)?.html')
-parser = argparse.ArgumentParser(description="Browser testing via Selenium")
 browser = ""
 headless = False
 keepOpen = False
@@ -143,10 +138,11 @@ class TestRunner(unittest.TestCase):
 			self.driver.close()
 		return super().tearDown()
 
-def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, site=testingSite, board=testingBoard):
+def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, site=testingSite, board=testingBoard, upload=testingUploadPath):
 	global browser
 	global testingSite
 	global testingBoard
+	global testingUploadPath
 	global headless
 	global keepOpen
 	browser = testBrowser
@@ -156,20 +152,25 @@ def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, s
 		keepOpen = False
 	testingSite = site
 	testingBoard = board
+	testingUploadPath = upload
 
 	print("Using browser %s (headless: %s) on site %s" % (browser, headless, testingSite))
 	suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestRunner)
 	unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
 
-
-if __name__ == "__main__":
+def parseArgs(parser:argparse.ArgumentParser):
 	testable_browsers = ("firefox","chrome","chromium")
+
 	parser.add_argument("--browser", choices=testable_browsers, required=True)
 	parser.add_argument("--site", default=testingSite, help=("Sets the site to be used for testing, defaults to %s" % testingSite))
 	parser.add_argument("--board", default=testingBoard, help="Sets the board to be used for testing")
 	parser.add_argument("--headless", action="store_true", help="If set, the driver will run without opening windows (overrides --keepopen if it is set)")
 	parser.add_argument("--keepopen", action="store_true", help="If set, the browser windows will stay open after the tests are complete")
-	args = parser.parse_args()
+	return parser.parse_args()
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description="Browser testing via Selenium")
+	args = parseArgs(parser)
 	try:
 		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board)
 	except KeyboardInterrupt:

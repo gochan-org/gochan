@@ -457,7 +457,7 @@ if __name__ == "__main__":
 		set_vars()
 
 	valid_actions = (
-		"build", "clean", "dependencies", "docker", "install", "js", "release", "sass", "test"
+		"build", "clean", "dependencies", "docker", "install", "js", "release", "sass", "test", "selenium"
 	)
 	parser = argparse.ArgumentParser(description="gochan build script")
 	parser.add_argument("action", nargs=1, default="build", choices=valid_actions)
@@ -549,6 +549,10 @@ if __name__ == "__main__":
 
 		args = parser.parse_args()
 		sass(args.minify, args.watch)
+	elif action == "selenium":
+		from devtools.selenium_testing.runtests import parseArgs,startBrowserTests
+		args = parseArgs(parser)
+		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/banned.png")
 	elif action == "test":
 		parser.add_argument("--verbose","-v",
 			action="store_true",
