@@ -552,7 +552,7 @@ if __name__ == "__main__":
 	elif action == "selenium":
 		from devtools.selenium_testing.runtests import parseArgs,startBrowserTests
 		args = parseArgs(parser)
-		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/banned.png")
+		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/notbanned.png", args.singletest)
 	elif action == "test":
 		parser.add_argument("--verbose","-v",
 			action="store_true",

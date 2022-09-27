@@ -30,7 +30,7 @@ testingName = "Selenium"
 testingEmail = "selenium@gochan.org#noko"
 testingMessage = "Hello, from Selenium!\n(driver is %s)"
 testingSubject = "Selenium post creation"
-testingUploadPath = "../../html/banned.png"
+testingUploadPath = "../../html/notbanned.png"
 testingPassword = "12345"
 testingBoard = "test"
 
@@ -131,14 +131,12 @@ class TestRunner(unittest.TestCase):
 			EC.url_changes(cur_url))
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the post we just made")
 
-
-
 	def tearDown(self):
 		if not keepOpen:
 			self.driver.close()
 		return super().tearDown()
 
-def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, site=testingSite, board=testingBoard, upload=testingUploadPath):
+def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, site=testingSite, board=testingBoard, upload=testingUploadPath, singleTest = ""):
 	global browser
 	global testingSite
 	global testingBoard
@@ -155,8 +153,13 @@ def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, s
 	testingUploadPath = upload
 
 	print("Using browser %s (headless: %s) on site %s" % (browser, headless, testingSite))
-	suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestRunner)
+	suite:unittest.TestSuite = None
+	if singleTest == "":
+		suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestRunner)
+	else:
+		suite = unittest.defaultTestLoader.loadTestsFromName(singleTest,TestRunner)
 	unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
+
 
 def parseArgs(parser:argparse.ArgumentParser):
 	testable_browsers = ("firefox","chrome","chromium")
@@ -165,7 +168,8 @@ def parseArgs(parser:argparse.ArgumentParser):
 	parser.add_argument("--site", default=testingSite, help=("Sets the site to be used for testing, defaults to %s" % testingSite))
 	parser.add_argument("--board", default=testingBoard, help="Sets the board to be used for testing")
 	parser.add_argument("--headless", action="store_true", help="If set, the driver will run without opening windows (overrides --keepopen if it is set)")
-	parser.add_argument("--keepopen", action="store_true", help="If set, the browser windows will stay open after the tests are complete")
+	parser.add_argument("--keepopen", action="store_true", help="If set, the browser windows will not automatically close after the tests are complete")
+	parser.add_argument("--singletest", default="", help="If specified, only the test method with this name will be run")
 	return parser.parse_args()
 
 if __name__ == "__main__":
