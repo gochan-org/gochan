@@ -18,7 +18,7 @@ import (
 )
 
 func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.ResponseWriter, request *http.Request) {
-	password := request.FormValue("password")
+	password := request.FormValue("postpassword")
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if moveBtn == "Move thread" {
 		// user clicked on move thread button on board or thread page
@@ -67,6 +67,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			"postid":     post.ID,
 			"webroot":    config.GetSystemCriticalConfig().WebRoot,
 			"destBoards": destBoards,
+			"page_title": fmt.Sprintf("Move thread #%d", post.ID),
 			"srcBoard":   srcBoard,
 		}, writer, "text/html"); err != nil {
 			gcutil.LogError(err).
@@ -80,7 +81,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		rank := manage.GetStaffRank(request)
 		if password == "" && rank == 0 {
 			writer.WriteHeader(http.StatusBadRequest)
-			serverutil.ServeError(writer, "Password required for post editing", wantsJSON, nil)
+			serverutil.ServeError(writer, "Password required for post moving", wantsJSON, nil)
 			return
 		}
 		postIDstr := request.PostForm.Get("postid")

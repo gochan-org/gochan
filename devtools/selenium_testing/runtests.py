@@ -48,14 +48,35 @@ def loginToStaff(driver: WebDriver, username = "admin", pw = "password"):
 	driver.find_element(by=By.NAME, value="password").send_keys(pw)
 	driver.find_element(by=By.CSS_SELECTOR, value="input[value=Login]").click()
 
-def sendPost(postForm:WebElement, name="", email="", subject="", message="", file=""):
+def sendPost(postForm:WebElement, name="", email="", subject="", message="", file="", password=""):
 	postForm.find_element(by=By.NAME, value="postname").send_keys(name)
 	postForm.find_element(by=By.NAME, value="postemail").send_keys(email)
 	postForm.find_element(by=By.NAME, value="postsubject").send_keys(subject)
 	postForm.find_element(by=By.NAME, value="postmsg").send_keys(message)
 	if file != "":
 		postForm.find_element(by=By.NAME, value="imagefile").send_keys(file)
+	if password != "":
+		passwordInput = postForm.find_element(by=By.CSS_SELECTOR, value="input#postpassword")
+		passwordInput.clear()
+		passwordInput.send_keys(password)
 	postForm.find_element(by=By.CSS_SELECTOR, value="input[type=submit]").click()
+
+def deletePost(driver:WebDriver, postID:int, password:str):
+	driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%postID)).click()
+	if password != "":
+		delPasswordInput = driver.find_element(by=By.CSS_SELECTOR, value="input#delete-password")
+		delPasswordInput.clear()
+		delPasswordInput.send_keys(password)
+	driver.find_element(by=By.CSS_SELECTOR, value="input[name=delete_btn]").click()
+	driver.switch_to.alert.accept()
+
+def expectInputIsEmpty(input):
+	def _predicate(driver:WebDriver):
+		target = driver.find_element(*input)
+		return target.get_property("value") == ""
+
+	return _predicate
+
 
 class TestRunner(unittest.TestCase):
 	def setUp(self):
@@ -114,22 +135,56 @@ class TestRunner(unittest.TestCase):
 			testingEmail,
 			testingSubject,
 			testingMessage % self.driver.name,
-			path.abspath(testingUploadPath))
+			path.abspath(testingUploadPath),
+			testingPassword)
 		WebDriverWait(self.driver, 10).until(
 			EC.url_matches(threadRE))
 		threadID = threadRE.findall(self.driver.current_url)[0][1]
-		self.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%threadID)).click()
-		delPasswordInput = self.driver.find_element(by=By.CSS_SELECTOR, value="input#delete-password")
-		val = delPasswordInput.get_attribute("value")
-		if val == "" or val is None:
-			val = testingPassword
-			delPasswordInput.send_keys(testingPassword)
 		cur_url = self.driver.current_url
-		self.driver.find_element(by=By.CSS_SELECTOR, value="input[name=delete_btn]").click()
-		self.driver.switch_to.alert.accept()
+		deletePost(self.driver, int(threadID), "")
 		WebDriverWait(self.driver, 10).until(
 			EC.url_changes(cur_url))
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the post we just made")
+
+	def test_moveThread(self):
+		gotoPage(self.driver, testingBoard)
+		WebDriverWait(self.driver, 10).until(
+			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
+
+		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+		sendPost(form,
+			testingName,
+			testingEmail,
+			testingSubject,
+			testingMessage % self.driver.name,
+			path.abspath(testingUploadPath),
+			testingPassword)
+		WebDriverWait(self.driver, 10).until(
+			EC.url_matches(threadRE))
+
+		cur_url = self.driver.current_url
+		threadID = threadRE.findall(cur_url)[0][1]
+		self.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%threadID)).click()
+		cur_url = self.driver.current_url
+		self.driver.find_element(by=By.CSS_SELECTOR, value="input[name=move_btn]").click()
+		# wait for response to move_btn
+		WebDriverWait(self.driver, 10).until(
+			EC.title_contains("Move thread #%s" % threadID))
+
+		self.driver.find_element(by=By.CSS_SELECTOR, value="input[type=submit]").click()
+		# wait for response to move request (domove=1)
+		WebDriverWait(self.driver, 10).until(
+			EC.url_matches(threadRE))
+		
+		self.assertEqual(
+			self.driver.find_element(by=By.CSS_SELECTOR, value="h1#board-title").text,
+			"/test2/ - Testing board #2",
+			"Verify that we properly moved the thread to /test2/")
+
+		deletePost(self.driver, int(threadID), "")
+		WebDriverWait(self.driver, 10).until(
+			EC.url_changes(cur_url))
+		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the moved thread")
 
 	def tearDown(self):
 		if not keepOpen:
