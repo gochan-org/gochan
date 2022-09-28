@@ -59,10 +59,11 @@ func BuildThreadPages(op *gcsql.Post) error {
 		gcutil.LogError(err).
 			Str("building", "thread").
 			Int("threadid", op.ID).Send()
-		return fmt.Errorf("Error building thread %d: %s", op.ID, err.Error())
+		return fmt.Errorf("failed building thread %d: %s", op.ID, err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
+	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"))
 
 	threadPageFilepath := path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
 	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
@@ -71,7 +72,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 			Str("building", "thread").
 			Str("boardDir", board.Dir).
 			Int("threadid", op.ID).Send()
-		return fmt.Errorf("Failed opening /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("unable to open opening /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
 
 	// render thread page
@@ -89,7 +90,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 			Str("boardDir", board.Dir).
 			Int("threadid", op.ID).
 			Msg("Failed building threadpage")
-		return fmt.Errorf("Failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error())
 	}
 
 	// Put together the thread JSON
@@ -98,7 +99,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		gcutil.LogError(err).
 			Str("boardDir", board.Dir).
 			Int("threadid", op.ID).Send()
-		return fmt.Errorf("Failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
 	}
 	defer threadJSONFile.Close()
 
@@ -112,14 +113,14 @@ func BuildThreadPages(op *gcsql.Post) error {
 	threadJSON, err := json.Marshal(threadMap)
 	if err != nil {
 		gcutil.LogError(err).Send()
-		return fmt.Errorf("Failed to marshal to JSON: %s", err.Error())
+		return fmt.Errorf("failed to marshal to JSON: %s", err.Error())
 	}
 	if _, err = threadJSONFile.Write(threadJSON); err != nil {
 		gcutil.LogError(err).
 			Str("boardDir", board.Dir).
 			Int("threadid", op.ID).Send()
 
-		return fmt.Errorf("Failed writing /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
 	}
 	return nil
 }

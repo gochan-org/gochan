@@ -1,10 +1,14 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path"
 	"strconv"
 
+	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
@@ -144,6 +148,17 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			return
 		}
 
+		if err = post.ChangeBoardID(destBoardID); err != nil {
+			gcutil.LogError(err).
+				Int("postID", postID).
+				Int("destBoardID", destBoardID).
+				Msg("Failed changing thread board ID")
+			serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+				"postID":      postID,
+				"destBoardID": destBoardID,
+			})
+			return
+		}
 		threadUploads, err := getThreadFiles(post)
 		if err != nil {
 			gcutil.LogError(err).Int("postid", post.ID).Send()
@@ -152,21 +167,149 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				"postid": post.ID,
 			})
 		}
+		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 		for _, upload := range threadUploads {
-			fmt.Println("Upload post ID:", upload.postID)
-			fmt.Println("Upload filename:", upload.filename)
-			fmt.Println("Upload thumbnail:", gcutil.GetThumbnailPath("thumb", upload.filename))
-			fmt.Println("Upload catalog thumbnail:", gcutil.GetThumbnailPath("catalog", upload.filename))
+			// move the upload itself
+			tmpErr := moveFileIfExists(
+				path.Join(documentRoot, srcBoard.Dir, "src", upload.filename),
+				path.Join(documentRoot, destBoard.Dir, "src", upload.filename))
+			if tmpErr != nil {
+				gcutil.LogError(err).
+					Str("filename", upload.filename).
+					Str("srcBoard", srcBoard.Dir).
+					Str("destBoard", destBoard.Dir).
+					Msg("Unable to move file from source board to destination board")
+				if err == nil {
+					// log all errors but only report the first one to the user
+					err = tmpErr
+				}
+			}
 
-			fmt.Println()
-			// threadUploads[f] = path.Join(config.GetSystemCriticalConfig().DocumentRoot, srcBoard.Dir, filename)
+			// move the upload thumbnail
+			if tmpErr = moveFileIfExists(
+				path.Join(documentRoot, srcBoard.Dir, "thumb", upload.thumbnail),
+				path.Join(documentRoot, destBoard.Dir, "thumb", upload.thumbnail),
+			); tmpErr != nil {
+				gcutil.LogError(err).
+					Str("thumbnail", upload.thumbnail).
+					Str("srcBoard", srcBoard.Dir).
+					Str("destBoard", destBoard.Dir).
+					Msg("Unable to move thumbnail from source board to destination board")
+				if err == nil {
+					err = tmpErr
+				}
+			}
+			if upload.postID == post.ID {
+				// move the upload catalog thumbnail
+				if tmpErr = moveFileIfExists(
+					path.Join(documentRoot, srcBoard.Dir, "thumb", upload.catalogThumbnail),
+					path.Join(documentRoot, destBoard.Dir, "thumb", upload.catalogThumbnail),
+				); tmpErr != nil {
+					gcutil.LogError(err).
+						Str("catalogThumbnail", upload.catalogThumbnail).
+						Str("srcBoard", srcBoard.Dir).
+						Str("destBoard", destBoard.Dir).
+						Msg("Unable to move catalog thumbnail from source board to destination board")
+				}
+				if err == nil {
+					err = tmpErr
+				}
+			}
+			if tmpErr == nil {
+				// moved file successfully
+				gcutil.LogInfo().
+					Int("movedFileForPost", post.ID).
+					Str("srcBoard", srcBoard.Dir).
+					Str("destBoard", destBoard.Dir).
+					Str("filename", upload.filename).Send()
+			}
 		}
-		serverutil.ServeJSON(writer, map[string]interface{}{
-			"srcBoard":  srcBoard.Dir,
-			"destBoard": destBoard.Dir,
-			"post":      post,
-		})
+		if err != nil {
+			// got at least one error while trying to move files (if there were any)
+			serverutil.ServeError(writer, "Error while moving post upload: "+err.Error(), wantsJSON,
+				map[string]interface{}{
+					"postID":    postID,
+					"srcBoard":  srcBoard.Dir,
+					"destBoard": destBoard.Dir,
+				})
+			return
+		}
+
+		// remove the old thread page (new one will be created if no errors)
+		if err = os.Remove(path.Join(documentRoot, srcBoard.Dir, "res", postIDstr+".html")); err != nil {
+			gcutil.LogError(err).
+				Int("postID", postID).
+				Str("srcBoard", srcBoard.Dir).
+				Msg("Failed deleting thread page")
+			writer.WriteHeader(500)
+			serverutil.ServeError(writer, "Failed deleting thread page: "+err.Error(), wantsJSON, map[string]interface{}{
+				"postID":   postID,
+				"srcBoard": srcBoard.Dir,
+			})
+			return
+		}
+		// same for the old JSON file
+		if err = os.Remove(path.Join(documentRoot, srcBoard.Dir, "res", postIDstr+".json")); err != nil {
+			gcutil.LogError(err).
+				Int("postID", postID).
+				Str("srcBoard", srcBoard.Dir).
+				Msg("Failed deleting thread JSON file")
+			writer.WriteHeader(500)
+			serverutil.ServeError(writer, "Failed deleting thread JSON file: "+err.Error(), wantsJSON, map[string]interface{}{
+				"postID":   postID,
+				"srcBoard": srcBoard.Dir,
+			})
+			return
+		}
+
+		oldParentID := post.ParentID // hacky, this will likely be fixed when gcsql's handling of ParentID struct properties is changed
+		post.ParentID = 0
+		if err = building.BuildThreadPages(post); err != nil {
+			gcutil.LogError(err).Int("postID", postID).Msg("Failed moved thread page")
+			writer.WriteHeader(500)
+			serverutil.ServeError(writer, "Failed building thread page: "+err.Error(), wantsJSON, map[string]interface{}{
+				"postID": postID,
+			})
+			return
+		}
+		post.ParentID = oldParentID
+		if err = building.BuildBoardPages(&srcBoard); err != nil {
+			gcutil.LogError(err).Int("srcBoardID", srcBoardID).Send()
+			writer.WriteHeader(500)
+			serverutil.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
+				"srcBoardID": srcBoardID,
+			})
+			return
+		}
+		if err = building.BuildBoardPages(&destBoard); err != nil {
+			gcutil.LogError(err).Int("destBoardID", destBoardID).Send()
+			writer.WriteHeader(500)
+			serverutil.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
+				"destBoardID": destBoardID,
+			})
+			return
+		}
+		if wantsJSON {
+			serverutil.ServeJSON(writer, map[string]interface{}{
+				"status":    "success",
+				"postID":    postID,
+				"srcBoard":  srcBoard.Dir,
+				"destBoard": destBoard.Dir,
+			})
+		} else {
+			http.Redirect(writer, request, config.WebPath(destBoard.Dir, "res", postIDstr+".html"), http.StatusMovedPermanently)
+		}
 	}
+}
+
+// move file if it exists on the filesystem and don't throw any errors if it doesn't, returning any other errors
+func moveFileIfExists(src string, dest string) error {
+	err := os.Rename(src, dest)
+	if errors.Is(err, os.ErrNotExist) {
+		// file doesn't exist
+		return nil
+	}
+	return err
 }
 
 type postUpload struct {
@@ -176,6 +319,8 @@ type postUpload struct {
 	postID           int
 }
 
+// getThreadFiles gets a list of the files owned by posts in the thread, including thumbnails for convenience.
+// TODO: move this to gcsql when the package is de-deprecated
 func getThreadFiles(post *gcsql.Post) ([]postUpload, error) {
 	query := `SELECT filename,post_id FROM DBPREFIXfiles WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = (

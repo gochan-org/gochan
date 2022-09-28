@@ -237,10 +237,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			serverutil.ServeErrorPage(writer, "Post must contain a message if no image is uploaded.")
 			return
 		}
-		gcutil.LogInfo().
+		gcutil.LogAccess(request).
 			Str("post", "referred").
 			Str("referredFrom", request.Referer()).
-			Str("IP", post.IP)
+			Send()
 	} else {
 		data, err := io.ReadAll(file)
 		if err != nil {
@@ -387,9 +387,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			}
 			post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
 
-			gcutil.LogInfo().
-				Str("post", "withFile").
-				Str("IP", post.IP).
+			gcutil.LogAccess(request).
+				Bool("withFile", true).
 				Str("filename", handler.Filename).
 				Str("referer", request.Referer()).Send()
 
@@ -400,6 +399,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					return
 				}
 				if err = syscall.Symlink(path.Join(systemCritical.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
+					gcutil.LogError(err).
+						Str("thumbPath", thumbPath).
+						Msg("Error creating symbolic link to thumbnail path")
 					serverutil.ServeErrorPage(writer, err.Error())
 					return
 				}

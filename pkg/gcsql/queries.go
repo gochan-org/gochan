@@ -181,6 +181,15 @@ func OptimizeDatabase() error {
 	return nil
 }
 
+func (p *Post) ChangeBoardID(newBoardID int) error {
+	err := ChangeThreadBoardID(p.ID, newBoardID)
+	if err != nil {
+		return err
+	}
+	p.BoardID = newBoardID
+	return nil
+}
+
 // ChangeThreadBoardID updates the given thread's post ID and the destination board ID
 func ChangeThreadBoardID(postID int, newBoardID int) error {
 	if !DoesBoardExistByID(newBoardID) {
