@@ -36,13 +36,20 @@ func BuildBoardPages(board *gcsql.Board) error {
 		return err
 	}
 	var currentPageFile *os.File
-	var threads []interface{}
 	var threadPages [][]interface{}
 	var stickiedThreads []interface{}
 	var nonStickiedThreads []interface{}
 	var opPosts []gcsql.Post
 
-	// Get all top level posts for the board.
+	threads, err := gcsql.GetThreadsWithBoardID(board.ID, true)
+	if err != nil {
+		gcutil.LogError(err).
+			Int("boardID", board.ID).
+			Msg("Failed getting OP posts")
+		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
+	}
+
+	// Get all top level posts for the board
 	if opPosts, err = gcsql.GetTopPosts(board.ID); err != nil {
 		gcutil.LogError(err).
 			Str("boardDir", board.Dir).
@@ -172,7 +179,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	board.NumPages = len(threadPages)
 
 	// Create array of page wrapper objects, and open the file.
-	pagesArr := make([]map[string]interface{}, board.NumPages)
+	var pagesArr boardCatalog
 
 	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {

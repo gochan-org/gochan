@@ -55,15 +55,11 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	}
 
 	for _, checkedPostID := range checkedPosts {
-		var post gcsql.Post
-		var err error
-		post.ID = checkedPostID
-		post.BoardID = boardid
-		post, err = gcsql.GetSpecificPost(post.ID, true)
+		post, err := gcsql.GetPostFromID(checkedPostID, true)
 		if err == sql.ErrNoRows {
 			serverutil.ServeError(writer, "Post does not exist", wantsJSON, map[string]interface{}{
 				"postid":  post.ID,
-				"boardid": post.BoardID,
+				"boardid": board.ID,
 			})
 			return
 		} else if err != nil {
@@ -71,11 +67,11 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 				Str("requestType", "deletePost").
 				Err(err).
 				Int("postid", post.ID).
-				Int("boardid", post.BoardID).
+				Int("boardid", board.ID).
 				Msg("Error deleting post")
 			serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postid":  post.ID,
-				"boardid": post.BoardID,
+				"boardid": board.ID,
 			})
 			return
 		}
@@ -83,93 +79,135 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		if passwordMD5 != post.Password && rank == 0 {
 			serverutil.ServeError(writer, fmt.Sprintf("Incorrect password for #%d", post.ID), wantsJSON, map[string]interface{}{
 				"postid":  post.ID,
-				"boardid": post.BoardID,
+				"boardid": board.ID,
 			})
 			return
 		}
 
 		if fileOnly {
-			fileName := post.Filename
-			if fileName != "" && fileName != "deleted" {
-				var files []string
-				if files, err = post.GetFilePaths(); err != nil {
-					gcutil.Logger().Error().
-						Str("requestType", "deleteFile").
+			upload, err := post.GetUpload()
+			if err != nil {
+				gcutil.LogError(err).
+					Str("IP", gcutil.GetRealIP(request)).
+					Int("postid", post.ID).
+					Msg("Unable to get file upload info")
+				serverutil.ServeError(writer, "Error getting file uplaod info: "+err.Error(),
+					wantsJSON, map[string]interface{}{"postid": post.ID})
+				return
+			}
+			documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+			if upload != nil && upload.Filename != "deleted" {
+				filePath := path.Join(documentRoot, board.Dir, "src", upload.Filename)
+				if err = os.Remove(filePath); err != nil {
+					gcutil.LogError(err).
+						Str("IP", gcutil.GetRealIP(request)).
 						Int("postid", post.ID).
-						Err(err).
-						Msg("Error getting file upload info")
-					serverutil.ServeError(writer, "Error getting file upload info: "+err.Error(), wantsJSON, map[string]interface{}{
-						"postid": post.ID,
-					})
+						Str("filename", upload.Filename).
+						Msg("Unable to delete file")
+					serverutil.ServeError(writer, "Unable to delete file: "+err.Error(),
+						wantsJSON, map[string]interface{}{"postid": post.ID})
 					return
 				}
-
-				if err = post.UnlinkUploads(true); err != nil {
-					gcutil.Logger().Error().
-						Str("requestType", "deleteFile").
+				// delete the file's thumbnail
+				thumbPath := path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("thumb"))
+				if err = os.Remove(thumbPath); err != nil {
+					gcutil.LogError(err).
+						Str("IP", gcutil.GetRealIP(request)).
 						Int("postid", post.ID).
-						Err(err).
-						Msg("Error unlinking post uploads")
-					serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
-						"postid": post.ID,
-					})
+						Str("thumbnail", upload.ThumbnailPath("thumb")).
+						Msg("Unable to delete thumbnail")
+					serverutil.ServeError(writer, "Unable to delete thumbnail: "+err.Error(),
+						wantsJSON, map[string]interface{}{"postid": post.ID})
 					return
 				}
-
-				for _, filePath := range files {
-					if err = os.Remove(filePath); err != nil {
-						fileBase := path.Base(filePath)
-						gcutil.Logger().Error().
-							Str("requestType", "deleteFile").
+				// delete the catalog thumbnail
+				if post.IsTopPost {
+					thumbPath := path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("catalog"))
+					if err = os.Remove(thumbPath); err != nil {
+						gcutil.LogError(err).
+							Str("IP", gcutil.GetRealIP(request)).
 							Int("postid", post.ID).
-							Str("file", filePath).
-							Err(err).
-							Msg("Error unlinking post uploads")
-						serverutil.ServeError(writer, fmt.Sprintf("Error deleting %s: %s", fileBase, err.Error()), wantsJSON, map[string]interface{}{
-							"postid": post.ID,
-							"file":   fileBase,
-						})
+							Str("catalogThumb", upload.ThumbnailPath("catalog")).
+							Msg("Unable to delete catalog thumbnail")
+						serverutil.ServeError(writer, "Unable to delete catalog thumbnail: "+err.Error(),
+							wantsJSON, map[string]interface{}{"postid": post.ID})
 						return
 					}
 				}
+				if err = post.UnlinkUploads(true); err != nil {
+					gcutil.LogError(err).
+						Str("requestType", "deleteFile").
+						Int("postid", post.ID).
+						Msg("Error unlinking post uploads")
+					serverutil.ServeError(writer, "Unable to unlink post uploads"+err.Error(),
+						wantsJSON, map[string]interface{}{"postid": post.ID})
+					return
+				}
 			}
-			_board, _ := gcsql.GetBoardFromID(post.BoardID)
-			building.BuildBoardPages(&_board)
+			// _board, err := post.GetBoard()
+			// if err != nil {
+			// 	gcutil.LogError(err).
+			// 		Int("postid", post.ID).
+			// 		Str("IP", post.IP).
+			// 		Msg("Unable to get board info from post")
+			// 	serverutil.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]interface{}{
+			// 		"postid": post.ID,
+			// 	})
+			// }
+			// building.BuildBoardPages(_board)
+			building.BuildBoardPages(board)
 
-			var opPost gcsql.Post
-			if post.ParentID > 0 {
-				// post is a reply, get the OP
-				opPost, _ = gcsql.GetSpecificPost(post.ParentID, true)
-			} else {
+			var opPost *gcsql.Post
+			if post.IsTopPost {
 				opPost = post
+			} else {
+				if opPost, err = post.GetTopPost(); err != nil {
+					gcutil.LogError(err).
+						Int("postid", post.ID).
+						Str("IP", post.IP).
+						Msg("Unable to get thread information from post")
+					serverutil.ServeError(writer, "Unable to get thread info from post: "+err.Error(), wantsJSON, map[string]interface{}{
+						"postid": post.ID,
+					})
+					return
+				}
 			}
-			building.BuildThreadPages(&opPost)
+			if building.BuildThreadPages(opPost); err != nil {
+				gcutil.LogError(err).
+					Int("postid", post.ID).
+					Str("IP", post.IP).
+					Msg("Unable to build thread pages")
+				serverutil.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]interface{}{
+					"postid": post.ID,
+				})
+				return
+			}
 		} else {
 			// delete the post
-			if err = gcsql.DeletePost(post.ID, true); err != nil {
-				gcutil.Logger().Error().
-					Str("requestType", "deleteFile").
+			if err = post.Delete(); err != nil {
+				gcutil.LogError(err).
+					Str("requestType", "deletePost").
 					Int("postid", post.ID).
-					Err(err).
 					Msg("Error deleting post")
 				serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
 					"postid": post.ID,
 				})
 				return
 			}
-			if post.ParentID == 0 {
+			if post.IsTopPost {
 				threadIndexPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.WebPath(strconv.Itoa(post.ID), "threadPage"))
 				os.Remove(threadIndexPath + ".html")
 				os.Remove(threadIndexPath + ".json")
 			} else {
-				_board, _ := gcsql.GetBoardFromID(post.BoardID)
-				building.BuildBoardPages(&_board)
+				building.BuildBoardPages(board)
+				// _board, _ := gcsql.GetBoardFromID(post.BoardID)
+				// building.BuildBoardPages(&_board)
 			}
-			building.BuildBoards(false, post.BoardID)
+			building.BuildBoards(false, boardid)
 		}
 		gcutil.LogAccess(request).
 			Str("requestType", "deletePost").
-			Int("boardid", post.BoardID).
+			Int("boardid", boardid).
 			Int("postid", post.ID).
 			Bool("fileOnly", fileOnly).
 			Msg("Post deleted")
@@ -177,16 +215,16 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 			serverutil.ServeJSON(writer, map[string]interface{}{
 				"success":  "post deleted",
 				"postid":   post.ID,
-				"boardid":  post.BoardID,
+				"boardid":  boardid,
 				"fileOnly": fileOnly,
 			})
 		} else {
-			if post.ParentID == 0 {
+			if post.IsTopPost {
 				// deleted thread
 				http.Redirect(writer, request, board.WebPath("/", "boardPage"), http.StatusFound)
 			} else {
 				// deleted a post in the thread
-				http.Redirect(writer, request, post.GetURL(false), http.StatusFound)
+				http.Redirect(writer, request, post.WebPath(), http.StatusFound)
 			}
 		}
 	}

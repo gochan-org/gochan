@@ -40,18 +40,18 @@ func TestVersionFunction(t *testing.T) {
 func TestStructPassing(t *testing.T) {
 	initPluginTests()
 	p := &gcsql.Post{
-		Name:        "Joe Poster",
-		Email:       "joeposter@gmail.com",
-		MessageHTML: "Message test<br />",
-		MessageText: "Message text\n",
+		Name:       "Joe Poster",
+		Email:      "joeposter@gmail.com",
+		Message:    "Message test<br />",
+		MessageRaw: "Message text\n",
 	}
 	lState.SetGlobal("post", luar.New(lState, p))
 	err := lState.DoString(structPassingStr)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	t.Logf("Modified message text after Lua: %q", p.MessageText)
-	if p.MessageText != "Message modified by a plugin\n" || p.MessageHTML != "Message modified by a plugin<br />" {
+	t.Logf("Modified message text after Lua: %q", p.MessageRaw)
+	if p.MessageRaw != "Message modified by a plugin\n" || p.Message != "Message modified by a plugin<br />" {
 		t.Fatal("message was not properly modified by plugin")
 	}
 }

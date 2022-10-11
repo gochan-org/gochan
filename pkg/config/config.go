@@ -316,6 +316,12 @@ type SiteConfig struct {
 	AkismetAPIKey   string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
 }
 
+type BoardCooldowns struct {
+	NewThread  int `json:"threads"`
+	Reply      int `json:"replies"`
+	ImageReply int `json:"images"`
+}
+
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json
 // If a board doesn't have board.json, the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
@@ -328,14 +334,21 @@ type BoardConfig struct {
 	PostConfig
 	UploadConfig
 
-	DateTimeFormat        string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
-	AkismetAPIKey         string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
-	UseCaptcha            bool
-	CaptchaWidth          int
-	CaptchaHeight         int
-	CaptchaMinutesTimeout int
-
-	EnableGeoIP bool
+	DateTimeFormat         string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
+	AkismetAPIKey          string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+	UseCaptcha             bool
+	CaptchaWidth           int
+	CaptchaHeight          int
+	CaptchaMinutesTimeout  int
+	MaxBoardPages          int
+	ShowPosterID           bool
+	EnableSpoileredImages  bool
+	EnableSpoileredThreads bool
+	Worksafe               bool
+	ThreadPage             int
+	Cooldowns              BoardCooldowns
+	ThreadsPerPage         int
+	EnableGeoIP            bool
 }
 
 type BoardListConfig struct {

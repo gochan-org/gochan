@@ -239,19 +239,19 @@ var funcMap = template.FuncMap{
 		}
 		return img[0:index] + thumbSuffix
 	},
-	"numReplies": func(boardid, threadid int) int {
-		num, err := gcsql.GetReplyCount(threadid)
+	"numReplies": func(boardid, opID int) int {
+		num, err := gcsql.GetThreadReplyCountFromOP(opID)
 		if err != nil {
 			return 0
 		}
 		return num
 	},
 	"getBoardDir": func(id int) string {
-		var board gcsql.Board
-		if err := board.PopulateData(id); err != nil {
+		dir, err := gcsql.GetBoardDir(id)
+		if err != nil {
 			return ""
 		}
-		return board.Dir
+		return dir
 	},
 	"webPath": func(part ...string) string {
 		return config.WebPath(part...)

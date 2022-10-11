@@ -4,42 +4,68 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"html/template"
 	"net/http"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-// GetStaffName returns the name associated with a session
-func GetStaffName(session string) (string, error) {
-	const sql = `SELECT staff.username from DBPREFIXstaff as staff
-	JOIN DBPREFIXsessions as sessions
-	ON sessions.staff_id = staff.id
-	WHERE sessions.data = ?`
-	var username string
-	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&username))
-	return username, err
+// createDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
+func createDefaultAdminIfNoStaff() error {
+	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
+	var count int
+	QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
+	if count > 0 {
+		return nil
+	}
+	_, err := NewStaff("admin", "password", 3)
+	return err
 }
 
-// GetStaffBySession gets the staff that is logged in in the given session
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetStaffBySession(session string) (*Staff, error) {
-	const sql = `SELECT 
-		staff.id, 
-		staff.username, 
-		staff.password_checksum, 
-		staff.global_rank,
-		staff.added_on,
-		staff.last_login 
-	FROM DBPREFIXstaff as staff
-	JOIN DBPREFIXsessions as sessions
-	ON sessions.staff_id = staff.id
-	WHERE sessions.data = ?`
-	staff := new(Staff)
-	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
-	return staff, err
+func NewStaff(username string, password string, rank int) (*Staff, error) {
+	const sqlINSERT = `INSERT INTO DBPREFIXstaff
+	(username, password_checksum, global_rank)
+	VALUES(?,?,?)`
+	passwordChecksum := gcutil.BcryptSum(password)
+	_, err := ExecSQL(sqlINSERT, username, passwordChecksum, rank)
+	if err != nil {
+		return nil, err
+	}
+	return &Staff{
+		Username:         username,
+		PasswordChecksum: passwordChecksum,
+		Rank:             rank,
+		AddedOn:          time.Now(),
+		IsActive:         true,
+	}, nil
+}
+
+// SetActive changes the active status of the staff member. If `active` is false, the login sessions are cleared
+func (s *Staff) SetActive(active bool) error {
+	const updateActive = `UPDATE DBPREFIXstaff SET is_active = 0 WHERE username = ?`
+	_, err := ExecSQL(updateActive, s.Username)
+	if err != nil {
+		return err
+	}
+	if active {
+		return nil
+	}
+	return s.ClearSessions()
+}
+
+// ClearSessions clears all login sessions for the user, requiring them to login again
+func (s *Staff) ClearSessions() error {
+	const query = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
+	const deleteSessions = `DELETE FROM DBPREFIXsessions WHERE staff_id = ?`
+	var err error
+	if s.ID == 0 {
+		// ID field not set, get it from the DB
+		if err = QueryRowSQL(query, interfaceSlice(s.Username), interfaceSlice(&s.ID)); err != nil {
+			return err
+		}
+	}
+	_, err = ExecSQL(deleteSessions, s.ID)
+	return err
 }
 
 // EndStaffSession deletes any session rows associated with the requests session cookie and then
@@ -52,8 +78,7 @@ func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
 	}
 	// make it so that the next time the page is loaded, the browser will delete it
 	sessionVal := session.Value
-	session.MaxAge = 0
-	session.Expires = time.Now().Add(-7 * 24 * time.Hour)
+	session.MaxAge = -1
 	http.SetCookie(writer, session)
 
 	staffID := 0
@@ -70,10 +95,13 @@ func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
 	return nil
 }
 
-// GetStaffByName gets the staff with a given name
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetStaffByName(name string) (*Staff, error) {
+func DeactivateStaff(username string) error {
+	s := Staff{Username: username}
+	return s.SetActive(false)
+}
+
+// GetStaffBySession gets the staff that is logged in in the given session
+func GetStaffBySession(session string) (*Staff, error) {
 	const sql = `SELECT 
 		staff.id, 
 		staff.username, 
@@ -82,241 +110,10 @@ func GetStaffByName(name string) (*Staff, error) {
 		staff.added_on,
 		staff.last_login 
 	FROM DBPREFIXstaff as staff
-	WHERE staff.username = ?`
+	JOIN DBPREFIXsessions as sessions
+	ON sessions.staff_id = staff.id
+	WHERE sessions.data = ?`
 	staff := new(Staff)
-	err := QueryRowSQL(sql, interfaceSlice(name), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
+	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin))
 	return staff, err
-}
-
-func getStaffByID(id int) (*Staff, error) {
-	const sql = `SELECT 
-		staff.id, 
-		staff.username, 
-		staff.password_checksum, 
-		staff.global_rank,
-		staff.added_on,
-		staff.last_login 
-	FROM DBPREFIXstaff as staff
-	WHERE staff.id = ?`
-	staff := new(Staff)
-	err := QueryRowSQL(sql, interfaceSlice(id), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastActive))
-	return staff, err
-}
-
-// NewStaff creates a new staff account from a given username, password and rank
-func NewStaff(username, password string, rank int) error {
-	const sql = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank)
-	VALUES (?, ?, ?)`
-	_, err := ExecSQL(sql, username, gcutil.BcryptSum(password), rank)
-	return err
-}
-
-// DeleteStaff deletes the staff with a given name.
-// Implemented to change the account name to a random string and set it to inactive
-func DeleteStaff(username string) error {
-	const sql = `UPDATE DBPREFIXstaff SET username = ?, is_active = FALSE WHERE username = ?`
-	_, err := ExecSQL(sql, gcutil.RandomString(45), username)
-	return err
-}
-
-func getStaffID(username string) (int, error) {
-	staff, err := GetStaffByName(username)
-	if err != nil {
-		return -1, err
-	}
-	return staff.ID, nil
-}
-
-// CreateSession inserts a session for a given key and username into the database
-func CreateSession(key, username string) error {
-	const sql1 = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
-	const sql2 = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
-	staffID, err := getStaffID(username)
-	if err != nil {
-		return err
-	}
-	_, err = ExecSQL(sql1, staffID, key, time.Now().Add(time.Duration(time.Hour*730))) //TODO move amount of time to config file
-	if err != nil {
-		return err
-	}
-	_, err = ExecSQL(sql2, staffID)
-	return err
-}
-
-// GetAllStaffNopass gets all staff accounts without their password
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func GetAllStaffNopass(onlyactive bool) ([]Staff, error) {
-	sql := `SELECT id, username, global_rank, added_on, last_login FROM DBPREFIXstaff`
-	if onlyactive {
-		sql += " where is_active = 1"
-	}
-	rows, err := QuerySQL(sql)
-	if err != nil {
-		return nil, err
-	}
-	var staffs []Staff
-	for rows.Next() {
-		var staff Staff
-		err = rows.Scan(&staff.ID, &staff.Username, &staff.Rank, &staff.AddedOn, &staff.LastActive)
-		if err != nil {
-			return nil, err
-		}
-		staffs = append(staffs, staff)
-	}
-	return staffs, nil
-}
-
-func createThread(boardID int, locked, stickied, anchored, cyclical bool) (threadID int, err error) {
-	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
-	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
-	//This is done because mysql doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
-	isPrimaryKeyError := true
-	for isPrimaryKeyError {
-		threadID, err = getNextFreeID("DBPREFIXthreads")
-		if err != nil {
-			return 0, err
-		}
-		_, err = ExecSQL(sql, boardID, locked, stickied, anchored, cyclical)
-
-		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return threadID, nil
-}
-
-func bumpThreadOfPost(postID int) error {
-	id, err := getThreadID(postID)
-	if err != nil {
-		return err
-	}
-	return bumpThread(id)
-}
-
-func bumpThread(threadID int) error {
-	const sql = "UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?"
-	_, err := ExecSQL(sql, threadID)
-	return err
-}
-
-func appendFile(postID int, originalFilename, filename, checksum string, fileSize int, isSpoilered bool, width, height, thumbnailWidth, thumbnailHeight int) error {
-	const nextIDSQL = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
-	var nextID int
-	err := QueryRowSQL(nextIDSQL, interfaceSlice(postID), interfaceSlice(&nextID))
-	if err != nil {
-		return err
-	}
-	const insertSQL = `INSERT INTO DBPREFIXfiles (file_order, post_id, original_filename, filename, checksum, file_size, is_spoilered, width, height, thumbnail_width, thumbnail_height)
-	VALUES (?,?,?,?,?,?,?,?,?,?,?)`
-	_, err = ExecSQL(insertSQL, nextID, postID, originalFilename, filename, checksum, fileSize, isSpoilered, width, height, thumbnailWidth, thumbnailHeight)
-	return err
-}
-
-// GetThreadIDZeroIfTopPost gets the post id of the top post of the thread a post belongs to, zero if the post itself is the top post
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design. Posts do not directly reference their post post anymore.
-func GetThreadIDZeroIfTopPost(postID int) (ID int, err error) {
-	const sql = `SELECT t1.id FROM DBPREFIXposts as t1
-	JOIN (SELECT thread_id FROM DBPREFIXposts where id = ?) as t2 ON t1.thread_id = t2.thread_id
-	WHERE t1.is_top_post`
-	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&ID))
-	if err != nil {
-		return 0, err
-	}
-	if ID == postID {
-		return 0, nil
-	}
-	return ID, nil
-}
-
-func getThreadID(postID int) (ID int, err error) {
-	const sql = `SELECT thread_id FROM DBPREFIXposts WHERE id = ?`
-	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&ID))
-	return ID, err
-}
-
-// GetPostPassword gets the password associated with a given post
-func GetPostPassword(postID int) (password string, err error) {
-	const sql = `SELECT password FROM DBPREFIXposts WHERE id = ?`
-	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&password))
-	return password, err
-}
-
-// UpdatePost updates a post with new information
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func UpdatePost(postID int, email, subject string, message template.HTML, messageRaw string) error {
-	const sql = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE id = ?`
-	_, err := ExecSQL(sql, email, subject, string(message), messageRaw, postID)
-	return err
-}
-
-// DeletePost deletes a post with a given ID
-func DeletePost(postID int, checkIfTopPost bool) error {
-	if checkIfTopPost {
-		isTopPost, err := isTopPost(postID)
-		if err != nil {
-			return err
-		}
-		if isTopPost {
-			threadID, err := getThreadID(postID)
-			if err != nil {
-				return err
-			}
-			return deleteThread(threadID)
-		}
-	}
-
-	const sql = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := ExecSQL(sql, postID)
-	return err
-}
-
-func isTopPost(postID int) (val bool, err error) {
-	const sql = `SELECT is_top_post FROM DBPREFIXposts WHERE id = ?`
-	err = QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&val))
-	return val, err
-}
-
-func deleteThread(threadID int) error {
-	const sql1 = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
-	const sql2 = `SELECT id FROM DBPREFIXposts WHERE thread_id = ?`
-
-	_, err := QuerySQL(sql1, threadID)
-	if err != nil {
-		return err
-	}
-	rows, err := QuerySQL(sql2, threadID)
-	if err != nil {
-		return err
-	}
-	var ids []int
-	for rows.Next() {
-		var id int
-		if err = rows.Scan(&id); err != nil {
-			return err
-		}
-		ids = append(ids, id)
-	}
-
-	for _, id := range ids {
-		if err = DeletePost(id, false); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func createUser(username, passwordEncrypted string, globalRank int) (userID int, err error) {
-	const sqlInsert = `INSERT INTO DBPREFIXstaff (username, password_checksum, global_rank) VALUES (?,?,?)`
-	const sqlSelect = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
-	//Excecuted in two steps this way because last row id functions arent thread safe, username is unique
-	_, err = ExecSQL(sqlInsert, username, passwordEncrypted, globalRank)
-	if err != nil {
-		return 0, err
-	}
-	err = QueryRowSQL(sqlSelect, interfaceSlice(username), interfaceSlice(&userID))
-	return userID, err
 }

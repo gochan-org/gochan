@@ -35,8 +35,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		}
 		passwordMD5 := gcutil.Md5Sum(password)
 
-		var post gcsql.Post
-		post, err = gcsql.GetSpecificPost(checkedPosts[0], true)
+		post, err := gcsql.GetPostFromID(checkedPosts[0], true)
 		if err != nil {
 			gcutil.Logger().Error().
 				Err(err).
@@ -69,11 +68,24 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
+			gcutil.LogError(err).
+				Str("postid", request.FormValue("postid")).
 				Str("IP", gcutil.GetRealIP(request)).
 				Msg("Invalid form data")
-			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
+			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+				"postid": postid,
+			})
+			return
+		}
+		post, err := gcsql.GetPostFromID(postid, true)
+		if err != nil {
+			gcutil.LogError(err).
+				Str("IP", gcutil.GetRealIP(request)).
+				Int("postid", postid).
+				Msg("Unable to find post")
+			serverutil.ServeError(writer, "Unable to find post: "+err.Error(), wantsJSON, map[string]interface{}{
+				"postid": postid,
+			})
 			return
 		}
 		boardid, err := strconv.Atoi(request.FormValue("boardid"))
@@ -82,41 +94,47 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				Err(err).
 				Str("IP", gcutil.GetRealIP(request)).
 				Msg("Invalid form data")
-			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
+			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, nil)
 			return
 		}
-		password, err = gcsql.GetPostPassword(postid)
-		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Invalid form data")
-			return
-		}
+		// password, err = gcsql.GetPostPassword(postid)
+		// if err != nil {
+		// 	gcutil.LogError(err).
+		// 		Str("IP", gcutil.GetRealIP(request)).
+		// 		Msg("Invalid form data")
+		// 	return
+		// }
 
 		rank := manage.GetStaffRank(request)
 		if request.FormValue("password") != password && rank == 0 {
-			serverutil.ServeErrorPage(writer, "Wrong password")
+			serverutil.ServeError(writer, "Wrong password", wantsJSON, nil)
 			return
 		}
 
-		var board gcsql.Board
-		if err = board.PopulateData(boardid); err != nil {
-			serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
-			gcutil.Logger().Error().
-				Err(err).
+		board, err := gcsql.GetBoardFromID(boardid)
+		if err != nil {
+			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+				"boardid": boardid,
+			})
+			gcutil.LogError(err).
 				Str("IP", gcutil.GetRealIP(request)).
 				Msg("Invalid form data")
 			return
 		}
 
-		if err = gcsql.UpdatePost(postid, request.FormValue("editemail"), request.FormValue("editsubject"),
-			posting.FormatMessage(request.FormValue("editmsg"), board.Dir), request.FormValue("editmsg")); err != nil {
-			gcutil.Logger().Error().
-				Err(err).
+		if err = post.UpdateContents(
+			request.FormValue("editemail"),
+			request.FormValue("editsubject"),
+			posting.FormatMessage(request.FormValue("editmsg"), board.Dir),
+			request.FormValue("editmsg"),
+		); err != nil {
+			gcutil.LogError(err).
+				Int("postid", post.ID).
 				Str("IP", gcutil.GetRealIP(request)).
 				Msg("Unable to edit post")
-			serverutil.ServeErrorPage(writer, "Unable to edit post: "+err.Error())
+			serverutil.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
+				"postid": post.ID,
+			})
 			return
 		}
 

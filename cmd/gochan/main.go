@@ -104,7 +104,7 @@ func parseCommandLine() {
 			os.Exit(1)
 		}
 		fmt.Printf("Creating new staff: %q, with password: %q and rank: %d from command line", arr[0], arr[1], rank)
-		if err = gcsql.NewStaff(arr[0], arr[1], rank); err != nil {
+		if _, err = gcsql.NewStaff(arr[0], arr[1], rank); err != nil {
 			fmt.Printf("Failed creating new staff account for %q: %s\n", arr[0], err.Error())
 			gcutil.LogFatal().
 				Str("staff", "add").
@@ -132,7 +132,7 @@ func parseCommandLine() {
 		fmt.Scanln(&answer)
 		answer = strings.ToLower(answer)
 		if answer == "y" || answer == "yes" {
-			if err = gcsql.DeleteStaff(delstaff); err != nil {
+			if err = gcsql.DeactivateStaff(delstaff); err != nil {
 				fmt.Printf("Error deleting %q: %s", delstaff, err.Error())
 				gcutil.LogFatal().Str("staff", "delete").Err(err).Send()
 			}

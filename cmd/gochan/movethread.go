@@ -40,10 +40,21 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				Msg("Error getting post from ID")
 			return
 		}
-		if post.ParentID != post.ID {
+		if !post.IsTopPost {
+			topPostID, err := post.TopPostID()
+			if err != nil {
+				serverutil.ServeError(writer, "Unable to get top post ID: "+err.Error(), wantsJSON, map[string]interface{}{
+					"postid": post.ID,
+				})
+				gcutil.LogError(err).
+					Str("IP", gcutil.GetRealIP(request)).
+					Int("postid", post.ID).
+					Msg("Unable to get top post ID")
+				return
+			}
 			serverutil.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]interface{}{
-				"postid":   checkedPosts[0],
-				"parentid": post.ParentID,
+				"postid":  checkedPosts[0],
+				"toppost": topPostID,
 			})
 			return
 		}
@@ -160,7 +171,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			})
 			return
 		}
-		threadUploads, err := getThreadFiles(post)
+		threadUploads, err := gcsql.GetThreadFiles(post)
 		if err != nil {
 			gcutil.LogError(err).Int("postid", post.ID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
@@ -172,11 +183,11 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		for _, upload := range threadUploads {
 			// move the upload itself
 			tmpErr := moveFileIfExists(
-				path.Join(documentRoot, srcBoard.Dir, "src", upload.filename),
-				path.Join(documentRoot, destBoard.Dir, "src", upload.filename))
+				path.Join(documentRoot, srcBoard.Dir, "src", upload.Filename),
+				path.Join(documentRoot, destBoard.Dir, "src", upload.Filename))
 			if tmpErr != nil {
 				gcutil.LogError(err).
-					Str("filename", upload.filename).
+					Str("filename", upload.Filename).
 					Str("srcBoard", srcBoard.Dir).
 					Str("destBoard", destBoard.Dir).
 					Msg("Unable to move file from source board to destination board")
@@ -188,11 +199,11 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 
 			// move the upload thumbnail
 			if tmpErr = moveFileIfExists(
-				path.Join(documentRoot, srcBoard.Dir, "thumb", upload.thumbnail),
-				path.Join(documentRoot, destBoard.Dir, "thumb", upload.thumbnail),
+				path.Join(documentRoot, srcBoard.Dir, "thumb", upload.ThumbnailPath("upload")),
+				path.Join(documentRoot, destBoard.Dir, "thumb", upload.ThumbnailPath("upload")),
 			); tmpErr != nil {
 				gcutil.LogError(err).
-					Str("thumbnail", upload.thumbnail).
+					Str("thumbnail", upload.ThumbnailPath("upload")).
 					Str("srcBoard", srcBoard.Dir).
 					Str("destBoard", destBoard.Dir).
 					Msg("Unable to move thumbnail from source board to destination board")
@@ -200,14 +211,14 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 					err = tmpErr
 				}
 			}
-			if upload.postID == post.ID {
+			if upload.PostID == post.ID {
 				// move the upload catalog thumbnail
 				if tmpErr = moveFileIfExists(
-					path.Join(documentRoot, srcBoard.Dir, "thumb", upload.catalogThumbnail),
-					path.Join(documentRoot, destBoard.Dir, "thumb", upload.catalogThumbnail),
+					path.Join(documentRoot, srcBoard.Dir, "thumb", upload.ThumbnailPath("catalog")),
+					path.Join(documentRoot, destBoard.Dir, "thumb", upload.ThumbnailPath("catalog")),
 				); tmpErr != nil {
 					gcutil.LogError(err).
-						Str("catalogThumbnail", upload.catalogThumbnail).
+						Str("catalogThumbnail", upload.ThumbnailPath("catalog")).
 						Str("srcBoard", srcBoard.Dir).
 						Str("destBoard", destBoard.Dir).
 						Msg("Unable to move catalog thumbnail from source board to destination board")
@@ -222,7 +233,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 					Int("movedFileForPost", post.ID).
 					Str("srcBoard", srcBoard.Dir).
 					Str("destBoard", destBoard.Dir).
-					Str("filename", upload.filename).Send()
+					Str("filename", upload.Filename).Send()
 			}
 		}
 		if err != nil {
@@ -263,8 +274,10 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			return
 		}
 
-		oldParentID := post.ParentID // hacky, this will likely be fixed when gcsql's handling of ParentID struct properties is changed
-		post.ParentID = 0
+		// oldThreadID := post.ThreadID
+
+		// oldParentID := post.ParentID // hacky, this will likely be fixed when gcsql's handling of ParentID struct properties is changed
+		// post.ParentID = 0
 		if err = building.BuildThreadPages(post); err != nil {
 			gcutil.LogError(err).Int("postID", postID).Msg("Failed moved thread page")
 			writer.WriteHeader(500)
@@ -273,8 +286,8 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			})
 			return
 		}
-		post.ParentID = oldParentID
-		if err = building.BuildBoardPages(&srcBoard); err != nil {
+		// post.ParentID = oldParentID
+		if err = building.BuildBoardPages(srcBoard); err != nil {
 			gcutil.LogError(err).Int("srcBoardID", srcBoardID).Send()
 			writer.WriteHeader(500)
 			serverutil.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
@@ -282,7 +295,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			})
 			return
 		}
-		if err = building.BuildBoardPages(&destBoard); err != nil {
+		if err = building.BuildBoardPages(destBoard); err != nil {
 			gcutil.LogError(err).Int("destBoardID", destBoardID).Send()
 			writer.WriteHeader(500)
 			serverutil.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
@@ -311,41 +324,4 @@ func moveFileIfExists(src string, dest string) error {
 		return nil
 	}
 	return err
-}
-
-type postUpload struct {
-	filename         string
-	thumbnail        string
-	catalogThumbnail string
-	postID           int
-}
-
-// getThreadFiles gets a list of the files owned by posts in the thread, including thumbnails for convenience.
-// TODO: move this to gcsql when the package is de-deprecated
-func getThreadFiles(post *gcsql.Post) ([]postUpload, error) {
-	query := `SELECT filename,post_id FROM DBPREFIXfiles WHERE post_id IN (
-		SELECT id FROM DBPREFIXposts WHERE thread_id = (
-			SELECT thread_id FROM DBPREFIXposts WHERE id = ?)) AND filename != 'deleted'`
-	rows, err := gcsql.QuerySQL(query, post.ID)
-	if err != nil {
-		return nil, err
-	}
-	var uploads []postUpload
-	for rows.Next() {
-		var upload postUpload
-		if err = rows.Scan(&upload.filename, &upload.postID); err != nil {
-			return uploads, err
-		}
-		upload.thumbnail = gcutil.GetThumbnailPath("thumb", upload.filename)
-
-		var parentID int
-		if parentID, err = gcsql.GetThreadIDZeroIfTopPost(upload.postID); err != nil {
-			return uploads, err
-		}
-		if parentID == 0 {
-			upload.catalogThumbnail = gcutil.GetThumbnailPath("catalog", upload.filename)
-		}
-		uploads = append(uploads, upload)
-	}
-	return uploads, nil
 }

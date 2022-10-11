@@ -1,16 +1,12 @@
 package gcsql
 
 import (
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
-
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 var (
-	gcdb            *GCDB
 	tcpHostIsolator = regexp.MustCompile(`\b(tcp\()?([^\(\)]*)\b`)
 )
 
@@ -19,17 +15,6 @@ func ConnectToDB(host, driver, dbName, username, password, prefix string) error 
 	var err error
 	gcdb, err = Open(host, driver, dbName, username, password, prefix)
 	return err
-}
-
-func initDB(initFile string) error {
-	filePath := gcutil.FindResource(initFile,
-		"/usr/local/share/gochan/"+initFile,
-		"/usr/share/gochan/"+initFile)
-	if filePath == "" {
-		return fmt.Errorf(
-			"SQL database initialization file (%s) missing. Please reinstall gochan", initFile)
-	}
-	return RunSQLFile(filePath)
 }
 
 // RunSQLFile cuts a given sql file into individual statements and runs it.

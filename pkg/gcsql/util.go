@@ -95,7 +95,7 @@ Example:
 	var intVal int
 	var stringVal string
 	err := QueryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
-		[]interface{}{&id},
+		[]interface{}{id},
 		[]interface{}{&intVal, &stringVal})
 */
 func QueryRowSQL(query string, values, out []interface{}) error {
@@ -138,17 +138,68 @@ func BeginTx() (*sql.Tx, error) {
 	})
 }
 
-// ResetBoardSectionArrays is run when the board list needs to be changed
-// (board/section is added, deleted, etc)
-func ResetBoardSectionArrays() {
-	AllBoards = nil
-	AllSections = nil
+func getNextFreeID(tableName string) (ID int, err error) {
+	var sql = `SELECT COALESCE(MAX(id), 0) + 1 FROM ` + tableName
+	err = QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
+	return ID, err
+}
 
-	allBoardsArr, _ := GetAllBoards()
-	AllBoards = append(AllBoards, allBoardsArr...)
+func doesTableExist(tableName string) (bool, error) {
+	var existQuery string
 
-	allSectionsArr, _ := GetAllSections()
-	AllSections = append(AllSections, allSectionsArr...)
+	switch config.GetSystemCriticalConfig().DBtype {
+	case "mysql":
+		fallthrough
+	case "postgresql":
+		existQuery = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?`
+	case "sqlite3":
+		existQuery = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`
+	default:
+		return false, ErrUnsupportedDB
+	}
+
+	var count int
+	err := QueryRowSQL(existQuery, []interface{}{config.GetSystemCriticalConfig().DBprefix + tableName}, []interface{}{&count})
+	if err != nil {
+		return false, err
+	}
+	return count == 1, nil
+}
+
+// getDatabaseVersion gets the version of the database, or an error if none or multiple exist
+func getDatabaseVersion(componentKey string) (int, error) {
+	const sql = `SELECT version FROM DBPREFIXdatabase_version WHERE component = ?`
+	var version int
+	err := QueryRowSQL(sql, []interface{}{componentKey}, []interface{}{&version})
+	if err != nil {
+		return 0, err
+	}
+	return version, err
+}
+
+// doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
+// Returns false if the prefix is an empty string
+func doesGochanPrefixTableExist() (bool, error) {
+	systemCritical := config.GetSystemCriticalConfig()
+	if systemCritical.DBprefix == "" {
+		return false, nil
+	}
+	var prefixTableExist string
+	switch systemCritical.DBtype {
+	case "mysql":
+		fallthrough
+	case "postgresql":
+		prefixTableExist = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'DBPREFIX%'`
+	case "sqlite3":
+		prefixTableExist = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name LIKE 'DBPREFIX%'`
+	}
+
+	var count int
+	err := QueryRowSQL(prefixTableExist, []interface{}{}, []interface{}{&count})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // interfaceSlice creates a new interface slice from an arbitrary collection of values

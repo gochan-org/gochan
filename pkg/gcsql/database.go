@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	// GochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
+	gochanVersionKeyConstant = "gochan"
 	UnsupportedSQLVersionMsg = `Received syntax error while preparing a SQL string.
 	This means that either there is a bug in gochan's code (hopefully not) or that you are using an unsupported MySQL/PostgreSQL version.
 	Before reporting an error, make sure that you are using the up to date version of your selected SQL server.
@@ -19,12 +21,13 @@ const (
 	sqlite3ConnStr  = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
 )
 
+var gcdb *GCDB
+
 type GCDB struct {
 	db       *sql.DB
 	connStr  string
 	driver   string
 	replacer *strings.Replacer
-	// nilTimestamp string
 }
 
 func (db *GCDB) ConnectionString() string {
@@ -38,10 +41,6 @@ func (db *GCDB) Connection() *sql.DB {
 func (db *GCDB) SQLDriver() string {
 	return db.driver
 }
-
-/* func (db *GCDB) NilSQLTimestamp() string {
-	return db.nilTimestamp
-} */
 
 func (db *GCDB) Close() error {
 	if db.db != nil {
@@ -112,7 +111,7 @@ Example:
 	var intVal int
 	var stringVal string
 	err := db.QueryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
-		[]interface{}{&id},
+		[]interface{}{id},
 		[]interface{}{&intVal, &stringVal})
 */
 func (db *GCDB) QueryRowSQL(query string, values, out []interface{}) error {
