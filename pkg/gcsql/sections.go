@@ -13,6 +13,7 @@ func getAllSections() ([]Section, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var sections []Section
 	for rows.Next() {
 		var section Section
@@ -76,18 +77,12 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 	}, nil
 }
 
-// // CreateSection creates a section, setting the newly created id in the given struct
-// func CreateSection(section *Section) error {
-// 	const sqlINSERT = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)`
-// 	const sqlSELECT = `SELECT id FROM DBPREFIXsections WHERE position = ?`
-
-// 	//Excecuted in two steps this way because last row id functions arent thread safe, position is unique
-// 	_, err := ExecSQL(sqlINSERT, section.Name, section.Abbreviation, section.Hidden, section.Position)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return QueryRowSQL(
-// 		sqlSELECT,
-// 		interfaceSlice(section.Position),
-// 		interfaceSlice(&section.ID))
-// }
+func GetAllNonHiddenSections() []Section {
+	var sections []Section
+	for s := range AllSections {
+		if !AllSections[s].Hidden {
+			sections = append(sections, AllSections[s])
+		}
+	}
+	return sections
+}
