@@ -2,6 +2,7 @@ package building
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -21,11 +22,11 @@ func BuildThreads(all bool, boardid, threadid int) error {
 	var threads []gcsql.Post
 	var err error
 	if all {
-		threads, err = gcsql.GetTopPostsNoSort(boardid)
+		threads, err = gcsql.GetBoardTopPosts(boardid, true)
 	} else {
-		var post gcsql.Post
-		post, err = gcsql.GetSpecificTopPost(threadid)
-		threads = []gcsql.Post{post}
+		var post *gcsql.Post
+		post, err = gcsql.GetThreadTopPost(threadid)
+		threads = []gcsql.Post{*post}
 	}
 	if err != nil {
 		return err
@@ -40,26 +41,41 @@ func BuildThreads(all bool, boardid, threadid int) error {
 	return nil
 }
 
-// BuildThreadPages builds the pages for a thread given by a Post object.
+// BuildThreadPages builds the pages for a thread given the top post. It fails if op is not the top post
 func BuildThreadPages(op *gcsql.Post) error {
+	if !op.IsTopPost {
+		return gcsql.ErrNotTopPost
+	}
 	err := gctemplates.InitTemplates("threadpage")
 	if err != nil {
 		return err
 	}
-
-	var replies []gcsql.Post
 	var threadPageFile *os.File
-	var board gcsql.Board
-	if err = board.PopulateData(op.BoardID); err != nil {
-		return err
-	}
 
-	replies, err = gcsql.GetExistingReplies(op.ID)
+	board, err := op.GetBoard()
 	if err != nil {
 		gcutil.LogError(err).
 			Str("building", "thread").
-			Int("threadid", op.ID).Send()
-		return fmt.Errorf("failed building thread %d: %s", op.ID, err.Error())
+			Int("postid", op.ID).
+			Int("threadid", op.ThreadID).
+			Msg("failed building thread")
+		return errors.New("failed building thread: " + err.Error())
+	}
+
+	thread, err := gcsql.GetThread(op.ThreadID)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("building", "thread").
+			Int("threadid", op.ThreadID).
+			Msg("Unable to get thread info")
+		return errors.New("unable to get thread info: " + err.Error())
+	}
+	posts, err := thread.GetPosts(false, false, 0)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("building", "thread").
+			Int("threadid", thread.ID).Send()
+		return errors.New("failed building thread: " + err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
@@ -82,45 +98,45 @@ func BuildThreadPages(op *gcsql.Post) error {
 		"board":        board,
 		"board_config": config.GetBoardConfig(board.Dir),
 		"sections":     gcsql.AllSections,
-		"posts":        replies,
+		"posts":        posts[1:],
 		"op":           op,
 	}, threadPageFile, "text/html"); err != nil {
 		gcutil.LogError(err).
 			Str("building", "thread").
 			Str("boardDir", board.Dir).
-			Int("threadid", op.ID).
+			Int("threadid", thread.ID).
 			Msg("Failed building threadpage")
-		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, posts[0].ID, err.Error())
 	}
 
 	// Put together the thread JSON
-	threadJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	threadJSONFile, err := os.OpenFile(
+		path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(posts[0].ID)+".json"),
+		os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		gcutil.LogError(err).
 			Str("boardDir", board.Dir).
-			Int("threadid", op.ID).Send()
-		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
+			Int("threadid", thread.ID).
+			Int("op", posts[0].ID).Send()
+		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
 	defer threadJSONFile.Close()
 
 	threadMap := make(map[string][]gcsql.Post)
 
-	// Handle the OP, of type *Post
-	threadMap["posts"] = []gcsql.Post{*op}
-
-	// Iterate through each reply, which are of type Post
-	threadMap["posts"] = append(threadMap["posts"], replies...)
+	threadMap["posts"] = posts
 	threadJSON, err := json.Marshal(threadMap)
 	if err != nil {
 		gcutil.LogError(err).Send()
-		return fmt.Errorf("failed to marshal to JSON: %s", err.Error())
+		return errors.New("failed to marshal to JSON: " + err.Error())
 	}
 	if _, err = threadJSONFile.Write(threadJSON); err != nil {
 		gcutil.LogError(err).
 			Str("boardDir", board.Dir).
-			Int("threadid", op.ID).Send()
+			Int("threadid", thread.ID).
+			Int("op", posts[0].ID).Send()
 
-		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
 	return nil
 }
