@@ -48,6 +48,7 @@ func getAllBoards() ([]Board, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var boards []Board
 	for rows.Next() {
 		var board Board
@@ -198,6 +199,47 @@ func getBoardIDFromURI(uri string) (int, error) {
 	var id int
 	err := QueryRowSQL(sql, interfaceSlice(uri), interfaceSlice(&id))
 	return id, err
+}
+
+func (board *Board) GetThreads(onlyNotDeleted bool) ([]Thread, error) {
+	query := selectThreadsBaseSQL + " WHERE id = ?"
+	if onlyNotDeleted {
+		query += " AND is_deleted = FALSE"
+	}
+	rows, err := QuerySQL(query, board.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var threads []Thread
+	for rows.Next() {
+		var thread Thread
+		err = rows.Scan(
+			&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored,
+			&thread.Cyclical, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
+		)
+		if err != nil {
+			return threads, err
+		}
+		threads = append(threads, thread)
+	}
+	return threads, nil
+}
+
+// IsHidden returns true if the board is in a section that is hidden, otherwise false. If it is in a section
+// that is not in the AllSections array, it returns defValueIfMissingSection
+func (board *Board) IsHidden(defValueIfMissingSection bool) bool {
+	for s := range AllSections {
+		if AllSections[s].ID == board.SectionID {
+			return AllSections[s].Hidden
+		}
+	}
+	return defValueIfMissingSection // board is not in a valid section (or AllSections needs to be reset)
+}
+
+// AbsolutePath returns the full filepath of the board directory
+func (board *Board) AbsolutePath(subpath ...string) string {
+	return path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.Dir, path.Join(subpath...))
 }
 
 // WebPath returns a string that represents the file's path as accessible by a browser

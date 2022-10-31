@@ -24,6 +24,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var id int
 		var dir string
@@ -85,18 +86,18 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		// create new board using the board data from the old db
 		// omitting things like ID and creation date since we don't really care
 		if err = gcsql.CreateBoard(&gcsql.Board{
-			Dir:              dir,
-			Title:            title,
-			Subtitle:         subtitle,
-			Description:      description,
-			SectionID:        section,
-			MaxFilesize:      max_file_size,
-			MaxPages:         max_pages,
-			DefaultStyle:     default_style,
-			Locked:           locked,
-			AnonymousName:    anonymous,
-			ForceAnonymous:   forced_anon,
-			MaxAge:           max_age,
+			Dir:         dir,
+			Title:       title,
+			Subtitle:    subtitle,
+			Description: description,
+			SectionID:   section,
+			MaxFilesize: max_file_size,
+			// MaxPages:         max_pages,
+			DefaultStyle:   default_style,
+			Locked:         locked,
+			AnonymousName:  anonymous,
+			ForceAnonymous: forced_anon,
+			// MaxAge:           max_age,
 			AutosageAfter:    autosage_after,
 			NoImagesAfter:    no_images_after,
 			MaxMessageLength: max_message_length,
