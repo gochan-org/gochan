@@ -21,9 +21,12 @@ const (
 )
 
 var (
-	ErrNotTopPost       = errors.New("not the top post in the thread")
-	ErrPostDoesNotExist = errors.New("post does not exist")
-	ErrPostDeleted      = errors.New("post is deleted")
+	ErrNotTopPost        = errors.New("not the top post in the thread")
+	ErrPostDoesNotExist  = errors.New("post does not exist")
+	ErrPostDeleted       = errors.New("post is deleted")
+	ErrorPostAlreadySent = errors.New("post already submitted")
+	// TempPosts is a cached list of all of the posts in the temporary posts table, used for temporarily storing CAPTCHA
+	TempPosts []Post
 )
 
 func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
@@ -32,16 +35,62 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 		query += " AND is_deleted = 0"
 	}
 	post := new(Post)
-	post.ID = id
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
-		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name, &post.Tripcode, &post.IsRoleSignature,
-		&post.Email, &post.Subject, &post.Message, &post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
 	))
 	if err == sql.ErrNoRows {
 		return nil, ErrPostDoesNotExist
 
 	}
 	return post, err
+}
+
+func GetTopPostInThread(postID int) (int, error) {
+	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = (
+		SELECT thread_id FROM DBPREFIXposts WHERE id = ?
+	) AND is_top_post = TRUE ORDER BY id ASC LIMIT 1`
+	var id int
+	err := QueryRowSQL(query, interfaceSlice(postID), interfaceSlice(&id))
+	return id, err
+}
+
+func GetThreadTopPost(threadID int) (*Post, error) {
+	const query = selectPostsBaseSQL + "WHERE thread_id = ? AND is_top_post = TRUE LIMIT 1"
+	post := new(Post)
+	err := QueryRowSQL(query, interfaceSlice(threadID), interfaceSlice(
+		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+	))
+	return post, err
+}
+
+func GetBoardTopPosts(boardID int, onlyNotDeleted bool) ([]Post, error) {
+	query := selectPostsBaseSQL + "WHERE board_id = ?"
+	if onlyNotDeleted {
+		query += " AND is_deleted = FALSE"
+	}
+	rows, err := QuerySQL(query, boardID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		err = rows.Scan(
+			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+		)
+		if err != nil {
+			return posts, err
+		}
+		posts = append(posts, post)
+	}
+	return posts, nil
 }
 
 // GetPostPassword returns the password checksum of the post with the given ID
@@ -167,6 +216,45 @@ func (p *Post) Delete() error {
 	}
 	const deleteSQL = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
 	_, err := ExecSQL(deleteSQL, p.ID)
+	return err
+}
+
+func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
+	if p.ID > 0 {
+		// already inserted
+		return ErrorPostAlreadySent
+	}
+	insertSQL := `INSERT INTO DBPREFIXposts
+	(thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject,
+		message, message_raw, password) 
+	VALUES(?,?,?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?)`
+	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
+	var err error
+	if p.ThreadID == 0 {
+		// thread doesn't exist yet, this is a new post
+		p.IsTopPost = true
+		var threadID int
+		threadID, err = createThread(boardID, locked, stickied, anchored, cyclical)
+		if err != nil {
+			return err
+		}
+		p.ThreadID = threadID
+	}
+
+	id, err := getNextFreeID("DBPREFIXposts")
+	if err != nil {
+		return err
+	}
+	if _, err = ExecSQL(insertSQL,
+		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
+		p.Message, p.MessageRaw, p.Password,
+	); err != nil {
+		return err
+	}
+	p.ID = id
+	if bumpThread {
+		_, err = ExecSQL(bumpSQL, p.ThreadID)
+	}
 	return err
 }
 
