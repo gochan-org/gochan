@@ -10,6 +10,10 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+var (
+	ErrUnrecognizedUsername = errors.New("invalid username")
+)
+
 // createDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
 func createDefaultAdminIfNoStaff() error {
 	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
@@ -100,9 +104,16 @@ func DeactivateStaff(username string) error {
 	return s.SetActive(false)
 }
 
+func getStaffUsernameFromID(id int) (string, error) {
+	const query = `SELECT username FROM DBPREFIXstaff WHERE id = ?`
+	var username string
+	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&username))
+	return username, err
+}
+
 // GetStaffBySession gets the staff that is logged in in the given session
 func GetStaffBySession(session string) (*Staff, error) {
-	const sql = `SELECT 
+	const query = `SELECT 
 		staff.id, 
 		staff.username, 
 		staff.password_checksum, 
@@ -114,6 +125,41 @@ func GetStaffBySession(session string) (*Staff, error) {
 	ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
 	staff := new(Staff)
-	err := QueryRowSQL(sql, interfaceSlice(session), interfaceSlice(&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin))
+	err := QueryRowSQL(query, interfaceSlice(session), interfaceSlice(
+		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin))
 	return staff, err
+}
+
+func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
+	query := `SELECT 
+	id, username, password_checksum, global_rank, added_on, last_login, is_active
+	FROM DBPREFIXstaff WHERE username = ?`
+	if onlyActive {
+		query += ` AND is_active = TRUE`
+	}
+	staff := new(Staff)
+	err := QueryRowSQL(query, interfaceSlice(username), interfaceSlice(
+		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Rank, &staff.AddedOn,
+		&staff.LastLogin, &staff.IsActive,
+	))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrUnrecognizedUsername
+	}
+	return staff, err
+}
+
+// CreateLoginSession inserts a session for a given key and username into the database
+func CreateLoginSession(key, username string) error {
+	const insertSQL = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
+	const updateSQL = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
+	staff, err := GetStaffByUsername(username, true)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(insertSQL, staff.ID, key, time.Now().Add(time.Duration(time.Hour*730))) //TODO move amount of time to config file
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(updateSQL, staff.ID)
+	return err
 }

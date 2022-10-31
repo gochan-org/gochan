@@ -24,6 +24,7 @@
 			"if err != nil {",
 				"\treturn nil, err",
 			"}",
+			"defer rows.Close()",
 			"var ${2:itemname}s []${3:elementType}",
 			"for rows.Next() {",
 				"\tvar ${2:itemname} ${3:elementType}",

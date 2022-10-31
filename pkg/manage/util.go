@@ -35,7 +35,7 @@ func createSession(key, username, password string, request *http.Request, writer
 			Msg("Rejected login from possible spambot")
 		return sOtherError
 	}
-	staff, err := gcsql.GetStaffByName(username)
+	staff, err := gcsql.GetStaffByUsername(username, true)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			gcutil.LogError(err).
@@ -73,7 +73,7 @@ func createSession(key, username, password string, request *http.Request, writer
 		MaxAge: int(maxAge),
 	})
 
-	if err = gcsql.CreateSession(key, username); err != nil {
+	if err = gcsql.CreateLoginSession(username, key); err != nil {
 		gcutil.LogError(err).
 			Str("staff", username).
 			Str("sessionKey", key).
@@ -89,7 +89,11 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 	if err != nil {
 		return "", err
 	}
-	return gcsql.GetStaffName(sessionCookie.Value)
+	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
+	if err != nil {
+		return "", err
+	}
+	return staff.Username, nil
 }
 
 func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
