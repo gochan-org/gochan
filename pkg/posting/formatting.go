@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"fmt"
 	"html/template"
 	"strconv"
 	"strings"
@@ -42,10 +43,10 @@ func (mf *MessageFormatter) InitBBcode() {
 }
 
 func (*MessageFormatter) ApplyWordFilters(message string, boardDir string) (string, error) {
-	var filters []gcsql.WordFilter
+	var filters []gcsql.Wordfilter
 	var err error
 	if boardDir == "" {
-		filters, err = gcsql.GetWordFilters()
+		filters, err = gcsql.GetWordfilters()
 	} else {
 		filters, err = gcsql.GetBoardWordFilters(boardDir)
 	}
@@ -87,32 +88,31 @@ func FormatMessage(message string, boardDir string) template.HTML {
 					// the link is in fact, a valid int
 					var boardDir string
 					var linkParent int
-					var boardIDFound bool
-
-					if boardDir, boardIDFound, err = gcsql.GetBoardFromPostID(postID); err != nil {
+					var p gcsql.Post
+					p.GetTopPost()
+					if boardDir, err = gcsql.GetBoardDirFromPostID(postID); err != nil {
 						gcutil.LogError(err).
 							Int("postid", postID).
 							Msg("Error getting board dir for backlink")
 					}
-					if linkParent, err = gcsql.GetThreadIDZeroIfTopPost(postID); err != nil {
+					if err == gcsql.ErrBoardDoesNotExist {
+						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
+						continue
+					}
+					linkParent, err := gcsql.GetTopPostInThread(postID)
+					if err != nil {
 						gcutil.LogError(err).
 							Int("postid", postID).
 							Msg("Error getting post parent for backlink")
-					}
-
-					// get post board dir
-					if !boardIDFound {
 						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
-					} else if linkParent == 0 {
-						lineWords[w] = `<a href="` + WebRoot + boardDir + `/res/` + word[8:] + `.html" class="postref">` + word + `</a>`
 					} else {
-						lineWords[w] = `<a href="` + WebRoot + boardDir + `/res/` + strconv.Itoa(linkParent) + `.html#` + word[8:] + `" class="postref">` + word + `</a>`
+						lineWords[w] = fmt.Sprintf(`<a href="%s%s/res/%d.html#%d" class="postref">%s</a>`, WebRoot, boardDir, linkParent, word[8:], word)
 					}
 				}
 			} else if strings.Index(word, "&gt;") == 0 && w == 0 {
 				// word is at the beginning of a line, and is greentext
 				isGreentext = true
-				lineWords[w] = "<span class=\"greentext\">" + word
+				lineWords[w] = `<span class="greentext">` + word
 			}
 		}
 		line = strings.Join(lineWords, " ")

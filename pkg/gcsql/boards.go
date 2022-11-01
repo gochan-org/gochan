@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"database/sql"
 	"errors"
 	"path"
 	"time"
@@ -70,6 +71,22 @@ func GetBoardDir(id int) (string, error) {
 	var dir string
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&dir))
 	return dir, err
+}
+
+// GetBoardFromPostID gets the boardURI that a given postid exists on
+func GetBoardDirFromPostID(postID int) (string, error) {
+	const query = `SELECT board.uri FROM DBPREFIXboards as board
+	JOIN (
+		SELECT threads.board_id FROM DBPREFIXthreads as threads
+		JOIN DBPREFIXposts as posts ON posts.thread_id = threads.id
+		WHERE posts.id = ?
+	) as threads ON threads.board_id = board.id`
+	var boardURI string
+	err := QueryRowSQL(query, interfaceSlice(postID), interfaceSlice(&boardURI))
+	if errors.Is(err, sql.ErrNoRows) {
+		err = ErrBoardDoesNotExist
+	}
+	return boardURI, err
 }
 
 // GetBoardFromID returns the board corresponding to a given id
