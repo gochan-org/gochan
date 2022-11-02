@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 )
@@ -99,6 +100,42 @@ func GetPostPassword(id int) (string, error) {
 	var passwordChecksum string
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&passwordChecksum))
 	return passwordChecksum, err
+}
+
+// PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
+func PermanentlyRemoveDeletedPosts() error {
+	const sql1 = `DELETE FROM DBPREFIXposts WHERE is_deleted`
+	const sql2 = `DELETE FROM DBPREFIXthreads WHERE is_deleted`
+	_, err := ExecSQL(sql1)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql2)
+	return err
+}
+
+// SinceLastPost returns the number of seconds since the given IP address created a post
+// (used for checking against the new reply cooldown)
+func SinceLastPost(postIP string) (int, error) {
+	const query = `SELECT MAX(created_on) FROM DBPREFIXposts WHERE ip = ?`
+	var when time.Time
+	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&when))
+	if err != nil {
+		return -1, err
+	}
+	return int(time.Since(when).Seconds()), nil
+}
+
+// SinceLastThread returns the number of seconds since the given IP address created a new thread/top post
+// (used for checking against the new thread cooldown)
+func SinceLastThread(postIP string) (int, error) {
+	const query = `SELECT MAX(created_on) FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
+	var when time.Time
+	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&when))
+	if err != nil {
+		return -1, err
+	}
+	return int(time.Since(when).Seconds()), nil
 }
 
 // UpdateContents updates the email, subject, and message text of the post

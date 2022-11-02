@@ -179,6 +179,23 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 	return db, err
 }
 
+// OptimizeDatabase peforms a database optimisation
+func OptimizeDatabase() error {
+	tableRows, tablesErr := QuerySQL("SHOW TABLES")
+	if tablesErr != nil {
+		return tablesErr
+	}
+	defer tableRows.Close()
+	for tableRows.Next() {
+		var table string
+		tableRows.Scan(&table)
+		if _, err := ExecSQL("OPTIMIZE TABLE " + table); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func sqlVersionError(err error, dbDriver string, query *string) error {
 	if err == nil {
 		return nil
