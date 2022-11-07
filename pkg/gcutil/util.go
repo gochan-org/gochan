@@ -109,12 +109,6 @@ func GetFileParts(filename string) (string, string, string) {
 	return base, noExt, ext
 }
 
-// GetFileExtension returns the given file's extension, or a blank string if it has none
-func GetFileExtension(filename string) string {
-	_, _, ext := GetFileParts(filename)
-	return ext
-}
-
 // GetFormattedFilesize returns a human readable filesize
 func GetFormattedFilesize(size float64) string {
 	if size < 1000 {
@@ -144,19 +138,41 @@ func GetRealIP(request *http.Request) string {
 	return remoteHost
 }
 
+// GetThumbnailExt returns the extension to be used when creating a thumbnail of img. For non-image files,
+// it just returns the extension, in which case a generic icon will be (eventually) used
+func GetThumbnailExt(filename string) string {
+	ext := filepath.Ext(strings.ToLower(filename))
+	switch ext {
+	case ".gif":
+		fallthrough
+	case ".png":
+		fallthrough
+	case ".webm":
+		fallthrough
+	case ".webp":
+		return "png"
+	case ".jpg":
+		fallthrough
+	case ".jpeg":
+		fallthrough
+	case "mp4":
+		return "jpg"
+	default:
+		// invalid file format
+		return ""
+	}
+}
+
 // GetThumbnailPath returns the thumbnail path of the given filename
 func GetThumbnailPath(thumbType string, img string) string {
-	filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
-	if filetype == "gif" || filetype == "webm" || filetype == "mp4" {
-		filetype = "jpg"
-	}
+	ext := GetThumbnailExt(img)
 	index := strings.LastIndex(img, ".")
 	if index < 0 || index > len(img) {
 		return ""
 	}
-	thumbSuffix := "t." + filetype
+	thumbSuffix := "t." + ext
 	if thumbType == "catalog" {
-		thumbSuffix = "c." + filetype
+		thumbSuffix = "c." + ext
 	}
 	return img[0:index] + thumbSuffix
 }
@@ -272,27 +288,4 @@ func StripHTML(htmlIn string) string {
 		tokenType = dom.Next()
 	}
 	return ""
-}
-
-func ThumbnailExtension(filename string) string {
-	ext := filepath.Ext(strings.ToLower(filename))
-	switch ext {
-	case ".gif":
-		fallthrough
-	case ".png":
-		fallthrough
-	case ".webm":
-		fallthrough
-	case ".webp":
-		return "png"
-	case ".jpg":
-		fallthrough
-	case ".jpeg":
-		fallthrough
-	case "mp4":
-		return "jpg"
-	default:
-		// invalid file format
-		return ""
-	}
 }

@@ -153,51 +153,51 @@ var funcMap = template.FuncMap{
 		return dict, nil
 	},
 	// Imageboard functions
-	"bannedForever": func(banInfo *gcsql.BanInfo) bool {
-		return banInfo.BannedForever()
-	},
-	"isBanned": func(banInfo *gcsql.BanInfo, board string) bool {
-		return banInfo.IsBanned(board)
-	},
-	"isOP": func(post gcsql.Post) bool {
-		return post.ParentID == 0
-	},
+	// "bannedForever": func(banInfo *gcsql.BanInfo) bool {
+	// 	return banInfo.BannedForever()
+	// },
+	// "isBanned": func(banInfo *gcsql.BanInfo, board string) bool {
+	// 	return banInfo.IsBanned(board)
+	// },
+	// "isOP": func(post gcsql.Post) bool {
+	// 	return post.ParentID == 0
+	// },
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},
-	"getThreadID": func(postInterface interface{}) (thread int) {
-		post, ok := postInterface.(gcsql.Post)
-		if !ok {
-			thread = 0
-		} else if post.ParentID == 0 {
-			thread = post.ID
-		} else {
-			thread = post.ParentID
-		}
-		return
-	},
-	"getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
-		systemCritical := config.GetSystemCriticalConfig()
-		if withDomain {
-			postURL = systemCritical.SiteDomain
-		}
-		postURL += systemCritical.WebRoot
+	// "getThreadID": func(postInterface interface{}) (thread int) {
+	// 	post, ok := postInterface.(gcsql.Post)
+	// 	if !ok {
+	// 		thread = 0
+	// 	} else if post.ParentID == 0 {
+	// 		thread = post.ID
+	// 	} else {
+	// 		thread = post.ParentID
+	// 	}
+	// 	return
+	// },
+	// "getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
+	// 	systemCritical := config.GetSystemCriticalConfig()
+	// 	if withDomain {
+	// 		postURL = systemCritical.SiteDomain
+	// 	}
+	// 	postURL += systemCritical.WebRoot
 
-		if typeOf == "recent" {
-			post, ok := postInterface.(gcsql.RecentPost)
-			if !ok {
-				return
-			}
-			postURL = post.GetURL(withDomain)
-		} else {
-			post, ok := postInterface.(*gcsql.Post)
-			if !ok {
-				return
-			}
-			postURL = post.GetURL(withDomain)
-		}
-		return
-	},
+	// 	if typeOf == "recent" {
+	// 		post, ok := postInterface.(gcsql.RecentPost)
+	// 		if !ok {
+	// 			return
+	// 		}
+	// 		postURL = post.GetURL(withDomain)
+	// 	} else {
+	// 		post, ok := postInterface.(*gcsql.Post)
+	// 		if !ok {
+	// 			return
+	// 		}
+	// 		postURL = post.GetURL(withDomain)
+	// 	}
+	// 	return
+	// },
 	"getThreadThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("thread", img)
 	},

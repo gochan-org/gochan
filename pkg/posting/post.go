@@ -1,9 +1,8 @@
 package posting
 
 import (
-	"bytes"
 	"crypto/md5"
-	"database/sql"
+	"errors"
 	"fmt"
 	"html"
 	"image"
@@ -13,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -22,7 +22,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
@@ -31,9 +30,21 @@ const (
 	yearInSeconds = 31536000
 )
 
+var (
+	ErrorPostTooLong = errors.New("post is too long")
+)
+
+func rejectPost(reasonShort string, reasonLong string, data map[string]interface{}, writer http.ResponseWriter, request *http.Request) {
+	gcutil.LogError(errors.New(reasonLong)).
+		Str("rejectedPost", reasonShort).
+		Str("IP", gcutil.GetRealIP(request)).
+		Fields(data).Send()
+	data["rejected"] = reasonLong
+	serverutil.ServeError(writer, reasonLong, serverutil.IsRequestingJSON(request), data)
+}
+
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
-	var maxMessageLength int
 	var post gcsql.Post
 	var formName string
 	var nameCookie string
@@ -46,17 +57,33 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
 		return
 	}
+	wantsJSON := serverutil.IsRequestingJSON(request)
 	post.IP = gcutil.GetRealIP(request)
-	post.ParentID, _ = strconv.Atoi(request.FormValue("threadid"))
-	post.BoardID, _ = strconv.Atoi(request.FormValue("boardid"))
-	var postBoard gcsql.Board
-	postBoard, err := gcsql.GetBoardFromID(post.BoardID)
+	var err error
+	threadidStr := request.FormValue("threadid")
+	if threadidStr != "" {
+		// post is a reply
+		if post.ThreadID, err = strconv.Atoi(threadidStr); err != nil {
+			rejectPost("invalidFormData", "Invalid form data (invalid threadid)", map[string]interface{}{
+				"threadidStr": threadidStr,
+			}, writer, request)
+			return
+		}
+	}
+
+	boardidStr := request.FormValue("boardid")
+	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
-		gcutil.LogError(err).
-			Int("boardid", post.BoardID).
-			Str("IP", post.IP).
-			Msg("Error getting board info")
-		serverutil.ServeErrorPage(writer, "Error getting board info: "+err.Error())
+		rejectPost("invalidForm", "Invalid form data (invalid boardid)", map[string]interface{}{
+			"boardidStr": boardidStr,
+		}, writer, request)
+		return
+	}
+	postBoard, err := gcsql.GetBoardFromID(boardID)
+	if err != nil {
+		rejectPost("boardInfoError", "Error getting board info: "+err.Error(), map[string]interface{}{
+			"boardid": boardID,
+		}, writer, request)
 		return
 	}
 
@@ -86,32 +113,23 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	post.Subject = request.FormValue("postsubject")
-	post.MessageText = strings.Trim(request.FormValue("postmsg"), "\r\n")
-
-	if maxMessageLength, err = gcsql.GetMaxMessageLength(post.BoardID); err != nil {
-		gcutil.LogError(err).
-			Int("boardid", post.BoardID).
-			Str("IP", post.IP).
-			Msg("Error getting board info")
-		serverutil.ServeErrorPage(writer, "Error getting board info: "+err.Error())
+	post.MessageRaw = strings.TrimSpace(request.FormValue("postmsg"))
+	if len(post.MessageRaw) > postBoard.MaxMessageLength {
+		rejectPost("messageLength", "Message is too long", map[string]interface{}{
+			"messageLength": len(post.MessageRaw),
+			"boardid":       boardID,
+		}, writer, request)
 		return
 	}
 
-	if len(post.MessageText) > maxMessageLength {
-		serverutil.ServeErrorPage(writer, "Post body is too long")
+	if post.MessageRaw, err = ApplyWordFilters(post.MessageRaw, postBoard.Dir); err != nil {
+		rejectPost("wordfilterError", "Error formatting post: "+err.Error(), map[string]interface{}{
+			"boardDir": postBoard.Dir,
+		}, writer, request)
 		return
 	}
 
-	if post.MessageText, err = ApplyWordFilters(post.MessageText, postBoard.Dir); err != nil {
-		gcutil.LogError(err).
-			Str("IP", post.IP).
-			Str("boardDir", postBoard.Dir).
-			Msg("Error applying wordfilters")
-		serverutil.ServeErrorPage(writer, "Error formatting post: "+err.Error())
-		return
-	}
-
-	post.MessageHTML = FormatMessage(post.MessageText, postBoard.Dir)
+	post.Message = FormatMessage(post.MessageRaw, postBoard.Dir)
 	password := request.FormValue("postpassword")
 	if password == "" {
 		password = gcutil.RandomString(8)
@@ -135,11 +153,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		MaxAge: yearInSeconds,
 	})
 
-	post.Timestamp = time.Now()
+	post.CreatedOn = time.Now()
 	// post.PosterAuthority = getStaffRank(request)
-	post.Bumped = time.Now()
-	post.Stickied = request.FormValue("modstickied") == "on"
-	post.Locked = request.FormValue("modlocked") == "on"
+	// bumpedTimestamp := time.Now()
+	// isSticky := request.FormValue("modstickied") == "on"
+	// isLocked := request.FormValue("modlocked") == "on"
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
 	if !serverutil.ValidReferer(request) {
@@ -147,12 +165,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			Str("spam", "badReferer").
 			Str("IP", post.IP).
 			Msg("Rejected post from possible spambot")
+		serverutil.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
 		return
 	}
 
 	akismetResult := serverutil.CheckPostForSpam(
 		post.IP, request.Header.Get("User-Agent"), request.Referer(),
-		post.Name, post.Email, post.MessageText,
+		post.Name, post.Email, post.MessageRaw,
 	)
 	logEvent := gcutil.LogInfo().
 		Str("User-Agent", request.Header.Get("User-Agent")).
@@ -160,55 +179,41 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	switch akismetResult {
 	case "discard":
 		logEvent.Str("akismet", "discard").Send()
-		serverutil.ServeErrorPage(writer, "Your post looks like spam.")
+		serverutil.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
 		return
 	case "spam":
 		logEvent.Str("akismet", "spam").Send()
-		serverutil.ServeErrorPage(writer, "Your post looks like spam.")
+		serverutil.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
 		return
 	default:
 		logEvent.Discard()
 	}
 
-	postDelay, _ := gcsql.SinceLastPost(post.IP)
-	if postDelay > -1 {
-		if post.ParentID == 0 && postDelay < boardConfig.NewThreadDelay {
-			serverutil.ServeErrorPage(writer, "Please wait before making a new thread.")
-			return
-		} else if post.ParentID > 0 && postDelay < boardConfig.ReplyDelay {
-			serverutil.ServeErrorPage(writer, "Please wait before making a reply.")
-			return
-		}
+	var delay int
+	var tooSoon bool
+	if threadidStr == "" {
+		// creating a new thread
+		delay, err = gcsql.SinceLastThread(post.IP)
+		tooSoon = delay < boardConfig.NewThreadDelay
+	} else {
+		delay, err = gcsql.SinceLastPost(post.IP)
+		tooSoon = delay < boardConfig.ReplyDelay
 	}
-
-	banStatus, err := getBannedStatus(request)
-	if err != nil && err != sql.ErrNoRows {
-		gcutil.LogError(err).
-			Str("IP", post.IP).
-			Fields(gcutil.ParseName(formName)).
-			Msg("Error getting banned status")
-		serverutil.ServeErrorPage(writer, "Error getting banned status: "+err.Error())
+	if err != nil {
+		rejectPost("cooldownError", "Error checking post cooldown: "+err.Error(), map[string]interface{}{
+			"boardDir": postBoard.Dir,
+		}, writer, request)
+		return
+	}
+	if tooSoon {
+		rejectPost("cooldownError", "Please wait before making a new post", map[string]interface{}{}, writer, request)
 		return
 	}
 
-	boards, _ := gcsql.GetAllBoards()
-
-	if banStatus != nil && banStatus.IsBanned(postBoard.Dir) {
-		var banpageBuffer bytes.Buffer
-
-		if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
-			"systemCritical": config.GetSystemCriticalConfig(),
-			"siteConfig":     config.GetSiteConfig(),
-			"boardConfig":    config.GetBoardConfig(""),
-			"ban":            banStatus,
-			"banBoards":      boards[post.BoardID-1].Dir,
-		}, writer, "text/html"); err != nil {
-			gcutil.LogError(err).
-				Str("building", "minifier").Send()
-			serverutil.ServeErrorPage(writer, "Error minifying page: "+err.Error())
-			return
-		}
-		writer.Write(banpageBuffer.Bytes())
+	if checkIpBan(&post, postBoard, writer, request) {
+		return
+	}
+	if checkUsernameBan(formName, &post, postBoard, writer, request) {
 		return
 	}
 
@@ -232,8 +237,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	var filePath, thumbPath, catalogThumbPath string
 	if err != nil || handler.Size == 0 {
 		// no file was uploaded
-		post.Filename = ""
-		if strings.TrimSpace(post.MessageText) == "" {
+		if strings.TrimSpace(post.MessageRaw) == "" {
 			serverutil.ServeErrorPage(writer, "Post must contain a message if no image is uploaded.")
 			return
 		}
@@ -250,33 +254,21 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		defer file.Close()
-		post.FilenameOriginal = html.EscapeString(handler.Filename)
-		ext := gcutil.GetFileExtension(post.FilenameOriginal)
-		thumbExt := strings.ToLower(ext)
-		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
-			thumbExt = "jpg"
-		}
+		var upload gcsql.Upload
+		upload.OriginalFilename = html.EscapeString(handler.Filename)
 
-		post.Filename = getNewFilename() + "." + ext
+		ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
+		upload.Filename = getNewFilename() + ext
+
 		boardExists := gcsql.DoesBoardExistByID(
 			gcutil.HackyStringToInt(request.FormValue("boardid")))
 		if !boardExists {
 			serverutil.ServeErrorPage(writer, "No boards have been created yet")
 			return
 		}
-		var _board = gcsql.Board{}
-		err = _board.PopulateData(gcutil.HackyStringToInt(request.FormValue("boardid")))
-		if err != nil {
-			gcutil.LogError(err).
-				Str("IP", post.IP).
-				Str("posting", "updateBoard").Send()
-			serverutil.ServeErrorPage(writer, "Server error: "+err.Error())
-			return
-		}
-		boardDir := _board.Dir
-		filePath = path.Join(systemCritical.DocumentRoot, boardDir, "src", post.Filename)
-		thumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "t."+thumbExt, -1))
-		catalogThumbPath = path.Join(systemCritical.DocumentRoot, boardDir, "thumb", strings.Replace(post.Filename, "."+ext, "c."+thumbExt, -1))
+		filePath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "src", upload.Filename)
+		thumbPath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
+		catalogThumbPath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 
 		if err = os.WriteFile(filePath, data, 0644); err != nil {
 			gcutil.LogError(err).
@@ -353,7 +345,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					}
 				}
 				thumbType := "reply"
-				if post.ParentID == 0 {
+				if post.IsTopPost {
 					thumbType = "op"
 				}
 				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
@@ -474,7 +466,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// rebuild the board page
-	building.BuildBoards(false, post.BoardID)
+	building.BuildBoards(false, postBoard.ID)
 	building.BuildFrontPage()
 
 	if emailCommand == "noko" {

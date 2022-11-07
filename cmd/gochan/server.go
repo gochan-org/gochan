@@ -66,34 +66,34 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 
 // set mime type/cache headers according to the file's extension
 func (*gochanServer) setFileHeaders(filename string, writer http.ResponseWriter) {
-	extension := strings.ToLower(gcutil.GetFileExtension(filename))
+	extension := strings.ToLower(path.Ext(filename))
 	switch extension {
-	case "png":
+	case ".png":
 		writer.Header().Set("Content-Type", "image/png")
 		writer.Header().Set("Cache-Control", "max-age=86400")
-	case "gif":
+	case ".gif":
 		writer.Header().Set("Content-Type", "image/gif")
 		writer.Header().Set("Cache-Control", "max-age=86400")
-	case "jpg":
+	case ".jpg":
 		fallthrough
-	case "jpeg":
+	case ".jpeg":
 		writer.Header().Set("Content-Type", "image/jpeg")
 		writer.Header().Set("Cache-Control", "max-age=86400")
-	case "css":
+	case ".css":
 		writer.Header().Set("Content-Type", "text/css")
 		writer.Header().Set("Cache-Control", "max-age=43200")
-	case "js":
+	case ".js":
 		writer.Header().Set("Content-Type", "text/javascript")
 		writer.Header().Set("Cache-Control", "max-age=43200")
-	case "json":
+	case ".json":
 		writer.Header().Set("Content-Type", "application/json")
 		writer.Header().Set("Cache-Control", "max-age=5, must-revalidate")
-	case "webm":
+	case ".webm":
 		writer.Header().Set("Content-Type", "video/webm")
 		writer.Header().Set("Cache-Control", "max-age=86400")
-	case "htm":
+	case ".htm":
 		fallthrough
-	case "html":
+	case ".html":
 		writer.Header().Set("Content-Type", "text/html")
 		writer.Header().Set("Cache-Control", "max-age=5, must-revalidate")
 	default:
@@ -135,7 +135,7 @@ func initServer() {
 		fmt.Println("Got error when initializing Akismet spam protection, it will be disabled:", err)
 	}
 
-	server.namespaces["banned"] = posting.BanHandler
+	// server.namespaces["banned"] = posting.BanHandler
 	server.namespaces["captcha"] = posting.ServeCaptcha
 	server.namespaces["manage"] = manage.CallManageFunction
 	server.namespaces["post"] = posting.MakePost

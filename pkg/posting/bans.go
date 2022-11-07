@@ -1,11 +1,6 @@
 package posting
 
 import (
-	"crypto/md5"
-	"database/sql"
-	"fmt"
-	"html"
-	"io"
 	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -15,82 +10,114 @@ import (
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
-const (
-	_ = iota
-	ThreadBan
-	ImageBan
-	FullBan
-)
-
-// BanHandler is used for serving ban pages
-func BanHandler(writer http.ResponseWriter, request *http.Request) {
-	appealMsg := request.FormValue("appealmsg")
-	// banStatus, err := getBannedStatus(request)  // TODO refactor to use ipban
-	var banStatus gcsql.BanInfo
-	var err error
-	systemCritical := config.GetSystemCriticalConfig()
-	siteConfig := config.GetSiteConfig()
-	boardConfig := config.GetBoardConfig("")
-	if appealMsg != "" {
-		if banStatus.BannedForever() {
-			fmt.Fprint(writer, "No.")
-			return
-		}
-		escapedMsg := html.EscapeString(appealMsg)
-		if err = gcsql.AddBanAppeal(banStatus.ID, escapedMsg); err != nil {
-			serverutil.ServeErrorPage(writer, err.Error())
-		}
-		fmt.Fprint(writer,
-			"Appeal sent. It will (hopefully) be read by a staff member. check "+systemCritical.WebRoot+"banned occasionally for a response",
-		)
-		return
-	}
-
-	if err != nil && err != sql.ErrNoRows {
-		gcutil.LogError(err).Msg("Failed getting banned status")
-		serverutil.ServeErrorPage(writer, "Error getting banned status: "+err.Error())
-		return
-	}
-
-	if err = serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
-		"systemCritical": systemCritical,
-		"siteConfig":     siteConfig,
-		"boardConfig":    boardConfig,
-		"ban":            banStatus,
-		"banBoards":      banStatus.Boards,
-		"post":           gcsql.Post{},
-	}, writer, "text/html"); err != nil {
+func showBanpage(ban gcsql.Ban, banType string, filename string, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) {
+	// TODO: possibly split file/username/filename bans into separate page template
+	err := serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
+		"systemCritical": config.GetSystemCriticalConfig(),
+		"siteConfig":     config.GetSiteConfig(),
+		"boardConfig":    config.GetBoardConfig(postBoard.Dir),
+		"ban":            ban,
+		"board":          postBoard,
+	}, writer, "text/html")
+	if err != nil {
 		gcutil.LogError(err).
-			Str("template", "banpage").
-			Msg("Failed minifying template")
-		serverutil.ServeErrorPage(writer, "Error minifying page template: "+err.Error())
+			Str("IP", post.IP).
+			Str("building", "minifier").
+			Str("banType", banType).
+			Str("template", "banpage.html").Send()
+		serverutil.ServeErrorPage(writer, "Error minifying page: "+err.Error())
 		return
+	}
+	ev := gcutil.LogInfo().
+		Str("IP", post.IP).
+		Str("boardDir", postBoard.Dir).
+		Str("banType", banType)
+	switch banType {
+	case "ip":
+		ev.Msg("Rejected post from banned IP")
+	case "username":
+		ev.
+			Str("name", post.Name).
+			Str("tripcode", post.Tripcode).
+			Msg("Rejected post with banned name/tripcode")
+	case "filename":
+		ev.
+			Str("filename", filename).
+			Msg("Rejected post with banned filename")
 	}
 }
 
-// Checks check poster's name/tripcode/file checksum (from Post post) for banned status
-// returns ban table if the user is banned or sql.ErrNoRows if they aren't
-func getBannedStatus(request *http.Request) (*gcsql.BanInfo, error) {
-	formName := request.FormValue("postname")
-	var tripcode string
-	if formName != "" {
-		parsedName := gcutil.ParseName(formName)
-		tripcode += parsedName["name"]
-		if tc, ok := parsedName["tripcode"]; ok {
-			tripcode += "!" + tc
-		}
-	}
-	ip := gcutil.GetRealIP(request)
+// func BanHandler(writer http.ResponseWriter, request *http.Request) {
+// 	ip := gcutil.GetRealIP(request)
+// 	ipBan, err := gcsql.CheckIPBan(ip, 0)
+// 	if err != nil {
+// 		gcutil.LogError(err).
+// 			Str("IP", ip).
+// 			Msg("Error checking IP banned status (/banned request)")
+// 		serverutil.ServeErrorPage(writer, "Error checking banned status: "+err.Error())
+// 		return
+// 	}
 
-	var filename string
-	var checksum string
-	file, fileHandler, err := request.FormFile("imagefile")
-	if err == nil {
-		html.EscapeString(fileHandler.Filename)
-		if data, err2 := io.ReadAll(file); err2 == nil {
-			checksum = fmt.Sprintf("%x", md5.Sum(data))
-		}
-		file.Close()
+// }
+
+// checks the post for spam. It returns true if a ban page or an error page was served (causing MakePost() to return)
+func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	ipBan, err := gcsql.CheckIPBan(post.IP, postBoard.ID)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Str("boardDir", postBoard.Dir).
+			Msg("Error getting IP banned status")
+		serverutil.ServeErrorPage(writer, "Error getting ban info"+err.Error())
+		return true
 	}
-	return gcsql.CheckBan(ip, tripcode, filename, checksum)
+	if ipBan == nil {
+		return false // ip is not banned and there were no errors, keep going
+	}
+	// IP is banned
+	showBanpage(ipBan, "ip", "", post, postBoard, writer, request)
+	return true
+}
+
+func checkUsernameBan(formName string, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	if formName == "" {
+		return false
+	}
+
+	nameBan, err := gcsql.CheckNameBan(formName, postBoard.ID)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Str("name", formName).
+			Str("boardDir", postBoard.Dir).
+			Msg("Error getting name banned status")
+		serverutil.ServeErrorPage(writer, "Error getting name ban info")
+		return true
+	}
+	if nameBan == nil {
+		return false // name is not banned
+	}
+	showBanpage(nameBan, "username", "", post, postBoard, writer, request)
+	return true
+}
+
+func checkFilenameBan(filename string, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	if filename == "" {
+		return false
+	}
+	filenameBan, err := gcsql.CheckFilenameBan(filename, postBoard.ID)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Str("filename", filename).
+			Str("boardDir", postBoard.Dir).
+			Msg("Error getting name banned status")
+		serverutil.ServeErrorPage(writer, "Error getting filename ban info")
+		return true
+	}
+	if filenameBan == nil {
+		return false
+	}
+	showBanpage(filenameBan, "filename", filename, post, postBoard, writer, request)
+	return true
 }

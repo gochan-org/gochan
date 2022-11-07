@@ -60,16 +60,22 @@ type FileBan struct {
 	Checksum  string    `json:"checksum"`   // sql: `checksum`
 }
 
+type filenameOrUsernameBanBase struct {
+	ID        int       // sql: id
+	BoardID   *int      // sql: board_id
+	StaffID   int       // sql: staff_id
+	StaffNote string    // sql: staff_note
+	IssuedAt  time.Time // sql: issued_at
+	check     string    // replaced with username or filename
+	IsRegex   bool      // sql: is_regex
+}
+
 // FilenameBan represents a ban on a specific filename or filename regular expression.
 // table: DBPREFIXfilename_ban
 type FilenameBan struct {
-	ID        int       `json:"id"`         // sql: `id`
-	BoardID   int       `json:"board_id"`   // sql: `board_id`
-	StaffID   int       `json:"staff_id"`   // sql: `staff_id`
-	StaffNote string    `json:"staff_note"` // sql: `staff_note`
-	IssuedAt  time.Time `json:"issued_at"`  // sql: `issued_at`
-	Filename  string    `json:"filename"`   // sql: `filename`
-	IsRegex   bool      `json:"is_regex"`   // sql: `is_regex`
+	filenameOrUsernameBanBase
+	Filename string // sql: `filename`
+	IsRegex  bool   // sql: `is_regex`
 }
 
 // Upload represents a file attached to a post.
@@ -161,6 +167,8 @@ type Post struct {
 	DeletedAt       time.Time     // sql: `deleted_at`
 	IsDeleted       bool          // sql: `is_deleted`
 	BannedMessage   string        // sql: `banned_message`
+
+	sanitized bool
 }
 
 // table: DBPREFIXreports
@@ -224,13 +232,8 @@ type Thread struct {
 
 // table: DBPREFIXusername_ban
 type UsernameBan struct {
-	ID        int       `json:"id"`         // sql: `id`
-	BoardID   *int      `json:"board"`      // sql: `board_id`
-	StaffID   int       `json:"staff_id"`   // sql: `staff_id`
-	StaffNote string    `json:"staff_note"` // sql: `staff_note`
-	IssuedAt  time.Time `json:"issued_at"`  // sql: `issued_at`
-	Username  string    `json:"username"`   // sql: `username`
-	IsRegex   bool      `json:"is_regex"`   // sql: `is_regex`
+	filenameOrUsernameBanBase
+	Username string // sql: `username`
 }
 
 // table DBPREFIXwordfilters
