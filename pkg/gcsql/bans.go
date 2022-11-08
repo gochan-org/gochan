@@ -98,3 +98,25 @@ func CheckFilenameBan(filename string, boardID int) (*FilenameBan, error) {
 		filenameOrUsernameBanBase: *banBase,
 	}, nil
 }
+
+func CheckFileBan(checksum string, boardID int) (*FileBan, error) {
+	const query = `SELECT
+	id, board_id, staff_id, staff_note, issued_at, checksum
+	FROM DBPREFIXfile_ban
+	WHERE checksum = ? AND (board_id IS NULL OR board_id = ?) ORDER BY id DESC LIMIT 1`
+	var ban FileBan
+	err := QueryRowSQL(query, interfaceSlice(checksum, boardID), interfaceSlice(
+		&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
+	))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &ban, err
+}
+
+func (fb *FileBan) IsGlobalBan() bool {
+	return fb.BoardID == nil
+}

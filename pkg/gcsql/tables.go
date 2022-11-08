@@ -52,12 +52,12 @@ type Board struct {
 // FileBan contains the information associated with a specific file ban.
 // table: DBPREFIXfile_ban
 type FileBan struct {
-	ID        int       `json:"id"`         // sql: `id`
-	BoardID   int       `json:"board_id"`   // sql: `board_id`
-	StaffID   int       `json:"staff_id"`   // sql: `staff_id`
-	StaffNote string    `json:"staff_note"` // sql: `staff_note`
-	IssuedAt  time.Time `json:"issued_at"`  // sql: `issued_at`
-	Checksum  string    `json:"checksum"`   // sql: `checksum`
+	ID        int       // sql: `id`
+	BoardID   *int      // sql: `board_id`
+	StaffID   int       // sql: `staff_id`
+	StaffNote string    // sql: `staff_note`
+	IssuedAt  time.Time // sql: `issued_at`
+	Checksum  string    // sql: `checksum`
 }
 
 type filenameOrUsernameBanBase struct {
@@ -97,26 +97,26 @@ type Upload struct {
 
 // used to composition IPBan and IPBanAudit
 type ipBanBase struct {
-	IsActive    bool      `json:"is_active"`
-	IsThreadBan bool      `json:"is_thread_ban"`
-	ExpiresAt   time.Time `json:"expires_at"`
-	StaffID     int       `json:"staff_id"`
-	AppealAt    time.Time `json:"appeal_at"`
-	Permanent   bool      `json:"permanent"`
-	StaffNote   string    `json:"staff_note"`
-	Message     string    `json:"message"`
-	CanAppeal   bool      `json:"can_appeal"`
+	IsActive    bool
+	IsThreadBan bool
+	ExpiresAt   time.Time
+	StaffID     int
+	AppealAt    time.Time
+	Permanent   bool
+	StaffNote   string
+	Message     string
+	CanAppeal   bool
 }
 
 // IPBan contains the information association with a specific ip ban.
 // table: DBPREFIXip_ban
 type IPBan struct {
-	ID              int           `json:"id"`
-	BoardID         *int          `json:"board"`
-	BannedForPostID *int          `json:"banned_for_post_id"`
-	CopyPostText    template.HTML `json:"copy_post_text"`
-	IP              string        `json:"ip"`
-	IssuedAt        time.Time     `json:"issued_at"`
+	ID              int
+	BoardID         *int
+	BannedForPostID *int
+	CopyPostText    template.HTML
+	IP              string
+	IssuedAt        time.Time
 	ipBanBase
 }
 

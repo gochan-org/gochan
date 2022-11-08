@@ -10,15 +10,19 @@ import (
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
-func showBanpage(ban gcsql.Ban, banType string, filename string, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) {
+func showBanpage(ban gcsql.Ban, banType string, upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) {
 	// TODO: possibly split file/username/filename bans into separate page template
-	err := serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
+	tmplMap := map[string]interface{}{
 		"systemCritical": config.GetSystemCriticalConfig(),
 		"siteConfig":     config.GetSiteConfig(),
 		"boardConfig":    config.GetBoardConfig(postBoard.Dir),
 		"ban":            ban,
 		"board":          postBoard,
-	}, writer, "text/html")
+	}
+	if upload != nil {
+		tmplMap["filename"] = upload.OriginalFilename
+	}
+	err := serverutil.MinifyTemplate(gctemplates.Banpage, tmplMap, writer, "text/html")
 	if err != nil {
 		gcutil.LogError(err).
 			Str("IP", post.IP).
@@ -42,8 +46,13 @@ func showBanpage(ban gcsql.Ban, banType string, filename string, post *gcsql.Pos
 			Msg("Rejected post with banned name/tripcode")
 	case "filename":
 		ev.
-			Str("filename", filename).
+			Str("filename", upload.OriginalFilename).
 			Msg("Rejected post with banned filename")
+	case "checksum":
+		ev.
+			Str("filename", upload.OriginalFilename).
+			Str("checksum", upload.Checksum).
+			Msg("Rejected post with banned checksum")
 	}
 }
 
@@ -75,7 +84,7 @@ func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWr
 		return false // ip is not banned and there were no errors, keep going
 	}
 	// IP is banned
-	showBanpage(ipBan, "ip", "", post, postBoard, writer, request)
+	showBanpage(ipBan, "ip", nil, post, postBoard, writer, request)
 	return true
 }
 
@@ -97,19 +106,16 @@ func checkUsernameBan(formName string, post *gcsql.Post, postBoard *gcsql.Board,
 	if nameBan == nil {
 		return false // name is not banned
 	}
-	showBanpage(nameBan, "username", "", post, postBoard, writer, request)
+	showBanpage(nameBan, "username", nil, post, postBoard, writer, request)
 	return true
 }
 
-func checkFilenameBan(filename string, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
-	if filename == "" {
-		return false
-	}
-	filenameBan, err := gcsql.CheckFilenameBan(filename, postBoard.ID)
+func checkFilenameBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	filenameBan, err := gcsql.CheckFilenameBan(upload.OriginalFilename, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).
 			Str("IP", post.IP).
-			Str("filename", filename).
+			Str("filename", upload.OriginalFilename).
 			Str("boardDir", postBoard.Dir).
 			Msg("Error getting name banned status")
 		serverutil.ServeErrorPage(writer, "Error getting filename ban info")
@@ -118,6 +124,24 @@ func checkFilenameBan(filename string, post *gcsql.Post, postBoard *gcsql.Board,
 	if filenameBan == nil {
 		return false
 	}
-	showBanpage(filenameBan, "filename", filename, post, postBoard, writer, request)
+	showBanpage(filenameBan, "filename", upload, post, postBoard, writer, request)
+	return true
+}
+
+func checkChecksumBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	fileBan, err := gcsql.CheckFileBan(upload.Checksum, postBoard.ID)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Str("boardDir", postBoard.Dir).
+			Str("checksum", upload.Checksum).
+			Msg("Error getting file checksum ban status")
+		serverutil.ServeErrorPage(writer, "Error processing file: "+err.Error())
+		return true
+	}
+	if fileBan == nil {
+		return false
+	}
+	showBanpage(fileBan, "checksum", upload, post, postBoard, writer, request)
 	return true
 }
