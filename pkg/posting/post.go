@@ -233,6 +233,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	var upload *gcsql.Upload
 	file, handler, err := request.FormFile("imagefile")
 	var filePath, thumbPath, catalogThumbPath string
 	if err != nil || handler.Size == 0 {
@@ -246,16 +247,31 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			Str("referredFrom", request.Referer()).
 			Send()
 	} else {
+		upload = &gcsql.Upload{
+			OriginalFilename: html.EscapeString(handler.Filename),
+		}
+
+		if checkFilenameBan(upload, &post, postBoard, writer, request) {
+			// if checkFilenameBan returns true, a ban page or error was displayed
+			return
+		}
+
 		data, err := io.ReadAll(file)
 		if err != nil {
 			gcutil.LogError(err).
+				Str("IP", post.IP).
 				Str("upload", "read").Send()
 			serverutil.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
 			return
 		}
 		defer file.Close()
-		var upload gcsql.Upload
-		upload.OriginalFilename = html.EscapeString(handler.Filename)
+
+		// Calculate image checksum
+		upload.Checksum = fmt.Sprintf("%x", md5.Sum(data))
+		if checkChecksumBan(upload, &post, postBoard, writer, request) {
+			// checkChecksumBan returns true, a ban page or error was displayed
+			return
+		}
 
 		ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
 		upload.Filename = getNewFilename() + ext
@@ -274,13 +290,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			gcutil.LogError(err).
 				Str("posting", "upload").
 				Str("IP", post.IP).
-				Str("filename", post.Filename).Send()
-			serverutil.ServeErrorPage(writer, fmt.Sprintf("Couldn't write file %q", post.FilenameOriginal))
+				Str("filename", upload.Filename).
+				Str("originalFilename", upload.OriginalFilename).
+				Send()
+			serverutil.ServeErrorPage(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename))
 			return
 		}
-
-		// Calculate image checksum
-		post.FileChecksum = fmt.Sprintf("%x", md5.Sum(data))
 
 		if ext == "webm" || ext == "mp4" {
 			gcutil.LogInfo().
@@ -288,7 +303,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				Str("IP", post.IP).
 				Str("filename", handler.Filename).
 				Str("referer", request.Referer()).Send()
-			if post.ParentID == 0 {
+			if post.IsTopPost {
 				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
 					gcutil.LogError(err).
 						Str("filePath", filePath).
@@ -337,18 +352,19 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					value, _ := strconv.Atoi(lineArr[1])
 					switch lineArr[0] {
 					case "width":
-						post.ImageW = value
+						upload.Width = value
 					case "height":
-						post.ImageH = value
+						upload.Height = value
 					case "size":
-						post.Filesize = value
+						upload.FileSize = value
 					}
 				}
 				thumbType := "reply"
 				if post.IsTopPost {
 					thumbType = "op"
 				}
-				post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
+				upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
+					upload.Width, upload.Height, postBoard.Dir, thumbType)
 			}
 		} else {
 			// Attempt to load uploaded file with imaging library
@@ -368,16 +384,17 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				serverutil.ServeErrorPage(writer, "Couldn't get image filesize: "+err.Error())
 				return
 			}
-			post.Filesize = int(stat.Size())
+			upload.FileSize = int(stat.Size())
 
 			// Get image width and height, as well as thumbnail width and height
-			post.ImageW = img.Bounds().Max.X
-			post.ImageH = img.Bounds().Max.Y
+			upload.Width = img.Bounds().Max.X
+			upload.Height = img.Bounds().Max.Y
 			thumbType := "reply"
-			if post.ParentID == 0 {
+			if post.IsTopPost {
 				thumbType = "op"
 			}
-			post.ThumbW, post.ThumbH = getThumbnailSize(post.ImageW, post.ImageH, boardDir, thumbType)
+			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
+				upload.Width, upload.Height, postBoard.Dir, thumbType)
 
 			gcutil.LogAccess(request).
 				Bool("withFile", true).
@@ -399,14 +416,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				}
 			}
 
-			shouldThumb := shouldCreateThumbnail(filePath, post.ImageW, post.ImageH, post.ThumbW, post.ThumbH)
+			shouldThumb := shouldCreateThumbnail(filePath,
+				upload.Width, upload.Height, upload.ThumbnailWidth, upload.ThumbnailHeight)
 			if shouldThumb {
 				var thumbnail image.Image
 				var catalogThumbnail image.Image
-				if post.ParentID == 0 {
+				if post.IsTopPost {
 					// If this is a new thread, generate thumbnail and catalog thumbnail
-					thumbnail = createImageThumbnail(img, boardDir, "op")
-					catalogThumbnail = createImageThumbnail(img, boardDir, "catalog")
+					thumbnail = createImageThumbnail(img, postBoard.Dir, "op")
+					catalogThumbnail = createImageThumbnail(img, postBoard.Dir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
 						gcutil.LogError(err).
 							Str("thumbPath", catalogThumbPath).
@@ -416,7 +434,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 						return
 					}
 				} else {
-					thumbnail = createImageThumbnail(img, boardDir, "reply")
+					thumbnail = createImageThumbnail(img, postBoard.Dir, "reply")
 				}
 				if err = imaging.Save(thumbnail, thumbPath); err != nil {
 					gcutil.LogError(err).
@@ -428,8 +446,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				}
 			} else {
 				// If image fits in thumbnail size, symlink thumbnail to original
-				post.ThumbW = img.Bounds().Max.X
-				post.ThumbH = img.Bounds().Max.Y
+				upload.ThumbnailWidth = img.Bounds().Max.X
+				upload.ThumbnailHeight = img.Bounds().Max.Y
 				if err := syscall.Symlink(filePath, thumbPath); err != nil {
 					gcutil.LogError(err).
 						Str("thumbPath", thumbPath).
@@ -438,9 +456,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
 					return
 				}
-				if post.ParentID == 0 {
+				if post.IsTopPost {
 					// Generate catalog thumbnail
-					catalogThumbnail := createImageThumbnail(img, boardDir, "catalog")
+					catalogThumbnail := createImageThumbnail(img, postBoard.Dir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
 						gcutil.LogError(err).
 							Str("thumbPath", catalogThumbPath).
@@ -454,14 +472,29 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if err = gcsql.InsertPost(&post, emailCommand != "sage"); err != nil {
+	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
 		gcutil.LogError(err).
-			Str("sql", "postInsertion").Send()
-		if post.Filename != "" {
+			Str("IP", post.IP).
+			Str("sql", "postInsertion").
+			Msg("Unable to insert post")
+		if upload != nil {
 			os.Remove(filePath)
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)
 		}
+		serverutil.ServeErrorPage(writer, "Unable to insert post: "+err.Error())
+		return
+	}
+
+	if err = post.AttachFile(upload); err != nil {
+		gcutil.LogError(err).
+			Str("IP", post.IP).
+			Str("sql", "postInsertion").
+			Msg("Unable to attach upload to post")
+		os.Remove(filePath)
+		os.Remove(thumbPath)
+		os.Remove(catalogThumbPath)
+		serverutil.ServeErrorPage(writer, "Unable to attach upload: "+err.Error())
 		return
 	}
 
@@ -470,10 +503,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	building.BuildFrontPage()
 
 	if emailCommand == "noko" {
-		if post.ParentID < 1 {
+		if post.IsTopPost {
 			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
-			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(post.ParentID)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
+			topPost, _ := post.TopPostID()
+			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(topPost)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
 		}
 	} else {
 		http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/", http.StatusFound)

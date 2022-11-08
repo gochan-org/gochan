@@ -43,6 +43,9 @@ func GetThreadFiles(post *Post) ([]Upload, error) {
 }
 
 func (p *Post) AttachFile(upload *Upload) error {
+	if upload == nil {
+		return nil //
+	}
 	const query = `INSERT INTO DBPREFIXfiles (
 		post_id, file_order, original_filename, filename, checksum, file_size,
 		is_spoilered, thumbnail_width, thumbnail_height, width, height)
