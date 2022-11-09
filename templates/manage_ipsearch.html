@@ -39,7 +39,7 @@
 				{{- if ne .Email ""}}</a>{{end -}}
 		</span>
 		{{- if ne .Tripcode ""}}<span class="tripcode">!{{.Tripcode}}</span>{{end}} {{formatTimestamp .Timestamp}}</label>
-		<a href="{{$.webroot}}{{.GetBoardDir}}/res/{{if isOP .}}{{.ID}}{{else}}{{.ParentID}}{{end}}.html#{{.ID}}" target="_blank">No. {{.ID}}</a><br/>
+		<a href="{{$.webroot}}{{.GetBoardDir}}/res/{{if .IsTopPost}}{{.ID}}{{else}}{{.ParentID}}{{end}}.html#{{.ID}}" target="_blank">No. {{.ID}}</a><br/>
 		{{- if eq .Filename "deleted" -}}
 			<div class="file-deleted-box" style="text-align:center;">File removed</div>
 		{{- else if ne .Filename "" -}}
