@@ -202,27 +202,7 @@ var funcMap = template.FuncMap{
 		return gcutil.GetThumbnailPath("thread", img)
 	},
 	"getUploadType": func(name string) string {
-		extension := gcutil.GetFileExtension(name)
-		var uploadType string
-		switch extension {
-		case "":
-			fallthrough
-		case "deleted":
-			uploadType = ""
-		case "webm":
-			fallthrough
-		case "mp4":
-			fallthrough
-		case "jpg":
-			fallthrough
-		case "jpeg":
-			fallthrough
-		case "gif":
-			uploadType = "jpg"
-		case "png":
-			uploadType = "png"
-		}
-		return uploadType
+		return gcutil.GetThumbnailExt(name)
 	},
 	"imageToThumbnailPath": func(thumbType string, img string) string {
 		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])

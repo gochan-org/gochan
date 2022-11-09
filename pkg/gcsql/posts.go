@@ -49,6 +49,35 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 	return post, err
 }
 
+// GetPostsFromIP gets the posts from the database with a matching IP address, specifying
+// optionally requiring them to not be deleted
+func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
+	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = ?`
+	if onlyNotDeleted {
+		sql += " AND is_deleted = 0"
+	}
+
+	sql += " ORDER BY id DESC LIMIT ?"
+	rows, err := QuerySQL(sql, ip, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		if err = rows.Scan(
+			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+		); err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
 func GetTopPostInThread(postID int) (int, error) {
 	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = (
 		SELECT thread_id FROM DBPREFIXposts WHERE id = ?

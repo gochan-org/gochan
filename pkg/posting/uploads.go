@@ -124,8 +124,7 @@ func getThumbnailSize(uploadWidth, uploadHeight int, boardDir string, thumbType 
 }
 
 func numImageFrames(imgPath string) (int, error) {
-	ext := strings.ToLower(gcutil.GetFileExtension(imgPath))
-	if ext != "gif" {
+	if path.Ext(imgPath) != ".gif" {
 		return 1, nil
 	}
 	fi, err := os.Open(imgPath)

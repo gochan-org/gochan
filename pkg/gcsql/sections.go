@@ -52,6 +52,24 @@ func getOrCreateDefaultSectionID() (sectionID int, err error) {
 	return id, nil
 }
 
+func GetSectionFromID(id int) (*Section, error) {
+	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE id = ?`
+	var section Section
+	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
+	))
+	if err != nil {
+		return nil, err
+	}
+	return &section, err
+}
+
+func DeleteSection(id int) error {
+	const query = `DELETE FROM DBPREFIXsections WHERE id = ?`
+	_, err := ExecSQL(query, id)
+	return err
+}
+
 // NewSection creates a new board section in the database and returns a *Section struct pointer.
 // If position < 0, it will use the ID
 func NewSection(name string, abbreviation string, hidden bool, position int) (*Section, error) {
@@ -85,4 +103,10 @@ func GetAllNonHiddenSections() []Section {
 		}
 	}
 	return sections
+}
+
+func (s *Section) UpdateValues() error {
+	const query = `UPDATE DBPREFIXsections set name = ? abbreviation = ?, position = ?, hidden = ?`
+	_, err := ExecSQL(query, s.Name, s.Abbreviation, s.Position, s.Hidden)
+	return err
 }

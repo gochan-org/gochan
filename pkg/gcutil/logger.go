@@ -72,17 +72,17 @@ func LogAccess(request *http.Request) *zerolog.Event {
 
 func LogError(err error) *zerolog.Event {
 	if err != nil {
-		return logger.Err(err).Caller(1)
+		return logger.Err(err)
 	}
-	return logger.Error().Caller(1)
+	return logger.Error()
 }
 
 func LogFatal() *zerolog.Event {
-	return logger.Fatal().Caller(1)
+	return logger.Fatal()
 }
 
 func LogDebug() *zerolog.Event {
-	return logger.Debug().Caller(1)
+	return logger.Debug()
 }
 
 func CloseLog() error {

@@ -218,6 +218,12 @@ func getBoardIDFromURI(uri string) (int, error) {
 	return id, err
 }
 
+func (board *Board) Delete() error {
+	const query = `DELETE FROM DBPREFIXboards WHERE id = ?`
+	_, err := ExecSQL(query, board.ID)
+	return err
+}
+
 func (board *Board) GetThreads(onlyNotDeleted bool) ([]Thread, error) {
 	query := selectThreadsBaseSQL + " WHERE id = ?"
 	if onlyNotDeleted {
