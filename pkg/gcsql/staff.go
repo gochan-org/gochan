@@ -139,7 +139,7 @@ func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 	}
 	staff := new(Staff)
 	err := QueryRowSQL(query, interfaceSlice(username), interfaceSlice(
-		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.Rank, &staff.AddedOn,
+		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn,
 		&staff.LastLogin, &staff.IsActive,
 	))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -149,14 +149,10 @@ func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 }
 
 // CreateLoginSession inserts a session for a given key and username into the database
-func CreateLoginSession(key, username string) error {
+func (staff *Staff) CreateLoginSession(key string) error {
 	const insertSQL = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
 	const updateSQL = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
-	staff, err := GetStaffByUsername(username, true)
-	if err != nil {
-		return err
-	}
-	_, err = ExecSQL(insertSQL, staff.ID, key, time.Now().Add(time.Duration(time.Hour*730))) //TODO move amount of time to config file
+	_, err := ExecSQL(insertSQL, staff.ID, key, time.Now().Add(time.Duration(time.Hour*730))) //TODO move amount of time to config file
 	if err != nil {
 		return err
 	}

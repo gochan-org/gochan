@@ -47,13 +47,12 @@ func createSession(key, username, password string, request *http.Request, writer
 		return sInvalidPassword
 	}
 
-	success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
-	if success == bcrypt.ErrMismatchedHashAndPassword {
+	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
+	if err == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
 		gcutil.LogError(nil).
 			Str("staff", username).
 			Str("IP", gcutil.GetRealIP(request)).
-			Str("remoteAddr", request.Response.Request.RemoteAddr).
 			Msg("Invalid password")
 		return sInvalidPassword
 	}
@@ -73,7 +72,7 @@ func createSession(key, username, password string, request *http.Request, writer
 		MaxAge: int(maxAge),
 	})
 
-	if err = gcsql.CreateLoginSession(username, key); err != nil {
+	if err = staff.CreateLoginSession(key); err != nil {
 		gcutil.LogError(err).
 			Str("staff", username).
 			Str("sessionKey", key).
