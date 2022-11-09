@@ -153,15 +153,12 @@ var funcMap = template.FuncMap{
 		return dict, nil
 	},
 	// Imageboard functions
-	// "bannedForever": func(banInfo *gcsql.BanInfo) bool {
-	// 	return banInfo.BannedForever()
-	// },
-	// "isBanned": func(banInfo *gcsql.BanInfo, board string) bool {
-	// 	return banInfo.IsBanned(board)
-	// },
-	// "isOP": func(post gcsql.Post) bool {
-	// 	return post.ParentID == 0
-	// },
+	"bannedForever": func(ban *gcsql.IPBan) bool {
+		return ban.IsActive && ban.Permanent && !ban.CanAppeal
+	},
+	"isBanned": func(ban *gcsql.IPBan, board string) bool {
+		return ban.IsActive && ban.BoardID != nil
+	},
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},
