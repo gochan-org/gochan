@@ -264,7 +264,7 @@ func InitConfig(versionStr string) {
 	}
 
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
-	if err = gcutil.InitLog(path.Join(cfg.LogDir, "gochan.log")); err != nil {
+	if err = gcutil.InitLog(path.Join(cfg.LogDir, "gochan.log"), cfg.DebugMode); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}

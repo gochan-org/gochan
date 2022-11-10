@@ -1,6 +1,7 @@
 package gcutil
 
 import (
+	"io"
 	"net/http"
 	"os"
 
@@ -49,7 +50,7 @@ func LogDiscard(events ...*zerolog.Event) {
 	}
 }
 
-func InitLog(logPath string) (err error) {
+func InitLog(logPath string, debug bool) (err error) {
 	if logFile != nil {
 		// log file already initialized, skip
 		return nil
@@ -58,7 +59,13 @@ func InitLog(logPath string) (err error) {
 	if err != nil {
 		return err
 	}
-	logger = zerolog.New(logFile).Hook(&logHook{})
+
+	if debug {
+		logger = zerolog.New(io.MultiWriter(logFile, os.Stdout)).Hook(&logHook{})
+	} else {
+		logger = zerolog.New(logFile).Hook(&logHook{})
+	}
+
 	return nil
 }
 
