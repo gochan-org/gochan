@@ -8,7 +8,7 @@
 {{range $s, $staff := $.allstaff -}}
 <tr>
 	<td>{{$staff.Username}}</td>
-	<td>{{$staff.RankString}}</td>
+	<td>{{$staff.RankTitle}}</td>
 	<td>{{formatTimestamp $staff.AddedOn}}</td>
 	<td>
 		<a {{if eq $staff.Username $.currentUsername -}}

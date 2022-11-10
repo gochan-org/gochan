@@ -72,6 +72,17 @@ func (s *Staff) ClearSessions() error {
 	return err
 }
 
+func (s *Staff) RankTitle() string {
+	if s.Rank == 3 {
+		return "Administrator"
+	} else if s.Rank == 2 {
+		return "Moderator"
+	} else if s.Rank == 1 {
+		return "Janitor"
+	}
+	return ""
+}
+
 // EndStaffSession deletes any session rows associated with the requests session cookie and then
 // makes the cookie expire, essentially deleting it
 func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
