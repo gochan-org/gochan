@@ -1145,6 +1145,7 @@ var actions = []Action{
 					regexCheckStr,
 					request.FormValue("replace"),
 					editIDstr)
+				infoEv.Str("do", "update")
 			case "Create new wordfilter":
 				_, err = gcsql.CreateWordFilter(
 					request.FormValue("find"),
@@ -1153,14 +1154,24 @@ var actions = []Action{
 					request.FormValue("boarddirs"),
 					staff.ID,
 					request.FormValue("staffnote"))
+				infoEv.Str("do", "create")
+			case "":
+				infoEv.Discard()
 			}
-			if err != nil {
+			if err == nil {
+				infoEv.
+					Str("find", request.FormValue("find")).
+					Str("replace", request.FormValue("replace")).
+					Str("staffnote", request.FormValue("staffnote")).
+					Str("boarddirs", request.FormValue("boarddirs"))
+			} else {
 				return err, err
 			}
 
 			wordfilters, err := gcsql.GetWordfilters()
 			if err != nil {
-				return wordfilters, nil
+				errEv.Err(err).Caller().Msg("Unable to get wordfilters")
+				return wordfilters, err
 			}
 			var editFilter *gcsql.Wordfilter
 			if editIDstr != "" {
