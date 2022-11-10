@@ -22,6 +22,33 @@ func (*logHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	}
 }
 
+func LogStr(key, val string, events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] == nil {
+			continue
+		}
+		events[e] = events[e].Str(key, val)
+	}
+}
+
+func LogInt(key string, i int, events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] == nil {
+			continue
+		}
+		events[e] = events[e].Int(key, i)
+	}
+}
+
+func LogDiscard(events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] == nil {
+			continue
+		}
+		events[e] = events[e].Discard()
+	}
+}
+
 func InitLog(logPath string) (err error) {
 	if logFile != nil {
 		// log file already initialized, skip

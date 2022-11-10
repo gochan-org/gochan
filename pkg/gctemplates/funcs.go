@@ -162,39 +162,10 @@ var funcMap = template.FuncMap{
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},
-	// "getThreadID": func(postInterface interface{}) (thread int) {
-	// 	post, ok := postInterface.(gcsql.Post)
-	// 	if !ok {
-	// 		thread = 0
-	// 	} else if post.ParentID == 0 {
-	// 		thread = post.ID
-	// 	} else {
-	// 		thread = post.ParentID
-	// 	}
-	// 	return
-	// },
-	// "getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
-	// 	systemCritical := config.GetSystemCriticalConfig()
-	// 	if withDomain {
-	// 		postURL = systemCritical.SiteDomain
-	// 	}
-	// 	postURL += systemCritical.WebRoot
-
-	// 	if typeOf == "recent" {
-	// 		post, ok := postInterface.(gcsql.RecentPost)
-	// 		if !ok {
-	// 			return
-	// 		}
-	// 		postURL = post.GetURL(withDomain)
-	// 	} else {
-	// 		post, ok := postInterface.(*gcsql.Post)
-	// 		if !ok {
-	// 			return
-	// 		}
-	// 		postURL = post.GetURL(withDomain)
-	// 	}
-	// 	return
-	// },
+	"getTopPostID": func(post *gcsql.Post) int {
+		id, _ := post.TopPostID()
+		return id
+	},
 	"getThreadThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("thread", img)
 	},

@@ -36,23 +36,31 @@ func serveError(writer http.ResponseWriter, field string, action string, message
 func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	var err error
 	wantsJSON := serverutil.IsRequestingJSON(request)
+	errEv := gcutil.LogError(nil)
+	accessEv := gcutil.LogAccess(request)
+	infoEv := gcutil.LogInfo()
+	defer gcutil.LogDiscard(infoEv, accessEv, errEv)
+
+	errEv.Str("IP", gcutil.GetRealIP(request))
 	if err = request.ParseForm(); err != nil {
-		gcutil.LogError(err).
+		errEv.
 			Str("IP", gcutil.GetRealIP(request)).
-			Msg("Error parsing form data")
+			Caller().Msg("Error parsing form data")
 		serverutil.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, nil)
 		return
 	}
 	actionID := request.FormValue("action")
+	gcutil.LogStr("action", actionID, infoEv, accessEv, errEv)
+
 	var staff *gcsql.Staff
 	staff, err = getCurrentFullStaff(request)
 	if err == http.ErrNoCookie {
 		staff = &gcsql.Staff{}
 		err = nil
 	} else if err != nil && err != sql.ErrNoRows {
-		gcutil.LogError(err).
+		errEv.Err(err).
 			Str("request", "getCurrentFullStaff").
-			Str("action", actionID).Send()
+			Caller().Send()
 		serverutil.ServeError(writer, "Error getting staff info from request: "+err.Error(), wantsJSON, nil)
 		return
 	}
@@ -64,7 +72,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 			actionID = "dashboard"
 		}
 	}
-
+	gcutil.LogStr("staff", staff.Username, infoEv, accessEv, errEv)
 	var managePageBuffer bytes.Buffer
 	action := getAction(actionID, staff.Rank)
 	if action == nil {
@@ -78,12 +86,10 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 
 	if staff.Rank < action.Permissions {
 		writer.WriteHeader(403)
-		staffName, _ := getCurrentStaff(request)
-		gcutil.LogInfo().
-			Str("staff", "insufficientPerms").
-			Str("IP", gcutil.GetRealIP(request)).
-			Str("username", staffName).
-			Str("action", actionID)
+		errEv.
+			Int("rank", staff.Rank).
+			Int("requiredRank", action.Permissions).
+			Msg("Insufficient permissions")
 		serveError(writer, "permission", actionID, "You do not have permission to access this page", wantsJSON || (action.JSONoutput == AlwaysJSON))
 		return
 	}
@@ -97,7 +103,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 			Message:    "Requested mod page does not have a JSON output option",
 		}
 	} else {
-		output, err = action.Callback(writer, request, staff, wantsJSON)
+		output, err = action.Callback(writer, request, staff, wantsJSON, infoEv, errEv)
 	}
 	if err != nil {
 		// writer.WriteHeader(500)

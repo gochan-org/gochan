@@ -12,6 +12,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,7 +43,7 @@ func createSession(key, username, password string, request *http.Request, writer
 				Str("staff", username).
 				Str("IP", gcutil.GetRealIP(request)).
 				Str("remoteAddr", request.RemoteAddr).
-				Msg("Invalid password")
+				Caller().Msg("Invalid password")
 		}
 		return sInvalidPassword
 	}
@@ -53,7 +54,7 @@ func createSession(key, username, password string, request *http.Request, writer
 		gcutil.LogError(nil).
 			Str("staff", username).
 			Str("IP", gcutil.GetRealIP(request)).
-			Msg("Invalid password")
+			Caller().Msg("Invalid password")
 		return sInvalidPassword
 	}
 
@@ -76,7 +77,7 @@ func createSession(key, username, password string, request *http.Request, writer
 		gcutil.LogError(err).
 			Str("staff", username).
 			Str("sessionKey", key).
-			Msg("Error creating new staff session")
+			Caller().Msg("Error creating new staff session")
 		return sOtherError
 	}
 
@@ -142,7 +143,7 @@ func init() {
 		})
 }
 
-func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	dashBuffer := bytes.NewBufferString("")
 	announcements, err := gcsql.GetAllAccouncements()
 	if err != nil {
@@ -167,10 +168,7 @@ func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff 
 		"boards":        gcsql.AllBoards,
 		"webroot":       config.GetSystemCriticalConfig().WebRoot,
 	}, dashBuffer, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("staff", staff.Username).
-			Str("action", "dashboard").
-			Str("template", "manage_dashboard.html").Send()
+		errEv.Err(err).Str("template", "manage_dashboard.html").Caller().Send()
 		return "", err
 	}
 	return dashBuffer.String(), nil
@@ -188,7 +186,7 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	return available
 }
 
-func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	availableActions := getAvailableActions(staff.Rank, false)
 	return availableActions, nil
 }

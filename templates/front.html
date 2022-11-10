@@ -31,7 +31,7 @@
 			<div class="section-title-block"><b>Recent Posts</b></div>
 			<div class="section-body">
 				<div id="recent-posts">
-				{{- range $i, $post := $.recent_posts}}{{$postURL := getPostURL $post "recent" false}}
+				{{- range $i, $post := $.recent_posts}}{{$postURL := $post.WebPath}}
 					<div class="recent-post">
 						{{if and (ne $post.Filename "deleted") (ne $post.Filename "") -}}
 							<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.webroot}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
