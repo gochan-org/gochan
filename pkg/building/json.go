@@ -99,7 +99,7 @@ func GetPostJSON(id int, boardid int) (*PostJSON, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
-	query := "SELECT * FROM (" + postQueryBase + ") posts ORDER BY postid DESC"
+	query := "SELECT * FROM (" + postQueryBase + ") posts"
 	var args []interface{} = []interface{}{}
 
 	if boardid > 0 {
@@ -107,7 +107,7 @@ func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
 		args = append(args, boardid)
 	}
 
-	rows, err := gcsql.QuerySQL(query+" LIMIT "+strconv.Itoa(limit), args...)
+	rows, err := gcsql.QuerySQL(query+" ORDER BY postid DESC LIMIT "+strconv.Itoa(limit), args...)
 	if err != nil {
 		return nil, err
 	}
