@@ -3,6 +3,7 @@ package building
 import (
 	"encoding/json"
 	"errors"
+	"html/template"
 	"os"
 	"path"
 	"strconv"
@@ -14,8 +15,9 @@ import (
 )
 
 const (
-	postQueryBase = `SELECT DBPREFIXposts.id AS postid, thread_id AS threadid, name, tripcode, email, subject,
+	postQueryBase = `SELECT DBPREFIXposts.id AS postid, thread_id AS threadid, ip, name, tripcode, email, subject, created_on, created_on as last_modified,
 	(SELECT id FROM DBPREFIXposts WHERE thread_id = threadid AND is_top_post) AS parent_id,
+	message, message_raw,
 	(SELECT board_id FROM DBPREFIXthreads where id = threadid LIMIT 1) AS boardid,
 	(SELECT dir FROM DBPREFIXboards WHERE id = boardid LIMIT 1) AS dir,
 	coalesce(DBPREFIXfiles.original_filename,'') as original_filename,
@@ -31,27 +33,52 @@ const (
 )
 
 type PostJSON struct {
-	ID               int    `json:"no"`
-	ParentID         int    `json:"resto"`
-	BoardID          int    `json:"-"`
-	BoardDir         string `json:"-"`
-	Name             string `json:"name"`
-	Trip             string `json:"trip"`
-	Email            string `json:"email"`
-	Subject          string `json:"sub"`
-	Message          string `json:"com"`
-	Filename         string `json:"tim"`
-	OriginalFilename string `json:"filename"`
-	Checksum         string `json:"md5"`
-	Extension        string `json:"extension"`
-	Filesize         int    `json:"fsize"`
-	Width            int    `json:"w"`
-	Height           int    `json:"h"`
-	ThumbnailWidth   int    `json:"tn_w"`
-	ThumbnailHeight  int    `json:"tn_h"`
-	Capcode          string `json:"capcode"`
-	Time             string `json:"time"`
-	LastModified     string `json:"last_modified"`
+	ID               int           `json:"no"`
+	ParentID         int           `json:"resto"`
+	BoardID          int           `json:"-"`
+	BoardDir         string        `json:"-"`
+	IP               string        `json:"-"`
+	Name             string        `json:"name"`
+	Tripcode         string        `json:"trip"`
+	Email            string        `json:"email"`
+	Subject          string        `json:"sub"`
+	MessageRaw       string        `json:"com"`
+	Message          template.HTML `json:"-"`
+	Filename         string        `json:"tim"`
+	OriginalFilename string        `json:"filename"`
+	Checksum         string        `json:"md5"`
+	Extension        string        `json:"extension"`
+	Filesize         int           `json:"fsize"`
+	Width            int           `json:"w"`
+	Height           int           `json:"h"`
+	ThumbnailWidth   int           `json:"tn_w"`
+	ThumbnailHeight  int           `json:"tn_h"`
+	Capcode          string        `json:"capcode"`
+	Time             string        `json:"time"`
+	LastModified     string        `json:"last_modified"`
+}
+
+func (p *PostJSON) WebPath() string {
+	threadID := p.ParentID
+	if threadID == 0 {
+		threadID = p.ID
+	}
+	return config.WebPath(p.BoardDir, "res", strconv.Itoa(threadID)+".html#"+strconv.Itoa(p.ID))
+}
+
+func (p *PostJSON) ThumbnailPath() string {
+	if p.Filename == "" {
+		return ""
+	}
+	return config.WebPath(p.BoardDir, "thumb", gcutil.GetThumbnailPath("reply", p.Filename))
+}
+
+func (p *PostJSON) UploadPath() string {
+	if p.Filename == "" {
+		return ""
+	}
+	return config.WebPath(p.BoardDir, "src", p.Filename)
+
 }
 
 func GetPostJSON(id int, boardid int) (*PostJSON, error) {
@@ -59,19 +86,28 @@ func GetPostJSON(id int, boardid int) (*PostJSON, error) {
 	var post PostJSON
 	var threadID int
 	err := gcsql.QueryRowSQL(query, []interface{}{id}, []interface{}{
-		&post.ID, &threadID, &post.Name, &post.Trip, &post.Email, &post.Subject,
-		&post.ParentID, &post.BoardID, &post.BoardDir, &post.OriginalFilename, &post.Filename,
-		&post.Checksum, &post.Filesize, &post.ThumbnailWidth, &post.ThumbnailHeight,
-		&post.Width, &post.Height,
+		&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Time, &post.LastModified,
+		&post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+		&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.Width, &post.Height,
 	})
 	if err != nil {
 		return nil, err
 	}
+	post.Extension = path.Ext(post.Filename)
 	return &post, nil
 }
 
 func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
-	rows, err := gcsql.QuerySQL(postQueryBase + " LIMIT " + strconv.Itoa(limit))
+	query := "SELECT * FROM (" + postQueryBase + ") posts"
+	var args []interface{} = []interface{}{}
+
+	if boardid > 0 {
+		query += " WHERE boardid = ?"
+		args = append(args, boardid)
+	}
+
+	rows, err := gcsql.QuerySQL(query+" LIMIT "+strconv.Itoa(limit), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,15 +117,16 @@ func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
 		var post PostJSON
 		var threadID int
 		err = rows.Scan(
-			&post.ID, &threadID, &post.Name, &post.Trip, &post.Email, &post.Subject,
-			&post.ParentID, &post.BoardID, &post.BoardDir, &post.OriginalFilename, &post.Filename,
-			&post.Checksum, &post.Filesize, &post.ThumbnailWidth, &post.ThumbnailHeight,
-			&post.Width, &post.Height,
+			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Time, &post.LastModified,
+			&post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.Width, &post.Height,
 		)
 		if err != nil {
 			return nil, err
 		}
-		if boardid > 0 && post.BoardID == boardid {
+		if boardid == 0 || post.BoardID == boardid {
+			post.Extension = path.Ext(post.Filename)
 			posts = append(posts, post)
 		}
 	}
