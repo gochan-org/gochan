@@ -165,6 +165,35 @@ var actions = []Action{
 			}
 			return outputStr, nil
 		}},
+	{
+		ID:          "recentposts",
+		Title:       "Recent posts",
+		Permissions: JanitorPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			limit, err := getIntField("limit", staff.Username, request, 0)
+			if err != nil {
+				return "", err
+			}
+			boardid, err := getIntField("boardid", staff.Username, request, 0)
+			if err != nil {
+				return "", err
+			}
+			recentposts, err := building.GetRecentPosts(boardid, limit)
+			if err != nil {
+				return "", err
+			}
+			manageRecentsBuffer := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageRecentPosts, map[string]interface{}{
+				"recentposts": recentposts,
+				"webroot":     config.GetSystemCriticalConfig().WebRoot,
+			}, manageRecentsBuffer, "text/html"); err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", errors.New("Error executing ban management page template: " + err.Error())
+			}
+			return manageRecentsBuffer.String(), nil
+		},
+	},
 	// {
 	// 	ID:          "recentposts",
 	// 	Title:       "Recent posts",
