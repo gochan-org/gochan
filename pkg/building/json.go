@@ -99,7 +99,7 @@ func GetPostJSON(id int, boardid int) (*PostJSON, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
-	query := "SELECT * FROM (" + postQueryBase + ") posts"
+	query := "SELECT * FROM (" + postQueryBase + ") posts ORDER BY postid DESC"
 	var args []interface{} = []interface{}{}
 
 	if boardid > 0 {
