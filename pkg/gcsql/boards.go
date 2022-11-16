@@ -103,6 +103,25 @@ func GetBoardFromID(id int) (*Board, error) {
 	return board, err
 }
 
+// GetBoardURIs gets a list of all existing board URIs
+func GetBoardURIs() (URIS []string, err error) {
+	const sql = `SELECT uri FROM DBPREFIXboards`
+	rows, err := QuerySQL(sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var uris []string
+	for rows.Next() {
+		var uri string
+		if err = rows.Scan(&uri); err != nil {
+			return nil, err
+		}
+		uris = append(uris, uri)
+	}
+	return uris, nil
+}
+
 // ResetBoardSectionArrays is run when the board list needs to be changed
 // (board/section is added, deleted, etc)
 func ResetBoardSectionArrays() error {

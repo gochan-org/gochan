@@ -211,134 +211,82 @@ var actions = []Action{
 			return manageRecentsBuffer.String(), nil
 		},
 	},
-	/* {
-		ID:          "filebans",
-		Title:       "File bans",
+	{
+		ID:          "checksumbans",
+		Title:       "File checksum bans",
 		Permissions: ModPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
-			var err error
-			fileBanType := request.PostForm.Get("bantype")
-			delFnbStr := request.Form.Get("delfnb")
-			if delFnbStr != "" {
-				var delFilenameBanID int
-				if delFilenameBanID, err = strconv.Atoi(delFnbStr); err != nil {
-					errorEv.Err(err).
-						Str("delfnb", delFnbStr).Caller().Send()
-					return "", err
-				}
-				if err = gcsql.DeleteFilenameBanByID(delFilenameBanID); err != nil {
-					errorEv.Err(err).
-						Int("delfnb", delFilenameBanID).Caller().Send()
-					return "", err
-				}
-				infoEv.Int("delFilenameBan", delFilenameBanID).Send()
-			}
-			delCsbStr := request.Form.Get("delcsb")
-			if delCsbStr != "" {
-				var delChecksumBanID int
-				if delChecksumBanID, err = strconv.Atoi(delCsbStr); err != nil {
-					errorEv.Err(err).
-						Str("delcsb", delCsbStr).Send()
-					return "", err
-				}
-				if err = gcsql.DeleteFileBanByID(delChecksumBanID); err != nil {
-					errorEv.Err(err).
-						Int("delcsb", delChecksumBanID).Send()
-					return "", err
-				}
-				InfoEv.Int("delChecksumBan", delChecksumBanID).Send()
-			}
-			switch fileBanType {
-			case "filename":
-				// filename form used
-				filename := request.PostForm.Get("filename")
-				isWildcard := request.PostForm.Get("iswildcard") == "on"
-				board := request.PostForm.Get("board")
-				staffNote := request.PostForm.Get("staffnote")
-				if filename == "" {
-					err = errors.New("missing filename field in filename ban creation")
-					errorEv.Err(err).Send()
-					return "", err
-				}
-				if err = gcsql.CreateFileNameBan(filename, isWildcard, staff.Username, staffNote, board); err != nil {
-					errorEv.Err(err).
-						Str("filename", filename).
-						Bool("iswildcard", isWildcard).
-						Str("board", board).
-						Str("staffnote", staffNote).Send()
-					return "", err
-				}
-				gcutil.LogInfo().
-					Str("action", "filebans").
-					Str("staff", staff.Username).
-					Str("newBanType", "filename").Send()
-			case "checksum":
-				// file checksum form used
-				checksum := request.PostForm.Get("checksum")
-				board := request.PostForm.Get("board")
-				staffNote := request.PostForm.Get("staffnote")
-				if checksum == "" {
-					err = errors.New("missing checksum field in filename ban creation")
-					errorEv.Err(err).Send()
-					return "", err
-				}
-				if err = gcsql.CreateFileBan(checksum, staff.Username, staffNote, board); err != nil {
-					errorEv.Err(err).
-						Str("checksum", checksum).
-						Str("board", board).
-						Str("staffnote", staffNote).Send()
-					return "", err
-				}
-				infoEv.Str("newBanType", "checksum").Send()
-			case "":
-				// no POST data sent
-			default:
-				err = fmt.Errorf(`invalid bantype value %q, valid values are "filename" and "checksum"`, fileBanType)
-				errorEv.Err(err).Caller().Send()
-				return "", err
-			}
-
-			filenameBans, err := gcsql.GetFilenameBans("", false)
-			if err != nil {
-				return "", err
-			}
-			checksumBans, err := gcsql.GetFileChecksumBans("")
-			if err != nil {
-				return "", err
-			}
-			if wantsJSON {
-				return map[string]interface{}{
-					"filenameBans": filenameBans,
-					"checksumBans": checksumBans,
-				}, nil
-			}
-
-			boardURIs, err := gcsql.GetBoardUris()
-			if err != nil {
-				return "", err
-			}
-			manageBansBuffer := bytes.NewBufferString("")
-			if err = serverutil.MinifyTemplate(gctemplates.ManageFileBans, map[string]interface{}{
-				"webroot":      config.GetSystemCriticalConfig().WebRoot,
-				"filenameBans": filenameBans,
-				"checksumBans": checksumBans,
-				"currentStaff": staff.Username,
-				"boardURIs":    boardURIs,
-			}, manageBansBuffer, "text/html"); err != nil {
-				errorEv.Err(err).Str("template", "manage_filebans.html").Caller().Send()
-				return "", errors.New("failed executing file ban management page template: " + err.Error())
-			}
-			return manageBansBuffer.String(), nil
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			return "", gcutil.ErrNotImplemented
 		},
-	}, */
+	},
 	{
-		ID:          "ipbans",
+		ID:          "bans",
 		Title:       "IP Bans",
 		Permissions: ModPerms,
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-			return "", gcutil.ErrNotImplemented
+			var outputStr string
+			ip := request.FormValue("ip")
+			postid := request.FormValue("postid")
+			ban := gcsql.IPBan{
+				BoardID: new(int),
+			}
+			*ban.BoardID = 32
+
+			if request.FormValue("do") == "add" {
+				//
+			}
+
+			boardIDstr := request.FormValue("boardid")
+			var boardid int
+			if boardIDstr != "" {
+				if boardid, err = strconv.Atoi(boardIDstr); err != nil {
+					errEv.Err(err).
+						Str("boardid", boardIDstr).Caller().Send()
+					return "", err
+				}
+			}
+			filterBoardIDstr := request.FormValue("filterboardid")
+			var filterBoardID int
+			if filterBoardIDstr != "" {
+				if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
+					errEv.Err(err).
+						Str("filterboardid", filterBoardIDstr).Caller().Send()
+					return "", err
+				}
+			}
+			limitStr := request.FormValue("limit")
+			limit := 200
+			if limitStr != "" {
+				if limit, err = strconv.Atoi(limitStr); err != nil {
+					errEv.Err(err).
+						Str("limit", limitStr).Caller().Send()
+					return "", err
+				}
+			}
+			banlist, err := gcsql.GetIPBans(filterBoardID, limit, true)
+			if err != nil {
+				errEv.Err(err).Msg("Error getting ban list")
+				err = errors.New("Error getting ban list: " + err.Error())
+				return "", err
+			}
+			manageBansBuffer := bytes.NewBufferString("")
+
+			if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]interface{}{
+				"systemCritical": config.GetSystemCriticalConfig(),
+				"banlist":        banlist,
+				"allBoards":      gcsql.AllBoards,
+				"boardid":        boardid,
+				"ip":             ip,
+				"postid":         postid,
+				"filterboardid":  filterBoardID,
+			}, manageBansBuffer, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
+				return "", errors.New("Error executing ban management page template: " + err.Error())
+			}
+			outputStr += manageBansBuffer.String()
+			return outputStr, nil
 		},
 	},
 	/* {

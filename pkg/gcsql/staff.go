@@ -115,7 +115,7 @@ func DeactivateStaff(username string) error {
 	return s.SetActive(false)
 }
 
-func getStaffUsernameFromID(id int) (string, error) {
+func GetStaffUsernameFromID(id int) (string, error) {
 	const query = `SELECT username FROM DBPREFIXstaff WHERE id = ?`
 	var username string
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&username))

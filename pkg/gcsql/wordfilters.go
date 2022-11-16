@@ -102,7 +102,7 @@ func (wf *Wordfilter) OnBoard(dir string) bool {
 }
 
 func (wf *Wordfilter) StaffName() string {
-	staff, err := getStaffUsernameFromID(wf.StaffID)
+	staff, err := GetStaffUsernameFromID(wf.StaffID)
 	if err != nil {
 		return "?"
 	}

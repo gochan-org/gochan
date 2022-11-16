@@ -129,7 +129,7 @@ func checkFilenameBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.B
 }
 
 func checkChecksumBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
-	fileBan, err := gcsql.CheckFileBan(upload.Checksum, postBoard.ID)
+	fileBan, err := gcsql.CheckFileChecksumBan(upload.Checksum, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).
 			Str("IP", post.IP).

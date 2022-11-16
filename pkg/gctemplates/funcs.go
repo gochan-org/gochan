@@ -159,6 +159,17 @@ var funcMap = template.FuncMap{
 	"isBanned": func(ban *gcsql.IPBan, board string) bool {
 		return ban.IsActive && ban.BoardID != nil
 	},
+	"getBoardDirFromID": func(id int) string {
+		dir, _ := gcsql.GetBoardDir(id)
+		return dir
+	},
+	"getStaffNameFromID": func(id int) string {
+		username, err := gcsql.GetStaffUsernameFromID(id)
+		if err != nil {
+			return "?"
+		}
+		return username
+	},
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},
