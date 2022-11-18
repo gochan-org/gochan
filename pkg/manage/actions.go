@@ -222,31 +222,35 @@ var actions = []Action{
 	},
 	{
 		ID:          "bans",
-		Title:       "IP Bans",
+		Title:       "Bans",
 		Permissions: ModPerms,
-		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			var outputStr string
-			ip := request.FormValue("ip")
-			postid := request.FormValue("postid")
-			ban := gcsql.IPBan{
-				BoardID: new(int),
-			}
-			*ban.BoardID = 32
-
-			if request.FormValue("do") == "add" {
-				//
-			}
-
-			boardIDstr := request.FormValue("boardid")
-			var boardid int
-			if boardIDstr != "" {
-				if boardid, err = strconv.Atoi(boardIDstr); err != nil {
+			var ban gcsql.IPBan
+			ban.StaffID = staff.ID
+			deleteIDStr := request.FormValue("delete")
+			if deleteIDStr != "" {
+				// deleting a ban
+				ban.ID, err = strconv.Atoi(deleteIDStr)
+				if err != nil {
 					errEv.Err(err).
-						Str("boardid", boardIDstr).Caller().Send()
+						Str("delete", deleteIDStr).
+						Caller().Send()
 					return "", err
 				}
+			} else if request.FormValue("do") == "add" {
+				err := ipBanFromRequest(&ban, request, errEv)
+				if err != nil {
+					return "", err
+				}
+				infoEv.
+					Str("bannedIP", ban.IP).
+					Str("expires", ban.ExpiresAt.String()).
+					Bool("permanent", ban.Permanent).
+					Str("reason", ban.Message).
+					Msg("Added IP ban")
 			}
+
 			filterBoardIDstr := request.FormValue("filterboardid")
 			var filterBoardID int
 			if filterBoardIDstr != "" {
@@ -277,146 +281,16 @@ var actions = []Action{
 				"systemCritical": config.GetSystemCriticalConfig(),
 				"banlist":        banlist,
 				"allBoards":      gcsql.AllBoards,
-				"boardid":        boardid,
-				"ip":             ip,
-				"postid":         postid,
+				"ban":            ban,
 				"filterboardid":  filterBoardID,
+				"webroot":        config.GetSystemCriticalConfig().WebRoot,
 			}, manageBansBuffer, "text/html"); err != nil {
 				errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
 				return "", errors.New("Error executing ban management page template: " + err.Error())
 			}
 			outputStr += manageBansBuffer.String()
 			return outputStr, nil
-		},
-	},
-	/* {
-	ID:          "bans",
-	Title:       "Bans",
-	Permissions: ModPerms,
-	Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) { //TODO whatever this does idk man
-		var outputStr string
-		var post gcsql.Post
-		errorEv := gcutil.LogError(nil).
-			Str("action", "bans").
-			Str("staff", staff.Username)
-		defer errorEv.Discard()
-
-		if request.FormValue("do") == "add" {
-			ip := request.FormValue("ip")
-			name := request.FormValue("name")
-			nameIsRegex := (request.FormValue("nameregex") == "on")
-			checksum := request.FormValue("checksum")
-			filename := request.FormValue("filename")
-			durationForm := request.FormValue("duration")
-			permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
-			duration, err := gcutil.ParseDurationString(durationForm)
-			if err != nil {
-				errorEv.Err(err).Send()
-				return "", err
-			}
-			expires := time.Now().Add(duration)
-
-			boards := request.FormValue("boards")
-			reason := html.EscapeString(request.FormValue("reason"))
-			staffNote := html.EscapeString(request.FormValue("staffnote"))
-
-			if filename != "" {
-				err = gcsql.CreateFileNameBan(filename, nameIsRegex, staff.Username, staffNote, boards)
-			}
-			if err != nil {
-				outputStr += err.Error()
-				errorEv.Err(err).Send()
-				err = nil
-			}
-			if name != "" {
-				if err = gcsql.CreateUserNameBan(name, nameIsRegex, staff.Username, permaban, staffNote, boards); err != nil {
-					errorEv.
-						Str("banType", "username").
-						Str("user", name).Send()
-					return "", err
-				}
-				infoEv.
-					Str("banType", "username").
-					Str("user", name).
-					Bool("permaban", permaban).Send()
-			}
-
-			if request.FormValue("fullban") == "on" {
-				err = gcsql.CreateUserBan(ip, false, staff.Username, boards, expires, permaban, staffNote, reason, true, time.Now())
-				if err != nil {
-					errorEv.
-						Str("banType", "ip").
-						Str("banIP", ip).
-						Bool("threadBan", false).
-						Str("bannedFromBoards", boards).Send()
-					return "", err
-				}
-				infoEv.
-					Str("banType", "ip").
-					Str("banIP", ip).
-					Bool("threadBan", true).
-					Str("bannedFromBoards", boards).Send()
-			} else {
-				if request.FormValue("threadban") == "on" {
-					err = gcsql.CreateUserBan(ip, true, staff.Username, boards, expires, permaban, staffNote, reason, true, time.Now())
-					if err != nil {
-						errorEv.
-							Str("banType", "ip").
-							Str("banIP", ip).
-							Bool("threadBan", true).
-							Str("bannedFromBoards", boards).Send()
-						return "", err
-					}
-					infoEv.
-						Str("banType", "ip").
-						Str("banIP", ip).
-						Bool("threadBan", true).
-						Str("bannedFromBoards", boards).Send()
-				}
-				if request.FormValue("imageban") == "on" {
-					err = gcsql.CreateFileBan(checksum, staff.Username, staffNote, boards)
-					if err != nil {
-						errorEv.
-							Str("banType", "fileBan").
-							Str("checksum", checksum).Send()
-						return "", err
-					}
-					infoEv.
-						Str("banType", "fileBan").
-						Str("checksum", checksum).Send()
-				}
-			}
-		}
-
-		if request.FormValue("postid") != "" {
-			var err error
-			post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"), true)
-			if err != nil {
-				errorEv.Err(err).Str("postid", request.FormValue("postid")).Msg("Error getting post")
-				err = errors.New("Error getting post: " + err.Error())
-				return "", err
-			}
-		}
-
-		banlist, err := gcsql.GetAllBans()
-		if err != nil {
-			errorEv.Err(err).Msg("Error getting ban list")
-			err = errors.New("Error getting ban list: " + err.Error())
-			return "", err
-		}
-		manageBansBuffer := bytes.NewBufferString("")
-
-		if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]interface{}{
-			// "systemCritical": config.GetSystemCriticalConfig(),
-			"banlist": banlist,
-			"post":    post,
-		}, manageBansBuffer, "text/html"); err != nil {
-			errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
-			return "", errors.New("Error executing ban management page template: " + err.Error())
-		}
-		outputStr += manageBansBuffer.String()
-		return outputStr, nil
-	}}, */
+		}},
 	{
 		ID:          "ipsearch",
 		Title:       "IP Search",

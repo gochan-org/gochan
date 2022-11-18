@@ -2,22 +2,50 @@ package gcsql
 
 import (
 	"database/sql"
+	"errors"
 	"regexp"
 	"strconv"
+)
+
+const (
+	ipBanQueryBase = `SELECT
+	id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
+	is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note,
+	message, can_appeal
+	FROM DBPREFIXip_ban`
+)
+
+var (
+	ErrBanAlreadyInserted = errors.New("ban already submitted")
 )
 
 type Ban interface {
 	IsGlobalBan() bool
 }
 
+func NewIPBan(ban *IPBan) error {
+	const query = `INSERT INTO DBPREFIXip_ban
+	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip,
+		appeal_at, expires_at, permanent, staff_note, message, can_appeal)
+	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	if ban.ID > 0 {
+		return ErrBanAlreadyInserted
+	}
+	var err error
+	ban.ID, err = getNextFreeID("DBPREFIXip_ban")
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(query,
+		ban.StaffID, ban.BoardID, ban.BannedForPostID, ban.CopyPostText, ban.IsThreadBan, ban.IsActive, ban.IP,
+		ban.AppealAt, ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal)
+	return err
+}
+
 // CheckIPBan returns the latest active IP ban for the given IP, as well as any errors. If the
 // IPBan pointer is nil, the IP has no active bans
 func CheckIPBan(ip string, boardID int) (*IPBan, error) {
-	const query = `SELECT 
-	id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
-	is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note,
-	message, can_appeal
-		FROM DBPREFIXip_ban WHERE ip = ? AND (board_id IS NULL OR board_id = ?) AND
+	const query = ipBanQueryBase + ` WHERE ip = ? AND (board_id IS NULL OR board_id = ?) AND
 		is_active AND (expires_at > CURRENT_TIMESTAMP OR permanent)
 	ORDER BY id DESC LIMIT 1`
 	var ban IPBan
@@ -31,12 +59,27 @@ func CheckIPBan(ip string, boardID int) (*IPBan, error) {
 	return &ban, nil
 }
 
+func GetIPBanByID(id int) (*IPBan, error) {
+	const query = ipBanQueryBase + " WHERE id = ?"
+	var ban IPBan
+	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan,
+		&ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote,
+		&ban.Message, &ban.CanAppeal))
+	if err != nil {
+		return nil, err
+	}
+	return &ban, err
+}
+
+func DeleteIPBanByID(id int) error {
+	const query = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?`
+	_, err := ExecSQL(query, id)
+	return err
+}
+
 func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
-	query := `SELECT
-	id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
-	is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note,
-	message, can_appeal
-	FROM DBPREFIXip_ban`
+	query := ipBanQueryBase
 	if boardID > 0 {
 		query += " WHERE board_id = ?"
 	}
