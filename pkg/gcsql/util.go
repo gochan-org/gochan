@@ -131,7 +131,7 @@ func BeginTx() (*sql.Tx, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
-	var ctx context.Context
+	ctx := context.Background()
 	return gcdb.BeginTx(ctx, &sql.TxOptions{
 		Isolation: 0,
 		ReadOnly:  false,

@@ -234,10 +234,17 @@ var actions = []Action{
 				ban.ID, err = strconv.Atoi(deleteIDStr)
 				if err != nil {
 					errEv.Err(err).
-						Str("delete", deleteIDStr).
+						Str("deleteBan", deleteIDStr).
 						Caller().Send()
 					return "", err
 				}
+				if err = ban.Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteBan", ban.ID).
+						Caller().Send()
+					return "", err
+				}
+
 			} else if request.FormValue("do") == "add" {
 				err := ipBanFromRequest(&ban, request, errEv)
 				if err != nil {
@@ -278,12 +285,10 @@ var actions = []Action{
 			manageBansBuffer := bytes.NewBufferString("")
 
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]interface{}{
-				"systemCritical": config.GetSystemCriticalConfig(),
-				"banlist":        banlist,
-				"allBoards":      gcsql.AllBoards,
-				"ban":            ban,
-				"filterboardid":  filterBoardID,
-				"webroot":        config.GetSystemCriticalConfig().WebRoot,
+				"banlist":       banlist,
+				"allBoards":     gcsql.AllBoards,
+				"ban":           ban,
+				"filterboardid": filterBoardID,
 			}, manageBansBuffer, "text/html"); err != nil {
 				errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
 				return "", errors.New("Error executing ban management page template: " + err.Error())

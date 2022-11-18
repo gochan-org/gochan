@@ -21,6 +21,7 @@ var (
 
 type Ban interface {
 	IsGlobalBan() bool
+	Deactivate(int) error
 }
 
 func NewIPBan(ban *IPBan) error {
@@ -72,12 +73,6 @@ func GetIPBanByID(id int) (*IPBan, error) {
 	return &ban, err
 }
 
-func DeleteIPBanByID(id int) error {
-	const query = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?`
-	_, err := ExecSQL(query, id)
-	return err
-}
-
 func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 	query := ipBanQueryBase
 	if boardID > 0 {
@@ -116,6 +111,39 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 // IsGlobalBan returns true if BoardID is a nil int, meaning they are banned on all boards, as opposed to a specific one
 func (ipb IPBan) IsGlobalBan() bool {
 	return ipb.BoardID == nil
+}
+
+func (ipb *IPBan) Deactivate(staffID int) error {
+	const deactivateQuery = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?`
+	const auditInsertQuery = `INSERT INTO DBPREFIXip_ban_audit
+		(ip_ban_id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, staff_note, message, can_appeal)
+		SELECT
+		id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, staff_note, message, can_appeal
+		FROM DBPREFIXip_ban WHERE id = ?`
+	tx, err := BeginTx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	stmt1, err := PrepareSQL(deactivateQuery, tx)
+	if err != nil {
+		return err
+	}
+	defer stmt1.Close()
+
+	if _, err = stmt1.Exec(ipb.ID); err != nil {
+		return err
+	}
+
+	stmt2, err := PrepareSQL(auditInsertQuery, tx)
+	if err != nil {
+		return err
+	}
+	defer stmt2.Close()
+	if _, err = stmt2.Exec(ipb.ID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func checkUsernameOrFilename(usernameFilename string, check string, boardID int) (*filenameOrUsernameBanBase, error) {
@@ -166,6 +194,18 @@ func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
 
 func (ub filenameOrUsernameBanBase) IsGlobalBan() bool {
 	return ub.BoardID == nil
+}
+
+func (fnb *FilenameBan) Deactivate(staffID int) error {
+	const deleteQuery = `DELETE FROM DBPREFIXfilename_ban WHERE id = ?`
+	_, err := ExecSQL(deleteQuery, fnb.ID)
+	return err
+}
+
+func (fnb *UsernameBan) Deactivate(staffID int) error {
+	const deleteQuery = `DELETE FROM DBPREFIXusername_ban WHERE id = ?`
+	_, err := ExecSQL(deleteQuery, fnb.ID)
+	return err
 }
 
 func CheckFilenameBan(filename string, boardID int) (*FilenameBan, error) {
@@ -236,6 +276,12 @@ func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
 
 func (fb *FileBan) IsGlobalBan() bool {
 	return fb.BoardID == nil
+}
+
+func (fb *FileBan) Deactivate(staffID int) error {
+	const deleteQuery = `DELETE FROM DBPREFIXfile_ban WHERE id = ?`
+	_, err := ExecSQL(deleteQuery, fb.ID)
+	return err
 }
 
 // DeleteFileBanByID deletes the ban, given the id column value
