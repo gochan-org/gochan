@@ -172,6 +172,16 @@ var funcMap = template.FuncMap{
 		dir, _ := gcsql.GetBoardDir(id)
 		return dir
 	},
+	"intPtrToBoardDir": func(id *int, ifNil string, ifErr string) string {
+		if id == nil {
+			return ifNil
+		}
+		dir, err := gcsql.GetBoardDir(*id)
+		if err != nil {
+			return ifErr
+		}
+		return dir
+	},
 	"getStaffNameFromID": func(id int) string {
 		username, err := gcsql.GetStaffUsernameFromID(id)
 		if err != nil {

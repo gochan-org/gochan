@@ -192,6 +192,64 @@ func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
 	}, nil
 }
 
+func GetFileBans(boardID int, limit int) ([]FileBan, error) {
+	query := `SELECT id, board_id, staff_id, staff_note, issued_at, checksum FROM DBPREFIXfile_ban`
+	limitStr := ""
+	if limit > 0 {
+		limitStr = " LIMIT " + strconv.Itoa(limit)
+	}
+	var rows *sql.Rows
+	var err error
+	if boardID > 0 {
+		query += " WHERE board_id = ?"
+		rows, err = QuerySQL(query+limitStr, boardID)
+	} else {
+		rows, err = QuerySQL(query + limitStr)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var bans []FileBan
+	for rows.Next() {
+		var ban FileBan
+		if err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum); err != nil {
+			return nil, err
+		}
+		bans = append(bans, ban)
+	}
+	return bans, nil
+}
+
+func GetFilenameBans(boardID int, limit int) ([]FilenameBan, error) {
+	query := `SELECT id, board_id, staff_id, staff_note, issued_at, filename FROM DBPREFIXfilename_ban`
+	limitStr := ""
+	if limit > 0 {
+		limitStr = " LIMIT " + strconv.Itoa(limit)
+	}
+	var rows *sql.Rows
+	var err error
+	if boardID > 0 {
+		query += " WHERE board_id = ?"
+		rows, err = QuerySQL(query+limitStr, boardID)
+	} else {
+		rows, err = QuerySQL(query + limitStr)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var bans []FilenameBan
+	for rows.Next() {
+		var ban FilenameBan
+		if err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename); err != nil {
+			return nil, err
+		}
+		bans = append(bans, ban)
+	}
+	return bans, nil
+}
+
 func (ub filenameOrUsernameBanBase) IsGlobalBan() bool {
 	return ub.BoardID == nil
 }

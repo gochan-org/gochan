@@ -10,9 +10,11 @@
 	<table>
 		<tr><td>Filename:</td><td><input type="text" name="filename" id="filename"></td></tr>
 		<tr><td>SQL wildcard:<sup><a href="https://www.w3schools.com/sql/sql_wildcards.asp" target="_blank">?</a></sup></td><td><input type="checkbox" name="iswildcard" id="iswildcard"/></td></tr>
-		<tr><td>Board:</td><td><select name="board">
-			<option value="">All boards (global ban)</option>
-			{{- range $b,$uri := .boardURIs -}}<option value="{{$uri}}">/{{$uri}}/</option>{{end -}}
+		<tr><td>Board:</td><td><select name="boardid" id="boardid">
+			<option value="0">All boards</option>
+		{{- range $b, $board := $.allBoards -}}
+			<option value="{{$board.ID}}" {{if eq (dereference $.ban.BoardID) $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+		{{- end -}}
 		</select></td></tr>
 		<tr><td>Staff:</td><td>{{.currentStaff}}</td></tr>
 		<tr><td>Staff note:</td><td><input type="text" name="staffnote"/></td></tr>
@@ -28,8 +30,9 @@
 	<tr>
 		<td>{{$ban.Filename}}</td>
 		<td>{{$ban.IsRegex}}</td>
-		<td>{{$uri := $ban.BoardURI}}{{if eq $uri ""}}<i>All boards</i>{{else}}/{{$uri}}/{{end}}</td>
-		<td>{{$staff := $ban.StaffName}}{{if eq $staff ""}}<i>?</i>{{else}}{{$staff}}{{end}}</td>
+		<td>{{$uri := (intPtrToBoardDir $ban.BoardID "" "?")}}{{if eq $uri ""}}<i>All boards</i>{{else}}/{{$uri}}/{{end}}</td>
+		<td>{{$staff := (getStaffNameFromID $ban.StaffID)}}{{if eq $staff ""}}<i>?</i>{{else}}{{$staff}}{{end}}</td>
+		
 		<td>{{$ban.StaffNote}}</td>
 		<td><a href="{{$.webroot}}manage?action=filebans&delfnb={{$ban.ID}}">Delete</a></td>
 	</tr>
@@ -43,9 +46,11 @@
 <input type="hidden" name="bantype" value="checksum">
 	<table>
 		<tr><td>Checksum</td><td><input type="text" name="checksum"></td></tr>
-		<tr><td>Board</td><td><select name="board">
-			<option value="">All boards (global ban)</option>
-			{{- range $b,$uri := .boardURIs -}}<option value="{{$uri}}">/{{$uri}}/</option>{{end -}}
+		<tr><td>Board</td><td><select name="boardid" id="boardid">
+			<option value="0">All boards</option>
+		{{- range $b, $board := $.allBoards -}}
+			<option value="{{$board.ID}}" {{if eq (dereference $.ban.BoardID) $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+		{{- end -}}
 		</select></td></tr>
 		<tr><td>Staff:</td><td>{{.currentStaff}}</td></tr>
 		<tr><td>Staff note:</td><td><input type="text" name="staffnote"/></td></tr>
@@ -60,8 +65,8 @@
 {{range $b,$ban := .checksumBans}}
 	<tr>
 		<td>{{$ban.Checksum}}</td>
-		<td>{{$uri := $ban.BoardURI}}{{if eq $uri ""}}<i>All boards</i>{{else}}/{{$uri}}/{{end}}</td>
-		<td>{{$staff := $ban.StaffName}}{{if eq $staff ""}}<i>?</i>{{else}}{{$staff}}{{end}}</td>
+		<td>{{$uri := (intPtrToBoardDir $ban.BoardID "" "?")}}{{if eq $uri ""}}<i>All boards</i>{{else}}/{{$uri}}/{{end}}</td>
+		<td>{{$staff := (getStaffNameFromID $ban.StaffID)}}{{if eq $staff ""}}<i>?</i>{{else}}{{$staff}}{{end}}</td>
 		<td>{{$ban.StaffNote}}</td>
 		<td><a href="{{$.webroot}}manage?action=filebans&delcsb={{$ban.ID}}#checksum-bans">Delete</a></td>
 	</tr>

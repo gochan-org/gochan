@@ -212,15 +212,6 @@ var actions = []Action{
 		},
 	},
 	{
-		ID:          "checksumbans",
-		Title:       "File checksum bans",
-		Permissions: ModPerms,
-		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
-			return "", gcutil.ErrNotImplemented
-		},
-	},
-	{
 		ID:          "bans",
 		Title:       "Bans",
 		Permissions: ModPerms,
@@ -296,6 +287,52 @@ var actions = []Action{
 			outputStr += manageBansBuffer.String()
 			return outputStr, nil
 		}},
+	{
+		ID:          "filebans",
+		Title:       "Filename and checksum bans",
+		Permissions: ModPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			filterBoardIDstr := request.FormValue("filterboardid")
+			var filterBoardID int
+			if filterBoardIDstr != "" {
+				if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
+					errEv.Err(err).
+						Str("filterboardid", filterBoardIDstr).Caller().Send()
+					return "", err
+				}
+			}
+			limitStr := request.FormValue("limit")
+			limit := 200
+			if limitStr != "" {
+				if limit, err = strconv.Atoi(limitStr); err != nil {
+					errEv.Err(err).
+						Str("limit", limitStr).Caller().Send()
+					return "", err
+				}
+			}
+			checksumBans, err := gcsql.GetFileBans(filterBoardID, limit)
+			if err != nil {
+				return "", err
+			}
+			filenameBans, err := gcsql.GetFilenameBans(filterBoardID, limit)
+			if err != nil {
+				return "", err
+			}
+			manageBansBuffer := bytes.NewBufferString("")
+
+			if err = serverutil.MinifyTemplate(gctemplates.ManageFileBans, map[string]interface{}{
+				"allBoards":     gcsql.AllBoards,
+				"checksumBans":  checksumBans,
+				"filenameBans":  filenameBans,
+				"filterboardid": filterBoardID,
+			}, manageBansBuffer, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_filebans.html").Caller().Send()
+				return "", errors.New("Error executing ban management page template: " + err.Error())
+			}
+			outputStr := manageBansBuffer.String()
+			return outputStr, nil
+		},
+	},
 	{
 		ID:          "ipsearch",
 		Title:       "IP Search",
