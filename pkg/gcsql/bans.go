@@ -336,7 +336,7 @@ func (fb *FileBan) IsGlobalBan() bool {
 	return fb.BoardID == nil
 }
 
-func (fb *FileBan) Deactivate(staffID int) error {
+func (fb FileBan) Deactivate(staffID int) error {
 	const deleteQuery = `DELETE FROM DBPREFIXfile_ban WHERE id = ?`
 	_, err := ExecSQL(deleteQuery, fb.ID)
 	return err

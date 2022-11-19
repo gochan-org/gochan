@@ -292,6 +292,23 @@ var actions = []Action{
 		Title:       "Filename and checksum bans",
 		Permissions: ModPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			delChecksumIDStr := request.FormValue("delcsb")
+			if delChecksumIDStr != "" {
+				delChecksumID, err := strconv.Atoi(delChecksumIDStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("delcsb", delChecksumIDStr).
+						Caller().Send()
+					return "", err
+				}
+				if err = (gcsql.FileBan{ID: delChecksumID}).Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteChecksumBanID", delChecksumID).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.Int("deleteChecksumBanID", delChecksumID).Msg("File checksum ban deleted")
+			}
 			filterBoardIDstr := request.FormValue("filterboardid")
 			var filterBoardID int
 			if filterBoardIDstr != "" {
