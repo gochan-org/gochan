@@ -292,22 +292,41 @@ var actions = []Action{
 		Title:       "Filename and checksum bans",
 		Permissions: ModPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
-			delChecksumIDStr := request.FormValue("delcsb")
-			if delChecksumIDStr != "" {
-				delChecksumID, err := strconv.Atoi(delChecksumIDStr)
+			delChecksumBanIDStr := request.FormValue("delcsb")
+			if delChecksumBanIDStr != "" {
+				delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
 				if err != nil {
 					errEv.Err(err).
-						Str("delcsb", delChecksumIDStr).
+						Str("deleteChecksumBanIDStr", delChecksumBanIDStr).
 						Caller().Send()
 					return "", err
 				}
-				if err = (gcsql.FileBan{ID: delChecksumID}).Deactivate(staff.ID); err != nil {
+				if err = (gcsql.FileBan{ID: delChecksumBanID}).Deactivate(staff.ID); err != nil {
 					errEv.Err(err).
-						Int("deleteChecksumBanID", delChecksumID).
+						Int("deleteChecksumBanID", delChecksumBanID).
 						Caller().Send()
 					return "", err
 				}
-				infoEv.Int("deleteChecksumBanID", delChecksumID).Msg("File checksum ban deleted")
+				infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
+			}
+			delFilenameBanIDStr := request.FormValue("delfnb")
+			if delFilenameBanIDStr != "" {
+				delFilenameBanID, err := strconv.Atoi(delFilenameBanIDStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("delfnb", delFilenameBanIDStr).
+						Caller().Send()
+					return "", err
+				}
+				var fnb gcsql.FilenameBan
+				fnb.ID = delFilenameBanID
+				if err = fnb.Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteFilenameBanID", delFilenameBanID).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.Int("deleteFilenameBanID", delFilenameBanID).Msg("Filename ban deleted")
 			}
 			filterBoardIDstr := request.FormValue("filterboardid")
 			var filterBoardID int
