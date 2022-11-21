@@ -292,25 +292,39 @@ var actions = []Action{
 		Title:       "Filename and checksum bans",
 		Permissions: ModPerms,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
-			delChecksumBanIDStr := request.FormValue("delcsb")
-			if delChecksumBanIDStr != "" {
-				delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
+			delFilenameBanIDStr := request.FormValue("delfnb") // filename ban deletion
+			delChecksumBanIDStr := request.FormValue("delcsb") // checksum ban deletion
+
+			boardidStr := request.FormValue("boardid")
+			boardid := 0
+			if boardidStr != "" {
+				boardid, err = strconv.Atoi(boardidStr)
 				if err != nil {
 					errEv.Err(err).
-						Str("deleteChecksumBanIDStr", delChecksumBanIDStr).
+						Str("boardid", boardidStr).
 						Caller().Send()
 					return "", err
 				}
-				if err = (gcsql.FileBan{ID: delChecksumBanID}).Deactivate(staff.ID); err != nil {
-					errEv.Err(err).
-						Int("deleteChecksumBanID", delChecksumBanID).
-						Caller().Send()
-					return "", err
-				}
-				infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
 			}
-			delFilenameBanIDStr := request.FormValue("delfnb")
-			if delFilenameBanIDStr != "" {
+			staffnote := request.FormValue("staffnote")
+
+			if request.FormValue("dofilenameban") != "" {
+				// creating a new filename ban
+				filename := request.FormValue("filename")
+				iswildcard := request.FormValue("iswildcard") == "on"
+				if _, err = gcsql.NewFilenameBan(filename, iswildcard, boardid, staff.ID, staffnote); err != nil {
+					errEv.Err(err).
+						Str("filename", filename).
+						Bool("iswildcard", iswildcard).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("filename", filename).
+					Bool("iswildcard", iswildcard).
+					Int("boardid", boardid).
+					Msg("Created new filename ban")
+			} else if delFilenameBanIDStr != "" {
 				delFilenameBanID, err := strconv.Atoi(delFilenameBanIDStr)
 				if err != nil {
 					errEv.Err(err).
@@ -326,7 +340,39 @@ var actions = []Action{
 						Caller().Send()
 					return "", err
 				}
-				infoEv.Int("deleteFilenameBanID", delFilenameBanID).Msg("Filename ban deleted")
+				infoEv.
+					Int("deleteFilenameBanID", delFilenameBanID).
+					Int("boardid", boardid).
+					Msg("Filename ban deleted")
+			} else if request.FormValue("dochecksumban") != "" {
+				// creating a new file checksum ban
+				checksum := request.FormValue("checksum")
+				if _, err = gcsql.NewFileChecksumBan(checksum, boardid, staff.ID, staffnote); err != nil {
+					errEv.Err(err).
+						Str("checksum", checksum).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("checksum", checksum).
+					Int("boardid", boardid).
+					Msg("Created new file checksum ban")
+			} else if delChecksumBanIDStr != "" {
+				// user requested a checksum ban ID to delete
+				delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("deleteChecksumBanIDStr", delChecksumBanIDStr).
+						Caller().Send()
+					return "", err
+				}
+				if err = (gcsql.FileBan{ID: delChecksumBanID}).Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteChecksumBanID", delChecksumBanID).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
 			}
 			filterBoardIDstr := request.FormValue("filterboardid")
 			var filterBoardID int

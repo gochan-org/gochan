@@ -222,7 +222,7 @@ func GetFileBans(boardID int, limit int) ([]FileBan, error) {
 }
 
 func GetFilenameBans(boardID int, limit int) ([]FilenameBan, error) {
-	query := `SELECT id, board_id, staff_id, staff_note, issued_at, filename FROM DBPREFIXfilename_ban`
+	query := `SELECT id, board_id, staff_id, staff_note, issued_at, filename, is_regex FROM DBPREFIXfilename_ban`
 	limitStr := ""
 	if limit > 0 {
 		limitStr = " LIMIT " + strconv.Itoa(limit)
@@ -242,12 +242,33 @@ func GetFilenameBans(boardID int, limit int) ([]FilenameBan, error) {
 	var bans []FilenameBan
 	for rows.Next() {
 		var ban FilenameBan
-		if err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename); err != nil {
+		if err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex); err != nil {
 			return nil, err
 		}
 		bans = append(bans, ban)
 	}
 	return bans, nil
+}
+
+func NewFilenameBan(filename string, isWildcard bool, boardID int, staffID int, staffNote string) (*FilenameBan, error) {
+	const query = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES(?,?,?,?,?)`
+	var ban FilenameBan
+	var err error
+	if ban.ID, err = getNextFreeID("DBPREFIXfilename_ban"); err != nil {
+		return nil, err
+	}
+	if boardID > 0 {
+		ban.BoardID = new(int)
+		*ban.BoardID = boardID
+	}
+	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, filename, isWildcard); err != nil {
+		return nil, err
+	}
+	ban.StaffID = staffID
+	ban.StaffNote = staffNote
+	ban.Filename = filename
+	ban.IsRegex = isWildcard
+	return &ban, nil
 }
 
 func (ub filenameOrUsernameBanBase) IsGlobalBan() bool {
@@ -330,6 +351,26 @@ func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
 		bans = append(bans, ban)
 	}
 	return bans, nil
+}
+
+func NewFileChecksumBan(checksum string, boardID int, staffID int, staffNote string) (*FileBan, error) {
+	const query = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES(?,?,?,?)`
+	var ban FileBan
+	var err error
+	if ban.ID, err = getNextFreeID("DBPREFIXfile_ban"); err != nil {
+		return nil, err
+	}
+	if boardID > 0 {
+		ban.BoardID = new(int)
+		*ban.BoardID = boardID
+	}
+	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, checksum); err != nil {
+		return nil, err
+	}
+	ban.StaffID = staffID
+	ban.StaffNote = staffNote
+	ban.Checksum = checksum
+	return &ban, nil
 }
 
 func (fb *FileBan) IsGlobalBan() bool {
