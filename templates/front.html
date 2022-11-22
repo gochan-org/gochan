@@ -17,7 +17,7 @@
 						<ul style="float:left; list-style: none">
 						<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
 						{{range $_, $board := $.boards}}
-							{{if and (eq $board.Section $section.ID) (ne $board.Dir $.site_config.Modboard)}}
+							{{if and (eq $board.SectionID $section.ID) (ne $board.Dir $.site_config.Modboard)}}
 								<li><a href="{{$.webroot}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
 							{{end}}
 						{{end}}
@@ -31,15 +31,15 @@
 			<div class="section-title-block"><b>Recent Posts</b></div>
 			<div class="section-body">
 				<div id="recent-posts">
-				{{- range $i, $post := $.recent_posts}}{{$postURL := $post.WebPath}}
+				{{- range $i, $post := $.recent_posts}}
 					<div class="recent-post">
-						{{if and (ne $post.Filename "deleted") (ne $post.Filename "") -}}
-							<a href="{{$postURL}}" class="front-reply" target="_blank"><img src="{{$.webroot}}{{$post.BoardName}}/thumb/{{getThreadThumbnail $post.Filename}}" alt="post thumbnail"/></a><br />
+						{{if and (not $post.FileDeleted) (ne $post.ThumbURL "") -}}
+							<a href="{{$post.URL}}" class="front-reply" target="_blank"><img src="{{$post.ThumbURL}}" alt="post thumbnail"/></a><br />
 						{{else}}
-							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$postURL}}" class="front-reply" target="_blank">No file</a></div>
+							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$post.URL}}" class="front-reply" target="_blank">No file</a></div>
 						{{- end}}<br />
-						<a href="{{$.webroot}}{{$post.BoardName}}/">/{{$post.BoardName}}/</a><hr />
-						{{truncateMessage (stripHTML $post.Message) 40 4}}
+						<a href="{{$.webroot}}{{$post.Board}}/">/{{$post.Board}}/</a><hr />
+						{{$post.MessageSample}}
 					</div>{{end}}
 				</div>
 			</div>{{end}}
