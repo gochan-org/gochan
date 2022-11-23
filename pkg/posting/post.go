@@ -28,23 +28,25 @@ import (
 
 const (
 	yearInSeconds = 31536000
+	maxFormBytes  = 50000000
 )
 
 var (
 	ErrorPostTooLong = errors.New("post is too long")
 )
 
-func rejectPost(reasonShort string, reasonLong string, data map[string]interface{}, writer http.ResponseWriter, request *http.Request) {
-	gcutil.LogError(errors.New(reasonLong)).
-		Str("rejectedPost", reasonShort).
-		Str("IP", gcutil.GetRealIP(request)).
-		Fields(data).Send()
-	data["rejected"] = reasonLong
-	serverutil.ServeError(writer, reasonLong, serverutil.IsRequestingJSON(request), data)
-}
-
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
+	request.ParseMultipartForm(maxFormBytes)
+	ip := gcutil.GetRealIP(request)
+	errEv := gcutil.LogError(nil).
+		Str("IP", ip)
+	infoEv := gcutil.LogInfo().
+		Str("IP", ip)
+	defer func() {
+		errEv.Discard()
+		infoEv.Discard()
+	}()
 	var post gcsql.Post
 	var formName string
 	var nameCookie string
@@ -54,6 +56,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardConfig := config.GetBoardConfig("")
 
 	if request.Method == "GET" {
+		infoEv.Msg("Invalid request (expected POST, not GET)")
 		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
 		return
 	}
@@ -64,9 +67,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if threadidStr != "" {
 		// post is a reply
 		if post.ThreadID, err = strconv.Atoi(threadidStr); err != nil {
-			rejectPost("invalidFormData", "Invalid form data (invalid threadid)", map[string]interface{}{
-				"threadidStr": threadidStr,
-			}, writer, request)
+			errEv.Str("threadid", threadidStr).Caller().Msg("Invalid threadid value")
+			serverutil.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]interface{}{
+				"threadid": threadidStr,
+			})
 			return
 		}
 	}
@@ -74,16 +78,20 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardidStr := request.FormValue("boardid")
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
-		rejectPost("invalidForm", "Invalid form data (invalid boardid)", map[string]interface{}{
-			"boardidStr": boardidStr,
-		}, writer, request)
+		errEv.Str("boardid", boardidStr).Caller().Msg("Invalid boardid value")
+		serverutil.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]interface{}{
+			"boardid": boardidStr,
+		})
 		return
 	}
 	postBoard, err := gcsql.GetBoardFromID(boardID)
 	if err != nil {
-		rejectPost("boardInfoError", "Error getting board info: "+err.Error(), map[string]interface{}{
+		errEv.Err(err).Caller().
+			Int("boardid", boardID).
+			Msg("Unable to get board info")
+		serverutil.ServeError(writer, "Unable to get board info", wantsJSON, map[string]interface{}{
 			"boardid": boardID,
-		}, writer, request)
+		})
 		return
 	}
 
@@ -115,17 +123,21 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	post.Subject = request.FormValue("postsubject")
 	post.MessageRaw = strings.TrimSpace(request.FormValue("postmsg"))
 	if len(post.MessageRaw) > postBoard.MaxMessageLength {
-		rejectPost("messageLength", "Message is too long", map[string]interface{}{
+		errEv.
+			Int("messageLength", len(post.MessageRaw)).
+			Int("maxMessageLength", postBoard.MaxMessageLength).Send()
+		serverutil.ServeError(writer, "Message is too long", wantsJSON, map[string]interface{}{
 			"messageLength": len(post.MessageRaw),
 			"boardid":       boardID,
-		}, writer, request)
+		})
 		return
 	}
 
 	if post.MessageRaw, err = ApplyWordFilters(post.MessageRaw, postBoard.Dir); err != nil {
-		rejectPost("wordfilterError", "Error formatting post: "+err.Error(), map[string]interface{}{
+		errEv.Err(err).Caller().Msg("Error formatting post")
+		serverutil.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]interface{}{
 			"boardDir": postBoard.Dir,
-		}, writer, request)
+		})
 		return
 	}
 
@@ -200,13 +212,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		tooSoon = delay < boardConfig.ReplyDelay
 	}
 	if err != nil {
-		rejectPost("cooldownError", "Error checking post cooldown: "+err.Error(), map[string]interface{}{
+		errEv.Err(err).Caller().Str("boardDir", postBoard.Dir).Msg("Unable to check psot cooldown")
+		serverutil.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]interface{}{
 			"boardDir": postBoard.Dir,
-		}, writer, request)
+		})
 		return
 	}
 	if tooSoon {
-		rejectPost("cooldownError", "Please wait before making a new post", map[string]interface{}{}, writer, request)
+		errEv.Int("delay", delay).Msg("Rejecting post (user must wait before making another post)")
+		serverutil.ServeError(writer, "Please wait before making a new post", wantsJSON, nil)
 		return
 	}
 
