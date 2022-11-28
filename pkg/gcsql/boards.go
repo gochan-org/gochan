@@ -12,9 +12,9 @@ import (
 const (
 	// selects all columns from DBPREFIXboards
 	selectBoardsBaseSQL = `SELECT
-	id, section_id, dir, navbar_position, title, subtitle, description,
-	max_file_size, default_style, locked, created_at, anonymous_name, force_anonymous,
-	autosage_after, no_images_after, max_message_length, allow_embeds, redirect_to_thread,
+	id, section_id, uri, dir, navbar_position, title, subtitle, description,
+	max_file_size, max_threads, default_style, locked, created_at, anonymous_name, force_anonymous,
+	autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,
 	require_file, enable_catalog
 	FROM DBPREFIXboards `
 )
@@ -53,12 +53,13 @@ func getAllBoards() ([]Board, error) {
 	var boards []Board
 	for rows.Next() {
 		var board Board
-		err = rows.Scan(
-			&board.ID, &board.SectionID, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle, &board.Description,
-			&board.MaxFilesize, &board.DefaultStyle, &board.Locked, &board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous,
-			&board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength, &board.AllowEmbeds, &board.RedirectToThread,
-			&board.RequireFile, &board.EnableCatalog)
-		if err != nil {
+		if err = rows.Scan(
+			&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
+			&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
+			&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
+			&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
+			&board.EnableCatalog,
+		); err != nil {
 			return nil, err
 		}
 		boards = append(boards, board)

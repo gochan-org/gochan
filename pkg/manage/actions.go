@@ -952,16 +952,20 @@ var actions = []Action{
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
-				errEv.Err(err).Caller().Send()
+				errEv.Err(err).Caller().Msg("Unable to initialize templates")
+				return "", err
+			}
+			err = building.BuildBoards(false)
+			if err != nil {
 				return "", err
 			}
 			if wantsJSON {
 				return map[string]interface{}{
 					"success": true,
 					"message": "Boards built successfully",
-				}, building.BuildBoards(false)
+				}, nil
 			}
-			return "Boards built successfully", building.BuildBoards(false)
+			return "Boards built successfully", nil
 		}},
 	{
 		ID:          "reparsehtml",

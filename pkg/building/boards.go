@@ -56,7 +56,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	if err != nil {
 		gcutil.LogError(err).
 			Int("boardID", board.ID).
-			Msg("Failed getting board threads")
+			Caller().Msg("Failed getting board threads")
 		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
 	}
 
@@ -69,8 +69,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 			gcutil.LogError(err).
 				Str("boardDir", board.Dir).
 				Int("threadID", thread.ID).
-				Msg("Failed getting file count")
-			return errors.New("Error getting file count")
+				Caller().Msg("Failed getting file count")
+			return err
 		}
 
 		var maxRepliesOnBoardPage int
@@ -88,7 +88,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 			gcutil.LogError(err).
 				Str("boardDir", board.Dir).
 				Int("threadID", thread.ID).
-				Msg("Failed getting reply count")
+				Caller().Msg("Failed getting reply count")
 			return errors.New("Error getting reply count: " + err.Error())
 		}
 		catalogThread.posts, err = thread.GetPosts(false, true, maxRepliesOnBoardPage)
@@ -104,7 +104,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 			gcutil.LogError(err).
 				Int("threadid", thread.ID).
 				Str("boardDir", board.Dir).
-				Msg("Failed getting thread uploads")
+				Caller().Msg("Failed getting thread uploads")
 			return errors.New("Failed getting thread uploads: " + err.Error())
 		}
 
@@ -148,10 +148,11 @@ func BuildBoardPages(board *gcsql.Board) error {
 			gcutil.LogError(err).
 				Str("boardDir", board.Dir).
 				Str("page", "board.html").
-				Msg("Failed getting board page")
+				Caller().Msg("Failed getting board page")
 			return fmt.Errorf("failed opening /%s/board.html: %s", board.Dir, err.Error())
 		}
 
+		boardConfig := config.GetBoardConfig(board.Dir)
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
@@ -159,14 +160,15 @@ func BuildBoardPages(board *gcsql.Board) error {
 			"boards":       gcsql.AllBoards,
 			"sections":     gcsql.AllSections,
 			"threads":      threads,
+			"numPages":     len(threads) / boardConfig.ThreadsPerPage,
 			"board":        board,
-			"board_config": config.GetBoardConfig(board.Dir),
+			"board_config": boardConfig,
 		}, boardPageFile, "text/html"); err != nil {
 			gcutil.LogError(err).
 				Str("boardDir", board.Dir).
 				Str("page", "board.html").
-				Msg("Failed building board")
-			return fmt.Errorf("Failed building /%s/: %s", board.Dir, err.Error())
+				Caller().Msg("Failed building board")
+			return fmt.Errorf("failed building /%s/: %s", board.Dir, err.Error())
 		}
 		return nil
 	}
@@ -260,7 +262,7 @@ func BuildBoards(verbose bool, which ...int) error {
 			if err != nil {
 				gcutil.LogError(err).
 					Int("boardid", boardID).
-					Msg("Unable to get board information")
+					Caller().Msg("Unable to get board information")
 				return fmt.Errorf("Error getting board information (ID: %d): %s", boardID, err.Error())
 			}
 			boards = append(boards, *board)
@@ -273,10 +275,7 @@ func BuildBoards(verbose bool, which ...int) error {
 	for _, board := range boards {
 		// board := &boards[b]
 		if err = buildBoard(&board, true); err != nil {
-			gcutil.LogError(err).
-				Str("boardDir", board.Dir).
-				Msg("Failed building board")
-			return fmt.Errorf("Error building /%s/: %s", board.Dir, err.Error())
+			return err
 		}
 		if verbose {
 			fmt.Printf("Built /%s/ successfully\n", board.Dir)
@@ -286,61 +285,65 @@ func BuildBoards(verbose bool, which ...int) error {
 }
 
 // BuildCatalog builds the catalog for a board with a given id
-func BuildCatalog(boardID int) string {
+func BuildCatalog(boardID int) error {
+	errEv := gcutil.LogError(nil).
+		Str("building", "catalog").
+		Int("boardID", boardID)
 	err := gctemplates.InitTemplates("catalog")
 	if err != nil {
-		return err.Error()
+		errEv.Err(err).Send()
+		return err
 	}
 
 	board, err := gcsql.GetBoardFromID(boardID)
 	if err != nil {
-		gcutil.LogError(err).
-			Int("boardid", boardID).
-			Msg("Unable to get board information")
-		return fmt.Sprintf("Error getting board information (ID: %d)", boardID)
+		errEv.Err(err).
+			Caller().Msg("Unable to get board information")
+		return err
 	}
+	errEv.Str("boardDir", board.Dir)
 	criticalCfg := config.GetSystemCriticalConfig()
 	catalogPath := path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.html")
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("boardDir", board.Dir).
-			Msg("Failed opening catalog.html")
-		return fmt.Sprintf("Failed opening /%s/catalog.html: %s<br/>", board.Dir, err.Error())
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("failed opening /%s/catalog.html: %s<br/>", board.Dir, err.Error())
 	}
 
-	threadOPs, err := gcsql.GetBoardTopPosts(boardID, true)
+	threadOPs, err := gcsql.GetBoardTopPosts(boardID)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "catalog").
-			Str("boardDir", board.Dir).Send()
-		return fmt.Sprintf("Error building catalog for /%s/: %s<br/>", board.Dir, err.Error())
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("failed building catalog for /%s/: %s<br/>", board.Dir, err.Error())
 	}
+	boardConfig := config.GetBoardConfig(board.Dir)
 
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
 		"boards":       gcsql.AllBoards,
 		"webroot":      criticalCfg.WebRoot,
 		"board":        board,
-		"board_config": config.GetBoardConfig(board.Dir),
+		"board_config": boardConfig,
 		"sections":     gcsql.AllSections,
 		"threads":      threadOPs,
 	}, catalogFile, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("building", "catalog").
-			Str("boardDir", board.Dir).Send()
-		return fmt.Sprintf("Error building catalog for /%s/: %s<br/>", board.Dir, err.Error())
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("failed building catalog for /%s/: %s<br/>", board.Dir, err.Error())
 	}
-	return fmt.Sprintf("Built catalog for /%s/ successfully", board.Dir)
+	return nil
 }
 
 // Build builds the board and its thread files
 // if force is true, it doesn't fail if the directories exist but does fail if it is a file
 func buildBoard(board *gcsql.Board, force bool) error {
 	var err error
+	errEv := gcutil.LogError(nil).
+		Str("boardDir", board.Dir).
+		Int("boardID", board.ID)
 	if board.Dir == "" {
+		errEv.Err(err).Caller().Send()
 		return ErrNoBoardDir
 	}
 	if board.Title == "" {
+		errEv.Err(err).Caller().Send()
 		return ErrNoBoardTitle
 	}
 
@@ -354,8 +357,9 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	thumbInfo, _ := os.Stat(thumbPath)
 	if dirInfo != nil {
 		if !force {
-			gcutil.LogError(os.ErrExist).
-				Str("dirPath", dirPath).Send()
+			errEv.Err(os.ErrExist).
+				Str("dirPath", dirPath).
+				Caller().Send()
 			return fmt.Errorf(pathExistsStr, dirPath)
 		}
 		if !dirInfo.IsDir() {
@@ -367,25 +371,50 @@ func buildBoard(board *gcsql.Board, force bool) error {
 
 	if resInfo != nil {
 		if !force {
-			return fmt.Errorf(pathExistsStr, resPath)
+			err = fmt.Errorf(pathExistsStr, resPath)
+			errEv.Err(err).
+				Str("resPath", resPath).
+				Caller().Send()
+			return err
 		}
 		if !resInfo.IsDir() {
-			return fmt.Errorf(dirIsAFileStr, resPath)
+			err = fmt.Errorf(dirIsAFileStr, resPath)
+			errEv.Err(err).
+				Str("resPath", resPath).
+				Caller().Send()
+			return err
 
 		}
 	} else if err = os.Mkdir(resPath, 0666); err != nil {
+		err = fmt.Errorf(genericErrStr, resPath, err.Error())
+		errEv.Err(err).
+			Str("resPath", resPath).
+			Caller().Send()
+
 		return fmt.Errorf(genericErrStr, resPath, err.Error())
 	}
 
 	if srcInfo != nil {
 		if !force {
-			return fmt.Errorf(pathExistsStr, srcPath)
+			err = fmt.Errorf(pathExistsStr, srcPath)
+			errEv.Err(err).
+				Str("srcPath", srcPath).
+				Caller().Send()
+			return err
 		}
 		if !srcInfo.IsDir() {
-			return fmt.Errorf(dirIsAFileStr, srcPath)
+			err = fmt.Errorf(dirIsAFileStr, srcPath)
+			errEv.Err(err).
+				Str("srcPath", srcPath).
+				Caller().Send()
+			return err
 		}
 	} else if err = os.Mkdir(srcPath, 0666); err != nil {
-		return fmt.Errorf(genericErrStr, srcPath, err.Error())
+		err = fmt.Errorf(genericErrStr, srcPath, err.Error())
+		errEv.Err(err).
+			Str("srcPath", srcPath).
+			Caller().Send()
+		return err
 	}
 
 	if thumbInfo != nil {
@@ -399,13 +428,32 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
 	}
 
-	BuildBoardPages(board)
-	BuildThreads(true, board.ID, 0)
-	gcsql.ResetBoardSectionArrays()
-	BuildFrontPage()
-	if board.EnableCatalog {
-		BuildCatalog(board.ID)
+	if err = BuildBoardPages(board); err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
 	}
-	BuildBoardListJSON()
+	if err = BuildThreads(true, board.ID, 0); err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
+	}
+	if err = gcsql.ResetBoardSectionArrays(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
+	}
+	if err = BuildFrontPage(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
+	}
+	if board.EnableCatalog {
+		errEv.Caller().Send()
+		if err = BuildCatalog(board.ID); err != nil {
+			return err
+		}
+	}
+	if err = BuildBoardListJSON(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
+	}
+
 	return nil
 }

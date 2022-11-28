@@ -22,7 +22,7 @@ func BuildThreads(all bool, boardid, threadid int) error {
 	var threads []gcsql.Post
 	var err error
 	if all {
-		threads, err = gcsql.GetBoardTopPosts(boardid, true)
+		threads, err = gcsql.GetBoardTopPosts(boardid)
 	} else {
 		var post *gcsql.Post
 		post, err = gcsql.GetThreadTopPost(threadid)

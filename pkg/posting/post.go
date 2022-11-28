@@ -53,7 +53,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	var formEmail string
 
 	systemCritical := config.GetSystemCriticalConfig()
-	boardConfig := config.GetBoardConfig("")
 
 	if request.Method == "GET" {
 		infoEv.Msg("Invalid request (expected POST, not GET)")
@@ -94,6 +93,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		})
 		return
 	}
+	boardConfig := config.GetBoardConfig(postBoard.Dir)
 
 	var emailCommand string
 	formName = request.FormValue("postname")

@@ -98,11 +98,15 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 	return post, err
 }
 
-func GetBoardTopPosts(boardID int, onlyNotDeleted bool) ([]Post, error) {
-	query := selectPostsBaseSQL + "WHERE board_id = ?"
-	if onlyNotDeleted {
-		query += " AND is_deleted = FALSE"
-	}
+func GetBoardTopPosts(boardID int) ([]Post, error) {
+	query := `SELECT * FROM (SELECT
+		id, thread_id AS threadid, (SELECT board_id FROM gc_threads WHERE gc_threads.id = threadid LIMIT 1) AS boardid,
+		is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject, message, message_raw,
+		password, deleted_at, is_deleted, banned_message
+		FROM gc_posts WHERE is_deleted = FALSE
+		) posts
+		WHERE boardid = ?`
+
 	rows, err := QuerySQL(query, boardID)
 	if err != nil {
 		return nil, err
@@ -111,13 +115,19 @@ func GetBoardTopPosts(boardID int, onlyNotDeleted bool) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		var post Post
+		var tmp int // only needed for WHERE clause in query
+
+		bannedMessage := new(string)
 		err = rows.Scan(
-			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+			&post.ID, &post.ThreadID, &tmp, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &bannedMessage,
 		)
 		if err != nil {
 			return posts, err
+		}
+		if bannedMessage != nil {
+			post.BannedMessage = *bannedMessage
 		}
 		posts = append(posts, post)
 	}
@@ -201,9 +211,8 @@ func (p *Post) GetBoardDir() (string, error) {
 
 func (p *Post) GetBoard() (*Board, error) {
 	const query = selectBoardsBaseSQL + boardFromPostIdSuffixSQL
-
 	board := new(Board)
-	err := QueryRowSQL(query, interfaceSlice(), interfaceSlice(
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,

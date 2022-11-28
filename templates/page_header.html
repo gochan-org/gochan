@@ -6,7 +6,7 @@
 	{{with .board -}}
 		{{with $.op -}}
 			{{if ne $.op.Subject "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.Subject 20 true}}</title>
-			{{- else if ne $.op.MessageHTML "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageText 20 true}}</title>
+			{{- else if ne $.op.Message "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageRaw 20 true}}</title>
 			{{- else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
 		{{- else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
 	{{- else}}<title>{{with $.page_title}}{{$.page_title}} - {{end}}{{.site_config.SiteName}}</title>{{end}}
