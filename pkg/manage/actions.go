@@ -181,7 +181,7 @@ var actions = []Action{
 				}
 			}
 			boardidStr := request.FormValue("boardid")
-			var recentposts []building.PostJSON
+			var recentposts []building.Post
 			var boardid int
 			if boardidStr != "" {
 				if boardid, err = strconv.Atoi(boardidStr); err != nil {

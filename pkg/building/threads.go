@@ -43,38 +43,39 @@ func BuildThreads(all bool, boardid, threadid int) error {
 
 // BuildThreadPages builds the pages for a thread given the top post. It fails if op is not the top post
 func BuildThreadPages(op *gcsql.Post) error {
+	errEv := gcutil.LogError(nil).
+		Str("building", "thread").
+		Int("postid", op.ID).
+		Int("threadid", op.ThreadID)
+	defer errEv.Discard()
 	if !op.IsTopPost {
+		errEv.Caller().Msg("non-OP passed to BuildThreadPages")
 		return gcsql.ErrNotTopPost
 	}
 	err := gctemplates.InitTemplates("threadpage")
 	if err != nil {
+		errEv.Err(err).Caller().Send()
 		return err
 	}
 	var threadPageFile *os.File
 
 	board, err := op.GetBoard()
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "thread").
-			Int("postid", op.ID).
-			Int("threadid", op.ThreadID).
-			Msg("failed building thread")
+		errEv.Err(err).
+			Caller().Msg("failed building thread")
 		return errors.New("failed building thread: " + err.Error())
 	}
-
+	errEv.Str("boardDir", board.Dir)
 	thread, err := gcsql.GetThread(op.ThreadID)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "thread").
-			Int("threadid", op.ThreadID).
-			Msg("Unable to get thread info")
+		errEv.Err(err).
+			Caller().Msg("Unable to get thread info")
 		return errors.New("unable to get thread info: " + err.Error())
 	}
-	posts, err := thread.GetPosts(false, false, 0)
+
+	posts, err := getThreadPosts(thread)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "thread").
-			Int("threadid", thread.ID).Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("failed building thread: " + err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
@@ -84,10 +85,8 @@ func BuildThreadPages(op *gcsql.Post) error {
 	threadPageFilepath := path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
 	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "thread").
-			Str("boardDir", board.Dir).
-			Int("threadid", op.ID).Send()
+		errEv.Err(err).
+			Caller().Send()
 		return fmt.Errorf("unable to open opening /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
 
@@ -99,13 +98,10 @@ func BuildThreadPages(op *gcsql.Post) error {
 		"board_config": config.GetBoardConfig(board.Dir),
 		"sections":     gcsql.AllSections,
 		"posts":        posts[1:],
-		"op":           op,
+		"op":           posts[0],
 	}, threadPageFile, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("building", "thread").
-			Str("boardDir", board.Dir).
-			Int("threadid", thread.ID).
-			Msg("Failed building threadpage")
+		errEv.Err(err).
+			Caller().Send()
 		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, posts[0].ID, err.Error())
 	}
 
@@ -114,15 +110,14 @@ func BuildThreadPages(op *gcsql.Post) error {
 		path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(posts[0].ID)+".json"),
 		os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("boardDir", board.Dir).
-			Int("threadid", thread.ID).
-			Int("op", posts[0].ID).Send()
+		errEv.Err(err).
+			Int("op", posts[0].ID).
+			Caller().Send()
 		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
 	defer threadJSONFile.Close()
 
-	threadMap := make(map[string][]gcsql.Post)
+	threadMap := make(map[string][]Post)
 
 	threadMap["posts"] = posts
 	threadJSON, err := json.Marshal(threadMap)
@@ -131,11 +126,9 @@ func BuildThreadPages(op *gcsql.Post) error {
 		return errors.New("failed to marshal to JSON: " + err.Error())
 	}
 	if _, err = threadJSONFile.Write(threadJSON); err != nil {
-		gcutil.LogError(err).
-			Str("boardDir", board.Dir).
-			Int("threadid", thread.ID).
-			Int("op", posts[0].ID).Send()
-
+		errEv.Err(err).
+			Int("op", posts[0].ID).
+			Caller().Send()
 		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
 	return nil

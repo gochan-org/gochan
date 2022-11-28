@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -29,12 +30,13 @@ const (
 	coalesce(DBPREFIXfiles.width,0) AS width,
 	coalesce(DBPREFIXfiles.height,0) AS height
 	FROM DBPREFIXposts
-	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id WHERE is_deleted = 0`
+	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id WHERE is_deleted = FALSE`
 )
 
-type PostJSON struct {
+type Post struct {
 	ID               int           `json:"no"`
 	ParentID         int           `json:"resto"`
+	IsTopPost        bool          `json:"-"`
 	BoardID          int           `json:"-"`
 	BoardDir         string        `json:"-"`
 	IP               string        `json:"-"`
@@ -49,16 +51,16 @@ type PostJSON struct {
 	Checksum         string        `json:"md5"`
 	Extension        string        `json:"extension"`
 	Filesize         int           `json:"fsize"`
-	Width            int           `json:"w"`
-	Height           int           `json:"h"`
+	UploadWidth      int           `json:"w"`
+	UploadHeight     int           `json:"h"`
 	ThumbnailWidth   int           `json:"tn_w"`
 	ThumbnailHeight  int           `json:"tn_h"`
 	Capcode          string        `json:"capcode"`
-	Time             string        `json:"time"`
+	Timestamp        time.Time     `json:"time"`
 	LastModified     string        `json:"last_modified"`
 }
 
-func (p *PostJSON) WebPath() string {
+func (p Post) WebPath() string {
 	threadID := p.ParentID
 	if threadID == 0 {
 		threadID = p.ID
@@ -66,14 +68,14 @@ func (p *PostJSON) WebPath() string {
 	return config.WebPath(p.BoardDir, "res", strconv.Itoa(threadID)+".html#"+strconv.Itoa(p.ID))
 }
 
-func (p *PostJSON) ThumbnailPath() string {
+func (p Post) ThumbnailPath() string {
 	if p.Filename == "" {
 		return ""
 	}
 	return config.WebPath(p.BoardDir, "thumb", gcutil.GetThumbnailPath("reply", p.Filename))
 }
 
-func (p *PostJSON) UploadPath() string {
+func (p Post) UploadPath() string {
 	if p.Filename == "" {
 		return ""
 	}
@@ -81,24 +83,80 @@ func (p *PostJSON) UploadPath() string {
 
 }
 
-func GetPostJSON(id int, boardid int) (*PostJSON, error) {
+func GetBuildablePost(id int, boardid int) (*Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
-	var post PostJSON
+	var post Post
 	var threadID int
 	err := gcsql.QueryRowSQL(query, []interface{}{id}, []interface{}{
-		&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Time, &post.LastModified,
-		&post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+		&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+		&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
 		&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.Width, &post.Height,
+		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 	})
 	if err != nil {
 		return nil, err
 	}
+	post.IsTopPost = post.ParentID == 0
 	post.Extension = path.Ext(post.Filename)
 	return &post, nil
 }
 
-func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
+func getBoardTopPosts(boardID int) ([]Post, error) {
+	const query = "SELECT * FROM (" + postQueryBase + ") p WHERE boardid = ?"
+	rows, err := gcsql.QuerySQL(query, boardID)
+	if err != nil {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var threadID int
+		err = rows.Scan(
+			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+		)
+		if err != nil {
+			return nil, err
+		}
+		post.IsTopPost = post.ParentID == 0
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
+	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ?"
+	rows, err := gcsql.QuerySQL(query, thread.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var threadID int
+		err = rows.Scan(
+			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+		)
+		if err != nil {
+			return nil, err
+		}
+		post.IsTopPost = post.ParentID == 0
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 	query := "SELECT * FROM (" + postQueryBase + ") posts"
 	var args []interface{} = []interface{}{}
 
@@ -112,15 +170,15 @@ func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var posts []PostJSON
+	var posts []Post
 	for rows.Next() {
-		var post PostJSON
+		var post Post
 		var threadID int
 		err = rows.Scan(
-			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Time, &post.LastModified,
-			&post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.Width, &post.Height,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		)
 		if err != nil {
 			return nil, err
@@ -135,8 +193,7 @@ func GetRecentPosts(boardid int, limit int) ([]PostJSON, error) {
 
 // BuildBoardListJSON generates a JSON file with info about the boards
 func BuildBoardListJSON() error {
-	criticalCfg := config.GetSystemCriticalConfig()
-	boardListFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	boardListFile, err := os.OpenFile(config.WebPath("boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		gcutil.LogError(err).
 			Str("building", "boardsList").Send()

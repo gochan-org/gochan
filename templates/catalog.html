@@ -17,10 +17,10 @@
 		<div class="catalog-thread">
 			<a href="{{$.webroot}}{{$.board.Dir}}/res/{{$thread.ID}}.html">
 				{{if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else}}
-				<img src="{{$.webroot}}{{$.board.Dir}}/thumb/{{getThreadThumbnail $thread.Filename}}" alt="{{$.webroot}}{{$.board.Dir}}/src/{{$thread.Filename}}" width="{{$thread.ThumbW}}" height="{{$thread.ThumbH}}" />
+				<img src="{{$thread.ThumbnailPath}}" alt="{{$thread.UploadPath}}" width="{{$thread.ThumbnailWidth}}" height="{{$thread.ThumbnailHeight}}" />
 			{{end}}</a><br />
-			<b>{{if eq $thread.Name ""}}Anonymous{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}<br />
-			{{$thread.MessageHTML}}
+			<b>{{if eq $thread.Name ""}}{{$.board.AnonymousName}}{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}<br />
+			{{$thread.Message}}
 	</div>{{end}}<hr />
 <a href="#">Scroll to top</a>
 {{template "page_footer.html" .}}

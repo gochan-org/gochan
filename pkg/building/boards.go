@@ -26,13 +26,6 @@ var (
 	ErrNoBoardTitle = errors.New("board must have a title before it is built")
 )
 
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func boolToInt(b bool) int {
 	if b {
 		return 1
@@ -310,7 +303,7 @@ func BuildCatalog(boardID int) error {
 		return fmt.Errorf("failed opening /%s/catalog.html: %s<br/>", board.Dir, err.Error())
 	}
 
-	threadOPs, err := gcsql.GetBoardTopPosts(boardID)
+	threadOPs, err := getBoardTopPosts(boardID)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed building catalog for /%s/: %s<br/>", board.Dir, err.Error())
@@ -326,7 +319,7 @@ func BuildCatalog(boardID int) error {
 		"threads":      threadOPs,
 	}, catalogFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed building catalog for /%s/: %s<br/>", board.Dir, err.Error())
+		return fmt.Errorf("failed building catalog for /%s/: %s", board.Dir, err.Error())
 	}
 	return nil
 }
@@ -445,8 +438,8 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		return err
 	}
 	if board.EnableCatalog {
-		errEv.Caller().Send()
 		if err = BuildCatalog(board.ID); err != nil {
+			errEv.Err(err).Caller().Send()
 			return err
 		}
 	}

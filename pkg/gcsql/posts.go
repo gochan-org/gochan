@@ -103,7 +103,7 @@ func GetBoardTopPosts(boardID int) ([]Post, error) {
 		id, thread_id AS threadid, (SELECT board_id FROM gc_threads WHERE gc_threads.id = threadid LIMIT 1) AS boardid,
 		is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject, message, message_raw,
 		password, deleted_at, is_deleted, banned_message
-		FROM gc_posts WHERE is_deleted = FALSE
+		FROM gc_posts WHERE is_deleted = FALSE and is_top_post
 		) posts
 		WHERE boardid = ?`
 
