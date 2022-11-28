@@ -3,7 +3,6 @@ package gcsql
 import (
 	"errors"
 
-	"github.com/gochan-org/gochan/pkg/gcsql.bak"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -23,7 +22,7 @@ func GetThreadFiles(post *Post) ([]Upload, error) {
 	query := selectFilesBaseSQL + `WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?)) AND filename != 'deleted'`
-	rows, err := gcsql.QuerySQL(query, post.ID)
+	rows, err := QuerySQL(query, post.ID)
 	if err != nil {
 		return nil, err
 	}
