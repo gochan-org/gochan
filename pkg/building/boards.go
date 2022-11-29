@@ -50,7 +50,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	var catalog boardCatalog
 	var catalogThreads []catalogThreadData
 
-	threads, err := board.GetThreads(true)
+	threads, err := board.GetThreads(true, true)
 	if err != nil {
 		errEv.Err(err).
 			Caller().Msg("Failed getting board threads")

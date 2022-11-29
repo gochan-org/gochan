@@ -244,10 +244,13 @@ func (board *Board) Delete() error {
 	return err
 }
 
-func (board *Board) GetThreads(onlyNotDeleted bool) ([]Thread, error) {
+func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool) ([]Thread, error) {
 	query := selectThreadsBaseSQL + " WHERE board_id = ?"
 	if onlyNotDeleted {
 		query += " AND is_deleted = FALSE"
+	}
+	if orderLastByBump {
+		query += " ORDER BY last_bump DESC"
 	}
 	rows, err := QuerySQL(query, board.ID)
 	if err != nil {
