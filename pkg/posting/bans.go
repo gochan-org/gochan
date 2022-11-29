@@ -2,13 +2,17 @@ package posting
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/rs/zerolog"
 )
 
 func showBanpage(ban gcsql.Ban, banType string, upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) {
@@ -63,19 +67,6 @@ func showBanpage(ban gcsql.Ban, banType string, upload *gcsql.Upload, post *gcsq
 			Msg("Rejected post with banned checksum")
 	}
 }
-
-// func BanHandler(writer http.ResponseWriter, request *http.Request) {
-// 	ip := gcutil.GetRealIP(request)
-// 	ipBan, err := gcsql.CheckIPBan(ip, 0)
-// 	if err != nil {
-// 		gcutil.LogError(err).
-// 			Str("IP", ip).
-// 			Msg("Error checking IP banned status (/banned request)")
-// 		serverutil.ServeErrorPage(writer, "Error checking banned status: "+err.Error())
-// 		return
-// 	}
-
-// }
 
 // checks the post for spam. It returns true if a ban page or an error page was served (causing MakePost() to return)
 func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
@@ -152,4 +143,75 @@ func checkChecksumBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.B
 	}
 	showBanpage(fileBan, "checksum", upload, post, postBoard, writer, request)
 	return true
+}
+
+func handleAppeal(writer http.ResponseWriter, request *http.Request, errEv *zerolog.Event) {
+	banIDstr := request.FormValue("banid")
+	if banIDstr == "" {
+		errEv.Caller().Msg("Appeal sent without banid field")
+		serverutil.ServeErrorPage(writer, "Missing banid value")
+		return
+	}
+	appealMsg := request.FormValue("appealmsg")
+	if appealMsg == "" {
+		errEv.Caller().Msg("Missing appealmsg value")
+		serverutil.ServeErrorPage(writer, "Missing or empty appeal")
+		return
+	}
+	banID, err := strconv.Atoi(banIDstr)
+	if err != nil {
+		errEv.Err(err).
+			Str("banIDstr", banIDstr).Caller().Send()
+		serverutil.ServeErrorPage(writer, fmt.Sprintf("Invalid banid value %q", banIDstr))
+		return
+	}
+	errEv.Int("banID", banID)
+	ban, err := gcsql.GetIPBanByID(banID)
+	if err != nil {
+		errEv.Err(err).
+			Caller().Send()
+		serverutil.ServeErrorPage(writer, "Error getting ban info: "+err.Error())
+		return
+	}
+	if ban == nil {
+		errEv.Caller().Msg("GetIPBanByID returned a nil ban (presumably not banned)")
+		serverutil.ServeErrorPage(writer, fmt.Sprintf("Invalid banid %d", banID))
+		return
+	}
+	if ban.IP != gcutil.GetRealIP(request) {
+		errEv.Caller().
+			Str("banIP", ban.IP).
+			Msg("User tried to appeal a ban from a different IP")
+		serverutil.ServeErrorPage(writer, fmt.Sprintf("Invalid banid %d", banID))
+		return
+	}
+	if !ban.IsActive {
+		errEv.Caller().Msg("Requested ban is not active")
+		serverutil.ServeErrorPage(writer, "Requested ban is not active")
+		return
+	}
+	if !ban.CanAppeal {
+		errEv.Caller().Msg("Rejected appeal submission, appeals denied for this ban")
+		serverutil.ServeErrorPage(writer, "You can not appeal this ban")
+	}
+	if ban.AppealAt.After(time.Now()) {
+		errEv.Caller().
+			Time("appealAt", ban.AppealAt).
+			Msg("Rejected appeal submission, can't appeal yet")
+		serverutil.ServeErrorPage(writer, "You are not able to appeal this ban until "+ban.AppealAt.Format(config.GetBoardConfig("").DateTimeFormat))
+	}
+	if err = ban.Appeal(appealMsg); err != nil {
+		errEv.Err(err).
+			Str("appealMsg", appealMsg).
+			Caller().Msg("Unable to submit appeal")
+		serverutil.ServeErrorPage(writer, "Unable to submit appeal")
+		return
+	}
+	board := request.FormValue("board")
+	gcutil.LogInfo().
+		Str("IP", gcutil.GetRealIP(request)).
+		Int("banID", banID).
+		Str("board", board).
+		Msg("Appeal submitted")
+	http.Redirect(writer, request, config.WebPath(request.FormValue("board")), http.StatusFound)
 }

@@ -135,7 +135,6 @@ func initServer() {
 		fmt.Println("Got error when initializing Akismet spam protection, it will be disabled:", err)
 	}
 
-	// server.namespaces["banned"] = posting.BanHandler
 	server.namespaces["captcha"] = posting.ServeCaptcha
 	server.namespaces["manage"] = manage.CallManageFunction
 	server.namespaces["post"] = posting.MakePost

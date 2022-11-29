@@ -108,6 +108,12 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 	return bans, nil
 }
 
+func (ipb *IPBan) Appeal(msg string) error {
+	const query = `INSERT INTO DBPREFIXip_ban_appeals (ip_ban_id, appeal_text, is_denied) VALUES(?, ?, FALSE)`
+	_, err := ExecSQL(query, ipb.ID, msg)
+	return err
+}
+
 // IsGlobalBan returns true if BoardID is a nil int, meaning they are banned on all boards, as opposed to a specific one
 func (ipb IPBan) IsGlobalBan() bool {
 	return ipb.BoardID == nil

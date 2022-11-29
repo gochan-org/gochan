@@ -59,6 +59,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
 		return
 	}
+
+	if request.FormValue("doappeal") != "" {
+		handleAppeal(writer, request, errEv)
+		return
+	}
+
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	post.IP = gcutil.GetRealIP(request)
 	var err error
