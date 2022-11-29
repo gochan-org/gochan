@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"bytes"
 	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -22,7 +23,13 @@ func showBanpage(ban gcsql.Ban, banType string, upload *gcsql.Upload, post *gcsq
 	if upload != nil {
 		tmplMap["filename"] = upload.OriginalFilename
 	}
-	err := serverutil.MinifyTemplate(gctemplates.Banpage, tmplMap, writer, "text/html")
+	ipb, ok := ban.(*gcsql.IPBan)
+	if ok {
+		tmplMap["permanent"] = ipb.Permanent
+		tmplMap["expires"] = ipb.ExpiresAt
+	}
+	banPageBuffer := bytes.NewBufferString("")
+	err := serverutil.MinifyTemplate(gctemplates.Banpage, tmplMap, banPageBuffer, "text/html")
 	if err != nil {
 		gcutil.LogError(err).
 			Str("IP", post.IP).
@@ -32,6 +39,7 @@ func showBanpage(ban gcsql.Ban, banType string, upload *gcsql.Upload, post *gcsq
 		serverutil.ServeErrorPage(writer, "Error minifying page: "+err.Error())
 		return
 	}
+	writer.Write(banPageBuffer.Bytes())
 	ev := gcutil.LogInfo().
 		Str("IP", post.IP).
 		Str("boardDir", postBoard.Dir).

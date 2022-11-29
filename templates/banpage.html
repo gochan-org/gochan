@@ -15,17 +15,17 @@
 	</div><br />
 	<div class="section-block" style="margin: 0px 26px 0px 24px">
 		<div class="section-title-block">
-			<span class="section-title"><b>{{if bannedForever .ban}}YOUR'E PERMABANNED, IDIOT!{{else if isBanned .ban .banBoards}}YOU ARE BANNED :({{else}}YOU ARE NOT BANNED :){{end}}</b></span>
+			<span class="section-title"><b>{{if bannedForever .ban}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</b></span>
 		</div>
-		<div class="section-body" style="padding-top:8px">{{if not (isBanned .ban .banBoards)}}<div style="text-align:center;">You're not banned. Good job.</div><br /><img id="banpage-image" src="/notbanned.png" style="display: block;margin-left: auto;margin-right: auto;"/><br />{{else}}
-			<div id="ban-info" style="float:left">{{if eq .ban.Boards ""}}
+		<div class="section-body" style="padding-top:8px">
+			<div id="ban-info" style="float:left">{{if .ban.IsGlobalBan}}
 				You are banned from posting on <b>all boards</b> for the following reason:{{else}}
-				You are banned from posting on <b>{{.ban.Boards}}</b> for the following reason:{{end}}
+				You are banned from posting on <b>{{.board.Dir}}</b> for the following reason:{{end}}
 				<br /><br />
-				<b>{{.ban.Reason}}</b>
-				<br /><br />{{$expires_timestamp := formatTimestamp .ban.Expires}}{{$appeal_timestamp := formatTimestamp .ban.AppealAt}}
-				Your ban was placed on {{formatTimestamp .ban.Timestamp}} and will 
-				{{if .ban.Permaban}}<b>not expire</b>{{else}}expire on <b>{{$expires_timestamp}}</b>{{end}}.<br />
+				<b>{{.ban.Message}}</b>
+				<br /><br />{{$expires_timestamp := formatTimestamp .ban.ExpiresAt}}{{$appeal_timestamp := formatTimestamp .ban.AppealAt}}
+				Your ban was placed on {{formatTimestamp .ban.IssuedAt}} and will 
+				{{if .ban.Permanent}}<b>not expire</b>{{else}}expire on <b>{{$expires_timestamp}}</b>{{end}}.<br />
 				Your IP address is <b>{{.ban.IP}}</b>.<br /><br />
 				{{if .ban.CanAppeal}}You may appeal this ban:<br />
 					<form id="appeal-form" action="/banned" method="POST">
@@ -33,16 +33,15 @@
 						<input type="submit" value="Submit" /><br />
 					</form>{{else}}You may <b>not</b> appeal this ban.<br />{{end}}
 				</div>{{if bannedForever .ban}}
-				<img id="banpage-image" src="/permabanned.png" style="float:right; margin: 4px 8px 8px 4px"/><br />
+				<img id="banpage-image" src="{{webPath "permabanned.jpg"}}" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
-					<source src="{{.systemCritical.WebRoot}}hittheroad.ogg" />
-					<source src="{{.systemCritical.WebRoot}}hittheroad.wav" />
-					<source src="{{.systemCritical.WebRoot}}hittheroad.mp3" />
+					<source src="{{webPath "hittheroad.ogg"}}" />
+					<source src="{{webPath "hittheroad.wav"}}" />
+					<source src="{{webPath "hittheroad.mp3"}}" />
 				</audio>
 				<script type="text/javascript">
 					document.getElementById("jack").play();
-				</script>{{else if isBanned .ban .banBoards}}
-				<img id="banpage-image" src="/banned.png" style="float:right; margin: 4px 8px 8px 4px"/><br />{{end}}
-			{{end}}</div>
+				</script>{{end}}
+			</div>
 		</div>
 	{{template "page_footer.html" .}}

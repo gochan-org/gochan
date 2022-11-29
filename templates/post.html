@@ -16,7 +16,7 @@
 	{{- if ne .post.Tripcode ""}}<span class="tripcode">!{{.post.Tripcode}}</span>{{end}} {{formatTimestamp .post.Timestamp -}}
 </label><a href="{{.post.WebPath}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a> <span class="post-links"></span>
 {{if $.is_board_page}}
-[<a href="{{$.webroot}}{{$.board.Dir}}/res/{{$.post.ID}}.html">View</a>]
+[<a href="{{$.post.ThreadPath}}">View</a>]
 {{end}}<br />
 {{- end -}}
 {{- if $.post.IsTopPost -}}

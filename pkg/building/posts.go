@@ -82,12 +82,16 @@ func (p Post) TitleText() string {
 	return title
 }
 
-func (p Post) WebPath() string {
+func (p Post) ThreadPath() string {
 	threadID := p.ParentID
 	if threadID == 0 {
 		threadID = p.ID
 	}
-	return config.WebPath(p.BoardDir, "res", strconv.Itoa(threadID)+".html#"+strconv.Itoa(p.ID))
+	return config.WebPath(p.BoardDir, "res", strconv.Itoa(threadID)+".html")
+}
+
+func (p Post) WebPath() string {
+	return p.ThreadPath() + "#" + strconv.Itoa(p.ID)
 }
 
 func (p Post) ThumbnailPath() string {
