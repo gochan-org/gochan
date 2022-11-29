@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"database/sql"
 	"errors"
 	"strconv"
 )
@@ -45,6 +46,17 @@ func GetThread(threadID int) (*Thread, error) {
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	))
 	return thread, err
+}
+
+// GetTopPostThreadID gets the thread ID from the database, given the post ID of a top post
+func GetTopPostThreadID(opID int) (int, error) {
+	const query = `SELECT thread_id FROM DBPREFIXposts WHERE id = ? and is_top_post`
+	var threadID int
+	err := QueryRowSQL(query, interfaceSlice(opID), interfaceSlice(&threadID))
+	if err == sql.ErrNoRows {
+		err = ErrThreadDoesNotExist
+	}
+	return threadID, err
 }
 
 // GetThreadsWithBoardID queries the database for the threads with the given board ID from the database.

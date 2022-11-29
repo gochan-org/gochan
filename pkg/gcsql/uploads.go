@@ -56,6 +56,7 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if err != nil {
 		return err
 	}
+	upload.PostID = p.ID
 	if _, err = ExecSQL(query,
 		&upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum, &upload.FileSize,
 		&upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,

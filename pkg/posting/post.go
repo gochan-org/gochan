@@ -63,14 +63,29 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	post.IP = gcutil.GetRealIP(request)
 	var err error
 	threadidStr := request.FormValue("threadid")
+	// to avoid potential hiccups, we'll just treat the "threadid" form field as the OP ID and convert it internally
+	// to the real thread ID
+	var opID int
 	if threadidStr != "" {
 		// post is a reply
-		if post.ThreadID, err = strconv.Atoi(threadidStr); err != nil {
-			errEv.Str("threadid", threadidStr).Caller().Msg("Invalid threadid value")
+		if opID, err = strconv.Atoi(threadidStr); err != nil {
+			errEv.Err(err).
+				Str("opIDstr", threadidStr).
+				Caller().Msg("Invalid threadid value")
 			serverutil.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]interface{}{
 				"threadid": threadidStr,
 			})
 			return
+		}
+		if opID > 0 {
+			if post.ThreadID, err = gcsql.GetTopPostThreadID(opID); err != nil {
+				errEv.Err(err).
+					Int("opID", opID).
+					Caller().Send()
+				serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+					"opID": opID,
+				})
+			}
 		}
 	}
 
