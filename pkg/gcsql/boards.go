@@ -245,7 +245,7 @@ func (board *Board) Delete() error {
 }
 
 func (board *Board) GetThreads(onlyNotDeleted bool) ([]Thread, error) {
-	query := selectThreadsBaseSQL + " WHERE id = ?"
+	query := selectThreadsBaseSQL + " WHERE board_id = ?"
 	if onlyNotDeleted {
 		query += " AND is_deleted = FALSE"
 	}

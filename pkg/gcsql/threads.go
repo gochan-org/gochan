@@ -75,7 +75,7 @@ func GetThreadsWithBoardID(boardID int, onlyNotDeleted bool) ([]Thread, error) {
 
 func GetThreadReplyCountFromOP(opID int) (int, error) {
 	const query = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = (
-		SELECT thread_id FROM DBPREFIXposts WHERE id = ?) AND is_deleted = 0`
+		SELECT thread_id FROM DBPREFIXposts WHERE id = ?) AND is_deleted = FALSE AND is_top_post = FALSE`
 	var num int
 	err := QueryRowSQL(query, interfaceSlice(opID), interfaceSlice(&num))
 	return num, err

@@ -5,10 +5,10 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	{{with .board -}}
 		{{with $.op -}}
-			{{if ne $.op.Subject "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.Subject 20 true}}</title>
-			{{- else if ne $.op.Message "" -}}<title>/{{$.board.Dir}}/ - {{truncateString $.op.MessageRaw 20 true}}</title>
-			{{- else}}<title>/{{$.board.Dir}}/ - #{{$.op.ID}}</title>{{end}}
-		{{- else}}<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>{{end}}
+			<title>{{$.op.TitleText}}</title>
+		{{- else}}
+			<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>
+		{{end}}
 	{{- else}}<title>{{with $.page_title}}{{$.page_title}} - {{end}}{{.site_config.SiteName}}</title>{{end}}
 	<link rel="stylesheet" href="{{.webroot}}css/global.css" />
 	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board_config.DefaultStyle}}" />

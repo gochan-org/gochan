@@ -18,7 +18,7 @@ const (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?))`
 	selectPostsBaseSQL = `SELECT 
 	id, thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature,
-	email, subject, message, message_raw, password, deleted_at, is_deleted, banned_message
+	email, subject, message, message_raw, password, deleted_at, is_deleted, COALESCE(banned_message,'') AS banned_message
 	FROM DBPREFIXposts `
 )
 

@@ -33,6 +33,16 @@ const (
 	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id WHERE is_deleted = FALSE`
 )
 
+func truncateString(msg string, limit int, ellipsis bool) string {
+	if len(msg) > limit {
+		if ellipsis {
+			return msg[:limit] + "..."
+		}
+		return msg[:limit]
+	}
+	return msg
+}
+
 type Post struct {
 	ID               int           `json:"no"`
 	ParentID         int           `json:"resto"`
@@ -58,6 +68,18 @@ type Post struct {
 	Capcode          string        `json:"capcode"`
 	Timestamp        time.Time     `json:"time"`
 	LastModified     string        `json:"last_modified"`
+}
+
+func (p Post) TitleText() string {
+	title := "/" + p.BoardDir + "/ - "
+	if p.Subject != "" {
+		title += truncateString(p.Subject, 20, true)
+	} else if p.Message != "" {
+		title += truncateString(bbcodeTagRE.ReplaceAllString(p.MessageRaw, ""), 20, true)
+	} else {
+		title += "#" + strconv.Itoa(p.ID)
+	}
+	return title
 }
 
 func (p Post) WebPath() string {
@@ -102,7 +124,7 @@ func GetBuildablePost(id int, boardid int) (*Post, error) {
 }
 
 func getBoardTopPosts(boardID int) ([]Post, error) {
-	const query = "SELECT * FROM (" + postQueryBase + ") p WHERE boardid = ?"
+	const query = "SELECT * FROM (" + postQueryBase + " AND is_top_post) p WHERE boardid = ?"
 	rows, err := gcsql.QuerySQL(query, boardID)
 	if err != nil {
 		return nil, err
@@ -124,7 +146,7 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 		if err != nil {
 			return nil, err
 		}
-		post.IsTopPost = post.ParentID == 0
+		post.IsTopPost = post.ParentID == 0 || post.ParentID == post.ID
 		posts = append(posts, post)
 	}
 	return posts, nil
@@ -150,7 +172,7 @@ func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 		if err != nil {
 			return nil, err
 		}
-		post.IsTopPost = post.ParentID == 0
+		post.IsTopPost = post.ParentID == 0 || post.ParentID == post.ID
 		posts = append(posts, post)
 	}
 	return posts, nil
