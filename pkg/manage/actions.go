@@ -442,7 +442,7 @@ var actions = []Action{
 					data["reverseAddrs"] = []string{err.Error()}
 				}
 
-				data["posts"], err = gcsql.GetPostsFromIP(ipQuery, limit, true)
+				data["posts"], err = building.GetBuildablePostsByIP(ipQuery, limit)
 				if err != nil {
 					errEv.Err(err).
 						Str("ipQuery", ipQuery).

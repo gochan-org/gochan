@@ -123,6 +123,35 @@ func GetBuildablePost(id int, boardid int) (*Post, error) {
 	return &post, nil
 }
 
+func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
+	query := postQueryBase + " AND DBPREFIXposts.ip = ? ORDER BY DBPREFIXposts.id DESC"
+	if limit > 0 {
+		query += " LIMIT " + strconv.Itoa(limit)
+	}
+	rows, err := gcsql.QuerySQL(query, ip)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		var threadID int
+		if err = rows.Scan(
+			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+		); err != nil {
+			return nil, err
+		}
+		post.IsTopPost = post.ParentID == 0
+		post.Extension = path.Ext(post.Filename)
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
 func getBoardTopPosts(boardID int) ([]Post, error) {
 	const query = "SELECT * FROM (" + postQueryBase + " AND is_top_post) p WHERE boardid = ?"
 	rows, err := gcsql.QuerySQL(query, boardID)
