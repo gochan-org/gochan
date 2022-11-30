@@ -288,6 +288,63 @@ var actions = []Action{
 			return outputStr, nil
 		}},
 	{
+		ID:          "appeals",
+		Title:       "Ban appeals",
+		Permissions: ModPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			banIDstr := request.FormValue("banid")
+			var banID int
+			if banIDstr != "" {
+				if banID, err = strconv.Atoi(banIDstr); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+			}
+			infoEv.Int("banID", banID)
+
+			limitStr := request.FormValue("limit")
+			limit := 20
+			if limitStr != "" {
+				if limit, err = strconv.Atoi(limitStr); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+			}
+			approveStr := request.FormValue("approve")
+			if approveStr != "" {
+				// approving an appeal
+				approveID, err := strconv.Atoi(approveStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("approveStr", approveStr).Caller().Send()
+				}
+				if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
+					errEv.Err(err).
+						Int("approveAppeal", approveID).
+						Caller().Send()
+					return "", err
+				}
+			}
+
+			appeals, err := gcsql.GetAppeals(banID, limit)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", errors.New("Unable to get appeals: " + err.Error())
+			}
+
+			manageAppealsBuffer := bytes.NewBufferString("")
+			pageData := map[string]interface{}{}
+			if appeals != nil && len(appeals) > 0 {
+				pageData["appeals"] = appeals
+			}
+			if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_appeals.html").Caller().Send()
+				return "", errors.New("Error executing appeal management page template: " + err.Error())
+			}
+			return manageAppealsBuffer.String(), err
+		}},
+	{
 		ID:          "filebans",
 		Title:       "Filename and checksum bans",
 		Permissions: ModPerms,

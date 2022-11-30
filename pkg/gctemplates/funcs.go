@@ -189,6 +189,13 @@ var funcMap = template.FuncMap{
 		}
 		return username
 	},
+	"getAppealBanIP": func(appealID int) string {
+		ban, err := gcsql.GetIPBanByID(appealID)
+		if err != nil || ban == nil {
+			return "?"
+		}
+		return ban.IP
+	},
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},

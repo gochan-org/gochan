@@ -18,6 +18,7 @@ var (
 	FrontPage         *template.Template
 	BoardPage         *template.Template
 	JsConsts          *template.Template
+	ManageAppeals     *template.Template
 	ManageBans        *template.Template
 	ManageBoards      *template.Template
 	ManageSections    *template.Template
@@ -128,6 +129,12 @@ func templateLoading(t string, buildAll bool) error {
 		PostEdit, err = loadTemplate("post_edit.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("threadpage.html", err)
+		}
+	}
+	if buildAll || t == "manageappeals" {
+		ManageAppeals, err = loadTemplate("manage_appeals.html")
+		if err != nil {
+			return templateError("manage_appeals.html", err)
 		}
 	}
 	if buildAll || t == "managebans" {
