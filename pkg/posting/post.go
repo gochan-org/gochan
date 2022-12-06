@@ -287,7 +287,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		if checkFilenameBan(upload, &post, postBoard, writer, request) {
-			// if checkFilenameBan returns true, a ban page or error was displayed
+			// If checkFilenameBan returns true, an error occured or the file was
+			// rejected for having a banned filename, and the incident was logged either way
 			return
 		}
 
@@ -304,7 +305,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		// Calculate image checksum
 		upload.Checksum = fmt.Sprintf("%x", md5.Sum(data))
 		if checkChecksumBan(upload, &post, postBoard, writer, request) {
-			// checkChecksumBan returns true, a ban page or error was displayed
+			// If checkChecksumBan returns true, an error occured or the file was
+			// rejected for having a banned checksum, and the incident was logged either way
 			return
 		}
 
