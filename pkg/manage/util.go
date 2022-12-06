@@ -279,39 +279,36 @@ func getBoardDataFromForm(board *gcsql.Board, request *http.Request) error {
 	if board.DefaultStyle, err = getStringField("defaultstyle", staff, request, 1); err != nil {
 		return err
 	}
-	if board.Locked, err = getBooleanField("locked", staff, request, 1); err != nil {
+	board.Locked = request.FormValue("locked") == "on"
+	if board.AnonymousName, err = getStringField("anonname", staff, request, 1); err != nil {
 		return err
 	}
-	if board.AnonymousName, err = getStringField("anonymousname", staff, request, 1); err != nil {
-		return err
+	if board.AnonymousName == "" {
+		board.AnonymousName = "Anonymous"
 	}
-	if board.ForceAnonymous, err = getBooleanField("forcedanonymous", staff, request, 1); err != nil {
-		return err
-	}
+	board.ForceAnonymous = request.FormValue("forcedanonymous") == "on"
 	if board.AutosageAfter, err = getIntField("autosageafter", staff, request, 1); err != nil {
 		return err
 	}
-	if board.NoImagesAfter, err = getIntField("noimagesafter", staff, request, 1); err != nil {
+	if board.AutosageAfter < 1 {
+		board.AutosageAfter = 200
+	}
+	if board.NoImagesAfter, err = getIntField("nouploadsafter", staff, request, 1); err != nil {
 		return err
 	}
 	if board.MaxMessageLength, err = getIntField("maxmessagelength", staff, request, 1); err != nil {
 		return err
 	}
+	if board.MaxMessageLength < 1 {
+		board.MaxMessageLength = 1024
+	}
 	if board.MinMessageLength, err = getIntField("minmessagelength", staff, request, 1); err != nil {
 		return err
 	}
-	if board.AllowEmbeds, err = getBooleanField("allowembeds", staff, request, 1); err != nil {
-		return err
-	}
-	if board.RedirectToThread, err = getBooleanField("redirecttothread", staff, request, 1); err != nil {
-		return err
-	}
-	if board.RequireFile, err = getBooleanField("requirefile", staff, request, 1); err != nil {
-		return err
-	}
-	if board.EnableCatalog, err = getBooleanField("enablecatalog", staff, request, 1); err != nil {
-		return err
-	}
+	board.AllowEmbeds = request.FormValue("allowembeds") == "on"
+	board.RedirectToThread = request.FormValue("redirecttothread") == "on"
+	board.RequireFile = request.FormValue("requirefile") == "on"
+	board.EnableCatalog = request.FormValue("enablecatalog") == "on"
 
 	return nil
 }

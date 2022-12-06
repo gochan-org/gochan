@@ -189,13 +189,25 @@ func NewBoardSimple(dir string, title string, subtitle string, description strin
 // It sets board.ID and board.CreatedAt if it is successfull
 func CreateBoard(board *Board, appendToAllBoards bool) error {
 	const sqlINSERT = `INSERT INTO DBPREFIXboards
-	(section_id, uri, dir, navbar_position, title, suttitle,
+	(section_id, uri, dir, navbar_position, title, subtitle,
 	description, max_file_size, max_threads, default_style, locked,
 	anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length,
 	min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog)
 	VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
 	if board == nil {
 		return ErrNilBoard
+	}
+	if DoesBoardExistByDir(board.Dir) {
+		return ErrBoardExists
+	}
+	if board.Dir == "" {
+		return errors.New("board dir string must not be empty")
+	}
+	if board.URI == "" {
+		board.URI = board.Dir
+	}
+	if board.Title == "" {
+		return errors.New("board title string must not be empty")
 	}
 	id, err := getNextFreeID("DBPREFIXboards")
 	if err != nil {

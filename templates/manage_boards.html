@@ -20,7 +20,7 @@
 {{else}}
 <h2>Create new board</h2>
 {{end}}
-<form action="{{$.webroot}}manage?action=boards" method="GET">
+<form action="{{$.webroot}}manage?action=boards" method="POST">
 	<input type="hidden" name="action" value="boards">
 	<input type="hidden" name="board" value="{{$.board.ID}}"/>
 <table>
@@ -54,7 +54,7 @@
 </tr>
 <tr>
 	<td>Navbar position</td>
-	<td><input type="number" min="0" name="listorder" value="{{$.board.NavbarPosition}}"></td>
+	<td><input type="number" min="0" name="navbarposition" value="{{$.board.NavbarPosition}}"></td>
 </tr>
 <tr>
 	<td>Max filesize</td>
@@ -97,6 +97,10 @@
 <tr>
 	<td>Max message length (in characters)</td>
 	<td><input type="number" min="0" name="maxmessagelength" value="{{$.board.MaxMessageLength}}"></td>
+</tr>
+<tr>
+	<td>Min message length (in characters)</td>
+	<td><input type="number" min="0" name="minmessagelength" value="{{$.board.MinMessageLength}}"></td>
 </tr>
 <tr>
 	<td>Allow embeds</td>

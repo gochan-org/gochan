@@ -741,45 +741,70 @@ var actions = []Action{
 		Permissions: AdminPerms,
 		JSONoutput:  NoJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-			board := new(gcsql.Board)
-
+			board := &gcsql.Board{
+				MaxFilesize:      1000 * 1000 * 15,
+				AnonymousName:    "Anonymous",
+				EnableCatalog:    true,
+				MaxMessageLength: 1500,
+				AutosageAfter:    200,
+				NoImagesAfter:    0,
+			}
 			requestType, _, _ := boardsRequestType(request)
 			switch requestType {
 			case "create":
 				// create button clicked, create the board with the request fields
 				if err = getBoardDataFromForm(board, request); err != nil {
-					serveError(writer, err.Error(), "boards", err.Error(), wantsJSON)
+					errEv.Err(err).Caller().Send()
 					return "", err
 				}
-
-				err = gcsql.CreateBoard(board, true)
+				if err = gcsql.CreateBoard(board, true); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("createBoard", board.Dir).
+					Int("boardID", board.ID).
+					Msg("New board created")
 			case "delete":
 				// delete button clicked, delete the board
 				boardID, err := getIntField("boardid", staff.Username, request, 0)
 				if err != nil {
-					serveError(writer, "boardid", "boards", err.Error(), wantsJSON)
 					return "", err
 				}
 				if board, err = gcsql.GetBoardFromID(boardID); err != nil {
 					errEv.Err(err).Int("deleteBoardID", boardID).Caller().Send()
 					return "", err
 				}
-				err = board.Delete()
-				if err != nil {
+				if err = board.Delete(); err != nil {
 					errEv.Err(err).Str("deleteBoard", board.Dir).Caller().Send()
 					return "", err
 				}
-				gcutil.LogInfo().
-					Str("staff", staff.Username).
-					Str("action", "boards").
+				infoEv.
 					Str("deleteBoard", board.Dir).Send()
-				err = os.RemoveAll(board.AbsolutePath())
+				if err = os.RemoveAll(board.AbsolutePath()); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+				if err = building.BuildBoards(false); err != nil {
+					return "", err
+				}
 			case "edit":
 				// edit button clicked, fill the input fields with board data to be edited
-				err = getBoardDataFromForm(board, request)
+				boardID, err := getIntField("boardid", staff.Username, request, 0)
+				if err != nil {
+					return "", err
+				}
+				if board, err = gcsql.GetBoardFromID(boardID); err != nil {
+					errEv.Err(err).
+						Int("boardID", boardID).
+						Caller().Msg("Unable to get board info")
+					return "", err
+				}
 			case "modify":
 				// save changes button clicked, apply changes to the board based on the request fields
-				err = getBoardDataFromForm(board, request)
+				if err = getBoardDataFromForm(board, request); err != nil {
+					return "", err
+				}
 			case "cancel":
 				// cancel button was clicked
 				fallthrough
@@ -787,9 +812,6 @@ var actions = []Action{
 				fallthrough
 			default:
 				// board.SetDefaults("", "", "")
-			}
-			if err != nil {
-				return "", err
 			}
 			if requestType == "create" || requestType == "modify" && err != nil {
 				if err = building.BuildBoardListJSON(); err != nil {
@@ -982,26 +1004,6 @@ var actions = []Action{
 			}
 			return buildStr, nil
 		}},
-	// {
-	// 	ID:          "rebuildboard",
-	// 	Title:       "Rebuild board",
-	// 	Permissions: AdminPerms,
-	// 	Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-	// 		if err = gctemplates.InitTemplates(); err != nil {
-	// 			return "", err
-	// 		}
-
-	// 		for b, board := range request.Form {
-	// 			if b == "board" {
-	// 				return board[0], nil
-	// 			}
-	// 		}
-	// 		return "", &ErrStaffAction{
-	// 			ErrorField: "staffaction",
-	// 			Action:     "rebuildboard",
-	// 			Message:    fmt.Sprintf("/%s/ is not a board"),
-	// 		}
-	// 	}},
 	{
 		ID:          "rebuildboards",
 		Title:       "Rebuild boards",
