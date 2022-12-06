@@ -67,7 +67,10 @@ func GetSectionFromID(id int) (*Section, error) {
 func DeleteSection(id int) error {
 	const query = `DELETE FROM DBPREFIXsections WHERE id = ?`
 	_, err := ExecSQL(query, id)
-	return err
+	if err != nil {
+		return err
+	}
+	return ResetBoardSectionArrays()
 }
 
 // NewSection creates a new board section in the database and returns a *Section struct pointer.
@@ -106,7 +109,7 @@ func GetAllNonHiddenSections() []Section {
 }
 
 func (s *Section) UpdateValues() error {
-	const query = `UPDATE DBPREFIXsections set name = ? abbreviation = ?, position = ?, hidden = ?`
-	_, err := ExecSQL(query, s.Name, s.Abbreviation, s.Position, s.Hidden)
+	const query = `UPDATE DBPREFIXsections set name = ?, abbreviation = ?, position = ?, hidden = ? WHERE id = ?`
+	_, err := ExecSQL(query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
 	return err
 }

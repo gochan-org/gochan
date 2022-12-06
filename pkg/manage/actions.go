@@ -845,7 +845,7 @@ var actions = []Action{
 		ID:          "boardsections",
 		Title:       "Board sections",
 		Permissions: AdminPerms,
-		JSONoutput:  NoJSON,
+		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			section := &gcsql.Section{}
 			editID := request.Form.Get("edit")
@@ -853,6 +853,7 @@ var actions = []Action{
 			deleteID := request.Form.Get("delete")
 			if editID != "" {
 				if section, err = gcsql.GetSectionFromID(gcutil.HackyStringToInt(editID)); err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -861,6 +862,7 @@ var actions = []Action{
 				}
 			} else if updateID != "" {
 				if section, err = gcsql.GetSectionFromID(gcutil.HackyStringToInt(updateID)); err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -869,6 +871,7 @@ var actions = []Action{
 				}
 			} else if deleteID != "" {
 				if err = gcsql.DeleteSection(gcutil.HackyStringToInt(deleteID)); err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -893,6 +896,7 @@ var actions = []Action{
 						Message:    "Missing section title, abbreviation, or hidden status data",
 					}
 				} else if err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "formerror",
 						Action:     "boardsections",
@@ -907,6 +911,7 @@ var actions = []Action{
 					section, err = gcsql.NewSection(section.Name, section.Abbreviation, section.Hidden, section.Position)
 				}
 				if err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -926,6 +931,7 @@ var actions = []Action{
 				pageMap["edit_section"] = section
 			}
 			if err = serverutil.MinifyTemplate(gctemplates.ManageSections, pageMap, pageBuffer, "text/html"); err != nil {
+				errEv.Err(err).Caller().Send()
 				return "", err
 			}
 			output = pageBuffer.String()

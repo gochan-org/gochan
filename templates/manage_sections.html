@@ -4,7 +4,7 @@
 <table>
 	<tr><td>Name:</td><td><input type="text" name="sectionname" {{with .edit_section}}value="{{.Name}}"{{end}} required></td></tr>
 	<tr><td>Abbreviation:</td><td><input type="text" name="sectionabbr" {{with .edit_section}}value="{{.Abbreviation}}"{{end}} required></td></tr>
-	<tr><td>List order</td><td><input type="number" name="sectionpos" {{with .edit_section}}value="{{.ListOrder}}"{{end}} value="0"/></td></tr>
+	<tr><td>Navbar position</td><td><input type="number" name="sectionpos" {{with .edit_section}}value="{{.Position}}"{{end}} value="0"/></td></tr>
 	<tr><td>Hidden:</td><td><input type="checkbox" name="sectionhidden" {{with .edit_section}}{{if .Hidden}}checked{{end}}{{end}}/></td></tr>
 </table>
 <input type="submit" name="save_section" value="{{with .edit_section}}Save{{else}}Create{{end}} section">
@@ -18,11 +18,11 @@
 <h2>Current sections</h2>
 
 <table id="sections" border="1">
-	<tr><th>Name</th><th>Abbreviation</th><th>List order</th><th>Hidden</th><th>Action</th></tr>
+	<tr><th>Name</th><th>Abbreviation</th><th>Navbar position</th><th>Hidden</th><th>Action</th></tr>
 {{range $s, $section := .sections}}<tr id="section{{$section.ID}}" class="sectionrow">
 	<td>{{$section.Name}}</td>
 	<td>{{$section.Abbreviation}}</td>
-	<td>{{$section.ListOrder}}</td>
+	<td>{{$section.Position}}</td>
 	<td>{{if eq $section.Hidden true}}Yes{{else}}No{{end}}</td>
 	<td><a href="{{$.webroot}}manage?action=boardsections&edit={{$section.ID}}">Edit</a> |
 	<a href="{{$.webroot}}manage?action=boardsections&delete={{$section.ID}}" onclick="return confirm('Are you sure you want to delete this section?')">Delete</a></td>
