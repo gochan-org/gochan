@@ -473,25 +473,84 @@ var actions = []Action{
 		},
 	},
 	{
+		ID:          "namebans",
+		Title:       "Name bans",
+		Permissions: ModPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			doNameBan := request.FormValue("donameban")
+			deleteIDstr := request.FormValue("del")
+			if deleteIDstr != "" {
+				deleteID, err := strconv.Atoi(deleteIDstr)
+				if err != nil {
+					errEv.Err(err).
+						Str("delStr", deleteIDstr).
+						Caller().Send()
+					return "", err
+				}
+				if err = gcsql.DeleteNameBan(deleteID); err != nil {
+					errEv.Err(err).
+						Int("deleteID", deleteID).
+						Caller().Msg("Unable to delete name ban")
+					return "", errors.New("Unable to delete name ban: " + err.Error())
+				}
+			}
+			data := map[string]interface{}{
+				"webroot":      config.GetSystemCriticalConfig().WebRoot,
+				"currentStaff": staff.Username,
+				"allBoards":    gcsql.AllBoards,
+			}
+			if doNameBan == "Create" {
+				var name string
+				if name, err = getStringField("name", staff.Username, request); err != nil {
+					return "", err
+				}
+				if name == "" {
+					return "", errors.New("name field must not be empty in name ban submission")
+				}
+				var boardID int
+				if boardID, err = getIntField("boardid", staff.Username, request); err != nil {
+					return "", err
+				}
+				isWildcard := request.FormValue("iswildcard") == "on"
+				// var ban *gcsql.UsernameBan
+				if _, err = gcsql.NewNameBan(name, isWildcard, boardID, staff.ID, request.FormValue("staffnote")); err != nil {
+					errEv.Err(err).
+						Str("name", name).
+						Int("boardID", boardID)
+					return "", err
+				}
+				// data["ban"] = ban
+			}
+			if data["nameBans"], err = gcsql.GetNameBans(0, 0); err != nil {
+				return "", err
+			}
+			buf := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageNameBans, data, buf, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_namebans.html").Caller().Send()
+				return "", errors.New("Error executing name ban management page template: " + err.Error())
+			}
+			return buf.String(), nil
+		},
+	},
+	{
 		ID:          "ipsearch",
 		Title:       "IP Search",
 		Permissions: ModPerms,
 		JSONoutput:  NoJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-			ipQuery := request.Form.Get("ip")
-			limitStr := request.Form.Get("limit")
+			ipQuery := request.FormValue("ip")
+			limitStr := request.FormValue("limit")
 			data := map[string]interface{}{
 				"webroot": config.GetSystemCriticalConfig().WebRoot,
 				"ipQuery": ipQuery,
-				"limit":   10,
+				"limit":   20,
 			}
 
 			if ipQuery != "" && limitStr != "" {
 				var limit int
-				if limit, err = strconv.Atoi(request.Form.Get("limit")); err != nil || limit < 1 {
-					limit = 20
+				if limit, err = strconv.Atoi(limitStr); err == nil && limit > 0 {
+					data["limit"] = limit
 				}
-				data["limit"] = limit
 				var names []string
 				if names, err = net.LookupAddr(ipQuery); err == nil {
 					data["reverseAddrs"] = names

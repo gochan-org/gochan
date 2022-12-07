@@ -198,6 +198,65 @@ func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
 	}, nil
 }
 
+func NewNameBan(name string, isWildcard bool, boardID int, staffID int, staffNote string) (*UsernameBan, error) {
+	const query = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES(?,?,?,?,?)`
+	var ban UsernameBan
+	var err error
+	if ban.ID, err = getNextFreeID("DBPREFIXusername_ban"); err != nil {
+		return nil, err
+	}
+	if boardID > 0 {
+		ban.BoardID = new(int)
+		*ban.BoardID = boardID
+	}
+	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, name, isWildcard); err != nil {
+		return nil, err
+	}
+	ban.StaffID = staffID
+	ban.StaffNote = staffNote
+	ban.Username = name
+	ban.IsRegex = isWildcard
+	return &ban, nil
+}
+
+func GetNameBans(boardID int, limit int) ([]UsernameBan, error) {
+	query := `SELECT id, board_id, staff_id, staff_note, issued_at, username, is_regex FROM DBPREFIXusername_ban`
+	limitStr := ""
+	if limit > 0 {
+		limitStr = " LIMIT " + strconv.Itoa(limit)
+	}
+	var rows *sql.Rows
+	var err error
+	if boardID > 0 {
+		query += " WHERE board_id = ?"
+		rows, err = QuerySQL(query+limitStr, boardID)
+	} else {
+		rows, err = QuerySQL(query + limitStr)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var bans []UsernameBan
+	for rows.Next() {
+		var ban UsernameBan
+		if err = rows.Scan(
+			&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username,
+			&ban.IsRegex,
+		); err != nil {
+			return nil, err
+		}
+		bans = append(bans, ban)
+	}
+	return bans, nil
+}
+
+func DeleteNameBan(id int) error {
+	const query = `DELETE FROM DBPREFIXusername_ban WHERE id = ?`
+	_, err := ExecSQL(query, id)
+	return err
+}
+
 func GetFileBans(boardID int, limit int) ([]FileBan, error) {
 	query := `SELECT id, board_id, staff_id, staff_note, issued_at, checksum FROM DBPREFIXfile_ban`
 	limitStr := ""
