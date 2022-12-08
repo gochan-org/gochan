@@ -9,7 +9,7 @@
 <input type="hidden" name="bantype" value="filename">
 	<table>
 		<tr><td>Filename:</td><td><input type="text" name="filename" id="filename"></td></tr>
-		<tr><td>SQL wildcard:<sup><a href="https://www.w3schools.com/sql/sql_wildcards.asp" target="_blank">?</a></sup></td><td><input type="checkbox" name="iswildcard" id="iswildcard"/></td></tr>
+		<tr><td>Regular expression</td><td><input type="checkbox" name="isregex" id="isregex"/></td></tr>
 		<tr><td>Board:</td><td><select name="boardid" id="boardid">
 			<option value="0">All boards</option>
 		{{- range $b, $board := $.allBoards -}}
@@ -25,7 +25,7 @@
 <h2>Current filename bans</h2>
 {{- if eq 0 (len .filenameBans)}}<i>No filename bans</i>{{else -}}
 <table border="1">
-	<tr><th>Filename</th><th>Wildcard</th><th>Board</th><th>Staff</th><th>Staff note</th><th>Action</th></tr>
+	<tr><th>Filename</th><th>Regular expression</th><th>Board</th><th>Staff</th><th>Staff note</th><th>Action</th></tr>
 {{range $b,$ban := .filenameBans}}
 	<tr>
 		<td>{{$ban.Filename}}</td>

@@ -368,17 +368,27 @@ var actions = []Action{
 			if request.FormValue("dofilenameban") != "" {
 				// creating a new filename ban
 				filename := request.FormValue("filename")
-				iswildcard := request.FormValue("iswildcard") == "on"
-				if _, err = gcsql.NewFilenameBan(filename, iswildcard, boardid, staff.ID, staffnote); err != nil {
+				isRegex := request.FormValue("isregex") == "on"
+				if isRegex {
+					_, err = regexp.Compile(filename)
+					if err != nil {
+						// invalid regular expression
+						errEv.Err(err).
+							Str("regex", filename).
+							Caller().Send()
+						return "", err
+					}
+				}
+				if _, err = gcsql.NewFilenameBan(filename, isRegex, boardid, staff.ID, staffnote); err != nil {
 					errEv.Err(err).
 						Str("filename", filename).
-						Bool("iswildcard", iswildcard).
+						Bool("isregex", isRegex).
 						Caller().Send()
 					return "", err
 				}
 				infoEv.
 					Str("filename", filename).
-					Bool("iswildcard", iswildcard).
+					Bool("isregex", isRegex).
 					Int("boardid", boardid).
 					Msg("Created new filename ban")
 			} else if delFilenameBanIDStr != "" {
@@ -511,15 +521,13 @@ var actions = []Action{
 				if boardID, err = getIntField("boardid", staff.Username, request); err != nil {
 					return "", err
 				}
-				isWildcard := request.FormValue("iswildcard") == "on"
-				// var ban *gcsql.UsernameBan
-				if _, err = gcsql.NewNameBan(name, isWildcard, boardID, staff.ID, request.FormValue("staffnote")); err != nil {
+				isRegex := request.FormValue("isregex") == "on"
+				if _, err = gcsql.NewNameBan(name, isRegex, boardID, staff.ID, request.FormValue("staffnote")); err != nil {
 					errEv.Err(err).
 						Str("name", name).
 						Int("boardID", boardID)
 					return "", err
 				}
-				// data["ban"] = ban
 			}
 			if data["nameBans"], err = gcsql.GetNameBans(0, 0); err != nil {
 				return "", err

@@ -60,16 +60,20 @@ func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWr
 	return true
 }
 
-func checkUsernameBan(formName string, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
-	if formName == "" {
+func checkUsernameBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	nameTrip := post.Name
+	if post.Tripcode != "" {
+		nameTrip += "!" + post.Tripcode
+	}
+	if nameTrip == "" {
 		return false
 	}
 
-	nameBan, err := gcsql.CheckNameBan(formName, postBoard.ID)
+	nameBan, err := gcsql.CheckNameBan(nameTrip, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).
 			Str("IP", post.IP).
-			Str("name", formName).
+			Str("nameTrip", nameTrip).
 			Str("boardDir", postBoard.Dir).
 			Msg("Error getting name banned status")
 		serverutil.ServeErrorPage(writer, "Error getting name ban info")
@@ -82,8 +86,9 @@ func checkUsernameBan(formName string, post *gcsql.Post, postBoard *gcsql.Board,
 	gcutil.LogWarning().
 		Str("IP", post.IP).
 		Str("boardDir", postBoard.Dir).
-		Str("name", post.Name).
-		Str("tripcode", post.Tripcode).
+		Str("nameTrip", nameTrip).
+		Str("banUsername", nameBan.Username).
+		Bool("banIsRegex", nameBan.IsRegex).
 		Msg("Rejected post with banned name/tripcode")
 	return true
 }

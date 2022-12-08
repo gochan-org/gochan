@@ -248,7 +248,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if checkIpBan(&post, postBoard, writer, request) {
 		return
 	}
-	if checkUsernameBan(formName, &post, postBoard, writer, request) {
+	if checkUsernameBan(&post, postBoard, writer, request) {
 		return
 	}
 

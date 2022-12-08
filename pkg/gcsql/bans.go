@@ -198,7 +198,7 @@ func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
 	}, nil
 }
 
-func NewNameBan(name string, isWildcard bool, boardID int, staffID int, staffNote string) (*UsernameBan, error) {
+func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote string) (*UsernameBan, error) {
 	const query = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES(?,?,?,?,?)`
 	var ban UsernameBan
 	var err error
@@ -209,13 +209,13 @@ func NewNameBan(name string, isWildcard bool, boardID int, staffID int, staffNot
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
-	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, name, isWildcard); err != nil {
+	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, name, isRegex); err != nil {
 		return nil, err
 	}
 	ban.StaffID = staffID
 	ban.StaffNote = staffNote
 	ban.Username = name
-	ban.IsRegex = isWildcard
+	ban.IsRegex = isRegex
 	return &ban, nil
 }
 
@@ -315,7 +315,7 @@ func GetFilenameBans(boardID int, limit int) ([]FilenameBan, error) {
 	return bans, nil
 }
 
-func NewFilenameBan(filename string, isWildcard bool, boardID int, staffID int, staffNote string) (*FilenameBan, error) {
+func NewFilenameBan(filename string, isRegex bool, boardID int, staffID int, staffNote string) (*FilenameBan, error) {
 	const query = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES(?,?,?,?,?)`
 	var ban FilenameBan
 	var err error
@@ -326,13 +326,13 @@ func NewFilenameBan(filename string, isWildcard bool, boardID int, staffID int, 
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
-	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, filename, isWildcard); err != nil {
+	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, filename, isRegex); err != nil {
 		return nil, err
 	}
 	ban.StaffID = staffID
 	ban.StaffNote = staffNote
 	ban.Filename = filename
-	ban.IsRegex = isWildcard
+	ban.IsRegex = isRegex
 	return &ban, nil
 }
 
