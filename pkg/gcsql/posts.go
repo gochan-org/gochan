@@ -157,7 +157,7 @@ func PermanentlyRemoveDeletedPosts() error {
 // SinceLastPost returns the number of seconds since the given IP address created a post
 // (used for checking against the new reply cooldown)
 func SinceLastPost(postIP string) (int, error) {
-	const query = `SELECT MAX(created_on) FROM DBPREFIXposts WHERE ip = ?`
+	const query = `SELECT COALESCE(MAX(created_on), DATE('1970-01-01 00:00:00')) FROM DBPREFIXposts WHERE ip = ?`
 	var when time.Time
 	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&when))
 	if err != nil {
@@ -169,7 +169,7 @@ func SinceLastPost(postIP string) (int, error) {
 // SinceLastThread returns the number of seconds since the given IP address created a new thread/top post
 // (used for checking against the new thread cooldown)
 func SinceLastThread(postIP string) (int, error) {
-	const query = `SELECT MAX(created_on) FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
+	const query = `SELECT COALESCE(MAX(created_on), DATE('1970-01-01 00:00:00')) FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
 	var when time.Time
 	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&when))
 	if err != nil {
