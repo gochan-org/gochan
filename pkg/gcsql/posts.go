@@ -99,13 +99,14 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 }
 
 func GetBoardTopPosts(boardID int) ([]Post, error) {
-	query := `SELECT * FROM (SELECT
-		id, thread_id AS threadid, (SELECT board_id FROM gc_threads WHERE gc_threads.id = threadid LIMIT 1) AS boardid,
-		is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject, message, message_raw,
+	query := `SELECT DBPREFIXposts.id, thread_id, is_top_post, ip, created_on, name,
+		tripcode, is_role_signature, email, subject, message, message_raw,
 		password, deleted_at, is_deleted, banned_message
-		FROM gc_posts WHERE is_deleted = FALSE and is_top_post
-		) posts
-		WHERE boardid = ?`
+		FROM DBPREFIXposts
+		LEFT JOIN (
+		SELECT id, board_id from DBPREFIXthreads
+		) t on t.id = DBPREFIXposts.thread_id
+		WHERE is_deleted = FALSE AND is_top_post AND t.board_id = ?`
 
 	rows, err := QuerySQL(query, boardID)
 	if err != nil {
@@ -115,11 +116,11 @@ func GetBoardTopPosts(boardID int) ([]Post, error) {
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		var tmp int // only needed for WHERE clause in query
+		// var tmp int // only needed for WHERE clause in query
 
 		bannedMessage := new(string)
 		err = rows.Scan(
-			&post.ID, &post.ThreadID, &tmp, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
 			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &bannedMessage,
 		)

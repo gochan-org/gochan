@@ -3,6 +3,7 @@ package building
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"os"
 	"path"
@@ -16,11 +17,10 @@ import (
 )
 
 const (
-	postQueryBase = `SELECT DBPREFIXposts.id AS postid, thread_id AS threadid, ip, name, tripcode, email, subject, created_on, created_on as last_modified,
-	(SELECT id FROM DBPREFIXposts WHERE thread_id = threadid AND is_top_post) AS parent_id,
+	postQueryBase = `SELECT DBPREFIXposts.id, DBPREFIXposts.thread_id, ip, name, tripcode, email, subject, created_on, created_on as last_modified,
+	p.id AS parent_id,
 	message, message_raw,
-	(SELECT board_id FROM DBPREFIXthreads where id = threadid LIMIT 1) AS boardid,
-	(SELECT dir FROM DBPREFIXboards WHERE id = boardid LIMIT 1) AS dir,
+	(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
 	coalesce(DBPREFIXfiles.original_filename,'') as original_filename,
 	coalesce(DBPREFIXfiles.filename,'') AS filename,
 	coalesce(DBPREFIXfiles.checksum,'') AS checksum,
@@ -30,7 +30,13 @@ const (
 	coalesce(DBPREFIXfiles.width,0) AS width,
 	coalesce(DBPREFIXfiles.height,0) AS height
 	FROM DBPREFIXposts
-	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id WHERE is_deleted = FALSE`
+	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id AND is_deleted = FALSE
+	LEFT JOIN (
+		SELECT id, board_id FROM DBPREFIXthreads
+	) t ON t.id = DBPREFIXposts.thread_id
+	INNER JOIN (
+		SELECT id, thread_id FROM DBPREFIXposts where is_top_post
+	) p on p.thread_id = DBPREFIXposts.thread_id`
 )
 
 func truncateString(msg string, limit int, ellipsis bool) string {
@@ -157,12 +163,10 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 }
 
 func getBoardTopPosts(boardID int) ([]Post, error) {
-	const query = "SELECT * FROM (" + postQueryBase + " AND is_top_post) p WHERE boardid = ?"
+	const query = postQueryBase + " WHERE is_top_post AND t.board_id = ?"
 	rows, err := gcsql.QuerySQL(query, boardID)
 	if err != nil {
-		return nil, err
-	}
-	if err != nil {
+		fmt.Println(query)
 		return nil, err
 	}
 	defer rows.Close()

@@ -53,12 +53,15 @@ func main() {
 		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
 	}
 	fmt.Println("Connected to database")
-	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
+	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
+		fmt.Println("Failed to initialize the database:", err.Error())
+		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
+	}
 	parseCommandLine()
 	serverutil.InitMinifier()
 
 	posting.InitCaptcha()
-	if err := gctemplates.InitTemplates(); err != nil {
+	if err = gctemplates.InitTemplates(); err != nil {
 		fmt.Println("Failed initializing templates:", err.Error())
 		gcutil.LogFatal().Err(err).Send()
 	}

@@ -83,9 +83,11 @@ func main() {
 	err := gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
-	gcsql.CheckAndInitializeDatabase(systemCritical.DBtype)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %s", err.Error())
+	}
+	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
+		log.Fatalf("Failed to initialize the database: %s", err.Error())
 	}
 	defer gcsql.Close()
 

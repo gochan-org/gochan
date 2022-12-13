@@ -30,15 +30,21 @@ type recentPost struct {
 
 func getRecentPosts() ([]recentPost, error) {
 	siteCfg := config.GetSiteConfig()
-	query := `SELECT id, thread_id AS threadid, message_raw,
-		(SELECT dir FROM DBPREFIXboards WHERE id = (
-			SELECT board_id FROM DBPREFIXthreads WHERE id = threadid)
-		) AS board,
-		COALESCE(
-			(SELECT filename FROM DBPREFIXfiles WHERE post_id = DBPREFIXposts.id LIMIT 1),
-		"") AS filename,
-		(SELECT id FROM DBPREFIXposts WHERE is_top_post = TRUE AND thread_id = threadid) AS top_post
-		FROM DBPREFIXposts WHERE is_deleted = FALSE LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
+	query := `SELECT
+		DBPREFIXposts.id,
+		DBPREFIXposts.message_raw,
+		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir,
+		p.id AS top_post
+	FROM
+		DBPREFIXposts
+	LEFT JOIN (
+		SELECT id, board_id FROM DBPREFIXthreads
+	) t ON t.id = DBPREFIXposts.thread_id
+	INNER JOIN (
+		SELECT
+			id, thread_id FROM DBPREFIXposts WHERE is_top_post
+	) p ON p.thread_id = DBPREFIXposts.thread_id
+	WHERE DBPREFIXposts.is_deleted = FALSE LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
 	rows, err := gcsql.QuerySQL(query)
 	if err != nil {
 		return nil, err
@@ -76,10 +82,12 @@ func getRecentPosts() ([]recentPost, error) {
 
 // BuildFrontPage builds the front page using templates/front.html
 func BuildFrontPage() error {
+	errEv := gcutil.LogError(nil).
+		Str("template", "front")
+	defer errEv.Discard()
 	err := gctemplates.InitTemplates("front")
 	if err != nil {
-		gcutil.LogError(err).
-			Str("template", "front").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Error loading front page template: " + err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
@@ -87,8 +95,7 @@ func BuildFrontPage() error {
 
 	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "front").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed opening front page for writing: " + err.Error())
 	}
 	defer frontFile.Close()
@@ -97,8 +104,7 @@ func BuildFrontPage() error {
 	siteCfg := config.GetSiteConfig()
 	recentPostsArr, err = getRecentPosts()
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "recent").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed loading recent posts: " + err.Error())
 	}
 
@@ -110,8 +116,7 @@ func BuildFrontPage() error {
 		"board_config": config.GetBoardConfig(""),
 		"recent_posts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("template", "front").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed executing front page template: " + err.Error())
 	}
 	return nil

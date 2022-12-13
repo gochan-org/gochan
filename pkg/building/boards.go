@@ -390,12 +390,10 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	}
 	if board.EnableCatalog {
 		if err = BuildCatalog(board.ID); err != nil {
-			errEv.Err(err).Caller().Send()
 			return err
 		}
 	}
 	if err = BuildBoardListJSON(); err != nil {
-		errEv.Err(err).Caller().Send()
 		return err
 	}
 

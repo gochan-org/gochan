@@ -150,7 +150,7 @@ func doesTableExist(tableName string) (bool, error) {
 	switch config.GetSystemCriticalConfig().DBtype {
 	case "mysql":
 		fallthrough
-	case "postgresql":
+	case "postgres":
 		existQuery = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?`
 	case "sqlite3":
 		existQuery = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`
@@ -196,7 +196,7 @@ func doesGochanPrefixTableExist() (bool, error) {
 
 	var count int
 	err := QueryRowSQL(prefixTableExist, []interface{}{}, []interface{}{&count})
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
 	return count > 0, nil
