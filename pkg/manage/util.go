@@ -242,21 +242,25 @@ func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
 // getBoardDataFromForm parses the relevant form fields into the board and returns any errors for invalid string to int
 // or missing required fields. It should only be used for editing and creating boards
 func getBoardDataFromForm(board *gcsql.Board, request *http.Request) error {
+	requestType, _, _ := boardsRequestType(request)
+
 	staff, err := getCurrentStaff(request)
 	if err != nil {
 		return err
 	}
 
 	if len(request.Form["domodify"]) > 0 || len(request.Form["doedit"]) > 0 || len(request.Form["dodelete"]) > 0 {
-		if board.ID, err = getIntField("boardid", staff, request, 1); err != nil {
+		if board.ID, err = getIntField("board", staff, request, 1); err != nil {
 			return err
 		}
 	}
 	if board.SectionID, err = getIntField("section", staff, request, 1); err != nil {
 		return err
 	}
-	if board.Dir, err = getStringField("dir", staff, request, 1); err != nil {
-		return err
+	if requestType == "create" {
+		if board.Dir, err = getStringField("dir", staff, request, 1); err != nil {
+			return err
+		}
 	}
 	if board.NavbarPosition, err = getIntField("navbarposition", staff, request, 1); err != nil {
 		return err

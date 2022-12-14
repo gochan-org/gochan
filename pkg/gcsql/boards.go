@@ -295,6 +295,41 @@ func (board *Board) IsHidden(defValueIfMissingSection bool) bool {
 	return defValueIfMissingSection // board is not in a valid section (or AllSections needs to be reset)
 }
 
+// ModifyInDB updates the board dataa in the database with new values
+func (board *Board) ModifyInDB() error {
+	const query = `UPDATE DBPREFIXboards SET
+		section_id = ?,
+		navbar_position = ?,
+		title = ?,
+		subtitle = ?,
+		description = ?,
+		max_file_size = ?,
+		max_threads = ?,
+		default_style = ?,
+		locked = ?,
+		anonymous_name = ?,
+		force_anonymous = ?,
+		autosage_after = ?,
+		no_images_after = ?,
+		max_message_length = ?,
+		min_message_length = ?,
+		allow_embeds = ?,
+		redirect_to_thread = ?,
+		require_file = ?,
+		enable_catalog = ?
+		WHERE id = ?`
+	_, err := ExecSQL(query,
+		board.SectionID, board.NavbarPosition, board.Title, board.Subtitle, board.Description,
+		board.MaxFilesize, board.MaxThreads, board.DefaultStyle, board.Locked, board.AnonymousName,
+		board.ForceAnonymous, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength,
+		board.MinMessageLength, board.AllowEmbeds, board.RedirectToThread, board.RequireFile, board.EnableCatalog,
+		board.ID)
+	if err != nil {
+		return err
+	}
+	return ResetBoardSectionArrays()
+}
+
 // AbsolutePath returns the full filepath of the board directory
 func (board *Board) AbsolutePath(subpath ...string) string {
 	return path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.Dir, path.Join(subpath...))

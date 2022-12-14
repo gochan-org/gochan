@@ -215,15 +215,15 @@ func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]Post, error) {
-	query := "SELECT * FROM (" + postQueryBase + ") posts"
+	query := postQueryBase
 	var args []interface{} = []interface{}{}
 
 	if boardid > 0 {
-		query += " WHERE boardid = ?"
+		query += " WHERE t.board_id = ?"
 		args = append(args, boardid)
 	}
 
-	rows, err := gcsql.QuerySQL(query+" ORDER BY postid DESC LIMIT "+strconv.Itoa(limit), args...)
+	rows, err := gcsql.QuerySQL(query+" ORDER BY DBPREFIXposts.id DESC LIMIT "+strconv.Itoa(limit), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 		var threadID int
 		err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		)

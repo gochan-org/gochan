@@ -834,7 +834,7 @@ var actions = []Action{
 					Msg("New board created")
 			case "delete":
 				// delete button clicked, delete the board
-				boardID, err := getIntField("boardid", staff.Username, request, 0)
+				boardID, err := getIntField("board", staff.Username, request, 0)
 				if err != nil {
 					return "", err
 				}
@@ -871,6 +871,9 @@ var actions = []Action{
 				// save changes button clicked, apply changes to the board based on the request fields
 				if err = getBoardDataFromForm(board, request); err != nil {
 					return "", err
+				}
+				if err = board.ModifyInDB(); err != nil {
+					return "", errors.New("Unable to apply changes: " + err.Error())
 				}
 			case "cancel":
 				// cancel button was clicked
