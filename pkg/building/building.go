@@ -32,6 +32,7 @@ func getRecentPosts() ([]recentPost, error) {
 	siteCfg := config.GetSiteConfig()
 	query := `SELECT
 		DBPREFIXposts.id,
+		DBPREFIXposts.message,
 		DBPREFIXposts.message_raw,
 		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir,
 		p.id AS top_post
@@ -54,9 +55,9 @@ func getRecentPosts() ([]recentPost, error) {
 
 	for rows.Next() {
 		var post recentPost
-		var id, threadID, topPostID string
+		var id, topPostID string
 		var message, boardDir, filename string
-		err = rows.Scan(&id, &threadID, &message, &boardDir, &filename, &topPostID)
+		err = rows.Scan(&id, &message, &boardDir, &filename, &topPostID)
 		if err != nil {
 			return nil, err
 		}

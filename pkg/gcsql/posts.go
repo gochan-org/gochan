@@ -34,7 +34,7 @@ var (
 func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 	query := selectPostsBaseSQL + "WHERE id = ?"
 	if onlyNotDeleted {
-		query += " AND is_deleted = 0"
+		query += " AND is_deleted = FALSE"
 	}
 	post := new(Post)
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
@@ -54,7 +54,7 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = ?`
 	if onlyNotDeleted {
-		sql += " AND is_deleted = 0"
+		sql += " AND is_deleted = FALSE"
 	}
 
 	sql += " ORDER BY id DESC LIMIT ?"
@@ -349,14 +349,20 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 
 func (p *Post) WebPath() string {
 	webRoot := config.GetSystemCriticalConfig().WebRoot
-	var threadID, opID, boardID int
+	var opID int
 	var boardDir string
-	const query = `SELECT thread_id as threadid,
-		(SELECT id from DBPREFIXposts WHERE thread_id = threadid AND is_top_post = TRUE LIMIT 1) as op,
-		(SELECT board_id from DBPREFIXthreads WHERE id = threadid) AS boardid,
-		(SELECT dir FROM DBPREFIXboards WHERE id = boardid) AS dir
-	FROM DBPREFIXposts WHERE id = ?`
-	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&threadID, &opID, &boardID, &boardDir))
+	const query = `SELECT
+		op.id,
+		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
+	FROM DBPREFIXposts
+	LEFT JOIN (
+		SELECT id, board_id FROM DBPREFIXthreads
+	) t ON t.id = DBPREFIXposts.thread_id
+	INNER JOIN (
+		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
+	) op on op.thread_id = DBPREFIXposts.thread_id
+	WHERE DBPREFIXposts.id = ?`
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&opID, &boardDir))
 	if err != nil {
 		return webRoot
 	}

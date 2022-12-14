@@ -84,13 +84,13 @@ func BuildCatalog(boardID int) error {
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed opening /%s/catalog.html: %s<br/>", board.Dir, err.Error())
+		return fmt.Errorf("failed opening /%s/catalog.html: %s", board.Dir, err.Error())
 	}
 
 	threadOPs, err := getBoardTopPosts(boardID)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed building catalog for /%s/: %s<br/>", board.Dir, err.Error())
+		return fmt.Errorf("failed building catalog for /%s/: %s", board.Dir, err.Error())
 	}
 	boardConfig := config.GetBoardConfig(board.Dir)
 

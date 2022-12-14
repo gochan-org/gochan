@@ -294,9 +294,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 		data, err := io.ReadAll(file)
 		if err != nil {
-			gcutil.LogError(err).
-				Str("IP", post.IP).
-				Str("upload", "read").Send()
+			errEv.Err(err).Caller().Send()
 			serverutil.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
 			return
 		}
@@ -324,9 +322,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		catalogThumbPath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 
 		if err = os.WriteFile(filePath, data, 0644); err != nil {
-			gcutil.LogError(err).
+			errEv.Err(err).Caller().
 				Str("posting", "upload").
-				Str("IP", post.IP).
 				Str("filename", upload.Filename).
 				Str("originalFilename", upload.OriginalFilename).
 				Send()
@@ -335,14 +332,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 
 		if ext == "webm" || ext == "mp4" {
-			gcutil.LogInfo().
-				Str("post", "withVideo").
-				Str("IP", post.IP).
+			infoEv.Str("post", "withVideo").
 				Str("filename", handler.Filename).
 				Str("referer", request.Referer()).Send()
 			if post.IsTopPost {
 				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Str("filePath", filePath).
 						Str("thumbPath", thumbPath).
 						Int("thumbWidth", boardConfig.ThumbWidth).
@@ -352,7 +347,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				}
 			} else {
 				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidthReply); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Str("filePath", filePath).
 						Str("thumbPath", thumbPath).
 						Int("thumbWidth", boardConfig.ThumbWidthReply).
@@ -363,7 +358,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			}
 
 			if err := createVideoThumbnail(filePath, catalogThumbPath, boardConfig.ThumbWidthCatalog); err != nil {
-				gcutil.LogError(err).
+				errEv.Err(err).Caller().
 					Str("filePath", filePath).
 					Str("thumbPath", thumbPath).
 					Int("thumbWidth", boardConfig.ThumbWidthCatalog).
@@ -463,9 +458,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					thumbnail = createImageThumbnail(img, postBoard.Dir, "op")
 					catalogThumbnail = createImageThumbnail(img, postBoard.Dir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						gcutil.LogError(err).
+						errEv.Err(err).Caller().
 							Str("thumbPath", catalogThumbPath).
-							Str("IP", post.IP).
 							Msg("Couldn't generate catalog thumbnail")
 						serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
 						return
@@ -474,9 +468,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					thumbnail = createImageThumbnail(img, postBoard.Dir, "reply")
 				}
 				if err = imaging.Save(thumbnail, thumbPath); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Str("thumbPath", thumbPath).
-						Str("IP", post.IP).
 						Msg("Couldn't generate catalog thumbnail")
 					serverutil.ServeErrorPage(writer, "Couldn't save thumbnail: "+err.Error())
 					return
@@ -486,9 +479,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				upload.ThumbnailWidth = img.Bounds().Max.X
 				upload.ThumbnailHeight = img.Bounds().Max.Y
 				if err := syscall.Symlink(filePath, thumbPath); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Str("thumbPath", thumbPath).
-						Str("IP", post.IP).
 						Msg("Couldn't generate catalog thumbnail")
 					serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
 					return
@@ -497,9 +489,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 					// Generate catalog thumbnail
 					catalogThumbnail := createImageThumbnail(img, postBoard.Dir, "catalog")
 					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						gcutil.LogError(err).
+						errEv.Err(err).Caller().
 							Str("thumbPath", catalogThumbPath).
-							Str("IP", post.IP).
 							Msg("Couldn't generate catalog thumbnail")
 						serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
 						return
@@ -510,8 +501,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
-		gcutil.LogError(err).
-			Str("IP", post.IP).
+		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
 		if upload != nil {
@@ -524,8 +514,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if err = post.AttachFile(upload); err != nil {
-		gcutil.LogError(err).
-			Str("IP", post.IP).
+		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to attach upload to post")
 		os.Remove(filePath)
@@ -536,8 +525,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// rebuild the board page
-	building.BuildBoards(false, postBoard.ID)
-	building.BuildFrontPage()
+	if err = building.BuildBoards(false, postBoard.ID); err != nil {
+		serverutil.ServeErrorPage(writer, "Error building boards: "+err.Error())
+		return
+	}
+
+	if err = building.BuildFrontPage(); err != nil {
+		serverutil.ServeErrorPage(writer, "Error building front page: "+err.Error())
+		return
+	}
 
 	if emailCommand == "noko" {
 		if post.IsTopPost {

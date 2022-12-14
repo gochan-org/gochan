@@ -210,9 +210,6 @@ func BuildBoardPages(board *gcsql.Board) error {
 			"currentPage":  catalog.currentPage,
 			"board":        board,
 			"board_config": boardCfg,
-			"posts": []interface{}{
-				gcsql.Post{},
-			},
 		}, currentPageFile, "text/html"); err != nil {
 			errEv.Err(err).
 				Caller().Send()
@@ -373,7 +370,6 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	}
 
 	if err = BuildBoardPages(board); err != nil {
-		errEv.Err(err).Caller().Send()
 		return err
 	}
 	if err = BuildThreads(true, board.ID, 0); err != nil {

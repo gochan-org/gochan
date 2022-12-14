@@ -18,6 +18,10 @@ import (
 
 func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.Request) {
 	// Delete a post or thread
+	errEv := gcutil.LogError(nil).
+		Str("IP", gcutil.GetRealIP(request))
+
+	defer errEv.Discard()
 	password := request.FormValue("password")
 	passwordMD5 := gcutil.Md5Sum(password)
 	rank := manage.GetStaffRank(request)
@@ -30,21 +34,18 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	}
 	boardid, err := strconv.Atoi(request.FormValue("boardid"))
 	if err != nil {
-		gcutil.LogError(err).
-			Str("IP", gcutil.GetRealIP(request)).
+		errEv.Err(err).Caller().
 			Str("boardid", request.FormValue("boardid")).
 			Msg("Invalid form data (boardid)")
 		writer.WriteHeader(http.StatusBadRequest)
 		serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-
+	errEv.Int("boardid", boardid)
 	board, err := gcsql.GetBoardFromID(boardid)
 	if err != nil {
 		serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
-		gcutil.LogError(err).
-			Str("IP", gcutil.GetRealIP(request)).
-			Int("boardid", boardid).
+		errEv.Err(err).Caller().
 			Msg("Invalid form data (error populating data")
 		return
 	}
@@ -63,14 +64,11 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 			})
 			return
 		} else if err != nil {
-			gcutil.Logger().Error().
-				Str("requestType", "deletePost").
-				Err(err).
-				Int("postid", post.ID).
-				Int("boardid", board.ID).
+			errEv.Err(err).Caller().
+				Int("postid", checkedPostID).
 				Msg("Error deleting post")
 			serverutil.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
-				"postid":  post.ID,
+				"postid":  checkedPostID,
 				"boardid": board.ID,
 			})
 			return
@@ -87,8 +85,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		if fileOnly {
 			upload, err := post.GetUpload()
 			if err != nil {
-				gcutil.LogError(err).
-					Str("IP", gcutil.GetRealIP(request)).
+				errEv.Err(err).Caller().
 					Int("postid", post.ID).
 					Msg("Unable to get file upload info")
 				serverutil.ServeError(writer, "Error getting file uplaod info: "+err.Error(),
@@ -99,8 +96,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 			if upload != nil && upload.Filename != "deleted" {
 				filePath := path.Join(documentRoot, board.Dir, "src", upload.Filename)
 				if err = os.Remove(filePath); err != nil {
-					gcutil.LogError(err).
-						Str("IP", gcutil.GetRealIP(request)).
+					errEv.Err(err).Caller().
 						Int("postid", post.ID).
 						Str("filename", upload.Filename).
 						Msg("Unable to delete file")
@@ -111,8 +107,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 				// delete the file's thumbnail
 				thumbPath := path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("thumb"))
 				if err = os.Remove(thumbPath); err != nil {
-					gcutil.LogError(err).
-						Str("IP", gcutil.GetRealIP(request)).
+					errEv.Err(err).Caller().
 						Int("postid", post.ID).
 						Str("thumbnail", upload.ThumbnailPath("thumb")).
 						Msg("Unable to delete thumbnail")
@@ -124,8 +119,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 				if post.IsTopPost {
 					thumbPath := path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("catalog"))
 					if err = os.Remove(thumbPath); err != nil {
-						gcutil.LogError(err).
-							Str("IP", gcutil.GetRealIP(request)).
+						errEv.Err(err).Caller().
 							Int("postid", post.ID).
 							Str("catalogThumb", upload.ThumbnailPath("catalog")).
 							Msg("Unable to delete catalog thumbnail")
@@ -135,7 +129,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 					}
 				}
 				if err = post.UnlinkUploads(true); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Str("requestType", "deleteFile").
 						Int("postid", post.ID).
 						Msg("Error unlinking post uploads")
@@ -144,27 +138,21 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 					return
 				}
 			}
-			// _board, err := post.GetBoard()
-			// if err != nil {
-			// 	gcutil.LogError(err).
-			// 		Int("postid", post.ID).
-			// 		Str("IP", post.IP).
-			// 		Msg("Unable to get board info from post")
-			// 	serverutil.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]interface{}{
-			// 		"postid": post.ID,
-			// 	})
-			// }
-			// building.BuildBoardPages(_board)
-			building.BuildBoardPages(board)
+			if err = building.BuildBoardPages(board); err != nil {
+				errEv.Err(err).Caller().Send()
+				serverutil.ServeError(writer, "Unable to build board pages for /"+board.Dir+"/: "+err.Error(), wantsJSON, map[string]interface{}{
+					"boardDir": board.Dir,
+				})
+				return
+			}
 
 			var opPost *gcsql.Post
 			if post.IsTopPost {
 				opPost = post
 			} else {
 				if opPost, err = post.GetTopPost(); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Int("postid", post.ID).
-						Str("IP", post.IP).
 						Msg("Unable to get thread information from post")
 					serverutil.ServeError(writer, "Unable to get thread info from post: "+err.Error(), wantsJSON, map[string]interface{}{
 						"postid": post.ID,
@@ -173,9 +161,8 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 				}
 			}
 			if building.BuildThreadPages(opPost); err != nil {
-				gcutil.LogError(err).
+				errEv.Err(err).Caller().
 					Int("postid", post.ID).
-					Str("IP", post.IP).
 					Msg("Unable to build thread pages")
 				serverutil.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]interface{}{
 					"postid": post.ID,
@@ -185,7 +172,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		} else {
 			// delete the post
 			if err = post.Delete(); err != nil {
-				gcutil.LogError(err).
+				errEv.Err(err).Caller().
 					Str("requestType", "deletePost").
 					Int("postid", post.ID).
 					Msg("Error deleting post")

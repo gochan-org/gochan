@@ -3,7 +3,6 @@ package building
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"html/template"
 	"os"
 	"path"
@@ -35,8 +34,9 @@ const (
 		SELECT id, board_id FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	INNER JOIN (
-		SELECT id, thread_id FROM DBPREFIXposts where is_top_post
-	) p on p.thread_id = DBPREFIXposts.thread_id`
+		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
+	) p on p.thread_id = DBPREFIXposts.thread_id
+	WHERE is_deleted = FALSE `
 )
 
 func truncateString(msg string, limit int, ellipsis bool) string {
@@ -163,10 +163,9 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 }
 
 func getBoardTopPosts(boardID int) ([]Post, error) {
-	const query = postQueryBase + " WHERE is_top_post AND t.board_id = ?"
+	const query = postQueryBase + " AND is_top_post AND t.board_id = ?"
 	rows, err := gcsql.QuerySQL(query, boardID)
 	if err != nil {
-		fmt.Println(query)
 		return nil, err
 	}
 	defer rows.Close()
@@ -176,7 +175,7 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 		var threadID int
 		err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		)
@@ -202,7 +201,7 @@ func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 		var threadID int
 		err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		)
