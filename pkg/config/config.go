@@ -373,9 +373,6 @@ type UploadConfig struct {
 }
 
 type PostConfig struct {
-	NewThreadDelay int `description:"The amount of time in seconds that is required before an IP can make a new thread.<br />This may end up being removed or being made board-specific in the future."`
-
-	ReplyDelay    int      `description:"Same as the above, but for replies."`
 	MaxLineLength int      `description:"Any line in a post that exceeds this will be split into two (or more) lines.<br />I'm not really sure why this is here, so it may end up being removed."`
 	ReservedTrips []string `description:"Secure tripcodes (!!Something) can be reserved here.<br />Each reservation should go on its own line and should look like this:<br />TripPassword1##Tripcode1<br />TripPassword2##Tripcode2"`
 

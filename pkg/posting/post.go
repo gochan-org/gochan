@@ -227,13 +227,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if threadidStr == "" || threadidStr == "0" {
 		// creating a new thread
 		delay, err = gcsql.SinceLastThread(post.IP)
-		tooSoon = delay < boardConfig.NewThreadDelay
+		tooSoon = delay < boardConfig.Cooldowns.NewThread
 	} else {
 		delay, err = gcsql.SinceLastPost(post.IP)
-		tooSoon = delay < boardConfig.ReplyDelay
+		tooSoon = delay < boardConfig.Cooldowns.Reply
 	}
 	if err != nil {
-		errEv.Err(err).Caller().Str("boardDir", postBoard.Dir).Msg("Unable to check psot cooldown")
+		errEv.Err(err).Caller().Str("boardDir", postBoard.Dir).Msg("Unable to check post cooldown")
 		serverutil.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]interface{}{
 			"boardDir": postBoard.Dir,
 		})

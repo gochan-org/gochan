@@ -179,9 +179,11 @@ func InitConfig(versionStr string) {
 				},
 				DefaultStyle: "pipes.css",
 
+				Cooldowns: BoardCooldowns{
+					NewThread: 30,
+					Reply:     7,
+				},
 				PostConfig: PostConfig{
-					NewThreadDelay:           30,
-					ReplyDelay:               7,
 					ThreadsPerPage:           15,
 					PostsPerThreadPage:       50,
 					RepliesOnBoardPage:       3,
