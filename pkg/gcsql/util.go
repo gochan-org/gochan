@@ -6,15 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 )
 
-const (
-	MySQLDatetimeFormat = "2006-01-02 15:04:05"
-)
-
 var (
+	dateTimeFormats = []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02T15:04:05Z",
+	}
 	ErrUnsupportedDB = errors.New("unsupported SQL driver")
 	ErrNotConnected  = errors.New("error connecting to database")
 )
@@ -136,6 +137,17 @@ func BeginTx() (*sql.Tx, error) {
 		Isolation: 0,
 		ReadOnly:  false,
 	})
+}
+
+func ParseSQLTimeString(str string) (time.Time, error) {
+	var t time.Time
+	var err error
+	for _, layout := range dateTimeFormats {
+		if t, err = time.Parse(layout, str); err == nil {
+			return t, nil
+		}
+	}
+	return t, fmt.Errorf("unrecognized timestamp string format %q", str)
 }
 
 func getNextFreeID(tableName string) (ID int, err error) {
