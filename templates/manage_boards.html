@@ -4,7 +4,7 @@
 	<input type="hidden" name="noboards" value="1">
 	{{end}}
 	{{/* <input type="hidden" name="confirm" value="1"> */}}
-	<select name="boardid" id="modifyboard">
+	<select name="board" id="modifyboard">
 	{{range $_, $board := $.boards}}
 		<option value="{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}}</option>
 	{{else}}

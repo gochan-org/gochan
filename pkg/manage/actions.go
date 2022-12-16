@@ -828,6 +828,10 @@ var actions = []Action{
 					errEv.Err(err).Caller().Send()
 					return "", err
 				}
+				if err = gcsql.ResetBoardSectionArrays(); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", errors.New("unable to reset board list: " + err.Error())
+				}
 				infoEv.
 					Str("createBoard", board.Dir).
 					Int("boardID", board.ID).
@@ -851,6 +855,10 @@ var actions = []Action{
 				if err = os.RemoveAll(board.AbsolutePath()); err != nil {
 					errEv.Err(err).Caller().Send()
 					return "", err
+				}
+				if err = gcsql.ResetBoardSectionArrays(); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", errors.New("unable to reset board list: " + err.Error())
 				}
 				if err = building.BuildBoards(false); err != nil {
 					return "", err
