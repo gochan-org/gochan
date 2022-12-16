@@ -395,3 +395,33 @@ func buildBoard(board *gcsql.Board, force bool) error {
 
 	return nil
 }
+
+// BuildBoardListJSON generates a JSON file with info about the boards
+func BuildBoardListJSON() error {
+	boardsJsonPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, "boards.json")
+	boardListFile, err := os.OpenFile(boardsJsonPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("building", "boardsList").Send()
+		return errors.New("Failed opening boards.json for writing: " + err.Error())
+	}
+	defer boardListFile.Close()
+
+	boardsMap := map[string][]gcsql.Board{
+		"boards": {},
+	}
+
+	// TODO: properly check if the board is in a hidden section
+	boardsMap["boards"] = gcsql.AllBoards
+	boardJSON, err := json.Marshal(boardsMap)
+	if err != nil {
+		gcutil.LogError(err).Str("building", "boards.json").Send()
+		return errors.New("Failed to create boards.json: " + err.Error())
+	}
+
+	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
+		gcutil.LogError(err).Str("building", "boards.json").Send()
+		return errors.New("Failed writing boards.json file: " + err.Error())
+	}
+	return nil
+}
