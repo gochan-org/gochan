@@ -30,7 +30,7 @@ var (
 		"SiteName":        "Gochan",
 		"MinifyHTML":      true,
 		"MinifyJS":        true,
-		"MaxRecentPosts":  3,
+		"MaxRecentPosts":  12,
 		"EnableAppeals":   true,
 		"MaxLogDays":      14,
 

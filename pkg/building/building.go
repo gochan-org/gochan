@@ -42,13 +42,17 @@ func getRecentPosts() ([]recentPost, error) {
 		SELECT id, board_id FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	LEFT JOIN (
-		select post_id, filename FROM DBPREFIXfiles
+		select post_id, COALESCE(filename,'') as filename FROM DBPREFIXfiles
 	) f on f.post_id = DBPREFIXposts.id
 	INNER JOIN (
 		SELECT
 			id, thread_id FROM DBPREFIXposts WHERE is_top_post
 	) op ON op.thread_id = DBPREFIXposts.thread_id
-	WHERE DBPREFIXposts.is_deleted = FALSE LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
+	WHERE DBPREFIXposts.is_deleted = FALSE`
+	if !siteCfg.RecentPostsWithNoFile {
+		query += ` AND f.filename != '' AND f.filename != 'deleted'`
+	}
+	query += ` LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
 	rows, err := gcsql.QuerySQL(query)
 	if err != nil {
 		return nil, err

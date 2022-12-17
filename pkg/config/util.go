@@ -160,7 +160,7 @@ func InitConfig(versionStr string) {
 				MaxLogDays:      14,
 				Verbosity:       1,
 
-				MaxRecentPosts:        3,
+				MaxRecentPosts:        12,
 				RecentPostsWithNoFile: false,
 			},
 			BoardConfig: BoardConfig{

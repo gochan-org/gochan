@@ -107,7 +107,7 @@ const (
 		"EnableGeoIP": true,
 		"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 		"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
-		"MaxRecentPosts": 3,
+		"MaxRecentPosts": 12,
 		"RecentPostsWithNoFile": false,
 		"Verbosity": 0,
 		"EnableAppeals": true,
