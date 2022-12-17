@@ -598,12 +598,11 @@ var actions = []Action{
 				dismissID := gcutil.HackyStringToInt(dismissIDstr)
 				block := request.FormValue("block")
 				if block != "" && staff.Rank != 3 {
-					serveError(writer, "permission", "reports", "Only the administrator can block reports", wantsJSON)
 					errEv.
 						Int("postID", dismissID).
 						Str("rejected", "not an admin").
 						Caller().Send()
-					return "", nil
+					return "", errors.New("only the administrator can block reports")
 				}
 				found, err := gcsql.ClearReport(dismissID, staff.ID, block != "" && staff.Rank == 3)
 				if err != nil {
@@ -623,7 +622,7 @@ var actions = []Action{
 			rows, err := gcsql.QuerySQL(`SELECT id,
 				handled_by_staff_id as staff_id,
 				(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
-				post_id, ip, reason, is_cleared from DBPREFIXreports WHERE is_cleared = 0`)
+				post_id, ip, reason, is_cleared from DBPREFIXreports WHERE is_cleared = FALSE`)
 			if err != nil {
 				return nil, err
 			}

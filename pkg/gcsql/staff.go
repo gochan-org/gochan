@@ -46,7 +46,7 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 
 // SetActive changes the active status of the staff member. If `active` is false, the login sessions are cleared
 func (s *Staff) SetActive(active bool) error {
-	const updateActive = `UPDATE DBPREFIXstaff SET is_active = 0 WHERE username = ?`
+	const updateActive = `UPDATE DBPREFIXstaff SET is_active = FALSE WHERE username = ?`
 	_, err := ExecSQL(updateActive, s.Username)
 	if err != nil {
 		return err
