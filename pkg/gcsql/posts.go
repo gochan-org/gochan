@@ -192,7 +192,7 @@ func SinceLastThread(postIP string) (int, error) {
 // UpdateContents updates the email, subject, and message text of the post
 func (p *Post) UpdateContents(email string, subject string, message template.HTML, messageRaw string) error {
 	const sqlUpdate = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE ID = ?`
-	_, err := ExecSQL(sqlUpdate, email, subject, message, messageRaw)
+	_, err := ExecSQL(sqlUpdate, email, subject, message, messageRaw, p.ID)
 	if err != nil {
 		return err
 	}

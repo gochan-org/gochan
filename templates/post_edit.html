@@ -6,16 +6,16 @@
 
 	<form action="/util" method="POST" id="edit-form">
 		<input name="postid" type="hidden" value="{{.post.ID}}" />
-		<input name="boardid" type="hidden" value="{{.post.BoardID}}" />
-		<input name="parentid" type="hidden" value="{{.post.ParentID}}" />
+		<input name="boardid" type="hidden" value="{{.boardID}}" />
+		<input name="threadid" type="hidden" value="{{.post.ThreadID}}" />
 		<input name="password" type="hidden" value="{{.post.Password}}" />
 		<input name="doedit" type="hidden" value="1" />
 		<table id="postbox-static">
-			<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "#" .post.Tripcode}}</td></tr>
-			<tr><th class="postblock">Email</th><td>{{.post.Email}}</td></tr>
+			<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "!" .post.Tripcode}}</td></tr>
+			<tr><th class="postblock">Email</th><td><input type="email" name="editemail" maxlength="100" size="28" autocomplete="off" value="{{.post.Email}}"/></td></tr>
 			<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="28" autocomplete="off" value="{{.post.Subject}}"/>
 				<input type="submit" value="Submit changes"/></td></tr>
-			<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="editmsg" id="editmsg">{{.post.MessageText}}</textarea></td></tr>
+			<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="editmsg" id="editmsg">{{.post.MessageRaw}}</textarea></td></tr>
 		</table>
 	</form><br />
 {{template "page_footer.html" .}}

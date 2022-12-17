@@ -17,6 +17,9 @@ import (
 func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.ResponseWriter, request *http.Request) {
 	password := request.FormValue("password")
 	wantsJSON := serverutil.IsRequestingJSON(request)
+	errEv := gcutil.LogError(nil).
+		Str("IP", gcutil.GetRealIP(request))
+	defer errEv.Discard()
 
 	if editBtn == "Edit post" {
 		var err error
@@ -37,29 +40,33 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 
 		post, err := gcsql.GetPostFromID(checkedPosts[0], true)
 		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
+			errEv.Err(err).Caller().
 				Msg("Error getting post information")
 			return
 		}
-
 		if post.Password != passwordMD5 && rank == 0 {
 			serverutil.ServeErrorPage(writer, "Wrong password")
 			return
 		}
 
-		if err = gctemplates.PostEdit.Execute(writer, map[string]interface{}{
+		boardID, err := post.GetBoardID()
+		if err != nil {
+			errEv.Err(err).Caller().Msg("Unable to get board ID from post")
+			serverutil.ServeErrorPage(writer, "Unable to get board ID from post: "+err.Error())
+			return
+		}
+
+		if err = serverutil.MinifyTemplate(gctemplates.PostEdit, map[string]interface{}{
+			"boards":         gcsql.AllBoards,
 			"systemCritical": config.GetSystemCriticalConfig(),
 			"siteConfig":     config.GetSiteConfig(),
+			"boardID":        boardID,
 			"boardConfig":    config.GetBoardConfig(""),
 			"post":           post,
 			"referrer":       request.Referer(),
-		}); err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
+		}, writer, "text/html"); err != nil {
+			errEv.Err(err).Caller().
 				Msg("Error executing edit post template")
-
 			serverutil.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
 			return
 		}
@@ -68,9 +75,8 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
-			gcutil.LogError(err).
+			errEv.Err(err).Caller().
 				Str("postid", request.FormValue("postid")).
-				Str("IP", gcutil.GetRealIP(request)).
 				Msg("Invalid form data")
 			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postid": postid,
@@ -79,8 +85,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		}
 		post, err := gcsql.GetPostFromID(postid, true)
 		if err != nil {
-			gcutil.LogError(err).
-				Str("IP", gcutil.GetRealIP(request)).
+			errEv.Err(err).
 				Int("postid", postid).
 				Msg("Unable to find post")
 			serverutil.ServeError(writer, "Unable to find post: "+err.Error(), wantsJSON, map[string]interface{}{
@@ -90,20 +95,11 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		}
 		boardid, err := strconv.Atoi(request.FormValue("boardid"))
 		if err != nil {
-			gcutil.Logger().Error().
-				Err(err).
-				Str("IP", gcutil.GetRealIP(request)).
+			errEv.Err(err).Caller().
 				Msg("Invalid form data")
 			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, nil)
 			return
 		}
-		// password, err = gcsql.GetPostPassword(postid)
-		// if err != nil {
-		// 	gcutil.LogError(err).
-		// 		Str("IP", gcutil.GetRealIP(request)).
-		// 		Msg("Invalid form data")
-		// 	return
-		// }
 
 		rank := manage.GetStaffRank(request)
 		if request.FormValue("password") != password && rank == 0 {
@@ -116,9 +112,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
 				"boardid": boardid,
 			})
-			gcutil.LogError(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Msg("Invalid form data")
+			errEv.Err(err).Caller().Msg("Invalid form data")
 			return
 		}
 
@@ -128,9 +122,8 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			posting.FormatMessage(request.FormValue("editmsg"), board.Dir),
 			request.FormValue("editmsg"),
 		); err != nil {
-			gcutil.LogError(err).
+			errEv.Err(err).Caller().
 				Int("postid", post.ID).
-				Str("IP", gcutil.GetRealIP(request)).
 				Msg("Unable to edit post")
 			serverutil.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postid": post.ID,
@@ -138,13 +131,13 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 
-		building.BuildBoards(false, boardid)
-		building.BuildFrontPage()
-		if request.FormValue("parentid") == "0" {
-			http.Redirect(writer, request, "/"+board.Dir+"/res/"+strconv.Itoa(postid)+".html", http.StatusFound)
-		} else {
-			http.Redirect(writer, request, "/"+board.Dir+"/res/"+request.FormValue("parentid")+".html#"+strconv.Itoa(postid), http.StatusFound)
+		if err = building.BuildBoards(false, boardid); err != nil {
+			serverutil.ServeErrorPage(writer, "Error rebuilding boards: "+err.Error())
 		}
+		if err = building.BuildFrontPage(); err != nil {
+			serverutil.ServeErrorPage(writer, "Error rebuilding front page: "+err.Error())
+		}
+		http.Redirect(writer, request, post.WebPath(), http.StatusFound)
 		return
 	}
 }
