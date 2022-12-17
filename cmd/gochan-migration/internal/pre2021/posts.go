@@ -67,6 +67,7 @@ func (m *Pre2021Migrator) migrateThreads() error {
 		return err
 	}
 	defer stmt.Close()
+	defer rows.Close()
 	for rows.Next() {
 		var post postTable
 		if err = rows.Scan(

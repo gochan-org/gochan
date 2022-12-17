@@ -2,142 +2,49 @@ package gcsql
 
 import (
 	"database/sql"
-	"path"
+	"errors"
+	"fmt"
+	"html"
+	"html/template"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-// SinceLastPost returns the number of seconds since the given IP address created a post
-// (used for checking against the new thread/new reply cooldown)
-func SinceLastPost(postIP string) (int, error) {
-	const sql = `SELECT MAX(created_on) FROM DBPREFIXposts WHERE ip = ?`
-	var when time.Time
-	err := QueryRowSQL(sql, interfaceSlice(postIP), interfaceSlice(&when))
-	if err != nil {
-		return -1, err
-	}
-	return int(time.Since(when).Seconds()), nil
-}
+const (
+	// should be appended when selecting info from DBPREFIXboards, requires a post ID
+	boardFromPostIdSuffixSQL = ` WHERE id = (
+		SELECT board_id FROM DBPREFIXthreads WHERE id = (
+			SELECT thread_id FROM DBPREFIXposts WHERE id = ?))`
+	selectPostsBaseSQL = `SELECT 
+	id, thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature,
+	email, subject, message, message_raw, password, deleted_at, is_deleted, COALESCE(banned_message,'') AS banned_message
+	FROM DBPREFIXposts `
+)
 
-// InsertPost insersts prepared post object into the SQL table so that it can be rendered
-// Deprecated: This method was created to support old functionality during the database refactor of april 2020
-// The code should be changed to reflect the new database design
-func InsertPost(post *Post, bump bool) error {
-	const sql = `INSERT INTO DBPREFIXposts (id, thread_id, name, tripcode, is_role_signature, email, subject, ip, is_top_post, message, message_raw, banned_message, password)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	isNewThread := post.ParentID == 0
-	var threadID int
-	var err error
-	if isNewThread {
-		threadID, err = createThread(post.BoardID, post.Locked, post.Stickied, post.Autosage, false)
-	} else {
-		threadID, err = getThreadID(post.ParentID)
-	}
-	if err != nil {
-		return err
-	}
+var (
+	ErrNotTopPost        = errors.New("not the top post in the thread")
+	ErrPostDoesNotExist  = errors.New("post does not exist")
+	ErrPostDeleted       = errors.New("post is deleted")
+	ErrorPostAlreadySent = errors.New("post already submitted")
+	// TempPosts is a cached list of all of the posts in the temporary posts table, used for temporarily storing CAPTCHA
+	TempPosts []Post
+)
 
-	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
-	//This is done because mysql doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
-	isPrimaryKeyError := true
-	for isPrimaryKeyError {
-		nextFreeID, err := getNextFreeID("DBPREFIXposts")
-		if err != nil {
-			return err
-		}
-		_, err = ExecSQL(sql, nextFreeID, threadID, post.Name, post.Tripcode, false, post.Email, post.Subject, post.IP, isNewThread, string(post.MessageHTML), post.MessageText, "", post.Password)
-
-		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
-		if err != nil {
-			return err
-		}
-		if !isPrimaryKeyError {
-			post.ID = nextFreeID
-		}
-	}
-
-	if post.Filename != "" {
-		err = appendFile(post.ID, post.FilenameOriginal, post.Filename, post.FileChecksum, post.Filesize, false, post.ImageW, post.ImageH, post.ThumbW, post.ThumbH)
-	}
-	if err != nil {
-		return err
-	}
-	if bump {
-		return bumpThread(threadID)
-	}
-	return nil
-}
-
-// GetReplyCount gets the total amount non-deleted of replies in a thread
-func GetReplyCount(postID int) (int, error) {
-	const sql = `SELECT COUNT(posts.id) FROM DBPREFIXposts as posts
-	JOIN (
-		SELECT threads.id FROM DBPREFIXthreads as threads
-		JOIN DBPREFIXposts as posts
-		ON posts.thread_id = threads.id
-		WHERE posts.id = ?
-	) as thread
-	ON posts.thread_id = thread.id
-	WHERE posts.is_deleted = FALSE`
-	var count int
-	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&count))
-	return count, err
-}
-
-// GetReplyFileCount gets the amount of files non-deleted posted in total in a thread
-func GetReplyFileCount(postID int) (int, error) {
-	const sql = `SELECT COUNT(files.id) from DBPREFIXfiles as files
-	JOIN (SELECT posts.id FROM DBPREFIXposts as posts
-		JOIN (
-			SELECT threads.id FROM DBPREFIXthreads as threads
-			JOIN DBPREFIXposts as posts
-			ON posts.thread_id = threads.id
-			WHERE posts.id = ?
-		) as thread
-		ON posts.thread_id = thread.id
-		WHERE posts.is_deleted = FALSE) as posts
-	ON posts.id = files.post_id`
-	var count int
-	err := QueryRowSQL(sql, interfaceSlice(postID), interfaceSlice(&count))
-	return count, err
-}
-
-const selectPostsQuery = `SELECT
-	DBPREFIXposts.id,
-	thread_id AS threadid,
-	(SELECT id FROM DBPREFIXposts WHERE is_top_post = TRUE AND thread_id = threadid LIMIT 1),
-	(SELECT board_id FROM DBPREFIXthreads WHERE id = DBPREFIXposts.thread_id) as board_id,
-	ip,created_on,name,tripcode,email,subject,message,message_raw,password,
-
-	COALESCE(files.filename,''),
-	COALESCE(files.original_filename,''),
-	COALESCE(files.file_size, 0),
-	COALESCE(files.checksum, ''),
-	COALESCE(files.thumbnail_width, 0),
-	COALESCE(files.thumbnail_height, 0),
-	COALESCE(files.width, 0),
-	COALESCE(files.height, 0)
-		FROM DBPREFIXposts LEFT OUTER JOIN DBPREFIXfiles AS files ON files.post_id = DBPREFIXposts.id`
-
-// GetPostFromID gets the post from the database with a matching ID,
-// optionally requiring it to not be deleted
 func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
-	sql := selectPostsQuery + ` WHERE DBPREFIXposts.id = ?`
+	query := selectPostsBaseSQL + "WHERE id = ?"
 	if onlyNotDeleted {
-		sql += " AND is_deleted = 0"
+		query += " AND is_deleted = FALSE"
 	}
-	var drop int
 	post := new(Post)
-	err := QueryRowSQL(sql, []interface{}{id}, []interface{}{
-		&post.ID, &drop, &post.ParentID,
-		&post.BoardID,
-		&post.IP, &post.Timestamp, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password,
-		&post.Filename, &post.FilenameOriginal, &post.Filesize, &post.FileChecksum, &post.ThumbW, &post.ThumbH, &post.ImageW, &post.ImageH,
-	})
-	if err != nil {
-		return nil, err
+	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+	))
+	if err == sql.ErrNoRows {
+		return nil, ErrPostDoesNotExist
+
 	}
 	return post, err
 }
@@ -145,9 +52,9 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 // GetPostsFromIP gets the posts from the database with a matching IP address, specifying
 // optionally requiring them to not be deleted
 func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
-	sql := selectPostsQuery + ` WHERE DBPREFIXposts.ip = ?`
+	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = ?`
 	if onlyNotDeleted {
-		sql += " AND is_deleted = 0"
+		sql += " AND is_deleted = FALSE"
 	}
 
 	sql += " ORDER BY id DESC LIMIT ?"
@@ -155,15 +62,14 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var posts []Post
 	for rows.Next() {
 		var post Post
-		var drop int
 		if err = rows.Scan(
-			&post.ID, &drop, &post.ParentID,
-			&post.BoardID,
-			&post.IP, &post.Timestamp, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.MessageHTML, &post.MessageText, &post.Password,
-			&post.Filename, &post.FilenameOriginal, &post.Filesize, &post.FileChecksum, &post.ThumbW, &post.ThumbH, &post.ImageW, &post.ImageH,
+			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
 		); err != nil {
 			return nil, err
 		}
@@ -172,41 +78,219 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	return posts, nil
 }
 
-// GetFilePaths returns an array of absolute paths to uploaded files and thumbnails associated
-// with this post, and any errors that occurred
-func (p *Post) GetFilePaths() ([]string, error) {
-	boardDir, err := p.GetBoardDir()
+func GetTopPostInThread(postID int) (int, error) {
+	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = (
+		SELECT thread_id FROM DBPREFIXposts WHERE id = ?
+	) AND is_top_post = TRUE ORDER BY id ASC LIMIT 1`
+	var id int
+	err := QueryRowSQL(query, interfaceSlice(postID), interfaceSlice(&id))
+	return id, err
+}
+
+func GetThreadTopPost(threadID int) (*Post, error) {
+	const query = selectPostsBaseSQL + "WHERE thread_id = ? AND is_top_post = TRUE LIMIT 1"
+	post := new(Post)
+	err := QueryRowSQL(query, interfaceSlice(threadID), interfaceSlice(
+		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+	))
+	return post, err
+}
+
+func GetBoardTopPosts(boardID int) ([]Post, error) {
+	query := `SELECT DBPREFIXposts.id, thread_id, is_top_post, ip, created_on, name,
+		tripcode, is_role_signature, email, subject, message, message_raw,
+		password, deleted_at, is_deleted, banned_message
+		FROM DBPREFIXposts
+		LEFT JOIN (
+		SELECT id, board_id from DBPREFIXthreads
+		) t on t.id = DBPREFIXposts.thread_id
+		WHERE is_deleted = FALSE AND is_top_post AND t.board_id = ?`
+
+	rows, err := QuerySQL(query, boardID)
 	if err != nil {
 		return nil, err
 	}
-	const filenameSQL = `SELECT filename FROM DBPREFIXfiles WHERE post_id = ?`
-	rows, err := QuerySQL(filenameSQL, p.ID)
-	var paths []string
-	if err == sql.ErrNoRows {
-		return paths, nil
-	} else if err != nil {
+	defer rows.Close()
+	var posts []Post
+	for rows.Next() {
+		var post Post
+		// var tmp int // only needed for WHERE clause in query
+
+		bannedMessage := new(string)
+		err = rows.Scan(
+			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
+			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &bannedMessage,
+		)
+		if err != nil {
+			return posts, err
+		}
+		if bannedMessage != nil {
+			post.BannedMessage = *bannedMessage
+		}
+		posts = append(posts, post)
+	}
+	return posts, nil
+}
+
+// GetPostPassword returns the password checksum of the post with the given ID
+func GetPostPassword(id int) (string, error) {
+	const query = `SELECT password FROM DBPREFIXposts WHERE id = ?`
+	var passwordChecksum string
+	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&passwordChecksum))
+	return passwordChecksum, err
+}
+
+// PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
+func PermanentlyRemoveDeletedPosts() error {
+	const sql1 = `DELETE FROM DBPREFIXposts WHERE is_deleted`
+	const sql2 = `DELETE FROM DBPREFIXthreads WHERE is_deleted`
+	_, err := ExecSQL(sql1)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(sql2)
+	return err
+}
+
+// SinceLastPost returns the number of seconds since the given IP address created a post
+// (used for checking against the new reply cooldown)
+func SinceLastPost(postIP string) (int, error) {
+	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ?`
+	var whenStr string
+	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&whenStr))
+	if err != nil {
+		return -1, err
+	}
+
+	when, err := ParseSQLTimeString(whenStr)
+	if err != nil {
+		return -1, err
+	}
+	return int(time.Since(when).Seconds()), nil
+}
+
+// SinceLastThread returns the number of seconds since the given IP address created a new thread/top post
+// (used for checking against the new thread cooldown)
+func SinceLastThread(postIP string) (int, error) {
+	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
+	var whenStr string
+
+	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&whenStr))
+	if err != nil {
+		return -1, err
+	}
+	when, err := ParseSQLTimeString(whenStr)
+	if err != nil {
+		return -1, err
+	}
+	return int(time.Since(when).Seconds()), nil
+}
+
+// UpdateContents updates the email, subject, and message text of the post
+func (p *Post) UpdateContents(email string, subject string, message template.HTML, messageRaw string) error {
+	const sqlUpdate = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE ID = ?`
+	_, err := ExecSQL(sqlUpdate, email, subject, message, messageRaw)
+	if err != nil {
+		return err
+	}
+	p.Email = email
+	p.Subject = subject
+	p.Message = message
+	p.MessageRaw = messageRaw
+	return nil
+}
+
+func (p *Post) GetBoardID() (int, error) {
+	const query = `SELECT board_id FROM DBPREFIXthreads where id = ?`
+	var boardID int
+	err := QueryRowSQL(query, interfaceSlice(p.ThreadID), interfaceSlice(&boardID))
+	if errors.Is(err, sql.ErrNoRows) {
+		err = ErrBoardDoesNotExist
+	}
+	return boardID, err
+}
+
+func (p *Post) GetBoardDir() (string, error) {
+	const query = "SELECT dir FROM DBPREFIXboards" + boardFromPostIdSuffixSQL
+	var dir string
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&dir))
+	return dir, err
+}
+
+func (p *Post) GetBoard() (*Board, error) {
+	const query = selectBoardsBaseSQL + boardFromPostIdSuffixSQL
+	board := new(Board)
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(
+		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
+		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
+		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
+		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
+		&board.EnableCatalog,
+	))
+	return board, err
+}
+
+// ChangeBoardID updates the post with the new board ID if it is a top post. It returns an error if it is not
+// an OP or if ChangeThreadBoardID returned any errors
+func (p *Post) ChangeBoardID(newBoardID int) error {
+	if !p.IsTopPost {
+		return ErrNotTopPost
+	}
+	return ChangeThreadBoardID(p.ThreadID, newBoardID)
+}
+
+// TopPostID returns the OP post ID of the thread that p is in
+func (p *Post) TopPostID() (int, error) {
+	if p.IsTopPost {
+		return p.ID, nil
+	}
+	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = ? and is_top_post = TRUE ORDER BY id ASC LIMIT 1`
+	var topPostID int
+	err := QueryRowSQL(query, interfaceSlice(p.ThreadID), interfaceSlice(&topPostID))
+	return topPostID, err
+}
+
+// GetTopPost returns the OP of the thread that p is in
+func (p *Post) GetTopPost() (*Post, error) {
+	opID, err := p.TopPostID()
+	if err != nil {
 		return nil, err
 	}
-	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	for rows.Next() {
-		var filename string
-		if err = rows.Scan(&filename); err != nil {
-			return paths, err
-		}
-		_, filenameBase, fileExt := gcutil.GetFileParts(filename)
-		thumbExt := fileExt
-		if thumbExt == "gif" || thumbExt == "webm" || thumbExt == "mp4" {
-			thumbExt = "jpg"
-		}
-		paths = append(paths,
-			path.Join(documentRoot, boardDir, "/src/", filenameBase+"."+fileExt),
-			path.Join(documentRoot, boardDir, "/thumb/", filenameBase+"t."+thumbExt), // thumbnail path
-		)
-		if p.ParentID == 0 {
-			paths = append(paths, path.Join(documentRoot, boardDir, "/thumb/", filenameBase+"c."+thumbExt)) // catalog thumbnail path
-		}
+	return GetPostFromID(opID, true)
+}
+
+// GetPostUpload returns the upload info associated with the file as well as any errors encountered.
+// If the file has no uploads, then *Upload is nil. If the file was removed from the post, then Filename
+// and OriginalFilename = "deleted"
+func (p *Post) GetUpload() (*Upload, error) {
+	const query = `SELECT
+	id, post_id, file_order, original_filename, filename, checksum,
+	file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height
+	FROM DBPREFIXfiles WHERE post_id = ?`
+	upload := new(Upload)
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(
+		&upload.ID, &upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum,
+		&upload.FileSize, &upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
+	))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
 	}
-	return paths, nil
+	return upload, err
+}
+
+// Sanitize escapes HTML strings in a post. This should be run immediately before
+// the post is inserted into the database
+func (p *Post) Sanitize() {
+	if !p.sanitized {
+		p.Name = html.EscapeString(p.Name)
+		p.Email = html.EscapeString(p.Email)
+		p.Subject = html.EscapeString(p.Subject)
+		p.Password = html.EscapeString(p.Password)
+		p.sanitized = true
+	}
 }
 
 // UnlinkUploads disassociates the post with any uploads in DBPREFIXfiles
@@ -222,4 +306,75 @@ func (p *Post) UnlinkUploads(leaveDeletedBox bool) error {
 	}
 	_, err := ExecSQL(sqlStr, p.ID)
 	return err
+}
+
+// Delete sets the post as deleted and sets the deleted_at timestamp to the current time
+func (p *Post) Delete() error {
+	if p.IsTopPost {
+		return deleteThread(p.ThreadID)
+	}
+	const deleteSQL = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
+	_, err := ExecSQL(deleteSQL, p.ID)
+	return err
+}
+
+func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
+	if p.ID > 0 {
+		// already inserted
+		return ErrorPostAlreadySent
+	}
+	insertSQL := `INSERT INTO DBPREFIXposts
+	(thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject,
+		message, message_raw, password) 
+	VALUES(?,?,?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?)`
+	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
+	var err error
+	if p.ThreadID == 0 {
+		// thread doesn't exist yet, this is a new post
+		p.IsTopPost = true
+		var threadID int
+		threadID, err = createThread(boardID, locked, stickied, anchored, cyclical)
+		if err != nil {
+			return err
+		}
+		p.ThreadID = threadID
+	}
+
+	id, err := getNextFreeID("DBPREFIXposts")
+	if err != nil {
+		return err
+	}
+	if _, err = ExecSQL(insertSQL,
+		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
+		p.Message, p.MessageRaw, p.Password,
+	); err != nil {
+		return err
+	}
+	p.ID = id
+	if bumpThread {
+		_, err = ExecSQL(bumpSQL, p.ThreadID)
+	}
+	return err
+}
+
+func (p *Post) WebPath() string {
+	webRoot := config.GetSystemCriticalConfig().WebRoot
+	var opID int
+	var boardDir string
+	const query = `SELECT
+		op.id,
+		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
+	FROM DBPREFIXposts
+	LEFT JOIN (
+		SELECT id, board_id FROM DBPREFIXthreads
+	) t ON t.id = DBPREFIXposts.thread_id
+	INNER JOIN (
+		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
+	) op on op.thread_id = DBPREFIXposts.thread_id
+	WHERE DBPREFIXposts.id = ?`
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&opID, &boardDir))
+	if err != nil {
+		return webRoot
+	}
+	return webRoot + boardDir + fmt.Sprintf("/res/%d.html#%d", opID, p.ID)
 }

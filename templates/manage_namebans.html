@@ -1,0 +1,31 @@
+<h2>Create a new name/tripcode ban</h2>
+<form id="namebanform" action="{{.webroot}}manage?action=namebans" method="post">
+	<table>
+		<tr><td>Name/Tripcode:</td><td><input type="text" name="name" id="name"> (ex: "Name", "Name!Tripcode", "!Tripcode, etc)</td></tr>
+		<tr><td>Regular expression:</td><td><input type="checkbox" name="isregex" id="isregex"/></td></tr>
+		<tr><td>Board:</td><td><select name="boardid" id="boardid">
+			<option value="0">All boards</option>
+		{{- range $b, $board := $.allBoards -}}
+			<option value="{{$board.ID}}" {{if eq (dereference $.ban.BoardID) $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+		{{- end -}}
+		</select></td></tr>
+		<tr><td>Staff:</td><td>{{.currentStaff}}</td></tr>
+		<tr><td>Staff note:</td><td><input type="text" name="staffnote"/></td></tr>
+	</table>
+	<input type="submit" name="donameban" value="Create"/>
+	<input type="button" onclick="document.getElementById('namebanform').reset()" value="Reset"/>
+</form>
+<h2>Current banned names/tripcodes</h2>
+{{- if eq 0 (len .nameBans)}}<i>No name bans</i>{{else -}}
+<table border="1">
+	<tr><th>Name</th><th>Regular expression</th><th>Board</th><th>Staff</th><th>Staff note</th><th>Action</th></tr>
+{{range $_, $ban := .nameBans}}<tr>
+	<td>{{$ban.Username}}</td>
+	<td>{{$ban.IsRegex}}</td>
+	<td>{{$uri := (intPtrToBoardDir $ban.BoardID "" "?")}}{{if eq $uri ""}}<i>All boards</i>{{else}}/{{$uri}}/{{end}}</td>
+	<td>{{$staff := (getStaffNameFromID $ban.StaffID)}}{{if eq $staff ""}}<i>?</i>{{else}}{{$staff}}{{end}}</td>
+	<td>{{$ban.StaffNote}}</td>
+	<td><a href="{{$.webroot}}manage?action=namebans&del={{$ban.ID}}">Delete</a></td>
+{{end -}}
+</table>
+{{end}}

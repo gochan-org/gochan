@@ -12,6 +12,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -35,26 +36,25 @@ func createSession(key, username, password string, request *http.Request, writer
 			Msg("Rejected login from possible spambot")
 		return sOtherError
 	}
-	staff, err := gcsql.GetStaffByName(username)
+	staff, err := gcsql.GetStaffByUsername(username, true)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			gcutil.LogError(err).
 				Str("staff", username).
 				Str("IP", gcutil.GetRealIP(request)).
 				Str("remoteAddr", request.RemoteAddr).
-				Msg("Invalid password")
+				Caller().Msg("Invalid password")
 		}
 		return sInvalidPassword
 	}
 
-	success := bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
-	if success == bcrypt.ErrMismatchedHashAndPassword {
+	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
+	if err == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
 		gcutil.LogError(nil).
 			Str("staff", username).
 			Str("IP", gcutil.GetRealIP(request)).
-			Str("remoteAddr", request.Response.Request.RemoteAddr).
-			Msg("Invalid password")
+			Caller().Msg("Invalid password")
 		return sInvalidPassword
 	}
 
@@ -73,11 +73,11 @@ func createSession(key, username, password string, request *http.Request, writer
 		MaxAge: int(maxAge),
 	})
 
-	if err = gcsql.CreateSession(key, username); err != nil {
+	if err = staff.CreateLoginSession(key); err != nil {
 		gcutil.LogError(err).
 			Str("staff", username).
 			Str("sessionKey", key).
-			Msg("Error creating new staff session")
+			Caller().Msg("Error creating new staff session")
 		return sOtherError
 	}
 
@@ -89,7 +89,11 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 	if err != nil {
 		return "", err
 	}
-	return gcsql.GetStaffName(sessionCookie.Value)
+	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
+	if err != nil {
+		return "", err
+	}
+	return staff.Username, nil
 }
 
 func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
@@ -139,7 +143,7 @@ func init() {
 		})
 }
 
-func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	dashBuffer := bytes.NewBufferString("")
 	announcements, err := gcsql.GetAllAccouncements()
 	if err != nil {
@@ -164,10 +168,7 @@ func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff 
 		"boards":        gcsql.AllBoards,
 		"webroot":       config.GetSystemCriticalConfig().WebRoot,
 	}, dashBuffer, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("staff", staff.Username).
-			Str("action", "dashboard").
-			Str("template", "manage_dashboard.html").Send()
+		errEv.Err(err).Str("template", "manage_dashboard.html").Caller().Send()
 		return "", err
 	}
 	return dashBuffer.String(), nil
@@ -185,7 +186,7 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	return available
 }
 
-func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
+func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	availableActions := getAvailableActions(staff.Rank, false)
 	return availableActions, nil
 }
@@ -212,6 +213,108 @@ func boardsRequestType(request *http.Request) (string, int, error) {
 		boardID, err = strconv.Atoi(boardIDstr)
 	}
 	return requestType, boardID, err
+}
+
+func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
+	query := `SELECT
+	id, username, global_rank, added_on, last_login, is_active
+	FROM DBPREFIXstaff`
+	if activeOnly {
+		query += " WHERE is_active"
+	}
+	rows, err := gcsql.QuerySQL(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var staff []gcsql.Staff
+	for rows.Next() {
+		var s gcsql.Staff
+		err = rows.Scan(&s.ID, &s.Username, &s.Rank, &s.AddedOn, &s.LastLogin, &s.IsActive)
+		if err != nil {
+			return nil, err
+		}
+		staff = append(staff, s)
+	}
+	return staff, nil
+}
+
+// getBoardDataFromForm parses the relevant form fields into the board and returns any errors for invalid string to int
+// or missing required fields. It should only be used for editing and creating boards
+func getBoardDataFromForm(board *gcsql.Board, request *http.Request) error {
+	requestType, _, _ := boardsRequestType(request)
+
+	staff, err := getCurrentStaff(request)
+	if err != nil {
+		return err
+	}
+
+	if len(request.Form["domodify"]) > 0 || len(request.Form["doedit"]) > 0 || len(request.Form["dodelete"]) > 0 {
+		if board.ID, err = getIntField("board", staff, request, 1); err != nil {
+			return err
+		}
+	}
+	if board.SectionID, err = getIntField("section", staff, request, 1); err != nil {
+		return err
+	}
+	if requestType == "create" {
+		if board.Dir, err = getStringField("dir", staff, request, 1); err != nil {
+			return err
+		}
+	}
+	if board.NavbarPosition, err = getIntField("navbarposition", staff, request, 1); err != nil {
+		return err
+	}
+	if board.Title, err = getStringField("title", staff, request, 1); err != nil {
+		return err
+	}
+	if board.Subtitle, err = getStringField("subtitle", staff, request, 1); err != nil {
+		return err
+	}
+	if board.Description, err = getStringField("description", staff, request, 1); err != nil {
+		return err
+	}
+	if board.MaxFilesize, err = getIntField("maxfilesize", staff, request, 1); err != nil {
+		return err
+	}
+	if board.MaxThreads, err = getIntField("maxthreads", staff, request, 1); err != nil {
+		return err
+	}
+	if board.DefaultStyle, err = getStringField("defaultstyle", staff, request, 1); err != nil {
+		return err
+	}
+	board.Locked = request.FormValue("locked") == "on"
+	if board.AnonymousName, err = getStringField("anonname", staff, request, 1); err != nil {
+		return err
+	}
+	if board.AnonymousName == "" {
+		board.AnonymousName = "Anonymous"
+	}
+	board.ForceAnonymous = request.FormValue("forcedanonymous") == "on"
+	if board.AutosageAfter, err = getIntField("autosageafter", staff, request, 1); err != nil {
+		return err
+	}
+	if board.AutosageAfter < 1 {
+		board.AutosageAfter = 200
+	}
+	if board.NoImagesAfter, err = getIntField("nouploadsafter", staff, request, 1); err != nil {
+		return err
+	}
+	if board.MaxMessageLength, err = getIntField("maxmessagelength", staff, request, 1); err != nil {
+		return err
+	}
+	if board.MaxMessageLength < 1 {
+		board.MaxMessageLength = 1024
+	}
+	if board.MinMessageLength, err = getIntField("minmessagelength", staff, request, 1); err != nil {
+		return err
+	}
+	board.AllowEmbeds = request.FormValue("allowembeds") == "on"
+	board.RedirectToThread = request.FormValue("redirecttothread") == "on"
+	board.RequireFile = request.FormValue("requirefile") == "on"
+	board.EnableCatalog = request.FormValue("enablecatalog") == "on"
+
+	return nil
 }
 
 func invalidWordfilterID(id interface{}) error {

@@ -109,6 +109,9 @@ sed -i /etc/gochan/gochan.json \
 if [ "$DBTYPE" = "postgresql" ]; then
 	sed -i /etc/gochan/gochan.json \
 		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
+elif [ "$DBTYPE" = "sqlite3" ]; then
+	sed -i /etc/gochan/gochan.json \
+		-e 's#"DBhost": ".*"#"DBhost": "/etc/gochan/gochan.db"#'
 fi
 
 # a convenient script for connecting to the db, whichever type we're using

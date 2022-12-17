@@ -8,6 +8,8 @@ import argparse
 from os import path
 import re
 import unittest
+import json
+from urllib.request import urlopen
 from urllib.parse import urljoin
 from selenium import webdriver
 
@@ -35,18 +37,51 @@ testingPassword = "12345"
 testingBoard = "test"
 
 threadRE = re.compile('.*/(\S+)/(\d+)(\+50)?.html')
+boardTitleRE = re.compile('/(\w+)/ - (.+)')
 browser = ""
 headless = False
 keepOpen = False
 
+def boardExists(board:str):
+	req = urlopen(urljoin(testingSite, "boards.json"))
+	boards = json.load(req)['boards']
+	for entry in boards:
+		if entry['board'] == board:
+			return True
+	return False
+
 def gotoPage(driver: WebDriver, page: str):
 	driver.get(urljoin(testingSite, page))
 
+def isLoggedIn(driver: WebDriver):
+	gotoPage(driver, "manage?action=login")
+	return driver.find_element(by=By.CSS_SELECTOR, value="h1#board-title").text == "Dashboard"
+
 def loginToStaff(driver: WebDriver, username = "admin", pw = "password"):
+	if isLoggedIn(driver):
+		return
 	gotoPage(driver, "manage")
 	driver.find_element(by=By.NAME, value="username").send_keys(username)
 	driver.find_element(by=By.NAME, value="password").send_keys(pw)
 	driver.find_element(by=By.CSS_SELECTOR, value="input[value=Login]").click()
+
+def makePostOnPage(url: str, runner: unittest.TestCase):
+	gotoPage(runner.driver, url)
+	WebDriverWait(runner.driver, 10).until(
+		EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
+	
+	valProp = runner.driver.find_element(by=By.CSS_SELECTOR, value="form#postform input[type=submit]").get_property("value")
+	runner.assertEqual(valProp, "Post")
+	form = runner.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+	sendPost(form,
+		testingName,
+		testingEmail,
+		testingSubject,
+		testingMessage % runner.driver.name,
+		path.abspath(testingUploadPath),
+		testingPassword)
+	WebDriverWait(runner.driver, 10).until(
+		EC.url_matches(threadRE))	
 
 def sendPost(postForm:WebElement, name="", email="", subject="", message="", file="", password=""):
 	postForm.find_element(by=By.NAME, value="postname").send_keys(name)
@@ -120,25 +155,29 @@ class TestRunner(unittest.TestCase):
 			"Dashboard",
 			"Testing staff login"
 		)
+	
+	def test_makeBoard(self):
+		if boardExists("seleniumtesting"):
+			raise Exception("Board /seleniumtests/ already exists")
+		loginToStaff(self.driver)
+		gotoPage(self.driver, "manage?action=boards")
+
+		# fill out the board creation form
+		self.driver.find_element(by=By.NAME, value="dir").send_keys("seleniumtesting")
+		self.driver.find_element(by=By.NAME, value="title").send_keys("Selenium testing")
+		self.driver.find_element(by=By.NAME, value="subtitle").send_keys("Board for testing Selenium")
+		self.driver.find_element(by=By.NAME, value="description").send_keys("Board for testing Selenium")
+		self.driver.find_element(by=By.NAME, value="docreate").click()
+		self.driver.switch_to.alert.accept()
+		WebDriverWait(self.driver, 10).until(
+			EC.presence_of_element_located((By.CSS_SELECTOR, 'div#topbar a[href="/seleniumtesting/"]')))
+
+		makePostOnPage("seleniumtesting", self)
+
 
 	def test_makeThread(self):
-		gotoPage(self.driver, testingBoard)
-		WebDriverWait(self.driver, 10).until(
-			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
-		
-		valProp = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform input[type=submit]").get_property("value")
-		self.assertEqual(valProp, "Post")
-		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+		makePostOnPage(testingBoard, self)
 
-		sendPost(form,
-			testingName,
-			testingEmail,
-			testingSubject,
-			testingMessage % self.driver.name,
-			path.abspath(testingUploadPath),
-			testingPassword)
-		WebDriverWait(self.driver, 10).until(
-			EC.url_matches(threadRE))
 		threadID = threadRE.findall(self.driver.current_url)[0][1]
 		cur_url = self.driver.current_url
 		deletePost(self.driver, int(threadID), "")
@@ -147,6 +186,20 @@ class TestRunner(unittest.TestCase):
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the post we just made")
 
 	def test_moveThread(self):
+		if not boardExists("test2"):
+			loginToStaff(self.driver)
+			gotoPage(self.driver, "manage?action=boards")
+
+			# fill out the board creation form
+			self.driver.find_element(by=By.NAME, value="dir").send_keys("test2")
+			self.driver.find_element(by=By.NAME, value="title").send_keys("Testing board #2")
+			self.driver.find_element(by=By.NAME, value="subtitle").send_keys("Board for testing thread moving")
+			self.driver.find_element(by=By.NAME, value="description").send_keys("Board for testing thread moving")
+			self.driver.find_element(by=By.NAME, value="docreate").click()
+			self.driver.switch_to.alert.accept()
+			WebDriverWait(self.driver, 10).until(
+				EC.presence_of_element_located((By.CSS_SELECTOR, 'div#topbar a[href="/test2/"]')))
+
 		gotoPage(self.driver, testingBoard)
 		WebDriverWait(self.driver, 10).until(
 			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))

@@ -1,12 +1,13 @@
 package building
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
+	"regexp"
+	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -15,38 +16,104 @@ import (
 	"github.com/gochan-org/gochan/pkg/serverutil"
 )
 
+var (
+	bbcodeTagRE = regexp.MustCompile(`\[/?[^\[\]\s]+\]`)
+)
+
+type recentPost struct {
+	Board         string
+	URL           string
+	ThumbURL      string
+	FileDeleted   bool
+	MessageSample string
+}
+
+func getRecentPosts() ([]recentPost, error) {
+	siteCfg := config.GetSiteConfig()
+	query := `SELECT
+		DBPREFIXposts.id,
+		DBPREFIXposts.message,
+		DBPREFIXposts.message_raw,
+		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir,
+		f.filename, op.id
+	FROM
+		DBPREFIXposts
+	LEFT JOIN (
+		SELECT id, board_id FROM DBPREFIXthreads
+	) t ON t.id = DBPREFIXposts.thread_id
+	LEFT JOIN (
+		select post_id, COALESCE(filename,'') as filename FROM DBPREFIXfiles
+	) f on f.post_id = DBPREFIXposts.id
+	INNER JOIN (
+		SELECT
+			id, thread_id FROM DBPREFIXposts WHERE is_top_post
+	) op ON op.thread_id = DBPREFIXposts.thread_id
+	WHERE DBPREFIXposts.is_deleted = FALSE`
+	if !siteCfg.RecentPostsWithNoFile {
+		query += ` AND f.filename != '' AND f.filename != 'deleted'`
+	}
+	query += ` LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
+	rows, err := gcsql.QuerySQL(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var recentPosts []recentPost
+
+	for rows.Next() {
+		var post recentPost
+		var id, topPostID string
+		var message, messageRaw, boardDir, filename string
+		err = rows.Scan(&id, &message, &messageRaw, &boardDir, &filename, &topPostID)
+		if err != nil {
+			return nil, err
+		}
+		if filename == "" && !siteCfg.RecentPostsWithNoFile {
+			continue
+		}
+		message = bbcodeTagRE.ReplaceAllString(message, "")
+		if len(message) > 40 {
+			message = message[:37] + "..."
+		}
+		post = recentPost{
+			Board:         boardDir,
+			URL:           config.WebPath(boardDir, "res", topPostID+".html") + "#" + id,
+			ThumbURL:      config.WebPath(boardDir, "thumb", gcutil.GetThumbnailPath("post", filename)),
+			FileDeleted:   filename == "deleted",
+			MessageSample: message,
+		}
+
+		recentPosts = append(recentPosts, post)
+	}
+	return recentPosts, nil
+}
+
 // BuildFrontPage builds the front page using templates/front.html
 func BuildFrontPage() error {
+	errEv := gcutil.LogError(nil).
+		Str("template", "front")
+	defer errEv.Discard()
 	err := gctemplates.InitTemplates("front")
 	if err != nil {
-		gcutil.LogError(err).
-			Str("template", "front").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Error loading front page template: " + err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, "index.html"))
-	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 
+	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "front").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed opening front page for writing: " + err.Error())
 	}
 	defer frontFile.Close()
 
-	var recentPostsArr []gcsql.RecentPost
+	var recentPostsArr []recentPost
 	siteCfg := config.GetSiteConfig()
-	recentPostsArr, err = gcsql.GetRecentPostsGlobal(siteCfg.MaxRecentPosts, !siteCfg.RecentPostsWithNoFile)
+	recentPostsArr, err = getRecentPosts()
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "recent").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed loading recent posts: " + err.Error())
-	}
-
-	for b := range gcsql.AllBoards {
-		if gcsql.AllBoards[b].Section == 0 {
-			gcsql.AllBoards[b].Section = 1
-		}
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
@@ -57,49 +124,8 @@ func BuildFrontPage() error {
 		"board_config": config.GetBoardConfig(""),
 		"recent_posts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("template", "front").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed executing front page template: " + err.Error())
-	}
-	return nil
-}
-
-// BuildBoardListJSON generates a JSON file with info about the boards
-func BuildBoardListJSON() error {
-	criticalCfg := config.GetSystemCriticalConfig()
-	boardListFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "boards.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
-	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "boardsList").Send()
-		return errors.New("Failed opening boards.json for writing: " + err.Error())
-	}
-	defer boardListFile.Close()
-
-	boardsMap := map[string][]gcsql.Board{
-		"boards": {},
-	}
-
-	boardCfg := config.GetBoardConfig("")
-	// Our cooldowns are site-wide currently.
-	cooldowns := gcsql.BoardCooldowns{
-		NewThread:  boardCfg.NewThreadDelay,
-		Reply:      boardCfg.ReplyDelay,
-		ImageReply: boardCfg.ReplyDelay}
-
-	for b := range gcsql.AllBoards {
-		gcsql.AllBoards[b].Cooldowns = cooldowns
-		boardsMap["boards"] = append(boardsMap["boards"], gcsql.AllBoards[b])
-	}
-
-	boardJSON, err := json.Marshal(boardsMap)
-	if err != nil {
-		gcutil.LogError(err).Str("building", "boards.json").Send()
-		return errors.New("Failed to create boards.json: " + err.Error())
-	}
-
-	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
-		gcutil.LogError(err).Str("building", "boards.json").Send()
-		return errors.New("Failed writing boards.json file: " + err.Error())
 	}
 	return nil
 }
@@ -165,29 +191,4 @@ func BuildJS() error {
 		return fmt.Errorf("Error building %q: %s", constsJSPath, err.Error())
 	}
 	return nil
-}
-
-// paginate returns a 2d array of a specified interface from a 1d array passed in,
-// with a specified number of values per array in the 2d array.
-// interfaceLength is the number of interfaces per array in the 2d array (e.g, threads per page)
-// interf is the array of interfaces to be split up.
-func paginate(interfaceLength int, interf []interface{}) [][]interface{} {
-	// paginatedInterfaces = the finished interface array
-	// numArrays = the current number of arrays (before remainder overflow)
-	// interfacesRemaining = if greater than 0, these are the remaining interfaces
-	// 	that will be added to the super-interface
-
-	var paginatedInterfaces [][]interface{}
-	numArrays := len(interf) / interfaceLength
-	interfacesRemaining := len(interf) % interfaceLength
-	currentInterface := 0
-	for l := 0; l < numArrays; l++ {
-		paginatedInterfaces = append(paginatedInterfaces,
-			interf[currentInterface:currentInterface+interfaceLength])
-		currentInterface += interfaceLength
-	}
-	if interfacesRemaining > 0 {
-		paginatedInterfaces = append(paginatedInterfaces, interf[len(interf)-interfacesRemaining:])
-	}
-	return paginatedInterfaces
 }

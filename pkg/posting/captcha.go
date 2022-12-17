@@ -79,6 +79,19 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 	}
 	writer.Header().Add("Content-Type", "text/html")
 	captchaID := request.FormValue("captchaid")
+	boardIDstr := request.FormValue("boardid")
+	boardID, err := strconv.Atoi(boardIDstr)
+	if err != nil {
+		gcutil.LogError(err).
+			Str("ip", gcutil.GetRealIP(request)).
+			Str("boardid", boardIDstr).Send()
+		serverutil.ServeError(writer, fmt.Sprintf("Invalid boardid value %q", boardIDstr),
+			useJSON, map[string]interface{}{
+				"boardid": boardIDstr,
+			})
+		serverutil.ServeErrorPage(writer, fmt.Sprintf("Invalid boardid value %q", boardIDstr))
+		return
+	}
 	captchaAnswer := request.FormValue("captchaanswer")
 	if captchaID != "" && request.FormValue("didreload") != "1" {
 		goodAnswer := base64Captcha.DefaultMemStore.Verify(captchaID, captchaAnswer, true)
@@ -86,12 +99,11 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 			if tempPostIndex > -1 && tempPostIndex < len(gcsql.TempPosts) {
 				// came from a /post redirect, insert the specified temporary post
 				// and redirect to the thread
-
-				gcsql.InsertPost(&gcsql.TempPosts[tempPostIndex], emailCommand == "noko")
-				building.BuildBoards(false, gcsql.TempPosts[tempPostIndex].BoardID)
+				gcsql.TempPosts[tempPostIndex].Insert(emailCommand != "sage", boardID, false, false, false, false)
+				building.BuildBoards(false, boardID)
 				building.BuildFrontPage()
 
-				url := gcsql.TempPosts[tempPostIndex].GetURL(false)
+				url := gcsql.TempPosts[tempPostIndex].WebPath()
 
 				// move the end Post to the current index and remove the old end Post. We don't
 				// really care about order as long as tempPost validation doesn't get jumbled up

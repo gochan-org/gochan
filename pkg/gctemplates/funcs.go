@@ -152,77 +152,62 @@ var funcMap = template.FuncMap{
 		}
 		return dict, nil
 	},
+	"until": func(t time.Time) string {
+		return t.Sub(time.Now()).String()
+	},
+	"dereference": func(a *int) int {
+		if a == nil {
+			return 0
+		}
+		return *a
+	},
 	// Imageboard functions
-	"bannedForever": func(banInfo *gcsql.BanInfo) bool {
-		return banInfo.BannedForever()
+	"bannedForever": func(ban *gcsql.IPBan) bool {
+		return ban.IsActive && ban.Permanent && !ban.CanAppeal
 	},
-	"isBanned": func(banInfo *gcsql.BanInfo, board string) bool {
-		return banInfo.IsBanned(board)
+	"isBanned": func(ban *gcsql.IPBan, board string) bool {
+		return ban.IsActive && ban.BoardID != nil
 	},
-	"isOP": func(post gcsql.Post) bool {
-		return post.ParentID == 0
+	"getBoardDirFromID": func(id int) string {
+		dir, _ := gcsql.GetBoardDir(id)
+		return dir
+	},
+	"intPtrToBoardDir": func(id *int, ifNil string, ifErr string) string {
+		if id == nil {
+			return ifNil
+		}
+		dir, err := gcsql.GetBoardDir(*id)
+		if err != nil {
+			return ifErr
+		}
+		return dir
+	},
+	"getStaffNameFromID": func(id int) string {
+		username, err := gcsql.GetStaffUsernameFromID(id)
+		if err != nil {
+			return "?"
+		}
+		return username
+	},
+	"getAppealBanIP": func(appealID int) string {
+		ban, err := gcsql.GetIPBanByID(appealID)
+		if err != nil || ban == nil {
+			return "?"
+		}
+		return ban.IP
 	},
 	"getCatalogThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("catalog", img)
 	},
-	"getThreadID": func(postInterface interface{}) (thread int) {
-		post, ok := postInterface.(gcsql.Post)
-		if !ok {
-			thread = 0
-		} else if post.ParentID == 0 {
-			thread = post.ID
-		} else {
-			thread = post.ParentID
-		}
-		return
-	},
-	"getPostURL": func(postInterface interface{}, typeOf string, withDomain bool) (postURL string) {
-		systemCritical := config.GetSystemCriticalConfig()
-		if withDomain {
-			postURL = systemCritical.SiteDomain
-		}
-		postURL += systemCritical.WebRoot
-
-		if typeOf == "recent" {
-			post, ok := postInterface.(gcsql.RecentPost)
-			if !ok {
-				return
-			}
-			postURL = post.GetURL(withDomain)
-		} else {
-			post, ok := postInterface.(*gcsql.Post)
-			if !ok {
-				return
-			}
-			postURL = post.GetURL(withDomain)
-		}
-		return
+	"getTopPostID": func(post *gcsql.Post) int {
+		id, _ := post.TopPostID()
+		return id
 	},
 	"getThreadThumbnail": func(img string) string {
 		return gcutil.GetThumbnailPath("thread", img)
 	},
 	"getUploadType": func(name string) string {
-		extension := gcutil.GetFileExtension(name)
-		var uploadType string
-		switch extension {
-		case "":
-			fallthrough
-		case "deleted":
-			uploadType = ""
-		case "webm":
-			fallthrough
-		case "mp4":
-			fallthrough
-		case "jpg":
-			fallthrough
-		case "jpeg":
-			fallthrough
-		case "gif":
-			uploadType = "jpg"
-		case "png":
-			uploadType = "png"
-		}
-		return uploadType
+		return gcutil.GetThumbnailExt(name)
 	},
 	"imageToThumbnailPath": func(thumbType string, img string) string {
 		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
@@ -239,19 +224,19 @@ var funcMap = template.FuncMap{
 		}
 		return img[0:index] + thumbSuffix
 	},
-	"numReplies": func(boardid, threadid int) int {
-		num, err := gcsql.GetReplyCount(threadid)
+	"numReplies": func(boardid, opID int) int {
+		num, err := gcsql.GetThreadReplyCountFromOP(opID)
 		if err != nil {
 			return 0
 		}
 		return num
 	},
 	"getBoardDir": func(id int) string {
-		var board gcsql.Board
-		if err := board.PopulateData(id); err != nil {
+		dir, err := gcsql.GetBoardDir(id)
+		if err != nil {
 			return ""
 		}
-		return board.Dir
+		return dir
 	},
 	"webPath": func(part ...string) string {
 		return config.WebPath(part...)

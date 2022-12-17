@@ -1,6 +1,7 @@
 package gcutil
 
 import (
+	"io"
 	"net/http"
 	"os"
 
@@ -22,7 +23,34 @@ func (*logHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	}
 }
 
-func InitLog(logPath string) (err error) {
+func LogStr(key, val string, events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] == nil {
+			continue
+		}
+		events[e] = events[e].Str(key, val)
+	}
+}
+
+func LogInt(key string, i int, events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] == nil {
+			continue
+		}
+		events[e] = events[e].Int(key, i)
+	}
+}
+
+func LogDiscard(events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] == nil {
+			continue
+		}
+		events[e] = events[e].Discard()
+	}
+}
+
+func InitLog(logPath string, debug bool) (err error) {
 	if logFile != nil {
 		// log file already initialized, skip
 		return nil
@@ -31,7 +59,13 @@ func InitLog(logPath string) (err error) {
 	if err != nil {
 		return err
 	}
-	logger = zerolog.New(logFile).Hook(&logHook{})
+
+	if debug {
+		logger = zerolog.New(io.MultiWriter(logFile, os.Stdout)).Hook(&logHook{})
+	} else {
+		logger = zerolog.New(logFile).Hook(&logHook{})
+	}
+
 	return nil
 }
 
@@ -72,17 +106,17 @@ func LogAccess(request *http.Request) *zerolog.Event {
 
 func LogError(err error) *zerolog.Event {
 	if err != nil {
-		return logger.Err(err).Caller(1)
+		return logger.Err(err)
 	}
-	return logger.Error().Caller(1)
+	return logger.Error()
 }
 
 func LogFatal() *zerolog.Event {
-	return logger.Fatal().Caller(1)
+	return logger.Fatal()
 }
 
 func LogDebug() *zerolog.Event {
-	return logger.Debug().Caller(1)
+	return logger.Debug()
 }
 
 func CloseLog() error {

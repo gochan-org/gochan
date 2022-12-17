@@ -14,9 +14,9 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		m.newBoards = map[int]string{}
 	}
 	// get all boards from new db
-	boards, err := gcsql.GetAllBoards()
+	err := gcsql.ResetBoardSectionArrays()
 	if err != nil {
-		return err
+		return nil
 	}
 
 	// get boards from old db
@@ -24,11 +24,10 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var id int
 		var dir string
-		var board_type int
-		var upload_type int
 		var title string
 		var subtitle string
 		var description string
@@ -50,8 +49,6 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		if err = rows.Scan(
 			&id,
 			&dir,
-			&board_type,
-			&upload_type,
 			&title,
 			&subtitle,
 			&description,
@@ -73,11 +70,11 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 			return err
 		}
 		found := false
-		for b := range boards {
+		for b := range gcsql.AllBoards {
 			if _, ok := m.oldBoards[id]; !ok {
 				m.oldBoards[id] = dir
 			}
-			if boards[b].Dir == dir {
+			if gcsql.AllBoards[b].Dir == dir {
 				log.Printf("Board /%s/ already exists in new db, moving on\n", dir)
 				found = true
 				break
@@ -89,28 +86,26 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		// create new board using the board data from the old db
 		// omitting things like ID and creation date since we don't really care
 		if err = gcsql.CreateBoard(&gcsql.Board{
-			Dir:              dir,
-			Type:             board_type,  // ??
-			UploadType:       upload_type, // ??
-			Title:            title,
-			Subtitle:         subtitle,
-			Description:      description,
-			Section:          section,
-			MaxFilesize:      max_file_size,
-			MaxPages:         max_pages,
-			DefaultStyle:     default_style,
-			Locked:           locked,
-			Anonymous:        anonymous,
-			ForcedAnon:       forced_anon,
-			MaxAge:           max_age,
+			Dir:         dir,
+			Title:       title,
+			Subtitle:    subtitle,
+			Description: description,
+			SectionID:   section,
+			MaxFilesize: max_file_size,
+			// MaxPages:         max_pages,
+			DefaultStyle:   default_style,
+			Locked:         locked,
+			AnonymousName:  anonymous,
+			ForceAnonymous: forced_anon,
+			// MaxAge:           max_age,
 			AutosageAfter:    autosage_after,
 			NoImagesAfter:    no_images_after,
 			MaxMessageLength: max_message_length,
-			EmbedsAllowed:    embeds_allowed,
+			AllowEmbeds:      embeds_allowed,
 			RedirectToThread: redirect_to_thread,
 			RequireFile:      require_file,
 			EnableCatalog:    enable_catalog,
-		}); err != nil {
+		}, false); err != nil {
 			return err
 		}
 		m.newBoards[id] = dir

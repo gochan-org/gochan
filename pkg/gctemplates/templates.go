@@ -18,12 +18,14 @@ var (
 	FrontPage         *template.Template
 	BoardPage         *template.Template
 	JsConsts          *template.Template
+	ManageAppeals     *template.Template
 	ManageBans        *template.Template
 	ManageBoards      *template.Template
 	ManageSections    *template.Template
 	ManageConfig      *template.Template
 	ManageDashboard   *template.Template
 	ManageFileBans    *template.Template
+	ManageNameBans    *template.Template
 	ManageIPSearch    *template.Template
 	ManageRecentPosts *template.Template
 	ManageWordfilters *template.Template
@@ -130,6 +132,12 @@ func templateLoading(t string, buildAll bool) error {
 			return templateError("threadpage.html", err)
 		}
 	}
+	if buildAll || t == "manageappeals" {
+		ManageAppeals, err = loadTemplate("manage_appeals.html")
+		if err != nil {
+			return templateError("manage_appeals.html", err)
+		}
+	}
 	if buildAll || t == "managebans" {
 		ManageBans, err = loadTemplate("manage_bans.html")
 		if err != nil {
@@ -176,6 +184,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageFileBans, err = loadTemplate("manage_filebans.html")
 		if err != nil {
 			return templateError("manage_filebans.html", err)
+		}
+	}
+	if buildAll || t == "managenamebans" {
+		ManageNameBans, err = loadTemplate("manage_namebans.html")
+		if err != nil {
+			return templateError("manage_namebans.html", err)
 		}
 	}
 	if buildAll || t == "manageipsearch" {

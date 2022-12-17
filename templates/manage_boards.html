@@ -20,7 +20,7 @@
 {{else}}
 <h2>Create new board</h2>
 {{end}}
-<form action="{{$.webroot}}manage?action=boards" method="GET">
+<form action="{{$.webroot}}manage?action=boards" method="POST">
 	<input type="hidden" name="action" value="boards">
 	<input type="hidden" name="board" value="{{$.board.ID}}"/>
 <table>
@@ -28,10 +28,6 @@
 	<th>Option</th>
 	<th>Value</th>
 </tr>
-{{/* <tr>
-	<td>List order</td>
-	<td><input type="number" min="0" name="listorder"></td>
-</tr>*/}}
 <tr>
 	<td>Directory</td>
 	<td><input type="text" name="dir" {{if $.editing}}disabled="disabled"{{end}} value="{{$.board.Dir}}"/></td>
@@ -49,28 +45,24 @@
 	<td><input type="text" name="description" value="{{$.board.Description}}"></td>
 </tr>
 <tr>
-	<td>Type</td>
-	<td><input type="number" min="0" name="boardtype" value="{{$.board.Type}}"></td>
-</tr>
-<tr>
-	<td>Upload type</td>
-	<td><input type="number" min="0" name="uploadtype" value="{{$.board.UploadType}}"></td>
-</tr>
-<tr>
 	<td>Section</td>
 	<td><select name="section">
-	{{- range $_, $section := $.sections -}}
+		{{- range $_, $section := $.sections -}}
 		<option value="{{$section.ID}}">{{$section.Name}}</option>
-	{{- end -}}
+		{{- end -}}
 	</select></td>
+</tr>
+<tr>
+	<td>Navbar position</td>
+	<td><input type="number" min="0" name="navbarposition" value="{{$.board.NavbarPosition}}"></td>
 </tr>
 <tr>
 	<td>Max filesize</td>
 	<td><input type="number" min="0" name="maxfilesize" value="{{$.board.MaxFilesize}}"></td>
 </tr>
 <tr>
-	<td>Max number of pages</td>
-	<td><input type="number" min="0" name="maxpages" value="{{$.board.MaxPages}}"></td>
+	<td>Max number of threads</td>
+	<td><input type="number" min="0" name="maxthreads" value="{{$.board.MaxThreads}}"></td>
 </tr>
 <tr>
 	<td>Default style</td>
@@ -88,15 +80,11 @@
 </tr>
 <tr>
 	<td>Anonymous name</td>
-	<td><input type="text" name="anonname" value="{{$.board.Anonymous}}"/></td>
+	<td><input type="text" name="anonname" value="{{$.board.AnonymousName}}"/></td>
 </tr>
 <tr>
-	<td>Forced anonymous</td>
-	<td><input type="checkbox" name="forcedanon" {{- if $.board.ForcedAnon}}checked="checked"{{end}}/></td>
-</tr>
-<tr>
-	<td>Max age</td>
-	<td><input type="number" min="0" name="maxage" value="{{$.board.MaxAge}}"></td>
+	<td>Force anonymous</td>
+	<td><input type="checkbox" name="forcedanonymous" {{- if $.board.ForceAnonymous}}checked="checked"{{end}}/></td>
 </tr>
 <tr>
 	<td>Autosage after # replies</td>
@@ -111,18 +99,17 @@
 	<td><input type="number" min="0" name="maxmessagelength" value="{{$.board.MaxMessageLength}}"></td>
 </tr>
 <tr>
-	<td>Embeds allowed</td>
-	<td><input type="checkbox" name="embedsallowed" {{if $.board.EmbedsAllowed}}checked="checked"{{end}}/>
+	<td>Min message length (in characters)</td>
+	<td><input type="number" min="0" name="minmessagelength" value="{{$.board.MinMessageLength}}"></td>
+</tr>
+<tr>
+	<td>Allow embeds</td>
+	<td><input type="checkbox" name="embedsallowed" {{if $.board.AllowEmbeds}}checked="checked"{{end}}/>
 	</td>
 </tr>
 <tr>
 	<td>Redirect to thread by default</td>
 	<td><input type="checkbox" name="redirecttothread" {{if $.board.RedirectToThread}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>Show user ID tag</td>
-	<td><input type="checkbox" name="showid" {{if $.board.ShowID}}checked="checked"{{end}}/>
 	</td>
 </tr>
 <tr>
@@ -134,37 +121,6 @@
 	<td>Create catalog</td>
 	<td><input type="checkbox" name="enablecatalog" {{if $.board.EnableCatalog}}checked="checked"{{end}}/>
 	</td>
-</tr>
-<tr>
-	<td>Allow file spoilers</td>
-	<td><input type="checkbox" name="enablefilespoilers" {{if $.board.EnableSpoileredImages}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>Enable spoilered threads</td>
-	<td><input type="checkbox" name="enablethreadspoilers" {{if $.board.ForcedAnon}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>Worksafe board (no NSFW threads)</td>
-	<td><input type="checkbox" name="worksafe" {{if $.board.Worksafe}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>New thread cooldown</td>
-	<td><input type="number" min="0" name="threadcooldown" value="{{$.board.Cooldowns.NewThread}}"></td>
-</tr>
-<tr>
-	<td>Reply cooldown</td>
-	<td><input type="number" min="0" name="replycooldown" value="{{$.board.Cooldowns.Reply}}"></td>
-</tr>
-<tr>
-	<td>Image reply cooldown</td>
-	<td><input type="number" min="0" name="imagecooldown" value="{{$.board.Cooldowns.ImageReply}}"></td>
-</tr>
-<tr>
-	<td>Threads per page</td>
-	<td><input type="number" min="0" name="threadsperpage" value="{{$.board.ThreadsPerPage}}"></td>
 </tr>
 </table>
 {{- if $.editing -}}

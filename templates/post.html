@@ -1,6 +1,6 @@
 {{define "uploadinfo" -}}
 <div class="file-info">
-	File: <a href="{{$.global.webroot}}{{.board.Dir}}/src/{{.post.Filename}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}} , {{$.post.ImageW}}x{{$.post.ImageH}}, <a href="{{$.global.webroot}}{{.board.Dir}}/src/{{.post.Filename}}" class="file-orig" download="{{.post.FilenameOriginal}}">{{.post.FilenameOriginal}}</a>)
+	File: <a href="{{.post.UploadPath}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}} , {{$.post.UploadWidth}}x{{$.post.UploadHeight}}, <a href="{{.post.UploadPath}}" class="file-orig" download="{{.post.OriginalFilename}}">{{.post.OriginalFilename}}</a>)
 </div>
 {{- end -}}
 {{define "nameline"}}
@@ -8,33 +8,33 @@
 	<label class="post-info" for="check{{.post.ID}}"><span class="subject">{{.post.Subject}}</span> <span class="postername">
 		{{- if ne .post.Email ""}}<a href="mailto:{{.post.Email}}">{{end}}
 	{{- if and (eq .post.Name "") (eq .post.Tripcode "") -}}
-		{{.board.Anonymous}}
+		{{.board.AnonymousName}}
 	{{- else -}}
 		{{.post.Name}}
 	{{- end -}}
 	{{- if ne .post.Email ""}}</a>{{end}}</span>
 	{{- if ne .post.Tripcode ""}}<span class="tripcode">!{{.post.Tripcode}}</span>{{end}} {{formatTimestamp .post.Timestamp -}}
-</label><a href="{{$.global.webroot}}{{.board.Dir}}/res/{{if isOP $.post}}{{$.post.ID}}{{else}}{{$.post.ParentID}}{{end}}.html#{{.post.ID}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a> <span class="post-links"></span>
+</label><a href="{{.post.WebPath}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a> <span class="post-links"></span>
 {{if $.is_board_page}}
-[<a href="{{$.global.webroot}}{{$.board.Dir}}/res/{{$.post.ID}}.html">View</a>]
+[<a href="{{$.post.ThreadPath}}">View</a>]
 {{end}}<br />
 {{- end -}}
-{{- if isOP $.post -}}
+{{- if $.post.IsTopPost -}}
 <div class="op-post post" id="op{{$.post.ID}}">
 {{- else -}}
 <div id="replycontainer{{.post.ID}}" class="reply-container">
 	<div class="reply" id="reply{{.post.ID}}">
 		<a class="anchor" id="{{$.post.ID}}"></a>
 {{- end -}}
-{{if not (isOP $.post)}}{{template "nameline" .}}{{end -}}
+{{if not $.post.IsTopPost}}{{template "nameline" .}}{{end -}}
 
 {{- if eq $.post.Filename "deleted" -}}
 	<div class="file-deleted-box" style="text-align:center;">File removed</div>
 {{- else if ne $.post.Filename "" -}}
 	{{- template "uploadinfo" . -}}
-	<a class="upload-container" href="{{.global.webroot}}{{.board.Dir}}/src/{{.post.Filename}}"><img src="{{.global.webroot}}{{.board.Dir}}/thumb/{{getThreadThumbnail .post.Filename}}" alt="{{$.global.webroot}}{{$.board.Dir}}/src/{{.post.Filename}}" width="{{.post.ThumbW}}" height="{{.post.ThumbH}}" class="upload" /></a>
+	<a class="upload-container" href="{{.post.UploadPath}}"><img src="{{.post.ThumbnailPath}}" alt="{{.post.UploadPath}}" width="{{.post.ThumbnailWidth}}" height="{{.post.ThumbnailHeight}}" class="upload" /></a>
 {{- end -}}
-{{- if isOP $.post}}{{template "nameline" .}}{{end -}}
-	<div class="post-text">{{.post.MessageHTML}}</div>
-	</div>{{if not (isOP $.post)}}
-{{if not (isOP $.post)}}</div>{{end}}{{end}}
+{{- if $.post.IsTopPost}}{{template "nameline" .}}{{end -}}
+	<div class="post-text">{{.post.Message}}</div>
+	</div>{{if not $.post.IsTopPost}}
+{{if not $.post.IsTopPost}}</div>{{end}}{{end}}

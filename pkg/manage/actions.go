@@ -5,15 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"html"
 	"net"
 	"net/http"
 	"os"
 	"path"
 	"regexp"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -22,6 +19,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting"
 	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -71,7 +69,7 @@ type Action struct {
 	//
 	// IMPORTANT: the writer parameter should only be written to if absolutely necessary (for example,
 	// if a redirect wouldn't work in handler.go) and even then, it should be done sparingly
-	Callback func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) `json:"-"`
+	Callback func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) `json:"-"`
 }
 
 var actions = []Action{
@@ -79,7 +77,7 @@ var actions = []Action{
 		ID:          "logout",
 		Title:       "Logout",
 		Permissions: JanitorPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			if err = gcsql.EndStaffSession(writer, request); err != nil {
 				return "", err
 			}
@@ -93,7 +91,7 @@ var actions = []Action{
 		Title:       "Log me out everywhere",
 		Permissions: JanitorPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			session, err := request.Cookie("sessiondata")
 			if err != nil {
 				// doesn't have a login session cookie, return with no errors
@@ -117,15 +115,14 @@ var actions = []Action{
 				}
 				return "You are not logged in", err
 			}
-			numSessions, err := staff.CleanSessions()
-			if err != nil && err != sql.ErrNoRows {
+			if err = staff.ClearSessions(); err != nil && err != sql.ErrNoRows {
 				// something went wrong when trying to clean out sessions for this user
 				return nil, err
 			}
 			serverutil.DeleteCookie(writer, request, "sessiondata")
-			gcutil.LogInfo().
+			gcutil.LogAccess(request).
 				Str("clearSessions", staff.Username).
-				Int64("cleared", numSessions)
+				Send()
 			if !wantsJSON {
 				http.Redirect(writer, request,
 					config.GetSystemCriticalConfig().WebRoot+"manage",
@@ -139,16 +136,14 @@ var actions = []Action{
 		ID:          "cleanup",
 		Title:       "Cleanup",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			outputStr := ""
 			if request.FormValue("run") == "Run Cleanup" {
 				outputStr += "Removing deleted posts from the database.<hr />"
 				if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).
 						Str("cleanup", "removeDeletedPosts").
-						Str("action", "cleanup").
-						Str("IP", gcutil.GetRealIP(request))
-
+						Caller().Send()
 					err = errors.New("Error removing deleted posts from database: " + err.Error())
 					return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 				}
@@ -156,10 +151,9 @@ var actions = []Action{
 				outputStr += "Optimizing all tables in database.<hr />"
 				err = gcsql.OptimizeDatabase()
 				if err != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).
 						Str("sql", "optimization").
-						Str("action", "cleanup").
-						Str("staff", staff.Username).Send()
+						Caller().Send()
 					err = errors.New("Error optimizing SQL tables: " + err.Error())
 					return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 				}
@@ -176,354 +170,418 @@ var actions = []Action{
 		Title:       "Recent posts",
 		Permissions: JanitorPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
-			limit := gcutil.HackyStringToInt(request.FormValue("limit"))
-			if limit == 0 {
-				limit = 50
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			limit := 20
+			limitStr := request.FormValue("limit")
+			if limitStr != "" {
+				limit, err = strconv.Atoi(limitStr)
+				if err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
 			}
-			recentposts, err := gcsql.GetRecentPostsGlobal(limit, false) //only uses boardname, boardid, postid, parentid, message, ip and timestamp
-			if wantsJSON || err != nil {
-				return recentposts, err
+			boardidStr := request.FormValue("boardid")
+			var recentposts []building.Post
+			var boardid int
+			if boardidStr != "" {
+				if boardid, err = strconv.Atoi(boardidStr); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+			}
+			recentposts, err = building.GetRecentPosts(boardid, limit)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", err
+			}
+			if wantsJSON {
+				return recentposts, nil
 			}
 			manageRecentsBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageRecentPosts, map[string]interface{}{
 				"recentposts": recentposts,
+				"allBoards":   gcsql.AllBoards,
+				"boardid":     boardid,
+				"limit":       limit,
 				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 			}, manageRecentsBuffer, "text/html"); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "recentposts").Send()
+				errEv.Err(err).Caller().Send()
 				return "", errors.New("Error executing ban management page template: " + err.Error())
 			}
 			return manageRecentsBuffer.String(), nil
-		}},
-	{
-		ID:          "filebans",
-		Title:       "File bans",
-		Permissions: ModPerms,
-		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (interface{}, error) {
-			errorEv := gcutil.LogError(nil).
-				Str("action", "filebans").
-				Str("staff", staff.Username)
-			defer errorEv.Discard()
-			var err error
-			fileBanType := request.PostForm.Get("bantype")
-			delFnbStr := request.Form.Get("delfnb")
-			if delFnbStr != "" {
-				var delFilenameBanID int
-				if delFilenameBanID, err = strconv.Atoi(delFnbStr); err != nil {
-					errorEv.Err(err).
-						Str("delfnb", delFnbStr).Send()
-					return "", err
-				}
-				if err = gcsql.DeleteFilenameBanByID(delFilenameBanID); err != nil {
-					errorEv.Err(err).
-						Int("delfnb", delFilenameBanID).Send()
-					return "", err
-				}
-				gcutil.LogInfo().
-					Str("action", "filebans").
-					Str("staff", staff.Username).
-					Int("delFilenameBan", delFilenameBanID).Send()
-			}
-			delCsbStr := request.Form.Get("delcsb")
-			if delCsbStr != "" {
-				var delChecksumBanID int
-				if delChecksumBanID, err = strconv.Atoi(delCsbStr); err != nil {
-					errorEv.Err(err).
-						Str("delcsb", delCsbStr).Send()
-					return "", err
-				}
-				if err = gcsql.DeleteFileBanByID(delChecksumBanID); err != nil {
-					errorEv.Err(err).
-						Int("delcsb", delChecksumBanID).Send()
-					return "", err
-				}
-				gcutil.LogInfo().
-					Str("action", "filebans").
-					Str("staff", staff.Username).
-					Int("delChecksumBan", delChecksumBanID).Send()
-			}
-			switch fileBanType {
-			case "filename":
-				// filename form used
-				filename := request.PostForm.Get("filename")
-				isWildcard := request.PostForm.Get("iswildcard") == "on"
-				board := request.PostForm.Get("board")
-				staffNote := request.PostForm.Get("staffnote")
-				if filename == "" {
-					err = errors.New("missing filename field in filename ban creation")
-					errorEv.Err(err).Send()
-					return "", err
-				}
-				if err = gcsql.CreateFileNameBan(filename, isWildcard, staff.Username, staffNote, board); err != nil {
-					errorEv.Err(err).
-						Str("filename", filename).
-						Bool("iswildcard", isWildcard).
-						Str("board", board).
-						Str("staffnote", staffNote).Send()
-					return "", err
-				}
-				gcutil.LogInfo().
-					Str("action", "filebans").
-					Str("staff", staff.Username).
-					Str("newBanType", "filename").Send()
-			case "checksum":
-				// file checksum form used
-				checksum := request.PostForm.Get("checksum")
-				board := request.PostForm.Get("board")
-				staffNote := request.PostForm.Get("staffnote")
-				if checksum == "" {
-					err = errors.New("missing checksum field in filename ban creation")
-					errorEv.Err(err).Send()
-					return "", err
-				}
-				if err = gcsql.CreateFileBan(checksum, staff.Username, staffNote, board); err != nil {
-					errorEv.Err(err).
-						Str("checksum", checksum).
-						Str("board", board).
-						Str("staffnote", staffNote).Send()
-					return "", err
-				}
-				gcutil.LogInfo().
-					Str("action", "filebans").
-					Str("staff", staff.Username).
-					Str("newBanType", "checksum").Send()
-			case "":
-				// no POST data sent
-			default:
-				err = fmt.Errorf(`invalid bantype value %q, valid values are "filename" and "checksum"`, fileBanType)
-				errorEv.Err(err).Send()
-				return "", err
-			}
-
-			filenameBans, err := gcsql.GetFilenameBans("", false)
-			if err != nil {
-				return "", err
-			}
-			checksumBans, err := gcsql.GetFileChecksumBans("")
-			if err != nil {
-				return "", err
-			}
-			if wantsJSON {
-				return map[string]interface{}{
-					"filenameBans": filenameBans,
-					"checksumBans": checksumBans,
-				}, nil
-			}
-
-			boardURIs, err := gcsql.GetBoardUris()
-			if err != nil {
-				return "", err
-			}
-			manageBansBuffer := bytes.NewBufferString("")
-			if err = serverutil.MinifyTemplate(gctemplates.ManageFileBans, map[string]interface{}{
-				"webroot":      config.GetSystemCriticalConfig().WebRoot,
-				"filenameBans": filenameBans,
-				"checksumBans": checksumBans,
-				"currentStaff": staff.Username,
-				"boardURIs":    boardURIs,
-			}, manageBansBuffer, "text/html"); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "filebans").
-					Str("template", "manage_filebans.html").
-					Msg("failed executing file ban management page template")
-				return "", errors.New("failed executing file ban management page template: " + err.Error())
-			}
-			return manageBansBuffer.String(), nil
-		},
-	},
-	{
-		ID:          "ipbans",
-		Title:       "IP Bans",
-		Permissions: ModPerms,
-		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
-			return "", gcutil.ErrNotImplemented
 		},
 	},
 	{
 		ID:          "bans",
 		Title:       "Bans",
 		Permissions: ModPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) { //TODO whatever this does idk man
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			var outputStr string
-			var post gcsql.Post
-			errorEv := gcutil.LogError(nil).
-				Str("action", "bans").
-				Str("staff", staff.Username)
-			defer errorEv.Discard()
-
-			if request.FormValue("do") == "add" {
-				ip := request.FormValue("ip")
-				name := request.FormValue("name")
-				nameIsRegex := (request.FormValue("nameregex") == "on")
-				checksum := request.FormValue("checksum")
-				filename := request.FormValue("filename")
-				durationForm := request.FormValue("duration")
-				permaban := (durationForm == "" || durationForm == "0" || durationForm == "forever")
-				duration, err := gcutil.ParseDurationString(durationForm)
+			var ban gcsql.IPBan
+			ban.StaffID = staff.ID
+			deleteIDStr := request.FormValue("delete")
+			if deleteIDStr != "" {
+				// deleting a ban
+				ban.ID, err = strconv.Atoi(deleteIDStr)
 				if err != nil {
-					errorEv.Err(err).Send()
+					errEv.Err(err).
+						Str("deleteBan", deleteIDStr).
+						Caller().Send()
 					return "", err
 				}
-				expires := time.Now().Add(duration)
-
-				boards := request.FormValue("boards")
-				reason := html.EscapeString(request.FormValue("reason"))
-				staffNote := html.EscapeString(request.FormValue("staffnote"))
-
-				if filename != "" {
-					err = gcsql.CreateFileNameBan(filename, nameIsRegex, staff.Username, staffNote, boards)
+				if err = ban.Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteBan", ban.ID).
+						Caller().Send()
+					return "", err
 				}
+
+			} else if request.FormValue("do") == "add" {
+				err := ipBanFromRequest(&ban, request, errEv)
 				if err != nil {
-					outputStr += err.Error()
-					errorEv.Err(err).Send()
-					err = nil
+					return "", err
 				}
-				if name != "" {
-					if err = gcsql.CreateUserNameBan(name, nameIsRegex, staff.Username, permaban, staffNote, boards); err != nil {
-						errorEv.
-							Str("banType", "username").
-							Str("user", name).Send()
-						return "", err
-					}
-					gcutil.LogInfo().
-						Str("action", "bans").
-						Str("staff", staff.Username).
-						Str("banType", "username").
-						Str("user", name).
-						Bool("permaban", permaban).Send()
-				}
-
-				if request.FormValue("fullban") == "on" {
-					err = gcsql.CreateUserBan(ip, false, staff.Username, boards, expires, permaban, staffNote, reason, true, time.Now())
-					if err != nil {
-						errorEv.
-							Str("banType", "ip").
-							Str("banIP", ip).
-							Bool("threadBan", false).
-							Str("bannedFromBoards", boards).Send()
-						return "", err
-					}
-					gcutil.LogInfo().
-						Str("staff", staff.Username).
-						Str("banType", "ip").
-						Str("banIP", ip).
-						Bool("threadBan", true).
-						Str("bannedFromBoards", boards).Send()
-				} else {
-					if request.FormValue("threadban") == "on" {
-						err = gcsql.CreateUserBan(ip, true, staff.Username, boards, expires, permaban, staffNote, reason, true, time.Now())
-						if err != nil {
-							errorEv.
-								Str("banType", "ip").
-								Str("banIP", ip).
-								Bool("threadBan", true).
-								Str("bannedFromBoards", boards).Send()
-							return "", err
-						}
-						gcutil.LogInfo().
-							Str("staff", staff.Username).
-							Str("banType", "ip").
-							Str("banIP", ip).
-							Bool("threadBan", true).
-							Str("bannedFromBoards", boards).Send()
-					}
-					if request.FormValue("imageban") == "on" {
-						err = gcsql.CreateFileBan(checksum, staff.Username, staffNote, boards)
-						if err != nil {
-							errorEv.
-								Str("banType", "fileBan").
-								Str("checksum", checksum).Send()
-							return "", err
-						}
-						gcutil.LogInfo().
-							Str("staff", staff.Username).
-							Str("banType", "fileBan").
-							Str("checksum", checksum).Send()
-					}
-				}
+				infoEv.
+					Str("bannedIP", ban.IP).
+					Str("expires", ban.ExpiresAt.String()).
+					Bool("permanent", ban.Permanent).
+					Str("reason", ban.Message).
+					Msg("Added IP ban")
 			}
 
-			if request.FormValue("postid") != "" {
-				var err error
-				post, err = gcsql.GetSpecificPostByString(request.FormValue("postid"), true)
-				if err != nil {
-					errorEv.Err(err).Str("postid", request.FormValue("postid")).Msg("Error getting post")
-					err = errors.New("Error getting post: " + err.Error())
+			filterBoardIDstr := request.FormValue("filterboardid")
+			var filterBoardID int
+			if filterBoardIDstr != "" {
+				if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
+					errEv.Err(err).
+						Str("filterboardid", filterBoardIDstr).Caller().Send()
 					return "", err
 				}
 			}
-
-			banlist, err := gcsql.GetAllBans()
+			limitStr := request.FormValue("limit")
+			limit := 200
+			if limitStr != "" {
+				if limit, err = strconv.Atoi(limitStr); err != nil {
+					errEv.Err(err).
+						Str("limit", limitStr).Caller().Send()
+					return "", err
+				}
+			}
+			banlist, err := gcsql.GetIPBans(filterBoardID, limit, true)
 			if err != nil {
-				errorEv.Err(err).Msg("Error getting ban list")
+				errEv.Err(err).Msg("Error getting ban list")
 				err = errors.New("Error getting ban list: " + err.Error())
 				return "", err
 			}
 			manageBansBuffer := bytes.NewBufferString("")
 
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]interface{}{
-				// "systemCritical": config.GetSystemCriticalConfig(),
-				"banlist": banlist,
-				"post":    post,
+				"banlist":       banlist,
+				"allBoards":     gcsql.AllBoards,
+				"ban":           ban,
+				"filterboardid": filterBoardID,
 			}, manageBansBuffer, "text/html"); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "bans").
-					Str("template", "manage_bans.html").Send()
+				errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
 				return "", errors.New("Error executing ban management page template: " + err.Error())
 			}
 			outputStr += manageBansBuffer.String()
 			return outputStr, nil
 		}},
 	{
+		ID:          "appeals",
+		Title:       "Ban appeals",
+		Permissions: ModPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			banIDstr := request.FormValue("banid")
+			var banID int
+			if banIDstr != "" {
+				if banID, err = strconv.Atoi(banIDstr); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+			}
+			infoEv.Int("banID", banID)
+
+			limitStr := request.FormValue("limit")
+			limit := 20
+			if limitStr != "" {
+				if limit, err = strconv.Atoi(limitStr); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+			}
+			approveStr := request.FormValue("approve")
+			if approveStr != "" {
+				// approving an appeal
+				approveID, err := strconv.Atoi(approveStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("approveStr", approveStr).Caller().Send()
+				}
+				if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
+					errEv.Err(err).
+						Int("approveAppeal", approveID).
+						Caller().Send()
+					return "", err
+				}
+			}
+
+			appeals, err := gcsql.GetAppeals(banID, limit)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", errors.New("Unable to get appeals: " + err.Error())
+			}
+
+			manageAppealsBuffer := bytes.NewBufferString("")
+			pageData := map[string]interface{}{}
+			if appeals != nil && len(appeals) > 0 {
+				pageData["appeals"] = appeals
+			}
+			if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_appeals.html").Caller().Send()
+				return "", errors.New("Error executing appeal management page template: " + err.Error())
+			}
+			return manageAppealsBuffer.String(), err
+		}},
+	{
+		ID:          "filebans",
+		Title:       "Filename and checksum bans",
+		Permissions: ModPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			delFilenameBanIDStr := request.FormValue("delfnb") // filename ban deletion
+			delChecksumBanIDStr := request.FormValue("delcsb") // checksum ban deletion
+
+			boardidStr := request.FormValue("boardid")
+			boardid := 0
+			if boardidStr != "" {
+				boardid, err = strconv.Atoi(boardidStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("boardid", boardidStr).
+						Caller().Send()
+					return "", err
+				}
+			}
+			staffnote := request.FormValue("staffnote")
+
+			if request.FormValue("dofilenameban") != "" {
+				// creating a new filename ban
+				filename := request.FormValue("filename")
+				isRegex := request.FormValue("isregex") == "on"
+				if isRegex {
+					_, err = regexp.Compile(filename)
+					if err != nil {
+						// invalid regular expression
+						errEv.Err(err).
+							Str("regex", filename).
+							Caller().Send()
+						return "", err
+					}
+				}
+				if _, err = gcsql.NewFilenameBan(filename, isRegex, boardid, staff.ID, staffnote); err != nil {
+					errEv.Err(err).
+						Str("filename", filename).
+						Bool("isregex", isRegex).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("filename", filename).
+					Bool("isregex", isRegex).
+					Int("boardid", boardid).
+					Msg("Created new filename ban")
+			} else if delFilenameBanIDStr != "" {
+				delFilenameBanID, err := strconv.Atoi(delFilenameBanIDStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("delfnb", delFilenameBanIDStr).
+						Caller().Send()
+					return "", err
+				}
+				var fnb gcsql.FilenameBan
+				fnb.ID = delFilenameBanID
+				if err = fnb.Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteFilenameBanID", delFilenameBanID).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Int("deleteFilenameBanID", delFilenameBanID).
+					Int("boardid", boardid).
+					Msg("Filename ban deleted")
+			} else if request.FormValue("dochecksumban") != "" {
+				// creating a new file checksum ban
+				checksum := request.FormValue("checksum")
+				if _, err = gcsql.NewFileChecksumBan(checksum, boardid, staff.ID, staffnote); err != nil {
+					errEv.Err(err).
+						Str("checksum", checksum).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("checksum", checksum).
+					Int("boardid", boardid).
+					Msg("Created new file checksum ban")
+			} else if delChecksumBanIDStr != "" {
+				// user requested a checksum ban ID to delete
+				delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
+				if err != nil {
+					errEv.Err(err).
+						Str("deleteChecksumBanIDStr", delChecksumBanIDStr).
+						Caller().Send()
+					return "", err
+				}
+				if err = (gcsql.FileBan{ID: delChecksumBanID}).Deactivate(staff.ID); err != nil {
+					errEv.Err(err).
+						Int("deleteChecksumBanID", delChecksumBanID).
+						Caller().Send()
+					return "", err
+				}
+				infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
+			}
+			filterBoardIDstr := request.FormValue("filterboardid")
+			var filterBoardID int
+			if filterBoardIDstr != "" {
+				if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
+					errEv.Err(err).
+						Str("filterboardid", filterBoardIDstr).Caller().Send()
+					return "", err
+				}
+			}
+			limitStr := request.FormValue("limit")
+			limit := 200
+			if limitStr != "" {
+				if limit, err = strconv.Atoi(limitStr); err != nil {
+					errEv.Err(err).
+						Str("limit", limitStr).Caller().Send()
+					return "", err
+				}
+			}
+			checksumBans, err := gcsql.GetFileBans(filterBoardID, limit)
+			if err != nil {
+				return "", err
+			}
+			filenameBans, err := gcsql.GetFilenameBans(filterBoardID, limit)
+			if err != nil {
+				return "", err
+			}
+			manageBansBuffer := bytes.NewBufferString("")
+
+			if err = serverutil.MinifyTemplate(gctemplates.ManageFileBans, map[string]interface{}{
+				"allBoards":     gcsql.AllBoards,
+				"checksumBans":  checksumBans,
+				"filenameBans":  filenameBans,
+				"filterboardid": filterBoardID,
+			}, manageBansBuffer, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_filebans.html").Caller().Send()
+				return "", errors.New("Error executing ban management page template: " + err.Error())
+			}
+			outputStr := manageBansBuffer.String()
+			return outputStr, nil
+		},
+	},
+	{
+		ID:          "namebans",
+		Title:       "Name bans",
+		Permissions: ModPerms,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			doNameBan := request.FormValue("donameban")
+			deleteIDstr := request.FormValue("del")
+			if deleteIDstr != "" {
+				deleteID, err := strconv.Atoi(deleteIDstr)
+				if err != nil {
+					errEv.Err(err).
+						Str("delStr", deleteIDstr).
+						Caller().Send()
+					return "", err
+				}
+				if err = gcsql.DeleteNameBan(deleteID); err != nil {
+					errEv.Err(err).
+						Int("deleteID", deleteID).
+						Caller().Msg("Unable to delete name ban")
+					return "", errors.New("Unable to delete name ban: " + err.Error())
+				}
+			}
+			data := map[string]interface{}{
+				"webroot":      config.GetSystemCriticalConfig().WebRoot,
+				"currentStaff": staff.Username,
+				"allBoards":    gcsql.AllBoards,
+			}
+			if doNameBan == "Create" {
+				var name string
+				if name, err = getStringField("name", staff.Username, request); err != nil {
+					return "", err
+				}
+				if name == "" {
+					return "", errors.New("name field must not be empty in name ban submission")
+				}
+				var boardID int
+				if boardID, err = getIntField("boardid", staff.Username, request); err != nil {
+					return "", err
+				}
+				isRegex := request.FormValue("isregex") == "on"
+				if _, err = gcsql.NewNameBan(name, isRegex, boardID, staff.ID, request.FormValue("staffnote")); err != nil {
+					errEv.Err(err).
+						Str("name", name).
+						Int("boardID", boardID)
+					return "", err
+				}
+			}
+			if data["nameBans"], err = gcsql.GetNameBans(0, 0); err != nil {
+				return "", err
+			}
+			buf := bytes.NewBufferString("")
+			if err = serverutil.MinifyTemplate(gctemplates.ManageNameBans, data, buf, "text/html"); err != nil {
+				errEv.Err(err).Str("template", "manage_namebans.html").Caller().Send()
+				return "", errors.New("Error executing name ban management page template: " + err.Error())
+			}
+			return buf.String(), nil
+		},
+	},
+	{
 		ID:          "ipsearch",
 		Title:       "IP Search",
 		Permissions: ModPerms,
 		JSONoutput:  NoJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
-			ipQuery := request.Form.Get("ip")
-			limitStr := request.Form.Get("limit")
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+			ipQuery := request.FormValue("ip")
+			limitStr := request.FormValue("limit")
 			data := map[string]interface{}{
 				"webroot": config.GetSystemCriticalConfig().WebRoot,
 				"ipQuery": ipQuery,
-				"limit":   10,
+				"limit":   20,
 			}
 
 			if ipQuery != "" && limitStr != "" {
 				var limit int
-				if limit, err = strconv.Atoi(request.Form.Get("limit")); err != nil || limit < 1 {
-					limit = 20
+				if limit, err = strconv.Atoi(limitStr); err == nil && limit > 0 {
+					data["limit"] = limit
 				}
-				data["limit"] = limit
 				var names []string
 				if names, err = net.LookupAddr(ipQuery); err == nil {
 					data["reverseAddrs"] = names
 				} else {
 					data["reverseAddrs"] = []string{err.Error()}
 				}
-				data["posts"], err = gcsql.GetPostsFromIP(ipQuery, limit, true)
+
+				data["posts"], err = building.GetBuildablePostsByIP(ipQuery, limit)
 				if err != nil {
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "ipsearch").
+					errEv.Err(err).
 						Str("ipQuery", ipQuery).
 						Int("limit", limit).
-						Bool("onlyNotDeleted", true).Send()
+						Bool("onlyNotDeleted", true).
+						Caller().Send()
 					return "", fmt.Errorf("Error getting list of posts from %q by staff %s: %s", ipQuery, staff.Username, err.Error())
 				}
 			}
 
 			manageIpBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageIPSearch, data, manageIpBuffer, "text/html"); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "ipsearch").
-					Str("template", "manage_ipsearch.html").Send()
+				errEv.Err(err).
+					Str("template", "manage_ipsearch.html").
+					Caller().Send()
 				return "", errors.New("Error executing IP search page template:" + err.Error())
 			}
 			return manageIpBuffer.String(), nil
@@ -533,35 +591,30 @@ var actions = []Action{
 		Title:       "Reports",
 		Permissions: ModPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			dismissIDstr := request.FormValue("dismiss")
 			if dismissIDstr != "" {
 				// staff is dismissing a report
 				dismissID := gcutil.HackyStringToInt(dismissIDstr)
 				block := request.FormValue("block")
 				if block != "" && staff.Rank != 3 {
-					serveError(writer, "permission", "reports", "Only the administrator can block reports", wantsJSON)
-					gcutil.LogWarning().
-						Str("staff", staff.Username).
-						Str("action", "reports").
+					errEv.
 						Int("postID", dismissID).
-						Str("rejected", "not an admin").Send()
-					return "", nil
+						Str("rejected", "not an admin").
+						Caller().Send()
+					return "", errors.New("only the administrator can block reports")
 				}
 				found, err := gcsql.ClearReport(dismissID, staff.ID, block != "" && staff.Rank == 3)
 				if err != nil {
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "reports").
-						Int("postID", dismissID).Send()
+					errEv.Err(err).
+						Int("postID", dismissID).
+						Caller().Send()
 					return nil, err
 				}
 				if !found {
 					return nil, errors.New("no matching reports")
 				}
-				gcutil.LogInfo().
-					Str("staff", staff.Username).
-					Str("action", "reports").
+				infoEv.
 					Int("reportID", dismissID).
 					Bool("blocked", block != "").
 					Msg("Report cleared")
@@ -569,10 +622,11 @@ var actions = []Action{
 			rows, err := gcsql.QuerySQL(`SELECT id,
 				handled_by_staff_id as staff_id,
 				(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
-				post_id, ip, reason, is_cleared from DBPREFIXreports WHERE is_cleared = 0`)
+				post_id, ip, reason, is_cleared from DBPREFIXreports WHERE is_cleared = FALSE`)
 			if err != nil {
 				return nil, err
 			}
+			defer rows.Close()
 			reports := make([]map[string]interface{}, 0)
 			for rows.Next() {
 				var id int
@@ -586,7 +640,8 @@ var actions = []Action{
 				if err != nil {
 					return nil, err
 				}
-				post, err := gcsql.GetSpecificPost(post_id, true)
+
+				post, err := gcsql.GetPostFromID(post_id, true)
 				if err != nil {
 					return nil, err
 				}
@@ -596,7 +651,7 @@ var actions = []Action{
 					"id":         id,
 					"staff_id":   int(staff_id_int),
 					"staff_user": string(staff_user),
-					"post_link":  post.GetURL(false),
+					"post_link":  post.WebPath(),
 					"ip":         ip,
 					"reason":     reason,
 					"is_cleared": is_cleared,
@@ -612,9 +667,7 @@ var actions = []Action{
 					"staff":   staff,
 				}, reportsBuffer, "text/html")
 			if err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "reports").Send()
+				errEv.Err(err).Caller().Send()
 				return "", err
 			}
 			output = reportsBuffer.String()
@@ -625,18 +678,18 @@ var actions = []Action{
 		Title:       "Staff",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			var outputStr string
 			do := request.FormValue("do")
-			allStaff, err := gcsql.GetAllStaffNopass(true)
+			allStaff, err := getAllStaffNopass(true)
 			if wantsJSON {
+				if err != nil {
+					errEv.Err(err).Caller().Msg("Failed getting staff list")
+				}
 				return allStaff, err
 			}
 			if err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "staff").
-					Msg("Error getting staff list")
+				errEv.Err(err).Caller().Msg("Failed getting staff list")
 				err = errors.New("Error getting staff list: " + err.Error())
 				return "", err
 			}
@@ -647,34 +700,27 @@ var actions = []Action{
 				rank := request.FormValue("rank")
 				rankI, _ := strconv.Atoi(rank)
 				if do == "add" {
-					if err = gcsql.NewStaff(username, password, rankI); err != nil {
-						gcutil.LogError(err).
-							Str("staff", staff.Username).
-							Str("action", "staff").
+					if _, err = gcsql.NewStaff(username, password, rankI); err != nil {
+						errEv.
 							Str("newStaff", username).
 							Str("newPass", password).
 							Int("newRank", rankI).
-							Msg("Error creating new staff account")
+							Caller().Msg("Error creating new staff account")
 						return "", fmt.Errorf("Error creating new staff account %q by %q: %s",
 							username, staff.Username, err.Error())
 					}
 				} else if do == "del" && username != "" {
-					if err = gcsql.DeleteStaff(username); err != nil {
-						gcutil.LogError(err).
-							Str("staff", staff.Username).
-							Str("action", "staff").
+					if err = gcsql.DeactivateStaff(username); err != nil {
+						errEv.Err(err).
 							Str("delStaff", username).
-							Msg("Error deleting staff account")
+							Caller().Msg("Error deleting staff account")
 						return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
 							username, staff.Username, err.Error())
 					}
 				}
-				allStaff, err = gcsql.GetAllStaffNopass(true)
+				allStaff, err = getAllStaffNopass(true)
 				if err != nil {
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "staff").
-						Msg("Error getting updated staff list")
+					errEv.Err(err).Caller().Msg("Error getting updated staff list")
 					err = errors.New("Error getting updated staff list: " + err.Error())
 					return "", err
 				}
@@ -695,10 +741,7 @@ var actions = []Action{
 				"webroot":         config.GetSystemCriticalConfig().WebRoot,
 				"currentUsername": staff.Username,
 			}, staffBuffer, "text/html"); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "staff").
-					Str("template", "manage_staff.html").Send()
+				errEv.Err(err).Str("template", "manage_staff.html").Send()
 				return "", errors.New("Error executing staff management page template: " + err.Error())
 			}
 			outputStr += staffBuffer.String()
@@ -708,7 +751,7 @@ var actions = []Action{
 		ID:          "login",
 		Title:       "Login",
 		Permissions: NoPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			systemCritical := config.GetSystemCriticalConfig()
 			if staff.Rank > 0 {
 				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
@@ -731,10 +774,7 @@ var actions = []Action{
 					"board_config": config.GetBoardConfig(""),
 					"redirect":     redirectAction,
 				}, manageLoginBuffer, "text/html"); err != nil {
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "login").
-						Str("template", "manage_login.html").Send()
+					errEv.Err(err).Str("template", "manage_login.html").Send()
 					return "", errors.New("Error executing staff login page template: " + err.Error())
 				}
 				output = manageLoginBuffer.String()
@@ -750,7 +790,7 @@ var actions = []Action{
 		Title:       "Announcements",
 		Permissions: JanitorPerms,
 		JSONoutput:  AlwaysJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			// return an array of announcements and any errors
 			return gcsql.GetAllAccouncements()
 		}},
@@ -758,7 +798,7 @@ var actions = []Action{
 		ID:          "staffinfo",
 		Permissions: NoPerms,
 		JSONoutput:  AlwaysJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			return staff, nil
 		}},
 	{
@@ -766,75 +806,95 @@ var actions = []Action{
 		Title:       "Boards",
 		Permissions: AdminPerms,
 		JSONoutput:  NoJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
-			pageBuffer := bytes.NewBufferString("")
-			var board gcsql.Board
-			requestType, boardID, err := boardsRequestType(request)
-			if err != nil {
-				return "", err
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+			board := &gcsql.Board{
+				MaxFilesize:      1000 * 1000 * 15,
+				AnonymousName:    "Anonymous",
+				EnableCatalog:    true,
+				MaxMessageLength: 1500,
+				AutosageAfter:    200,
+				NoImagesAfter:    0,
 			}
-			if requestType == "cancel" || requestType == "" {
-				board.SetDefaults("", "", "")
-			}
+			requestType, _, _ := boardsRequestType(request)
 			switch requestType {
 			case "create":
 				// create button clicked, create the board with the request fields
-				board.ChangeFromRequest(request, false)
-				err = board.Create()
+				if err = getBoardDataFromForm(board, request); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+				if err = gcsql.CreateBoard(board, true); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("createBoard", board.Dir).
+					Int("boardID", board.ID).
+					Msg("New board created")
 			case "delete":
 				// delete button clicked, delete the board
-				if board, err = gcsql.GetBoardFromID(boardID); err != nil {
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "boards").
-						Int("deleteBoardID", boardID).Send()
-					return "", err
-				}
-				err = board.Delete()
+				boardID, err := getIntField("board", staff.Username, request, 0)
 				if err != nil {
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "boards").
-						Str("deleteBoard", board.Dir).Send()
 					return "", err
 				}
-				gcutil.LogInfo().
-					Str("staff", staff.Username).
-					Str("action", "boards").
-					Str("deleteBoard", board.Dir).Send()
-				err = os.RemoveAll(board.AbsolutePath())
+				// use a temporary variable so that the form values aren't filled
+				var deleteBoard *gcsql.Board
+				if deleteBoard, err = gcsql.GetBoardFromID(boardID); err != nil {
+					errEv.Err(err).Int("deleteBoardID", boardID).Caller().Send()
+					return "", err
+				}
+				if err = deleteBoard.Delete(); err != nil {
+					errEv.Err(err).Str("deleteBoard", deleteBoard.Dir).Caller().Send()
+					return "", err
+				}
+				infoEv.
+					Str("deleteBoard", deleteBoard.Dir).Send()
+				if err = os.RemoveAll(deleteBoard.AbsolutePath()); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
 			case "edit":
 				// edit button clicked, fill the input fields with board data to be edited
-				board, err = gcsql.GetBoardFromID(boardID)
-			case "modify":
-				// save changes button clicked, apply changes to the board based on the request fields
-				board, err = gcsql.GetBoardFromID(boardID)
+				boardID, err := getIntField("boardid", staff.Username, request, 0)
 				if err != nil {
 					return "", err
 				}
-				err = board.ChangeFromRequest(request, true)
+				if board, err = gcsql.GetBoardFromID(boardID); err != nil {
+					errEv.Err(err).
+						Int("boardID", boardID).
+						Caller().Msg("Unable to get board info")
+					return "", err
+				}
+			case "modify":
+				// save changes button clicked, apply changes to the board based on the request fields
+				if err = getBoardDataFromForm(board, request); err != nil {
+					return "", err
+				}
+				if err = board.ModifyInDB(); err != nil {
+					return "", errors.New("Unable to apply changes: " + err.Error())
+				}
 			case "cancel":
 				// cancel button was clicked
 				fallthrough
 			case "":
 				fallthrough
 			default:
-				board.SetDefaults("", "", "")
+				// board.SetDefaults("", "", "")
 			}
-			if err != nil {
-				return "", err
-			}
-			if requestType == "create" || requestType == "modify" && err != nil {
+
+			if requestType == "create" || requestType == "modify" || requestType == "delete" {
+				if err = gcsql.ResetBoardSectionArrays(); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", errors.New("unable to reset board list: " + err.Error())
+				}
 				if err = building.BuildBoardListJSON(); err != nil {
 					return "", err
 				}
-				if err = building.BuildBoards(false, board.ID); err != nil {
-					return "", err
-				}
-				if err = building.BuildBoardPages(&board); err != nil {
+				if err = building.BuildBoards(false); err != nil {
 					return "", err
 				}
 			}
+			pageBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
 				map[string]interface{}{
 					"webroot":      config.GetSystemCriticalConfig().WebRoot,
@@ -845,10 +905,7 @@ var actions = []Action{
 					"editing":      requestType == "edit",
 					"board":        board,
 				}, pageBuffer, "text/html"); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "boards").
-					Str("template", "manage_boards.html").Send()
+				errEv.Err(err).Str("template", "manage_boards.html").Caller().Send()
 				return "", err
 			}
 
@@ -858,14 +915,15 @@ var actions = []Action{
 		ID:          "boardsections",
 		Title:       "Board sections",
 		Permissions: AdminPerms,
-		JSONoutput:  NoJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
-			section := &gcsql.BoardSection{}
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+			section := &gcsql.Section{}
 			editID := request.Form.Get("edit")
 			updateID := request.Form.Get("updatesection")
 			deleteID := request.Form.Get("delete")
 			if editID != "" {
 				if section, err = gcsql.GetSectionFromID(gcutil.HackyStringToInt(editID)); err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -874,6 +932,7 @@ var actions = []Action{
 				}
 			} else if updateID != "" {
 				if section, err = gcsql.GetSectionFromID(gcutil.HackyStringToInt(updateID)); err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -882,6 +941,7 @@ var actions = []Action{
 				}
 			} else if deleteID != "" {
 				if err = gcsql.DeleteSection(gcutil.HackyStringToInt(deleteID)); err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -893,12 +953,12 @@ var actions = []Action{
 			if request.PostForm.Get("save_section") != "" {
 				// user is creating a new board section
 				if section == nil {
-					section = &gcsql.BoardSection{}
+					section = &gcsql.Section{}
 				}
 				section.Name = request.PostForm.Get("sectionname")
 				section.Abbreviation = request.PostForm.Get("sectionabbr")
 				section.Hidden = request.PostForm.Get("sectionhidden") == "on"
-				section.ListOrder, err = strconv.Atoi(request.PostForm.Get("sectionpos"))
+				section.Position, err = strconv.Atoi(request.PostForm.Get("sectionpos"))
 				if section.Name == "" || section.Abbreviation == "" || request.PostForm.Get("sectionpos") == "" {
 					return "", &ErrStaffAction{
 						ErrorField: "formerror",
@@ -906,6 +966,7 @@ var actions = []Action{
 						Message:    "Missing section title, abbreviation, or hidden status data",
 					}
 				} else if err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "formerror",
 						Action:     "boardsections",
@@ -917,9 +978,10 @@ var actions = []Action{
 					err = section.UpdateValues()
 				} else {
 					// creating a new section
-					err = gcsql.CreateSection(section)
+					section, err = gcsql.NewSection(section.Name, section.Abbreviation, section.Hidden, section.Position)
 				}
 				if err != nil {
+					errEv.Err(err).Caller().Send()
 					return "", &ErrStaffAction{
 						ErrorField: "db",
 						Action:     "boardsections",
@@ -939,6 +1001,7 @@ var actions = []Action{
 				pageMap["edit_section"] = section
 			}
 			if err = serverutil.MinifyTemplate(gctemplates.ManageSections, pageMap, pageBuffer, "text/html"); err != nil {
+				errEv.Err(err).Caller().Send()
 				return "", err
 			}
 			output = pageBuffer.String()
@@ -949,7 +1012,7 @@ var actions = []Action{
 		Title:       "Rebuild front page",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
 				return "", err
 			}
@@ -966,7 +1029,7 @@ var actions = []Action{
 		Title:       "Rebuild everything",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			gctemplates.InitTemplates()
 			gcsql.ResetBoardSectionArrays()
 			buildErr := &ErrStaffAction{
@@ -1017,62 +1080,69 @@ var actions = []Action{
 			}
 			return buildStr, nil
 		}},
-	// {
-	// 	ID:          "rebuildboard",
-	// 	Title:       "Rebuild board",
-	// 	Permissions: AdminPerms,
-	// 	Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-	// 		if err = gctemplates.InitTemplates(); err != nil {
-	// 			return "", err
-	// 		}
-
-	// 		for b, board := range request.Form {
-	// 			if b == "board" {
-	// 				return board[0], nil
-	// 			}
-	// 		}
-	// 		return "", &ErrStaffAction{
-	// 			ErrorField: "staffaction",
-	// 			Action:     "rebuildboard",
-	// 			Message:    fmt.Sprintf("/%s/ is not a board"),
-	// 		}
-	// 	}},
 	{
 		ID:          "rebuildboards",
 		Title:       "Rebuild boards",
 		Permissions: AdminPerms,
 		JSONoutput:  OptionalJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			if err = gctemplates.InitTemplates(); err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "rebuildboards").Send()
+				errEv.Err(err).Caller().Msg("Unable to initialize templates")
+				return "", err
+			}
+			err = building.BuildBoards(false)
+			if err != nil {
 				return "", err
 			}
 			if wantsJSON {
 				return map[string]interface{}{
 					"success": true,
 					"message": "Boards built successfully",
-				}, building.BuildBoards(false)
+				}, nil
 			}
-			return "Boards built successfully", building.BuildBoards(false)
+			return "Boards built successfully", nil
 		}},
 	{
 		ID:          "reparsehtml",
 		Title:       "Reparse HTML",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			var outputStr string
-			messages, err := gcsql.GetAllNondeletedMessageRaw()
+			tx, err := gcsql.BeginTx()
 			if err != nil {
-				return "", err
+				errEv.Err(err).Msg("Unable to begin transaction")
+				return "", errors.New("unable to begin SQL transaction")
 			}
+			defer tx.Rollback()
+			const query = `SELECT
+			id, message_raw, thread_id as threadid,
+			(SELECT id FROM DBPREFIXposts WHERE is_top_post = TRUE AND thread_id = threadid LIMIT 1) AS op,
+			(SELECT board_id FROM DBPREFIXthreads WHERE id = threadid) AS boardid,
+			(SELECT dir FROM DBPREFIXboards WHERE id = boardid) AS dir
+			FROM DBPREFIXposts WHERE is_deleted = FALSE`
+			const updateQuery = `UPDATE DBPREFIXposts SET message = ? WHERE id = ?`
 
-			for i := range messages {
-				messages[i].Message = posting.FormatMessage(messages[i].MessageRaw, messages[i].Board)
-			}
-			if err = gcsql.SetFormattedInDatabase(messages); err != nil {
+			stmt, err := gcsql.PrepareSQL(query, tx)
+			if err != nil {
+				errEv.Err(err).Caller().Msg("Unable to prepare SQL query")
 				return "", err
+			}
+			defer stmt.Close()
+			rows, err := stmt.Query()
+			if err != nil {
+				errEv.Err(err).Msg("Unable to query the database")
+				return "", err
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var postID, threadID, opID, boardID int
+				var messageRaw, boardDir string
+				if err = rows.Scan(&postID, &messageRaw, &threadID, &opID, &boardID, &boardDir); err != nil {
+					errEv.Err(err).Caller().Msg("Unable to scan SQL row")
+					return "", err
+				}
+				formatted := posting.FormatMessage(messageRaw, boardDir)
+				gcsql.ExecSQL(updateQuery, formatted, postID)
 			}
 			outputStr += "Done reparsing HTML<hr />"
 
@@ -1097,7 +1167,7 @@ var actions = []Action{
 		Title:       "Post info",
 		Permissions: ModPerms,
 		JSONoutput:  AlwaysJSON,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			postIDstr := request.FormValue("postid")
 			if postIDstr == "" {
 				return "", errors.New("invalid request (missing postid)")
@@ -1143,7 +1213,7 @@ var actions = []Action{
 		ID:          "wordfilters",
 		Title:       "Wordfilters",
 		Permissions: AdminPerms,
-		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool) (output interface{}, err error) {
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			managePageBuffer := bytes.NewBufferString("")
 			editIDstr := request.FormValue("edit")
 			deleteIDstr := request.FormValue("delete")
@@ -1154,15 +1224,10 @@ var actions = []Action{
 				}
 				if numRows, _ := result.RowsAffected(); numRows < 1 {
 					err = invalidWordfilterID(deleteIDstr)
-					gcutil.LogError(err).
-						Str("staff", staff.Username).
-						Str("action", "wordfilters").Send()
+					errEv.Err(err).Caller().Send()
 					return err, err
 				}
-				gcutil.LogInfo().
-					Str("staff", staff.Username).
-					Str("action", "wordfilters").
-					Str("deletedWordfilterID", deleteIDstr)
+				infoEv.Str("deletedWordfilterID", deleteIDstr)
 			}
 
 			submitBtn := request.FormValue("dowordfilter")
@@ -1187,24 +1252,35 @@ var actions = []Action{
 					regexCheckStr,
 					request.FormValue("replace"),
 					editIDstr)
+				infoEv.Str("do", "update")
 			case "Create new wordfilter":
 				_, err = gcsql.CreateWordFilter(
 					request.FormValue("find"),
 					request.FormValue("replace"),
 					request.FormValue("isregex") == "on",
-					strings.Split(request.FormValue("boarddirs"), ","),
+					request.FormValue("boarddirs"),
 					staff.ID,
 					request.FormValue("staffnote"))
+				infoEv.Str("do", "create")
+			case "":
+				infoEv.Discard()
 			}
-			if err != nil {
+			if err == nil {
+				infoEv.
+					Str("find", request.FormValue("find")).
+					Str("replace", request.FormValue("replace")).
+					Str("staffnote", request.FormValue("staffnote")).
+					Str("boarddirs", request.FormValue("boarddirs"))
+			} else {
 				return err, err
 			}
 
-			wordfilters, err := gcsql.GetWordFilters()
+			wordfilters, err := gcsql.GetWordfilters()
 			if err != nil {
-				return wordfilters, nil
+				errEv.Err(err).Caller().Msg("Unable to get wordfilters")
+				return wordfilters, err
 			}
-			var editFilter *gcsql.WordFilter
+			var editFilter *gcsql.Wordfilter
 			if editIDstr != "" {
 				editID := gcutil.HackyStringToInt(editIDstr)
 				for _, filter := range wordfilters {
@@ -1223,12 +1299,10 @@ var actions = []Action{
 			err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters,
 				filterMap, managePageBuffer, "text/html")
 			if err != nil {
-				gcutil.LogError(err).
-					Str("staff", staff.Username).
-					Str("action", "wordfilters").
-					Str("template", "manage_wordfilters.html").Send()
+				errEv.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
 
 			}
+			infoEv.Send()
 			return managePageBuffer.String(), err
 		},
 	},

@@ -12,14 +12,16 @@
 {{- template "postbox.html" . -}}<hr />
 <form action="{{.webroot}}util" method="POST" id="main-form">
 {{$global := .}}
-{{- range $t, $thread := .threads}}{{$op := $thread.OP}}
+{{- range $t, $thread := .threads}}{{$op := index $thread.Posts 0}}
 	<div class="thread">
 		{{- template "post.html" map "global" $global "board" $.board "post" $op "is_board_page" true -}}
-	{{- if gt $thread.NumReplies 3 -}}
-		<b>{{subtract $thread.NumReplies 3}} post{{if gt $thread.NumReplies 4}}s{{end}} omitted</b><br />
+	{{- if gt $thread.Replies 3 -}}
+		<b>{{subtract $thread.Replies 3}} post{{if gt $thread.Replies 4}}s{{end}} omitted</b><br />
 	{{- end -}}
-	{{- range $reply_num,$reply := $thread.BoardReplies -}}
-		{{- template "post.html" map "global" $global "board" $.board "post" $reply -}}
+	{{- range $r,$reply := $thread.Posts -}}
+		{{if gt $r 0}}
+			{{- template "post.html" map "global" $global "board" $.board "post" $reply -}}
+		{{end}}
 	{{- end -}}
 	</div><hr />
 {{- end}}
@@ -38,23 +40,24 @@
 	<a href="#">Scroll to top</a><br/>
 	<table id="pages">
 		<tr>
-			<td>{{if gt .board.CurrentPage 1}}
+			{{/*<td>{{if gt $.currentPage 1}}
 				<form method="GET" action='{{.board.PagePath "prev"}}'>
 					<input type="submit" value="Previous" />
 				</form>
-			{{- else}}Previous{{end}}</td>
-			<td>{{range $_,$i := makeLoop .board.NumPages 1 -}}
-				{{- if eq $.board.CurrentPage $i -}}
+			{{- else}}Previous{{end}}</td> */}}
+			<td>{{range $_,$i := makeLoop .numPages 1 -}}
+				{{- if eq $.currentPage $i -}}
 					[<b>{{$i}}</b>]
 				{{- else -}}
 					[<a href="{{$.board.PagePath $i }}">{{$i}}</a>]
 				{{- end -}}
 			{{- end}}</td>
-			<td>{{if lt .board.CurrentPage .board.NumPages}}
+			{{/*
+			<td>{{if lt $.currentPage .numPages}}
 				<form method="GET" action="{{.board.PagePath `next` }}">
 					<input type="submit" value="Next" />
 				</form>
-			{{else}}Next{{end}}</td>
+			{{else}}Next{{end}}</td> */}}
 		</tr>
 	</table>
 	<span id="boardmenu-bottom">

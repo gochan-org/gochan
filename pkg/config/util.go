@@ -160,7 +160,7 @@ func InitConfig(versionStr string) {
 				MaxLogDays:      14,
 				Verbosity:       1,
 
-				MaxRecentPosts:        3,
+				MaxRecentPosts:        12,
 				RecentPostsWithNoFile: false,
 			},
 			BoardConfig: BoardConfig{
@@ -179,9 +179,11 @@ func InitConfig(versionStr string) {
 				},
 				DefaultStyle: "pipes.css",
 
+				Cooldowns: BoardCooldowns{
+					NewThread: 30,
+					Reply:     7,
+				},
 				PostConfig: PostConfig{
-					NewThreadDelay:           30,
-					ReplyDelay:               7,
 					ThreadsPerPage:           15,
 					PostsPerThreadPage:       50,
 					RepliesOnBoardPage:       3,
@@ -264,7 +266,7 @@ func InitConfig(versionStr string) {
 	}
 
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
-	if err = gcutil.InitLog(path.Join(cfg.LogDir, "gochan.log")); err != nil {
+	if err = gcutil.InitLog(path.Join(cfg.LogDir, "gochan.log"), cfg.DebugMode); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}

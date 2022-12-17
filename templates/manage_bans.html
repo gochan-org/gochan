@@ -1,32 +1,55 @@
-<form method="POST" action="/manage?action=bans">
+<form method="POST" action="{{webPath "manage?action=bans"}}">
 <input type="hidden" name="do" value="add" />
-<b>User filter:</b><br />
+<h2>Add IP ban</h2>
 <table>
-	<tr><th>IP address</th><td><input type="text" name="ip" value="{{.post.IP}}" /></td></tr>
-	<tr><th></th><td>"192.168.1.36" will ban posts from that IP address<br />
-		"192.168" will block all IPs starting with 192.168<br /></td></tr>
-	<tr><th>Name!Tripcode</th><td><input type="text" name="name" value="{{if ne .post.Name ""}}{{.post.Name}}!{{.post.Tripcode}}{{end}}"/> <label>Regex<input type="checkbox" name="nameregex" /></label></td></tr>
-	<tr><th>Ban filename</th><td><input type="text" name="filename" value="{{.post.FilenameOriginal}}"/></td></tr>
-	<tr><th>Ban file checksum</th><td><input type="text" name="checksum" value="{{.post.FileChecksum}}" /></td></tr>
-</table><br /><hr />
-
-<b>Ban info</b><br />
-<table>
-	<tr><th>Duration</th><td><input type="text" name="duration" /></td></tr>
-	<tr><th></th><td>e.g. '1y2mo3w4d5h6m7s',<br />'1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds',<br /> or 'forever', '0', or '' for a permaban</td></tr>
-	<tr><th>Ban type</th><td><label>Image ban <input type="checkbox" name="imageban" /></label><br />
-		<label>Thread starting ban <input type="checkbox" name="threadban" /></label><br />
-		<label>Full ban (overrides the above) <input type="checkbox" name="fullban" /></label></tr>
-	<tr><th>Boards</th><td><input type="text" name="boards" /></td></tr>
-	<tr><th></th><td>Comma-separated list of boards (e.g. board1,board2,board3) or blank for all boards</td></tr>
-	<tr><th>Reason</th><td><textarea name="reason" rows="5" cols="30"></textarea></td></tr>
-	<tr><th>Staff note</th><td><input type="text" name="staffnote" /></td></tr>
+	<tr><th>IP address</th><td><input type="text" name="ip" value="{{.ban.IP}}" style="width: 100%;"/></td></tr>
+	<tr><th>Duration</th><td><input type="text" name="duration" style="width: 100%;" {{if gt .ban.ID 0}}value="{{until .ban.ExpiresAt}}"{{end}}/></td></tr>
+	<tr><th></th><td>e.g. '1y2mo3w4d5h6m7s',<br />'1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds'<br/>Optional if "Permanent" is checked, required otherwise</td></tr>
+	<tr><th>Permanent</th><td><input type="checkbox" name="permanent" id="permanent" {{if .ban.Permanent}}checked{{end}}> (overrides the duration)</td></tr>
+	<tr><th>Appeal wait time</th><td><input type="text" name="appealwait" id="appealwait" style="width: 100%;"></td></tr>
+	<tr><th></th><td>Same syntax as above, but optional.<br />If left blank, they can appeal immediately</td></tr>
+	<tr><th>No appeals</th><td><input type="checkbox" name="noappeals" /></td> (if checked, Appeal wait time field is ignored)</tr>
+	<tr><th>Thread starting ban</th><td><input type="checkbox" name="threadban" /> (user can reply to threads but can't make new threads)</td></tr>
+		{{with $.bannedForPostID}}<tr><th>Banned for post ID</th><td>{{$.bannedForPostID}}</td></tr>{{end}}
+	<tr><th>Board</th><td><select name="boardid" id="boardid">
+		<option value="0">All boards</option>
+	{{- range $b, $board := $.allBoards -}}
+		<option value="{{$board.ID}}" {{if eq (dereference $.ban.BoardID) $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+	{{- end -}}
+	</select></td></tr>
+	<tr><th>Reason</th><td><textarea name="reason" style="width: 100%;" rows="6" placeholder="Message to be displayed to the banned user"></textarea></td></tr>
+	<tr><th>Staff note</th><td><textarea name="staffnote" style="width: 100%;" rows="6" placeholder="Private note that only staff can see"></textarea></td></tr>
 </table>
-<input type="submit" value="Ban user" />
+<input type="submit" value="Ban user" /> <input type="button" name="docancel" value="Cancel" onclick="window.location = './manage?action=bans'; return false"/>
 </form>
 
-<h2 class="manage-header">Banlist</h2>
-<table>
-	<tr><th>IP</th><th>Name!Tripcode</th><th>Reason</th><th>Staff note</th><th>Boards</th><th>Staff</th><th>Set</th><th>Expires</th><th>Permaban</th></tr>
-{{range $b, $ban := $.banlist}}	<tr><td>{{$ban.IP}}</td><td>{{$ban.Name}}</td><td>{{$ban.Reason}}</td><td>{{$ban.StaffNote}}</td><td>{{if eq $ban.Boards ""}}<i>all boards</i>{{else}}{{$ban.Boards}}{{end}}</td><td>{{$ban.Staff}}</td><td>{{$ban.Timestamp}}</td><td>{{if $ban.Permaban}}never{{else}}{{$ban.Expires}}{{end}}</td><td>{{$ban.Permaban}}</td></tr>
+<h2 id="banlist">Banlist</h2>
+<form action="{{webPath "manage?action=bans"}}" method="get">
+	<input type="hidden" name="action" value="bans">
+Filter board: <select name="filterboardid" id="filterboardid" onchange="window.location = '{{webPath "manage?action=bans&filterboardid="}}' + this.value + '#banlist'">
+	<option value="0">All boards</option>
+{{- range $b, $board := $.allBoards -}}
+	<option value="{{$board.ID}}" {{if eq $.filterboardid $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+{{- end -}}
+</select> <input type="submit">
+</form>
+<table border="1">
+	<tr><th>Action</th><th>IP</th><th>Board</th><th>Reason</th><th>Staff</th><th>Staff note</th><th>Banned post text</th><th>Set</th><th>Expires</th><th>Appeal at</th></tr>
+{{range $_, $ban := $.banlist -}}
+	<tr>
+		<td> <a href="{{webPath "manage?action=bans&edit="}}{{$ban.ID}}">Edit</a> | <a href="{{webPath "manage?action=bans&delete="}}{{$ban.ID}}">Delete</a> </td>
+		<td>{{$ban.IP}}</td>
+		<td>{{if not $ban.BoardID}}<i>all</i>{{else}}/{{getBoardDirFromID $ban.BoardID}}/{{end}}</td>
+		<td>{{$ban.Message}}</td>
+		<td>{{getStaffNameFromID $ban.StaffID}}</td>
+		<td>{{$ban.StaffNote}}</td>
+		<td>{{if not $ban.BannedForPostID}}<i>N/A</i>{{else}}{{$ban.CopyPostText}}{{end}}</td>
+		<td>{{formatTimestamp $ban.IssuedAt}}</td>
+		<td>
+			{{- if $ban.Permanent}}<i>Never</i>{{else}}{{formatTimestamp $ban.ExpiresAt}}{{end -}}
+		</td>
+		<td>
+			{{- if $ban.CanAppeal}}{{formatTimestamp $ban.AppealAt}}{{else}}<i>Never</i>{{end -}}
+		</td>
+	</tr>
 {{end}}</table>

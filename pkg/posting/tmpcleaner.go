@@ -18,38 +18,41 @@ func tempCleaner() {
 		case <-tempCleanerTicker.C:
 			for p := range gcsql.TempPosts {
 				post := &gcsql.TempPosts[p]
-				if !time.Now().After(post.Timestamp.Add(time.Minute * 5)) {
+				if !time.Now().After(post.CreatedOn.Add(time.Minute * 5)) {
 					continue
 				}
 				// temporary post is >= 5 minutes, time to prune it
 				gcsql.TempPosts[p] = gcsql.TempPosts[len(gcsql.TempPosts)-1]
 				gcsql.TempPosts = gcsql.TempPosts[:len(gcsql.TempPosts)-1]
-				if post.FilenameOriginal == "" {
+				upload, err := post.GetUpload()
+				if err != nil {
 					continue
 				}
-				var board gcsql.Board
-				err := board.PopulateData(post.BoardID)
+				if upload.OriginalFilename == "" {
+					continue
+				}
+				board, err := post.GetBoard()
 				if err != nil {
 					continue
 				}
 
 				systemCritical := config.GetSystemCriticalConfig()
-				fileSrc := path.Join(systemCritical.DocumentRoot, board.Dir, "src", post.FilenameOriginal)
+				fileSrc := path.Join(systemCritical.DocumentRoot, board.Dir, "src", upload.OriginalFilename)
 				if err = os.Remove(fileSrc); err != nil {
 					gcutil.LogError(err).
 						Str("subject", "tempUpload").
 						Str("filePath", fileSrc).Send()
 				}
 
-				thumbSrc := gcutil.GetThumbnailPath("thread", fileSrc)
+				thumbSrc := upload.ThumbnailPath("thread")
 				if err = os.Remove(thumbSrc); err != nil {
 					gcutil.LogError(err).
 						Str("subject", "tempUpload").
 						Str("filePath", thumbSrc).Send()
 				}
 
-				if post.ParentID == 0 {
-					catalogSrc := gcutil.GetThumbnailPath("catalog", fileSrc)
+				if post.IsTopPost {
+					catalogSrc := upload.ThumbnailPath("catalog")
 					if err = os.Remove(catalogSrc); err != nil {
 						gcutil.LogError(err).
 							Str("subject", "tempUpload").

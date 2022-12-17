@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -27,6 +28,16 @@ var (
 	ErrInvalidDBVersion = errors.New("invalid version flag returned by GetCompleteDatabaseVersion()")
 )
 
+func initDB(initFile string) error {
+	filePath := gcutil.FindResource(initFile,
+		"/usr/local/share/gochan/"+initFile,
+		"/usr/share/gochan/"+initFile)
+	if filePath == "" {
+		return fmt.Errorf("missing SQL database initialization file (%s), please reinstall gochan", initFile)
+	}
+	return RunSQLFile(filePath)
+}
+
 // GetCompleteDatabaseVersion checks the database for any versions and errors that may exist.
 // If a version is found, execute the version check. Otherwise check for deprecated info
 // If no deprecated info is found, check if any databases exist prefixed with config.DBprefix
@@ -37,7 +48,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 		return 0, 0, err
 	}
 	if versionTableExists {
-		databaseVersion, versionError := getDatabaseVersion(GochanVersionKeyConstant)
+		databaseVersion, versionError := getDatabaseVersion(gochanVersionKeyConstant)
 		if versionError != nil {
 			return 0, 0, ErrInvalidVersion
 		}
@@ -102,12 +113,12 @@ func CheckAndInitializeDatabase(dbType string) error {
 func buildNewDatabase(dbType string) error {
 	var err error
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
-		return err
+		return errors.New("database initialization failed: " + err.Error())
 	}
-	if err = CreateDefaultBoardIfNoneExist(); err != nil {
-		return errors.New("Failed creating default board if non already exists: " + err.Error())
+	if err = createDefaultBoardIfNoneExist(); err != nil {
+		return errors.New("failed creating default board if non already exists: " + err.Error())
 	}
-	if err = CreateDefaultAdminIfNoStaff(); err != nil {
+	if err = createDefaultAdminIfNoStaff(); err != nil {
 		return errors.New("failed creating default admin account: " + err.Error())
 	}
 	return nil
