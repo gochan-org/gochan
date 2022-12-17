@@ -35,16 +35,19 @@ func getRecentPosts() ([]recentPost, error) {
 		DBPREFIXposts.message,
 		DBPREFIXposts.message_raw,
 		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir,
-		p.id AS top_post
+		f.filename, op.id
 	FROM
 		DBPREFIXposts
 	LEFT JOIN (
 		SELECT id, board_id FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
+	LEFT JOIN (
+		select post_id, filename FROM DBPREFIXfiles
+	) f on f.post_id = DBPREFIXposts.id
 	INNER JOIN (
 		SELECT
 			id, thread_id FROM DBPREFIXposts WHERE is_top_post
-	) p ON p.thread_id = DBPREFIXposts.thread_id
+	) op ON op.thread_id = DBPREFIXposts.thread_id
 	WHERE DBPREFIXposts.is_deleted = FALSE LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
 	rows, err := gcsql.QuerySQL(query)
 	if err != nil {
@@ -56,8 +59,8 @@ func getRecentPosts() ([]recentPost, error) {
 	for rows.Next() {
 		var post recentPost
 		var id, topPostID string
-		var message, boardDir, filename string
-		err = rows.Scan(&id, &message, &boardDir, &filename, &topPostID)
+		var message, messageRaw, boardDir, filename string
+		err = rows.Scan(&id, &message, &messageRaw, &boardDir, &filename, &topPostID)
 		if err != nil {
 			return nil, err
 		}
