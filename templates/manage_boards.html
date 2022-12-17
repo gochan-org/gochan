@@ -48,7 +48,9 @@
 	<td>Section</td>
 	<td><select name="section">
 		{{- range $_, $section := $.sections -}}
-		<option value="{{$section.ID}}">{{$section.Name}}</option>
+			<option value="{{$section.ID}}" {{if eq $section.ID $.board.SectionID -}}
+				selected="selected"
+			{{- end}}>{{$section.Name}}</option>
 		{{- end -}}
 	</select></td>
 </tr>

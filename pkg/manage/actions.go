@@ -855,7 +855,7 @@ var actions = []Action{
 				}
 			case "edit":
 				// edit button clicked, fill the input fields with board data to be edited
-				boardID, err := getIntField("boardid", staff.Username, request, 0)
+				boardID, err := getIntField("board", staff.Username, request, 0)
 				if err != nil {
 					return "", err
 				}
