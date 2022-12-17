@@ -209,11 +209,7 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 	if board.Title == "" {
 		return errors.New("board title string must not be empty")
 	}
-	id, err := getNextFreeID("DBPREFIXboards")
-	if err != nil {
-		return err
-	}
-	_, err = ExecSQL(sqlINSERT,
+	_, err := ExecSQL(sqlINSERT,
 		&board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
@@ -221,7 +217,12 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 	if err != nil {
 		return err
 	}
-	board.ID = id
+	if err = QueryRowSQL(
+		`SELECT id FROM DBPREFIXboards WHERE dir = ?`,
+		interfaceSlice(board.Dir), interfaceSlice(&board.ID),
+	); err != nil {
+		return err
+	}
 	board.CreatedAt = time.Now()
 	if appendToAllBoards {
 		AllBoards = append(AllBoards, *board)

@@ -828,10 +828,6 @@ var actions = []Action{
 					errEv.Err(err).Caller().Send()
 					return "", err
 				}
-				if err = gcsql.ResetBoardSectionArrays(); err != nil {
-					errEv.Err(err).Caller().Send()
-					return "", errors.New("unable to reset board list: " + err.Error())
-				}
 				infoEv.
 					Str("createBoard", board.Dir).
 					Int("boardID", board.ID).
@@ -842,25 +838,20 @@ var actions = []Action{
 				if err != nil {
 					return "", err
 				}
-				if board, err = gcsql.GetBoardFromID(boardID); err != nil {
+				// use a temporary variable so that the form values aren't filled
+				var deleteBoard *gcsql.Board
+				if deleteBoard, err = gcsql.GetBoardFromID(boardID); err != nil {
 					errEv.Err(err).Int("deleteBoardID", boardID).Caller().Send()
 					return "", err
 				}
-				if err = board.Delete(); err != nil {
-					errEv.Err(err).Str("deleteBoard", board.Dir).Caller().Send()
+				if err = deleteBoard.Delete(); err != nil {
+					errEv.Err(err).Str("deleteBoard", deleteBoard.Dir).Caller().Send()
 					return "", err
 				}
 				infoEv.
-					Str("deleteBoard", board.Dir).Send()
-				if err = os.RemoveAll(board.AbsolutePath()); err != nil {
+					Str("deleteBoard", deleteBoard.Dir).Send()
+				if err = os.RemoveAll(deleteBoard.AbsolutePath()); err != nil {
 					errEv.Err(err).Caller().Send()
-					return "", err
-				}
-				if err = gcsql.ResetBoardSectionArrays(); err != nil {
-					errEv.Err(err).Caller().Send()
-					return "", errors.New("unable to reset board list: " + err.Error())
-				}
-				if err = building.BuildBoards(false); err != nil {
 					return "", err
 				}
 			case "edit":
@@ -891,14 +882,16 @@ var actions = []Action{
 			default:
 				// board.SetDefaults("", "", "")
 			}
-			if requestType == "create" || requestType == "modify" && err != nil {
+
+			if requestType == "create" || requestType == "modify" || requestType == "delete" {
+				if err = gcsql.ResetBoardSectionArrays(); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", errors.New("unable to reset board list: " + err.Error())
+				}
 				if err = building.BuildBoardListJSON(); err != nil {
 					return "", err
 				}
-				if err = building.BuildBoards(false, board.ID); err != nil {
-					return "", err
-				}
-				if err = building.BuildBoardPages(board); err != nil {
+				if err = building.BuildBoards(false); err != nil {
 					return "", err
 				}
 			}

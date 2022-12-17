@@ -261,7 +261,6 @@ func BuildBoards(verbose bool, which ...int) error {
 	}
 
 	for _, board := range boards {
-		// board := &boards[b]
 		if err = buildBoard(&board, true); err != nil {
 			return err
 		}
