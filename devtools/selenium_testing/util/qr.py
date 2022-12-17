@@ -1,6 +1,6 @@
 from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.edge.webdriver import WebDriver
-from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.edge.webdriver import WebDriver # skipcq:  PYL-W0404
+from selenium.webdriver.firefox.webdriver import WebDriver # skipcq:  PYL-W0404
 from selenium.webdriver.common.by import By
 
 

@@ -36,7 +36,7 @@ testingUploadPath = "../../html/notbanned.png"
 testingPassword = "12345"
 testingBoard = "test"
 
-threadRE = re.compile(r'.*/(\S+)/(\d+)(\+50)?.html')
+threadRE = re.compile(r".*/(\S+)/(\d+)(\+50)?.html")
 boardTitleRE = re.compile('/(\w+)/ - (.+)')
 browser = ""
 headless = False
@@ -73,7 +73,7 @@ def makePostOnPage(url: str, runner: unittest.TestCase):
 	gotoPage(runner.driver, url)
 	WebDriverWait(runner.driver, 10).until(
 		EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
-	
+
 	valProp = runner.driver.find_element(by=By.CSS_SELECTOR, value="form#postform input[type=submit]").get_property("value")
 	runner.assertEqual(valProp, "Post")
 	form = runner.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
@@ -127,16 +127,20 @@ class TestRunner(unittest.TestCase):
 	def setUp(self):
 		if browser == "firefox":
 			options = FirefoxOptions()
-			if headless:
-				options.headless = True
+			options.headless = headless
 			self.driver = webdriver.Firefox(options=options)
 		elif browser in ("chrome", "chromium"):
 			options = ChromeOptions()
-			if headless:
-				options.headless = True
+			options.headless = headless
 			if keepOpen:
 				options.add_experimental_option("detach", True)
 			self.driver = webdriver.Chrome(options=options)
+		elif browser == "edge":
+			options = EdgeOptions()
+			options.headless = headless
+			if keepOpen:
+				options.add_experimental_option("detach", True)
+			self.driver = webdriver.Edge(options=options)
 		else:
 			self.fail("Unrecognized --browser option '%s'" % browser)
 		return super().setUp()
@@ -168,7 +172,7 @@ class TestRunner(unittest.TestCase):
 			"Dashboard",
 			"Testing staff login"
 		)
-	
+
 	def test_makeBoard(self):
 		if boardExists("seleniumtesting"):
 			raise Exception("Board /seleniumtests/ already exists")
@@ -256,7 +260,7 @@ class TestRunner(unittest.TestCase):
 		# wait for response to move request (domove=1)
 		WebDriverWait(self.driver, 10).until(
 			EC.url_matches(threadRE))
-		
+
 		self.assertEqual(
 			self.driver.find_element(
 				by=By.CSS_SELECTOR,
@@ -275,7 +279,7 @@ class TestRunner(unittest.TestCase):
 			self.driver.close()
 		return super().tearDown()
 
-def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, site=testingSite, board=testingBoard, upload=testingUploadPath, singleTest = ""):
+def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, site="", board="", upload="", singleTest = ""):
 	global browser
 	global testingSite
 	global testingBoard
@@ -287,9 +291,12 @@ def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, s
 	keepOpen = testKeepOpen
 	if headless:
 		keepOpen = False
-	testingSite = site
-	testingBoard = board
-	testingUploadPath = upload
+	if site != "":
+		testingSite = site
+	if board != "":
+		testingBoard = board
+	if upload != "":
+		testingUploadPath = upload
 
 	print("Using browser %s (headless: %s) on site %s" % (browser, headless, testingSite))
 	suite:unittest.TestSuite = None
@@ -301,7 +308,7 @@ def startBrowserTests(testBrowser:str, testHeadless=False, testKeepOpen=False, s
 
 
 def parseArgs(argParser:argparse.ArgumentParser):
-	testable_browsers = ("firefox","chrome","chromium")
+	testable_browsers = ("firefox","chrome","chromium", "edge")
 
 	argParser.add_argument("--browser", choices=testable_browsers, required=True)
 	argParser.add_argument("--site", default=testingSite,
