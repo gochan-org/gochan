@@ -12,15 +12,21 @@ import (
 const (
 	// selects all columns from DBPREFIXboards
 	selectBoardsBaseSQL = `SELECT
-	id, section_id, uri, dir, navbar_position, title, subtitle, description,
+	DBPREFIXboards.id, section_id, uri, dir, navbar_position, title, subtitle, description,
 	max_file_size, max_threads, default_style, locked, created_at, anonymous_name, force_anonymous,
 	autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,
 	require_file, enable_catalog
-	FROM DBPREFIXboards `
+	FROM DBPREFIXboards
+	INNER JOIN (
+		SELECT id, hidden FROM DBPREFIXsections
+	) s ON DBPREFIXboards.section_id = s.id `
 )
 
 var (
-	AllBoards            []Board
+	// AllBoards provides a quick and simple way to access a list of all boards in non-hidden sections
+	// without having to do any SQL queries. It and AllSections are updated by ResetBoardSectionArrays
+	AllBoards []Board
+
 	ErrNilBoard          = errors.New("board is nil")
 	ErrBoardExists       = errors.New("board already exists")
 	ErrBoardDoesNotExist = errors.New("board does not exist")
@@ -42,9 +48,13 @@ func DoesBoardExistByDir(dir string) bool {
 	return count > 0
 }
 
-// getAllBoards gets a list of all existing boards
-func getAllBoards() ([]Board, error) {
-	const query = selectBoardsBaseSQL + "ORDER BY navbar_position ASC, id ASC"
+// GetAllBoards gets a list of all existing boards
+func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
+	query := selectBoardsBaseSQL
+	if onlyNonHidden {
+		query += " WHERE s.hidden = FALSE"
+	}
+	query += " ORDER BY navbar_position ASC, DBPREFIXboards.id ASC"
 	rows, err := QuerySQL(query)
 	if err != nil {
 		return nil, err
@@ -92,7 +102,7 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 
 // GetBoardFromID returns the board corresponding to a given id
 func GetBoardFromID(id int) (*Board, error) {
-	const query = selectBoardsBaseSQL + "WHERE id = ?"
+	const query = selectBoardsBaseSQL + "WHERE DBPREFIXboards.id = ?"
 	board := new(Board)
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
@@ -126,19 +136,18 @@ func GetBoardURIs() (URIS []string, err error) {
 // ResetBoardSectionArrays is run when the board list needs to be changed
 // (board/section is added, deleted, etc)
 func ResetBoardSectionArrays() error {
-	AllBoards = nil
-	AllSections = nil
-
-	allBoardsArr, err := getAllBoards()
+	allBoardsArr, err := GetAllBoards(true)
 	if err != nil {
 		return err
 	}
+	AllBoards = nil
 	AllBoards = append(AllBoards, allBoardsArr...)
 
-	allSectionsArr, err := getAllSections()
+	allSectionsArr, err := GetAllSections(true)
 	if err != nil {
 		return err
 	}
+	AllSections = nil
 	AllSections = append(AllSections, allSectionsArr...)
 	return nil
 }

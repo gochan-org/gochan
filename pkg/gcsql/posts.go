@@ -13,7 +13,7 @@ import (
 
 const (
 	// should be appended when selecting info from DBPREFIXboards, requires a post ID
-	boardFromPostIdSuffixSQL = ` WHERE id = (
+	boardFromPostIdSuffixSQL = ` WHERE DBPREFIXboards.id = (
 		SELECT board_id FROM DBPREFIXthreads WHERE id = (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?))`
 	selectPostsBaseSQL = `SELECT 

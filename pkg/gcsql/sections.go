@@ -3,12 +3,21 @@ package gcsql
 import "database/sql"
 
 var (
+	// AllSections provides a quick and simple way to access a list of all non-hidden sections without
+	// having to do any SQL queries. It and AllBoards are updated by ResetBoardSectionArrays
 	AllSections []Section
 )
 
-// getAllSections gets a list of all existing sections
-func getAllSections() ([]Section, error) {
-	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections ORDER BY position ASC, name ASC`
+// GetAllSections gets a list of all existing sections, optionally omitting hidden ones
+func GetAllSections(onlyNonHidden bool) ([]Section, error) {
+	query := `SELECT
+	id, name, abbreviation, position, hidden
+	FROM DBPREFIXsections`
+	if onlyNonHidden {
+		query += " WHERE hidden = FALSE "
+	}
+	query += " ORDER BY position ASC, name ASC"
+
 	rows, err := QuerySQL(query)
 	if err != nil {
 		return nil, err
@@ -96,16 +105,6 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 		Position:     position,
 		Hidden:       hidden,
 	}, nil
-}
-
-func GetAllNonHiddenSections() []Section {
-	var sections []Section
-	for s := range AllSections {
-		if !AllSections[s].Hidden {
-			sections = append(sections, AllSections[s])
-		}
-	}
-	return sections
 }
 
 func (s *Section) UpdateValues() error {

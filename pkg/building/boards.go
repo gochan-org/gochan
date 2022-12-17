@@ -243,7 +243,10 @@ func BuildBoards(verbose bool, which ...int) error {
 	var err error
 
 	if which == nil {
-		boards = gcsql.AllBoards
+		boards, err = gcsql.GetAllBoards(false)
+		if err != nil {
+			return err
+		}
 	} else {
 		for _, boardID := range which {
 			board, err := gcsql.GetBoardFromID(boardID)

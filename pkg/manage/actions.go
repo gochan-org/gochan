@@ -991,11 +991,16 @@ var actions = []Action{
 				gcsql.ResetBoardSectionArrays()
 			}
 
+			sections, err := gcsql.GetAllSections(false)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", err
+			}
 			pageBuffer := bytes.NewBufferString("")
 			pageMap := map[string]interface{}{
 				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 				"site_config": config.GetSiteConfig(),
-				"sections":    gcsql.AllSections,
+				"sections":    sections,
 			}
 			if section.ID > 0 {
 				pageMap["edit_section"] = section
@@ -1031,7 +1036,10 @@ var actions = []Action{
 		JSONoutput:  OptionalJSON,
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			gctemplates.InitTemplates()
-			gcsql.ResetBoardSectionArrays()
+			if err = gcsql.ResetBoardSectionArrays(); err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", err
+			}
 			buildErr := &ErrStaffAction{
 				ErrorField: "builderror",
 				Action:     "rebuildall",
