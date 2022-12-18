@@ -44,14 +44,16 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	errEv.Int("boardid", boardid)
 	board, err := gcsql.GetBoardFromID(boardid)
 	if err != nil {
-		serverutil.ServeErrorPage(writer, "Invalid form data: "+err.Error())
+		serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+			"boardid": boardid,
+		})
 		errEv.Err(err).Caller().
 			Msg("Invalid form data (error populating data")
 		return
 	}
 
 	if password == "" && rank == 0 {
-		serverutil.ServeErrorPage(writer, "Password required for post deletion")
+		serverutil.ServeError(writer, "Password required for post deletion", wantsJSON, nil)
 		return
 	}
 
