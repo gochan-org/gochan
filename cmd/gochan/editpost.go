@@ -154,7 +154,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			}
 			documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 			var filePath, thumbPath, catalogThumbPath string
-			if oldUpload != nil && oldUpload.Filename != "deleted" {
+			if oldUpload != nil {
 				filePath = path.Join(documentRoot, board.Dir, "src", oldUpload.Filename)
 				thumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("thumb"))
 				catalogThumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("catalog"))
@@ -163,12 +163,15 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 					serverutil.ServeError(writer, "Error unlinking old upload from post: "+err.Error(), wantsJSON, nil)
 					return
 				}
-				os.Remove(filePath)
-				os.Remove(thumbPath)
-				if post.IsTopPost {
-					os.Remove(catalogThumbPath)
+				if oldUpload.Filename != "deleted" {
+					os.Remove(filePath)
+					os.Remove(thumbPath)
+					if post.IsTopPost {
+						os.Remove(catalogThumbPath)
+					}
 				}
 			}
+
 			if err = post.AttachFile(upload); err != nil {
 				errEv.Err(err).Caller().
 					Str("newFilename", upload.Filename).

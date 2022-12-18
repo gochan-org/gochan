@@ -42,17 +42,16 @@ func getRecentPosts() ([]recentPost, error) {
 		SELECT id, board_id FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	LEFT JOIN (
-		select post_id, COALESCE(filename,'') as filename FROM DBPREFIXfiles
+		SELECT post_id, filename FROM DBPREFIXfiles
 	) f on f.post_id = DBPREFIXposts.id
 	INNER JOIN (
-		SELECT
-			id, thread_id FROM DBPREFIXposts WHERE is_top_post
+		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
 	) op ON op.thread_id = DBPREFIXposts.thread_id
 	WHERE DBPREFIXposts.is_deleted = FALSE`
 	if !siteCfg.RecentPostsWithNoFile {
 		query += ` AND f.filename != '' AND f.filename != 'deleted'`
 	}
-	query += ` LIMIT ` + strconv.Itoa(siteCfg.MaxRecentPosts)
+	query += " GROUP BY DBPREFIXposts.id LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 	rows, err := gcsql.QuerySQL(query)
 	if err != nil {
 		return nil, err
@@ -173,7 +172,7 @@ func BuildJS() error {
 		gcutil.LogError(err).
 			Str("building", "consts.js").
 			Str("filePath", constsJSPath).Send()
-		return fmt.Errorf("Error opening %q for writing: %s", constsJSPath, err.Error())
+		return fmt.Errorf("error opening %q for writing: %s", constsJSPath, err.Error())
 	}
 	defer constsJSFile.Close()
 
@@ -188,7 +187,7 @@ func BuildJS() error {
 		gcutil.LogError(err).
 			Str("building", "consts.js").
 			Str("filePath", constsJSPath).Send()
-		return fmt.Errorf("Error building %q: %s", constsJSPath, err.Error())
+		return fmt.Errorf("error building %q: %s", constsJSPath, err.Error())
 	}
 	return nil
 }
