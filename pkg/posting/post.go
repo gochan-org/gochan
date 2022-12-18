@@ -1,24 +1,15 @@
 package posting
 
 import (
-	"crypto/md5"
 	"errors"
-	"fmt"
-	"html"
-	"image"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -268,243 +259,27 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	var upload *gcsql.Upload
-	file, handler, err := request.FormFile("imagefile")
-	var filePath, thumbPath, catalogThumbPath string
-	if err != nil || handler.Size == 0 {
-		// no file was uploaded
-		if strings.TrimSpace(post.MessageRaw) == "" {
-			serverutil.ServeErrorPage(writer, "Post must contain a message if no image is uploaded.")
-			return
-		}
-		gcutil.LogAccess(request).
-			Str("post", "referred").
-			Str("referredFrom", request.Referer()).
-			Send()
-	} else {
-		upload = &gcsql.Upload{
-			OriginalFilename: html.EscapeString(handler.Filename),
-		}
-
-		if checkFilenameBan(upload, &post, postBoard, writer, request) {
-			// If checkFilenameBan returns true, an error occured or the file was
-			// rejected for having a banned filename, and the incident was logged either way
-			return
-		}
-
-		data, err := io.ReadAll(file)
-		if err != nil {
-			errEv.Err(err).Caller().Send()
-			serverutil.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
-			return
-		}
-		defer file.Close()
-
-		// Calculate image checksum
-		upload.Checksum = fmt.Sprintf("%x", md5.Sum(data))
-		if checkChecksumBan(upload, &post, postBoard, writer, request) {
-			// If checkChecksumBan returns true, an error occured or the file was
-			// rejected for having a banned checksum, and the incident was logged either way
-			return
-		}
-
-		ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
-		upload.Filename = getNewFilename() + ext
-
-		boardExists := gcsql.DoesBoardExistByID(
-			gcutil.HackyStringToInt(request.FormValue("boardid")))
-		if !boardExists {
-			serverutil.ServeErrorPage(writer, "No boards have been created yet")
-			return
-		}
-		filePath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "src", upload.Filename)
-		thumbPath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
-		catalogThumbPath = path.Join(systemCritical.DocumentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
-
-		if err = os.WriteFile(filePath, data, 0644); err != nil {
-			errEv.Err(err).Caller().
-				Str("posting", "upload").
-				Str("filename", upload.Filename).
-				Str("originalFilename", upload.OriginalFilename).
-				Send()
-			serverutil.ServeErrorPage(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename))
-			return
-		}
-
-		if ext == "webm" || ext == "mp4" {
-			infoEv.Str("post", "withVideo").
-				Str("filename", handler.Filename).
-				Str("referer", request.Referer()).Send()
-			if post.IsTopPost {
-				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
-					errEv.Err(err).Caller().
-						Str("filePath", filePath).
-						Str("thumbPath", thumbPath).
-						Int("thumbWidth", boardConfig.ThumbWidth).
-						Msg("Error creating video thumbnail")
-					serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
-					return
-				}
-			} else {
-				if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidthReply); err != nil {
-					errEv.Err(err).Caller().
-						Str("filePath", filePath).
-						Str("thumbPath", thumbPath).
-						Int("thumbWidth", boardConfig.ThumbWidthReply).
-						Msg("Error creating video thumbnail for reply")
-					serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
-					return
-				}
-			}
-
-			if err := createVideoThumbnail(filePath, catalogThumbPath, boardConfig.ThumbWidthCatalog); err != nil {
-				errEv.Err(err).Caller().
-					Str("filePath", filePath).
-					Str("thumbPath", thumbPath).
-					Int("thumbWidth", boardConfig.ThumbWidthCatalog).
-					Msg("Error creating video thumbnail for catalog")
-				serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
-				return
-			}
-
-			outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
-			if err != nil {
-				gcutil.LogError(err).Msg("Error getting video info")
-
-				serverutil.ServeErrorPage(writer, "Error getting video info: "+err.Error())
-				return
-			}
-			if outputBytes != nil {
-				outputStringArr := strings.Split(string(outputBytes), "\n")
-				for _, line := range outputStringArr {
-					lineArr := strings.Split(line, "=")
-					if len(lineArr) < 2 {
-						continue
-					}
-					value, _ := strconv.Atoi(lineArr[1])
-					switch lineArr[0] {
-					case "width":
-						upload.Width = value
-					case "height":
-						upload.Height = value
-					case "size":
-						upload.FileSize = value
-					}
-				}
-				thumbType := "reply"
-				if post.IsTopPost {
-					thumbType = "op"
-				}
-				upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
-					upload.Width, upload.Height, postBoard.Dir, thumbType)
-			}
-		} else {
-			// Attempt to load uploaded file with imaging library
-			img, err := imaging.Open(filePath)
-			if err != nil {
-				os.Remove(filePath)
-				gcutil.LogError(err).
-					Str("filePath", filePath).Send()
-				serverutil.ServeErrorPage(writer, "Upload filetype not supported")
-				return
-			}
-			// Get image filesize
-			stat, err := os.Stat(filePath)
-			if err != nil {
-				gcutil.LogError(err).
-					Str("filePath", filePath).Send()
-				serverutil.ServeErrorPage(writer, "Couldn't get image filesize: "+err.Error())
-				return
-			}
-			upload.FileSize = int(stat.Size())
-
-			// Get image width and height, as well as thumbnail width and height
-			upload.Width = img.Bounds().Max.X
-			upload.Height = img.Bounds().Max.Y
-			thumbType := "reply"
-			if post.IsTopPost {
-				thumbType = "op"
-			}
-			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
-				upload.Width, upload.Height, postBoard.Dir, thumbType)
-
-			gcutil.LogAccess(request).
-				Bool("withFile", true).
-				Str("filename", handler.Filename).
-				Str("referer", request.Referer()).Send()
-
-			if request.FormValue("spoiler") == "on" {
-				// If spoiler is enabled, symlink thumbnail to spoiler image
-				if _, err := os.Stat(path.Join(systemCritical.DocumentRoot, "spoiler.png")); err != nil {
-					serverutil.ServeErrorPage(writer, "missing spoiler.png")
-					return
-				}
-				if err = syscall.Symlink(path.Join(systemCritical.DocumentRoot, "spoiler.png"), thumbPath); err != nil {
-					gcutil.LogError(err).
-						Str("thumbPath", thumbPath).
-						Msg("Error creating symbolic link to thumbnail path")
-					serverutil.ServeErrorPage(writer, err.Error())
-					return
-				}
-			}
-
-			shouldThumb := shouldCreateThumbnail(filePath,
-				upload.Width, upload.Height, upload.ThumbnailWidth, upload.ThumbnailHeight)
-			if shouldThumb {
-				var thumbnail image.Image
-				var catalogThumbnail image.Image
-				if post.IsTopPost {
-					// If this is a new thread, generate thumbnail and catalog thumbnail
-					thumbnail = createImageThumbnail(img, postBoard.Dir, "op")
-					catalogThumbnail = createImageThumbnail(img, postBoard.Dir, "catalog")
-					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						errEv.Err(err).Caller().
-							Str("thumbPath", catalogThumbPath).
-							Msg("Couldn't generate catalog thumbnail")
-						serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
-						return
-					}
-				} else {
-					thumbnail = createImageThumbnail(img, postBoard.Dir, "reply")
-				}
-				if err = imaging.Save(thumbnail, thumbPath); err != nil {
-					errEv.Err(err).Caller().
-						Str("thumbPath", thumbPath).
-						Msg("Couldn't generate catalog thumbnail")
-					serverutil.ServeErrorPage(writer, "Couldn't save thumbnail: "+err.Error())
-					return
-				}
-			} else {
-				// If image fits in thumbnail size, symlink thumbnail to original
-				upload.ThumbnailWidth = img.Bounds().Max.X
-				upload.ThumbnailHeight = img.Bounds().Max.Y
-				if err := syscall.Symlink(filePath, thumbPath); err != nil {
-					errEv.Err(err).Caller().
-						Str("thumbPath", thumbPath).
-						Msg("Couldn't generate catalog thumbnail")
-					serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
-					return
-				}
-				if post.IsTopPost {
-					// Generate catalog thumbnail
-					catalogThumbnail := createImageThumbnail(img, postBoard.Dir, "catalog")
-					if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
-						errEv.Err(err).Caller().
-							Str("thumbPath", catalogThumbPath).
-							Msg("Couldn't generate catalog thumbnail")
-						serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
-						return
-					}
-				}
-			}
-		}
+	boardExists := gcsql.DoesBoardExistByID(boardID)
+	if !boardExists {
+		serverutil.ServeErrorPage(writer, "Board does not exist (invalid boardid)")
+		return
 	}
+
+	upload, gotErr := AttachUploadFromRequest(request, writer, &post, postBoard)
+	if gotErr {
+		// got an error receiving the upload, stop here (assuming an error page was actually shown)
+		return
+	}
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 
 	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
 		if upload != nil {
+			filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+			thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
+			catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 			os.Remove(filePath)
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)
@@ -517,6 +292,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to attach upload to post")
+		filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+		thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
+		catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 		os.Remove(filePath)
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)

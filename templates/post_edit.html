@@ -6,16 +6,39 @@
 
 	<form action="/util" method="POST" id="edit-form">
 		<input name="postid" type="hidden" value="{{.post.ID}}" />
-		<input name="boardid" type="hidden" value="{{.boardID}}" />
+		<input name="boardid" type="hidden" value="{{.board.ID}}" />
 		<input name="threadid" type="hidden" value="{{.post.ThreadID}}" />
 		<input name="password" type="hidden" value="{{.post.Password}}" />
-		<input name="doedit" type="hidden" value="1" />
+		<input name="doedit" type="hidden" value="post" />
 		<table id="postbox-static">
 			<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "!" .post.Tripcode}}</td></tr>
 			<tr><th class="postblock">Email</th><td><input type="email" name="editemail" maxlength="100" size="28" autocomplete="off" value="{{.post.Email}}"/></td></tr>
 			<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="28" autocomplete="off" value="{{.post.Subject}}"/>
-				<input type="submit" value="Submit changes"/></td></tr>
+				<input type="submit" value="Update"/></td></tr>
 			<tr><th class="postblock">Message</th><td><textarea rows="4" cols="48" name="editmsg" id="editmsg">{{.post.MessageRaw}}</textarea></td></tr>
 		</table>
+	</form><hr/>
+	<header>
+		<h1>{{- with .upload -}}Edit{{else}}Add{{end}} upload</h1>
+	</header>
+	<form action="/util" method="POST" id="upload-form" enctype="multipart/form-data">
+		<input name="postid" type="hidden" value="{{$.post.ID}}" />
+		<input name="boardid" type="hidden" value="{{$.board.ID}}" />
+		<input name="threadid" type="hidden" value="{{$.post.ThreadID}}" />
+		<input name="password" type="hidden" value="{{$.post.Password}}" />
+		<input name="doedit" type="hidden" value="upload" />
+		<table id="postbox-static">
+			{{- with .upload -}}
+			<tr><th class="postblock">Filename</th><td>{{.Filename}}</td></tr>
+			<tr><th class="postblock">Thumbnail</th><td>
+				<img src="{{webPath $.board.Dir "thumb" (.ThumbnailPath "reply")}}" alt="{{webPath $.board.Dir "src" .Filename}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload" />
+			</td></tr>
+			{{- end -}}
+			<tr><th>Spoiler</th><td><input type="checkbox" name="spoiler" id="spoiler" {{with .upload}}{{if .IsSpoilered}}checked{{end}}{{end}}></td></tr>
+			<tr><th>Replace</th><td>
+				<input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4" onchange="var sub = document.getElementById('update-file'); if(this.value != '') { sub.disabled = false; sub.value = 'Update file'; } else { sub.disabled = true; sub.value = 'No file selected'}"/>
+			</td></tr>
+		</table>
+		<div style="text-align: center;"><input type="submit" id="update-file" value="Update file" onclick="confirm()"></div>
 	</form><br />
 {{template "page_footer.html" .}}

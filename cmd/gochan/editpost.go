@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"net/http"
+	"os"
+	"path"
 	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -44,34 +47,50 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				Msg("Error getting post information")
 			return
 		}
+		errEv.Int("postID", post.ID)
+
 		if post.Password != passwordMD5 && rank == 0 {
 			serverutil.ServeErrorPage(writer, "Wrong password")
 			return
 		}
 
-		boardID, err := post.GetBoardID()
+		board, err := post.GetBoard()
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get board ID from post")
 			serverutil.ServeErrorPage(writer, "Unable to get board ID from post: "+err.Error())
 			return
 		}
+		errEv.Str("board", board.Dir)
+		upload, err := post.GetUpload()
+		if err != nil {
+			errEv.Err(err).Caller().Send()
+			serverutil.ServeErrorPage(writer, "Error getting post upload info: "+err.Error())
+			return
+		}
 
-		if err = serverutil.MinifyTemplate(gctemplates.PostEdit, map[string]interface{}{
+		data := map[string]interface{}{
 			"boards":         gcsql.AllBoards,
 			"systemCritical": config.GetSystemCriticalConfig(),
 			"siteConfig":     config.GetSiteConfig(),
-			"boardID":        boardID,
+			"board":          board,
 			"boardConfig":    config.GetBoardConfig(""),
 			"post":           post,
 			"referrer":       request.Referer(),
-		}, writer, "text/html"); err != nil {
+		}
+		if upload != nil {
+			data["upload"] = upload
+		}
+		buf := bytes.NewBufferString("")
+		err = serverutil.MinifyTemplate(gctemplates.PostEdit, data, buf, "text/html")
+		if err != nil {
 			errEv.Err(err).Caller().
 				Msg("Error executing edit post template")
 			serverutil.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
 			return
 		}
+		writer.Write(buf.Bytes())
 	}
-	if doEdit == "1" {
+	if doEdit == "post" || doEdit == "upload" {
 		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
@@ -116,19 +135,72 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 
-		if err = post.UpdateContents(
-			request.FormValue("editemail"),
-			request.FormValue("editsubject"),
-			posting.FormatMessage(request.FormValue("editmsg"), board.Dir),
-			request.FormValue("editmsg"),
-		); err != nil {
-			errEv.Err(err).Caller().
-				Int("postid", post.ID).
-				Msg("Unable to edit post")
-			serverutil.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
-				"postid": post.ID,
-			})
-			return
+		if doEdit == "upload" {
+			oldUpload, err := post.GetUpload()
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
+				return
+			}
+
+			upload, gotErr := posting.AttachUploadFromRequest(request, writer, post, board)
+			if gotErr {
+				// AttachUploadFromRequest handles error serving/logging
+				return
+			}
+			if upload == nil {
+				serverutil.ServeError(writer, "Missing upload replacement", wantsJSON, nil)
+				return
+			}
+			documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+			var filePath, thumbPath, catalogThumbPath string
+			if oldUpload != nil && oldUpload.Filename != "deleted" {
+				filePath = path.Join(documentRoot, board.Dir, "src", oldUpload.Filename)
+				thumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("thumb"))
+				catalogThumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("catalog"))
+				if err = post.UnlinkUploads(false); err != nil {
+					errEv.Err(err).Caller().Send()
+					serverutil.ServeError(writer, "Error unlinking old upload from post: "+err.Error(), wantsJSON, nil)
+					return
+				}
+				os.Remove(filePath)
+				os.Remove(thumbPath)
+				if post.IsTopPost {
+					os.Remove(catalogThumbPath)
+				}
+			}
+			if err = post.AttachFile(upload); err != nil {
+				errEv.Err(err).Caller().
+					Str("newFilename", upload.Filename).
+					Str("newOriginalFilename", upload.OriginalFilename).
+					Send()
+				serverutil.ServeError(writer, "Error attaching new upload: "+err.Error(), wantsJSON, map[string]interface{}{
+					"filename": upload.OriginalFilename,
+				})
+				filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
+				thumbPath = path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("thumb"))
+				catalogThumbPath = path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("catalog"))
+				os.Remove(filePath)
+				os.Remove(thumbPath)
+				if post.IsTopPost {
+					os.Remove(catalogThumbPath)
+				}
+			}
+		} else {
+			if err = post.UpdateContents(
+				request.FormValue("editemail"),
+				request.FormValue("editsubject"),
+				posting.FormatMessage(request.FormValue("editmsg"), board.Dir),
+				request.FormValue("editmsg"),
+			); err != nil {
+				errEv.Err(err).Caller().
+					Int("postid", post.ID).
+					Msg("Unable to edit post")
+				serverutil.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
+					"postid": post.ID,
+				})
+				return
+			}
 		}
 
 		if err = building.BuildBoards(false, boardid); err != nil {

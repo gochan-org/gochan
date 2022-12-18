@@ -176,7 +176,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	if wantsJSON {
 		writer.Header().Set("Content-Type", "application/json")
 	}
-	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit post" && doEdit != "1" && moveBtn != "Move thread" && doMove != "1" {
+	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit post" && doEdit != "post" && doEdit != "upload" && moveBtn != "Move thread" && doMove != "1" {
 		gcutil.LogAccess(request).Int("status", 400).Msg("received invalid /util request")
 		if wantsJSON {
 			writer.WriteHeader(http.StatusBadRequest)
@@ -227,7 +227,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if editBtn != "" || doEdit == "1" {
+	if editBtn != "" || doEdit == "post" || doEdit == "upload" {
 		editPost(checkedPosts, editBtn, doEdit, writer, request)
 		return
 	}

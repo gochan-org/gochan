@@ -41,6 +41,13 @@ func GetThreadFiles(post *Post) ([]Upload, error) {
 	return uploads, nil
 }
 
+func (p *Post) nextFileOrder() (int, error) {
+	const query = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
+	var next int
+	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&next))
+	return next, err
+}
+
 func (p *Post) AttachFile(upload *Upload) error {
 	if upload == nil {
 		return nil //
@@ -55,6 +62,12 @@ func (p *Post) AttachFile(upload *Upload) error {
 	uploadID, err := getNextFreeID("DBPREFIXfiles")
 	if err != nil {
 		return err
+	}
+	if upload.FileOrder < 1 {
+		upload.FileOrder, err = p.nextFileOrder()
+		if err != nil {
+			return err
+		}
 	}
 	upload.PostID = p.ID
 	if _, err = ExecSQL(query,

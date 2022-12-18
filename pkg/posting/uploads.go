@@ -1,21 +1,272 @@
 package posting
 
 import (
+	"crypto/md5"
 	"errors"
+	"fmt"
+	"html"
 	"image"
 	"image/gif"
+	"io"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/serverutil"
 )
+
+// AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
+// It returns the upload (if there was one) and whether or not any errors were served (meaning
+// that it should stop processing the post
+func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board) (*gcsql.Upload, bool) {
+	errEv := gcutil.LogError(nil).
+		Str("IP", post.IP)
+	infoEv := gcutil.LogInfo().
+		Str("IP", post.IP)
+	defer func() {
+		infoEv.Discard()
+		errEv.Discard()
+	}()
+	file, handler, err := request.FormFile("imagefile")
+	if err == http.ErrMissingFile {
+		// no file was submitted with the form
+		return nil, false
+	}
+	wantsJSON := serverutil.IsRequestingJSON(request)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
+		return nil, true
+	}
+	upload := &gcsql.Upload{
+		OriginalFilename: html.EscapeString(handler.Filename),
+	}
+	if checkFilenameBan(upload, post, postBoard, writer, request) {
+		// If checkFilenameBan returns true, an error occured or the file was
+		// rejected for having a banned filename, and the incident was logged either way
+		return nil, true
+	}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		serverutil.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
+		return nil, true
+	}
+	defer file.Close()
+
+	// Calculate image checksum
+	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data))
+	if checkChecksumBan(upload, post, postBoard, writer, request) {
+		// If checkChecksumBan returns true, an error occured or the file was
+		// rejected for having a banned checksum, and the incident was logged either way
+		return nil, true
+	}
+
+	ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
+	upload.Filename = getNewFilename() + ext
+
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+	filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+	thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
+	catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
+
+	if err = os.WriteFile(filePath, data, 0644); err != nil {
+		errEv.Err(err).Caller().
+			Str("filename", upload.Filename).
+			Str("originalFilename", upload.OriginalFilename).
+			Send()
+		serverutil.ServeError(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename), wantsJSON, map[string]interface{}{
+			"filename":         upload.Filename,
+			"originalFilename": upload.OriginalFilename,
+		})
+		return nil, true
+	}
+	errEv.
+		Str("filename", handler.Filename).
+		Str("filePath", filePath).
+		Str("thumbPath", thumbPath)
+
+	boardConfig := config.GetBoardConfig(postBoard.Dir)
+	if ext == "webm" || ext == "mp4" {
+		infoEv.Str("post", "withVideo").
+			Str("filename", handler.Filename).
+			Str("referer", request.Referer()).Send()
+		if post.IsTopPost {
+			if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
+				errEv.Err(err).Caller().
+					Str("filePath", filePath).
+					Str("thumbPath", thumbPath).
+					Int("thumbWidth", boardConfig.ThumbWidth).
+					Msg("Error creating video thumbnail")
+				serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
+				return nil, true
+			}
+		} else {
+			if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidthReply); err != nil {
+				errEv.Err(err).Caller().
+					Str("filePath", filePath).
+					Str("thumbPath", thumbPath).
+					Int("thumbWidth", boardConfig.ThumbWidthReply).
+					Msg("Error creating video thumbnail for reply")
+				serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
+				return nil, true
+			}
+		}
+
+		if err := createVideoThumbnail(filePath, catalogThumbPath, boardConfig.ThumbWidthCatalog); err != nil {
+			errEv.Err(err).Caller().
+				Str("filePath", filePath).
+				Str("thumbPath", thumbPath).
+				Int("thumbWidth", boardConfig.ThumbWidthCatalog).
+				Msg("Error creating video thumbnail for catalog")
+			serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
+			return nil, true
+		}
+
+		outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
+		if err != nil {
+			gcutil.LogError(err).Msg("Error getting video info")
+			serverutil.ServeErrorPage(writer, "Error getting video info: "+err.Error())
+			return nil, true
+		}
+		if outputBytes != nil {
+			outputStringArr := strings.Split(string(outputBytes), "\n")
+			for _, line := range outputStringArr {
+				lineArr := strings.Split(line, "=")
+				if len(lineArr) < 2 {
+					continue
+				}
+				value, _ := strconv.Atoi(lineArr[1])
+				switch lineArr[0] {
+				case "width":
+					upload.Width = value
+				case "height":
+					upload.Height = value
+				case "size":
+					upload.FileSize = value
+				}
+			}
+			thumbType := "reply"
+			if post.IsTopPost {
+				thumbType = "op"
+			}
+			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
+				upload.Width, upload.Height, postBoard.Dir, thumbType)
+		}
+	} else {
+		// Attempt to load uploaded file with imaging library
+		img, err := imaging.Open(filePath)
+		if err != nil {
+			os.Remove(filePath)
+			errEv.Err(err).Caller().
+				Str("filePath", filePath).Send()
+			serverutil.ServeErrorPage(writer, "Upload filetype not supported")
+			return nil, true
+		}
+		// Get image filesize
+		stat, err := os.Stat(filePath)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Str("filePath", filePath).Send()
+			serverutil.ServeErrorPage(writer, "Couldn't get image filesize: "+err.Error())
+			return nil, true
+		}
+		upload.FileSize = int(stat.Size())
+
+		// Get image width and height, as well as thumbnail width and height
+		upload.Width = img.Bounds().Max.X
+		upload.Height = img.Bounds().Max.Y
+		thumbType := "reply"
+		if post.IsTopPost {
+			thumbType = "op"
+		}
+		upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
+			upload.Width, upload.Height, postBoard.Dir, thumbType)
+
+		gcutil.LogAccess(request).
+			Bool("withFile", true).
+			Str("filename", handler.Filename).
+			Str("referer", request.Referer()).Send()
+
+		if request.FormValue("spoiler") == "on" {
+			// If spoiler is enabled, symlink thumbnail to spoiler image
+			if _, err := os.Stat(path.Join(documentRoot, "spoiler.png")); err != nil {
+				serverutil.ServeErrorPage(writer, "missing spoiler.png")
+				return nil, true
+			}
+			if err = syscall.Symlink(path.Join(documentRoot, "spoiler.png"), thumbPath); err != nil {
+				gcutil.LogError(err).
+					Str("thumbPath", thumbPath).
+					Msg("Error creating symbolic link to thumbnail path")
+				serverutil.ServeErrorPage(writer, err.Error())
+				return nil, true
+			}
+		}
+
+		shouldThumb := shouldCreateThumbnail(filePath,
+			upload.Width, upload.Height, upload.ThumbnailWidth, upload.ThumbnailHeight)
+		if shouldThumb {
+			var thumbnail image.Image
+			var catalogThumbnail image.Image
+			if post.IsTopPost {
+				// If this is a new thread, generate thumbnail and catalog thumbnail
+				thumbnail = createImageThumbnail(img, postBoard.Dir, "op")
+				catalogThumbnail = createImageThumbnail(img, postBoard.Dir, "catalog")
+				if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
+					errEv.Err(err).Caller().
+						Str("thumbPath", catalogThumbPath).
+						Msg("Couldn't generate catalog thumbnail")
+					serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
+					return nil, true
+				}
+			} else {
+				thumbnail = createImageThumbnail(img, postBoard.Dir, "reply")
+			}
+			if err = imaging.Save(thumbnail, thumbPath); err != nil {
+				errEv.Err(err).Caller().
+					Str("thumbPath", thumbPath).
+					Msg("Couldn't generate catalog thumbnail")
+				serverutil.ServeErrorPage(writer, "Couldn't save thumbnail: "+err.Error())
+				return nil, true
+			}
+		} else {
+			// If image fits in thumbnail size, symlink thumbnail to original
+			upload.ThumbnailWidth = img.Bounds().Max.X
+			upload.ThumbnailHeight = img.Bounds().Max.Y
+			if err := syscall.Symlink(filePath, thumbPath); err != nil {
+				errEv.Err(err).Caller().
+					Str("thumbPath", thumbPath).
+					Msg("Couldn't generate catalog thumbnail")
+				serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
+				return nil, true
+			}
+			if post.IsTopPost {
+				// Generate catalog thumbnail
+				catalogThumbnail := createImageThumbnail(img, postBoard.Dir, "catalog")
+				if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
+					errEv.Err(err).Caller().
+						Str("thumbPath", catalogThumbPath).
+						Msg("Couldn't generate catalog thumbnail")
+					serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
+					return nil, true
+				}
+			}
+		}
+	}
+
+	return upload, false
+}
 
 func getBoardThumbnailSize(boardDir string, thumbType string) (int, int) {
 	boardCfg := config.GetBoardConfig(boardDir)
