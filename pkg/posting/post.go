@@ -40,7 +40,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}()
 	var post gcsql.Post
 	var formName string
-	var nameCookie string
 	var formEmail string
 
 	systemCritical := config.GetSystemCriticalConfig()
@@ -117,7 +116,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "email",
-		Value:  formEmail,
+		Value:  url.QueryEscape(formEmail),
 		MaxAge: yearInSeconds,
 	})
 
@@ -154,32 +153,25 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	post.Message = FormatMessage(post.MessageRaw, postBoard.Dir)
-	password := request.FormValue("postpassword")
+	password, _ := url.QueryUnescape(request.FormValue("postpassword"))
 	if password == "" {
 		password = gcutil.RandomString(8)
 	}
 	post.Password = gcutil.Md5Sum(password)
 
-	// Reverse escapes
-	nameCookie = strings.Replace(formName, "&amp;", "&", -1)
-	nameCookie = strings.Replace(nameCookie, "\\&#39;", "'", -1)
-	nameCookie = strings.Replace(url.QueryEscape(nameCookie), "+", "%20", -1)
-
 	// add name and email cookies that will expire in a year (31536000 seconds)
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "name",
-		Value:  nameCookie,
+		Value:  url.QueryEscape(formName),
 		MaxAge: yearInSeconds,
 	})
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "password",
-		Value:  password,
+		Value:  url.QueryEscape(password),
 		MaxAge: yearInSeconds,
 	})
 
 	post.CreatedOn = time.Now()
-	// post.PosterAuthority = getStaffRank(request)
-	// bumpedTimestamp := time.Now()
 	// isSticky := request.FormValue("modstickied") == "on"
 	// isLocked := request.FormValue("modlocked") == "on"
 
