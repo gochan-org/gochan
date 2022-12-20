@@ -92,6 +92,9 @@ func BuildBoardPages(board *gcsql.Board) error {
 				Caller().Msg("Failed getting replies")
 			return errors.New("Failed getting replies: " + err.Error())
 		}
+		if len(catalogThread.Posts) == 0 {
+			continue
+		}
 		if len(catalogThread.Posts) > maxRepliesOnBoardPage {
 			op := catalogThread.Posts[0]
 			replies := catalogThread.Posts[len(catalogThread.Posts)-maxRepliesOnBoardPage:]

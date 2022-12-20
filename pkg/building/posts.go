@@ -112,7 +112,7 @@ func (p Post) UploadPath() string {
 }
 
 func GetBuildablePost(id int, boardid int) (*Post, error) {
-	const query = postQueryBase + " AND DBPREFIXposts.id = ? GROUP BY DBPREFIXposts.id"
+	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
 	var post Post
 	var threadID int
 	err := gcsql.QueryRowSQL(query, []interface{}{id}, []interface{}{
@@ -134,7 +134,6 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
-	query += " GROUP BY DBPREFIXposts.id"
 	rows, err := gcsql.QuerySQL(query, ip)
 	if err != nil {
 		return nil, err
@@ -160,7 +159,7 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 }
 
 func getBoardTopPosts(boardID int) ([]Post, error) {
-	const query = postQueryBase + " AND is_top_post AND t.board_id = ? GROUP BY DBPREFIXposts.id"
+	const query = postQueryBase + " AND is_top_post AND t.board_id = ?"
 	rows, err := gcsql.QuerySQL(query, boardID)
 	if err != nil {
 		return nil, err
@@ -186,7 +185,7 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 }
 
 func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
-	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ? GROUP BY DBPREFIXposts.id"
+	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ?"
 	rows, err := gcsql.QuerySQL(query, thread.ID)
 	if err != nil {
 		return nil, err
@@ -220,7 +219,7 @@ func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 		args = append(args, boardid)
 	}
 
-	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(limit) + " GROUP BY DBPREFIXposts.id"
+	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(limit)
 	rows, err := gcsql.QuerySQL(query, args...)
 	if err != nil {
 		return nil, err
