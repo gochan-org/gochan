@@ -81,10 +81,11 @@
 
 	"DateTimeFormat": "Mon, January 02, 2006 3:04 PM",
 	"AkismetAPIKey": "",
-	"UseCaptcha": false,
-	"CaptchaWidth": 240,
-	"CaptchaHeight": 80,
-	"CaptchaMinutesTimeout": 15,
+	"_Captcha": {
+		"Type": "hcaptcha",
+		"SiteKey": "your site key goes here (if you want a captcha, make sure to replace '_Captcha' with 'Captcha'",
+		"AccountSecret": "your account secret key goes here"
+	},
 	"EnableGeoIP": true,
 	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
