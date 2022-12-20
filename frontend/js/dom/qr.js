@@ -208,11 +208,17 @@ export function initQR(pageThread) {
 	openQR();
 	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
-	if(currentThread().thread < 1) return; 
+	if(currentThread().thread < 1) {
+		$("form#qrpostform").on("submit", function(e) {
+			copyCaptchaResponse($(this));
+		});
+		return; 
+	}
 
 	$("form#qrpostform").on("submit", function(e) {
 		let $form = $(this);
 		e.preventDefault();
+		copyCaptchaResponse($form);
 		let data = new FormData(this);
 
 		$.ajax({
@@ -234,6 +240,16 @@ export function initQR(pageThread) {
 		});
 		return false;
 	});
+}
+
+function copyCaptchaResponse($copyToForm) {
+	let $captchaResp = $("textarea[name=h-captcha-response]");
+	if($captchaResp.length > 0) {
+		$("<textarea/>").prop({
+			"name": "h-captcha-response"
+		}).val($("textarea[name=h-captcha-response]").val()).css("display", "none")
+		.appendTo($copyToForm);
+	}
 }
 
 function clearQR() {
