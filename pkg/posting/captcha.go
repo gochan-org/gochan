@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -53,8 +54,8 @@ func SubmitCaptchaResponse(request *http.Request) (bool, error) {
 	if !captchaCfg.UseCaptcha() {
 		return true, nil // captcha isn't required, skip the test
 	}
-	threadid := request.PostFormValue("threadid")
-	if captchaCfg.OnlyNeededForThreads && threadid != "" && threadid != "0" {
+	threadid, _ := strconv.Atoi(request.PostFormValue("threadid"))
+	if captchaCfg.OnlyNeededForThreads && threadid > 0 {
 		return true, nil
 	}
 

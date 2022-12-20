@@ -207,7 +207,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	var delay int
 	var tooSoon bool
-	if threadidStr == "" || threadidStr == "0" {
+	if threadidStr == "" || threadidStr == "0" || threadidStr == "-1" {
 		// creating a new thread
 		delay, err = gcsql.SinceLastThread(post.IP)
 		tooSoon = delay < boardConfig.Cooldowns.NewThread
