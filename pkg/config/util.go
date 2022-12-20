@@ -162,6 +162,9 @@ func InitConfig(versionStr string) {
 
 				MaxRecentPosts:        12,
 				RecentPostsWithNoFile: false,
+				Captcha: CaptchaConfig{
+					OnlyNeededForThreads: true,
+				},
 			},
 			BoardConfig: BoardConfig{
 				Sillytags:    []string{"Admin", "Mod", "Janitor", "Dweeb", "Kick me", "Troll", "worst pony"},

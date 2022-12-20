@@ -309,9 +309,10 @@ type SiteConfig struct {
 }
 
 type CaptchaConfig struct {
-	Type          string
-	SiteKey       string
-	AccountSecret string
+	Type                 string
+	OnlyNeededForThreads bool
+	SiteKey              string
+	AccountSecret        string
 }
 
 func (cc *CaptchaConfig) UseCaptcha() bool {

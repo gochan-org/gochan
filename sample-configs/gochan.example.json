@@ -83,6 +83,7 @@
 	"AkismetAPIKey": "",
 	"_Captcha": {
 		"Type": "hcaptcha",
+		"OnlyNeededForThreads": true,
 		"SiteKey": "your site key goes here (if you want a captcha, make sure to replace '_Captcha' with 'Captcha'",
 		"AccountSecret": "your account secret key goes here"
 	},

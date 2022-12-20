@@ -53,6 +53,11 @@ func SubmitCaptchaResponse(request *http.Request) (bool, error) {
 	if !captchaCfg.UseCaptcha() {
 		return true, nil // captcha isn't required, skip the test
 	}
+	threadid := request.PostFormValue("threadid")
+	if captchaCfg.OnlyNeededForThreads && threadid != "" && threadid != "0" {
+		return true, nil
+	}
+
 	var token string
 	switch captchaCfg.Type {
 	case "hcaptcha":
