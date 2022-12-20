@@ -256,6 +256,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		serverutil.ServeError(writer, "Upload required for new threads", wantsJSON, nil)
 		return
 	}
+	if post.MessageRaw == "" && noFile {
+		errEv.Caller().Msg("New post rejected (no file and message is blank)")
+		serverutil.ServeError(writer, "Your post must have an upload or a comment", wantsJSON, nil)
+		return
+	}
 
 	upload, gotErr := AttachUploadFromRequest(request, writer, &post, postBoard)
 	if gotErr {
