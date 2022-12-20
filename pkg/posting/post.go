@@ -212,6 +212,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		delay, err = gcsql.SinceLastThread(post.IP)
 		tooSoon = delay < boardConfig.Cooldowns.NewThread
 	} else {
+		// replying to a thread
 		delay, err = gcsql.SinceLastPost(post.IP)
 		tooSoon = delay < boardConfig.Cooldowns.Reply
 	}
@@ -236,24 +237,16 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	post.Sanitize()
-
-	if boardConfig.UseCaptcha {
-		captchaID := request.FormValue("captchaid")
-		captchaAnswer := request.FormValue("captchaanswer")
-		if captchaID == "" && captchaAnswer == "" {
-			// browser isn't using JS, save post data to tempPosts and show captcha
-			request.Form.Add("temppostindex", strconv.Itoa(len(gcsql.TempPosts)))
-			request.Form.Add("emailcmd", emailCommand)
-			gcsql.TempPosts = append(gcsql.TempPosts, post)
-
-			ServeCaptcha(writer, request)
-			return
-		}
+	captchaSuccess, err := SubmitCaptchaResponse(request)
+	if err != nil {
+		serverutil.ServeErrorPage(writer, "Error submitting captcha response:"+err.Error())
+		errEv.Err(err).
+			Caller().Send()
+		return
 	}
-
-	boardExists := gcsql.DoesBoardExistByID(boardID)
-	if !boardExists {
-		serverutil.ServeErrorPage(writer, "Board does not exist (invalid boardid)")
+	if !captchaSuccess {
+		serverutil.ServeErrorPage(writer, "Missing or invalid captcha response")
+		errEv.Msg("Missing or invalid captcha response")
 		return
 	}
 

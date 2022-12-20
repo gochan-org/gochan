@@ -1,134 +1,108 @@
 package posting
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	"image/color"
 	"net/http"
-	"strconv"
+	"net/url"
+	"time"
 
-	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
-	"github.com/mojocn/base64Captcha"
 )
 
 var (
-	captchaString *base64Captcha.DriverString
-	driver        *base64Captcha.DriverString
+	ErrNoCaptchaToken     = errors.New("missing required CAPTCHA")
+	ErrUnsupportedCaptcha = errors.New("unsupported captcha type set in configuration (currently only hcaptcha is supported)")
+	validCaptchaTypes     = []string{"hcaptcha"}
 )
 
-type captchaJSON struct {
-	CaptchaID     string `json:"id"`
-	Base64String  string `json:"image"`
-	Result        string `json:"-"`
-	TempPostIndex string `json:"-"`
-	EmailCmd      string `json:"-"`
+type CaptchaResult struct {
+	Hostname  string    `json:"hostname"`
+	Credit    bool      `json:"credit"`
+	Success   bool      `json:"success"`
+	Timestamp time.Time `json:"challenge_ts"`
 }
 
-// InitCaptcha prepares the captcha driver for use
 func InitCaptcha() {
-	boardConfig := config.GetBoardConfig("")
-	if !boardConfig.UseCaptcha {
+	var typeIsValid bool
+	captchaCfg := config.GetSiteConfig().Captcha
+	if !captchaCfg.UseCaptcha() {
 		return
 	}
-	driver = base64Captcha.NewDriverString(
-		boardConfig.CaptchaHeight, boardConfig.CaptchaWidth, int(0), int(0), int(6),
-		"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		&color.RGBA{0, 0, 0, 0}, nil, nil).ConvertFonts()
-}
-
-// ServeCaptcha handles requests to /captcha if UseCaptcha is enabled in gochan.json
-func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
-	boardConfig := config.GetBoardConfig("")
-	if !boardConfig.UseCaptcha {
-		return
-	}
-	var err error
-	if err = request.ParseForm(); err != nil {
-		gcutil.LogError(err).Msg("Failed parsing request form")
-		serverutil.ServeErrorPage(writer, "Error parsing request form: "+err.Error())
-		return
-	}
-
-	tempPostIndexStr := request.FormValue("temppostindex")
-	var tempPostIndex int
-	if tempPostIndex, err = strconv.Atoi(tempPostIndexStr); err != nil {
-		tempPostIndexStr = "-1"
-		tempPostIndex = 0
-	}
-	emailCommand := request.FormValue("emailcmd")
-
-	id, b64 := getCaptchaImage()
-	captchaStruct := captchaJSON{id, b64, "", tempPostIndexStr, emailCommand}
-	useJSON := request.FormValue("json") == "1"
-	if useJSON {
-		writer.Header().Add("Content-Type", "application/json")
-
-		str, _ := gcutil.MarshalJSON(captchaStruct, false)
-		serverutil.MinifyWriter(writer, []byte(str), "application/json")
-		return
-	}
-	if request.FormValue("reload") == "Reload" {
-		request.Form.Del("reload")
-		request.Form.Add("didreload", "1")
-		ServeCaptcha(writer, request)
-		return
-	}
-	writer.Header().Add("Content-Type", "text/html")
-	captchaID := request.FormValue("captchaid")
-	boardIDstr := request.FormValue("boardid")
-	boardID, err := strconv.Atoi(boardIDstr)
-	if err != nil {
-		gcutil.LogError(err).
-			Str("ip", gcutil.GetRealIP(request)).
-			Str("boardid", boardIDstr).Send()
-		serverutil.ServeError(writer, fmt.Sprintf("Invalid boardid value %q", boardIDstr),
-			useJSON, map[string]interface{}{
-				"boardid": boardIDstr,
-			})
-		serverutil.ServeErrorPage(writer, fmt.Sprintf("Invalid boardid value %q", boardIDstr))
-		return
-	}
-	captchaAnswer := request.FormValue("captchaanswer")
-	if captchaID != "" && request.FormValue("didreload") != "1" {
-		goodAnswer := base64Captcha.DefaultMemStore.Verify(captchaID, captchaAnswer, true)
-		if goodAnswer {
-			if tempPostIndex > -1 && tempPostIndex < len(gcsql.TempPosts) {
-				// came from a /post redirect, insert the specified temporary post
-				// and redirect to the thread
-				gcsql.TempPosts[tempPostIndex].Insert(emailCommand != "sage", boardID, false, false, false, false)
-				building.BuildBoards(false, boardID)
-				building.BuildFrontPage()
-
-				url := gcsql.TempPosts[tempPostIndex].WebPath()
-
-				// move the end Post to the current index and remove the old end Post. We don't
-				// really care about order as long as tempPost validation doesn't get jumbled up
-				gcsql.TempPosts[tempPostIndex] = gcsql.TempPosts[len(gcsql.TempPosts)-1]
-				gcsql.TempPosts = gcsql.TempPosts[:len(gcsql.TempPosts)-1]
-				http.Redirect(writer, request, url, http.StatusFound)
-				return
-			}
-		} else {
-			captchaStruct.Result = "Incorrect CAPTCHA"
+	for _, vType := range validCaptchaTypes {
+		if captchaCfg.Type == vType {
+			typeIsValid = true
 		}
 	}
-	if err = serverutil.MinifyTemplate(gctemplates.Captcha, captchaStruct, writer, "text/html"); err != nil {
-		gcutil.LogError(err).
-			Str("template", "captcha").Send()
-		fmt.Fprint(writer, "Error executing captcha template: ", err.Error())
+	if !typeIsValid {
+		fmt.Printf("Unrecognized Captcha.Type value in configuration: %q, valid values: %v\n",
+			captchaCfg.Type, validCaptchaTypes)
+		gcutil.LogFatal().
+			Str("captchaType", captchaCfg.Type).
+			Msg("Unsupported captcha type set in configuration")
 	}
 }
 
-func getCaptchaImage() (captchaID, chaptchaB64 string) {
-	boardConfig := config.GetBoardConfig("")
-	if !boardConfig.UseCaptcha {
+// SubmitCaptchaResponse parses the incoming captcha form values, submits them, and returns the results
+func SubmitCaptchaResponse(request *http.Request) (bool, error) {
+	captchaCfg := config.GetSiteConfig().Captcha
+	if !captchaCfg.UseCaptcha() {
+		return true, nil // captcha isn't required, skip the test
+	}
+	var token string
+	switch captchaCfg.Type {
+	case "hcaptcha":
+		token = request.PostFormValue("h-captcha-response")
+	default:
+
+	}
+
+	if token == "" {
+		return false, ErrNoCaptchaToken
+	}
+	params := url.Values{
+		"secret":   []string{captchaCfg.AccountSecret},
+		"response": []string{token},
+	}
+	resp, err := http.PostForm("https://hcaptcha.com/siteverify", params)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	var vals CaptchaResult
+	if err = json.NewDecoder(resp.Body).Decode(&vals); err != nil {
+		return false, err
+	}
+	return vals.Success, nil
+}
+
+// ServeCaptcha handles requests to /captcha if the captcha is properly configured
+func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
+	captchaCfg := config.GetSiteConfig().Captcha
+	if request.Method == "GET" && request.FormValue("needcaptcha") != "" {
+		fmt.Fprint(writer, captchaCfg.UseCaptcha())
 		return
 	}
-	captcha := base64Captcha.NewCaptcha(driver, base64Captcha.DefaultMemStore)
-	captchaID, chaptchaB64, _ = captcha.Generate()
-	return
+	if !captchaCfg.UseCaptcha() {
+		serverutil.ServeErrorPage(writer, "This site is not set up to require a CAPTCHA test")
+		return
+	}
+	if request.Method == "POST" {
+		result, err := SubmitCaptchaResponse(request)
+		if err != nil {
+			serverutil.ServeErrorPage(writer, "Error checking results: "+err.Error())
+		}
+		fmt.Println("Success:", result)
+	}
+	err := serverutil.MinifyTemplate(gctemplates.Captcha, map[string]interface{}{
+		"webroot": config.GetSystemCriticalConfig().WebRoot,
+		"siteKey": captchaCfg.SiteKey,
+	}, writer, "text/html")
+	if err != nil {
+		serverutil.ServeErrorPage(writer, "Error serving CAPTCHA: "+err.Error())
+	}
 }

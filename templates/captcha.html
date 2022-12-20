@@ -1,18 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Gochan CAPTCHA</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	{{with .board -}}
+		{{with $.op -}}
+			<title>{{$.op.TitleText}}</title>
+		{{- else}}
+			<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>
+		{{end}}
+	{{- else}}<title>{{with $.page_title}}{{$.page_title}} - {{end}}{{.site_config.SiteName}}</title>{{end}}
+	<link rel="stylesheet" href="{{.webroot}}css/global.css" />
+	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board_config.DefaultStyle}}" />
+	<link rel="shortcut icon" href="{{.webroot}}favicon.png">
+	<script type="text/javascript" src="{{.webroot}}js/consts.js"></script>
+	<script type="text/javascript" src="{{.webroot}}js/gochan.js"></script>
 </head>
 <body>
-{{with .Result}}{{$.Result}}{{end}}
-<form action="/captcha" method="POST">
-	<img src="{{.Base64String}}" /><br />
-	<input type="text" name="captchaanswer" autocomplete="off" />
-	<input type="hidden" name="captchaid" value="{{.CaptchaID}}" />
-	{{with .EmailCmd}}<input type="hidden" name="emailcmd" value="{{$.EmailCmd}}" />{{end}}
-	{{with .TempPostIndex}}<input type="hidden" name="temppostindex" value="{{$.TempPostIndex}}" />{{end}}
-	<input type="submit" value="Submit" /><br />
-	<input type="submit" name="reload" value="Reload" />
+<div id="topbar">
+	<a href="{{$.webroot}}" class="topbar-item">home</a>
+	{{range $i, $board := .boards}}<a href="{{$.webroot}}{{$board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>{{end}}
+</div>
+{{with $.page_title  }}<header>
+<h1 id="board-title">{{$.page_title}}</h1>
+{{with $.include_dashboard_link}}<a href="{{$.webroot}}manage" class="board-subtitle">Return to dashboard</a><br/>{{end}}
+</header>{{end}}
+<div id="content">
+<header>
+	<h1 id="board-title">hCAPTCHA test</h1>
+</header><br />
+<form method="POST" action="{{.webroot}}captcha">
+	<div class="h-captcha" data-sitekey="{{.siteKey}}"></div>
+	<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+	<input type="submit" value="Post">
 </form>
+<div id="footer">
+	Powered by <a href="http://github.com/gochan-org/gochan/">Gochan {{version}}</a><br />
+</div>
+</div>
 </body>
 </html>

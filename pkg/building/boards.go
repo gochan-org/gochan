@@ -154,6 +154,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		defer boardPageFile.Close()
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
+		captchaCfg := config.GetSiteConfig().Captcha
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
 			"webroot":      criticalCfg.WebRoot,
 			"boards":       gcsql.AllBoards,
@@ -163,6 +164,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 			"currentPage":  1,
 			"board":        board,
 			"board_config": boardConfig,
+			"useCaptcha":   captchaCfg.UseCaptcha(),
+			"captcha":      captchaCfg,
 		}, boardPageFile, "text/html"); err != nil {
 			errEv.Err(err).
 				Str("page", "board.html").
@@ -204,6 +207,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		defer currentPageFile.Close()
 
 		// Render the boardpage template
+		captchaCfg := config.GetSiteConfig().Captcha
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
 			"webroot":      criticalCfg.WebRoot,
 			"boards":       gcsql.AllBoards,
@@ -213,6 +217,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 			"currentPage":  catalog.currentPage,
 			"board":        board,
 			"board_config": boardCfg,
+			"useCaptcha":   captchaCfg.UseCaptcha(),
+			"captcha":      captchaCfg,
 		}, currentPageFile, "text/html"); err != nil {
 			errEv.Err(err).
 				Caller().Send()

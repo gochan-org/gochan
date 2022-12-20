@@ -35,10 +35,7 @@ var (
 		"MaxLogDays":      14,
 
 		// BoardConfig
-		"DateTimeFormat":        "Mon, January 02, 2006 3:04:05 PM",
-		"CaptchaWidth":          240,
-		"CaptchaHeight":         80,
-		"CaptchaMinutesTimeout": 15,
+		"DateTimeFormat": "Mon, January 02, 2006 3:04:05 PM",
 
 		// PostConfig
 		"NewThreadDelay":           30,
@@ -219,14 +216,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		gcfg.DateTimeFormat = defaults["DateTimeFormat"].(string)
 		changed = true
 	}
-	if gcfg.CaptchaWidth == 0 {
-		gcfg.CaptchaWidth = defaults["CaptchaWidth"].(int)
-		changed = true
-	}
-	if gcfg.CaptchaHeight == 0 {
-		gcfg.CaptchaHeight = defaults["CaptchaHeight"].(int)
-		changed = true
-	}
+
 	if gcfg.EnableGeoIP {
 		if gcfg.GeoIPDBlocation == "" {
 			return &ErrInvalidValue{Field: "GeoIPDBlocation", Value: "", Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true"}
@@ -314,6 +304,18 @@ type SiteConfig struct {
 	MinifyJS        bool   `description:"If checked, gochan will minify js and json files when building"`
 	GeoIPDBlocation string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information."`
 	AkismetAPIKey   string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+
+	Captcha CaptchaConfig
+}
+
+type CaptchaConfig struct {
+	Type          string // may or may not be used, possibly for specifying which service (e.g. "hcaptcha","recaptcha")
+	SiteKey       string
+	AccountSecret string
+}
+
+func (cc *CaptchaConfig) UseCaptcha() bool {
+	return cc.SiteKey != "" && cc.AccountSecret != ""
 }
 
 type BoardCooldowns struct {
@@ -336,10 +338,6 @@ type BoardConfig struct {
 
 	DateTimeFormat         string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
 	AkismetAPIKey          string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
-	UseCaptcha             bool
-	CaptchaWidth           int
-	CaptchaHeight          int
-	CaptchaMinutesTimeout  int
 	MaxBoardPages          int
 	ShowPosterID           bool
 	EnableSpoileredImages  bool

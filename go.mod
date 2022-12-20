@@ -9,7 +9,6 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/lib/pq v1.10.6
 	github.com/mattn/go-sqlite3 v1.14.15
-	github.com/mojocn/base64Captcha v1.3.5
 	github.com/rs/zerolog v1.28.0
 	github.com/tdewolff/minify v2.3.6+incompatible
 	github.com/tdewolff/parse v2.3.4+incompatible // indirect
