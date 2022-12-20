@@ -249,6 +249,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Msg("Missing or invalid captcha response")
 		return
 	}
+	_, _, err = request.FormFile("imagefile")
+	noFile := err == http.ErrMissingFile
+	if noFile && post.ThreadID == 0 && boardConfig.NewThreadsRequireUpload {
+		errEv.Caller().Msg("New thread rejected (NewThreadsRequireUpload set in config)")
+		serverutil.ServeError(writer, "Upload required for new threads", wantsJSON, nil)
+		return
+	}
 
 	upload, gotErr := AttachUploadFromRequest(request, writer, &post, postBoard)
 	if gotErr {

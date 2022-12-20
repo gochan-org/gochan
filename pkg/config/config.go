@@ -309,7 +309,7 @@ type SiteConfig struct {
 }
 
 type CaptchaConfig struct {
-	Type          string // may or may not be used, possibly for specifying which service (e.g. "hcaptcha","recaptcha")
+	Type          string
 	SiteKey       string
 	AccountSecret string
 }
@@ -378,6 +378,7 @@ type PostConfig struct {
 	PostsPerThreadPage       int
 	RepliesOnBoardPage       int `description:"Number of replies to a thread to show on the board page."`
 	StickyRepliesOnBoardPage int `description:"Same as above for stickied threads."`
+	NewThreadsRequireUpload  bool
 
 	BanColors        []string
 	BanMessage       string `description:"The default public ban message."`
