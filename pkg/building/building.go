@@ -24,6 +24,7 @@ type recentPost struct {
 	Board         string
 	URL           string
 	ThumbURL      string
+	Filename      string
 	FileDeleted   bool
 	MessageSample string
 }
@@ -81,6 +82,7 @@ func getRecentPosts() ([]recentPost, error) {
 			Board:         boardDir,
 			URL:           config.WebPath(boardDir, "res", topPostID+".html") + "#" + id,
 			ThumbURL:      config.WebPath(boardDir, "thumb", gcutil.GetThumbnailPath("post", filename)),
+			Filename:      filename,
 			FileDeleted:   filename == "deleted",
 			MessageSample: message,
 		}

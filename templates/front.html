@@ -33,7 +33,7 @@
 				<div id="recent-posts">
 				{{- range $i, $post := $.recent_posts}}
 					<div class="recent-post">
-						{{if and (not $post.FileDeleted) (ne $post.ThumbURL "") -}}
+						{{if and (not $post.FileDeleted) (ne $post.Filename "") -}}
 							<a href="{{$post.URL}}" class="front-reply" target="_blank"><img src="{{$post.ThumbURL}}" alt="post thumbnail"/></a><br />
 						{{else}}
 							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$post.URL}}" class="front-reply" target="_blank">No file</a></div>
