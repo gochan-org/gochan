@@ -26,6 +26,20 @@ var (
 	ErrNoBoardTitle = errors.New("board must have a title before it is built")
 )
 
+type boardJSON struct {
+	Dir             string `json:"board"`
+	Title           string `json:"title"`
+	Subtitle        string `json:"meta_description"`
+	MaxFilesize     int    `json:"max_filesize"`
+	Locked          bool   `json:"is_archived"`
+	BumpLimit       int    `json:"bump_limit"`
+	ImageLimit      int    `json:"image_limit"`
+	MaxCommentChars int    `json:"max_comment_chars"`
+	MinCommentChars int    `json:"min_comment_chars"`
+
+	Cooldowns config.BoardCooldowns `json:"cooldowns"`
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1
@@ -403,7 +417,6 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	if err = BuildBoardListJSON(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -418,12 +431,25 @@ func BuildBoardListJSON() error {
 	}
 	defer boardListFile.Close()
 
-	boardsMap := map[string][]gcsql.Board{
+	boardsMap := map[string][]boardJSON{
 		"boards": {},
+	}
+	for _, board := range gcsql.AllBoards {
+		boardsMap["boards"] = append(boardsMap["boards"], boardJSON{
+			Dir:             board.Dir,
+			Title:           board.Title,
+			Subtitle:        board.Subtitle,
+			MaxFilesize:     board.MaxFilesize,
+			Locked:          board.Locked,
+			BumpLimit:       board.AutosageAfter,
+			ImageLimit:      board.NoImagesAfter,
+			MaxCommentChars: board.MaxMessageLength,
+			MinCommentChars: board.MinMessageLength,
+			Cooldowns:       config.GetBoardConfig(board.Dir).Cooldowns,
+		})
 	}
 
 	// TODO: properly check if the board is in a hidden section
-	boardsMap["boards"] = gcsql.AllBoards
 	boardJSON, err := json.Marshal(boardsMap)
 	if err != nil {
 		gcutil.LogError(err).Str("building", "boards.json").Send()

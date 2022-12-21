@@ -22,31 +22,29 @@ type BoardStaff struct {
 
 // table: DBPREFIXboards
 type Board struct {
-	ID               int       `json:"-"`                 // sql: `id`
-	SectionID        int       `json:"-"`                 // sql: `section_id`
-	URI              string    `json:"-"`                 // sql: `uri`
-	Dir              string    `json:"board"`             // sql: `dir`
-	NavbarPosition   int       `json:"-"`                 // sql: `navbar_position`
-	Title            string    `json:"title"`             // sql: `title`
-	Subtitle         string    `json:"meta_description"`  // sql: `suttitle`
-	Description      string    `json:"-"`                 // sql: `description`
-	MaxFilesize      int       `json:"max_filesize"`      // sql: `max_file_size`
-	MaxThreads       int       `json:"-"`                 // sql: `max_threads`
-	DefaultStyle     string    `json:"-"`                 // sql: `default_style`
-	Locked           bool      `json:"is_archived"`       // sql: `locked`
-	CreatedAt        time.Time `json:"-"`                 // sql: `created_at`
-	AnonymousName    string    `json:"-"`                 // sql: `anonymous_name`
-	ForceAnonymous   bool      `json:"-"`                 // sql: `force_anonymous`
-	AutosageAfter    int       `json:"bump_limit"`        // sql: `autosage_after`
-	NoImagesAfter    int       `json:"image_limit"`       // sql: `no_images_after`
-	MaxMessageLength int       `json:"max_comment_chars"` // sql: `max_message_length`
-	MinMessageLength int       `json:"min_comment_chars"` // sql: `min_message_length`
-	AllowEmbeds      bool      `json:"-"`                 // sql: `allow_embeds`
-	RedirectToThread bool      `json:"-"`                 // sql: `redirect_to_thread`
-	RequireFile      bool      `json:"-"`                 // sql: `require_file`
-	EnableCatalog    bool      `json:"-"`                 // sql: `enable_catalog`
-
-	// // not in the database, may end up moving this to a separate struct, possibly in a separate pkg
+	ID               int       // sql: `id`
+	SectionID        int       // sql: `section_id`
+	URI              string    // sql: `uri`
+	Dir              string    // sql: `dir`
+	NavbarPosition   int       // sql: `navbar_position`
+	Title            string    // sql: `title`
+	Subtitle         string    // sql: `suttitle`
+	Description      string    // sql: `description`
+	MaxFilesize      int       // sql: `max_file_size`
+	MaxThreads       int       // sql: `max_threads`
+	DefaultStyle     string    // sql: `default_style`
+	Locked           bool      // sql: `locked`
+	CreatedAt        time.Time // sql: `created_at`
+	AnonymousName    string    // sql: `anonymous_name`
+	ForceAnonymous   bool      // sql: `force_anonymous`
+	AutosageAfter    int       // sql: `autosage_after`
+	NoImagesAfter    int       // sql: `no_images_after`
+	MaxMessageLength int       // sql: `max_message_length`
+	MinMessageLength int       // sql: `min_message_length`
+	AllowEmbeds      bool      // sql: `allow_embeds`
+	RedirectToThread bool      // sql: `redirect_to_thread`
+	RequireFile      bool      // sql: `require_file`
+	EnableCatalog    bool      // sql: `enable_catalog`
 }
 
 // FileBan contains the information associated with a specific file ban.
