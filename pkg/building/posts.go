@@ -185,7 +185,7 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 }
 
 func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
-	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ?"
+	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ? ORDER BY DBPREFIXposts.id ASC"
 	rows, err := gcsql.QuerySQL(query, thread.ID)
 	if err != nil {
 		return nil, err
