@@ -41,9 +41,9 @@ func ServeErrorPage(writer http.ResponseWriter, err string) {
 		"systemCritical": config.GetSystemCriticalConfig(),
 		"siteConfig":     config.GetSiteConfig(),
 		"boardConfig":    config.GetBoardConfig(""),
-		"ErrorTitle":     "Error :c",
-		"ErrorHeader":    "Error",
-		"ErrorText":      err,
+		"errorTitle":     "Error :c",
+		"errorHeader":    "Error",
+		"errorText":      err,
 	}, writer, "text/html")
 }
 

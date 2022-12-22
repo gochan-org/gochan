@@ -1,7 +1,7 @@
 {{- template "page_header.html" .}}
 	<div id="top-pane">
-		<span id="site-title">{{.site_config.SiteName}}</span><br />
-		<span id="site-slogan">{{.site_config.SiteSlogan}}</span>
+		<span id="site-title">{{.siteConfig.SiteName}}</span><br />
+		<span id="site-slogan">{{.siteConfig.SiteSlogan}}</span>
 	</div><br />
 	<div id="frontpage">
 		<div class="section-block" style="margin: 16px 64px 16px 64px;">
@@ -17,7 +17,7 @@
 						<ul style="float:left; list-style: none">
 						<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
 						{{range $_, $board := $.boards}}
-							{{if and (eq $board.SectionID $section.ID) (ne $board.Dir $.site_config.Modboard)}}
+							{{if and (eq $board.SectionID $section.ID) (ne $board.Dir $.siteConfig.Modboard)}}
 								<li><a href="{{$.webroot}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
 							{{end}}
 						{{end}}
@@ -26,12 +26,12 @@
 				{{end}}
 			</div>
 		</div>
-		{{- if gt .site_config.MaxRecentPosts 0}}
+		{{- if gt .siteConfig.MaxRecentPosts 0}}
 		<div class="section-block">
 			<div class="section-title-block"><b>Recent Posts</b></div>
 			<div class="section-body">
 				<div id="recent-posts">
-				{{- range $i, $post := $.recent_posts}}
+				{{- range $i, $post := $.recentPosts}}
 					<div class="recent-post">
 						{{if and (not $post.FileDeleted) (ne $post.Filename "") -}}
 							<a href="{{$post.URL}}" class="front-reply" target="_blank"><img src="{{$post.ThumbURL}}" alt="post thumbnail"/></a><br />

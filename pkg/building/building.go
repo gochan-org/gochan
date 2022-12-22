@@ -121,12 +121,12 @@ func BuildFrontPage() error {
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
-		"webroot":      criticalCfg.WebRoot,
-		"site_config":  siteCfg,
-		"sections":     gcsql.AllSections,
-		"boards":       gcsql.AllBoards,
-		"board_config": config.GetBoardConfig(""),
-		"recent_posts": recentPostsArr,
+		"webroot":     criticalCfg.WebRoot,
+		"siteConfig":  siteCfg,
+		"sections":    gcsql.AllSections,
+		"boards":      gcsql.AllBoards,
+		"boardConfig": config.GetBoardConfig(""),
+		"recentPosts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed executing front page template: " + err.Error())
@@ -138,12 +138,12 @@ func BuildFrontPage() error {
 // of every normal HTML page
 func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]interface{}) error {
 	phMap := map[string]interface{}{
-		"page_title":   pageTitle,
-		"webroot":      config.GetSystemCriticalConfig().WebRoot,
-		"site_config":  config.GetSiteConfig(),
-		"sections":     gcsql.AllSections,
-		"boards":       gcsql.AllBoards,
-		"board_config": config.GetBoardConfig(board),
+		"pageTitle":   pageTitle,
+		"webroot":     config.GetSystemCriticalConfig().WebRoot,
+		"siteConfig":  config.GetSiteConfig(),
+		"sections":    gcsql.AllSections,
+		"boards":      gcsql.AllBoards,
+		"boardConfig": config.GetBoardConfig(board),
 	}
 	for k, val := range misc {
 		phMap[k] = val
@@ -183,10 +183,10 @@ func BuildJS() error {
 
 	if err = serverutil.MinifyTemplate(gctemplates.JsConsts,
 		map[string]interface{}{
-			"webroot":       criticalCfg.WebRoot,
-			"styles":        boardCfg.Styles,
-			"default_style": boardCfg.DefaultStyle,
-			"timezone":      criticalCfg.TimeZone,
+			"webroot":      criticalCfg.WebRoot,
+			"styles":       boardCfg.Styles,
+			"defaultStyle": boardCfg.DefaultStyle,
+			"timezone":     criticalCfg.TimeZone,
 		},
 		constsJSFile, "text/javascript"); err != nil {
 		gcutil.LogError(err).

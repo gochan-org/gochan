@@ -170,16 +170,16 @@ func BuildBoardPages(board *gcsql.Board) error {
 		// packaging the board/section list, threads, and board info
 		captchaCfg := config.GetSiteConfig().Captcha
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"webroot":      criticalCfg.WebRoot,
-			"boards":       gcsql.AllBoards,
-			"sections":     gcsql.AllSections,
-			"threads":      threads,
-			"numPages":     1,
-			"currentPage":  1,
-			"board":        board,
-			"board_config": boardConfig,
-			"useCaptcha":   captchaCfg.UseCaptcha(),
-			"captcha":      captchaCfg,
+			"webroot":     criticalCfg.WebRoot,
+			"boards":      gcsql.AllBoards,
+			"sections":    gcsql.AllSections,
+			"threads":     threads,
+			"numPages":    1,
+			"currentPage": 1,
+			"board":       board,
+			"boardConfig": boardConfig,
+			"useCaptcha":  captchaCfg.UseCaptcha(),
+			"captcha":     captchaCfg,
 		}, boardPageFile, "text/html"); err != nil {
 			errEv.Err(err).
 				Str("page", "board.html").
@@ -223,16 +223,16 @@ func BuildBoardPages(board *gcsql.Board) error {
 		// Render the boardpage template
 		captchaCfg := config.GetSiteConfig().Captcha
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
-			"webroot":      criticalCfg.WebRoot,
-			"boards":       gcsql.AllBoards,
-			"sections":     gcsql.AllSections,
-			"threads":      page.Threads,
-			"numPages":     len(threads) / boardConfig.ThreadsPerPage,
-			"currentPage":  catalog.currentPage,
-			"board":        board,
-			"board_config": boardCfg,
-			"useCaptcha":   captchaCfg.UseCaptcha(),
-			"captcha":      captchaCfg,
+			"webroot":     criticalCfg.WebRoot,
+			"boards":      gcsql.AllBoards,
+			"sections":    gcsql.AllSections,
+			"threads":     page.Threads,
+			"numPages":    len(threads) / boardConfig.ThreadsPerPage,
+			"currentPage": catalog.currentPage,
+			"board":       board,
+			"boardConfig": boardCfg,
+			"useCaptcha":  captchaCfg.UseCaptcha(),
+			"captcha":     captchaCfg,
 		}, currentPageFile, "text/html"); err != nil {
 			errEv.Err(err).
 				Caller().Send()

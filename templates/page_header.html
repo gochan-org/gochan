@@ -9,9 +9,11 @@
 		{{- else}}
 			<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>
 		{{end}}
-	{{- else}}<title>{{with $.page_title}}{{$.page_title}} - {{end}}{{.site_config.SiteName}}</title>{{end}}
+	{{- else -}}
+		<title>{{with $.pageTitle}}{{$.pageTitle}} - {{end}}{{.siteConfig.SiteName}}</title>
+	{{- end}}
 	<link rel="stylesheet" href="{{.webroot}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.board_config.DefaultStyle}}" />
+	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.boardConfig.DefaultStyle}}" />
 	<link rel="shortcut icon" href="{{.webroot}}favicon.png">
 	<script type="text/javascript" src="{{.webroot}}js/consts.js"></script>
 	<script type="text/javascript" src="{{.webroot}}js/gochan.js"></script>
@@ -21,8 +23,10 @@
 	<a href="{{$.webroot}}" class="topbar-item">home</a>
 	{{range $i, $board := .boards}}<a href="{{$.webroot}}{{$board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>{{end}}
 </div>
-{{with $.page_title  }}<header>
-<h1 id="board-title">{{$.page_title}}</h1>
-{{with $.include_dashboard_link}}<a href="{{$.webroot}}manage" class="board-subtitle">Return to dashboard</a><br/>{{end}}
+{{with $.pageTitle -}}<header>
+	<h1 id="board-title">{{$.pageTitle}}</h1>
+	{{with $.includeDashboardLink -}}
+		<a href="{{$.webroot}}manage" class="board-subtitle">Return to dashboard</a><br/>
+	{{- end}}
 </header>{{end}}
 <div id="content">

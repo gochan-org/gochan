@@ -23,9 +23,9 @@
 				You are banned from posting on <b>{{.board.Dir}}</b> for the following reason:{{end}}
 				<br /><br />
 				<b>{{.ban.Message}}</b>
-				<br /><br />{{$expires_timestamp := formatTimestamp .ban.ExpiresAt}}{{$appeal_timestamp := formatTimestamp .ban.AppealAt}}
+				<br /><br />{{$expiresTimestamp := formatTimestamp .ban.ExpiresAt}}{{$appealTimestamp := formatTimestamp .ban.AppealAt}}
 				Your ban was placed on {{formatTimestamp .ban.IssuedAt}} and will 
-				{{if .ban.Permanent}}<b>not expire</b>{{else}}expire on <b>{{$expires_timestamp}}</b>{{end}}.<br />
+				{{if .ban.Permanent}}<b>not expire</b>{{else}}expire on <b>{{$expiresTimestamp}}</b>{{end}}.<br />
 				Your IP address is <b>{{.ban.IP}}</b>.<br /><br />
 				{{if .ban.CanAppeal}}You may appeal this ban:<br />
 					<form id="appeal-form" action="/post" method="POST">

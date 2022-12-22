@@ -95,12 +95,12 @@ func BuildCatalog(boardID int) error {
 	boardConfig := config.GetBoardConfig(board.Dir)
 
 	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
-		"boards":       gcsql.AllBoards,
-		"webroot":      criticalCfg.WebRoot,
-		"board":        board,
-		"board_config": boardConfig,
-		"sections":     gcsql.AllSections,
-		"threads":      threadOPs,
+		"boards":      gcsql.AllBoards,
+		"webroot":     criticalCfg.WebRoot,
+		"board":       board,
+		"boardConfig": boardConfig,
+		"sections":    gcsql.AllSections,
+		"threads":     threadOPs,
 	}, catalogFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed building catalog for /%s/: %s", board.Dir, err.Error())

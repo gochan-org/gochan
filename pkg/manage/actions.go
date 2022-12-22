@@ -767,12 +767,12 @@ var actions = []Action{
 				//assume that they haven't logged in
 				manageLoginBuffer := bytes.NewBufferString("")
 				if err = serverutil.MinifyTemplate(gctemplates.ManageLogin, map[string]interface{}{
-					"webroot":      config.GetSystemCriticalConfig().WebRoot,
-					"site_config":  config.GetSiteConfig(),
-					"sections":     gcsql.AllSections,
-					"boards":       gcsql.AllBoards,
-					"board_config": config.GetBoardConfig(""),
-					"redirect":     redirectAction,
+					"webroot":     config.GetSystemCriticalConfig().WebRoot,
+					"siteConfig":  config.GetSiteConfig(),
+					"sections":    gcsql.AllSections,
+					"boards":      gcsql.AllBoards,
+					"boardConfig": config.GetBoardConfig(""),
+					"redirect":    redirectAction,
 				}, manageLoginBuffer, "text/html"); err != nil {
 					errEv.Err(err).Str("template", "manage_login.html").Send()
 					return "", errors.New("Error executing staff login page template: " + err.Error())
@@ -897,13 +897,13 @@ var actions = []Action{
 			pageBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
 				map[string]interface{}{
-					"webroot":      config.GetSystemCriticalConfig().WebRoot,
-					"site_config":  config.GetSiteConfig(),
-					"sections":     gcsql.AllSections,
-					"boards":       gcsql.AllBoards,
-					"board_config": config.GetBoardConfig(""),
-					"editing":      requestType == "edit",
-					"board":        board,
+					"webroot":     config.GetSystemCriticalConfig().WebRoot,
+					"siteConfig":  config.GetSiteConfig(),
+					"sections":    gcsql.AllSections,
+					"boards":      gcsql.AllBoards,
+					"boardConfig": config.GetBoardConfig(""),
+					"editing":     requestType == "edit",
+					"board":       board,
 				}, pageBuffer, "text/html"); err != nil {
 				errEv.Err(err).Str("template", "manage_boards.html").Caller().Send()
 				return "", err
@@ -998,9 +998,9 @@ var actions = []Action{
 			}
 			pageBuffer := bytes.NewBufferString("")
 			pageMap := map[string]interface{}{
-				"webroot":     config.GetSystemCriticalConfig().WebRoot,
-				"site_config": config.GetSiteConfig(),
-				"sections":    sections,
+				"webroot":    config.GetSystemCriticalConfig().WebRoot,
+				"siteConfig": config.GetSiteConfig(),
+				"sections":   sections,
 			}
 			if section.ID > 0 {
 				pageMap["edit_section"] = section

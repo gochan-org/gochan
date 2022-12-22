@@ -78,7 +78,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			"postid":     post.ID,
 			"webroot":    config.GetSystemCriticalConfig().WebRoot,
 			"destBoards": destBoards,
-			"page_title": fmt.Sprintf("Move thread #%d", post.ID),
+			"pageTitle":  fmt.Sprintf("Move thread #%d", post.ID),
 			"srcBoard":   srcBoard,
 		}, writer, "text/html"); err != nil {
 			gcutil.LogError(err).

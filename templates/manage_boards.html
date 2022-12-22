@@ -69,7 +69,7 @@
 <tr>
 	<td>Default style</td>
 	<td><select name="defaultstyle">
-	{{range $_, $style := $.board_config.Styles}}
+	{{range $_, $style := $.boardConfig.Styles}}
 		<option value="{{$style.Filename}}" {{if eq $style.Filename $.board.DefaultStyle -}}
 			selected="selected"
 		{{- end}}>{{$style.Name}}</option>

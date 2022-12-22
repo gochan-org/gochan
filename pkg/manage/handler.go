@@ -128,7 +128,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		"page_type": "manage",
 	}
 	if action.ID != "dashboard" && action.ID != "login" && action.ID != "logout" {
-		headerMap["include_dashboard_link"] = true
+		headerMap["includeDashboardLink"] = true
 	}
 	if err = building.BuildPageHeader(&managePageBuffer, action.Title, "", headerMap); err != nil {
 		gcutil.LogError(err).

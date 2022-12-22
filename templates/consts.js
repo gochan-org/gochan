@@ -8,6 +8,6 @@ var styles = [
 		{Name: "{{js $style.Name}}", Filename: "{{js $style.Filename}}"}
 	{{- end -}}
 ];
-var defaultStyle = "{{js .default_style}}";
+var defaultStyle = "{{js .defaultStyle}}";
 var webroot = "{{js .webroot}}";
 var serverTZ = {{.timezone}};

@@ -93,15 +93,15 @@ func BuildThreadPages(op *gcsql.Post) error {
 	// render thread page
 	captchaCfg := config.GetSiteConfig().Captcha
 	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
-		"webroot":      criticalCfg.WebRoot,
-		"boards":       gcsql.AllBoards,
-		"board":        board,
-		"board_config": config.GetBoardConfig(board.Dir),
-		"sections":     gcsql.AllSections,
-		"posts":        posts[1:],
-		"op":           posts[0],
-		"useCaptcha":   captchaCfg.UseCaptcha() && !captchaCfg.OnlyNeededForThreads,
-		"captcha":      captchaCfg,
+		"webroot":     criticalCfg.WebRoot,
+		"boards":      gcsql.AllBoards,
+		"board":       board,
+		"boardConfig": config.GetBoardConfig(board.Dir),
+		"sections":    gcsql.AllSections,
+		"posts":       posts[1:],
+		"op":          posts[0],
+		"useCaptcha":  captchaCfg.UseCaptcha() && !captchaCfg.OnlyNeededForThreads,
+		"captcha":     captchaCfg,
 	}, threadPageFile, "text/html"); err != nil {
 		errEv.Err(err).
 			Caller().Send()
