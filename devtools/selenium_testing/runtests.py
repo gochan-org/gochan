@@ -23,6 +23,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.select import Select
 
 from .util.localstorage import LocalStorage
 from .util.qr import openQR,closeQR,qrIsVisible
@@ -147,7 +148,6 @@ class TestRunner(unittest.TestCase):
 
 	def test_qr(self):
 		gotoPage(self.driver, testingBoard)
-		self.assertIn("/test/ - Testing board", self.driver.title)
 		elem = self.driver.find_element(by=By.ID, value="board-subtitle")
 		self.assertIn("Board for testing stuff", elem.text)
 		openQR(self.driver)
@@ -196,6 +196,17 @@ class TestRunner(unittest.TestCase):
 				'div#topbar a[href="/seleniumtesting/"]')))
 
 		makePostOnPage("seleniumtesting", self)
+
+		gotoPage(self.driver, "manage?action=boards")
+		sel = Select(self.driver.find_element(by=By.ID, value="modifyboard"))
+		sel.select_by_visible_text("/seleniumtesting/ - Selenium testing")
+		self.driver.find_element(by=By.NAME, value="dodelete").click()
+		self.driver.switch_to.alert.accept()
+		WebDriverWait(self.driver, 10).until_not(
+			EC.presence_of_element_located((
+				By.CSS_SELECTOR,
+				'div#topbar a[href="/seleniumtesting/"]')))
+
 
 	def test_makeThread(self):
 		makePostOnPage(testingBoard, self)
@@ -267,6 +278,15 @@ class TestRunner(unittest.TestCase):
 				value="h1#board-title").text,
 			"/test2/ - Testing board #2",
 			"Verify that we properly moved the thread to /test2/")
+
+		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+		sendPost(form,
+			testingName,
+			testingEmail,
+			"",
+			"Reply to thread after it was moved",
+			path.abspath(testingUploadPath),
+			testingPassword)
 
 		deletePost(self.driver, int(threadID), "")
 		WebDriverWait(self.driver, 10).until(
