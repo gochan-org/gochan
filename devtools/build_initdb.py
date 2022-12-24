@@ -77,6 +77,5 @@ def dofile(filestart):
 
 
 if __name__ == "__main__":
-	dofile(path.join("..", "initdb_"))
-	dofile(path.join("..", "sql", "preapril2020migration", "initdb_"))
+	dofile(path.join("..", "sql", "initdb_"))
 	dofile(path.join("..", "sql", "preapril2020migration", "oldDBMigration_"))

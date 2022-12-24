@@ -34,9 +34,10 @@ release_files = (
 	"html/permabanned.jpg",
 	"sample-configs/",
 	"templates/",
-	"initdb_master.sql",
-	"initdb_mysql.sql",
-	"initdb_postgres.sql",
+	"sql/initdb_master.sql",
+	"sql/initdb_mysql.sql",
+	"sql/initdb_postgres.sql",
+	"sql/initdb_sqlite3.sql",
 	"LICENSE",
 	"README.md",
 )
@@ -362,7 +363,7 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 	if gcos == "linux":
 		print(
 			"If your Linux distribution has systemd, you will also need to run the following commands:\n",
-			"cp sample-configs/gochan-[mysql|postgresql].service /lib/systemd/system/gochan.service\n",
+			"cp sample-configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service\n",
 			"systemctl daemon-reload\n",
 			"systemctl enable gochan.service\n",
 			"systemctl start gochan.service")
@@ -408,6 +409,7 @@ def release(goos):
 
 
 	mkdir(path.join(release_dir, "html"))
+	mkdir(path.join(release_dir, "sql"))
 	for file in release_files:
 		srcinfo = pathinfo(file)
 		if srcinfo == PATH_NOTHING:
