@@ -20,6 +20,18 @@ var (
 	ErrNotConnected  = errors.New("error connecting to database")
 )
 
+// BeginTx begins a new transaction for the gochan database
+func BeginTx() (*sql.Tx, error) {
+	if gcdb == nil {
+		return nil, ErrNotConnected
+	}
+	ctx := context.Background()
+	return gcdb.BeginTx(ctx, &sql.TxOptions{
+		Isolation: 0,
+		ReadOnly:  false,
+	})
+}
+
 // PrepareSQL is used for generating a prepared SQL statement formatted according to the configured database driver
 func PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	if gcdb == nil {
@@ -128,17 +140,6 @@ func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	return gcdb.QuerySQL(query, a...)
 }
 
-func BeginTx() (*sql.Tx, error) {
-	if gcdb == nil {
-		return nil, ErrNotConnected
-	}
-	ctx := context.Background()
-	return gcdb.BeginTx(ctx, &sql.TxOptions{
-		Isolation: 0,
-		ReadOnly:  false,
-	})
-}
-
 func ParseSQLTimeString(str string) (time.Time, error) {
 	var t time.Time
 	var err error
@@ -150,10 +151,20 @@ func ParseSQLTimeString(str string) (time.Time, error) {
 	return t, fmt.Errorf("unrecognized timestamp string format %q", str)
 }
 
-func getNextFreeID(tableName string) (ID int, err error) {
-	var sql = `SELECT COALESCE(MAX(id), 0) + 1 FROM ` + tableName
-	err = QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&ID))
-	return ID, err
+// getLatestID returns the latest inserted id column value from the given table
+func getLatestID(tableName string, tx *sql.Tx) (id int, err error) {
+	query := `SELECT MAX(id) FROM ` + tableName
+	if tx != nil {
+		var stmt *sql.Stmt
+		stmt, err = PrepareSQL(query, tx)
+		if err != nil {
+			return 0, err
+		}
+		err = stmt.QueryRow().Scan(&id)
+	} else {
+		err = QueryRowSQL(query, nil, interfaceSlice(&id))
+	}
+	return
 }
 
 func doesTableExist(tableName string) (bool, error) {
@@ -219,7 +230,7 @@ func interfaceSlice(args ...interface{}) []interface{} {
 	return args
 }
 
-func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {
+/* func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {
 	if err == nil {
 		return false, nil
 	}
@@ -235,4 +246,4 @@ func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) 
 		}
 	}
 	return true, nil
-}
+} */

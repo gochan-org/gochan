@@ -115,11 +115,11 @@ func buildNewDatabase(dbType string) error {
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
 		return errors.New("database initialization failed: " + err.Error())
 	}
-	if err = createDefaultBoardIfNoneExist(); err != nil {
-		return errors.New("failed creating default board if non already exists: " + err.Error())
-	}
 	if err = createDefaultAdminIfNoStaff(); err != nil {
 		return errors.New("failed creating default admin account: " + err.Error())
+	}
+	if err = createDefaultBoardIfNoneExist(); err != nil {
+		return errors.New("failed creating default board if non already exists: " + err.Error())
 	}
 	return nil
 }

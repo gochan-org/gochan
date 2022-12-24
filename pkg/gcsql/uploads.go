@@ -50,7 +50,7 @@ func (p *Post) nextFileOrder() (int, error) {
 
 func (p *Post) AttachFile(upload *Upload) error {
 	if upload == nil {
-		return nil //
+		return nil // no upload to attach, so no error
 	}
 	const query = `INSERT INTO DBPREFIXfiles (
 		post_id, file_order, original_filename, filename, checksum, file_size,
@@ -59,10 +59,17 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload.ID > 0 {
 		return ErrAlreadyAttached
 	}
-	uploadID, err := getNextFreeID("DBPREFIXfiles")
+	tx, err := BeginTx()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
+
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return err
+	}
+
 	if upload.FileOrder < 1 {
 		upload.FileOrder, err = p.nextFileOrder()
 		if err != nil {
@@ -70,14 +77,16 @@ func (p *Post) AttachFile(upload *Upload) error {
 		}
 	}
 	upload.PostID = p.ID
-	if _, err = ExecSQL(query,
+	if _, err = stmt.Exec(
 		&upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum, &upload.FileSize,
 		&upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
 	); err != nil {
 		return err
 	}
-	upload.ID = uploadID
-	return nil
+	if upload.ID, err = getLatestID("DBPREFIXfiles", tx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ThumbnailPath returns the thumbnail path of the upload, given an thumbnail type ("thumbnail" or "catalog")

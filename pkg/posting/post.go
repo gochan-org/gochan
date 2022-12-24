@@ -180,6 +180,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		gcutil.LogWarning().
 			Str("spam", "badReferer").
 			Str("IP", post.IP).
+			Int("threadID", post.ThreadID).
 			Msg("Rejected post from possible spambot")
 		serverutil.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
 		return

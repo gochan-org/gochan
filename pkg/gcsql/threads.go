@@ -17,24 +17,28 @@ var (
 	ErrThreadDoesNotExist = errors.New("thread does not exist")
 )
 
-func createThread(boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
-	const sql = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
-	//Retrieves next free ID, explicitly inserts it, keeps retrying until succesfull insert or until a non-pk error is encountered.
-	//This is done because mysql doesnt support RETURNING and both LAST_INSERT_ID() and last_row_id() are not thread-safe
-	isPrimaryKeyError := true
-	for isPrimaryKeyError {
-		threadID, err = getNextFreeID("DBPREFIXthreads")
-		if err != nil {
-			return 0, err
-		}
-		_, err = ExecSQL(sql, boardID, locked, stickied, anchored, cyclical)
-
-		isPrimaryKeyError, err = errFilterDuplicatePrimaryKey(err)
-		if err != nil {
-			return 0, err
-		}
+func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
+	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
+	stmt, err := PrepareSQL(insertQuery, tx)
+	if err != nil {
+		return 0, err
 	}
-	return threadID, nil
+	if tx == nil {
+		defer stmt.Close()
+	}
+	if _, err = stmt.Exec(boardID, locked, stickied, anchored, cyclical); err != nil {
+		return 0, err
+	}
+	stmt2, err := PrepareSQL(`SELECT MAX(id) FROM DBPREFIXthreads`, tx)
+	if err != nil {
+		return 0, err
+	}
+	if tx == nil {
+		defer stmt2.Close()
+	}
+
+	err = stmt2.QueryRow().Scan(&threadID)
+	return threadID, err
 }
 
 // GetThread returns a a thread object from the database

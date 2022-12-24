@@ -35,13 +35,6 @@ func GetAllSections(onlyNonHidden bool) ([]Section, error) {
 	return sections, nil
 }
 
-func getNextSectionListOrder() (int, error) {
-	const query = `SELECT COALESCE(MAX(position) + 1, 0) FROM DBPREFIXsections`
-	var id int
-	err := QueryRowSQL(query, interfaceSlice(), interfaceSlice(&id))
-	return id, err
-}
-
 // getOrCreateDefaultSectionID creates the default section if no sections have been created yet,
 // returns default section ID if it exists
 func getOrCreateDefaultSectionID() (sectionID int, err error) {
@@ -86,16 +79,37 @@ func DeleteSection(id int) error {
 // If position < 0, it will use the ID
 func NewSection(name string, abbreviation string, hidden bool, position int) (*Section, error) {
 	const sqlINSERT = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)`
+	const sqlPosition = `SELECT COALESCE(MAX(position) + 1, 1) FROM DBPREFIXsections`
 
-	id, err := getNextFreeID("DBPREFIXsections")
+	tx, err := BeginTx()
 	if err != nil {
 		return nil, err
 	}
-	if position < 0 {
-		// position not specified, use the ID
-		position = id
+	defer tx.Rollback()
+
+	stmt, err := PrepareSQL(sqlINSERT, tx)
+	if err != nil {
+		return nil, err
 	}
-	if _, err = ExecSQL(sqlINSERT, name, abbreviation, hidden, position); err != nil {
+
+	if position < 0 {
+		// position not specified
+		stmt2, err := PrepareSQL(sqlPosition, tx)
+		if err != nil {
+			return nil, err
+		}
+		if err = stmt2.QueryRow().Scan(&position); err != nil {
+			return nil, err
+		}
+	}
+	if _, err = stmt.Exec(name, abbreviation, hidden, position); err != nil {
+		return nil, err
+	}
+	id, err := getLatestID("DBPREFIXsections", tx)
+	if err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	return &Section{

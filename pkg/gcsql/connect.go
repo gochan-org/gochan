@@ -56,11 +56,14 @@ func tmpSqlAdjust() error {
 		}
 		if numConstraints > 0 {
 			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY IF EXISTS wordfilters_board_id_fk`
+		} else {
+			query = ""
 		}
 	case "postgres":
 		query = `ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`
 	case "sqlite3":
-		return nil
+		_, err = ExecSQL(`PRAGMA foreign_keys = ON`)
+		return err
 	}
 	if _, err = gcdb.ExecSQL(query); err != nil {
 		return err

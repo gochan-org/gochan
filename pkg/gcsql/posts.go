@@ -328,33 +328,47 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		message, message_raw, password) 
 	VALUES(?,?,?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
-	var err error
+
+	tx, err := BeginTx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	if p.ThreadID == 0 {
 		// thread doesn't exist yet, this is a new post
 		p.IsTopPost = true
 		var threadID int
-		threadID, err = createThread(boardID, locked, stickied, anchored, cyclical)
+		threadID, err = createThread(tx, boardID, locked, stickied, anchored, cyclical)
 		if err != nil {
 			return err
 		}
 		p.ThreadID = threadID
 	}
 
-	id, err := getNextFreeID("DBPREFIXposts")
+	stmt, err := PrepareSQL(insertSQL, tx)
 	if err != nil {
 		return err
 	}
-	if _, err = ExecSQL(insertSQL,
+	if _, err = stmt.Exec(
 		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
 		p.Message, p.MessageRaw, p.Password,
 	); err != nil {
 		return err
 	}
-	p.ID = id
-	if bumpThread {
-		_, err = ExecSQL(bumpSQL, p.ThreadID)
+	if p.ID, err = getLatestID("DBPREFIXposts", tx); err != nil {
+		return err
 	}
-	return err
+	if bumpThread {
+		stmt2, err := PrepareSQL(bumpSQL, tx)
+		if err != nil {
+			return err
+		}
+		if _, err = stmt2.Exec(p.ThreadID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (p *Post) WebPath() string {

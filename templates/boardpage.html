@@ -40,24 +40,13 @@
 	<a href="#">Scroll to top</a><br/>
 	<table id="pages">
 		<tr>
-			{{/*<td>{{if gt $.currentPage 1}}
-				<form method="GET" action='{{.board.PagePath "prev"}}'>
-					<input type="submit" value="Previous" />
-				</form>
-			{{- else}}Previous{{end}}</td> */}}
 			<td>{{range $_,$i := makeLoop .numPages 1 -}}
 				{{- if eq $.currentPage $i -}}
 					[<b>{{$i}}</b>]
 				{{- else -}}
-					[<a href="{{$.board.PagePath $i }}">{{$i}}</a>]
+					[<a href="{{boardPagePath $.board $i}}">{{$i}}</a>]
 				{{- end -}}
 			{{- end}}</td>
-			{{/*
-			<td>{{if lt $.currentPage .numPages}}
-				<form method="GET" action="{{.board.PagePath `next` }}">
-					<input type="submit" value="Next" />
-				</form>
-			{{else}}Next{{end}}</td> */}}
 		</tr>
 	</table>
 	<span id="boardmenu-bottom">

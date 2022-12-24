@@ -238,6 +238,9 @@ var funcMap = template.FuncMap{
 		}
 		return dir
 	},
+	"boardPagePath": func(board *gcsql.Board, page int) string {
+		return config.WebPath(board.Dir, strconv.Itoa(page)+".html")
+	},
 	"webPath": func(part ...string) string {
 		return config.WebPath(part...)
 	},

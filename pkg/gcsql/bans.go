@@ -32,15 +32,27 @@ func NewIPBan(ban *IPBan) error {
 	if ban.ID > 0 {
 		return ErrBanAlreadyInserted
 	}
-	var err error
-	ban.ID, err = getNextFreeID("DBPREFIXip_ban")
+	tx, err := BeginTx()
 	if err != nil {
 		return err
 	}
-	_, err = ExecSQL(query,
+	defer tx.Rollback()
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if _, err = stmt.Exec(
 		ban.StaffID, ban.BoardID, ban.BannedForPostID, ban.CopyPostText, ban.IsThreadBan, ban.IsActive, ban.IP,
-		ban.AppealAt, ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal)
-	return err
+		ban.AppealAt, ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal,
+	); err != nil {
+		return err
+	}
+	ban.ID, err = getLatestID("DBPREFIXip_ban", tx)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // CheckIPBan returns the latest active IP ban for the given IP, as well as any errors. If the
@@ -135,7 +147,6 @@ func (ipb *IPBan) Deactivate(staffID int) error {
 	if err != nil {
 		return err
 	}
-	defer stmt1.Close()
 
 	if _, err = stmt1.Exec(ipb.ID); err != nil {
 		return err
@@ -145,7 +156,6 @@ func (ipb *IPBan) Deactivate(staffID int) error {
 	if err != nil {
 		return err
 	}
-	defer stmt2.Close()
 	if _, err = stmt2.Exec(ipb.ID); err != nil {
 		return err
 	}
@@ -201,17 +211,31 @@ func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
 func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote string) (*UsernameBan, error) {
 	const query = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES(?,?,?,?,?)`
 	var ban UsernameBan
-	var err error
-	if ban.ID, err = getNextFreeID("DBPREFIXusername_ban"); err != nil {
-		return nil, err
-	}
 	if boardID > 0 {
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
-	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, name, isRegex); err != nil {
+
+	tx, err := BeginTx()
+	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
+
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, name, isRegex); err != nil {
+		return nil, err
+	}
+	if ban.ID, err = getLatestID("DBPREFIXusername_ban", tx); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	ban.StaffID = staffID
 	ban.StaffNote = staffNote
 	ban.Username = name
@@ -318,17 +342,30 @@ func GetFilenameBans(boardID int, limit int) ([]FilenameBan, error) {
 func NewFilenameBan(filename string, isRegex bool, boardID int, staffID int, staffNote string) (*FilenameBan, error) {
 	const query = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES(?,?,?,?,?)`
 	var ban FilenameBan
-	var err error
-	if ban.ID, err = getNextFreeID("DBPREFIXfilename_ban"); err != nil {
-		return nil, err
-	}
 	if boardID > 0 {
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
-	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, filename, isRegex); err != nil {
+
+	tx, err := BeginTx()
+	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, filename, isRegex); err != nil {
+		return nil, err
+	}
+	if ban.ID, err = getLatestID("DBPREFIXfilename_ban", tx); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	ban.StaffID = staffID
 	ban.StaffNote = staffNote
 	ban.Filename = filename
@@ -422,14 +459,27 @@ func NewFileChecksumBan(checksum string, boardID int, staffID int, staffNote str
 	const query = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES(?,?,?,?)`
 	var ban FileBan
 	var err error
-	if ban.ID, err = getNextFreeID("DBPREFIXfile_ban"); err != nil {
-		return nil, err
-	}
+
 	if boardID > 0 {
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
-	if _, err = ExecSQL(query, ban.BoardID, staffID, staffNote, checksum); err != nil {
+	tx, err := BeginTx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, checksum); err != nil {
+		return nil, err
+	}
+	if ban.ID, err = getLatestID("DBPREFIXfile_ban", tx); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	ban.StaffID = staffID
