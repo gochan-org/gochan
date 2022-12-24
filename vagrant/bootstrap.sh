@@ -103,6 +103,7 @@ sed -i /etc/gochan/gochan.json \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
 	-e "s/\"DBtype\": .*/\"DBtype\": \"$DBTYPE\",/" \
+	-e 's/"DebugMode": false/"DebugMode": true/' \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/'
 
