@@ -1,14 +1,11 @@
 {{template "page_header.html" .}}
 	<header>
 		<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
-		<span id="board-subtitle">{{$.board.Subtitle}}</span>
+		<div id="board-subtitle">
+			{{$.board.Subtitle}}<br/>
+			<a href="{{$.webroot}}{{$.board.Dir}}/" >Return</a> | <a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Catalog</a> | <a href="#footer">Bottom</a>
+		</div>
 	</header><hr />
-	<div id="threadlinks-top">
-		<a href="{{$.webroot}}{{$.board.Dir}}/1.html" >Return</a> | <a href="#footer">Scroll to bottom</a><br />
-	</div>
-	<div id="right-sidelinks">
-		<a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Board catalog</a><br />
-	</div>
 	{{template "postbox.html" .}}<hr />
 		<form action="/util" method="POST" id="main-form">
 		<div class="thread" id="{{$.op.ID}}">
