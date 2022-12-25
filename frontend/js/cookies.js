@@ -2,6 +2,8 @@
 
 import $ from "jquery";
 
+const YEAR_IN_MS = 365*24*60*60*1000;
+
 /**
  * @param {string} name
  */
@@ -13,7 +15,7 @@ export function getCookie(name, defaultVal = "") {
 		let pair = cookie.split("=");
 		if(pair[0] != name) continue;
 		try {
-			val = decodeURIComponent(pair[1]);
+			val = decodeURIComponent(pair[1]).replace("+", " ");
 		} catch(err) {
 			console.error(`Error parsing cookie value for "${name}": ${err}`);
 			return defaultVal;
@@ -50,10 +52,10 @@ export function setCookie(name, value, expires, root) {
 	if(root === undefined || root === "")
 		root = webroot;
 	let expiresStr = "";
-	if(expires !== undefined && expires !== "") {
+	if(expires === undefined || expires == "") {
 		expiresStr = ";expires=";
 		let d = new Date();
-		d.setTime(d.getTime() + 1000*60*60*24*expires);
+		d.setTime(d.getTime() + YEAR_IN_MS);
 		expiresStr += d.toUTCString();
 	}
 	document.cookie = `${name}=${value}${expiresStr};path=${root};sameSite=strict`;

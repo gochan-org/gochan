@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"html"
 	"html/template"
 	"time"
 
@@ -279,18 +278,6 @@ func (p *Post) GetUpload() (*Upload, error) {
 		return nil, nil
 	}
 	return upload, err
-}
-
-// Sanitize escapes HTML strings in a post. This should be run immediately before
-// the post is inserted into the database
-func (p *Post) Sanitize() {
-	if !p.sanitized {
-		p.Name = html.EscapeString(p.Name)
-		p.Email = html.EscapeString(p.Email)
-		p.Subject = html.EscapeString(p.Subject)
-		p.Password = html.EscapeString(p.Password)
-		p.sanitized = true
-	}
 }
 
 // UnlinkUploads disassociates the post with any uploads in DBPREFIXfiles

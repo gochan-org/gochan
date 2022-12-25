@@ -153,7 +153,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	post.Message = FormatMessage(post.MessageRaw, postBoard.Dir)
-	password, _ := url.QueryUnescape(request.FormValue("postpassword"))
+	password := request.FormValue("postpassword")
 	if password == "" {
 		password = gcutil.RandomString(8)
 	}
@@ -237,7 +237,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	post.Sanitize()
 	captchaSuccess, err := SubmitCaptchaResponse(request)
 	if err != nil {
 		serverutil.ServeErrorPage(writer, "Error submitting captcha response:"+err.Error())
