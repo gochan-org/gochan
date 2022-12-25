@@ -46,6 +46,7 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 
 ## Style guide
 * For Go source, follow the standard Go [style guide](https://github.com/golang/go/wiki/CodeReviewComments).
+* variables and functions exposed to Go templates should be in camelCase, like Go variables
 * All exported functions and variables should have a documentation comment explaining their functionality, as per go style guides.
 * Unexported functions are preferred to have a documentation comment explaining it, unless it is sufficiently self explanatory or simple.
 * Git commits should be descriptive. Put further explanation in the comment of the commit.
@@ -55,18 +56,19 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 ## Roadmap
 
 ### Near future
-All features that are to be realised for the near future are found in the issues tab with the milestone "Next Release"
+* Make the plugin support actually useful
+* Improve moderation tools, using path routing instead of the action variable
+* Add support for sticky and locked threads
+* Add support for more filetypes (zip,)
+* Improve API support for existing chan browing phone apps
 
 ### Lower priority
-* Improve moderation tools heavily
+* Better image fingerpringing and banning system (as opposed to a hash)
 * Rework any legacy structs that uses comma separated fields to use a slice instead.
-* Readd sqlite support
 * RSS feeds from boards/specific threads/specific usernames+tripcodes (such as newsanon)
 * Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclical thread.
 
 ### Later down the line
-* Improve API support for existing chan browing phone apps
-* Better image fingerpringing and banning system (as opposed to a hash)
 
 ### Possible experimental features:
 * Allow users to be mini-moderators within threads they posted themselves, to prevent spammers/derailers.

@@ -102,7 +102,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		infoEv.Str("post", "withVideo").
 			Str("filename", handler.Filename).
 			Str("referer", request.Referer()).Send()
-		if post.IsTopPost {
+		if post.ThreadID == 0 {
 			if err := createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
 				errEv.Err(err).Caller().
 					Str("filePath", filePath).
@@ -158,7 +158,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 				}
 			}
 			thumbType := "reply"
-			if post.IsTopPost {
+			if post.ThreadID == 0 {
 				thumbType = "op"
 			}
 			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
@@ -188,7 +188,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		upload.Width = img.Bounds().Max.X
 		upload.Height = img.Bounds().Max.Y
 		thumbType := "reply"
-		if post.IsTopPost {
+		if post.ThreadID == 0 {
 			thumbType = "op"
 		}
 		upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
@@ -219,7 +219,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		if shouldThumb {
 			var thumbnail image.Image
 			var catalogThumbnail image.Image
-			if post.IsTopPost {
+			if post.ThreadID == 0 {
 				// If this is a new thread, generate thumbnail and catalog thumbnail
 				thumbnail = createImageThumbnail(img, postBoard.Dir, "op")
 				catalogThumbnail = createImageThumbnail(img, postBoard.Dir, "catalog")
@@ -251,7 +251,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 				serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
 				return nil, true
 			}
-			if post.IsTopPost {
+			if post.ThreadID == 0 {
 				// Generate catalog thumbnail
 				catalogThumbnail := createImageThumbnail(img, postBoard.Dir, "catalog")
 				if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
