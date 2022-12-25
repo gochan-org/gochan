@@ -82,7 +82,7 @@ div#staff, select.post-actions {
 
 div#topbar,
 div#topbar a,
-div#topbar a:visited div#threadlinks-top {
+div#topbar a:visited {
   background: #151515;
   border-bottom: 1px solid #B0790A;
 }

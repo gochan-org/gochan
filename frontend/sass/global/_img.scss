@@ -74,10 +74,6 @@ table#pages td {
 	float:right;
 }
 
-#threadlinks-top {
-	float:left;
-	position:absolute;
-}
 
 .reply {
 	margin-bottom: 4px;
@@ -169,8 +165,9 @@ input[type=file] {
 	width: 275px;
 }
 
-input {
+input, textarea {
 	filter: none;
+	font-size: 10pt;
 }
 
 table#postbox-static {
