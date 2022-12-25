@@ -6,7 +6,7 @@ export function handleKeydown(e) {
 	let ta = e.target;
 	let isPostMsg = ta.nodeName == "TEXTAREA" && ta.name == "postmsg";
 	let inForm = ta.form != undefined;
-	if(!inForm && !e.ctrlKey) {
+	if(!inForm && !e.ctrlKey && e.keyCode == 81) {
 		openQR();
 	} else if(isPostMsg && e.ctrlKey) {
 		applyBBCode(e);

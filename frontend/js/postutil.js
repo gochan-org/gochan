@@ -50,10 +50,10 @@ function updateThreadHTML() {
 	let numAdded = 0;
 	for(const post of currentThreadJSON.posts) {
 		let selector = "";
-		if(post.resto === 0)
-			selector += `div#${post.no}.thread`;
+		if(post.resto === 0 || post.resto == post.no)
+			selector += `div#op${post.no}`;
 		else
-			selector += `a#${post.no}.anchor`;
+			selector += `div#reply${post.no}`;
 		let elementExists = $(selector).length > 0;
 		if(elementExists)
 			continue; // TODO: check for edits

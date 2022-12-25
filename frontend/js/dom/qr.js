@@ -18,6 +18,7 @@ import { updateThread } from "../postutil";
 import { currentBoard, currentThread, getPageThread } from "../postinfo";
 import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
 import { getUploadFilename, updateUploadImage } from "./uploaddata";
+import { alertLightbox } from "./lightbox";
 
 /**
  * @type {JQuery<HTMLElement>}
@@ -214,8 +215,7 @@ export function initQR(pageThread) {
 		});
 		return; 
 	}
-
-	$("form#qrpostform").on("submit", function(e) {
+	$postform.on("submit", function(e) {
 		let $form = $(this);
 		e.preventDefault();
 		copyCaptchaResponse($form);
@@ -228,7 +228,11 @@ export function initQR(pageThread) {
 			data: data, // $form.serialize(),
 			processData: false,
 			contentType: false,
-			success: () => {
+			success: (data, status, jqXHR) => {
+				if(data.error) {
+					alertLightbox(data.error, "Error");
+					return;
+				}
 				clearQR();
 				let cooldown = (currentThread().thread > 0)?replyCooldown:threadCooldown;
 				setButtonTimeout("", cooldown);
@@ -236,6 +240,10 @@ export function initQR(pageThread) {
 					let persist = getBooleanStorageVal("persistentqr", false);
 					if(!persist) closeQR();
 				});
+				return false;
+			},
+			error: (jqXHR, status, error) => {
+				alertLightbox(error, "Error");
 			}
 		});
 		return false;
@@ -261,12 +269,18 @@ function clearQR() {
 }
 
 export function openQR() {
-	if($qr) $qr.insertAfter("div#content");
+	if($qr) {
+		if($qr.parent().length == 0) {
+			$qr.insertAfter("div#content");
+		} else {
+			$qr.show();
+		}
+	}
 }
 window.openQR = openQR;
 
 export function closeQR() {
-	if($qr) $qr.remove();
+	if($qr) $qr.hide();
 }
 window.closeQR = closeQR;
 
