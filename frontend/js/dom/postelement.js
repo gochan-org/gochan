@@ -6,7 +6,7 @@
 
 
 import $ from "jquery";
-
+import { extname } from "path";
 import { formatDateString, formatFileSize } from "../formatting";
 import { getThumbFilename } from "../postinfo";
 
@@ -99,6 +99,7 @@ export function createPostElement(post, boardDir, elementClass = "inlinepostprev
 						})
 				)	
 		);
+		shrinkOriginalFilenames($post);
 	}
 	$post.append(
 		$("<div/>").prop({
@@ -107,3 +108,31 @@ export function createPostElement(post, boardDir, elementClass = "inlinepostprev
 	);
 	return $post;
 }
+
+/**
+ * @param {JQuery<HTMLElement>} elem
+ */
+export function shrinkOriginalFilenames(elem) {
+	if(elem == undefined)
+		elem = $(document.body);
+
+	elem.find("a.file-orig").each((i, el) => {
+		let ext = extname(el.innerText);
+		let noExt = el.innerText.slice(0,el.innerText.lastIndexOf("."));
+		if(noExt.length > 16) {
+			trimmed = noExt.slice(0, 15).trim() + "…" + ext;
+			el.setAttribute("trimmed", trimmed);
+			el.text = el.getAttribute("trimmed");
+			$(el).on("mouseover", () => {
+				el.text = el.getAttribute("download");
+			}).on("mouseout", () => {
+				el.text = el.getAttribute("trimmed");
+			});
+		}
+	});
+}
+
+
+$(() => {
+	shrinkOriginalFilenames();
+});
