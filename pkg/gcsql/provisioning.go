@@ -30,6 +30,7 @@ var (
 
 func initDB(initFile string) error {
 	filePath := gcutil.FindResource(initFile,
+		"./sql/"+initFile,
 		"/usr/local/share/gochan/"+initFile,
 		"/usr/share/gochan/"+initFile)
 	if filePath == "" {
