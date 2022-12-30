@@ -13,11 +13,10 @@ const (
 	versionStr = `return _GOCHAN_VERSION
 `
 	structPassingStr = `print(string.format("Receiving post from %q", post.Name))
-print(string.format("Message before changing: %q", post.MessageText))
-post.MessageText = "Message modified by a plugin\n"
-post.MessageHTML = "Message modified by a plugin<br />"
-print(string.format("Modified message text: %q", post.MessageText))
-`
+print(string.format("Message before changing: %q", post.MessageRaw))
+post.MessageRaw = "Message modified by a plugin\n"
+post.Message = "Message modified by a plugin<br />"
+print(string.format("Modified message text: %q", post.MessageText))`
 )
 
 func initPluginTests() {

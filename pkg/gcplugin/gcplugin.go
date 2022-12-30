@@ -1,10 +1,13 @@
 package gcplugin
 
 import (
+	"errors"
+
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 
 	lua "github.com/yuin/gopher-lua"
+	luar "layeh.com/gopher-luar"
 )
 
 var (
@@ -27,22 +30,20 @@ func ClosePlugins() {
 
 func createLuaLogFunc(which string) lua.LGFunction {
 	return func(l *lua.LState) int {
-		args := []interface{}{}
-		for v := 1; v <= l.GetTop(); v++ {
-			args = append(args, l.Get(v))
-		}
 		switch which {
 		case "info":
-			gcutil.LogInfo().
-				Interface("pluginInfo", args)
+			l.Push(luar.New(l, gcutil.LogInfo()))
 		case "warn":
-			gcutil.LogWarning().
-				Interface("pluginWarning", args)
+			l.Push(luar.New(l, gcutil.LogWarning()))
 		case "error":
-			gcutil.LogError(nil).
-				Interface("pluginError", args)
+			numArgs := l.GetTop()
+			if numArgs == 0 {
+				l.Push(luar.New(l, gcutil.LogError(nil)))
+			} else {
+				l.Push(luar.New(l, gcutil.LogError(errors.New(l.CheckString(-1)))))
+			}
 		}
-		return 0
+		return 1
 	}
 }
 
