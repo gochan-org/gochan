@@ -19,6 +19,12 @@ func initLua() {
 	}
 }
 
+func ClosePlugins() {
+	if lState != nil {
+		lState.Close()
+	}
+}
+
 func createLuaLogFunc(which string) lua.LGFunction {
 	return func(l *lua.LState) int {
 		args := []interface{}{}
@@ -65,7 +71,7 @@ func LoadPlugins(paths []string) error {
 		if err = lState.DoFile(pluginPath); err != nil {
 			return err
 		}
-		pluginTable := lState.CheckTable(-1)
+		pluginTable := lState.NewTable()
 		pluginTable.ForEach(func(key, val lua.LValue) {
 			keyStr := key.String()
 			fn, ok := val.(*lua.LFunction)

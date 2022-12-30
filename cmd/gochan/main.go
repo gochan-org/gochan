@@ -30,9 +30,9 @@ var (
 func main() {
 	defer func() {
 		fmt.Println("Cleaning up")
-		//gcsql.ExecSQL("DROP TABLE DBPREFIXsessions")
 		gcsql.Close()
 		gcutil.CloseLog()
+		gcplugin.ClosePlugins()
 	}()
 
 	fmt.Printf("Starting gochan v%s\n", versionStr)
