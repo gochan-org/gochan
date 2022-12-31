@@ -160,12 +160,18 @@ func BuildBoardPages(board *gcsql.Board) error {
 		boardPageFile, err = os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "1.html"),
 			os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("page", "board.html").
-				Caller().Msg("Failed getting board page")
+				Msg("Failed getting board page")
 			return fmt.Errorf("failed opening /%s/board.html: %s", board.Dir, err.Error())
 		}
 		defer boardPageFile.Close()
+
+		if err = config.TakeOwnershipOfFile(boardPageFile); err != nil {
+			errEv.Err(err).Caller().
+				Msg("Unable to take ownership of board.html")
+			return fmt.Errorf("unable to take ownership of /%s/board.html: %s", board.Dir, err.Error())
+		}
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		captchaCfg := config.GetSiteConfig().Captcha
@@ -199,13 +205,17 @@ func BuildBoardPages(board *gcsql.Board) error {
 	// catalog JSON file is built with the pages because pages are recorded in the JSON file
 	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		errEv.Err(err).
-			Str("subject", "catalog.json").
-			Caller().Msg("Failed opening catalog.json")
+		errEv.Err(err).Caller().
+			Msg("Failed opening catalog.json")
 		return fmt.Errorf("failed opening /%s/catalog.json: %s", board.Dir, err.Error())
 	}
 	defer catalogJSONFile.Close()
 
+	if err = config.TakeOwnershipOfFile(catalogJSONFile); err != nil {
+		errEv.Err(err).Caller().
+			Msg("Unable to take ownership of catalog.json")
+		return fmt.Errorf("unable to take ownership of /%s/catalog.json: %s", board.Dir, err.Error())
+	}
 	for _, page := range catalog.pages {
 		catalog.currentPage++
 		var currentPageFilepath string
@@ -213,12 +223,19 @@ func BuildBoardPages(board *gcsql.Board) error {
 		currentPageFilepath = path.Join(criticalCfg.DocumentRoot, board.Dir, pageFilename)
 		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 		if err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("page", pageFilename).
-				Caller().Msg("Failed getting board page")
+				Msg("Failed getting board page")
 			continue
 		}
 		defer currentPageFile.Close()
+
+		if err = config.TakeOwnershipOfFile(currentPageFile); err != nil {
+			errEv.Err(err).Caller().
+				Str("page", pageFilename).
+				Msg("Unable to update file ownership")
+			return errors.New("unable to set board page file ownership")
+		}
 
 		// Render the boardpage template
 		captchaCfg := config.GetSiteConfig().Captcha
@@ -329,9 +346,19 @@ func buildBoard(board *gcsql.Board, force bool) error {
 			return fmt.Errorf(pathExistsStr, dirPath)
 		}
 		if !dirInfo.IsDir() {
+			errEv.Err(os.ErrExist).
+				Str("dirPath", dirPath).
+				Caller().Send()
 			return fmt.Errorf(dirIsAFileStr, dirPath)
 		}
 	} else if err = os.Mkdir(dirPath, 0666); err != nil {
+		errEv.Err(os.ErrExist).
+			Str("dirPath", dirPath).
+			Caller().Send()
+		return fmt.Errorf(genericErrStr, dirPath, err.Error())
+	}
+	if err = config.TakeOwnership(dirPath); err != nil {
+
 		return fmt.Errorf(genericErrStr, dirPath, err.Error())
 	}
 
@@ -356,7 +383,11 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		errEv.Err(err).
 			Str("resPath", resPath).
 			Caller().Send()
-
+		return fmt.Errorf(genericErrStr, resPath, err.Error())
+	}
+	if err = config.TakeOwnership(resPath); err != nil {
+		errEv.Err(err).Caller().
+			Str("resPath", resPath).Send()
 		return fmt.Errorf(genericErrStr, resPath, err.Error())
 	}
 
@@ -382,6 +413,11 @@ func buildBoard(board *gcsql.Board, force bool) error {
 			Caller().Send()
 		return err
 	}
+	if config.TakeOwnership(srcPath); err != nil {
+		errEv.Err(err).Caller().
+			Str("srcPath", srcPath).Send()
+		return fmt.Errorf(genericErrStr, srcPath, err.Error())
+	}
 
 	if thumbInfo != nil {
 		if !force {
@@ -391,6 +427,13 @@ func buildBoard(board *gcsql.Board, force bool) error {
 			return fmt.Errorf(dirIsAFileStr, thumbPath)
 		}
 	} else if err = os.Mkdir(thumbPath, 0666); err != nil {
+		errEv.Err(err).Caller().
+			Str("thumbPath", thumbPath).Send()
+		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
+	}
+	if config.TakeOwnership(thumbPath); err != nil {
+		errEv.Err(err).Caller().
+			Str("thumbPath", thumbPath).Send()
 		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
 	}
 
@@ -424,12 +467,18 @@ func buildBoard(board *gcsql.Board, force bool) error {
 func BuildBoardListJSON() error {
 	boardsJsonPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, "boards.json")
 	boardListFile, err := os.OpenFile(boardsJsonPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	errEv := gcutil.LogError(nil).Str("building", "boards.json")
+	defer errEv.Discard()
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "boardsList").Send()
-		return errors.New("Failed opening boards.json for writing: " + err.Error())
+		errEv.Err(err).Caller().Send()
+		return errors.New("unable to open boards.json for writing: " + err.Error())
 	}
 	defer boardListFile.Close()
+
+	if err = config.TakeOwnershipOfFile(boardListFile); err != nil {
+		errEv.Err(err).Caller().Send()
+		return errors.New("unable to update boards.json ownership: " + err.Error())
+	}
 
 	boardsMap := map[string][]boardJSON{
 		"boards": {},
@@ -452,12 +501,12 @@ func BuildBoardListJSON() error {
 	// TODO: properly check if the board is in a hidden section
 	boardJSON, err := json.Marshal(boardsMap)
 	if err != nil {
-		gcutil.LogError(err).Str("building", "boards.json").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed to create boards.json: " + err.Error())
 	}
 
 	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
-		gcutil.LogError(err).Str("building", "boards.json").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Failed writing boards.json file: " + err.Error())
 	}
 	return nil

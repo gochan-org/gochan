@@ -85,10 +85,15 @@ func BuildThreadPages(op *gcsql.Post) error {
 	threadPageFilepath := path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
 	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		errEv.Err(err).
-			Caller().Send()
-		return fmt.Errorf("unable to open opening /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("unable to open /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
+	defer threadPageFile.Close()
+	if err = config.TakeOwnershipOfFile(threadPageFile); err != nil {
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("unable to set file permissions for /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
+	}
+	errEv.Int("op", posts[0].ID)
 
 	// render thread page
 	captchaCfg := config.GetSiteConfig().Captcha
@@ -103,8 +108,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		"useCaptcha":  captchaCfg.UseCaptcha() && !captchaCfg.OnlyNeededForThreads,
 		"captcha":     captchaCfg,
 	}, threadPageFile, "text/html"); err != nil {
-		errEv.Err(err).
-			Caller().Send()
+		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, posts[0].ID, err.Error())
 	}
 
@@ -113,12 +117,15 @@ func BuildThreadPages(op *gcsql.Post) error {
 		path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(posts[0].ID)+".json"),
 		os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
 	if err != nil {
-		errEv.Err(err).
-			Int("op", posts[0].ID).
-			Caller().Send()
+		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
 	defer threadJSONFile.Close()
+
+	if err = config.TakeOwnershipOfFile(threadJSONFile); err != nil {
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("failed setting file permissions for /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
+	}
 
 	threadMap := make(map[string][]Post)
 
@@ -130,7 +137,6 @@ func BuildThreadPages(op *gcsql.Post) error {
 	}
 	if _, err = threadJSONFile.Write(threadJSON); err != nil {
 		errEv.Err(err).
-			Int("op", posts[0].ID).
 			Caller().Send()
 		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}

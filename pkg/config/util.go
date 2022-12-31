@@ -5,8 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/user"
 	"path"
 	"reflect"
+	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -17,6 +20,8 @@ var (
 		"ListenIP", "Port", "Username", "UseFastCGI", "DocumentRoot", "TemplateDir", "LogDir",
 		"DBtype", "DBhost", "DBname", "DBusername", "DBpassword", "SiteDomain", "Styles",
 	}
+	uid int
+	gid int
 )
 
 // MissingField represents a field missing from the configuration file
@@ -72,6 +77,22 @@ func GetDefaultString(key string) string {
 		return ""
 	}
 	return str
+}
+
+func TakeOwnership(fp string) error {
+	if runtime.GOOS == "windows" || fp == "" {
+		// Chown returns an error in Windows
+		return nil
+	}
+	return os.Chown(fp, uid, gid)
+}
+
+func TakeOwnershipOfFile(f *os.File) error {
+	if runtime.GOOS == "windows" || f == nil {
+		// Chown returns an error in Windows
+		return nil
+	}
+	return f.Chown(uid, gid)
 }
 
 // ParseJSON loads and parses JSON data, returning a GochanConfig pointer, any critical missing
@@ -148,7 +169,7 @@ func InitConfig(versionStr string) {
 				Version:      ParseVersion(versionStr),
 			},
 			SiteConfig: SiteConfig{
-				Username:        "gochan",
+				Username:        "",
 				FirstPage:       []string{"index.html", "firstrun.html", "1.html"},
 				Lockdown:        false,
 				LockdownMessage: "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
@@ -253,6 +274,21 @@ func InitConfig(versionStr string) {
 	if err = cfg.ValidateValues(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
+	}
+
+	if runtime.GOOS != "windows" {
+		var gcUser *user.User
+		if cfg.Username != "" {
+			gcUser, err = user.Lookup(cfg.Username)
+		} else {
+			gcUser, err = user.Current()
+		}
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		uid, _ = strconv.Atoi(gcUser.Uid)
+		gid, _ = strconv.Atoi(gcUser.Gid)
 	}
 
 	if _, err = os.Stat(cfg.DocumentRoot); err != nil {

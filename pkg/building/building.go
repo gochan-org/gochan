@@ -112,6 +112,11 @@ func BuildFrontPage() error {
 	}
 	defer frontFile.Close()
 
+	if err = config.TakeOwnershipOfFile(frontFile); err != nil {
+		errEv.Err(err).Caller().Send()
+		return errors.New("Failed setting file ownership for front page: " + err.Error())
+	}
+
 	var recentPostsArr []recentPost
 	siteCfg := config.GetSiteConfig()
 	recentPostsArr, err = getRecentPosts()
@@ -164,8 +169,10 @@ func BuildPageFooter(writer io.Writer) (err error) {
 func BuildJS() error {
 	// build consts.js from template
 	err := gctemplates.InitTemplates("js")
+	errEv := gcutil.LogError(nil).Str("building", "consts.js")
+	defer errEv.Discard()
 	if err != nil {
-		gcutil.LogError(err).Str("template", "consts.js").Send()
+		errEv.Err(err).Caller().Send()
 		return errors.New("Error loading consts.js template:" + err.Error())
 	}
 
@@ -174,12 +181,15 @@ func BuildJS() error {
 	constsJSPath := path.Join(criticalCfg.DocumentRoot, "js", "consts.js")
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		gcutil.LogError(err).
-			Str("building", "consts.js").
-			Str("filePath", constsJSPath).Send()
-		return fmt.Errorf("error opening %q for writing: %s", constsJSPath, err.Error())
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("error opening consts.js for writing: %s", err.Error())
 	}
 	defer constsJSFile.Close()
+
+	if err = config.TakeOwnershipOfFile(constsJSFile); err != nil {
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("unable to update file ownership for consts.js: %s", err.Error())
+	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.JsConsts,
 		map[string]interface{}{
@@ -189,10 +199,8 @@ func BuildJS() error {
 			"timezone":     criticalCfg.TimeZone,
 		},
 		constsJSFile, "text/javascript"); err != nil {
-		gcutil.LogError(err).
-			Str("building", "consts.js").
-			Str("filePath", constsJSPath).Send()
-		return fmt.Errorf("error building %q: %s", constsJSPath, err.Error())
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("error building consts.js: %s", err.Error())
 	}
 	return nil
 }

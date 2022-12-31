@@ -268,15 +268,18 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+	var filePath, thumbPath, catalogThumbPath string
+	if upload != nil {
+		filePath = path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+		thumbPath = path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
+		catalogThumbPath = path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
+	}
 
 	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
 		if upload != nil {
-			filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
-			thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
-			catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 			os.Remove(filePath)
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)
@@ -289,14 +292,25 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to attach upload to post")
-		filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
-		thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
-		catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 		os.Remove(filePath)
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
 		serverutil.ServeErrorPage(writer, "Unable to attach upload: "+err.Error())
 		return
+	}
+	if upload != nil {
+		if err = config.TakeOwnership(filePath); err != nil {
+			errEv.Err(err).Caller().
+				Str("file", filePath).Send()
+		}
+		if err = config.TakeOwnership(thumbPath); err != nil {
+			errEv.Err(err).Caller().
+				Str("thumbnail", thumbPath).Send()
+		}
+		if err = config.TakeOwnership(catalogThumbPath); err != nil && !os.IsNotExist(err) {
+			errEv.Err(err).Caller().
+				Str("catalogThumbnail", catalogThumbPath).Send()
+		}
 	}
 
 	// rebuild the board page

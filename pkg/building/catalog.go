@@ -86,6 +86,12 @@ func BuildCatalog(boardID int) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed opening /%s/catalog.html: %s", board.Dir, err.Error())
 	}
+	defer catalogFile.Close()
+
+	if err = config.TakeOwnershipOfFile(catalogFile); err != nil {
+		errEv.Err(err).Caller().Send()
+		return fmt.Errorf("failed taking ownership of /%s/catalog.html: %s", board.Dir, err.Error())
+	}
 
 	threadOPs, err := getBoardTopPosts(boardID)
 	if err != nil {
