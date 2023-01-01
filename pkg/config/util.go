@@ -86,16 +86,18 @@ func GetDefaultString(key string) string {
 }
 
 func TakeOwnership(fp string) (err error) {
-	if runtime.GOOS == "windows" || fp == "" {
-		// Chown returns an error in Windows
+	if runtime.GOOS == "windows" || fp == "" || cfg.Username == "" {
+		// Chown returns an error in Windows so skip it, also skip if Username isn't set
+		// because otherwise it'll think we want to switch to uid and gid 0 (root)
 		return nil
 	}
 	return os.Chown(fp, uid, gid)
 }
 
 func TakeOwnershipOfFile(f *os.File) error {
-	if runtime.GOOS == "windows" || f == nil {
-		// Chown returns an error in Windows
+	if runtime.GOOS == "windows" || f == nil || cfg.Username == "" {
+		// Chown returns an error in Windows so skip it, also skip if Username isn't set
+		// because otherwise it'll think we want to switch to uid and gid 0 (root)
 		return nil
 	}
 	return f.Chown(uid, gid)
@@ -293,8 +295,15 @@ func InitConfig(versionStr string) {
 			fmt.Println(err.Error())
 			os.Exit(1)
 		}
-		uid, _ = strconv.Atoi(gcUser.Uid)
-		gid, _ = strconv.Atoi(gcUser.Gid)
+		if uid, err = strconv.Atoi(gcUser.Uid); err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		if gid, err = strconv.Atoi(gcUser.Gid); err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
 	}
 
 	if _, err = os.Stat(cfg.DocumentRoot); err != nil {
@@ -313,6 +322,7 @@ func InitConfig(versionStr string) {
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
 	if err = gcutil.InitLogs(cfg.LogDir, cfg.DebugMode, uid, gid); err != nil {
 		fmt.Println("Error opening logs:", err.Error())
+		os.Exit(1)
 	}
 
 	if cfg.Port == 0 {
