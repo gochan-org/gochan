@@ -17,7 +17,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-
+import traceback
 
 release_files = (
 	"html/banned.png",
@@ -339,6 +339,13 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 				mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		except shutil.SameFileError as err:
 			print(err)
+		except FileNotFoundError as err:
+			if file == "html/js/":
+				print("Missing html/js directory, this must be built before installation by running python3 build.py js, or mkdir html/js if you don't want JavaScript")
+			else:
+				traceback.print_exc()
+			sys.exit(1)
+
 
 	if path.exists(gochan_exe) is False:
 		build()

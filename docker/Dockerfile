@@ -42,6 +42,7 @@ EXPOSE 9000
 CMD ls -la /opt/gochan && ls -la && ls -la .. && sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
+	-e 's/"Username": ".*",//' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \

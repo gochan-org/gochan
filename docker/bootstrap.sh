@@ -80,6 +80,7 @@ sed -i /etc/gochan/gochan.json \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
+	-e 's/"Username": ".*",/ /' \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
 	-e 's/"RandomSeed": ""/"RandomSeed": "abc123"/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/'
