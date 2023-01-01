@@ -247,7 +247,7 @@ func (gcfg *GochanConfig) Write() error {
 		// don't try to write anything if we're doing a test
 		return nil
 	}
-	return os.WriteFile(gcfg.jsonLocation, str, 0777)
+	return os.WriteFile(gcfg.jsonLocation, str, GC_FILE_MODE)
 }
 
 /*

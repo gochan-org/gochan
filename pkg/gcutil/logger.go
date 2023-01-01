@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/rs/zerolog"
 )
@@ -79,6 +80,23 @@ func InitAccessLog(logPath string) (err error) {
 		return err
 	}
 	accessLogger = zerolog.New(accessFile).Hook(&logHook{})
+	return nil
+}
+
+func InitLogs(logDir string, debug bool, uid int, gid int) (err error) {
+	if err = InitLog(path.Join(logDir, "gochan.log"), debug); err != nil {
+		return err
+	}
+	if err = logFile.Chown(uid, gid); err != nil {
+		return err
+	}
+
+	if err = InitAccessLog(path.Join(logDir, "gochan_access.log")); err != nil {
+		return err
+	}
+	if err = accessFile.Chown(uid, gid); err != nil {
+		return err
+	}
 	return nil
 }
 

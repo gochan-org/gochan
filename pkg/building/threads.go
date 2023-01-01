@@ -83,7 +83,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".json"))
 
 	threadPageFilepath := path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html")
-	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("unable to open /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
@@ -115,7 +115,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 	// Put together the thread JSON
 	threadJSONFile, err := os.OpenFile(
 		path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(posts[0].ID)+".json"),
-		os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0777)
+		os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())

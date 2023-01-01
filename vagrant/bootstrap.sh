@@ -132,7 +132,7 @@ su - vagrant <<EOF
 mkdir -p /home/vagrant/go
 source /home/vagrant/.bashrc
 cd /vagrant/devtools
-python build_initdb.py
+./build_initdb.py
 cd ..
 mkdir -p $GOPATH/src/github.com/gochan-org/gochan
 cp -r pkg $GOPATH/src/github.com/gochan-org/gochan

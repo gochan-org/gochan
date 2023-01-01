@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 	"path"
@@ -13,6 +14,11 @@ import (
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
+)
+
+const (
+	GC_DIR_MODE  fs.FileMode = 0775
+	GC_FILE_MODE fs.FileMode = 0664
 )
 
 var (
@@ -79,7 +85,7 @@ func GetDefaultString(key string) string {
 	return str
 }
 
-func TakeOwnership(fp string) error {
+func TakeOwnership(fp string) (err error) {
 	if runtime.GOOS == "windows" || fp == "" {
 		// Chown returns an error in Windows
 		return nil
@@ -305,13 +311,8 @@ func InitConfig(versionStr string) {
 	}
 
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
-	if err = gcutil.InitLog(path.Join(cfg.LogDir, "gochan.log"), cfg.DebugMode); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	if err = gcutil.InitAccessLog(path.Join(cfg.LogDir, "gochan_access.log")); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	if err = gcutil.InitLogs(cfg.LogDir, cfg.DebugMode, uid, gid); err != nil {
+		fmt.Println("Error opening logs:", err.Error())
 	}
 
 	if cfg.Port == 0 {

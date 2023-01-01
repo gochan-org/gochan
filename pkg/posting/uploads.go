@@ -81,7 +81,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
 	catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 
-	if err = os.WriteFile(filePath, data, 0644); err != nil {
+	if err = os.WriteFile(filePath, data, config.GC_FILE_MODE); err != nil {
 		errEv.Err(err).Caller().
 			Str("filename", upload.Filename).
 			Str("originalFilename", upload.OriginalFilename).
