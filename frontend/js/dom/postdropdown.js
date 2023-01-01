@@ -103,11 +103,11 @@ function deletePost(id, board, fileOnly) {
 					deletePostElement(id);
 				}
 			} else {
-				if(data.boardid === 0 && data.postid === 0) {
-					alertLightbox(`Error deleting post #${id}: Post doesn't exist`, "Error");
+				if(data.error !== undefined) {
+					alertLightbox(data.error, `Error deleting post #${id}`);
 				} else if(data !== "") {
 					alertLightbox(`Error deleting post #${id}`, "Error");
-					console.log(data);
+					console.error(data);
 				}
 			}
 		}, "json");
@@ -169,7 +169,10 @@ function handleActions(action, postIDStr) {
 				banFile(banType, info.post.filename, info.post.md5, `Added from post dropdown for post /${board}/${postID}`)
 			).then(result => {
 				if(result.error !== undefined && result.error != "") {
-					alertLightbox(`Failed applying ${banType} ban: ${result.error}`, "Error");
+					if(result.message !== undefined)
+						alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
+					else
+						alertLightbox(`Failed applying ${banType} ban: ${result.error}`, "Error");
 				} else {
 					alertLightbox(`Successfully applied ${banType} ban`, "Success");
 				}
