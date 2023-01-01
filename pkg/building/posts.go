@@ -145,7 +145,7 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 		var threadID int
 		if err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		); err != nil {
