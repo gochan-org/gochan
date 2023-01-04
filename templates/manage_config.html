@@ -2,7 +2,7 @@
 Some fields omitted because they can not be (safely) edited from the web interface while Gochan is running.
 Edit these directly in gochan.json, then restart Gochan.<br />
 <span class="warning">This config editor isn't fully stable so MAKE BACKUPS!</span>
-<form action="/manage?action=config" method="POST">
+<form action="/manage/config" method="POST">
 	<input name="do" value="save" type="hidden" />
 	{{generateConfigTable}}<br />
 <input type="submit" />

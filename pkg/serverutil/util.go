@@ -50,7 +50,7 @@ func ServeErrorPage(writer http.ResponseWriter, err string) {
 // ServeNotFound shows an error page if a requested file is not found
 func ServeNotFound(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.WriteHeader(404)
+	writer.WriteHeader(http.StatusNotFound)
 	systemCritical := config.GetSystemCriticalConfig()
 	errorPage, err := os.ReadFile(systemCritical.DocumentRoot + "/error/404.html")
 	if err != nil {

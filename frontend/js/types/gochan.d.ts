@@ -91,7 +91,7 @@ declare interface ThreadPost {
 }
 
 /**
- * An object representing a staff member retreived by requesting /manage?action=staffinfo
+ * An object representing a staff member retreived by requesting /manage/staffinfo
  */
  interface StaffInfo {
 	/**
@@ -117,7 +117,7 @@ declare interface ThreadPost {
  */
 interface StaffAction {
 	/**
-	 * The GET key used when requesting /manage?action=<id>
+	 * The GET key used when requesting /manage/<id>
 	 */
 	id?:string;
 	/**
@@ -142,7 +142,7 @@ interface StaffAction {
 }
 
 /**
- * The result of requesting /manage?action=actions
+ * The result of requesting /manage/actions
  */
 declare var staffActions: StaffAction[];
 

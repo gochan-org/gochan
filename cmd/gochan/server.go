@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/uptrace/bunrouter"
+
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
@@ -18,14 +20,10 @@ import (
 )
 
 var (
-	server *gochanServer
+	router *bunrouter.Router
 )
 
-type gochanServer struct {
-	namespaces map[string]func(http.ResponseWriter, *http.Request)
-}
-
-func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Request) {
+func serveFile(writer http.ResponseWriter, request *http.Request) {
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
 
@@ -56,7 +54,7 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 			return
 		}
 	}
-	s.setFileHeaders(filePath, writer)
+	setFileHeaders(filePath, writer)
 
 	// serve the requested file
 	fileBytes, _ = os.ReadFile(filePath)
@@ -65,7 +63,7 @@ func (s gochanServer) serveFile(writer http.ResponseWriter, request *http.Reques
 }
 
 // set mime type/cache headers according to the file's extension
-func (*gochanServer) setFileHeaders(filename string, writer http.ResponseWriter) {
+func setFileHeaders(filename string, writer http.ResponseWriter) {
 	extension := strings.ToLower(path.Ext(filename))
 	switch extension {
 	case ".png":
@@ -102,16 +100,6 @@ func (*gochanServer) setFileHeaders(filename string, writer http.ResponseWriter)
 	}
 }
 
-func (s gochanServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	for name, namespaceFunction := range s.namespaces {
-		if request.URL.Path == config.WebPath(name) {
-			namespaceFunction(writer, request)
-			return
-		}
-	}
-	s.serveFile(writer, request)
-}
-
 func initServer() {
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
@@ -124,8 +112,9 @@ func initServer() {
 			Int("Port", systemCritical.Port).Send()
 		fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
 	}
-	server = new(gochanServer)
-	server.namespaces = make(map[string]func(http.ResponseWriter, *http.Request))
+	router = bunrouter.New(
+		bunrouter.WithNotFoundHandler(bunrouter.HTTPHandlerFunc(serveFile)),
+	)
 
 	// Check if Akismet API key is usable at startup.
 	err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey)
@@ -135,22 +124,21 @@ func initServer() {
 		fmt.Println("Got error when initializing Akismet spam protection, it will be disabled:", err)
 	}
 
-	server.namespaces["captcha"] = posting.ServeCaptcha
-	server.namespaces["manage"] = manage.CallManageFunction
-	server.namespaces["post"] = posting.MakePost
-	server.namespaces["util"] = utilHandler
-	server.namespaces["example"] = func(writer http.ResponseWriter, request *http.Request) {
-		if writer != nil {
-			http.Redirect(writer, request, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", http.StatusFound)
-		}
-	}
+	router.GET(config.WebPath("/captcha"), bunrouter.HTTPHandlerFunc(posting.ServeCaptcha))
+	router.POST(config.WebPath("/captcha"), bunrouter.HTTPHandlerFunc(posting.ServeCaptcha))
+	router.GET(config.WebPath("/manage"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
+	router.GET(config.WebPath("/manage/:action"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
+	router.POST(config.WebPath("/manage/:action"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
+	router.POST(config.WebPath("/post"), bunrouter.HTTPHandlerFunc(posting.MakePost))
+	router.GET(config.WebPath("/util"), bunrouter.HTTPHandlerFunc(utilHandler))
+	router.POST(config.WebPath("/util"), bunrouter.HTTPHandlerFunc(utilHandler))
 	// Eventually plugins might be able to register new namespaces or they might be restricted to something
 	// like /plugin
 
 	if systemCritical.UseFastCGI {
-		err = fcgi.Serve(listener, server)
+		err = fcgi.Serve(listener, router)
 	} else {
-		err = http.Serve(listener, server)
+		err = http.Serve(listener, router)
 	}
 
 	if err != nil {

@@ -1,4 +1,4 @@
-<form method="POST" action="{{webPath "manage?action=bans"}}">
+<form method="POST" action="{{webPath "manage/bans"}}">
 <input type="hidden" name="do" value="add" />
 <h2>Add IP ban</h2>
 <table>
@@ -20,13 +20,12 @@
 	<tr><th>Reason</th><td><textarea name="reason" style="width: 100%;" rows="6" placeholder="Message to be displayed to the banned user"></textarea></td></tr>
 	<tr><th>Staff note</th><td><textarea name="staffnote" style="width: 100%;" rows="6" placeholder="Private note that only staff can see"></textarea></td></tr>
 </table>
-<input type="submit" value="Ban user" /> <input type="button" name="docancel" value="Cancel" onclick="window.location = './manage?action=bans'; return false"/>
+<input type="submit" value="Ban user" /> <input type="button" name="docancel" value="Cancel" onclick="window.location = './manage/bans'; return false"/>
 </form>
 
 <h2 id="banlist">Banlist</h2>
-<form action="{{webPath "manage?action=bans"}}" method="get">
-	<input type="hidden" name="action" value="bans">
-Filter board: <select name="filterboardid" id="filterboardid" onchange="window.location = '{{webPath "manage?action=bans&filterboardid="}}' + this.value + '#banlist'">
+<form action="{{webPath "manage/bans"}}" method="get">
+Filter board: <select name="filterboardid" id="filterboardid" onchange="window.location = '{{webPath "manage/bans?filterboardid="}}' + this.value + '#banlist'">
 	<option value="0">All boards</option>
 {{- range $b, $board := $.allBoards -}}
 	<option value="{{$board.ID}}" {{if eq $.filterboardid $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
@@ -37,7 +36,7 @@ Filter board: <select name="filterboardid" id="filterboardid" onchange="window.l
 	<tr><th>Action</th><th>IP</th><th>Board</th><th>Reason</th><th>Staff</th><th>Staff note</th><th>Banned post text</th><th>Set</th><th>Expires</th><th>Appeal at</th></tr>
 {{range $_, $ban := $.banlist -}}
 	<tr>
-		<td> <a href="{{webPath "manage?action=bans&edit="}}{{$ban.ID}}">Edit</a> | <a href="{{webPath "manage?action=bans&delete="}}{{$ban.ID}}">Delete</a> </td>
+		<td> <a href="{{webPath "manage/bans?edit="}}{{$ban.ID}}">Edit</a> | <a href="{{webPath "manage/bans?delete="}}{{$ban.ID}}">Delete</a> </td>
 		<td>{{$ban.IP}}</td>
 		<td>{{if not $ban.BoardID}}<i>all</i>{{else}}/{{getBoardDirFromID $ban.BoardID}}/{{end}}</td>
 		<td>{{$ban.Message}}</td>

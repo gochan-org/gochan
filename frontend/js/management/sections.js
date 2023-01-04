@@ -1,4 +1,4 @@
-// Make the sections table on /manage?action=boardsections sortable to make changing the list order easier
+// Make the sections table on /manage/boardsections sortable to make changing the list order easier
 
 /* global webroot */
 
@@ -28,7 +28,7 @@ function applyOrderChanges() {
 		let sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() == "yes"?"on":"off";
 		$.ajax({
 			method: "POST",
-			url: webroot + "manage?action=boardsections",
+			url: webroot + "manage/boardsections",
 			data: {
 				updatesection: updatesection,
 				sectionname: sectionname,
@@ -81,7 +81,7 @@ function addButtons() {
 }
 
 $(() => {
-	if(window.location.search.indexOf("?action=boardsections") != 0)
+	if(window.location.pathname != webroot + "manage/boardsections")
 		return;
 	
 	$sectionsTable = $("table#sections");

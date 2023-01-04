@@ -9,10 +9,10 @@
 		{{$report.staff_user}}
 	{{- end -}}
 </td><td>
-	<a href="{{webPath "manage?action=reports&dismiss="}}{{$report.id}}">Dismiss</a>
+	<a href="{{webPath "manage/reports?dismiss="}}{{$report.id}}">Dismiss</a>
 	{{if eq $.staff.Rank 3 -}}
 	|
-	<a href="{{webPath "manage?action=reports&dismiss="}}{{$report.id}}&block=1" title="Prevent future reports of this post, regardless of report reason">Make post unreportable</a>
+	<a href="{{webPath "manage/reports?dismiss="}}{{$report.id}}&block=1" title="Prevent future reports of this post, regardless of report reason">Make post unreportable</a>
 	{{- end}}
 </td></tr>
 {{end}}

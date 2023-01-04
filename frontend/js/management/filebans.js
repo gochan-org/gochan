@@ -4,7 +4,7 @@ import "jquery-ui/ui/unique-id";
 import "jquery-ui/ui/keycode";
 import "jquery-ui/ui/widgets/tabs";
 $(() => {
-	if(window.location.search.indexOf("?action=filebans") != 0)
+	if(window.location.pathname != webroot + "manage/filebans")
 		return;
 	$("div#fileban-tabs").tabs();
 });

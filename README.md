@@ -13,7 +13,7 @@ Demo installation: https://gochan.org
 3. If you're using nginx, copy gochan-http.nginx, or gochan-fastcgi.nginx if `UseFastCGI` is set to true to /etc/nginx/sites-enabled/, or the appropriate folder in Windows.
 4. If you're using a Linux distribution with systemd, you can optionally copy gochan.service to /lib/systemd/system/gochan.service and run `systemctl enable gochan.service` to have it run on startup. Then run `systemctl start gochan.service` to start it as a background service.
 	1. If you aren't using a distro with systemd, you can start a screen session and run `/path/to/gochan`
-5. Go to http://[gochan url]/manage?action=staff, log in (default username/password is admin/password), and create a new admin user (and any other staff users as necessary). Then delete the admin user for security.
+5. Go to http://[gochan url]/manage/staff, log in (default username/password is admin/password), and create a new admin user (and any other staff users as necessary). Then delete the admin user for security.
 
 ## Installation using Docker
 See [`docker/README.md`](docker/README.md)

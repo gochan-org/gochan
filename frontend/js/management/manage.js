@@ -92,7 +92,7 @@ export function banFile(banType, filename, checksum, staffNote = "") {
 	}
 	return $.ajax({
 		method: "POST",
-		url: `${webroot}manage?action=filebans`,
+		url: `${webroot}manage/filebans`,
 		data: xhrFields
 	});
 }
@@ -100,10 +100,7 @@ export function banFile(banType, filename, checksum, staffNote = "") {
 export async function initStaff() {
 	return $.ajax({
 		method: "GET",
-		url: `${webroot}manage`,
-		data: {
-			action: "actions"
-		},
+		url: `${webroot}manage/actions`,
 		async: true,
 		cache: false,
 		success: result => {
@@ -138,10 +135,7 @@ export async function getStaffInfo() {
 	loginChecked = true;
 	return $.ajax({
 		method: "GET",
-		url: `${webroot}manage`,
-		data: {
-			action: "staffinfo",
-		},
+		url: `${webroot}manage/staffinfo`,
 		async: true,
 		cache: true,
 		dataType: "json"
@@ -158,9 +152,8 @@ export async function getStaffInfo() {
 export async function getPostInfo(id) {
 	return $.ajax({
 		method: "GET",
-		url: `${webroot}manage`,
+		url: `${webroot}manage/postinfo`,
 		data: {
-			action: "postinfo",
 			postid: id
 		},
 		async: true,
@@ -191,7 +184,7 @@ export function banSelectedPost() {
 			break;
 		}
 	}
-	window.location = `${webroot}manage?action=bans&dir=${boardDir}&postid=${postID}`;
+	window.location = `${webroot}manage/bans?dir=${boardDir}&postid=${postID}`;
 }
 
 /**
@@ -201,7 +194,7 @@ export function banSelectedPost() {
 function menuItem(action, isCategory = false) {
 	return isCategory ? $("<div/>").append($("<b/>").text(action)) : $("<div/>").append(
 			$("<a/>").prop({
-				href: `${webroot}manage?action=${action.id}`
+				href: `${webroot}manage/${action.id}`
 			}).text(action.title)
 		);
 }
@@ -294,9 +287,8 @@ function updateReports(reports) {
 function getReports() {
 	return $.ajax({
 		method: "GET",
-		url: `${webroot}manage`,
+		url: `${webroot}manage/reports`,
 		data: {
-			action: "reports",
 			json: "1"
 		},
 		async: true,

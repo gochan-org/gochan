@@ -21,7 +21,7 @@ the README and/or the -h command line flag before you use it.
 	migrateCompleteTxt = `Database migration successful!
 To migrate the uploads for each board, move or copy the uploads to /path/to/gochan/document/root/<boardname>/src/
 Then copy the thumbnails to /path/to/gochan/documentroot/<boardname>/thumb/
-Then start the gochan server and go to http://yoursite/manage?action=rebuildall to generate the html files
+Then start the gochan server and go to http://yoursite/manage/rebuildall to generate the html files
 for the threads and board pages`
 
 	allowedDirActions = "Valid values are noaction, copy, and move (defaults to noaction if unset)"

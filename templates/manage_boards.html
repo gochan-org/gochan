@@ -1,5 +1,4 @@
-<form action="{{$.webroot}}manage?action=boards" method="GET">
-	<input type="hidden" name="action" value="boards">
+<form action="{{$.webroot}}manage/boards" method="GET">
 	{{with $.boards}}{{else}}
 	<input type="hidden" name="noboards" value="1">
 	{{end}}
@@ -20,8 +19,7 @@
 {{else}}
 <h2>Create new board</h2>
 {{end}}
-<form action="{{$.webroot}}manage?action=boards" method="POST">
-	<input type="hidden" name="action" value="boards">
+<form action="{{$.webroot}}manage/boards" method="POST">
 	<input type="hidden" name="board" value="{{$.board.ID}}"/>
 <table>
 <tr>
@@ -127,7 +125,7 @@
 </table>
 {{- if $.editing -}}
 <input type="submit" name="domodify" value="Save changes" onclick="return confirm('Click ok to confirm')"/>
-<input type="submit" name="docancel" value="Cancel" onclick="window.location = './manage?action=boards'; return false"/>
+<input type="submit" name="docancel" value="Cancel" onclick="window.location = './manage/boards'; return false"/>
 {{- else -}}
 <input type="submit" name="docreate" value="Create new board" onclick="return confirm('Click ok to confirm')"/>
 {{- end -}}

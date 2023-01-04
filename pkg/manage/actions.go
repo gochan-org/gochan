@@ -46,9 +46,9 @@ var (
 	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
 )
 
-// Action represents the functions accessed by staff members at /manage?action=<functionname>.
+// Action represents the functions accessed by staff members at /manage/<functionname>.
 type Action struct {
-	// the string used when the user requests /manage?action=<id>
+	// the string used when the user requests /manage/<ID>
 	ID string `json:"id"`
 
 	// The text shown in the staff menu and the window title
@@ -159,7 +159,7 @@ var actions = []Action{
 				}
 				outputStr += "Cleanup finished"
 			} else {
-				outputStr += `<form action="/manage?action=cleanup" method="post">` +
+				outputStr += `<form action="/manage/cleanup" method="post">` +
 					`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
 					`</form>`
 			}
@@ -781,7 +781,7 @@ var actions = []Action{
 			} else {
 				key := gcutil.Md5Sum(request.RemoteAddr + username + password + systemCritical.RandomSeed + gcutil.RandomString(3))[0:10]
 				createSession(key, username, password, request, writer)
-				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage?action="+request.FormValue("redirect")), http.StatusFound)
+				http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage/"+request.FormValue("redirect")), http.StatusFound)
 			}
 			return
 		}},

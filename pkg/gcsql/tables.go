@@ -161,7 +161,7 @@ type Post struct {
 	Subject         string        // sql: `subject`
 	Message         template.HTML // sql: `message`
 	MessageRaw      string        // sql: `message_raw`
-	Password        string        // sql: `password`
+	Password        string        `json:"-"` // sql: `password`
 	DeletedAt       time.Time     // sql: `deleted_at`
 	IsDeleted       bool          // sql: `is_deleted`
 	BannedMessage   string        // sql: `banned_message`
@@ -208,11 +208,11 @@ type LoginSession struct {
 type Staff struct {
 	ID               int       // sql: `id`
 	Username         string    // sql: `username`
-	PasswordChecksum string    // sql: `password_checksum`
+	PasswordChecksum string    `json:"-"` // sql: `password_checksum`
 	Rank             int       // sql: `global_rank`
-	AddedOn          time.Time // sql: `added_on`
-	LastLogin        time.Time // sql: `last_login`
-	IsActive         bool      // sql: `is_active`
+	AddedOn          time.Time `json:"-"` // sql: `added_on`
+	LastLogin        time.Time `json:"-"` // sql: `last_login`
+	IsActive         bool      `json:"-"` // sql: `is_active`
 }
 
 // table: DBPREFIXthreads

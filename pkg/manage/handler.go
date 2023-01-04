@@ -10,6 +10,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/uptrace/bunrouter"
 )
 
 type ErrStaffAction struct {
@@ -43,13 +44,12 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 
 	errEv.Str("IP", gcutil.GetRealIP(request))
 	if err = request.ParseForm(); err != nil {
-		errEv.
-			Str("IP", gcutil.GetRealIP(request)).
-			Caller().Msg("Error parsing form data")
+		errEv.Err(err).Caller().Msg("Error parsing form data")
 		serverutil.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, nil)
 		return
 	}
-	actionID := request.FormValue("action")
+	params := bunrouter.ParamsFromContext(request.Context())
+	actionID := params.ByName("action")
 	gcutil.LogStr("action", actionID, infoEv, accessEv, errEv)
 
 	var staff *gcsql.Staff

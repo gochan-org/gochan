@@ -157,7 +157,7 @@ function handleActions(action, postIDStr) {
 		// manage stuff
 		case "Posts from this IP":
 			getPostInfo(postID).then(info => {
-				window.open(`${webroot}manage?action=ipsearch&limit=100&ip=${info.ip}`);
+				window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.ip}`);
 			}).catch(reason => {
 				alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
 			});

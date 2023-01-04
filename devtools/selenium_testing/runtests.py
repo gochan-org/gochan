@@ -57,7 +57,7 @@ def gotoPage(driver: WebDriver, page: str):
 
 
 def isLoggedIn(driver: WebDriver):
-	gotoPage(driver, "manage?action=login")
+	gotoPage(driver, "manage/login")
 	return driver.find_element(by=By.CSS_SELECTOR, value="h1#board-title").text == "Dashboard"
 
 
@@ -177,7 +177,7 @@ class TestRunner(unittest.TestCase):
 		if boardExists("seleniumtesting"):
 			raise Exception("Board /seleniumtests/ already exists")
 		loginToStaff(self.driver)
-		gotoPage(self.driver, "manage?action=boards")
+		gotoPage(self.driver, "manage/boards")
 
 		# fill out the board creation form
 		self.driver.find_element(by=By.NAME, value="dir").\
@@ -197,7 +197,7 @@ class TestRunner(unittest.TestCase):
 
 		makePostOnPage("seleniumtesting", self)
 
-		gotoPage(self.driver, "manage?action=boards")
+		gotoPage(self.driver, "manage/boards")
 		sel = Select(self.driver.find_element(by=By.ID, value="modifyboard"))
 		sel.select_by_visible_text("/seleniumtesting/ - Selenium testing")
 		self.driver.find_element(by=By.NAME, value="dodelete").click()
@@ -221,7 +221,7 @@ class TestRunner(unittest.TestCase):
 	def test_moveThread(self):
 		if not boardExists("test2"):
 			loginToStaff(self.driver)
-			gotoPage(self.driver, "manage?action=boards")
+			gotoPage(self.driver, "manage/boards")
 
 			# fill out the board creation form
 			self.driver.find_element(by=By.NAME, value="dir").\

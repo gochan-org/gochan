@@ -1,7 +1,7 @@
 <table border="1">
 <tr><th>Action</th><th>Appeal Text</th><th>Banned IP</th></tr>
 {{range $_,$appeal := $.appeals}}
-<tr><td><a href="{{webPath "manage"}}?action=appeals&approve={{$appeal.ID}}">Approve</a> | <a href="{{webPath "manage"}}?action=appeals&deny={{$appeal.ID}}">Deny</a></td><td>{{$appeal.AppealText}}</td><td>{{getAppealBanIP $appeal.IPBanID}}</td></tr>
+<tr><td><a href="{{webPath "manage/appeals"}}?approve={{$appeal.ID}}">Approve</a> | <a href="{{webPath "manage/appeals"}}?deny={{$appeal.ID}}">Deny</a></td><td>{{$appeal.AppealText}}</td><td>{{getAppealBanIP $appeal.IPBanID}}</td></tr>
 <tr></tr>
 {{end}}
 </table>
