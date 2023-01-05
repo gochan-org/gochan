@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -22,10 +23,19 @@ const (
 	sOtherError
 )
 
+var (
+	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
+)
+
 func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) int {
 	//returns 0 for successful, 1 for password mismatch, and 2 for other
 	domain := request.Host
 	var err error
+	errEv := gcutil.LogError(nil).
+		Str("staff", username).
+		Str("IP", gcutil.GetRealIP(request))
+	defer errEv.Discard()
+
 	domain = chopPortNumRegex.Split(domain, -1)[0]
 
 	if !serverutil.ValidReferer(request) {
@@ -39,9 +49,7 @@ func createSession(key, username, password string, request *http.Request, writer
 	staff, err := gcsql.GetStaffByUsername(username, true)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			gcutil.LogError(err).
-				Str("staff", username).
-				Str("IP", gcutil.GetRealIP(request)).
+			errEv.Err(err).
 				Str("remoteAddr", request.RemoteAddr).
 				Caller().Msg("Invalid password")
 		}
@@ -51,10 +59,8 @@ func createSession(key, username, password string, request *http.Request, writer
 	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 	if err == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
-		gcutil.LogError(nil).
-			Str("staff", username).
-			Str("IP", gcutil.GetRealIP(request)).
-			Caller().Msg("Invalid password")
+		errEv.Caller().
+			Msg("Invalid password")
 		return sInvalidPassword
 	}
 
@@ -166,7 +172,6 @@ func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff 
 		"rankString":    rankString,
 		"announcements": announcements,
 		"boards":        gcsql.AllBoards,
-		"webroot":       config.GetSystemCriticalConfig().WebRoot,
 	}, dashBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_dashboard.html").Caller().Send()
 		return "", err

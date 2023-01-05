@@ -12,16 +12,16 @@
 	<td>{{formatTimestamp $staff.AddedOn}}</td>
 	<td>
 		<a {{if eq $staff.Username $.currentUsername -}}
-			href="{{$.webroot}}manage/staff" title="Cannot self terminate" style="color: black;"
+			href="{{webPath "/manage/staff"}}" title="Cannot self terminate" style="color: black;"
 		{{- else -}}
-			href="{{$.webroot}}manage/staff?do=del&username={{$staff.Username}}" title="Delete {{$staff.Username}}" style="color:red;"
+			href="{{webPath "/manage/staff"}}?do=del&username={{$staff.Username}}" title="Delete {{$staff.Username}}" onclick="return confirm('Are you sure you want to delete the staff account for \'{{$staff.Username}}\'?')" style="color:red;"
 		{{end}}>Delete</a>
 	</td>
 </tr>
 {{end}}
 </table><hr />
 <h2>Add new staff</h2>
-<form action="{{.webroot}}manage/staff" onsubmit="return makeNewStaff();" method="POST">
+<form action="{{webPath "/manage/staff"}}" onsubmit="return makeNewStaff();" method="POST">
 <input type="hidden" name="do" value="add" />
 <table>
 	<tr><td>Username:</td><td><input id="username" name="username" type="text"/></td></tr>

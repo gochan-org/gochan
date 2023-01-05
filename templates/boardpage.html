@@ -3,11 +3,11 @@
 	<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
 	<div id="board-subtitle">
 		{{$.board.Subtitle}}<br/>
-		<a href="{{.webroot}}{{.board.Dir}}/catalog.html">Catalog</a> | <a href="#footer">Bottom</a>
+		<a href="{{webPath .board.Dir "/catalog.html"}}">Catalog</a> | <a href="#footer">Bottom</a>
 	</div>
 </header><hr />
 {{- template "postbox.html" . -}}<hr />
-<form action="{{.webroot}}util" method="POST" id="main-form">
+<form action="{{webPath "/util"}}" method="POST" id="main-form">
 {{$global := .}}
 {{- range $t, $thread := .threads}}{{$op := index $thread.Posts 0}}
 	<div class="thread">
@@ -47,7 +47,7 @@
 		</tr>
 	</table>
 	<span id="boardmenu-bottom">
-		[<a href="{{$.webroot}}">home</a>]&nbsp;
+		[<a href="{{webPath `/`}}">home</a>]&nbsp;
 		[{{range $i, $boardlink := $.boards -}}
 			{{- if gt $i 0}}/{{end}} <a href="{{$boardlink.WebPath `` `boardPage`}}/">{{$boardlink.Dir}}</a> {{end}}]
 	</span>

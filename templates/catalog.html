@@ -4,7 +4,7 @@
 		<span id="board-subtitle">Catalog</span>
 	</header><hr />
 	<div id="catalog-links" style="float: left;">
-		<a href="{{$.webroot}}{{$.board.Dir}}">Return</a> | <a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Refresh</a> | <a href="#footer">Scroll to bottom</a>
+		<a href="{{webPath $.board.Dir}}/">Return</a> | <a href="{{webPath $.board.Dir "/catalog.html"}}">Refresh</a> | <a href="#footer">Scroll to bottom</a>
 	</div>
 	<div id="catalog-controls" style="float: right;">
 		Sort by: <select>
@@ -15,7 +15,7 @@
 	</div><hr />
 	{{range $_,$thread := .threads}}
 		<div class="catalog-thread">
-			<a href="{{$.webroot}}{{$.board.Dir}}/res/{{$thread.ID}}.html">
+			<a href="{{webPath $.board.Dir "res" (print $thread.ID)}}.html">
 				{{if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else}}
 				<img src="{{$thread.ThumbnailPath}}" alt="{{$thread.UploadPath}}" width="{{$thread.ThumbnailWidth}}" height="{{$thread.ThumbnailHeight}}" />
 			{{end}}</a><br />

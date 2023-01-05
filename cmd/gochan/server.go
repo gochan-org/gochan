@@ -27,7 +27,11 @@ func serveFile(writer http.ResponseWriter, request *http.Request) {
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
 
-	filePath := path.Join(systemCritical.DocumentRoot, request.URL.Path)
+	requestPath := request.URL.Path
+	if len(systemCritical.WebRoot) > 0 && systemCritical.WebRoot != "/" {
+		requestPath = requestPath[len(systemCritical.WebRoot):]
+	}
+	filePath := path.Join(systemCritical.DocumentRoot, requestPath)
 	var fileBytes []byte
 	results, err := os.Stat(filePath)
 	if err != nil {

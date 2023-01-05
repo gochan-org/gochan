@@ -1,5 +1,5 @@
 <h2>Create a new name/tripcode ban</h2>
-<form id="namebanform" action="{{.webroot}}manage/namebans" method="post">
+<form id="namebanform" action="{{webPath "manage/namebans"}}" method="post">
 	<table>
 		<tr><td>Name/Tripcode:</td><td><input type="text" name="name" id="name"> (ex: "Name", "Name!Tripcode", "!Tripcode, etc)</td></tr>
 		<tr><td>Regular expression:</td><td><input type="checkbox" name="isregex" id="isregex"/></td></tr>
@@ -25,7 +25,7 @@
 	<td>{{$uri := (intPtrToBoardDir $ban.BoardID "" "?")}}{{if eq $uri ""}}<i>All boards</i>{{else}}/{{$uri}}/{{end}}</td>
 	<td>{{$staff := (getStaffNameFromID $ban.StaffID)}}{{if eq $staff ""}}<i>?</i>{{else}}{{$staff}}{{end}}</td>
 	<td>{{$ban.StaffNote}}</td>
-	<td><a href="{{$.webroot}}manage/namebans?del={{$ban.ID}}">Delete</a></td>
+	<td><a href="{{webPath "manage/namebans"}}?del={{$ban.ID}}">Delete</a></td>
 {{end -}}
 </table>
 {{end}}

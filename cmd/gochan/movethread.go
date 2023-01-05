@@ -76,7 +76,6 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		}
 		if err = serverutil.MinifyTemplate(gctemplates.MoveThreadPage, map[string]interface{}{
 			"postid":     post.ID,
-			"webroot":    config.GetSystemCriticalConfig().WebRoot,
 			"destBoards": destBoards,
 			"pageTitle":  fmt.Sprintf("Move thread #%d", post.ID),
 			"srcBoard":   srcBoard,

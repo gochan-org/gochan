@@ -18,7 +18,7 @@
 						<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
 						{{range $_, $board := $.boards}}
 							{{if and (eq $board.SectionID $section.ID) (ne $board.Dir $.siteConfig.Modboard)}}
-								<li><a href="{{$.webroot}}{{$board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
+								<li><a href="{{webPath $board.Dir}}/" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
 							{{end}}
 						{{end}}
 						</ul>
@@ -38,7 +38,7 @@
 						{{else}}
 							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$post.URL}}" class="front-reply" target="_blank">No file</a></div>
 						{{- end}}<br />
-						<a href="{{$.webroot}}{{$post.Board}}/">/{{$post.Board}}/</a><hr />
+						<a href="{{webPath $post.Board}}/">/{{$post.Board}}/</a><hr />
 						{{$post.MessageSample}}
 					</div>{{end}}
 				</div>

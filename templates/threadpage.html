@@ -3,7 +3,7 @@
 		<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
 		<div id="board-subtitle">
 			{{$.board.Subtitle}}<br/>
-			<a href="{{$.webroot}}{{$.board.Dir}}/" >Return</a> | <a href="{{$.webroot}}{{$.board.Dir}}/catalog.html">Catalog</a> | <a href="#footer">Bottom</a>
+			<a href="{{webPath $.board.Dir}}/" >Return</a> | <a href="{{webPath $.board.Dir "/catalog.html"}}">Catalog</a> | <a href="#footer">Bottom</a>
 		</div>
 	</header><hr />
 	{{template "postbox.html" .}}<hr />
@@ -27,11 +27,11 @@
 		</div>
 	</form>
 	<div id="left-bottom-content">
-		<a href="{{.webroot}}{{.board.Dir}}/">Return</a> | <a href="#">Scroll to top</a><br /><br />
+		<a href="{{webPath .board.Dir}}/">Return</a> | <a href="#">Scroll to top</a><br /><br />
 		<span id="boardmenu-bottom">
-			[<a href="{{$.webroot}}">home</a>]&nbsp;
+			[<a href="{{webPath "/"}}">home</a>]&nbsp;
 			[{{range $i, $boardlink := .boards -}}
-				{{if gt $i 0}}/{{end -}}&nbsp;<a href="/{{$boardlink.Dir}}/">{{$boardlink.Dir}}</a>&nbsp;
+				{{if gt $i 0}}/{{end -}}&nbsp;<a href="{{webPath $boardlink.Dir}}/">{{$boardlink.Dir}}</a>&nbsp;
 			{{- end}}]
 		</span>
 	</div>

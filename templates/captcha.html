@@ -3,35 +3,23 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	{{with .board -}}
-		{{with $.op -}}
-			<title>{{$.op.TitleText}}</title>
-		{{- else}}
-			<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>
-		{{end}}
-	{{- else}}<title>{{with $.pageTitle}}{{$.pageTitle}} - {{end}}{{.siteConfig.SiteName}}</title>{{end}}
-	<link rel="stylesheet" href="{{.webroot}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.webroot}}css/{{.boardConfig.DefaultStyle}}" />
-	<link rel="shortcut icon" href="{{.webroot}}favicon.png">
-	<script type="text/javascript" src="{{.webroot}}js/consts.js"></script>
-	<script type="text/javascript" src="{{.webroot}}js/gochan.js"></script>
+	<title>CAPTCHA test</title>
+	<link rel="stylesheet" href="{{webPath "/css/global.css"}}" />
+	<link id="theme" rel="stylesheet" href="{{webPath "css/" .boardConfig.DefaultStyle}}" />
+	<link rel="shortcut icon" href="{{webPath "/favicon.png"}}">
+	<script type="text/javascript" src="{{webPath "js/consts.js"}}"></script>
+	<script type="text/javascript" src="{{webPath "js/gochan.js"}}"></script>
 </head>
 <body>
 <div id="topbar">
-	<a href="{{$.webroot}}" class="topbar-item">home</a>
-	{{range $i, $board := .boards}}<a href="{{$.webroot}}{{$board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>{{end}}
+	<a href="{{webPath "/"}}" class="topbar-item">home</a>
+	{{range $i, $board := .boards}}<a href="{{webPath $board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>{{end}}
 </div>
-{{with $.pageTitle}}<header>
-	<h1 id="board-title">{{$.pageTitle}}</h1>
-	{{with $.includeDashboardLink -}}
-		<a href="{{$.webroot}}manage" class="board-subtitle">Return to dashboard</a><br/>
-	{{- end}}
-</header>{{end}}
 <div id="content">
 <header>
 	<h1 id="board-title">hCAPTCHA test</h1>
 </header><br />
-<form method="POST" action="{{.webroot}}captcha">
+<form method="POST" action="{{webPath "/captcha"}}">
 	<div class="h-captcha" data-sitekey="{{.siteKey}}"></div>
 	<script src="https://js.hcaptcha.com/1/api.js" async defer></script>
 	<input type="submit" value="Post">

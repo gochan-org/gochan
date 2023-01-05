@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/serverutil"
@@ -105,8 +106,9 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		fmt.Println("Success:", result)
 	}
 	err := serverutil.MinifyTemplate(gctemplates.Captcha, map[string]interface{}{
-		"webroot": config.GetSystemCriticalConfig().WebRoot,
-		"siteKey": captchaCfg.SiteKey,
+		"boardConfig": config.GetBoardConfig(""),
+		"boards":      gcsql.AllBoards,
+		"siteKey":     captchaCfg.SiteKey,
 	}, writer, "text/html")
 	if err != nil {
 		serverutil.ServeErrorPage(writer, "Error serving CAPTCHA: "+err.Error())

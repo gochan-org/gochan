@@ -126,7 +126,6 @@ func BuildFrontPage() error {
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
-		"webroot":     criticalCfg.WebRoot,
 		"siteConfig":  siteCfg,
 		"sections":    gcsql.AllSections,
 		"boards":      gcsql.AllBoards,
@@ -144,7 +143,6 @@ func BuildFrontPage() error {
 func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]interface{}) error {
 	phMap := map[string]interface{}{
 		"pageTitle":   pageTitle,
-		"webroot":     config.GetSystemCriticalConfig().WebRoot,
 		"siteConfig":  config.GetSiteConfig(),
 		"sections":    gcsql.AllSections,
 		"boards":      gcsql.AllBoards,
@@ -160,9 +158,7 @@ func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[
 // of every normal HTML page
 func BuildPageFooter(writer io.Writer) (err error) {
 	return serverutil.MinifyTemplate(gctemplates.PageFooter,
-		map[string]interface{}{
-			"webroot": config.GetSystemCriticalConfig().WebRoot,
-		}, writer, "text/html")
+		map[string]interface{}{}, writer, "text/html")
 }
 
 // BuildJS minifies (if enabled) consts.js, which is built from a template
@@ -193,7 +189,6 @@ func BuildJS() error {
 
 	if err = serverutil.MinifyTemplate(gctemplates.JsConsts,
 		map[string]interface{}{
-			"webroot":      criticalCfg.WebRoot,
 			"styles":       boardCfg.Styles,
 			"defaultStyle": boardCfg.DefaultStyle,
 			"timezone":     criticalCfg.TimeZone,

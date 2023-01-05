@@ -5,7 +5,7 @@
 {{- end -}}
 <fieldset>
 	<legend>Search</legend>
-	<form method="GET" action="{{.webroot}}manage/ipsearch" class="staff-form">
+	<form method="GET" action="{{webPath "manage/ipsearch"}}" class="staff-form">
 		<label for="ip">IP Address</label>
 		<input type="text" name="ip" id="ipquery" value="{{.ipQuery}}"><br />
 		<label for="number">Max results</label>

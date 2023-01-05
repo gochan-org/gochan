@@ -1,4 +1,4 @@
-<form action="{{$.webroot}}manage/boards" method="GET">
+<form action="{{webPath "/manage/boards"}}" method="GET">
 	{{with $.boards}}{{else}}
 	<input type="hidden" name="noboards" value="1">
 	{{end}}
@@ -19,7 +19,7 @@
 {{else}}
 <h2>Create new board</h2>
 {{end}}
-<form action="{{$.webroot}}manage/boards" method="POST">
+<form action="{{webPath "manage/boards"}}" method="POST">
 	<input type="hidden" name="board" value="{{$.board.ID}}"/>
 <table>
 <tr>

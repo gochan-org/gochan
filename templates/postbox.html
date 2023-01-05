@@ -1,6 +1,6 @@
 {{define "postbox.html"}}
 <div id="postbox-area">
-	<form id="postform" name="postform" action="/post" method="POST" enctype="multipart/form-data">
+	<form id="postform" name="postform" action="{{webPath "/post"}}" method="POST" enctype="multipart/form-data">
 	{{- with .op}}
 		<input type="hidden" name="threadid" value="{{$.op.ID}}" />
 	{{- else -}}

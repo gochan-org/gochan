@@ -1,4 +1,4 @@
-import $ from "jquery";
+import $, { ready } from "jquery";
 
 const opRE = /\/res\/(\d+)(p(\d)+)?.html$/;
 const threadRE = /^\d+/;
@@ -11,7 +11,14 @@ export function currentBoard() {
 }
 
 export function getPageThread() {
-	let arr = opRE.exec(window.location.pathname);
+	let pathname = window.location.pathname;
+	if(typeof webroot == "string" && webroot != "/") {
+		pathname = pathname.slice(webroot.length);
+		if(pathname === "" || pathname[0] != '/') {
+			pathname = "/" + pathname;
+		}
+	}
+	let arr = opRE.exec(pathname);
 	let info = {
 		board: currentBoard(),
 		boardID: -1,
@@ -28,7 +35,14 @@ export function getPageThread() {
 export function currentThread() {
 	// returns the board and thread ID if we are viewing a thread
 	let thread = {board: currentBoard(), thread: 0};
-	let splits = location.pathname.split("/");
+	let pathname = location.pathname;
+	if(typeof webroot == "string" && webroot != "/") {
+		pathname = pathname.slice(webroot.length);
+		if(pathname === "" || pathname[0] != '/') {
+			pathname = "/" + pathname;
+		}
+	}
+	let splits = pathname.split("/");
 	if(splits.length != 4)
 		return thread;
 	let reArr = threadRE.exec(splits[3]);

@@ -42,10 +42,6 @@ const (
 	AlwaysJSON
 )
 
-var (
-	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
-)
-
 // Action represents the functions accessed by staff members at /manage/<functionname>.
 type Action struct {
 	// the string used when the user requests /manage/<ID>
@@ -203,7 +199,6 @@ var actions = []Action{
 				"allBoards":   gcsql.AllBoards,
 				"boardid":     boardid,
 				"limit":       limit,
-				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 			}, manageRecentsBuffer, "text/html"); err != nil {
 				errEv.Err(err).Caller().Send()
 				return "", errors.New("Error executing ban management page template: " + err.Error())
@@ -335,7 +330,7 @@ var actions = []Action{
 
 			manageAppealsBuffer := bytes.NewBufferString("")
 			pageData := map[string]interface{}{}
-			if appeals != nil && len(appeals) > 0 {
+			if len(appeals) > 0 {
 				pageData["appeals"] = appeals
 			}
 			if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
@@ -505,7 +500,6 @@ var actions = []Action{
 				}
 			}
 			data := map[string]interface{}{
-				"webroot":      config.GetSystemCriticalConfig().WebRoot,
 				"currentStaff": staff.Username,
 				"allBoards":    gcsql.AllBoards,
 			}
@@ -549,7 +543,6 @@ var actions = []Action{
 			ipQuery := request.FormValue("ip")
 			limitStr := request.FormValue("limit")
 			data := map[string]interface{}{
-				"webroot": config.GetSystemCriticalConfig().WebRoot,
 				"ipQuery": ipQuery,
 				"limit":   20,
 			}
@@ -738,7 +731,6 @@ var actions = []Action{
 			staffBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, map[string]interface{}{
 				"allstaff":        allStaff,
-				"webroot":         config.GetSystemCriticalConfig().WebRoot,
 				"currentUsername": staff.Username,
 			}, staffBuffer, "text/html"); err != nil {
 				errEv.Err(err).Str("template", "manage_staff.html").Send()
@@ -767,7 +759,6 @@ var actions = []Action{
 				//assume that they haven't logged in
 				manageLoginBuffer := bytes.NewBufferString("")
 				if err = serverutil.MinifyTemplate(gctemplates.ManageLogin, map[string]interface{}{
-					"webroot":     config.GetSystemCriticalConfig().WebRoot,
 					"siteConfig":  config.GetSiteConfig(),
 					"sections":    gcsql.AllSections,
 					"boards":      gcsql.AllBoards,
@@ -897,7 +888,6 @@ var actions = []Action{
 			pageBuffer := bytes.NewBufferString("")
 			if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
 				map[string]interface{}{
-					"webroot":     config.GetSystemCriticalConfig().WebRoot,
 					"siteConfig":  config.GetSiteConfig(),
 					"sections":    gcsql.AllSections,
 					"boards":      gcsql.AllBoards,
@@ -998,7 +988,6 @@ var actions = []Action{
 			}
 			pageBuffer := bytes.NewBufferString("")
 			pageMap := map[string]interface{}{
-				"webroot":    config.GetSystemCriticalConfig().WebRoot,
 				"siteConfig": config.GetSiteConfig(),
 				"sections":   sections,
 			}
@@ -1299,7 +1288,6 @@ var actions = []Action{
 				}
 			}
 			filterMap := map[string]interface{}{
-				"webroot":     config.GetSystemCriticalConfig().WebRoot,
 				"wordfilters": wordfilters,
 				"edit":        editFilter,
 			}

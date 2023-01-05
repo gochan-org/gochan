@@ -13,7 +13,7 @@
 {{with $.boards}}
 	<ul>
 	{{range $b, $board := $.boards}}
-		<li><a href="{{$.webroot}}{{$board.Dir}}/">/{{$board.Dir}}/</a> - {{$board.Title}}</li>
+		<li><a href="{{webPath $board.Dir}}/">/{{$board.Dir}}/</a> - {{$board.Title}}</li>
 	{{end}}
 	</ul>
 {{else}}
@@ -23,7 +23,7 @@
 <fieldset><legend>Staff actions (role: {{$.rankString}})</legend>
 	<ul>
 	{{range $a, $action := $.actions}}
-		{{if ne $action.Title "Dashboard"}}<li><a href="{{$.webroot}}manage/{{$action.ID}}">{{$action.Title}}</a> </li>{{end}}
+		{{if ne $action.Title "Dashboard"}}<li><a href="{{webPath "/manage" $action.ID}}">{{$action.Title}}</a> </li>{{end}}
 	{{end}}
 	</ul>
 </fieldset>

@@ -2,7 +2,7 @@
 <header>
 	<h1 id="board-title">Move thread</h1>
 </header><hr />
-<form action="{{.webroot}}util" method="POST" id="main-form">
+<form action="{{webPath "/util"}}" method="POST" id="main-form">
 	<input name="srcboardid" type="hidden" value="{{.srcBoard.ID}}" />
 	<input name="postid" type="hidden" value="{{.postid}}" />
 	<input name="domove" type="hidden" value="1" />
@@ -15,6 +15,6 @@
 		<tr><td>Password:</td><td><input type="password" name="postpassword"/></td></tr>
 	</table>
 	<input type="submit" value="Move thread" />
-	<input type="button" value="Cancel" onclick="window.location = '{{.webroot}}{{.srcBoard.Dir}}/'">
+	<input type="button" value="Cancel" onclick="window.location = '{{webPath .srcBoard.Dir}}/'">
 </form>
 {{- template "page_footer.html" .}}
