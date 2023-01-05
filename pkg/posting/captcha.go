@@ -79,12 +79,11 @@ func SubmitCaptchaResponse(request *http.Request) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
 	var vals CaptchaResult
 	if err = json.NewDecoder(resp.Body).Decode(&vals); err != nil {
 		return false, err
 	}
-	return vals.Success, nil
+	return vals.Success, resp.Body.Close()
 }
 
 // ServeCaptcha handles requests to /captcha if the captcha is properly configured

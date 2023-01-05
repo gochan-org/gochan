@@ -56,7 +56,7 @@ func InitLog(logPath string, debug bool) (err error) {
 		// log file already initialized, skip
 		return nil
 	}
-	logFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	logFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func InitAccessLog(logPath string) (err error) {
 		// access log already initialized, skip
 		return nil
 	}
-	accessFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640)
+	accessFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}

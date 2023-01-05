@@ -47,14 +47,14 @@ func BcryptSum(str string) string {
 
 // Md5Sum generates and returns a checksum using the MD5 hashing function
 func Md5Sum(str string) string {
-	hash := md5.New()
+	hash := md5.New() // skipcq: GSC-G401
 	io.WriteString(hash, str)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 // Sha1Sum generates and returns a checksum using the SHA-1 hashing function
 func Sha1Sum(str string) string {
-	hash := sha1.New()
+	hash := sha1.New() // skipcq: GSC-G401
 	io.WriteString(hash, str)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }

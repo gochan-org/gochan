@@ -66,7 +66,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	defer file.Close()
 
 	// Calculate image checksum
-	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data))
+	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data)) // skipcq: GSC-G401
 	if checkChecksumBan(upload, post, postBoard, writer, request) {
 		// If checkChecksumBan returns true, an error occured or the file was
 		// rejected for having a banned checksum, and the incident was logged either way
