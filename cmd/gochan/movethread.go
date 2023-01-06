@@ -14,7 +14,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
-	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/gochan-org/gochan/pkg/server"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
 func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.ResponseWriter, request *http.Request) {
@@ -24,16 +25,16 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		// user clicked on move thread button on board or thread page
 
 		if len(checkedPosts) == 0 {
-			serverutil.ServeError(writer, "You need to select one thread to move.", wantsJSON, nil)
+			server.ServeError(writer, "You need to select one thread to move.", wantsJSON, nil)
 			return
 		} else if len(checkedPosts) > 1 {
-			serverutil.ServeError(writer, "You can only move one thread at a time.", wantsJSON, nil)
+			server.ServeError(writer, "You can only move one thread at a time.", wantsJSON, nil)
 			return
 		}
 		post, err := gcsql.GetPostFromID(checkedPosts[0], true)
 
 		if err != nil {
-			serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 			gcutil.LogError(err).
 				Str("IP", gcutil.GetRealIP(request)).
 				Int("postid", checkedPosts[0]).
@@ -43,7 +44,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if !post.IsTopPost {
 			topPostID, err := post.TopPostID()
 			if err != nil {
-				serverutil.ServeError(writer, "Unable to get top post ID: "+err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, "Unable to get top post ID: "+err.Error(), wantsJSON, map[string]interface{}{
 					"postid": post.ID,
 				})
 				gcutil.LogError(err).
@@ -52,7 +53,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 					Msg("Unable to get top post ID")
 				return
 			}
-			serverutil.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]interface{}{
 				"postid":  checkedPosts[0],
 				"toppost": topPostID,
 			})
@@ -61,7 +62,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 
 		srcBoardID, err := strconv.Atoi(request.PostForm.Get("boardid"))
 		if err != nil {
-			serverutil.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostForm.Get("boardid")), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostForm.Get("boardid")), wantsJSON, map[string]interface{}{
 				"boardid": srcBoardID,
 			})
 		}
@@ -75,15 +76,16 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			}
 		}
 		if err = serverutil.MinifyTemplate(gctemplates.MoveThreadPage, map[string]interface{}{
-			"postid":     post.ID,
-			"destBoards": destBoards,
-			"pageTitle":  fmt.Sprintf("Move thread #%d", post.ID),
-			"srcBoard":   srcBoard,
+			"boardConfig": config.GetBoardConfig(srcBoard.Dir),
+			"postid":      post.ID,
+			"destBoards":  destBoards,
+			"pageTitle":   fmt.Sprintf("Move thread #%d", post.ID),
+			"srcBoard":    srcBoard,
 		}, writer, "text/html"); err != nil {
 			gcutil.LogError(err).
 				Str("IP", gcutil.GetRealIP(request)).
 				Int("postid", post.ID).Send()
-			serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 			return
 		}
 	} else if doMove == "1" {
@@ -91,14 +93,14 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		rank := manage.GetStaffRank(request)
 		if password == "" && rank == 0 {
 			writer.WriteHeader(http.StatusBadRequest)
-			serverutil.ServeError(writer, "Password required for post moving", wantsJSON, nil)
+			server.ServeError(writer, "Password required for post moving", wantsJSON, nil)
 			return
 		}
 		postIDstr := request.PostForm.Get("postid")
 		postID, err := strconv.Atoi(postIDstr)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
-			serverutil.ServeError(writer, fmt.Sprintf("Error parsing postid value: %q: %s", postIDstr, err.Error()), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Error parsing postid value: %q: %s", postIDstr, err.Error()), wantsJSON, map[string]interface{}{
 				"postid": postIDstr,
 			})
 			return
@@ -107,7 +109,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		srcBoardID, err := strconv.Atoi(srcBoardIDstr)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
-			serverutil.ServeError(writer, fmt.Sprintf("Error parsing srcboardid value: %q: %s", srcBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Error parsing srcboardid value: %q: %s", srcBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
 				"srcboardid": srcBoardIDstr,
 			})
 			return
@@ -117,7 +119,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			gcutil.LogError(err).
 				Int("srcboardid", srcBoardID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"srcboardid": srcBoardID,
 			})
 			return
@@ -127,7 +129,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		destBoardID, err := strconv.Atoi(destBoardIDstr)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
-			serverutil.ServeError(writer, fmt.Sprintf("Error parsing destboardid value: %q: %s", destBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Error parsing destboardid value: %q: %s", destBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
 				"destboardid": destBoardIDstr,
 			})
 			return
@@ -137,7 +139,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			gcutil.LogError(err).
 				Int("destboardid", destBoardID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"destboardid": destBoardID,
 			})
 			return
@@ -147,7 +149,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			gcutil.LogError(err).Int("postid", postID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"postid": postID,
 			})
 			return
@@ -155,7 +157,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 
 		passwordMD5 := gcutil.Md5Sum(password)
 		if passwordMD5 != post.Password && rank == 0 {
-			serverutil.ServeError(writer, "Wrong password", wantsJSON, nil)
+			server.ServeError(writer, "Wrong password", wantsJSON, nil)
 			return
 		}
 
@@ -164,7 +166,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				Int("postID", postID).
 				Int("destBoardID", destBoardID).
 				Msg("Failed changing thread board ID")
-			serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"postID":      postID,
 				"destBoardID": destBoardID,
 			})
@@ -174,7 +176,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			gcutil.LogError(err).Int("postid", post.ID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			serverutil.ServeError(writer, "Error getting list of files in thread", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Error getting list of files in thread", wantsJSON, map[string]interface{}{
 				"postid": post.ID,
 			})
 		}
@@ -237,7 +239,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		}
 		if err != nil {
 			// got at least one error while trying to move files (if there were any)
-			serverutil.ServeError(writer, "Error while moving post upload: "+err.Error(), wantsJSON,
+			server.ServeError(writer, "Error while moving post upload: "+err.Error(), wantsJSON,
 				map[string]interface{}{
 					"postID":    postID,
 					"srcBoard":  srcBoard.Dir,
@@ -253,7 +255,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				Str("srcBoard", srcBoard.Dir).
 				Msg("Failed deleting thread page")
 			writer.WriteHeader(500)
-			serverutil.ServeError(writer, "Failed deleting thread page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed deleting thread page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postID":   postID,
 				"srcBoard": srcBoard.Dir,
 			})
@@ -266,7 +268,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				Str("srcBoard", srcBoard.Dir).
 				Msg("Failed deleting thread JSON file")
 			writer.WriteHeader(500)
-			serverutil.ServeError(writer, "Failed deleting thread JSON file: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed deleting thread JSON file: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postID":   postID,
 				"srcBoard": srcBoard.Dir,
 			})
@@ -280,7 +282,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err = building.BuildThreadPages(post); err != nil {
 			gcutil.LogError(err).Int("postID", postID).Msg("Failed moved thread page")
 			writer.WriteHeader(500)
-			serverutil.ServeError(writer, "Failed building thread page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed building thread page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postID": postID,
 			})
 			return
@@ -289,7 +291,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err = building.BuildBoardPages(srcBoard); err != nil {
 			gcutil.LogError(err).Int("srcBoardID", srcBoardID).Send()
 			writer.WriteHeader(500)
-			serverutil.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"srcBoardID": srcBoardID,
 			})
 			return
@@ -297,13 +299,13 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err = building.BuildBoardPages(destBoard); err != nil {
 			gcutil.LogError(err).Int("destBoardID", destBoardID).Send()
 			writer.WriteHeader(500)
-			serverutil.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"destBoardID": destBoardID,
 			})
 			return
 		}
 		if wantsJSON {
-			serverutil.ServeJSON(writer, map[string]interface{}{
+			server.ServeJSON(writer, map[string]interface{}{
 				"status":    "success",
 				"postID":    postID,
 				"srcBoard":  srcBoard.Dir,

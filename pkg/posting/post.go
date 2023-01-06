@@ -14,7 +14,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/gochan-org/gochan/pkg/server"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
 const (
@@ -68,7 +69,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			errEv.Err(err).
 				Str("opIDstr", threadidStr).
 				Caller().Msg("Invalid threadid value")
-			serverutil.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]interface{}{
 				"threadid": threadidStr,
 			})
 			return
@@ -78,7 +79,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				errEv.Err(err).
 					Int("opID", opID).
 					Caller().Send()
-				serverutil.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 					"opID": opID,
 				})
 			}
@@ -89,7 +90,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
 		errEv.Str("boardid", boardidStr).Caller().Msg("Invalid boardid value")
-		serverutil.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]interface{}{
 			"boardid": boardidStr,
 		})
 		return
@@ -99,7 +100,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().
 			Int("boardid", boardID).
 			Msg("Unable to get board info")
-		serverutil.ServeError(writer, "Unable to get board info", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Unable to get board info", wantsJSON, map[string]interface{}{
 			"boardid": boardID,
 		})
 		return
@@ -137,7 +138,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.
 			Int("messageLength", len(post.MessageRaw)).
 			Int("maxMessageLength", postBoard.MaxMessageLength).Send()
-		serverutil.ServeError(writer, "Message is too long", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Message is too long", wantsJSON, map[string]interface{}{
 			"messageLength": len(post.MessageRaw),
 			"boardid":       boardID,
 		})
@@ -146,7 +147,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	if post.MessageRaw, err = ApplyWordFilters(post.MessageRaw, postBoard.Dir); err != nil {
 		errEv.Err(err).Caller().Msg("Error formatting post")
-		serverutil.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]interface{}{
 			"boardDir": postBoard.Dir,
 		})
 		return
@@ -182,7 +183,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			Str("IP", post.IP).
 			Int("threadID", post.ThreadID).
 			Msg("Rejected post from possible spambot")
-		serverutil.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
+		server.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
 		return
 	}
 
@@ -196,11 +197,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	switch akismetResult {
 	case "discard":
 		logEvent.Str("akismet", "discard").Send()
-		serverutil.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
+		server.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
 		return
 	case "spam":
 		logEvent.Str("akismet", "spam").Send()
-		serverutil.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
+		server.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
 		return
 	default:
 		logEvent.Discard()
@@ -219,14 +220,14 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 	if err != nil {
 		errEv.Err(err).Caller().Str("boardDir", postBoard.Dir).Msg("Unable to check post cooldown")
-		serverutil.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]interface{}{
 			"boardDir": postBoard.Dir,
 		})
 		return
 	}
 	if tooSoon {
 		errEv.Int("delay", delay).Msg("Rejecting post (user must wait before making another post)")
-		serverutil.ServeError(writer, "Please wait before making a new post", wantsJSON, nil)
+		server.ServeError(writer, "Please wait before making a new post", wantsJSON, nil)
 		return
 	}
 
@@ -239,13 +240,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	captchaSuccess, err := SubmitCaptchaResponse(request)
 	if err != nil {
-		serverutil.ServeErrorPage(writer, "Error submitting captcha response:"+err.Error())
+		server.ServeErrorPage(writer, "Error submitting captcha response:"+err.Error())
 		errEv.Err(err).
 			Caller().Send()
 		return
 	}
 	if !captchaSuccess {
-		serverutil.ServeErrorPage(writer, "Missing or invalid captcha response")
+		server.ServeErrorPage(writer, "Missing or invalid captcha response")
 		errEv.Msg("Missing or invalid captcha response")
 		return
 	}
@@ -253,12 +254,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	noFile := err == http.ErrMissingFile
 	if noFile && post.ThreadID == 0 && boardConfig.NewThreadsRequireUpload {
 		errEv.Caller().Msg("New thread rejected (NewThreadsRequireUpload set in config)")
-		serverutil.ServeError(writer, "Upload required for new threads", wantsJSON, nil)
+		server.ServeError(writer, "Upload required for new threads", wantsJSON, nil)
 		return
 	}
 	if post.MessageRaw == "" && noFile {
 		errEv.Caller().Msg("New post rejected (no file and message is blank)")
-		serverutil.ServeError(writer, "Your post must have an upload or a comment", wantsJSON, nil)
+		server.ServeError(writer, "Your post must have an upload or a comment", wantsJSON, nil)
 		return
 	}
 
@@ -284,7 +285,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)
 		}
-		serverutil.ServeErrorPage(writer, "Unable to insert post: "+err.Error())
+		server.ServeErrorPage(writer, "Unable to insert post: "+err.Error())
 		return
 	}
 
@@ -295,7 +296,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		os.Remove(filePath)
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
-		serverutil.ServeErrorPage(writer, "Unable to attach upload: "+err.Error())
+		server.ServeErrorPage(writer, "Unable to attach upload: "+err.Error())
 		return
 	}
 	if upload != nil {
@@ -315,12 +316,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	// rebuild the board page
 	if err = building.BuildBoards(false, postBoard.ID); err != nil {
-		serverutil.ServeErrorPage(writer, "Error building boards: "+err.Error())
+		server.ServeErrorPage(writer, "Error building boards: "+err.Error())
 		return
 	}
 
 	if err = building.BuildFrontPage(); err != nil {
-		serverutil.ServeErrorPage(writer, "Error building front page: "+err.Error())
+		server.ServeErrorPage(writer, "Error building front page: "+err.Error())
 		return
 	}
 

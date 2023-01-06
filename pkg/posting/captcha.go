@@ -13,7 +13,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/gochan-org/gochan/pkg/server"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
 var (
@@ -94,13 +95,13 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if !captchaCfg.UseCaptcha() {
-		serverutil.ServeErrorPage(writer, "This site is not set up to require a CAPTCHA test")
+		server.ServeErrorPage(writer, "This site is not set up to require a CAPTCHA test")
 		return
 	}
 	if request.Method == "POST" {
 		result, err := SubmitCaptchaResponse(request)
 		if err != nil {
-			serverutil.ServeErrorPage(writer, "Error checking results: "+err.Error())
+			server.ServeErrorPage(writer, "Error checking results: "+err.Error())
 		}
 		fmt.Println("Success:", result)
 	}
@@ -110,6 +111,6 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		"siteKey":     captchaCfg.SiteKey,
 	}, writer, "text/html")
 	if err != nil {
-		serverutil.ServeErrorPage(writer, "Error serving CAPTCHA: "+err.Error())
+		server.ServeErrorPage(writer, "Error serving CAPTCHA: "+err.Error())
 	}
 }

@@ -23,7 +23,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/gochan-org/gochan/pkg/server"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
@@ -46,7 +47,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return nil, true
 	}
 	upload := &gcsql.Upload{
@@ -60,7 +61,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	data, err := io.ReadAll(file)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		serverutil.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
+		server.ServeErrorPage(writer, "Error while trying to read file: "+err.Error())
 		return nil, true
 	}
 	defer file.Close()
@@ -86,7 +87,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			Str("filename", upload.Filename).
 			Str("originalFilename", upload.OriginalFilename).
 			Send()
-		serverutil.ServeError(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename), wantsJSON, map[string]interface{}{
 			"filename":         upload.Filename,
 			"originalFilename": upload.OriginalFilename,
 		})
@@ -109,7 +110,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 					Str("thumbPath", thumbPath).
 					Int("thumbWidth", boardConfig.ThumbWidth).
 					Msg("Error creating video thumbnail")
-				serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
+				server.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
 				return nil, true
 			}
 		} else {
@@ -119,7 +120,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 					Str("thumbPath", thumbPath).
 					Int("thumbWidth", boardConfig.ThumbWidthReply).
 					Msg("Error creating video thumbnail for reply")
-				serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
+				server.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
 				return nil, true
 			}
 		}
@@ -130,14 +131,14 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 				Str("thumbPath", thumbPath).
 				Int("thumbWidth", boardConfig.ThumbWidthCatalog).
 				Msg("Error creating video thumbnail for catalog")
-			serverutil.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
+			server.ServeErrorPage(writer, "Error creating video thumbnail: "+err.Error())
 			return nil, true
 		}
 
 		outputBytes, err := exec.Command("ffprobe", "-v", "quiet", "-show_format", "-show_streams", filePath).CombinedOutput()
 		if err != nil {
 			gcutil.LogError(err).Msg("Error getting video info")
-			serverutil.ServeErrorPage(writer, "Error getting video info: "+err.Error())
+			server.ServeErrorPage(writer, "Error getting video info: "+err.Error())
 			return nil, true
 		}
 		if outputBytes != nil {
@@ -171,7 +172,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			os.Remove(filePath)
 			errEv.Err(err).Caller().
 				Str("filePath", filePath).Send()
-			serverutil.ServeErrorPage(writer, "Upload filetype not supported")
+			server.ServeErrorPage(writer, "Upload filetype not supported")
 			return nil, true
 		}
 		// Get image filesize
@@ -179,7 +180,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		if err != nil {
 			errEv.Err(err).Caller().
 				Str("filePath", filePath).Send()
-			serverutil.ServeErrorPage(writer, "Couldn't get image filesize: "+err.Error())
+			server.ServeErrorPage(writer, "Couldn't get image filesize: "+err.Error())
 			return nil, true
 		}
 		upload.FileSize = int(stat.Size())
@@ -202,14 +203,14 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		if request.FormValue("spoiler") == "on" {
 			// If spoiler is enabled, symlink thumbnail to spoiler image
 			if _, err := os.Stat(path.Join(documentRoot, "spoiler.png")); err != nil {
-				serverutil.ServeErrorPage(writer, "missing spoiler.png")
+				server.ServeErrorPage(writer, "missing spoiler.png")
 				return nil, true
 			}
 			if err = syscall.Symlink(path.Join(documentRoot, "spoiler.png"), thumbPath); err != nil {
 				gcutil.LogError(err).
 					Str("thumbPath", thumbPath).
 					Msg("Error creating symbolic link to thumbnail path")
-				serverutil.ServeErrorPage(writer, err.Error())
+				server.ServeErrorPage(writer, err.Error())
 				return nil, true
 			}
 		}
@@ -227,7 +228,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 					errEv.Err(err).Caller().
 						Str("thumbPath", catalogThumbPath).
 						Msg("Couldn't generate catalog thumbnail")
-					serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
+					server.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
 					return nil, true
 				}
 			} else {
@@ -237,7 +238,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 				errEv.Err(err).Caller().
 					Str("thumbPath", thumbPath).
 					Msg("Couldn't generate catalog thumbnail")
-				serverutil.ServeErrorPage(writer, "Couldn't save thumbnail: "+err.Error())
+				server.ServeErrorPage(writer, "Couldn't save thumbnail: "+err.Error())
 				return nil, true
 			}
 		} else {
@@ -248,7 +249,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 				errEv.Err(err).Caller().
 					Str("thumbPath", thumbPath).
 					Msg("Couldn't generate catalog thumbnail")
-				serverutil.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
+				server.ServeErrorPage(writer, "Couldn't create thumbnail: "+err.Error())
 				return nil, true
 			}
 			if post.ThreadID == 0 {
@@ -258,7 +259,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 					errEv.Err(err).Caller().
 						Str("thumbPath", catalogThumbPath).
 						Msg("Couldn't generate catalog thumbnail")
-					serverutil.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
+					server.ServeErrorPage(writer, "Couldn't generate catalog thumbnail: "+err.Error())
 					return nil, true
 				}
 			}

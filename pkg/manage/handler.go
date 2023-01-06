@@ -9,7 +9,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/gochan-org/gochan/pkg/server"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/uptrace/bunrouter"
 )
 
@@ -25,7 +26,7 @@ func (esa *ErrStaffAction) Error() string {
 }
 
 func serveError(writer http.ResponseWriter, field string, action string, message string, isJSON bool) {
-	serverutil.ServeError(writer, message, isJSON, map[string]interface{}{
+	server.ServeError(writer, message, isJSON, map[string]interface{}{
 		"error":   field,
 		"action":  action,
 		"message": message,
@@ -45,7 +46,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	errEv.Str("IP", gcutil.GetRealIP(request))
 	if err = request.ParseForm(); err != nil {
 		errEv.Err(err).Caller().Msg("Error parsing form data")
-		serverutil.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, nil)
+		server.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, nil)
 		return
 	}
 	params := bunrouter.ParamsFromContext(request.Context())
@@ -61,7 +62,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).
 			Str("request", "getCurrentFullStaff").
 			Caller().Send()
-		serverutil.ServeError(writer, "Error getting staff info from request: "+err.Error(), wantsJSON, nil)
+		server.ServeError(writer, "Error getting staff info from request: "+err.Error(), wantsJSON, nil)
 		return
 	}
 	if actionID == "" {
@@ -79,7 +80,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		if wantsJSON {
 			serveError(writer, "notfound", actionID, "action not found", wantsJSON || (action.JSONoutput == AlwaysJSON))
 		} else {
-			serverutil.ServeNotFound(writer, request)
+			server.ServeNotFound(writer, request)
 		}
 		return
 	}

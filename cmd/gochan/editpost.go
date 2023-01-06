@@ -14,7 +14,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
 	"github.com/gochan-org/gochan/pkg/posting"
-	"github.com/gochan-org/gochan/pkg/serverutil"
+	"github.com/gochan-org/gochan/pkg/server"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
 func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.ResponseWriter, request *http.Request) {
@@ -27,16 +28,16 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	if editBtn == "Edit post" {
 		var err error
 		if len(checkedPosts) == 0 {
-			serverutil.ServeErrorPage(writer, "You need to select one post to edit.")
+			server.ServeErrorPage(writer, "You need to select one post to edit.")
 			return
 		} else if len(checkedPosts) > 1 {
-			serverutil.ServeErrorPage(writer, "You can only edit one post at a time.")
+			server.ServeErrorPage(writer, "You can only edit one post at a time.")
 			return
 		}
 
 		rank := manage.GetStaffRank(request)
 		if password == "" && rank == 0 {
-			serverutil.ServeErrorPage(writer, "Password required for post editing")
+			server.ServeErrorPage(writer, "Password required for post editing")
 			return
 		}
 		passwordMD5 := gcutil.Md5Sum(password)
@@ -50,21 +51,21 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		errEv.Int("postID", post.ID)
 
 		if post.Password != passwordMD5 && rank == 0 {
-			serverutil.ServeErrorPage(writer, "Wrong password")
+			server.ServeErrorPage(writer, "Wrong password")
 			return
 		}
 
 		board, err := post.GetBoard()
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get board ID from post")
-			serverutil.ServeErrorPage(writer, "Unable to get board ID from post: "+err.Error())
+			server.ServeErrorPage(writer, "Unable to get board ID from post: "+err.Error())
 			return
 		}
 		errEv.Str("board", board.Dir)
 		upload, err := post.GetUpload()
 		if err != nil {
 			errEv.Err(err).Caller().Send()
-			serverutil.ServeErrorPage(writer, "Error getting post upload info: "+err.Error())
+			server.ServeErrorPage(writer, "Error getting post upload info: "+err.Error())
 			return
 		}
 
@@ -85,7 +86,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		if err != nil {
 			errEv.Err(err).Caller().
 				Msg("Error executing edit post template")
-			serverutil.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
+			server.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
 			return
 		}
 		writer.Write(buf.Bytes())
@@ -97,7 +98,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			errEv.Err(err).Caller().
 				Str("postid", request.FormValue("postid")).
 				Msg("Invalid form data")
-			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postid": postid,
 			})
 			return
@@ -107,7 +108,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			errEv.Err(err).
 				Int("postid", postid).
 				Msg("Unable to find post")
-			serverutil.ServeError(writer, "Unable to find post: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Unable to find post: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postid": postid,
 			})
 			return
@@ -116,19 +117,19 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		if err != nil {
 			errEv.Err(err).Caller().
 				Msg("Invalid form data")
-			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, nil)
+			server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, nil)
 			return
 		}
 
 		rank := manage.GetStaffRank(request)
 		if request.FormValue("password") != password && rank == 0 {
-			serverutil.ServeError(writer, "Wrong password", wantsJSON, nil)
+			server.ServeError(writer, "Wrong password", wantsJSON, nil)
 			return
 		}
 
 		board, err := gcsql.GetBoardFromID(boardid)
 		if err != nil {
-			serverutil.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
 				"boardid": boardid,
 			})
 			errEv.Err(err).Caller().Msg("Invalid form data")
@@ -139,7 +140,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			oldUpload, err := post.GetUpload()
 			if err != nil {
 				errEv.Err(err).Caller().Send()
-				serverutil.ServeError(writer, err.Error(), wantsJSON, nil)
+				server.ServeError(writer, err.Error(), wantsJSON, nil)
 				return
 			}
 
@@ -149,7 +150,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				return
 			}
 			if upload == nil {
-				serverutil.ServeError(writer, "Missing upload replacement", wantsJSON, nil)
+				server.ServeError(writer, "Missing upload replacement", wantsJSON, nil)
 				return
 			}
 			documentRoot := config.GetSystemCriticalConfig().DocumentRoot
@@ -160,7 +161,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				catalogThumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("catalog"))
 				if err = post.UnlinkUploads(false); err != nil {
 					errEv.Err(err).Caller().Send()
-					serverutil.ServeError(writer, "Error unlinking old upload from post: "+err.Error(), wantsJSON, nil)
+					server.ServeError(writer, "Error unlinking old upload from post: "+err.Error(), wantsJSON, nil)
 					return
 				}
 				if oldUpload.Filename != "deleted" {
@@ -177,7 +178,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 					Str("newFilename", upload.Filename).
 					Str("newOriginalFilename", upload.OriginalFilename).
 					Send()
-				serverutil.ServeError(writer, "Error attaching new upload: "+err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, "Error attaching new upload: "+err.Error(), wantsJSON, map[string]interface{}{
 					"filename": upload.OriginalFilename,
 				})
 				filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
@@ -199,7 +200,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				errEv.Err(err).Caller().
 					Int("postid", post.ID).
 					Msg("Unable to edit post")
-				serverutil.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
 					"postid": post.ID,
 				})
 				return
@@ -207,10 +208,10 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		}
 
 		if err = building.BuildBoards(false, boardid); err != nil {
-			serverutil.ServeErrorPage(writer, "Error rebuilding boards: "+err.Error())
+			server.ServeErrorPage(writer, "Error rebuilding boards: "+err.Error())
 		}
 		if err = building.BuildFrontPage(); err != nil {
-			serverutil.ServeErrorPage(writer, "Error rebuilding front page: "+err.Error())
+			server.ServeErrorPage(writer, "Error rebuilding front page: "+err.Error())
 		}
 		http.Redirect(writer, request, post.WebPath(), http.StatusFound)
 		return
