@@ -110,11 +110,13 @@ func initServer() {
 
 	listener, err := net.Listen("tcp", systemCritical.ListenIP+":"+strconv.Itoa(systemCritical.Port))
 	if err != nil {
-		gcutil.Logger().Fatal().
+		if !systemCritical.DebugMode {
+			fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
+		}
+		gcutil.Logger().Fatal().Caller().
 			Err(err).
 			Str("ListenIP", systemCritical.ListenIP).
 			Int("Port", systemCritical.Port).Send()
-		fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
 	}
 	router = bunrouter.New(
 		bunrouter.WithNotFoundHandler(bunrouter.HTTPHandlerFunc(serveFile)),
@@ -123,11 +125,13 @@ func initServer() {
 	// Check if Akismet API key is usable at startup.
 	err = serverutil.CheckAkismetAPIKey(siteConfig.AkismetAPIKey)
 	if err != nil && err != serverutil.ErrBlankAkismetKey {
-		gcutil.Logger().Err(err).
+		if !systemCritical.DebugMode {
+			fmt.Println("Got error when initializing Akismet spam protection, it will be disabled:", err)
+		}
+		gcutil.Logger().Fatal().Caller().
+			Err(err).
 			Msg("Akismet spam protection will be disabled")
-		fmt.Println("Got error when initializing Akismet spam protection, it will be disabled:", err)
 	}
-
 	router.GET(config.WebPath("/captcha"), bunrouter.HTTPHandlerFunc(posting.ServeCaptcha))
 	router.POST(config.WebPath("/captcha"), bunrouter.HTTPHandlerFunc(posting.ServeCaptcha))
 	router.GET(config.WebPath("/manage"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
@@ -146,10 +150,12 @@ func initServer() {
 	}
 
 	if err != nil {
+		if !systemCritical.DebugMode {
+			fmt.Println("Error initializing server:", err.Error())
+		}
 		gcutil.Logger().Fatal().
 			Err(err).
 			Msg("Error initializing server")
-		fmt.Println("Error initializing server:", err.Error())
 	}
 }
 
