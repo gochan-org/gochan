@@ -191,6 +191,7 @@ func BuildJS() error {
 		map[string]interface{}{
 			"styles":       boardCfg.Styles,
 			"defaultStyle": boardCfg.DefaultStyle,
+			"webroot":      criticalCfg.WebRoot,
 			"timezone":     criticalCfg.TimeZone,
 		},
 		constsJSFile, "text/javascript"); err != nil {
