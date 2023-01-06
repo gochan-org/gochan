@@ -155,7 +155,7 @@ var actions = []Action{
 				}
 				outputStr += "Cleanup finished"
 			} else {
-				outputStr += `<form action="/manage/cleanup" method="post">` +
+				outputStr += `<form action="` + config.GetSystemCriticalConfig().WebRoot + `manage/cleanup" method="post">` +
 					`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
 					`</form>`
 			}
