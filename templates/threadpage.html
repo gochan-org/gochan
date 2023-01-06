@@ -7,7 +7,7 @@
 		</div>
 	</header><hr />
 	{{template "postbox.html" .}}<hr />
-		<form action="/util" method="POST" id="main-form">
+		<form action="{{webPath "/util"}}" method="POST" id="main-form">
 		<div class="thread" id="{{$.op.ID}}">
 			{{$global := .}}
 			{{- template "post.html" map "global" $global "board" .board "post" .op -}}

@@ -28,7 +28,7 @@
 				{{if .ban.Permanent}}<b>not expire</b>{{else}}expire on <b>{{$expiresTimestamp}}</b>{{end}}.<br />
 				Your IP address is <b>{{.ban.IP}}</b>.<br /><br />
 				{{if .ban.CanAppeal}}You may appeal this ban:<br />
-					<form id="appeal-form" action="/post" method="POST">
+					<form id="appeal-form" action="{{webPath "/post"}}" method="POST">
 						<input type="hidden" name="board" value="{{.board.Dir}}">
 						<input type="hidden" name="banid" value="{{.ban.ID}}">
 						<textarea rows="4" cols="48" name="appealmsg" id="postmsg" placeholder="Appeal message"></textarea><br />

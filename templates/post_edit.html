@@ -4,7 +4,7 @@
 		<div class="subtitle"><a href="{{.referrer}}">Return</a></div>
 	</header>
 
-	<form action="/util" method="POST" id="edit-form">
+	<form action="{{webPath "/util"}}" method="POST" id="edit-form">
 		<input name="postid" type="hidden" value="{{.post.ID}}" />
 		<input name="boardid" type="hidden" value="{{.board.ID}}" />
 		<input name="threadid" type="hidden" value="{{.post.ThreadID}}" />
@@ -21,7 +21,7 @@
 	<header>
 		<h1>{{- with .upload -}}Edit{{else}}Add{{end}} upload</h1>
 	</header>
-	<form action="/util" method="POST" id="upload-form" enctype="multipart/form-data">
+	<form action="{{webPath "/util"}}" method="POST" id="upload-form" enctype="multipart/form-data">
 		<input name="postid" type="hidden" value="{{$.post.ID}}" />
 		<input name="boardid" type="hidden" value="{{$.board.ID}}" />
 		<input name="threadid" type="hidden" value="{{$.post.ThreadID}}" />
