@@ -2,12 +2,21 @@ package gcplugin
 
 import (
 	"errors"
-	"fmt"
+	"html/template"
+	"io"
+	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
+	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	"github.com/rs/zerolog"
 
+	luaFilePath "github.com/vadv/gopher-lua-libs/filepath"
+	luaStrings "github.com/vadv/gopher-lua-libs/strings"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
@@ -30,7 +39,7 @@ func ClosePlugins() {
 	}
 }
 
-func lvalueToInterface(v lua.LValue) interface{} {
+func lvalueToInterface(l *lua.LState, v lua.LValue) interface{} {
 	lt := v.Type()
 	switch lt {
 	case lua.LTNil:
@@ -41,6 +50,9 @@ func lvalueToInterface(v lua.LValue) interface{} {
 		return lua.LVAsNumber(v)
 	case lua.LTString:
 		return v.String()
+	case lua.LTUserData:
+		l.Push(v)
+		return l.CheckUserData(l.GetTop()).Value
 	default:
 		gcutil.LogError(nil).Caller(1).
 			Interface("lvalue", v).
@@ -86,9 +98,24 @@ func luaEventRegisterHandlerAdapter(l *lua.LState, fn *lua.LFunction) events.Eve
 }
 
 func registerLuaFunctions() {
+	luaFilePath.Preload(lState)
+	luaStrings.Preload(lState)
 	lState.Register("info_log", createLuaLogFunc("info"))
 	lState.Register("warn_log", createLuaLogFunc("warn"))
 	lState.Register("error_log", createLuaLogFunc("error"))
+	lState.Register("system_critical_config", func(l *lua.LState) int {
+		l.Push(luar.New(l, config.GetSystemCriticalConfig()))
+		return 1
+	})
+	lState.Register("site_config", func(l *lua.LState) int {
+		l.Push(luar.New(l, config.GetSiteConfig()))
+		return 1
+	})
+	lState.Register("board_config", func(l *lua.LState) int {
+		l.Push(luar.New(l, config.GetBoardConfig(l.CheckString(1))))
+		return 1
+	})
+
 	lState.Register("event_register", func(l *lua.LState) int {
 		table := l.CheckTable(-2)
 		var triggers []string
@@ -105,11 +132,66 @@ func registerLuaFunctions() {
 		var data []interface{}
 		for i := 2; i <= numArgs; i++ {
 			v := l.CheckAny(i)
-			data = append(data, lvalueToInterface(v))
+			data = append(data, lvalueToInterface(l, v))
 		}
-		fmt.Println("triggering", trigger)
 		events.TriggerEvent(trigger, data...)
 		return 0
+	})
+	lState.Register("register_manage_page", func(l *lua.LState) int {
+		actionID := l.CheckString(1)
+		actionTitle := l.CheckString(2)
+		actionPerms := l.CheckInt(3)
+		actionJSON := l.CheckInt(4)
+		fn := l.CheckFunction(5)
+		actionHandler := func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+			if err = l.CallByParam(lua.P{
+				Fn:      fn,
+				NRet:    2,
+				Protect: true,
+			}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, infoEv), luar.New(l, errEv)); err != nil {
+				return "", err
+			}
+			out := lua.LVAsString(l.Get(-2))
+			errStr := lua.LVAsString(l.Get(-1))
+			if errStr != "" {
+				err = errors.New(errStr)
+			}
+			return out, err
+		}
+		manage.RegisterManagePage(actionID, actionTitle, actionPerms, actionJSON, actionHandler)
+		return 0
+	})
+	lState.Register("load_template", func(l *lua.LState) int {
+		var tmplPaths []string
+		for i := 0; i < l.GetTop(); i++ {
+			tmplPaths = append(tmplPaths, l.CheckString(i+1))
+		}
+		tmpl, err := gctemplates.LoadTemplate(tmplPaths...)
+		l.Push(luar.New(l, tmpl))
+		l.Push(luar.New(l, err))
+		return 2
+	})
+	lState.Register("parse_template", func(l *lua.LState) int {
+		tmplName := l.CheckString(1)
+		tmplData := l.CheckString(2)
+		tmpl, err := gctemplates.ParseTemplate(tmplName, tmplData)
+		l.Push(luar.New(l, tmpl))
+		l.Push(luar.New(l, err))
+		return 2
+	})
+	lState.Register("minify_template", func(l *lua.LState) int {
+		tmplUD := l.CheckUserData(1)
+		tmpl := tmplUD.Value.(*template.Template)
+		dataTable := l.CheckTable(2)
+		data := map[string]interface{}{}
+		dataTable.ForEach(func(l1, l2 lua.LValue) {
+			data[l1.String()] = lvalueToInterface(l, l2)
+		})
+		writer := l.CheckUserData(3).Value.(io.Writer)
+		mediaType := l.CheckString(4)
+		err := serverutil.MinifyTemplate(tmpl, data, writer, mediaType)
+		l.Push(luar.New(l, err))
+		return 1
 	})
 	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GetVersion().String()))
 }

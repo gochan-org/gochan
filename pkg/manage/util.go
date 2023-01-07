@@ -132,21 +132,19 @@ func getAction(id string, rank int) *Action {
 	return nil
 }
 
+func RegisterManagePage(id string, title string, permissions int, jsonOutput int, callback CallbackFunction) {
+	actions = append(actions, Action{
+		ID:          id,
+		Title:       title,
+		Permissions: permissions,
+		JSONoutput:  jsonOutput,
+		Callback:    callback,
+	})
+}
+
 func init() {
-	actions = append(actions,
-		Action{
-			ID:          "actions",
-			Title:       "Staff actions",
-			Permissions: JanitorPerms,
-			JSONoutput:  AlwaysJSON,
-			Callback:    getStaffActions,
-		},
-		Action{
-			ID:          "dashboard",
-			Title:       "Dashboard",
-			Permissions: JanitorPerms,
-			Callback:    dashboardCallback,
-		})
+	RegisterManagePage("actions", "Staff actions", JanitorPerms, AlwaysJSON, getStaffActions)
+	RegisterManagePage("dashboard", "Dashboard", JanitorPerms, NoJSON, dashboardCallback)
 }
 
 func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {

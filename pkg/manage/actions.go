@@ -42,6 +42,8 @@ const (
 	AlwaysJSON
 )
 
+type CallbackFunction func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error)
+
 // Action represents the functions accessed by staff members at /manage/<functionname>.
 type Action struct {
 	// the string used when the user requests /manage/<ID>
@@ -65,7 +67,7 @@ type Action struct {
 	//
 	// IMPORTANT: the writer parameter should only be written to if absolutely necessary (for example,
 	// if a redirect wouldn't work in handler.go) and even then, it should be done sparingly
-	Callback func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) `json:"-"`
+	Callback CallbackFunction `json:"-"`
 }
 
 var actions = []Action{

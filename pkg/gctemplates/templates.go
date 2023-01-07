@@ -39,7 +39,7 @@ var (
 	ThreadPage        *template.Template
 )
 
-func loadTemplate(files ...string) (*template.Template, error) {
+func LoadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
 	templateDir := config.GetSystemCriticalConfig().TemplateDir
 	for i, file := range files {
@@ -54,6 +54,10 @@ func loadTemplate(files ...string) (*template.Template, error) {
 	}
 
 	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
+}
+
+func ParseTemplate(name, tmplStr string) (*template.Template, error) {
+	return template.New(name).Funcs(funcMap).Parse(tmplStr)
 }
 
 func templateError(name string, err error) error {
@@ -85,157 +89,157 @@ func InitTemplates(which ...string) error {
 func templateLoading(t string, buildAll bool) error {
 	var err error
 	if buildAll || t == "banpage" {
-		Banpage, err = loadTemplate("banpage.html", "page_footer.html")
+		Banpage, err = LoadTemplate("banpage.html", "page_footer.html")
 		if err != nil {
 			return templateError("banpage.html", err)
 		}
 	}
 	if buildAll || t == "captcha" {
-		Captcha, err = loadTemplate("captcha.html")
+		Captcha, err = LoadTemplate("captcha.html")
 		if err != nil {
 			return templateError("captcha.html", err)
 		}
 	}
 	if buildAll || t == "catalog" {
-		Catalog, err = loadTemplate("catalog.html", "page_header.html", "page_footer.html")
+		Catalog, err = LoadTemplate("catalog.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("catalog.html", err)
 		}
 	}
 	if buildAll || t == "error" {
-		ErrorPage, err = loadTemplate("error.html")
+		ErrorPage, err = LoadTemplate("error.html")
 		if err != nil {
 			return templateError("error.html", err)
 		}
 	}
 	if buildAll || t == "front" {
-		FrontPage, err = loadTemplate("front.html", "front_intro.html", "page_header.html", "page_footer.html")
+		FrontPage, err = LoadTemplate("front.html", "front_intro.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("front.html", err)
 		}
 	}
 	if buildAll || t == "boardpage" {
-		BoardPage, err = loadTemplate("boardpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
+		BoardPage, err = LoadTemplate("boardpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
 		if err != nil {
 			return templateError("boardpage.html", err)
 		}
 	}
 	if buildAll || t == "threadpage" {
-		ThreadPage, err = loadTemplate("threadpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
+		ThreadPage, err = LoadTemplate("threadpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
 		if err != nil {
 			return templateError("threadpage.html", err)
 		}
 	}
 	if buildAll || t == "postedit" {
-		PostEdit, err = loadTemplate("post_edit.html", "page_header.html", "page_footer.html")
+		PostEdit, err = LoadTemplate("post_edit.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("threadpage.html", err)
 		}
 	}
 	if buildAll || t == "manageappeals" {
-		ManageAppeals, err = loadTemplate("manage_appeals.html")
+		ManageAppeals, err = LoadTemplate("manage_appeals.html")
 		if err != nil {
 			return templateError("manage_appeals.html", err)
 		}
 	}
 	if buildAll || t == "managebans" {
-		ManageBans, err = loadTemplate("manage_bans.html")
+		ManageBans, err = LoadTemplate("manage_bans.html")
 		if err != nil {
 			return templateError("manage_bans.html", err)
 		}
 	}
 	if buildAll || t == "manageboards" {
-		ManageBoards, err = loadTemplate("manage_boards.html")
+		ManageBoards, err = LoadTemplate("manage_boards.html")
 		if err != nil {
 			return templateError("manage_boards.html", err)
 		}
 	}
 	if buildAll || t == "managesections" {
-		ManageSections, err = loadTemplate("manage_sections.html")
+		ManageSections, err = LoadTemplate("manage_sections.html")
 		if err != nil {
 			return templateError("manage_sections.html", err)
 		}
 	}
 	if buildAll || t == "manageconfig" {
-		ManageConfig, err = loadTemplate("manage_config.html")
+		ManageConfig, err = LoadTemplate("manage_config.html")
 		if err != nil {
 			return templateError("manage_config.html", err)
 		}
 	}
 	if buildAll || t == "managedashboard" {
-		ManageDashboard, err = loadTemplate("manage_dashboard.html")
+		ManageDashboard, err = LoadTemplate("manage_dashboard.html")
 		if err != nil {
 			return templateError("manage_dashboard.html", err)
 		}
 	}
 	if buildAll || t == "managelogin" {
-		ManageLogin, err = loadTemplate("manage_login.html")
+		ManageLogin, err = LoadTemplate("manage_login.html")
 		if err != nil {
 			return templateError("manage_login.html", err)
 		}
 	}
 	if buildAll || t == "managereports" {
-		ManageReports, err = loadTemplate("manage_reports.html")
+		ManageReports, err = LoadTemplate("manage_reports.html")
 		if err != nil {
 			return templateError("manage_reports.html", err)
 		}
 	}
 	if buildAll || t == "managefilebans" {
-		ManageFileBans, err = loadTemplate("manage_filebans.html")
+		ManageFileBans, err = LoadTemplate("manage_filebans.html")
 		if err != nil {
 			return templateError("manage_filebans.html", err)
 		}
 	}
 	if buildAll || t == "managenamebans" {
-		ManageNameBans, err = loadTemplate("manage_namebans.html")
+		ManageNameBans, err = LoadTemplate("manage_namebans.html")
 		if err != nil {
 			return templateError("manage_namebans.html", err)
 		}
 	}
 	if buildAll || t == "manageipsearch" {
-		ManageIPSearch, err = loadTemplate("manage_ipsearch.html")
+		ManageIPSearch, err = LoadTemplate("manage_ipsearch.html")
 		if err != nil {
 			return templateError("manage_ipsearch.html", err)
 		}
 	}
 	if buildAll || t == "managerecents" {
-		ManageRecentPosts, err = loadTemplate("manage_recentposts.html")
+		ManageRecentPosts, err = LoadTemplate("manage_recentposts.html")
 		if err != nil {
 			return templateError("manage_recentposts.html", err)
 		}
 	}
 	if buildAll || t == "managewordfilters" {
-		ManageWordfilters, err = loadTemplate("manage_wordfilters.html")
+		ManageWordfilters, err = LoadTemplate("manage_wordfilters.html")
 		if err != nil {
 			return templateError("manage_wordfilters.html", err)
 		}
 	}
 	if buildAll || t == "managestaff" {
-		ManageStaff, err = loadTemplate("manage_staff.html")
+		ManageStaff, err = LoadTemplate("manage_staff.html")
 		if err != nil {
 			return templateError("manage_staff.html", err)
 		}
 	}
 	if buildAll || t == "movethreadpage" {
-		MoveThreadPage, err = loadTemplate("movethreadpage.html", "page_header.html", "page_footer.html")
+		MoveThreadPage, err = LoadTemplate("movethreadpage.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("movethreadpage.html", err)
 		}
 	}
 	if buildAll || t == "pageheader" {
-		PageHeader, err = loadTemplate("page_header.html")
+		PageHeader, err = LoadTemplate("page_header.html")
 		if err != nil {
 			return templateError("page_header.html", err)
 		}
 	}
 	if buildAll || t == "pagefooter" {
-		PageFooter, err = loadTemplate("page_footer.html")
+		PageFooter, err = LoadTemplate("page_footer.html")
 		if err != nil {
 			return templateError("page_footer.html", err)
 		}
 	}
 	if buildAll || t == "js" {
-		JsConsts, err = loadTemplate("consts.js")
+		JsConsts, err = LoadTemplate("consts.js")
 		if err != nil {
 			return templateError("consts.js", err)
 		}
