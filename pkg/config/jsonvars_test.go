@@ -84,7 +84,6 @@ const (
 		"ThumbHeightCatalog": 50,
 	
 		"ThreadsPerPage": 15,
-		"PostsPerThreadPage": 50,
 		"RepliesOnBoardPage": 3,
 		"StickyRepliesOnBoardPage": 1,
 		"BanMessage": "USER WAS BANNED FOR THIS POST",

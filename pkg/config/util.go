@@ -217,7 +217,6 @@ func InitConfig(versionStr string) {
 				},
 				PostConfig: PostConfig{
 					ThreadsPerPage:           15,
-					PostsPerThreadPage:       50,
 					RepliesOnBoardPage:       3,
 					StickyRepliesOnBoardPage: 1,
 					BanColors: []string{

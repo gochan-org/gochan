@@ -42,7 +42,6 @@ var (
 		"ReplyDelay":               7,
 		"MaxLineLength":            150,
 		"ThreadsPerPage":           15,
-		"PostsPerThreadPage":       50,
 		"RepliesOnBoardPage":       3,
 		"StickyRepliesOnBoardPage": 1,
 		"BanMessage":               "USER WAS BANNED FOR THIS POST",
@@ -339,7 +338,6 @@ type BoardConfig struct {
 
 	DateTimeFormat         string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
 	AkismetAPIKey          string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
-	MaxBoardPages          int
 	ShowPosterID           bool
 	EnableSpoileredImages  bool
 	EnableSpoileredThreads bool
@@ -376,7 +374,6 @@ type PostConfig struct {
 	ReservedTrips []string `description:"Secure tripcodes (!!Something) can be reserved here.<br />Each reservation should go on its own line and should look like this:<br />TripPassword1##Tripcode1<br />TripPassword2##Tripcode2"`
 
 	ThreadsPerPage           int
-	PostsPerThreadPage       int
 	RepliesOnBoardPage       int `description:"Number of replies to a thread to show on the board page."`
 	StickyRepliesOnBoardPage int `description:"Same as above for stickied threads."`
 	NewThreadsRequireUpload  bool
