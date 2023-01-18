@@ -89,14 +89,37 @@ Example:
 
 	var intVal int
 	var stringVal string
-	result, err := gcsql.ExecSQL(db, "mysql",
-		"INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
+	result, err := gcsql.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)",
+		intVal, stringVal)
 */
 func ExecSQL(query string, values ...interface{}) (sql.Result, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
 	return gcdb.ExecSQL(query, values...)
+}
+
+/*
+ExecTxSQL automatically escapes the given values and caches the statement
+Example:
+
+	tx, err := BeginTx()
+	// do error handling stuff
+	defer tx.Rollback()
+	var intVal int
+	var stringVal string
+	result, err := gcsql.ExecTxSQL(tx, "INSERT INTO tablename (intval,stringval) VALUES(?,?)",
+		intVal, stringVal)
+*/
+func ExecTxSQL(tx *sql.Tx, query string, values ...interface{}) (sql.Result, error) {
+	if gcdb == nil {
+		return nil, ErrNotConnected
+	}
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return nil, err
+	}
+	return stmt.Exec(values...)
 }
 
 /*
@@ -138,6 +161,32 @@ func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
 		return nil, ErrNotConnected
 	}
 	return gcdb.QuerySQL(query, a...)
+}
+
+/*
+QueryTxSQL gets all rows from the db using the transaction tx with the values in values[] and fills the
+respective pointers in out[]. Automatically escapes the given values and caches the query
+Example:
+
+	tx, err := BeginTx()
+	// do error handling stuff
+	defer tx.Rollback()
+	rows, err := sqlutil.QueryTxSQL(tx, "SELECT * FROM table")
+	if err == nil {
+		for rows.Next() {
+			var intVal int
+			var stringVal string
+			rows.Scan(&intVal, &stringVal)
+			// do something with intVal and stringVal
+		}
+	}
+*/
+func QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Rows, error) {
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return nil, err
+	}
+	return stmt.Query(a...)
 }
 
 func ParseSQLTimeString(str string) (time.Time, error) {
@@ -247,3 +296,12 @@ func interfaceSlice(args ...interface{}) []interface{} {
 	}
 	return true, nil
 } */
+
+// createArrayPlaceholder creates a string of ?s based on the size of arr
+func createArrayPlaceholder(arr []interface{}) string {
+	params := make([]string, len(arr))
+	for p := range params {
+		params[p] = "?"
+	}
+	return "(" + strings.Join(params, ",") + ")"
+}

@@ -143,20 +143,10 @@ func (ipb *IPBan) Deactivate(staffID int) error {
 		return err
 	}
 	defer tx.Rollback()
-	stmt1, err := PrepareSQL(deactivateQuery, tx)
-	if err != nil {
+	if _, err = ExecTxSQL(tx, deactivateQuery, ipb.ID); err != nil {
 		return err
 	}
-
-	if _, err = stmt1.Exec(ipb.ID); err != nil {
-		return err
-	}
-
-	stmt2, err := PrepareSQL(auditInsertQuery, tx)
-	if err != nil {
-		return err
-	}
-	if _, err = stmt2.Exec(ipb.ID); err != nil {
+	if _, err = ExecTxSQL(tx, auditInsertQuery, ipb.ID); err != nil {
 		return err
 	}
 	return tx.Commit()

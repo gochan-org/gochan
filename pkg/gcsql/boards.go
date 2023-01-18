@@ -266,6 +266,71 @@ func (board *Board) Delete() error {
 	return err
 }
 
+// DeleteOldThreads deletes old threads that exceed the limit set by board.MaxThreads and returns the posts in those
+// threads
+func (board *Board) DeleteOldThreads() ([]int, error) {
+	if board.MaxThreads < 1 {
+		return nil, nil
+	}
+	tx, err := BeginTx()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	rows, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND !is_deleted ORDER BY last_bump DESC`,
+		board.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var threadIDs []interface{}
+	var id int
+	var threadsProccessed int
+	for rows.Next() {
+		threadsProccessed++
+		if threadsProccessed <= board.MaxThreads {
+			continue
+		}
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		threadIDs = append(threadIDs, id)
+	}
+	if threadIDs == nil {
+		// no threads to trim
+		return nil, nil
+	}
+	idSetStr := createArrayPlaceholder(threadIDs)
+
+	if _, err = ExecTxSQL(tx, `UPDATE DBPREFIXthreads SET is_deleted = TRUE WHERE id in `+idSetStr,
+		threadIDs...); err != nil {
+		return nil, err
+	}
+
+	if rows, err = QueryTxSQL(tx, `SELECT id FROM DBPREFIXposts WHERE thread_id in `+idSetStr,
+		threadIDs...); err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var postIDs []int
+	for rows.Next() {
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		postIDs = append(postIDs, id)
+	}
+
+	if _, err = ExecTxSQL(tx, `UPDATE DBPREFIXposts SET is_deleted = TRUE WHERE thread_id in `+idSetStr,
+		threadIDs...); err != nil {
+		return nil, err
+	}
+
+	return postIDs, tx.Commit()
+}
+
 func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool) ([]Thread, error) {
 	query := selectThreadsBaseSQL + " WHERE board_id = ?"
 	if onlyNotDeleted {

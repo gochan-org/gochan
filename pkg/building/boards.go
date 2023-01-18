@@ -195,8 +195,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	}
 
 	// Create the archive pages.
-	boardCfg := config.GetBoardConfig(board.Dir)
-	catalog.fillPages(boardCfg.ThreadsPerPage, catalogThreads)
+	catalog.fillPages(boardConfig.ThreadsPerPage, catalogThreads)
 
 	// Create array of page wrapper objects, and open the file.
 	var catalogPages boardCatalog
@@ -238,17 +237,29 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		// Render the boardpage template
 		captchaCfg := config.GetSiteConfig().Captcha
-		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
+		numThreads := len(threads)
+		numPages := numThreads / boardConfig.ThreadsPerPage
+		if (numThreads % boardConfig.ThreadsPerPage) > 0 {
+			numPages++
+		}
+		data := map[string]interface{}{
 			"boards":      gcsql.AllBoards,
 			"sections":    gcsql.AllSections,
 			"threads":     page.Threads,
-			"numPages":    len(threads) / boardConfig.ThreadsPerPage,
+			"numPages":    numPages,
 			"currentPage": catalog.currentPage,
 			"board":       board,
-			"boardConfig": boardCfg,
+			"boardConfig": boardConfig,
 			"useCaptcha":  captchaCfg.UseCaptcha(),
 			"captcha":     captchaCfg,
-		}, currentPageFile, "text/html"); err != nil {
+		}
+		if catalog.currentPage > 1 {
+			data["prevPage"] = catalog.currentPage - 1
+		}
+		if catalog.currentPage < numPages {
+			data["nextPage"] = catalog.currentPage + 1
+		}
+		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, data, currentPageFile, "text/html"); err != nil {
 			errEv.Err(err).
 				Caller().Send()
 			return fmt.Errorf("failed building /%s/ boardpage: %s", board.Dir, err.Error())

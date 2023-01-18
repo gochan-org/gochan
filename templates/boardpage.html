@@ -37,6 +37,9 @@
 	<a href="#">Scroll to top</a><br/>
 	<table id="pages">
 		<tr>
+			{{- with .prevPage -}}
+				<td><a href="{{webPath "/" $.board.Dir (printf "%d.html" $.prevPage) }}">Prev</a></td>
+			{{- end -}}
 			<td>{{range $_,$i := makeLoop .numPages 1 -}}
 				{{- if eq $.currentPage $i -}}
 					[<b>{{$i}}</b>]
@@ -44,6 +47,9 @@
 					[<a href="{{boardPagePath $.board $i}}">{{$i}}</a>]
 				{{- end -}}
 			{{- end}}</td>
+			{{- with .nextPage -}}
+				<td><a href="{{webPath "/" $.board.Dir (printf "%d.html" $.nextPage) }}">Next</a></td>
+			{{- end -}}
 		</tr>
 	</table>
 	<span id="boardmenu-bottom">

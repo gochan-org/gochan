@@ -59,26 +59,13 @@ func ApproveAppeal(appealID int, staffID int) error {
 		return err
 	}
 	defer tx.Rollback()
-	stmt, err := PrepareSQL(deactivateQuery, tx)
-	if err != nil {
+	if _, err = ExecTxSQL(tx, deactivateQuery, appealID); err != nil {
 		return err
 	}
-	defer func() {
-		stmt.Close()
-	}()
-	if _, err = stmt.Exec(appealID); err != nil {
+	if _, err = ExecTxSQL(tx, deactivateAppealQuery, appealID, staffID); err != nil {
 		return err
 	}
-	if stmt, err = PrepareSQL(deactivateAppealQuery, tx); err != nil {
-		return err
-	}
-	if _, err = stmt.Exec(appealID, staffID); err != nil {
-		return err
-	}
-	if stmt, err = PrepareSQL(deleteAppealQuery, tx); err != nil {
-		return err
-	}
-	if _, err = stmt.Exec(appealID); err != nil {
+	if _, err = ExecTxSQL(tx, deleteAppealQuery, appealID); err != nil {
 		return err
 	}
 	return tx.Commit()

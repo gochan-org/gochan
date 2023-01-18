@@ -66,6 +66,13 @@ func main() {
 		gcutil.LogFatal().Err(err).Send()
 	}
 
+	for _, board := range gcsql.AllBoards {
+		if _, err = board.DeleteOldThreads(); err != nil {
+			fmt.Printf("Error deleting old threads for board /%s/: %s", board.Dir, err)
+			os.Exit(1)
+		}
+	}
+
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	posting.InitPosting()
