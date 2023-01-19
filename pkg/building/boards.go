@@ -331,12 +331,76 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		Str("boardDir", board.Dir).
 		Int("boardID", board.ID)
 	if board.Dir == "" {
-		errEv.Err(err).Caller().Send()
+		errEv.Err(ErrNoBoardDir).Caller().Send()
 		return ErrNoBoardDir
 	}
 	if board.Title == "" {
-		errEv.Err(err).Caller().Send()
+		errEv.Err(ErrNoBoardTitle).Caller().Send()
 		return ErrNoBoardTitle
+	}
+
+	oldPosts, err := board.DeleteOldThreads()
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to delete old threads")
+		return err
+	}
+	boardDir := path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.Dir)
+	for _, postID := range oldPosts {
+		post, err := gcsql.GetPostFromID(postID, false)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Int("postID", postID).
+				Msg("Unable to get post")
+			return err
+		}
+		upload, err := post.GetUpload()
+		if err != nil {
+			errEv.Err(err).Caller().
+				Int("postID", postID).
+				Msg("Unable to get post uploads")
+			return err
+		}
+		var filePath string
+		if upload != nil {
+			filePath = path.Join(boardDir, "src", upload.Filename)
+			if err = os.Remove(filePath); err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", postID).
+					Str("upload", filePath).Send()
+				return err
+			}
+			filePath = path.Join(boardDir, "thumb", upload.ThumbnailPath("thumbnail"))
+			if err = os.Remove(filePath); err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", postID).
+					Str("upload", filePath).Send()
+				return err
+			}
+			if post.IsTopPost && board.EnableCatalog {
+				filePath = path.Join(boardDir, "thumb", upload.ThumbnailPath("catalog"))
+				if err = os.Remove(filePath); err != nil {
+					errEv.Err(err).Caller().
+						Int("postID", postID).
+						Str("upload", filePath).Send()
+					return err
+				}
+			}
+		}
+
+		if err = post.UnlinkUploads(false); err != nil {
+			errEv.Err(err).Caller().
+				Int("postID", postID).Send()
+			return err
+		}
+		if post.IsTopPost {
+			filePath = path.Join(boardDir, "res", strconv.Itoa(post.ID)+".html")
+			if err = os.Remove(filePath); err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", postID).
+					Str("threadFile", filePath).Send()
+				return err
+			}
+		}
 	}
 
 	dirPath := board.AbsolutePath()
