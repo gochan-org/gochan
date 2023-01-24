@@ -361,7 +361,7 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 	if symlinks:
 		symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
 	else:
-		copy(migration_exe, path.join(prefix, "bin", gochan_exe))
+		copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
