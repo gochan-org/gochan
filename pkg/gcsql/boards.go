@@ -278,7 +278,7 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	}
 	defer tx.Rollback()
 
-	rows, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND !is_deleted ORDER BY last_bump DESC`,
+	rows, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND is_deleted = FALSE ORDER BY last_bump DESC`,
 		board.ID)
 	if err != nil {
 		return nil, err
