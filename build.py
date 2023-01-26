@@ -20,18 +20,13 @@ import sys
 import traceback
 
 release_files = (
-	"html/static/banned.png",
 	"html/css/",
 	"html/error/",
+	"html/static/",
 	"html/favicon2.png",
 	"html/favicon.png",
 	"html/firstrun.html",
-	"html/static/hittheroad.mp3",
-	"html/static/hittheroad.ogg",
-	"html/static/hittheroad.wav",
 	"html/js/",
-	"html/static/notbanned.png",
-	"html/static/permabanned.jpg",
 	"sample-configs/",
 	"templates/",
 	"sql/initdb_master.sql",
