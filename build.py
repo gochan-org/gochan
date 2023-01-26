@@ -20,18 +20,18 @@ import sys
 import traceback
 
 release_files = (
-	"html/banned.png",
+	"html/static/banned.png",
 	"html/css/",
 	"html/error/",
 	"html/favicon2.png",
 	"html/favicon.png",
 	"html/firstrun.html",
-	"html/hittheroad.mp3",
-	"html/hittheroad.ogg",
-	"html/hittheroad.wav",
+	"html/static/hittheroad.mp3",
+	"html/static/hittheroad.ogg",
+	"html/static/hittheroad.wav",
 	"html/js/",
-	"html/notbanned.png",
-	"html/permabanned.jpg",
+	"html/static/notbanned.png",
+	"html/static/permabanned.jpg",
 	"sample-configs/",
 	"templates/",
 	"sql/initdb_master.sql",
@@ -561,7 +561,7 @@ if __name__ == "__main__":
 	elif action == "selenium":
 		from devtools.selenium_testing.runtests import parseArgs,startBrowserTests
 		args = parseArgs(parser)
-		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/notbanned.png", args.singletest)
+		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/static/notbanned.png", args.singletest)
 	elif action == "test":
 		parser.add_argument("--verbose","-v",
 			action="store_true",

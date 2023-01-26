@@ -33,7 +33,7 @@ testingName = "Selenium"
 testingEmail = "selenium@gochan.org#noko"
 testingMessage = "Hello, from Selenium!\n(driver is %s)"
 testingSubject = "Selenium post creation"
-testingUploadPath = "../../html/notbanned.png"
+testingUploadPath = "../../html/static/notbanned.png"
 testingPassword = "12345"
 testingBoard = "test"
 
