@@ -13,7 +13,7 @@ import (
 
 const (
 	postQueryBase = `SELECT DBPREFIXposts.id, DBPREFIXposts.thread_id, ip, name, tripcode, email, subject, created_on, created_on as last_modified,
-	p.id AS parent_id,
+	p.id AS parent_id, t.last_bump as last_bump,
 	message, message_raw,
 	(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
 	coalesce(DBPREFIXfiles.original_filename,'') as original_filename,
@@ -27,7 +27,7 @@ const (
 	FROM DBPREFIXposts
 	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id AND is_deleted = FALSE
 	LEFT JOIN (
-		SELECT id, board_id FROM DBPREFIXthreads
+		SELECT id, board_id, last_bump FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	INNER JOIN (
 		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
@@ -115,9 +115,10 @@ func GetBuildablePost(id int, boardid int) (*Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
 	var post Post
 	var threadID int
+	var lastBump time.Time
 	err := gcsql.QueryRowSQL(query, []interface{}{id}, []interface{}{
 		&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-		&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
+		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
 		&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 	})
@@ -140,12 +141,13 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 	}
 	defer rows.Close()
 	var posts []Post
+	var lastBump time.Time
 	for rows.Next() {
 		var post Post
 		var threadID int
 		if err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		); err != nil {
@@ -153,32 +155,6 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 		}
 		post.IsTopPost = post.ParentID == 0
 		post.Extension = path.Ext(post.Filename)
-		posts = append(posts, post)
-	}
-	return posts, nil
-}
-
-func getBoardTopPosts(boardID int) ([]Post, error) {
-	const query = postQueryBase + " AND is_top_post AND t.board_id = ?"
-	rows, err := gcsql.QuerySQL(query, boardID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var posts []Post
-	for rows.Next() {
-		var post Post
-		var threadID int
-		err = rows.Scan(
-			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
-			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-		)
-		if err != nil {
-			return nil, err
-		}
-		post.IsTopPost = post.ParentID == 0 || post.ParentID == post.ID
 		posts = append(posts, post)
 	}
 	return posts, nil
@@ -192,12 +168,13 @@ func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 	}
 	defer rows.Close()
 	var posts []Post
+	var lastBump time.Time
 	for rows.Next() {
 		var post Post
 		var threadID int
 		err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		)
@@ -226,12 +203,13 @@ func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 	}
 	defer rows.Close()
 	var posts []Post
+	var lastBump time.Time
 	for rows.Next() {
 		var post Post
 		var threadID int
 		err = rows.Scan(
 			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &post.Message, &post.MessageRaw, &post.BoardDir,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
 		)
