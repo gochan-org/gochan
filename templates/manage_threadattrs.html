@@ -1,0 +1,39 @@
+<form method="GET" action="{{webPath "manage" $.action}}" class="staff-form">
+{{with $.boards -}}
+<select name="board">
+	{{range $_, $board := $.boards}}
+		<option value="{{$board.Dir}}" {{with $.board}}{{if eq $.board.Dir $board.Dir}}selected="selected"{{end}}{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+	{{else}}
+		<i>No boards</i>
+	{{end}}
+</select>
+<input type="submit" name="show-threads" value="Show threads" /><br />
+{{else}}
+<i>No boards</i>
+{{end}}
+{{with $.board}}
+	Threads on /{{.Dir}}/ (board ID is {{.ID}})<br/>
+	{{if (lt (len $.threads) 1)}}
+	<i>No threads on </i>
+	{{else -}}
+	<table>
+		<tr>
+			<th>Thread ID</th><th>OP</th><th>Locked</th><th>Stickied</th><th>Anchored</th><th>Cyclical</th>
+		</tr>
+	{{- range $t, $thread := $.threads}}
+	<tr>
+		{{- with $opIDstr := (print (index $.opIDs $t)) -}}
+			<td>{{$thread.ID}}</td>
+			<td><a href="{{webPath $.board.Dir "res" $opIDstr}}.html">&gt;&gt;/{{$.board.Dir}}/{{$opIDstr}}</a></td>
+			<td><input type="checkbox" name="locked" {{if $thread.Locked}}checked="checked"{{end}} />{{$thread.Locked}}</td>
+			<td><input type="checkbox" name="stickied" {{if $thread.Stickied}}checked="checked"{{end}} />{{$thread.Stickied}}</td>
+			<td><input type="checkbox" name="anchored" {{if $thread.Anchored}}checked="checked"{{end}} />{{$thread.Anchored}}</td>
+			<td><input type="checkbox" name="cyclical" {{if $thread.Cyclical}}checked="checked"{{end}} />{{$thread.Cyclical}}</td>
+			<td><input type="submit" name="update-{{$thread.ID}}" value="Update attributes"></td>
+		{{- end}}
+	</tr>
+	{{end -}}
+	</table>
+	{{- end}}
+{{end}}
+</form>

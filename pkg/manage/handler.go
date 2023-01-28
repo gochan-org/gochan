@@ -86,7 +86,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if staff.Rank < action.Permissions {
-		writer.WriteHeader(403)
+		writer.WriteHeader(http.StatusForbidden)
 		errEv.
 			Int("rank", staff.Rank).
 			Int("requiredRank", action.Permissions).
@@ -107,7 +107,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		output, err = action.Callback(writer, request, staff, wantsJSON, infoEv, errEv)
 	}
 	if err != nil {
-		// writer.WriteHeader(500)
+		writer.WriteHeader(http.StatusInternalServerError)
 		serveError(writer, "actionerror", actionID, err.Error(), wantsJSON || (action.JSONoutput == AlwaysJSON))
 		return
 	}

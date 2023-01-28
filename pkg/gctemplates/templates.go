@@ -21,6 +21,7 @@ var (
 	ManageAppeals     *template.Template
 	ManageBans        *template.Template
 	ManageBoards      *template.Template
+	ManageThreadAttrs *template.Template
 	ManageSections    *template.Template
 	ManageConfig      *template.Template
 	ManageDashboard   *template.Template
@@ -152,6 +153,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageBoards, err = LoadTemplate("manage_boards.html")
 		if err != nil {
 			return templateError("manage_boards.html", err)
+		}
+	}
+	if buildAll || t == "managethreadattrs" {
+		ManageThreadAttrs, err = LoadTemplate("manage_threadattrs.html")
+		if err != nil {
+			return templateError("manage_threadattrs.html", err)
 		}
 	}
 	if buildAll || t == "managesections" {

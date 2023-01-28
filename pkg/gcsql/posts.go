@@ -86,6 +86,25 @@ func GetTopPostInThread(postID int) (int, error) {
 	return id, err
 }
 
+func GetTopPostIDsInThreadIDs(threads ...interface{}) ([]int, error) {
+	params := createArrayPlaceholder(threads)
+	query := `SELECT id FROM DBPREFIXposts WHERE thread_id in ` + params
+	rows, err := QuerySQL(query, threads...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
 func GetThreadTopPost(threadID int) (*Post, error) {
 	const query = selectPostsBaseSQL + "WHERE thread_id = ? AND is_top_post = TRUE LIMIT 1"
 	post := new(Post)

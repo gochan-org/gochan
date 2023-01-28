@@ -100,11 +100,10 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 	return boardURI, err
 }
 
-// GetBoardFromID returns the board corresponding to a given id
-func GetBoardFromID(id int) (*Board, error) {
-	const query = selectBoardsBaseSQL + "WHERE DBPREFIXboards.id = ?"
+func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
+	query := selectBoardsBaseSQL + where
 	board := new(Board)
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+	err := QueryRowSQL(query, whereParameters, interfaceSlice(
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
@@ -112,6 +111,23 @@ func GetBoardFromID(id int) (*Board, error) {
 		&board.EnableCatalog,
 	))
 	return board, err
+}
+
+// GetBoardFromID returns the board corresponding to a given id
+func GetBoardFromID(id int) (*Board, error) {
+	return getBoardBase("WHERE DBPREFIXboards.id = ?", interfaceSlice(id))
+}
+
+// GetBoardFromDir returns the board corresponding to a given dir
+func GetBoardFromDir(dir string) (*Board, error) {
+	return getBoardBase("WHERE DBPREFIXboards.dir = ?", interfaceSlice(dir))
+}
+
+// GetIDFromDir returns the id of the board with the given dir value
+func GetBoardIDFromDir(dir string) (id int, err error) {
+	const query = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
+	err = QueryRowSQL(query, interfaceSlice(dir), interfaceSlice(&id))
+	return id, err
 }
 
 // GetBoardURIs gets a list of all existing board URIs

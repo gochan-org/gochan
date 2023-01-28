@@ -742,6 +742,78 @@ var actions = []Action{
 			return outputStr, nil
 		}},
 	{
+		ID:          "threadattrs",
+		Title:       "View/Update Thread Attributes",
+		Permissions: ModPerms,
+		JSONoutput:  OptionalJSON,
+		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+			boardDir := request.FormValue("board")
+			attrBuffer := bytes.NewBufferString("")
+			if boardDir == "" {
+				if wantsJSON {
+					return nil, errors.New(`missing required field "board"`)
+				}
+				if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, map[string]interface{}{
+					"action": "threadattrs",
+					"boards": gcsql.AllBoards,
+				}, attrBuffer, "text/html"); err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+				return attrBuffer.String(), nil
+			}
+			errEv.Str("boardDir", boardDir)
+			boardID, err := gcsql.GetBoardIDFromDir(boardDir)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", err
+			}
+
+			var updateID int
+			for name, val := range request.Form {
+				if len(val) > 0 && val[0] == "Update attributes" {
+					if _, err = fmt.Sscanf(name, "update-%d", &updateID); err != nil {
+						return "", fmt.Errorf("invalid input name %q: %s", name, err.Error())
+					}
+				}
+			}
+
+			threads, err := gcsql.GetThreadsWithBoardID(boardID, true)
+			var threadIDs []interface{}
+			for _, thread := range threads {
+				threadIDs = append(threadIDs, thread.ID)
+			}
+			if err != nil {
+				errEv.Err(err).Caller().
+					Int("boardID", boardID).Send()
+				return "", err
+			}
+			if wantsJSON {
+				return threads, nil
+			}
+			board := gcsql.Board{
+				ID:  boardID,
+				Dir: boardDir,
+			}
+
+			opIDs, err := gcsql.GetTopPostIDsInThreadIDs(threadIDs...)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", err
+			}
+			if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, map[string]interface{}{
+				"action":  "threadattrs",
+				"boards":  gcsql.AllBoards,
+				"board":   board,
+				"threads": threads,
+				"opIDs":   opIDs,
+			}, attrBuffer, "text/html"); err != nil {
+				errEv.Err(err).Caller().Send()
+				return "", err
+			}
+			return attrBuffer.String(), nil
+		}},
+	{
 		ID:          "login",
 		Title:       "Login",
 		Permissions: NoPerms,
@@ -1192,22 +1264,6 @@ var actions = []Action{
 			}
 			return postInfo, nil
 		}},
-	// {
-	// 	may end up deleting this
-	// 	ID:          "tempposts",
-	// 	Title:       "Temporary posts lists",
-	// 	Permissions: AdminPerms,
-	// 	Callback: func(writer http.ResponseWriter, request *http.Request, wantsJSON bool) (output interface{}, err error) {
-	// 		outputStr := ""
-	// 		if len(gcsql.TempPosts) == 0 {
-	// 			outputStr += "No temporary posts"
-	// 			return
-	// 		}
-	// 		for p, post := range gcsql.TempPosts {
-	// 			outputStr += fmt.Sprintf("Post[%d]: %#v<br />", p, post)
-	// 		}
-	// 		return outputStr, nil
-	// 	}},
 	{
 		ID:          "wordfilters",
 		Title:       "Wordfilters",

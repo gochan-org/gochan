@@ -81,10 +81,11 @@ func GetThreadsWithBoardID(boardID int, onlyNotDeleted bool) ([]Thread, error) {
 		var thread Thread
 		if err = rows.Scan(
 			&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored,
-			&thread.Cyclical, &thread.LastBump,
+			&thread.Cyclical, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 		); err != nil {
 			return threads, err
 		}
+		threads = append(threads, thread)
 	}
 	return threads, nil
 }
