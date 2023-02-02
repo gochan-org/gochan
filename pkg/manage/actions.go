@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"regexp"
@@ -749,65 +750,107 @@ var actions = []Action{
 		Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 			boardDir := request.FormValue("board")
 			attrBuffer := bytes.NewBufferString("")
+			data := map[string]interface{}{
+				"action": "threadattrs",
+				"boards": gcsql.AllBoards,
+			}
 			if boardDir == "" {
 				if wantsJSON {
 					return nil, errors.New(`missing required field "board"`)
 				}
-				if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, map[string]interface{}{
-					"action": "threadattrs",
-					"boards": gcsql.AllBoards,
-				}, attrBuffer, "text/html"); err != nil {
+				if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, data, attrBuffer, "text/html"); err != nil {
 					errEv.Err(err).Caller().Send()
 					return "", err
 				}
 				return attrBuffer.String(), nil
 			}
-			errEv.Str("boardDir", boardDir)
-			boardID, err := gcsql.GetBoardIDFromDir(boardDir)
+			gcutil.LogStr("board", boardDir, errEv, infoEv)
+			board, err := gcsql.GetBoardFromDir(boardDir)
+			if err != nil {
+				errEv.Err(err)
+			}
+			data["board"] = board
+			topPostStr := request.FormValue("thread")
+			if topPostStr != "" {
+				var topPostID int
+				if topPostID, err = strconv.Atoi(topPostStr); err != nil {
+					errEv.Err(err).Str("topPostStr", topPostStr).Caller().Send()
+					return "", err
+				}
+				gcutil.LogInt("topPostID", topPostID, errEv, infoEv)
+				var attr string
+				var newVal bool
+				if request.FormValue("unlock") != "" {
+					attr = "locked"
+					newVal = false
+				} else if request.FormValue("lock") != "" {
+					attr = "locked"
+					newVal = true
+				} else if request.FormValue("unsticky") != "" {
+					attr = "stickied"
+					newVal = false
+				} else if request.FormValue("sticky") != "" {
+					attr = "stickied"
+					newVal = true
+				} else if request.FormValue("unanchor") != "" {
+					attr = "anchored"
+					newVal = false
+				} else if request.FormValue("anchor") != "" {
+					attr = "anchored"
+					newVal = true
+				} else if request.FormValue("uncyclical") != "" {
+					attr = "cyclical"
+					newVal = false
+				} else if request.FormValue("cyclical") != "" {
+					attr = "cyclical"
+					newVal = true
+				}
+				if attr != "" {
+					gcutil.LogStr("attribute", attr, errEv, infoEv)
+					gcutil.LogBool("attrVal", newVal, errEv, infoEv)
+					if err = gcsql.UpdateThreadAttribute(topPostID, attr, newVal); err != nil {
+						errEv.Err(err).Caller().Send()
+						return "", err
+					}
+				}
+				thread, err := gcsql.GetPostThread(topPostID)
+				if err != nil {
+					errEv.Err(err).Caller().Send()
+					return "", err
+				}
+				data["thread"] = thread
+			}
+
+			threads, err := gcsql.GetThreadsWithBoardID(board.ID, true)
 			if err != nil {
 				errEv.Err(err).Caller().Send()
 				return "", err
 			}
-
-			var updateID int
-			for name, val := range request.Form {
-				if len(val) > 0 && val[0] == "Update attributes" {
-					if _, err = fmt.Sscanf(name, "update-%d", &updateID); err != nil {
-						return "", fmt.Errorf("invalid input name %q: %s", name, err.Error())
-					}
-				}
-			}
-
-			threads, err := gcsql.GetThreadsWithBoardID(boardID, true)
+			data["threads"] = threads
 			var threadIDs []interface{}
 			for _, thread := range threads {
 				threadIDs = append(threadIDs, thread.ID)
 			}
-			if err != nil {
-				errEv.Err(err).Caller().
-					Int("boardID", boardID).Send()
-				return "", err
-			}
 			if wantsJSON {
 				return threads, nil
 			}
-			board := gcsql.Board{
-				ID:  boardID,
-				Dir: boardDir,
-			}
 
-			opIDs, err := gcsql.GetTopPostIDsInThreadIDs(threadIDs...)
+			opMap, err := gcsql.GetTopPostIDsInThreadIDs(threadIDs...)
 			if err != nil {
 				errEv.Err(err).Caller().Send()
 				return "", err
 			}
-			if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, map[string]interface{}{
-				"action":  "threadattrs",
-				"boards":  gcsql.AllBoards,
-				"board":   board,
-				"threads": threads,
-				"opIDs":   opIDs,
-			}, attrBuffer, "text/html"); err != nil {
+			data["opMap"] = opMap
+			var formURL url.URL
+			formURL.Path = config.WebPath("/manage/threadattrs")
+			vals := formURL.Query()
+			vals.Set("board", boardDir)
+			if topPostStr != "" {
+				vals.Set("thread", topPostStr)
+			}
+			formURL.RawQuery = vals.Encode()
+			data["formURL"] = formURL.String()
+			if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, data, attrBuffer, "text/html"); err != nil {
 				errEv.Err(err).Caller().Send()
 				return "", err
 			}

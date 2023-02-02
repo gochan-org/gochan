@@ -1,4 +1,5 @@
 <form method="GET" action="{{webPath "manage" $.action}}" class="staff-form">
+<h3>Select a board</h3>
 {{with $.boards -}}
 <select name="board">
 	{{range $_, $board := $.boards}}
@@ -7,33 +8,51 @@
 		<i>No boards</i>
 	{{end}}
 </select>
-<input type="submit" name="show-threads" value="Show threads" /><br />
+<input type="submit" value="Show threads" /><br />
+</form>
 {{else}}
 <i>No boards</i>
 {{end}}
 {{with $.board}}
-	Threads on /{{.Dir}}/ (board ID is {{.ID}})<br/>
-	{{if (lt (len $.threads) 1)}}
-	<i>No threads on </i>
-	{{else -}}
-	<table>
-		<tr>
-			<th>Thread ID</th><th>OP</th><th>Locked</th><th>Stickied</th><th>Anchored</th><th>Cyclical</th>
-		</tr>
-	{{- range $t, $thread := $.threads}}
-	<tr>
-		{{- with $opIDstr := (print (index $.opIDs $t)) -}}
-			<td>{{$thread.ID}}</td>
-			<td><a href="{{webPath $.board.Dir "res" $opIDstr}}.html">&gt;&gt;/{{$.board.Dir}}/{{$opIDstr}}</a></td>
-			<td><input type="checkbox" name="locked" {{if $thread.Locked}}checked="checked"{{end}} />{{$thread.Locked}}</td>
-			<td><input type="checkbox" name="stickied" {{if $thread.Stickied}}checked="checked"{{end}} />{{$thread.Stickied}}</td>
-			<td><input type="checkbox" name="anchored" {{if $thread.Anchored}}checked="checked"{{end}} />{{$thread.Anchored}}</td>
-			<td><input type="checkbox" name="cyclical" {{if $thread.Cyclical}}checked="checked"{{end}} />{{$thread.Cyclical}}</td>
-			<td><input type="submit" name="update-{{$thread.ID}}" value="Update attributes"></td>
-		{{- end}}
-	</tr>
+<h3>Select a thread</h3>
+{{if (lt (len $.threads) 1)}}
+<i>No threads on </i>
+{{else -}}
+<form action="{{$.formURL}}" method="GET">
+	<input type="hidden" name="board" value="{{$.board.Dir}}">
+<select name="thread">
+{{- range $_, $thread := $.threads}}
+	{{with $opIDstr := (print (index $.opMap $thread.ID)) -}}
+	<option value="{{$opIDstr}}" {{with $.thread}}{{if eq (index $.opMap $thread.ID) (index $.opMap $.thread.ID)}}selected="selected"{{end}}{{end}}>>>/{{$.board.Dir}}/{{$opIDstr}}</option>
 	{{end -}}
-	</table>
-	{{- end}}
-{{end}}
+{{end -}}
+</select>
+<input type="submit" value="Show attributes">
 </form>
+{{with $.thread}}
+<form action="{{$.formURL}}" method="POST">
+	<input type="hidden" name="board" value="{{$.board.Dir}}">
+	<input type="hidden" name="thread" value="{{$.thread.ID}}">
+<h3>Thread attributes (click to toggle)</h3>
+<table>
+	<tr>
+		<th>Locked</th>
+		<td><input type="submit" name="{{if $.thread.Locked}}unlock{{else}}lock{{end}}" value="{{if $.thread.Locked}}Locked{{else}}Not locked{{end}}" /></td>
+	</tr>
+	<tr>
+		<th>Stickied</th>
+		<td><input type="submit" name="{{if $.thread.Stickied}}unsticky{{else}}sticky{{end}}" value="{{if $.thread.Stickied}}Stickied{{else}}Not stickied{{end}}" /></td>
+	</tr>
+	<tr>
+		<th>Anchored</th>
+		<td><input type="submit" name="{{if $.thread.Anchored}}unanchor{{else}}anchor{{end}}" value="{{if $.thread.Anchored}}Anchored{{else}}Not anchored{{end}}" /></td>
+	</tr>
+	<tr>
+		<th>Cyclical</th>
+		<td><input type="submit" name="{{if $.thread.Cyclical}}uncyclical{{else}}cyclical{{end}}" value="{{if $.thread.Cyclical}}Cyclical{{else}}Not cyclical{{end}}" /></td>
+	</tr>
+</table>
+</form>
+{{- end}}
+{{- end}}
+{{- end}}

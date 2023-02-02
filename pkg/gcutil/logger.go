@@ -26,19 +26,25 @@ func (*logHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 
 func LogStr(key, val string, events ...*zerolog.Event) {
 	for e := range events {
-		if events[e] == nil {
-			continue
+		if events[e] != nil {
+			events[e] = events[e].Str(key, val)
 		}
-		events[e] = events[e].Str(key, val)
 	}
 }
 
 func LogInt(key string, i int, events ...*zerolog.Event) {
 	for e := range events {
-		if events[e] == nil {
-			continue
+		if events[e] != nil {
+			events[e] = events[e].Int(key, i)
 		}
-		events[e] = events[e].Int(key, i)
+	}
+}
+
+func LogBool(key string, b bool, events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] != nil {
+			events[e] = events[e].Bool(key, b)
+		}
 	}
 }
 

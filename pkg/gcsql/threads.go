@@ -3,6 +3,7 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
 )
 
@@ -41,11 +42,22 @@ func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored 
 	return threadID, err
 }
 
-// GetThread returns a a thread object from the database
+// GetThread returns a a thread object from the database, given its ID
 func GetThread(threadID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = ?`
 	thread := new(Thread)
 	err := QueryRowSQL(query, interfaceSlice(threadID), interfaceSlice(
+		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
+		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
+	))
+	return thread, err
+}
+
+// GetPostThread returns a thread object from the database, given the ID of a post in the thread
+func GetPostThread(opID int) (*Thread, error) {
+	const query = selectThreadsBaseSQL + `WHERE id = (SELECT thread_id FROM DBPREFIXposts WHERE id = ? LIMIT 1)`
+	thread := new(Thread)
+	err := QueryRowSQL(query, interfaceSlice(opID), interfaceSlice(
 		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	))
@@ -193,6 +205,23 @@ func (t *Thread) GetUploads() ([]Upload, error) {
 		uploads = append(uploads, upload)
 	}
 	return uploads, nil
+}
+
+// UpdateThreadAttribute updates the given attribute (valid attribute values are "locked", "stickied, "anchored",
+// or "cyclical") for the thread with the given top post ID
+func UpdateThreadAttribute(opID int, attribute string, value bool) error {
+	updateSQL := "UPDATE DBPREFIXthreads SET "
+	if attribute == "locked" || attribute == "stickied" || attribute == "anchored" || attribute == "cyclical" {
+		updateSQL += attribute + " = ? WHERE id = ?"
+	} else {
+		return fmt.Errorf("invalid thread attribute %q", attribute)
+	}
+	threadID, err := GetTopPostThreadID(opID)
+	if err != nil {
+		return err
+	}
+	_, err = ExecSQL(updateSQL, value, threadID)
+	return err
 }
 
 // deleteThread updates the thread and sets it as deleted, as well as the posts where thread_id = threadID
