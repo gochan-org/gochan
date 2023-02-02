@@ -142,6 +142,32 @@ func QueryRowSQL(query string, values, out []interface{}) error {
 }
 
 /*
+QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
+Automatically escapes the given values and caches the query
+Example:
+
+	id := 32
+	var intVal int
+	var stringVal string
+	tx, err := BeginTx()
+	// do error handling stuff
+	defer tx.Rollback()
+	err = QueryRowTxSQL(tx, "SELECT intval,stringval FROM table WHERE id = ?",
+		[]interface{}{id},
+		[]interface{}{&intVal, &stringVal})
+*/
+func QueryRowTxSQL(tx *sql.Tx, query string, values, out []interface{}) error {
+	if gcdb == nil {
+		return ErrNotConnected
+	}
+	stmt, err := PrepareSQL(query, tx)
+	if err != nil {
+		return err
+	}
+	return stmt.QueryRow(values...).Scan(out...)
+}
+
+/*
 QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
 Example:

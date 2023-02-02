@@ -357,6 +357,15 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 			return err
 		}
 		p.ThreadID = threadID
+	} else {
+		var threadIsLocked bool
+		if err = QueryRowTxSQL(tx, "SELECT locked FROM DBPREFIXthreads WHERE id = ?",
+			interfaceSlice(p.ThreadID), interfaceSlice(&threadIsLocked)); err != nil {
+			return err
+		}
+		if threadIsLocked {
+			return ErrThreadLocked
+		}
 	}
 
 	stmt, err := PrepareSQL(insertSQL, tx)

@@ -16,29 +16,23 @@ const (
 var (
 	ErrThreadExists       = errors.New("thread already exists")
 	ErrThreadDoesNotExist = errors.New("thread does not exist")
+	ErrThreadLocked       = errors.New("thread is locked and cannot be replied to")
 )
 
 func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
+	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
 	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
-	stmt, err := PrepareSQL(insertQuery, tx)
-	if err != nil {
+	var boardIsLocked bool
+	if err = QueryRowTxSQL(tx, lockedQuery, interfaceSlice(boardID), interfaceSlice(&boardIsLocked)); err != nil {
 		return 0, err
 	}
-	if tx == nil {
-		defer stmt.Close()
+	if boardIsLocked {
+		return 0, ErrBoardIsLocked
 	}
-	if _, err = stmt.Exec(boardID, locked, stickied, anchored, cyclical); err != nil {
+	if _, err = ExecTxSQL(tx, insertQuery, boardID, locked, stickied, anchored, cyclical); err != nil {
 		return 0, err
 	}
-	stmt2, err := PrepareSQL(`SELECT MAX(id) FROM DBPREFIXthreads`, tx)
-	if err != nil {
-		return 0, err
-	}
-	if tx == nil {
-		defer stmt2.Close()
-	}
-
-	err = stmt2.QueryRow().Scan(&threadID)
+	QueryRowTxSQL(tx, "SELECT MAX(id) FROM DBPREFIXthreads", nil, interfaceSlice(&threadID))
 	return threadID, err
 }
 

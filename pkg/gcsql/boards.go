@@ -30,6 +30,7 @@ var (
 	ErrNilBoard          = errors.New("board is nil")
 	ErrBoardExists       = errors.New("board already exists")
 	ErrBoardDoesNotExist = errors.New("board does not exist")
+	ErrBoardIsLocked     = errors.New("board is locked")
 )
 
 // DoesBoardExistByID returns a bool indicating whether a board with a given id exists
