@@ -110,6 +110,9 @@ func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
 		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
 		&board.EnableCatalog,
 	))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrBoardDoesNotExist
+	}
 	return board, err
 }
 

@@ -751,7 +751,6 @@ var actions = []Action{
 			boardDir := request.FormValue("board")
 			attrBuffer := bytes.NewBufferString("")
 			data := map[string]interface{}{
-				"action": "threadattrs",
 				"boards": gcsql.AllBoards,
 			}
 			if boardDir == "" {
@@ -767,7 +766,8 @@ var actions = []Action{
 			gcutil.LogStr("board", boardDir, errEv, infoEv)
 			board, err := gcsql.GetBoardFromDir(boardDir)
 			if err != nil {
-				errEv.Err(err)
+				errEv.Err(err).Caller().Send()
+				return "", err
 			}
 			data["board"] = board
 			topPostStr := request.FormValue("thread")
