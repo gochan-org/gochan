@@ -778,6 +778,7 @@ var actions = []Action{
 					return "", err
 				}
 				gcutil.LogInt("topPostID", topPostID, errEv, infoEv)
+				data["topPostID"] = topPostID
 				var attr string
 				var newVal bool
 				if request.FormValue("unlock") != "" {
@@ -805,18 +806,18 @@ var actions = []Action{
 					attr = "cyclical"
 					newVal = true
 				}
-				if attr != "" {
-					gcutil.LogStr("attribute", attr, errEv, infoEv)
-					gcutil.LogBool("attrVal", newVal, errEv, infoEv)
-					if err = gcsql.UpdateThreadAttribute(topPostID, attr, newVal); err != nil {
-						errEv.Err(err).Caller().Send()
-						return "", err
-					}
-				}
 				thread, err := gcsql.GetPostThread(topPostID)
 				if err != nil {
 					errEv.Err(err).Caller().Send()
 					return "", err
+				}
+				if attr != "" {
+					gcutil.LogStr("attribute", attr, errEv, infoEv)
+					gcutil.LogBool("attrVal", newVal, errEv, infoEv)
+					if err = thread.UpdateAttribute(attr, newVal); err != nil {
+						errEv.Err(err).Caller().Send()
+						return "", err
+					}
 				}
 				data["thread"] = thread
 			}
@@ -828,8 +829,8 @@ var actions = []Action{
 			}
 			data["threads"] = threads
 			var threadIDs []interface{}
-			for _, thread := range threads {
-				threadIDs = append(threadIDs, thread.ID)
+			for i := len(threads) - 1; i >= 0; i-- {
+				threadIDs = append(threadIDs, threads[i].ID)
 			}
 			if wantsJSON {
 				return threads, nil

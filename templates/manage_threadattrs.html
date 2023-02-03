@@ -32,7 +32,7 @@
 {{with $.thread}}
 <form action="{{$.formURL}}" method="POST">
 	<input type="hidden" name="board" value="{{$.board.Dir}}">
-	<input type="hidden" name="thread" value="{{$.thread.ID}}">
+	<input type="hidden" name="thread" value="{{$.topPostID}}">
 <h3>Thread attributes (click to toggle)</h3>
 <table>
 	<tr>

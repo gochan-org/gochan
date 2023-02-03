@@ -201,20 +201,24 @@ func (t *Thread) GetUploads() ([]Upload, error) {
 	return uploads, nil
 }
 
-// UpdateThreadAttribute updates the given attribute (valid attribute values are "locked", "stickied, "anchored",
-// or "cyclical") for the thread with the given top post ID
-func UpdateThreadAttribute(opID int, attribute string, value bool) error {
+// UpdateAttribute updates the given attribute (valid attribute values are "locked", "stickied, "anchored",
+// or "cyclical") for the thread
+func (t *Thread) UpdateAttribute(attribute string, value bool) error {
 	updateSQL := "UPDATE DBPREFIXthreads SET "
-	if attribute == "locked" || attribute == "stickied" || attribute == "anchored" || attribute == "cyclical" {
-		updateSQL += attribute + " = ? WHERE id = ?"
-	} else {
+	switch attribute {
+	case "locked":
+		t.Locked = value
+	case "stickied":
+		t.Stickied = value
+	case "anchored":
+		t.Anchored = value
+	case "cyclical":
+		t.Cyclical = value
+	default:
 		return fmt.Errorf("invalid thread attribute %q", attribute)
 	}
-	threadID, err := GetTopPostThreadID(opID)
-	if err != nil {
-		return err
-	}
-	_, err = ExecSQL(updateSQL, value, threadID)
+	updateSQL += attribute + " = ? WHERE id = ?"
+	_, err := ExecSQL(updateSQL, value, t.ID)
 	return err
 }
 
