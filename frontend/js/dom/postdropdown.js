@@ -1,4 +1,3 @@
-/* global webroot */
 import $ from "jquery";
 
 import { isThreadWatched, watchThread, unwatchThread } from "../watcher/watcher";

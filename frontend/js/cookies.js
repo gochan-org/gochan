@@ -1,5 +1,3 @@
-/* global webroot */
-
 import $ from "jquery";
 
 const YEAR_IN_MS = 365*24*60*60*1000;

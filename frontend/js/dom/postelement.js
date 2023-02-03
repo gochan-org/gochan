@@ -1,4 +1,3 @@
-/* global webroot */
 /**
  * @typedef { import("../types/gochan").BoardThread } BoardThread
  * @typedef { import("../types/gochan").ThreadPost } ThreadPost
@@ -120,7 +119,7 @@ export function shrinkOriginalFilenames(elem) {
 		let ext = extname(el.innerText);
 		let noExt = el.innerText.slice(0,el.innerText.lastIndexOf("."));
 		if(noExt.length > 16) {
-			trimmed = noExt.slice(0, 15).trim() + "…" + ext;
+			const trimmed = noExt.slice(0, 15).trim() + "…" + ext;
 			el.setAttribute("trimmed", trimmed);
 			el.text = el.getAttribute("trimmed");
 			$(el).on("mouseover", () => {

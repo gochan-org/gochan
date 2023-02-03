@@ -1,5 +1,3 @@
-/* global webroot, defaultStyle, styles */
-
 import $ from "jquery";
 
 import { showLightBox } from "./dom/lightbox";

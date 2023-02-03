@@ -1,5 +1,3 @@
-/* global webroot */
-
 /**
  * @typedef { import("../types/gochan").StaffAction } StaffAction
  * @typedef { import("../types/gochan").StaffInfo } StaffInfo

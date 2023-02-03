@@ -1,5 +1,3 @@
-/* global webroot */
-
 import $ from "jquery";
 
 const noteCloseTime = 4*1000; // 4 seconds

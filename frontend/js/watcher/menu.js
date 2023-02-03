@@ -1,5 +1,3 @@
-/* global webroot */
-
 import $ from "jquery";
 
 import { $topbar, TopBarButton } from "../dom/topbar";

@@ -1,5 +1,3 @@
-/* global webroot, defaultStyle */
-
 import $ from "jquery";
 
 import "./vars";

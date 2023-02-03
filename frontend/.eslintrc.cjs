@@ -3,6 +3,12 @@ module.exports = {
         "browser": true,
         "es2021": true
     },
+    "globals": {
+        "styles": "readonly",
+        "defaultStyle": "readonly",
+        "webroot": "readonly",
+        "serverTZ": "readonly"
+    },
     "extends": "eslint:recommended",
     "parserOptions": {
         "ecmaVersion": "latest",

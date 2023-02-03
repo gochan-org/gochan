@@ -1,7 +1,5 @@
 // Make the sections table on /manage/boardsections sortable to make changing the list order easier
 
-/* global webroot */
-
 import $ from "jquery";
 import "jquery-ui/ui/widget";
 import "jquery-ui/ui/widgets/mouse";

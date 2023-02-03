@@ -1,4 +1,4 @@
-import $, { ready } from "jquery";
+import $ from "jquery";
 
 const opRE = /\/res\/(\d+)(p(\d)+)?.html$/;
 const threadRE = /^\d+/;

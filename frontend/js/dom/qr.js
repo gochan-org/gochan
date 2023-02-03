@@ -1,5 +1,3 @@
-/* global webroot */
-
 import $ from "jquery";
 import "jquery-ui/ui/version";
 import "jquery-ui/ui/plugin";
@@ -15,7 +13,7 @@ import { getCookie } from "../cookies";
 import { $topbar, topbarHeight } from "./topbar";
 import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../storage";
 import { updateThread } from "../postutil";
-import { currentBoard, currentThread, getPageThread } from "../postinfo";
+import { currentBoard, currentThread } from "../postinfo";
 import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
 import { getUploadFilename, updateUploadImage } from "./uploaddata";
 import { alertLightbox } from "./lightbox";
@@ -209,7 +207,7 @@ export function initQR() {
 	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
 	if(currentThread().thread < 1) {
-		$("form#qrpostform").on("submit", function(e) {
+		$("form#qrpostform").on("submit", function(_e) {
 			copyCaptchaResponse($(this));
 		});
 		return; 
@@ -227,7 +225,7 @@ export function initQR() {
 			data: data, // $form.serialize(),
 			processData: false,
 			contentType: false,
-			success: (data, status, jqXHR) => {
+			success: (data, _status, _jqXHR) => {
 				if(data.error) {
 					alertLightbox(data.error, "Error");
 					return;
@@ -241,7 +239,7 @@ export function initQR() {
 				});
 				return false;
 			},
-			error: (jqXHR, status, error) => {
+			error: (_jqXHR, _status, error) => {
 				alertLightbox(error, "Error");
 			}
 		});
