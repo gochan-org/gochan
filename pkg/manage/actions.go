@@ -781,41 +781,54 @@ var actions = []Action{
 				data["topPostID"] = topPostID
 				var attr string
 				var newVal bool
-				if request.FormValue("unlock") != "" {
-					attr = "locked"
-					newVal = false
-				} else if request.FormValue("lock") != "" {
-					attr = "locked"
-					newVal = true
-				} else if request.FormValue("unsticky") != "" {
-					attr = "stickied"
-					newVal = false
-				} else if request.FormValue("sticky") != "" {
-					attr = "stickied"
-					newVal = true
-				} else if request.FormValue("unanchor") != "" {
-					attr = "anchored"
-					newVal = false
-				} else if request.FormValue("anchor") != "" {
-					attr = "anchored"
-					newVal = true
-				} else if request.FormValue("uncyclical") != "" {
-					attr = "cyclical"
-					newVal = false
-				} else if request.FormValue("cyclical") != "" {
-					attr = "cyclical"
-					newVal = true
-				}
+				var doChange bool // if false, don't bother executing any SQL since nothing will change
 				thread, err := gcsql.GetPostThread(topPostID)
 				if err != nil {
 					errEv.Err(err).Caller().Send()
 					return "", err
 				}
-				if attr != "" {
+				if request.FormValue("unlock") != "" {
+					attr = "locked"
+					newVal = false
+					doChange = thread.Locked != newVal
+				} else if request.FormValue("lock") != "" {
+					attr = "locked"
+					newVal = true
+					doChange = thread.Locked != newVal
+				} else if request.FormValue("unsticky") != "" {
+					attr = "stickied"
+					newVal = false
+					doChange = thread.Stickied != newVal
+				} else if request.FormValue("sticky") != "" {
+					attr = "stickied"
+					newVal = true
+					doChange = thread.Stickied != newVal
+				} else if request.FormValue("unanchor") != "" {
+					attr = "anchored"
+					newVal = false
+					doChange = thread.Anchored != newVal
+				} else if request.FormValue("anchor") != "" {
+					attr = "anchored"
+					newVal = true
+					doChange = thread.Anchored != newVal
+				} else if request.FormValue("uncyclical") != "" {
+					attr = "cyclical"
+					newVal = false
+					doChange = thread.Cyclical != newVal
+				} else if request.FormValue("cyclical") != "" {
+					attr = "cyclical"
+					newVal = true
+					doChange = thread.Cyclical != newVal
+				}
+
+				if attr != "" && doChange {
 					gcutil.LogStr("attribute", attr, errEv, infoEv)
 					gcutil.LogBool("attrVal", newVal, errEv, infoEv)
 					if err = thread.UpdateAttribute(attr, newVal); err != nil {
 						errEv.Err(err).Caller().Send()
+						return "", err
+					}
+					if err = building.BuildBoardPages(board); err != nil {
 						return "", err
 					}
 				}
