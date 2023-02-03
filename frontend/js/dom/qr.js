@@ -98,13 +98,11 @@ function setButtonTimeout(prefix = "", cooldown = 5) {
 	timeoutCB();
 }
 
-export function initQR(pageThread) {
+export function initQR() {
 	if($qr !== null) {
 		// QR box already initialized
 		return;
 	}
-	if(pageThread === undefined)
-		pageThread = getPageThread();
 
 	if(!getBooleanStorageVal("useqr", true)) {
 		return closeQR();
@@ -118,6 +116,7 @@ export function initQR(pageThread) {
 
 	const nameCookie = getCookie("name");
 	const emailCookie = getCookie("email");
+	const $oldForm = $("form#postform");
 
 	let $qrbuttons = $("<div/>")
 		.prop("id", "qrbuttons")
@@ -132,7 +131,7 @@ export function initQR(pageThread) {
 		$("<input/>").prop({
 			type: "hidden",
 			name: "threadid",
-			value: pageThread.op
+			value: $oldForm.find("input[name='threadid']").val()
 		}),
 		$("<input/>").prop({
 			type: "hidden",
@@ -142,7 +141,7 @@ export function initQR(pageThread) {
 		$("<input/>").prop({
 			type: "hidden",
 			name: "boardid",
-			value: 1
+			value: $oldForm.find("input[name='boardid']").val()
 		}),
 		$("<div/>").append($("<input/>").prop({
 			id: "qrpostname",

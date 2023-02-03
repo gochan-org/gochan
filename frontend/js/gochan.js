@@ -41,7 +41,7 @@ $(() => {
 	if(pageThread.board != "") {
 		prepareThumbnails();
 		if(getBooleanStorageVal("useqr", true))
-			initQR(pageThread);
+			initQR();
 		initPostPreviews();
 	}
 	$("div.post, div.reply").each((i, elem) => {
