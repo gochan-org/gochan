@@ -68,11 +68,22 @@ func BuildBoardPages(board *gcsql.Board) error {
 	if err != nil {
 		errEv.Err(err).
 			Caller().Msg("Failed getting board threads")
+		return fmt.Errorf("error getting threads for /%s/: %s", board.Dir, err.Error())
+	}
+	topPosts, err := getBoardTopPosts(board.ID)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed getting board threads")
 		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
+	}
+	opMap := make(map[int]Post)
+	for _, post := range topPosts {
+		post.ParentID = 0
+		opMap[post.threadID] = post
 	}
 
 	for _, thread := range threads {
 		catalogThread := catalogThreadData{
+			Post:   opMap[thread.ID],
 			Locked: boolToInt(thread.Locked),
 			Sticky: boolToInt(thread.Stickied),
 		}

@@ -11,7 +11,7 @@
 {{$global := .}}
 {{- range $t, $thread := .threads}}{{$op := index $thread.Posts 0}}
 	<div class="thread">
-		{{- template "post.html" map "global" $global "board" $.board "post" $op "is_board_page" true -}}
+		{{- template "post.html" map "global" $global "board" $.board "post" $op "is_board_page" true "thread" $thread -}}
 	{{- if gt $thread.Replies 3 -}}
 		<b>{{subtract $thread.Replies 3}} post{{if gt $thread.Replies 4}}s{{end}} omitted</b><br />
 	{{- end -}}

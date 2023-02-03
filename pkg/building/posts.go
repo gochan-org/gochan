@@ -70,6 +70,7 @@ type Post struct {
 	Capcode          string        `json:"capcode"`
 	Timestamp        time.Time     `json:"time"`
 	LastModified     string        `json:"last_modified"`
+	threadID         int
 }
 
 func (p Post) TitleText() string {

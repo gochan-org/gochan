@@ -14,12 +14,13 @@ import (
 )
 
 type catalogThreadData struct {
+	Post
 	Replies       int    `json:"replies"`
 	Images        int    `json:"images"`
 	OmittedPosts  int    `json:"omitted_posts"`  // posts in the thread but not shown on the board page
 	OmittedImages int    `json:"omitted_images"` // uploads in the thread but not shown on the board page
 	Sticky        int    `json:"sticky"`
-	Locked        int    `json:"locked"`
+	Locked        int    `json:"closed"`
 	Posts         []Post `json:"-"`
 	uploads       []gcsql.Upload
 }
@@ -73,9 +74,8 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 	var lastBump time.Time
 	for rows.Next() {
 		var post Post
-		var threadID int
 		err = rows.Scan(
-			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.ID, &post.threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,

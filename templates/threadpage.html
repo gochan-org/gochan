@@ -10,7 +10,7 @@
 		<form action="{{webPath "/util"}}" method="POST" id="main-form">
 		<div class="thread" id="{{$.op.ID}}">
 			{{$global := .}}
-			{{- template "post.html" map "global" $global "board" .board "post" .op -}}
+			{{- template "post.html" map "global" $global "board" .board "post" .op "thread" $.thread -}}
 			{{range $reply_num,$reply := .posts -}}
 				{{- template "post.html" map "global" $global "board" $global.board "post" $reply -}}
 			{{- end -}}
