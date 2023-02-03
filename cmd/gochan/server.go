@@ -49,6 +49,9 @@ func initServer() {
 	router.GET(config.WebPath("/manage"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
 	router.GET(config.WebPath("/manage/:action"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
 	router.POST(config.WebPath("/manage/:action"), bunrouter.HTTPHandlerFunc(manage.CallManageFunction))
+	router.GET(config.WebPath("/post"), bunrouter.HTTPHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, config.WebPath("/"), http.StatusFound)
+	}))
 	router.POST(config.WebPath("/post"), bunrouter.HTTPHandlerFunc(posting.MakePost))
 	router.GET(config.WebPath("/util"), bunrouter.HTTPHandlerFunc(utilHandler))
 	router.POST(config.WebPath("/util"), bunrouter.HTTPHandlerFunc(utilHandler))
