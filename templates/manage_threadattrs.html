@@ -23,7 +23,7 @@
 <select name="thread">
 {{- range $_, $thread := $.threads}}
 	{{with $opIDstr := (print (index $.opMap $thread.ID)) -}}
-	<option value="{{$opIDstr}}" {{with $.thread}}{{if eq (index $.opMap $thread.ID) (index $.opMap $.thread.ID)}}selected="selected"{{end}}{{end}}>>>/{{$.board.Dir}}/{{$opIDstr}}</option>
+	<option value="{{$opIDstr}}" {{with $.thread}}{{if eq $opIDstr (print $.topPostID)}}selected="selected"{{end}}{{end}}>>>/{{$.board.Dir}}/{{$opIDstr}}</option>
 	{{end -}}
 {{end -}}
 </select>
@@ -33,7 +33,7 @@
 <form action="{{$.formURL}}" method="POST">
 	<input type="hidden" name="board" value="{{$.board.Dir}}">
 	<input type="hidden" name="thread" value="{{$.topPostID}}">
-<h3>Thread attributes (click to toggle)</h3>
+<h3>Thread attributes for <a href="{{webPath $.board.Dir "res" (print $.topPostID)}}.html">#{{$.topPostID}}</a> (click to toggle)</h3>
 <table>
 	<tr>
 		<th>Locked</th>

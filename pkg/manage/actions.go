@@ -831,6 +831,15 @@ var actions = []Action{
 					if err = building.BuildBoardPages(board); err != nil {
 						return "", err
 					}
+					post, err := gcsql.GetPostFromID(topPostID, true)
+					if err != nil {
+						errEv.Err(err).Caller().Send()
+						return "", err
+					}
+					if err = building.BuildThreadPages(post); err != nil {
+						return "", err
+					}
+					fmt.Println("Done rebuilding", board.Dir)
 				}
 				data["thread"] = thread
 			}
