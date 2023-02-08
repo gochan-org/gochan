@@ -55,6 +55,9 @@ func GetPostThread(opID int) (*Thread, error) {
 		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	))
+	if errors.Is(err, sql.ErrNoRows) {
+		err = ErrThreadDoesNotExist
+	}
 	return thread, err
 }
 

@@ -9,6 +9,7 @@ import { alertLightbox } from "../dom/lightbox";
 import { $topbar, TopBarButton } from '../dom/topbar';
 import "./sections";
 import "./filebans";
+import { isThreadLocked } from '../api/management';
 
 /**
  * @type {StaffInfo}
@@ -49,14 +50,22 @@ function dropdownHasItem(dropdown, item) {
 
 function setupManagementEvents() {
 	$("select.post-actions").each((_i, el) => {
-		let $el = $(el);
+		const $el = $(el);
+		const $post = $(el.parentElement);
+		const isLocked = isThreadLocked($post);
 		if(!dropdownHasItem(el, "Staff Actions")) {
 			$el.append(`<option disabled="disabled">Staff Actions</option>`);
+		}
+		if($post.hasClass("op-post")) {
+			if(isLocked) {
+				$el.append("<option>Unlock thread</option>");
+			} else {
+				$el.append("<option>Lock thread</option>");
+			}
 		}
 		if(!dropdownHasItem(el, "Posts from this IP")) {
 			$el.append("<option>Posts from this IP</option>");
 		}
-		let $post = $(el.parentElement);
 		let filenameOrig = $post.find("div.file-info a.file-orig").text();
 		if(filenameOrig != "" && !dropdownHasItem(el, "Ban filename")) {
 			$el.append(

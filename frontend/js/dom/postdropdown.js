@@ -6,6 +6,7 @@ import { currentBoard } from "../postinfo";
 import { getCookie } from "../cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
 import { banFile, getPostInfo } from "../management/manage";
+import { updateThreadLock } from "../api/management";
 
 const idRe = /^((reply)|(op))(\d+)/;
 
@@ -154,6 +155,14 @@ function handleActions(action, postIDStr) {
 			deletePost(postID, board);
 			break;
 		// manage stuff
+		case "Lock thread":
+			console.log(`Locking /${board}/${postID}`);
+			updateThreadLock(board, postID, true);
+			break;
+		case "Unlock thread":
+			console.log(`Unlocking /${board}/${postID}`);
+			updateThreadLock(board, postID, false);
+			break;
 		case "Posts from this IP":
 			getPostInfo(postID).then(info => {
 				window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.ip}`);

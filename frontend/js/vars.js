@@ -4,7 +4,8 @@ export default (window.$ = window.jQuery = jquery);
 // overwrite jQuery's deferred exception hook, because otherwise the sourcemap
 // is useless if AJAX is involved
 jquery.Deferred.exceptionHook = function(err) {
-	throw err;
+	// throw err;
+	return err;
 };
 
 
