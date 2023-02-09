@@ -27,7 +27,7 @@ const (
 	FROM DBPREFIXposts
 	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id AND is_deleted = FALSE
 	LEFT JOIN (
-		SELECT id, board_id, last_bump FROM DBPREFIXthreads
+		SELECT id, board_id, last_bump, stickied FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	INNER JOIN (
 		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post

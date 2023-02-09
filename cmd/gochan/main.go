@@ -68,8 +68,10 @@ func main() {
 
 	for _, board := range gcsql.AllBoards {
 		if _, err = board.DeleteOldThreads(); err != nil {
-			fmt.Printf("Error deleting old threads for board /%s/: %s", board.Dir, err)
-			os.Exit(1)
+			fmt.Printf("Error deleting old threads for board /%s/: %s\n", board.Dir, err)
+			gcutil.LogFatal().Err(err).Caller().
+				Str("board", board.Dir).
+				Msg("Failed deleting old threads")
 		}
 	}
 

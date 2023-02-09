@@ -64,7 +64,7 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 }
 
 func getBoardTopPosts(boardID int) ([]Post, error) {
-	const query = postQueryBase + " AND is_top_post AND t.board_id = ? ORDER BY last_bump DESC"
+	const query = postQueryBase + " AND is_top_post AND t.board_id = ? ORDER BY t.stickied DESC, last_bump DESC"
 	rows, err := gcsql.QuerySQL(query, boardID)
 	if err != nil {
 		return nil, err

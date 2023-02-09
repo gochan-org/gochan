@@ -59,12 +59,10 @@ func BuildBoardPages(board *gcsql.Board) error {
 		return err
 	}
 	var currentPageFile *os.File
-	var stickiedThreads []gcsql.Thread
-	var nonStickiedThreads []gcsql.Thread
 	var catalog boardCatalog
 	var catalogThreads []catalogThreadData
 
-	threads, err := board.GetThreads(true, true)
+	threads, err := board.GetThreads(true, true, true)
 	if err != nil {
 		errEv.Err(err).
 			Caller().Msg("Failed getting board threads")
@@ -146,19 +144,11 @@ func BuildBoardPages(board *gcsql.Board) error {
 			catalogThread.OmittedImages = len(catalogThread.uploads) - imagesOnBoardPage
 		}
 
-		// Add thread struct to appropriate list
-		if thread.Stickied {
-			stickiedThreads = append(stickiedThreads, thread)
-		} else {
-			nonStickiedThreads = append(nonStickiedThreads, thread)
-		}
 		catalogThreads = append(catalogThreads, catalogThread)
 	}
 
 	criticalCfg := config.GetSystemCriticalConfig()
 	gcutil.DeleteMatchingFiles(path.Join(criticalCfg.DocumentRoot, board.Dir), "\\d.html$")
-	// Order the threads, stickied threads first, then nonstickied threads.
-	threads = append(stickiedThreads, nonStickiedThreads...)
 
 	// If there are no posts on the board
 	var boardPageFile *os.File

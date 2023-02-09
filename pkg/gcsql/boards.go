@@ -298,7 +298,7 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	}
 	defer tx.Rollback()
 
-	rows, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND is_deleted = FALSE ORDER BY last_bump DESC`,
+	rows, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND is_deleted = FALSE AND stickied = FALSE ORDER BY last_bump DESC`,
 		board.ID)
 	if err != nil {
 		return nil, err
@@ -351,13 +351,22 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	return postIDs, tx.Commit()
 }
 
-func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool) ([]Thread, error) {
+func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool, stickiedFirst bool) ([]Thread, error) {
 	query := selectThreadsBaseSQL + " WHERE board_id = ?"
 	if onlyNotDeleted {
 		query += " AND is_deleted = FALSE"
 	}
+	if orderLastByBump || stickiedFirst {
+		query += " ORDER BY "
+	}
+	if stickiedFirst {
+		query += "stickied DESC"
+		if orderLastByBump {
+			query += ", "
+		}
+	}
 	if orderLastByBump {
-		query += " ORDER BY last_bump DESC"
+		query += " last_bump DESC"
 	}
 	rows, err := QuerySQL(query, board.ID)
 	if err != nil {
