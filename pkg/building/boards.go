@@ -81,11 +81,12 @@ func BuildBoardPages(board *gcsql.Board) error {
 		opMap[post.threadID] = post
 	}
 
+	postCfg := config.GetBoardConfig(board.Dir).PostConfig
 	for _, thread := range threads {
 		catalogThread := catalogThreadData{
-			Post:   opMap[thread.ID],
-			Locked: boolToInt(thread.Locked),
-			Sticky: boolToInt(thread.Stickied),
+			Post:     opMap[thread.ID],
+			Locked:   boolToInt(thread.Locked),
+			Stickied: boolToInt(thread.Stickied),
 		}
 		errEv.Int("threadID", thread.ID)
 		if catalogThread.Images, err = thread.GetReplyFileCount(); err != nil {
@@ -95,7 +96,6 @@ func BuildBoardPages(board *gcsql.Board) error {
 		}
 
 		var maxRepliesOnBoardPage int
-		postCfg := config.GetBoardConfig(board.Dir).PostConfig
 		if thread.Stickied {
 			// If the thread is stickied, limit replies on the archive page to the
 			// configured value for stickied threads.
@@ -142,10 +142,9 @@ func BuildBoardPages(board *gcsql.Board) error {
 			}
 		}
 		if catalogThread.Replies > maxRepliesOnBoardPage {
-			catalogThread.OmittedPosts = catalogThread.Replies - len(catalogThread.Posts)
+			catalogThread.OmittedPosts = catalogThread.Replies - len(catalogThread.Posts) + 1
 			catalogThread.OmittedImages = len(catalogThread.uploads) - imagesOnBoardPage
 		}
-		catalogThread.OmittedPosts = catalogThread.Replies - len(catalogThread.Posts)
 
 		// Add thread struct to appropriate list
 		if thread.Stickied {

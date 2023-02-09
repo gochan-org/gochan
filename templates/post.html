@@ -17,6 +17,7 @@
 </label><a href="{{.post.WebPath}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a>
 <span class="status-icons">
 	{{- if $.thread.Locked -}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
+	{{- if $.thread.Stickied -}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
 </span>
 {{if $.is_board_page -}}
 [<a href="{{$.post.ThreadPath}}">View</a>]
