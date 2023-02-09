@@ -76,7 +76,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	opMap := make(map[int]Post)
 	for _, post := range topPosts {
 		post.ParentID = 0
-		opMap[post.threadID] = post
+		opMap[post.thread.ID] = post
 	}
 
 	postCfg := config.GetBoardConfig(board.Dir).PostConfig

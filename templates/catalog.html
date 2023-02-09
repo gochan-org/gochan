@@ -19,7 +19,12 @@
 				{{if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else}}
 				<img src="{{$thread.ThumbnailPath}}" alt="{{$thread.UploadPath}}" width="{{$thread.ThumbnailWidth}}" height="{{$thread.ThumbnailHeight}}" />
 			{{end}}</a><br />
-			<b>{{if eq $thread.Name ""}}{{$.board.AnonymousName}}{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}<br />
+			<b>{{if eq $thread.Name ""}}{{$.board.AnonymousName}}{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}
+			<span class="status-icons">
+				{{- if $thread.Locked -}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
+				{{- if $thread.Stickied -}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
+			</span>
+			<br />
 			{{$thread.Message}}
 	</div>{{end}}<hr />
 <a href="#">Scroll to top</a>

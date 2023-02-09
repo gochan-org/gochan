@@ -75,10 +75,11 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 	for rows.Next() {
 		var post Post
 		err = rows.Scan(
-			&post.ID, &post.threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+			&post.thread.Locked, &post.thread.Stickied,
 		)
 		if err != nil {
 			return nil, err

@@ -23,11 +23,13 @@ const (
 	coalesce(DBPREFIXfiles.thumbnail_width,0) AS tw,
 	coalesce(DBPREFIXfiles.thumbnail_height,0) AS th,
 	coalesce(DBPREFIXfiles.width,0) AS width,
-	coalesce(DBPREFIXfiles.height,0) AS height
+	coalesce(DBPREFIXfiles.height,0) AS height,
+	t.locked as locked,
+	t.stickied as stickied
 	FROM DBPREFIXposts
 	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id AND is_deleted = FALSE
 	LEFT JOIN (
-		SELECT id, board_id, last_bump, stickied FROM DBPREFIXthreads
+		SELECT id, board_id, last_bump, locked, stickied FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	INNER JOIN (
 		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
@@ -70,7 +72,7 @@ type Post struct {
 	Capcode          string        `json:"capcode"`
 	Timestamp        time.Time     `json:"time"`
 	LastModified     string        `json:"last_modified"`
-	threadID         int
+	thread           gcsql.Thread
 }
 
 func (p Post) TitleText() string {
@@ -109,19 +111,26 @@ func (p Post) UploadPath() string {
 		return ""
 	}
 	return config.WebPath(p.BoardDir, "src", p.Filename)
+}
 
+func (p *Post) Locked() bool {
+	return p.thread.Locked
+}
+
+func (p *Post) Stickied() bool {
+	return p.thread.Stickied
 }
 
 func GetBuildablePost(id int, boardid int) (*Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
 	var post Post
-	var threadID int
 	var lastBump time.Time
 	err := gcsql.QueryRowSQL(query, []interface{}{id}, []interface{}{
-		&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+		&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
 		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
 		&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+		&post.thread.Locked, &post.thread.Stickied,
 	})
 	if err != nil {
 		return nil, err
@@ -145,12 +154,12 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 	var lastBump time.Time
 	for rows.Next() {
 		var post Post
-		var threadID int
 		if err = rows.Scan(
-			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+			&post.thread.Locked, &post.thread.Stickied,
 		); err != nil {
 			return nil, err
 		}
@@ -172,12 +181,12 @@ func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 	var lastBump time.Time
 	for rows.Next() {
 		var post Post
-		var threadID int
 		err = rows.Scan(
-			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+			&post.thread.Locked, &post.thread.Stickied,
 		)
 		if err != nil {
 			return nil, err
