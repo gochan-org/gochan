@@ -12,18 +12,20 @@ const idRe = /^((reply)|(op))(\d+)/;
 
 function editPost(id, _board) {
 	let cookiePass = getCookie("password");
-	promptLightbox(cookiePass, true, () => {
+	promptLightbox(cookiePass, true, (_jq, inputData) => {
 		$("input[type=checkbox]").prop("checked", false);
 		$(`input#check${id}`).prop("checked", true);
+		$("input#delete-password").val(inputData);
 		$("input[name=edit_btn]").trigger("click");
 	}, "Edit post");
 }
 
 function moveThread(id, _board) {
 	let cookiePass = getCookie("password");
-	promptLightbox(cookiePass, true, () => {
+	promptLightbox(cookiePass, true, (_jq, inputData) => {
 		$("input[type=checkbox]").prop("checked", false);
 		$(`input#check${id}`).prop("checked", true);
+		$("input#delete-password").val(inputData);
 		$("input[name=move_btn]").trigger("click");
 	}, "Move thread");
 }

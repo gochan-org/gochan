@@ -8,7 +8,7 @@
 		<input name="postid" type="hidden" value="{{.post.ID}}" />
 		<input name="boardid" type="hidden" value="{{.board.ID}}" />
 		<input name="threadid" type="hidden" value="{{.post.ThreadID}}" />
-		<input name="password" type="hidden" value="{{.post.Password}}" />
+		<input name="password" type="hidden" value="{{.password}}" />
 		<input name="doedit" type="hidden" value="post" />
 		<table id="postbox-static">
 			<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "!" .post.Tripcode}}</td></tr>
@@ -25,7 +25,7 @@
 		<input name="postid" type="hidden" value="{{$.post.ID}}" />
 		<input name="boardid" type="hidden" value="{{$.board.ID}}" />
 		<input name="threadid" type="hidden" value="{{$.post.ThreadID}}" />
-		<input name="password" type="hidden" value="{{$.post.Password}}" />
+		<input name="password" type="hidden" value="{{$.password}}" />
 		<input name="doedit" type="hidden" value="upload" />
 		<table id="postbox-static">
 			{{- with .upload -}}

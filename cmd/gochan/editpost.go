@@ -75,6 +75,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			"siteConfig":     config.GetSiteConfig(),
 			"board":          board,
 			"boardConfig":    config.GetBoardConfig(""),
+			"password":       password,
 			"post":           post,
 			"referrer":       request.Referer(),
 		}
@@ -92,7 +93,6 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		writer.Write(buf.Bytes())
 	}
 	if doEdit == "post" || doEdit == "upload" {
-		var password string
 		postid, err := strconv.Atoi(request.FormValue("postid"))
 		if err != nil {
 			errEv.Err(err).Caller().
@@ -122,7 +122,9 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		}
 
 		rank := manage.GetStaffRank(request)
-		if request.FormValue("password") != password && rank == 0 {
+		password := request.PostFormValue("password")
+		passwordMD5 := gcutil.Md5Sum(password)
+		if post.Password != passwordMD5 && rank == 0 {
 			server.ServeError(writer, "Wrong password", wantsJSON, nil)
 			return
 		}
