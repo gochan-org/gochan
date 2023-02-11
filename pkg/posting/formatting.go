@@ -35,7 +35,7 @@ type MessageFormatter struct {
 func (mf *MessageFormatter) InitBBcode() {
 	mf.bbCompiler = bbcode.NewCompiler(true, true)
 	mf.bbCompiler.SetTag("center", nil)
-	mf.bbCompiler.SetTag("code", nil)
+	// mf.bbCompiler.SetTag("code", nil)
 	mf.bbCompiler.SetTag("color", nil)
 	mf.bbCompiler.SetTag("img", nil)
 	mf.bbCompiler.SetTag("quote", nil)
