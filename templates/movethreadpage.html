@@ -7,12 +7,12 @@
 	<input name="postid" type="hidden" value="{{.postid}}" />
 	<input name="domove" type="hidden" value="1" />
 	<input type="hidden" name="srcboardid" value="{{.srcBoard.ID}}" />
+	<input type="hidden" name="password" value="{{.password}}" />
 	<table>
 		<tr><td>Source board:</td><td>/{{.srcBoard.Dir}}/</td></tr>
 		<tr><td>Desination board:</td><td><select name="destboardid" id="">
 			{{range $b,$board := .destBoards}}<option value="{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}}</option>{{end}}
 		</select></td></tr>
-		<tr><td>Password:</td><td><input type="password" name="postpassword"/></td></tr>
 	</table>
 	<input type="submit" value="Move thread" />
 	<input type="button" value="Cancel" onclick="window.location = '{{webPath .srcBoard.Dir}}/'">

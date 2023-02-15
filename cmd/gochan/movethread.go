@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"net/http"
 	"os"
@@ -19,8 +19,29 @@ import (
 )
 
 func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.ResponseWriter, request *http.Request) {
-	password := request.FormValue("postpassword")
+	password := request.PostFormValue("password")
+	var passwordMD5 string
+	if password != "" {
+		passwordMD5 = gcutil.Md5Sum(password)
+	}
 	wantsJSON := serverutil.IsRequestingJSON(request)
+	errEv := gcutil.LogError(nil)
+	infoEv := gcutil.LogInfo()
+	defer func() {
+		errEv.Discard()
+		infoEv.Discard()
+	}()
+	gcutil.LogStr("IP", gcutil.GetRealIP(request), errEv, infoEv)
+
+	rank := manage.GetStaffRank(request)
+
+	if password == "" && rank == 0 {
+		errEv.Msg("Thread move request rejected, non-staff didn't provide a password")
+		writer.WriteHeader(http.StatusBadRequest)
+		server.ServeError(writer, "Password required for post moving", wantsJSON, nil)
+		return
+	}
+
 	if moveBtn == "Move thread" {
 		// user clicked on move thread button on board or thread page
 
@@ -32,82 +53,73 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			return
 		}
 		post, err := gcsql.GetPostFromID(checkedPosts[0], true)
+		gcutil.LogInt("postid", checkedPosts[0], errEv, infoEv)
 
 		if err != nil {
+			errEv.Err(err).Caller().Msg("Error getting post from ID")
 			server.ServeError(writer, err.Error(), wantsJSON, nil)
-			gcutil.LogError(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Int("postid", checkedPosts[0]).
-				Msg("Error getting post from ID")
 			return
 		}
 		if !post.IsTopPost {
-			topPostID, err := post.TopPostID()
-			if err != nil {
-				server.ServeError(writer, "Unable to get top post ID: "+err.Error(), wantsJSON, map[string]interface{}{
-					"postid": post.ID,
-				})
-				gcutil.LogError(err).
-					Str("IP", gcutil.GetRealIP(request)).
-					Int("postid", post.ID).
-					Msg("Unable to get top post ID")
-				return
-			}
 			server.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]interface{}{
-				"postid":  checkedPosts[0],
-				"toppost": topPostID,
+				"postid": checkedPosts[0],
 			})
 			return
 		}
 
-		srcBoardID, err := strconv.Atoi(request.PostForm.Get("boardid"))
+		srcBoardID, err := strconv.Atoi(request.PostFormValue("boardid"))
 		if err != nil {
-			server.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostForm.Get("boardid")), wantsJSON, map[string]interface{}{
+			errEv.Err(err).Caller().
+				Str("srcBoardIDstr", request.PostFormValue("boardid")).Send()
+			server.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostFormValue("boardid")), wantsJSON, map[string]interface{}{
 				"boardid": srcBoardID,
 			})
+			return
 		}
 		var destBoards []gcsql.Board
 		var srcBoard gcsql.Board
 		for _, board := range gcsql.AllBoards {
-			if board.ID != srcBoardID {
-				destBoards = append(destBoards, board)
-			} else {
+			if board.ID == srcBoardID {
 				srcBoard = board
+			} else {
+				destBoards = append(destBoards, board)
 			}
 		}
+		gcutil.LogStr("srcBoard", srcBoard.Dir, errEv, infoEv)
+		buf := bytes.NewBufferString("")
 		if err = serverutil.MinifyTemplate(gctemplates.MoveThreadPage, map[string]interface{}{
 			"boardConfig": config.GetBoardConfig(srcBoard.Dir),
 			"postid":      post.ID,
 			"destBoards":  destBoards,
+			"password":    password,
 			"pageTitle":   fmt.Sprintf("Move thread #%d", post.ID),
 			"srcBoard":    srcBoard,
-		}, writer, "text/html"); err != nil {
-			gcutil.LogError(err).
-				Str("IP", gcutil.GetRealIP(request)).
-				Int("postid", post.ID).Send()
+		}, buf, "text/html"); err != nil {
+			errEv.Err(err).Caller().Send()
 			server.ServeError(writer, err.Error(), wantsJSON, nil)
 			return
 		}
+		writer.Write(buf.Bytes())
 	} else if doMove == "1" {
 		// user got here from the move thread page
-		rank := manage.GetStaffRank(request)
-		if password == "" && rank == 0 {
-			writer.WriteHeader(http.StatusBadRequest)
-			server.ServeError(writer, "Password required for post moving", wantsJSON, nil)
-			return
-		}
-		postIDstr := request.PostForm.Get("postid")
+		postIDstr := request.PostFormValue("postid")
 		postID, err := strconv.Atoi(postIDstr)
 		if err != nil {
+			errEv.Err(err).Caller().
+				Str("postIDstr", postIDstr).Send()
 			writer.WriteHeader(http.StatusBadRequest)
 			server.ServeError(writer, fmt.Sprintf("Error parsing postid value: %q: %s", postIDstr, err.Error()), wantsJSON, map[string]interface{}{
 				"postid": postIDstr,
 			})
 			return
 		}
-		srcBoardIDstr := request.PostForm.Get("srcboardid")
+		gcutil.LogInt("postID", postID, errEv, infoEv)
+
+		srcBoardIDstr := request.PostFormValue("srcboardid")
 		srcBoardID, err := strconv.Atoi(srcBoardIDstr)
 		if err != nil {
+			errEv.Err(err).Caller().
+				Str("srcBoardIDstr", srcBoardIDstr).Send()
 			writer.WriteHeader(http.StatusBadRequest)
 			server.ServeError(writer, fmt.Sprintf("Error parsing srcboardid value: %q: %s", srcBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
 				"srcboardid": srcBoardIDstr,
@@ -116,38 +128,43 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		}
 		srcBoard, err := gcsql.GetBoardFromID(srcBoardID)
 		if err != nil {
-			gcutil.LogError(err).
-				Int("srcboardid", srcBoardID).Send()
+			errEv.Err(err).Caller().
+				Int("srcBoardID", srcBoardID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"srcboardid": srcBoardID,
 			})
 			return
 		}
+		gcutil.LogStr("srcBoard", srcBoard.Dir, errEv, infoEv)
 
-		destBoardIDstr := request.PostForm.Get("destboardid")
+		destBoardIDstr := request.PostFormValue("destboardid")
 		destBoardID, err := strconv.Atoi(destBoardIDstr)
 		if err != nil {
+			errEv.Err(err).Caller().
+				Str("destBoardIDstr", destBoardIDstr).Send()
 			writer.WriteHeader(http.StatusBadRequest)
 			server.ServeError(writer, fmt.Sprintf("Error parsing destboardid value: %q: %s", destBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
 				"destboardid": destBoardIDstr,
 			})
 			return
 		}
+
 		destBoard, err := gcsql.GetBoardFromID(destBoardID)
 		if err != nil {
-			gcutil.LogError(err).
-				Int("destboardid", destBoardID).Send()
+			errEv.Err(err).Caller().
+				Int("destBoardID", destBoardID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"destboardid": destBoardID,
 			})
 			return
 		}
+		gcutil.LogStr("destBoard", destBoard.Dir, errEv, infoEv)
 
 		post, err := gcsql.GetPostFromID(postID, true)
 		if err != nil {
-			gcutil.LogError(err).Int("postid", postID).Send()
+			errEv.Err(err).Caller().Send()
 			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"postid": postID,
@@ -155,31 +172,30 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			return
 		}
 
-		passwordMD5 := gcutil.Md5Sum(password)
 		if passwordMD5 != post.Password && rank == 0 {
+			errEv.Msg("Wrong password")
 			server.ServeError(writer, "Wrong password", wantsJSON, nil)
 			return
 		}
 
 		if err = post.ChangeBoardID(destBoardID); err != nil {
-			gcutil.LogError(err).
-				Int("postID", postID).
-				Int("destBoardID", destBoardID).
-				Msg("Failed changing thread board ID")
+			errEv.Err(err).Caller().Msg("Failed changing thread board ID")
 			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
 				"postID":      postID,
 				"destBoardID": destBoardID,
 			})
 			return
 		}
+
 		threadUploads, err := gcsql.GetThreadFiles(post)
 		if err != nil {
-			gcutil.LogError(err).Int("postid", post.ID).Send()
+			errEv.Err(err).Caller().Msg("Unable to get upload info")
 			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Error getting list of files in thread", wantsJSON, map[string]interface{}{
 				"postid": post.ID,
 			})
 		}
+
 		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 		for _, upload := range threadUploads {
 			// move the upload itself
@@ -187,10 +203,8 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				path.Join(documentRoot, srcBoard.Dir, "src", upload.Filename),
 				path.Join(documentRoot, destBoard.Dir, "src", upload.Filename))
 			if tmpErr != nil {
-				gcutil.LogError(err).
+				errEv.Err(err).Caller().
 					Str("filename", upload.Filename).
-					Str("srcBoard", srcBoard.Dir).
-					Str("destBoard", destBoard.Dir).
 					Msg("Unable to move file from source board to destination board")
 				if err == nil {
 					// log all errors but only report the first one to the user
@@ -203,10 +217,8 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 				path.Join(documentRoot, srcBoard.Dir, "thumb", upload.ThumbnailPath("upload")),
 				path.Join(documentRoot, destBoard.Dir, "thumb", upload.ThumbnailPath("upload")),
 			); tmpErr != nil {
-				gcutil.LogError(err).
+				errEv.Err(err).Caller().
 					Str("thumbnail", upload.ThumbnailPath("upload")).
-					Str("srcBoard", srcBoard.Dir).
-					Str("destBoard", destBoard.Dir).
 					Msg("Unable to move thumbnail from source board to destination board")
 				if err == nil {
 					err = tmpErr
@@ -218,10 +230,8 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 					path.Join(documentRoot, srcBoard.Dir, "thumb", upload.ThumbnailPath("catalog")),
 					path.Join(documentRoot, destBoard.Dir, "thumb", upload.ThumbnailPath("catalog")),
 				); tmpErr != nil {
-					gcutil.LogError(err).
+					errEv.Err(err).Caller().
 						Str("catalogThumbnail", upload.ThumbnailPath("catalog")).
-						Str("srcBoard", srcBoard.Dir).
-						Str("destBoard", destBoard.Dir).
 						Msg("Unable to move catalog thumbnail from source board to destination board")
 				}
 				if err == nil {
@@ -230,11 +240,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			}
 			if tmpErr == nil {
 				// moved file successfully
-				gcutil.LogInfo().
-					Int("movedFileForPost", post.ID).
-					Str("srcBoard", srcBoard.Dir).
-					Str("destBoard", destBoard.Dir).
-					Str("filename", upload.Filename).Send()
+				infoEv.Str("filename", upload.Filename)
 			}
 		}
 		if err != nil {
@@ -250,11 +256,9 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 
 		// remove the old thread page (new one will be created if no errors)
 		if err = os.Remove(path.Join(documentRoot, srcBoard.Dir, "res", postIDstr+".html")); err != nil {
-			gcutil.LogError(err).
-				Int("postID", postID).
-				Str("srcBoard", srcBoard.Dir).
+			errEv.Err(err).Caller().
 				Msg("Failed deleting thread page")
-			writer.WriteHeader(500)
+			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed deleting thread page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postID":   postID,
 				"srcBoard": srcBoard.Dir,
@@ -263,11 +267,9 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		}
 		// same for the old JSON file
 		if err = os.Remove(path.Join(documentRoot, srcBoard.Dir, "res", postIDstr+".json")); err != nil {
-			gcutil.LogError(err).
-				Int("postID", postID).
-				Str("srcBoard", srcBoard.Dir).
+			errEv.Err(err).Caller().
 				Msg("Failed deleting thread JSON file")
-			writer.WriteHeader(500)
+			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed deleting thread JSON file: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postID":   postID,
 				"srcBoard": srcBoard.Dir,
@@ -275,30 +277,22 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			return
 		}
 
-		// oldThreadID := post.ThreadID
-
-		// oldParentID := post.ParentID // hacky, this will likely be fixed when gcsql's handling of ParentID struct properties is changed
-		// post.ParentID = 0
 		if err = building.BuildThreadPages(post); err != nil {
-			gcutil.LogError(err).Int("postID", postID).Msg("Failed moved thread page")
-			writer.WriteHeader(500)
+			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed building thread page: "+err.Error(), wantsJSON, map[string]interface{}{
-				"postID": postID,
+				"postid": postID,
 			})
 			return
 		}
-		// post.ParentID = oldParentID
 		if err = building.BuildBoardPages(srcBoard); err != nil {
-			gcutil.LogError(err).Int("srcBoardID", srcBoardID).Send()
-			writer.WriteHeader(500)
+			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"srcBoardID": srcBoardID,
 			})
 			return
 		}
 		if err = building.BuildBoardPages(destBoard); err != nil {
-			gcutil.LogError(err).Int("destBoardID", destBoardID).Send()
-			writer.WriteHeader(500)
+			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"destBoardID": destBoardID,
 			})
@@ -314,13 +308,14 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		} else {
 			http.Redirect(writer, request, config.WebPath(destBoard.Dir, "res", postIDstr+".html"), http.StatusMovedPermanently)
 		}
+		infoEv.Send()
 	}
 }
 
 // move file if it exists on the filesystem and don't throw any errors if it doesn't, returning any other errors
 func moveFileIfExists(src string, dest string) error {
 	err := os.Rename(src, dest)
-	if errors.Is(err, os.ErrNotExist) {
+	if os.IsExist(err) {
 		// file doesn't exist
 		return nil
 	}
