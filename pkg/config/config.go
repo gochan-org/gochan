@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net"
 	"os"
+	"os/exec"
+	"path"
 	"reflect"
 	"strings"
 
@@ -91,27 +93,11 @@ func (gcfg *GochanConfig) setField(field string, value interface{}) {
 	structFieldValue.Set(val)
 }
 
-// ToMap returns the configuration file as a map. This will probably be removed
-func (gcfg *GochanConfig) ToMap() map[string]interface{} {
-	cVal := reflect.ValueOf(gcfg).Elem()
-	cType := reflect.TypeOf(*gcfg)
-	numFields := cType.NumField()
-	out := make(map[string]interface{})
-	for f := 0; f < numFields; f++ {
-		field := cVal.Field(f)
-		if !field.CanSet() {
-			continue
-		}
-		out[cType.Field(f).Name] = field.Elem().Interface()
-	}
-	return out
-}
-
 // ValidateValues checks to make sure that the configuration options are usable
 // (e.g., ListenIP is a valid IP address, Port isn't a negative number, etc)
 func (gcfg *GochanConfig) ValidateValues() error {
 	if net.ParseIP(gcfg.ListenIP) == nil {
-		return &ErrInvalidValue{Field: "ListenIP", Value: gcfg.ListenIP}
+		return &InvalidValueError{Field: "ListenIP", Value: gcfg.ListenIP}
 	}
 	changed := false
 
@@ -129,7 +115,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 	_, err := gcutil.ParseDurationString(gcfg.CookieMaxAge)
 	if err == gcutil.ErrInvalidDurationString {
-		return &ErrInvalidValue{Field: "CookieMaxAge", Value: gcfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
+		return &InvalidValueError{Field: "CookieMaxAge", Value: gcfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
 	} else if err != nil {
 		return err
 	}
@@ -149,13 +135,13 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 
 	if !found {
-		return &ErrInvalidValue{
+		return &InvalidValueError{
 			Field:   "DBtype",
 			Value:   gcfg.DBtype,
 			Details: "currently supported values: " + strings.Join(acceptedDrivers, ",")}
 	}
 	if len(gcfg.Styles) == 0 {
-		return &ErrInvalidValue{Field: "Styles", Value: gcfg.Styles}
+		return &InvalidValueError{Field: "Styles", Value: gcfg.Styles}
 	}
 	if gcfg.DefaultStyle == "" {
 		gcfg.DefaultStyle = gcfg.Styles[0].Filename
@@ -218,7 +204,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 
 	if gcfg.EnableGeoIP {
 		if gcfg.GeoIPDBlocation == "" {
-			return &ErrInvalidValue{Field: "GeoIPDBlocation", Value: "", Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true"}
+			return &InvalidValueError{Field: "GeoIPDBlocation", Value: "", Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true"}
 		}
 	}
 
@@ -231,6 +217,29 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		gcfg.RandomSeed = gcutil.RandomString(randomStringSize)
 		changed = true
 	}
+
+	if gcfg.StripImageMetadata != "" && gcfg.StripImageMetadata != "none" {
+		if gcfg.ExiftoolPath == "" {
+			if _, err = exec.LookPath("exiftool"); err != nil {
+				return &InvalidValueError{
+					Field: "ExiftoolPath", Value: "", Details: "unable to find exiftool in the system path",
+				}
+			}
+		} else {
+			if _, err = exec.LookPath(path.Join(gcfg.ExiftoolPath, "exiftool")); err != nil {
+				return &InvalidValueError{
+					Field: "ExiftoolPath", Value: gcfg.ExiftoolPath, Details: "unable to find exiftool at the given location",
+				}
+			}
+		}
+	} else if gcfg.StripImageMetadata != "exif" && gcfg.StripImageMetadata != "all" {
+		return &InvalidValueError{
+			Field:   "StripImageMetadata",
+			Value:   gcfg.StripImageMetadata,
+			Details: `invalid valuee, valid values are "","none","exif", or "all"`,
+		}
+	}
+
 	if !changed {
 		return nil
 	}
@@ -367,6 +376,12 @@ type UploadConfig struct {
 	ThumbHeightReply      int  `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
 	ThumbWidthCatalog     int  `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
 	ThumbHeightCatalog    int  `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
+
+	// Sets what (if any) metadata to remove from uploaded images using exiftool.
+	// Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata)
+	StripImageMetadata string
+	// The path to the exiftool command. If unset or empty, the system path will be used to find it
+	ExiftoolPath string
 }
 
 type PostConfig struct {

@@ -37,14 +37,14 @@ type MissingField struct {
 	Description string
 }
 
-// ErrInvalidValue represents a GochanConfig field with a bad value
-type ErrInvalidValue struct {
+// InvalidValueError represents a GochanConfig field with a bad value
+type InvalidValueError struct {
 	Field   string
 	Value   interface{}
 	Details string
 }
 
-func (iv *ErrInvalidValue) Error() string {
+func (iv *InvalidValueError) Error() string {
 	str := fmt.Sprintf("invalid %s value: %#v", iv.Field, iv.Value)
 	if iv.Details != "" {
 		str += " - " + iv.Details
