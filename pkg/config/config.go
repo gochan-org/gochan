@@ -218,7 +218,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		changed = true
 	}
 
-	if gcfg.StripImageMetadata != "" && gcfg.StripImageMetadata != "none" {
+	if gcfg.StripImageMetadata == "exif" || gcfg.StripImageMetadata == "all" {
 		if gcfg.ExiftoolPath == "" {
 			if _, err = exec.LookPath("exiftool"); err != nil {
 				return &InvalidValueError{
@@ -232,11 +232,11 @@ func (gcfg *GochanConfig) ValidateValues() error {
 				}
 			}
 		}
-	} else if gcfg.StripImageMetadata != "exif" && gcfg.StripImageMetadata != "all" {
+	} else if gcfg.StripImageMetadata != "" && gcfg.StripImageMetadata != "none" {
 		return &InvalidValueError{
 			Field:   "StripImageMetadata",
 			Value:   gcfg.StripImageMetadata,
-			Details: `invalid valuee, valid values are "","none","exif", or "all"`,
+			Details: `valid values are "","none","exif", or "all"`,
 		}
 	}
 
