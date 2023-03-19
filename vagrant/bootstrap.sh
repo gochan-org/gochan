@@ -3,7 +3,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-export GO_VERSION=1.16
+export GO_VERSION=1.18
 
 if [ -z "$DBTYPE" ]; then
 	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql'."
