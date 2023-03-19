@@ -204,7 +204,7 @@ def build(debugging=False):
 	trimpath = "-trimpath=" + pwd
 	gcflags = " -gcflags=\"" + trimpath + "{}\""
 	ldflags = " -ldflags=\"-X main.versionStr=" + version + "{}\""
-	build_cmd = "go build -v -asmflags=" + trimpath
+	build_cmd = "go build -v -trimpath -asmflags=" + trimpath
 
 	print("Building error pages from templates")
 	with open("templates/404.html", "r") as tmpl404:
