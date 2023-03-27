@@ -4,6 +4,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/gochan-org/gochan/pkg/config"
 )
 
 var (
@@ -76,20 +78,49 @@ func tmpSqlAdjust() error {
 		}
 		if numColumns == 0 {
 			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
-			_, err = ExecSQL(query)
+			if _, err = ExecSQL(query); err != nil {
+				return err
+			}
 		}
+
+		// Yay, collation! Everybody loves MySQL's default collation!
+		criticalConfig := config.GetSystemCriticalConfig()
+		query = `ALTER DATABASE ` + criticalConfig.DBname + ` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci`
+		if _, err = gcdb.db.Exec(query); err != nil {
+			return err
+		}
+
+		rows, err := QuerySQL(
+			`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`,
+			criticalConfig.DBname)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var tableName string
+			err = rows.Scan(&tableName)
+			if err != nil {
+				return err
+			}
+			query = `ALTER TABLE ` + tableName + ` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+			if _, err = gcdb.db.Exec(query); err != nil {
+				return err
+			}
+		}
+		err = nil
 	case "postgres":
 		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`)
 		if err != nil {
 			return err
 		}
-		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`)
+		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`)
 	case "sqlite3":
 		_, err = ExecSQL(`PRAGMA foreign_keys = ON`)
 		if err != nil {
 			return err
 		}
-		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`)
+		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`)
 	}
 
 	return err
