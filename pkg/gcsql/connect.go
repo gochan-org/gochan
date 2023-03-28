@@ -120,7 +120,14 @@ func tmpSqlAdjust() error {
 		if err != nil {
 			return err
 		}
-		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`)
+		query = `SELECT COUNT(*) FROM PRAGMA_TABLE_INFO('DBPREFIXwordfilters') WHERE name = 'board_dirs'`
+		var numColumns int
+		if err = QueryRowSQL(query, interfaceSlice(), interfaceSlice(&numColumns)); err != nil {
+			return err
+		}
+		if numColumns == 0 {
+			_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`)
+		}
 	}
 
 	return err
