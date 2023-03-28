@@ -17,7 +17,13 @@ apt-get -y update && apt-get -y upgrade
 
 if [ "$DBTYPE" == "mysql" ]; then
 	# Using MySQL (stable)
-	apt-get -y install mariadb-server mariadb-client 
+	if [ "$MYSQL_MAINLINE" == "1" ]; then
+		echo "using mainline MySQL instead of MariaDB"
+		apt-get -y install mysql-server mysql-client 
+	else
+		echo "using MariaDB fork of MySQL (default)"
+		apt-get -y install mariadb-server mariadb-client 
+	fi
 	mysql -uroot <<- EOF
 	CREATE DATABASE IF NOT EXISTS gochan;
 	GRANT USAGE ON *.* TO gochan IDENTIFIED BY 'gochan'; \
@@ -25,8 +31,13 @@ if [ "$DBTYPE" == "mysql" ]; then
 	SET PASSWORD FOR 'gochan'@'%' = PASSWORD('gochan');
 	FLUSH PRIVILEGES;
 	EOF
-	systemctl enable mariadb
-	systemctl start mariadb &
+	if [ "$MYSQL_MAINLINE" == "1" ]; then
+		systemctl enable mysql
+		systemctl start mysql &
+	else
+		systemctl enable mariadb
+		systemctl start mariadb &
+	fi
 	wait
 	if [ -d /lib/systemd ]; then
 		cp /vagrant/sample-configs/gochan-mysql.service /lib/systemd/system/gochan.service

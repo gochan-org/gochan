@@ -114,7 +114,7 @@ func CheckAndInitializeDatabase(dbType string) error {
 func buildNewDatabase(dbType string) error {
 	var err error
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
-		return errors.New("database initialization failed: " + err.Error())
+		return err
 	}
 	if err = createDefaultAdminIfNoStaff(); err != nil {
 		return errors.New("failed creating default admin account: " + err.Error())

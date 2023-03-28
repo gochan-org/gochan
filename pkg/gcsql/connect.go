@@ -4,6 +4,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/gochan-org/gochan/pkg/config"
 )
 
 var (
@@ -27,15 +29,20 @@ func RunSQLFile(path string) error {
 	sqlStr := regexp.MustCompile("--.*\n?").ReplaceAllString(string(sqlBytes), " ")
 	sqlArr := strings.Split(gcdb.replacer.Replace(sqlStr), ";")
 
+	tx, err := BeginTx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	for _, statement := range sqlArr {
 		statement = strings.Trim(statement, " \n\r\t")
 		if len(statement) > 0 {
-			if _, err = gcdb.db.Exec(statement); err != nil {
+			if _, err = ExecTxSQL(tx, statement); err != nil {
 				return err
 			}
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 // TODO: get gochan-migration working so this doesn't have to sit here
@@ -46,33 +53,87 @@ func tmpSqlAdjust() error {
 	switch gcdb.driver {
 	case "mysql":
 		query = `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-		WHERE CONSTRAINT_NAME = 'wordfilters_staff_id_fk'
+		WHERE CONSTRAINT_NAME = 'wordfilters_board_id_fk'
 		AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
-		numConstraints := 3
+		var numConstraints int
 		if err = gcdb.QueryRowSQL(query,
 			interfaceSlice(),
 			interfaceSlice(&numConstraints)); err != nil {
 			return err
 		}
 		if numConstraints > 0 {
-			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY IF EXISTS wordfilters_board_id_fk`
+			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY wordfilters_board_id_fk`
 		} else {
 			query = ""
 		}
+		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		AND TABLE_NAME = 'DBPREFIXwordfilters'
+		AND COLUMN_NAME = 'board_dirs'`
+		var numColumns int
+		if err = gcdb.QueryRowSQL(query,
+			interfaceSlice(),
+			interfaceSlice(&numColumns)); err != nil {
+			return err
+		}
+		if numColumns == 0 {
+			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
+			if _, err = ExecSQL(query); err != nil {
+				return err
+			}
+		}
+
+		// Yay, collation! Everybody loves MySQL's default collation!
+		criticalConfig := config.GetSystemCriticalConfig()
+		query = `ALTER DATABASE ` + criticalConfig.DBname + ` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci`
+		if _, err = gcdb.db.Exec(query); err != nil {
+			return err
+		}
+
+		query = `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`
+		rows, err := QuerySQL(query, criticalConfig.DBname)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var tableName string
+			err = rows.Scan(&tableName)
+			if err != nil {
+				return err
+			}
+			query = `ALTER TABLE ` + tableName + ` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+			if _, err = gcdb.db.Exec(query); err != nil {
+				return err
+			}
+		}
+		err = nil
 	case "postgres":
-		query = `ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`
+		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`)
+		if err != nil {
+			return err
+		}
+		query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`
+		if _, err = ExecSQL(query); err != nil {
+			return err
+		}
 	case "sqlite3":
 		_, err = ExecSQL(`PRAGMA foreign_keys = ON`)
-		return err
+		if err != nil {
+			return err
+		}
+		query = `SELECT COUNT(*) FROM PRAGMA_TABLE_INFO('DBPREFIXwordfilters') WHERE name = 'board_dirs'`
+		var numColumns int
+		if err = QueryRowSQL(query, interfaceSlice(), interfaceSlice(&numColumns)); err != nil {
+			return err
+		}
+		if numColumns == 0 {
+			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
+			if _, err = ExecSQL(query); err != nil {
+				return err
+			}
+		}
 	}
-	if _, err = gcdb.ExecSQL(query); err != nil {
-		return err
-	}
-	query = `ALTER TABLE DBPREFIXwordfilters DROP COLUMN IF EXISTS board_id`
-	if _, err = gcdb.ExecSQL(query); err != nil {
-		return err
-	}
-	query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`
-	_, err = gcdb.ExecSQL(query)
+
 	return err
 }
