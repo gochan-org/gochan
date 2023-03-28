@@ -90,9 +90,8 @@ func tmpSqlAdjust() error {
 			return err
 		}
 
-		rows, err := QuerySQL(
-			`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`,
-			criticalConfig.DBname)
+		query = `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`
+		rows, err := QuerySQL(query, criticalConfig.DBname)
 		if err != nil {
 			return err
 		}
@@ -114,7 +113,10 @@ func tmpSqlAdjust() error {
 		if err != nil {
 			return err
 		}
-		_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`)
+		query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`
+		if _, err = ExecSQL(query); err != nil {
+			return err
+		}
 	case "sqlite3":
 		_, err = ExecSQL(`PRAGMA foreign_keys = ON`)
 		if err != nil {
@@ -126,7 +128,10 @@ func tmpSqlAdjust() error {
 			return err
 		}
 		if numColumns == 0 {
-			_, err = ExecSQL(`ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`)
+			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
+			if _, err = ExecSQL(query); err != nil {
+				return err
+			}
 		}
 	}
 
