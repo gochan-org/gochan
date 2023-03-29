@@ -36,13 +36,12 @@ func main() {
 	var dirAction string
 
 	log.SetFlags(0)
-	config.InitConfig(versionStr)
 	flag.StringVar(&options.ChanType, "oldchan", "", "The imageboard we are migrating from (currently only pre2021 is supported, but more are coming")
 	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
-	/* flag.StringVar(&dirAction, "diraction", "",
-	"Action taken on each board directory after it has been migrated. "+allowedDirActions) */
-
+	// flag.StringVar(&dirAction, "diraction", "", "Action taken on each board directory after it has been migrated. "+allowedDirActions)
 	flag.Parse()
+
+	config.InitConfig(versionStr)
 
 	if options.ChanType == "" || options.OldChanConfig == "" {
 		flag.PrintDefaults()
