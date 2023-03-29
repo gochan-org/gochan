@@ -28,6 +28,7 @@ release_files = (
 	"html/firstrun.html",
 	"html/js/",
 	"sample-configs/",
+	"sample-plugins/",
 	"templates/",
 	"sql/initdb_master.sql",
 	"sql/initdb_mysql.sql",
