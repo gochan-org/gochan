@@ -237,6 +237,11 @@ var actions = []Action{
 			} else if request.FormValue("do") == "add" {
 				err := ipBanFromRequest(&ban, request, errEv)
 				if err != nil {
+					errEv.Err(err).
+						Str("banIP", ban.IP).
+						Time("expireAt", ban.ExpiresAt).
+						Time("appealAt", ban.AppealAt).
+						Msg("Unable to create new ban")
 					return "", err
 				}
 				infoEv.

@@ -13,6 +13,7 @@ import (
 )
 
 func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Event) error {
+	now := time.Now()
 	banIDStr := request.FormValue("edit")
 	if banIDStr != "" && request.FormValue("do") == "edit" {
 		banID, err := strconv.Atoi(banIDStr)
@@ -34,7 +35,9 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 	}
 	ban.IP = request.FormValue("ip")
 	ban.Permanent = request.FormValue("permanent") == "on"
-	if !ban.Permanent {
+	if ban.Permanent {
+		ban.ExpiresAt = now
+	} else {
 		durationStr := request.FormValue("duration")
 		duration, err := gcutil.ParseDurationString(durationStr)
 		if err != nil {
@@ -43,7 +46,7 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 				Caller().Msg("Invalid duration")
 			return err
 		}
-		ban.ExpiresAt = time.Now().Add(duration)
+		ban.ExpiresAt = now.Add(duration)
 	}
 
 	ban.CanAppeal = request.FormValue("noappeals") != "on"
@@ -57,8 +60,12 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 					Caller().Msg("Invalid appeal delay duration string")
 				return err
 			}
-			ban.AppealAt = time.Now().Add(appealDuration)
+			ban.AppealAt = now.Add(appealDuration)
+		} else {
+			ban.AppealAt = now
 		}
+	} else {
+		ban.AppealAt = now
 	}
 
 	ban.IsThreadBan = request.FormValue("threadban") == "on"
