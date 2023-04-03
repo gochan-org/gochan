@@ -40,7 +40,7 @@ type MissingField struct {
 // InvalidValueError represents a GochanConfig field with a bad value
 type InvalidValueError struct {
 	Field   string
-	Value   interface{}
+	Value   any
 	Details string
 }
 
@@ -52,37 +52,21 @@ func (iv *InvalidValueError) Error() string {
 	return str
 }
 
-func GetDefaultBool(key string) bool {
-	boolInterface := defaults[key]
-	if boolInterface == nil {
-		return false
-	}
-	b, ok := boolInterface.(bool)
-	return b && ok
-}
-
-func GetDefaultInt(key string) int {
-	intInterface := defaults[key]
-	if intInterface == nil {
-		return 0
-	}
-	i, ok := intInterface.(int)
+func getDefaultSetting[E any](key string) (E, error) {
+	defaultValInterface, ok := defaults[key]
+	var defaultVal E
 	if !ok {
-		return 0
+		return defaultVal, nil // not set in defaults map, use the default value for the type
 	}
-	return i
-}
-
-func GetDefaultString(key string) string {
-	i := defaults[key]
-	if i == nil {
-		return ""
+	defaultVal, ok = defaultValInterface.(E)
+	if ok {
+		return defaultVal, nil
 	}
-	str, ok := i.(string)
-	if !ok {
-		return ""
+	return defaultVal, &InvalidValueError{
+		Field:   key,
+		Value:   defaultValInterface,
+		Details: "invalid value type",
 	}
-	return str
 }
 
 func TakeOwnership(fp string) (err error) {

@@ -23,7 +23,7 @@ const (
 var (
 	cfg      *GochanConfig
 	cfgPath  string
-	defaults = map[string]interface{}{
+	defaults = map[string]any{
 		"WebRoot": "/",
 		// SiteConfig
 		"FirstPage":       []string{"index.html", "firstrun.html", "1.html"},
