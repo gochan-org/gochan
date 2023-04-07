@@ -16,7 +16,7 @@ const (
 	DBUpToDate
 	DBModernButAhead
 
-	targetDatabaseVersion = 1
+	targetDatabaseVersion = 2
 )
 
 var (
@@ -108,7 +108,7 @@ func CheckAndInitializeDatabase(dbType string) error {
 	if err != nil {
 		return err
 	}
-	return tmpSqlAdjust()
+	return nil
 }
 
 func buildNewDatabase(dbType string) error {

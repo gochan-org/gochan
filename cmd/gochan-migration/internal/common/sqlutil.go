@@ -24,7 +24,7 @@ func RunSQLFile(path string, db *gcsql.GCDB) error {
 	sqlArr := strings.Split(sqlStr, ";")
 
 	for _, statement := range sqlArr {
-		statement = strings.Trim(statement, " \n\r\t")
+		statement = strings.TrimSpace(statement)
 		if len(statement) > 0 {
 			if _, err = db.ExecSQL(statement); err != nil {
 				return err

@@ -142,7 +142,7 @@ func QueryRowSQL(query string, values, out []interface{}) error {
 }
 
 /*
-QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
+QueryRowTxSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
 Example:
 
@@ -160,11 +160,7 @@ func QueryRowTxSQL(tx *sql.Tx, query string, values, out []interface{}) error {
 	if gcdb == nil {
 		return ErrNotConnected
 	}
-	stmt, err := PrepareSQL(query, tx)
-	if err != nil {
-		return err
-	}
-	return stmt.QueryRow(values...).Scan(out...)
+	return gcdb.QueryRowTxSQL(tx, query, values, out)
 }
 
 /*
