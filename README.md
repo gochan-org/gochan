@@ -21,13 +21,15 @@ See [`docker/README.md`](docker/README.md)
 ## Configuration
 See [config.md](config.md)
 
-<!-- ## Migration
-If you run gochan and get a message telling you your database is out of data, please run gochan-migration. If this does not work, please contact the developers. -->
+## Migration
+If you run gochan v3.0 or newer and get a message telling you that your database is out of date, please run gochan-migration -updatedb. If this does not work, please contact the developers.
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
-2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MySQL/MariaDB is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql or postgresql
+2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MariaDB (a MySQL fork that most Linux distributions are defaulting to) is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql or postgresql
+	- **Note on MySQL:** While MariaDB and mainline MySQL are very similar, there are a few features that MariaDB has that MySQL lacks that may cause issues. To specifically use the mainline MySQL server, run `GC_MYSQL_MAINLINE=1 vagrant up`
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
+
 
 ## For developers (using vscode)
 1. Install go, the vs-go extention and gcc (I think, let me know if you need something else)
@@ -35,7 +37,7 @@ If you run gochan and get a message telling you your database is out of data, pl
 3. Set "DebugMode" to true. This will log all logs to the console and disable some checks.
 4. Open the folder containing everything in vscode (named gochan most likely), go to "Run"
 	1. Select "gochan" if you wish to run/debug the website itself
-	2. <s>Select "gochan-migrate" if you wish to run/debug the migrator</s> (gochan-migrate development has been put on indefinite hiatus)
+	2. Select "gochan-migrate" if you wish to run/debug the migration tool
 5. (Optional) Change go extention configs. Examples: save all files on start debugging
 6. Press F5 or "Start Debugging" to debug.
 
@@ -47,7 +49,7 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 ## Style guide
 * For Go source, follow the standard Go [style guide](https://github.com/golang/go/wiki/CodeReviewComments).
 * variables and functions exposed to Go templates should be in camelCase, like Go variables
-* All exported functions and variables should have a documentation comment explaining their functionality, as per go style guides.
+* All exported functions and variables should have a documentation comment explaining their functionality, as per Go style guides.
 * Unexported functions are preferred to have a documentation comment explaining it, unless it is sufficiently self explanatory or simple.
 * Git commits should be descriptive. Put further explanation in the comment of the commit.
 * Function names should not be *too* long.
@@ -56,19 +58,14 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 ## Roadmap
 
 ### Near future
-* Make the plugin support actually useful
-* Improve moderation tools, using path routing instead of the action variable
-* Add support for sticky and locked threads
-* Add support for more filetypes (zip,)
+* Add some banners
+* Add config option to strip metadata from uploaded images
+* Add more plugin support (more event triggers)
+* Improve moderation tools
+* Add support for more filetypes (zip, pdf, etc)
 * Improve API support for existing chan browing phone apps
 
 ### Lower priority
 * Better image fingerpringing and banning system (as opposed to a hash)
-* Rework any legacy structs that uses comma separated fields to use a slice instead.
 * RSS feeds from boards/specific threads/specific usernames+tripcodes (such as newsanon)
 * Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclical thread.
-
-### Later down the line
-
-### Possible experimental features:
-* Allow users to be mini-moderators within threads they posted themselves, to prevent spammers/derailers.
