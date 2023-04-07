@@ -38,6 +38,15 @@ release_files = (
 	"README.md",
 )
 
+GOCHAN_VERSION = "3.5.1"
+
+PATH_NOTHING = -1
+PATH_UNKNOWN = 0
+PATH_FILE = 1
+PATH_DIR = 2
+PATH_LINK = 4
+
+
 gcos = ""
 gcos_name = ""  # used for release, since macOS GOOS is "darwin"
 exe = ""
@@ -45,13 +54,6 @@ gochan_bin = ""
 gochan_exe = ""
 migration_bin = ""
 migration_exe = ""
-version = ""
-
-PATH_NOTHING = -1
-PATH_UNKNOWN = 0
-PATH_FILE = 1
-PATH_DIR = 2
-PATH_LINK = 4
 
 
 def pathinfo(loc):
@@ -168,7 +170,7 @@ def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 
 
 def set_vars(goos=""):
-	""" Sets version and GOOS-related variables to be used globally"""
+	""" Sets GOOS-related variables to be used globally"""
 	global gcos
 	global gcos_name  # used for release, since macOS GOOS is "darwin"
 	global exe
@@ -176,7 +178,6 @@ def set_vars(goos=""):
 	global gochan_exe
 	global migration_bin
 	global migration_exe
-	global version
 
 	if goos != "":
 		os.environ["GOOS"] = goos
@@ -195,29 +196,26 @@ def set_vars(goos=""):
 	migration_bin = "gochan-migration"
 	migration_exe = "gochan-migration" + exe
 
-	with open("version", "r") as version_file:
-		version = version_file.read().strip()
-
 
 def build(debugging=False):
 	"""Build the gochan executable for the current GOOS"""
 	pwd = os.getcwd()
 	trimpath = "-trimpath=" + pwd
 	gcflags = " -gcflags=\"" + trimpath + "{}\""
-	ldflags = " -ldflags=\"-X main.versionStr=" + version + "{}\""
+	ldflags = " -ldflags=\"-X main.versionStr=" + GOCHAN_VERSION + " -X main.dbVersionStr=" + DATABASE_VERSION + " {}\""
 	build_cmd = "go build -v -trimpath -asmflags=" + trimpath
 
 	print("Building error pages from templates")
 	with open("templates/404.html", "r") as tmpl404:
 		tmpl404str = tmpl404.read().strip()
 		with open("html/error/404.html", "w") as page404:
-			page404.write(tmpl404str.format(version))
+			page404.write(tmpl404str.format(GOCHAN_VERSION))
 	with open("templates/5xx.html", "r") as tmpl5xx:
 		tmpl5xxStr = tmpl5xx.read().strip()
 		with open("html/error/500.html", "w") as page500:
-			page500.write(tmpl5xxStr.format(version=version, title="Error 500: Internal Server error"))
+			page500.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 500: Internal Server error"))
 		with open("html/error/502.html", "w") as page502:
-			page502.write(tmpl5xxStr.format(version=version, title="Error 502: Bad gateway"))
+			page502.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 502: Bad gateway"))
 
 	if debugging:
 		print("Building for", gcos, "with debugging symbols")
@@ -405,7 +403,7 @@ def eslint(fix=False):
 def release(goos):
 	set_vars(goos)
 	build(False)
-	release_name = gochan_bin + "-v" + version + "_" + gcos_name
+	release_name = gochan_bin + "-v" + GOCHAN_VERSION + "_" + gcos_name
 	release_dir = path.join("releases", release_name)
 	delete(release_dir)
 	print("Creating release for", gcos_name, "\n")
