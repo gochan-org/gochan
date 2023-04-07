@@ -116,5 +116,9 @@ func main() {
 		log.Println("Database is already migrated")
 		os.Exit(0)
 	}
-	log.Println(migrateCompleteTxt)
+	if updateDB {
+		log.Println("Database schema updated successfully")
+	} else {
+		log.Println(migrateCompleteTxt)
+	}
 }
