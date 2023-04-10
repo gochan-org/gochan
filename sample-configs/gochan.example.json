@@ -44,6 +44,10 @@
 	],
 	"DefaultStyle": "pipes.css",
 
+	"Banners": [
+		{"Filename": "gochan_go-parody.png", "Width": 300, "Height": 100}
+	],
+
 	"AllowDuplicateImages": true,
 	"AllowVideoUploads": true,
 	"NewThreadDelay": 30,
