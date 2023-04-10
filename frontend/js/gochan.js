@@ -3,6 +3,7 @@ import $ from "jquery";
 import "./vars";
 import "./cookies";
 import "./notifications";
+import { setPageBanner } from "./dom/banners";
 import { setCustomCSS, setCustomJS } from "./settings";
 import { handleKeydown } from "./boardevents";
 import { initStaff, createStaffMenu } from "./management/manage";
@@ -36,6 +37,7 @@ $(() => {
 	let passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
+	setPageBanner();
 	if(pageThread.board != "") {
 		prepareThumbnails();
 		if(getBooleanStorageVal("useqr", true))

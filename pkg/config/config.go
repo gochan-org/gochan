@@ -334,6 +334,12 @@ type BoardCooldowns struct {
 	ImageReply int `json:"images"`
 }
 
+type PageBanner struct {
+	Filename string
+	Width    int
+	Height   int
+}
+
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json
 // If a board doesn't have board.json, the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
@@ -342,7 +348,7 @@ type BoardConfig struct {
 	DefaultStyle        string   `description:"Filename of the default Style. If this unset, the first entry in the Styles array will be used."`
 	Sillytags           []string `description:"List of randomly selected fake staff tags separated by line, e.g. ## Mod, to be randomly assigned to posts if UseSillytags is checked. Don't include the \"## \""`
 	UseSillytags        bool     `description:"Use Sillytags"`
-	Banners             []string
+	Banners             []PageBanner
 
 	PostConfig
 	UploadConfig

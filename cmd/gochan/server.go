@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"net/http/fcgi"
@@ -55,6 +57,7 @@ func initServer() {
 	router.POST(config.WebPath("/post"), bunrouter.HTTPHandlerFunc(posting.MakePost))
 	router.GET(config.WebPath("/util"), bunrouter.HTTPHandlerFunc(utilHandler))
 	router.POST(config.WebPath("/util"), bunrouter.HTTPHandlerFunc(utilHandler))
+	router.GET(config.WebPath("/util/banner"), bunrouter.HTTPHandlerFunc(randomBanner))
 	// Eventually plugins might be able to register new namespaces or they might be restricted to something
 	// like /plugin
 
@@ -71,6 +74,30 @@ func initServer() {
 		gcutil.Logger().Fatal().
 			Err(err).
 			Msg("Error initializing server")
+	}
+}
+
+func randomBanner(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "application/json")
+	boardDir := request.FormValue("board")
+	boardCfg := config.GetBoardConfig(boardDir)
+	var banner *config.PageBanner
+	if len(boardCfg.Banners) > 1 {
+		banner = &boardCfg.Banners[rand.Intn(len(boardCfg.Banners)-1)]
+	} else if len(boardCfg.Banners) == 1 {
+		banner = &boardCfg.Banners[0]
+	}
+	err := json.NewEncoder(writer).Encode(banner)
+	if err != nil {
+		gcutil.LogError(err).Caller().Str("board", boardDir).Send()
+		server.ServeError(writer, err.Error(), true, map[string]any{
+			"board":  boardDir,
+			"banner": banner,
+		})
+		return
+	}
+	if banner != nil {
+		gcutil.LogAccess(request).Str("board", boardDir).Str("banner", banner.Filename).Send()
 	}
 }
 
@@ -95,7 +122,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			Msg("received invalid /util request")
 		if wantsJSON {
 			writer.WriteHeader(http.StatusBadRequest)
-			server.ServeJSON(writer, map[string]interface{}{"error": "Invalid /util request"})
+			server.ServeJSON(writer, map[string]any{"error": "Invalid /util request"})
 		} else {
 			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusBadRequest)
 		}
@@ -122,7 +149,7 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 				Ints("posts", checkedPosts).
 				Str("board", board).
 				Msg("Error submitting report")
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 				"posts": checkedPosts,
 				"board": board,
 			})
