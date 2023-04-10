@@ -162,6 +162,11 @@ func ResetBoardSectionArrays() error {
 	}
 	AllBoards = nil
 	AllBoards = append(AllBoards, allBoardsArr...)
+	for _, board := range AllBoards {
+		if err = config.UpdateBoardConfig(board.Dir); err != nil {
+			return err
+		}
+	}
 
 	allSectionsArr, err := GetAllSections(true)
 	if err != nil {
@@ -283,7 +288,11 @@ func getBoardIDFromURI(uri string) (int, error) {
 func (board *Board) Delete() error {
 	const query = `DELETE FROM DBPREFIXboards WHERE id = ?`
 	_, err := ExecSQL(query, board.ID)
-	return err
+	if err != nil {
+		return err
+	}
+	config.DeleteBoardConfig(board.Dir)
+	return nil
 }
 
 // DeleteOldThreads deletes old threads that exceed the limit set by board.MaxThreads and returns the posts in those

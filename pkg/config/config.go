@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"net"
 	"os"
 	"os/exec"
@@ -341,6 +342,7 @@ type BoardConfig struct {
 	DefaultStyle        string   `description:"Filename of the default Style. If this unset, the first entry in the Styles array will be used."`
 	Sillytags           []string `description:"List of randomly selected fake staff tags separated by line, e.g. ## Mod, to be randomly assigned to posts if UseSillytags is checked. Don't include the \"## \""`
 	UseSillytags        bool     `description:"Use Sillytags"`
+	Banners             []string
 
 	PostConfig
 	UploadConfig
@@ -428,6 +430,30 @@ func GetBoardConfig(board string) *BoardConfig {
 		return &cfg.BoardConfig
 	}
 	return &bc
+}
+
+// UpdateBoardConfig updates or establishes the configuration for the given board
+func UpdateBoardConfig(dir string) error {
+	ba, err := os.ReadFile(path.Join(cfg.DocumentRoot, dir, "board.json"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// board doesn't have a custom config, use global config
+			return nil
+		}
+		return err
+	}
+	var config BoardConfig
+	if err = json.Unmarshal(ba, &config); err != nil {
+		return err
+	}
+	boardConfigs[dir] = config
+	return nil
+}
+
+// DeleteBoardConfig removes the custom board configuration data, normally should be used
+// when a board is deleted
+func DeleteBoardConfig(dir string) {
+	delete(boardConfigs, dir)
 }
 
 func GetDebugMode() bool {
