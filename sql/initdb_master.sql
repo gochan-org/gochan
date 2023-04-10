@@ -268,4 +268,4 @@ CREATE TABLE DBPREFIXwordfilters(
 );
 
 INSERT INTO DBPREFIXdatabase_version(component, version)
-VALUES('gochan', 1);
+VALUES('gochan', 2);
