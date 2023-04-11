@@ -58,7 +58,7 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 ## Roadmap
 
 ### Near future
-* Add some banners
+* Add more banners
 * Add config option to strip metadata from uploaded images
 * Add more plugin support (more event triggers)
 * Improve moderation tools

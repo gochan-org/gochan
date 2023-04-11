@@ -5,13 +5,16 @@ export function setPageBanner() {
 		url: `${webroot}util/banner`,
 		dataType: "json"
 	};
-	const board = location.pathname.split("/")[0];
-	if(board !== "") {
-		data.data = {
+	const slashArr = location.pathname.split("/");
+	const board = (slashArr.length >= 2)?slashArr[1]:"";
+
+	$.get({
+		url: `${webroot}util/banner`,
+		data: {
 			board: board
-		};
-	}
-	$.get(data).then(data => {
+		},
+		dataType: "json"
+	}).then(data => {
 		if(!data || data.Filename == undefined || data.Filename == "") {
 			return; // no banners :(
 		}
