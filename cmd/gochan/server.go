@@ -79,13 +79,14 @@ func initServer() {
 
 func randomBanner(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
+	banners := config.GetBoardConfig("").Banners // get global banners
 	boardDir := request.FormValue("board")
-	boardCfg := config.GetBoardConfig(boardDir)
-	var banner *config.PageBanner
-	if len(boardCfg.Banners) > 1 {
-		banner = &boardCfg.Banners[rand.Intn(len(boardCfg.Banners)-1)]
-	} else if len(boardCfg.Banners) == 1 {
-		banner = &boardCfg.Banners[0]
+	if boardDir != "" {
+		banners = append(banners, config.GetBoardConfig(boardDir).Banners...)
+	}
+	var banner config.PageBanner
+	if len(banners) > 0 {
+		banner = banners[rand.Intn(len(banners))]
 	}
 	err := json.NewEncoder(writer).Encode(banner)
 	if err != nil {
@@ -96,7 +97,7 @@ func randomBanner(writer http.ResponseWriter, request *http.Request) {
 		})
 		return
 	}
-	if banner != nil {
+	if banner.Filename != "" {
 		gcutil.LogAccess(request).Str("board", boardDir).Str("banner", banner.Filename).Send()
 	}
 }
