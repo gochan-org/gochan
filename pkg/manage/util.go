@@ -119,32 +119,13 @@ func GetStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
-// returns the action by its ID, or nil if it doesn't exist
-func getAction(id string, rank int) *Action {
-	for a := range actions {
-		if rank == NoPerms && actions[a].Permissions > NoPerms {
-			id = "login"
-		}
-		if actions[a].ID == id {
-			return &actions[a]
-		}
-	}
-	return nil
-}
-
-func RegisterManagePage(id string, title string, permissions int, jsonOutput int, callback CallbackFunction) {
-	actions = append(actions, Action{
-		ID:          id,
-		Title:       title,
-		Permissions: permissions,
-		JSONoutput:  jsonOutput,
-		Callback:    callback,
-	})
-}
-
 func init() {
 	RegisterManagePage("actions", "Staff actions", JanitorPerms, AlwaysJSON, getStaffActions)
 	RegisterManagePage("dashboard", "Dashboard", JanitorPerms, NoJSON, dashboardCallback)
+	RegisterNoPermPages()
+	RegisterJanitorPages()
+	RegisterModeratorPages()
+	RegisterAdminPages()
 }
 
 func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
@@ -175,23 +156,6 @@ func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff 
 		return "", err
 	}
 	return dashBuffer.String(), nil
-}
-
-func getAvailableActions(rank int, noJSON bool) []Action {
-	available := []Action{}
-	for _, action := range actions {
-		if (rank < action.Permissions || action.Permissions == NoPerms) ||
-			(noJSON && action.JSONoutput == AlwaysJSON) {
-			continue
-		}
-		available = append(available, action)
-	}
-	return available
-}
-
-func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
-	availableActions := getAvailableActions(staff.Rank, false)
-	return availableActions, nil
 }
 
 // bordsRequestType takes the request and returns "cancel", "create", "delete",
