@@ -106,7 +106,7 @@ func FormatMessage(message string, boardDir string) template.HTML {
 							Msg("Error getting post parent for backlink")
 						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
 					} else {
-						lineWords[w] = fmt.Sprintf(`<a href="%s%s/res/%d.html#%d" class="postref">%s</a>`, WebRoot, boardDir, linkParent, word[8:], word)
+						lineWords[w] = fmt.Sprintf(`<a href="%s%s/res/%d.html#%s" class="postref">%s</a>`, WebRoot, boardDir, linkParent, word[8:], word)
 					}
 				}
 			} else if strings.Index(word, "&gt;") == 0 && w == 0 {
