@@ -53,7 +53,14 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload == nil {
 		return nil // no upload to attach, so no error
 	}
-	events.TriggerEvent("incoming-upload", upload)
+	_, recovered := events.TriggerEvent("incoming-upload", upload)
+	if recovered {
+		gcutil.LogWarning().Caller().
+			Str("triggeredEvent", "incoming-upload").
+			Str("originalFilename", upload.OriginalFilename).
+			Str("filename", upload.Filename).
+			Msg("Recovered from a panic in event handler")
+	}
 
 	const query = `INSERT INTO DBPREFIXfiles (
 		post_id, file_order, original_filename, filename, checksum, file_size,

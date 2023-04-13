@@ -21,6 +21,7 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/server"
@@ -92,6 +93,12 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			"originalFilename": upload.OriginalFilename,
 		})
 		return nil, true
+	}
+	_, recovered := events.TriggerEvent("upload-saved", filePath)
+	if recovered {
+		gcutil.LogWarning().Caller().
+			Str("filePath", filePath).Str("triggeredEvent", "upload-saved").
+			Msg("Recovered from a panic in event handler")
 	}
 	errEv.
 		Str("filename", handler.Filename).
