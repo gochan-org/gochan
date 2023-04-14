@@ -1,7 +1,6 @@
 package posting
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"time"
@@ -14,7 +13,6 @@ import (
 func tempCleaner() {
 	ticker := time.Tick(time.Minute * 5)
 	for range ticker {
-		fmt.Println("tick")
 		for p := range gcsql.TempPosts {
 			post := &gcsql.TempPosts[p]
 			if !time.Now().After(post.CreatedOn.Add(time.Minute * 5)) {
