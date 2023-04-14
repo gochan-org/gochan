@@ -145,17 +145,19 @@ func GetThumbnailExt(filename string) string {
 	switch ext {
 	case ".gif":
 		fallthrough
+	case ".mp4":
+		fallthrough
 	case ".png":
 		fallthrough
 	case ".webm":
 		fallthrough
 	case ".webp":
 		return "png"
+	case ".jfif":
+		fallthrough
 	case ".jpg":
 		fallthrough
 	case ".jpeg":
-		fallthrough
-	case "mp4":
 		return "jpg"
 	default:
 		// invalid file format

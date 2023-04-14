@@ -105,7 +105,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			Msg("Recovered from a panic in event handler")
 	}
 
-	if ext == "webm" || ext == "mp4" {
+	if ext == ".webm" || ext == ".mp4" {
 		infoEv.Str("post", "withVideo").
 			Str("filename", handler.Filename).
 			Str("referer", request.Referer()).Send()
