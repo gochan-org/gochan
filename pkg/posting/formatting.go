@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/frustra/bbcode"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -21,7 +20,6 @@ var (
 func InitPosting() {
 	msgfmtr = new(MessageFormatter)
 	msgfmtr.InitBBcode()
-	tempCleanerTicker = time.NewTicker(time.Minute * 5)
 	go tempCleaner()
 }
 
