@@ -28,7 +28,7 @@ func createImageThumbnail(imageObj image.Image, boardDir string, thumbType strin
 
 func createVideoThumbnail(video, thumb string, size int) error {
 	sizeStr := strconv.Itoa(size)
-	outputBytes, err := exec.Command("ffmpeg", "-y", "-itsoffset", "-1", "-i", video, "-vframes", "1", "-filter:v", "scale='min("+sizeStr+"\\, "+sizeStr+"):-1'", thumb).CombinedOutput()
+	outputBytes, err := exec.Command("ffmpeg", "-y" /* "-itsoffset", "-1", */, "-i", video, "-vframes", "1", "-filter:v", "scale='min("+sizeStr+"\\, "+sizeStr+"):-1'", thumb).CombinedOutput()
 	if err != nil {
 		outputStringArr := strings.Split(string(outputBytes), "\n")
 		if len(outputStringArr) > 1 {
