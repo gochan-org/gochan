@@ -221,13 +221,13 @@ func (gcfg *GochanConfig) ValidateValues() error {
 
 	if gcfg.StripImageMetadata == "exif" || gcfg.StripImageMetadata == "all" {
 		if gcfg.ExiftoolPath == "" {
-			if _, err = exec.LookPath("exiftool"); err != nil {
+			if gcfg.ExiftoolPath, err = exec.LookPath("exiftool"); err != nil {
 				return &InvalidValueError{
 					Field: "ExiftoolPath", Value: "", Details: "unable to find exiftool in the system path",
 				}
 			}
 		} else {
-			if _, err = exec.LookPath(path.Join(gcfg.ExiftoolPath, "exiftool")); err != nil {
+			if _, err = exec.LookPath(gcfg.ExiftoolPath); err != nil {
 				return &InvalidValueError{
 					Field: "ExiftoolPath", Value: gcfg.ExiftoolPath, Details: "unable to find exiftool at the given location",
 				}

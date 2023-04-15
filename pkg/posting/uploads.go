@@ -98,6 +98,15 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		})
 		return nil, true
 	}
+	gcutil.LogStr("stripImageMetadata", boardConfig.StripImageMetadata)
+	if err = stripImageMetadata(filePath, boardConfig); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to strip metadata")
+		server.ServeError(writer, "Unable to strip metadata from image", wantsJSON, map[string]interface{}{
+			"filename":         upload.Filename,
+			"originalFilename": upload.OriginalFilename,
+		})
+		return nil, true
+	}
 	_, recovered := events.TriggerEvent("upload-saved", filePath)
 	if recovered {
 		gcutil.LogWarning().Caller().
@@ -269,6 +278,22 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	}
 
 	return upload, false
+}
+
+func stripImageMetadata(filePath string, boardConfig *config.BoardConfig) (err error) {
+	var stripFlag string
+	switch boardConfig.StripImageMetadata {
+	case "exif":
+		stripFlag = "-EXIF="
+	case "all":
+		stripFlag = "-all="
+	case "none":
+		fallthrough
+	case "":
+		return nil
+	}
+	err = exec.Command(boardConfig.ExiftoolPath, "-overwrite_original_in_place", stripFlag, filePath).Run()
+	return
 }
 
 func getVideoInfo(path string) (map[string]int, error) {
