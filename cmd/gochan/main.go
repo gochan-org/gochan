@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 
@@ -45,6 +46,9 @@ func main() {
 		gcutil.LogFatal().Err(err).Msg("failed loading plugins")
 	}
 
+	events.TriggerEvent("startup")
+	defer events.TriggerEvent("shutdown")
+
 	if err = gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix,
@@ -52,11 +56,13 @@ func main() {
 		fmt.Println("Failed to connect to the database:", err.Error())
 		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
 	}
+	events.TriggerEvent("db-connected")
 	fmt.Println("Connected to database")
 	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
 		fmt.Println("Failed to initialize the database:", err.Error())
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
+	events.TriggerEvent("db-initialized")
 	parseCommandLine()
 	serverutil.InitMinifier()
 
