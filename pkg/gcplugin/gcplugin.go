@@ -1,6 +1,7 @@
 package gcplugin
 
 import (
+	"database/sql"
 	"errors"
 	"html/template"
 	"io"
@@ -90,9 +91,9 @@ func luaEventRegisterHandlerAdapter(l *lua.LState, fn *lua.LFunction) events.Eve
 			args = append(args, luar.New(l, i))
 		}
 		l.CallByParam(lua.P{
-			Fn:      fn,
-			NRet:    0,
-			Protect: true,
+			Fn:   fn,
+			NRet: 0,
+			// Protect: true,
 		}, args...)
 	}
 }
@@ -103,6 +104,7 @@ func registerLuaFunctions() {
 	lState.Register("info_log", createLuaLogFunc("info"))
 	lState.Register("warn_log", createLuaLogFunc("warn"))
 	lState.Register("error_log", createLuaLogFunc("error"))
+
 	lState.Register("system_critical_config", func(l *lua.LState) int {
 		l.Push(luar.New(l, config.GetSystemCriticalConfig()))
 		return 1
@@ -113,6 +115,40 @@ func registerLuaFunctions() {
 	})
 	lState.Register("board_config", func(l *lua.LState) int {
 		l.Push(luar.New(l, config.GetBoardConfig(l.CheckString(1))))
+		return 1
+	})
+
+	lState.Register("db_query", func(l *lua.LState) int {
+		queryStr := l.CheckString(1)
+		queryArgsL := l.CheckAny(2)
+
+		var queryArgs []any
+		if queryArgsL.Type() != lua.LTNil {
+			table := queryArgsL.(*lua.LTable)
+			table.ForEach(func(_ lua.LValue, val lua.LValue) {
+				arg := lvalueToInterface(l, val)
+				queryArgs = append(queryArgs, arg)
+			})
+		}
+
+		rows, err := gcsql.QuerySQL(queryStr, queryArgs...)
+
+		l.Push(luar.New(l, rows))
+		l.Push(luar.New(l, err))
+		return 2
+	})
+
+	lState.Register("db_scan_rows", func(l *lua.LState) int {
+		rows := l.CheckUserData(1).Value.(*sql.Rows)
+		table := l.CheckTable(2)
+		var val any
+		err := rows.Scan(&val)
+		if err != nil {
+			l.Push(luar.New(l, err))
+			return 1
+		}
+		table.Append(luar.New(l, val))
+		l.Push(lua.LNil)
 		return 1
 	})
 
@@ -137,6 +173,7 @@ func registerLuaFunctions() {
 		events.TriggerEvent(trigger, data...)
 		return 0
 	})
+
 	lState.Register("register_manage_page", func(l *lua.LState) int {
 		actionID := l.CheckString(1)
 		actionTitle := l.CheckString(2)
