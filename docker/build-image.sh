@@ -2,8 +2,7 @@
 
 set -euo pipefail
 
-apk --no-cache add \
-	postgresql-client	\
+apk add \
 	mariadb-client		\
 	nginx 				\
 	ffmpeg				\
@@ -12,7 +11,7 @@ apk --no-cache add \
 	gcc					\
 	musl-dev			\
 	openssl				\
-	bash
+	exiftool
 
 mkdir -p /root/bin
 
@@ -34,4 +33,4 @@ mkdir -p /etc/ssl/private
 openssl req -x509 -nodes -days 7305 -newkey rsa:2048 \
 	-keyout /etc/ssl/private/nginx-selfsigned.key \
 	-out /etc/ssl/certs/nginx-selfsigned.crt \
-	-subj "/CN=192.168.56.3"
+	-subj "/CN=127.0.0.1"
