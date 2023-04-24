@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 from os import path
 
 class macro():
@@ -77,5 +78,11 @@ def dofile(filestart):
 
 
 if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description="gochan build script")
 	dofile(path.join("..", "sql", "initdb_"))
-	dofile(path.join("..", "sql", "preapril2020migration", "oldDBMigration_"))
+	parser.add_argument("--preapril2020",
+			action="store_true",
+			help="Also build the legacy (pre-April 2020 migration) database schema used for testing gochan-migrate.")
+	args = parser.parse_args()
+	if args.preapril2020:
+		dofile(path.join("..", "sql", "preapril2020migration", "oldDBMigration_"))
