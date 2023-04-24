@@ -9,7 +9,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - DBTYPE=mysql # change this to 'postgresql' if needed
+      - DBTYPE=mysql # change this to 'postgresql' or 'sqlite3' if needed
       - DATABASE_HOST=host.docker.internal
       - DATABASE_PORT=3306
       - DATABASE_NAME=gochan
