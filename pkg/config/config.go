@@ -393,7 +393,16 @@ type UploadConfig struct {
 	ExiftoolPath string
 }
 
-func (uc *UploadConfig) AcceptexExtension(filename string) bool {
+func (uc *UploadConfig) AcceptedOtherExtension(ext string) bool {
+	for _, allowedExt := range uc.AllowOtherExtensions {
+		if ext == allowedExt {
+			return true
+		}
+	}
+	return false
+}
+
+func (uc *UploadConfig) AcceptedExtension(filename string) bool {
 	ext := strings.ToLower(path.Ext(filename))
 	switch ext {
 	// images
@@ -420,12 +429,7 @@ func (uc *UploadConfig) AcceptexExtension(filename string) bool {
 	case ".zip":
 		return uc.AllowUploadingZipFiles
 	}
-	for _, allowedExt := range uc.AllowOtherExtensions {
-		if ext == allowedExt {
-			return true
-		}
-	}
-	return false
+	return uc.AcceptedOtherExtension(ext)
 }
 
 type PostConfig struct {

@@ -60,7 +60,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	gcutil.LogStr("originalFilename", upload.OriginalFilename, errEv, infoEv)
 
 	boardConfig := config.GetBoardConfig(postBoard.Dir)
-	if !boardConfig.AcceptexExtension(upload.OriginalFilename) {
+	if !boardConfig.AcceptedExtension(upload.OriginalFilename) {
 		errEv.Caller().Msg("Upload filetype not supported")
 		server.ServeError(writer, "Upload filetype not supported", wantsJSON, map[string]interface{}{
 			"filename": upload.OriginalFilename,
@@ -190,7 +190,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 				upload.Width, upload.Height, postBoard.Dir, thumbType)
 		}
-	} else if ext == ".pdf" || ext == ".zip" {
+	} else if ext == ".pdf" || ext == ".zip" || boardConfig.AcceptedOtherExtension(ext) {
 		stat, err := os.Stat(filePath)
 		if err != nil {
 			errEv.Err(err).Caller().
@@ -212,8 +212,16 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		switch ext {
 		case ".pdf":
 			staticThumbPath = "static/pdfthumb.png"
+		case ".txt":
+			staticThumbPath = "static/txtthumb.png"
+		case ".gz":
+			fallthrough
+		case ".xz":
+			fallthrough
 		case ".zip":
 			staticThumbPath = "static/archivethumb.png"
+		default:
+			staticThumbPath = "static/otherthumb.png"
 		}
 		originalThumbPath := path.Join(documentRoot, staticThumbPath)
 		if _, err = os.Stat(originalThumbPath); err != nil {
