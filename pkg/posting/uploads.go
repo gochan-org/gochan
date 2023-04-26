@@ -2,6 +2,7 @@ package posting
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"html"
 	"image"
@@ -25,6 +26,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	_ "golang.org/x/image/webp"
 )
 
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
@@ -39,20 +41,33 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		infoEv.Discard()
 		errEv.Discard()
 	}()
+	wantsJSON := serverutil.IsRequestingJSON(request)
+
 	file, handler, err := request.FormFile("imagefile")
-	if err == http.ErrMissingFile {
+	if errors.Is(err, http.ErrMissingFile) {
 		// no file was submitted with the form
 		return nil, false
 	}
-	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return nil, true
 	}
+
 	upload := &gcsql.Upload{
 		OriginalFilename: html.EscapeString(handler.Filename),
 	}
+	gcutil.LogStr("originalFilename", upload.OriginalFilename, errEv, infoEv)
+
+	boardConfig := config.GetBoardConfig(postBoard.Dir)
+	if !boardConfig.AcceptexExtension(upload.OriginalFilename) {
+		errEv.Caller().Msg("Upload filetype not supported")
+		server.ServeError(writer, "Upload filetype not supported", wantsJSON, map[string]interface{}{
+			"filename": upload.OriginalFilename,
+		})
+		return nil, true
+	}
+
 	if checkFilenameBan(upload, post, postBoard, writer, request) {
 		// If checkFilenameBan returns true, an error occured or the file was
 		// rejected for having a banned filename, and the incident was logged either way
@@ -82,7 +97,6 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
 	catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
 
-	boardConfig := config.GetBoardConfig(postBoard.Dir)
 	errEv.
 		Str("originalFilename", upload.OriginalFilename).
 		Str("filePath", filePath)
@@ -175,6 +189,54 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			}
 			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 				upload.Width, upload.Height, postBoard.Dir, thumbType)
+		}
+	} else if ext == ".pdf" || ext == ".zip" {
+		stat, err := os.Stat(filePath)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Str("filePath", filePath).Send()
+			server.ServeErrorPage(writer, "Couldn't get upload filesize: "+err.Error())
+			return nil, true
+		}
+		upload.FileSize = int(stat.Size())
+		if post.ThreadID == 0 {
+			// OP
+			upload.ThumbnailWidth = boardConfig.ThumbWidth
+			upload.ThumbnailHeight = boardConfig.ThumbHeight
+		} else {
+			// reply
+			upload.ThumbnailWidth = boardConfig.ThumbWidthReply
+			upload.ThumbnailHeight = boardConfig.ThumbHeightReply
+		}
+		var staticThumbPath string
+		switch ext {
+		case ".pdf":
+			staticThumbPath = "static/pdfthumb.png"
+		case ".zip":
+			staticThumbPath = "static/archivethumb.png"
+		}
+		originalThumbPath := path.Join(documentRoot, staticThumbPath)
+		if _, err = os.Stat(originalThumbPath); err != nil {
+			errEv.Err(err).Str("originalThumbPath", originalThumbPath).Send()
+			server.ServeError(writer, "missing static thumbnail "+staticThumbPath, wantsJSON, nil)
+			return nil, true
+		}
+
+		if err = os.Symlink(originalThumbPath, thumbPath); err != nil {
+			os.Remove(filePath)
+			errEv.Err(err).Caller().
+				Str("filePath", filePath).Send()
+			server.ServeError(writer, "Failed creating symbolic link to thumbnail path", wantsJSON, nil)
+			return nil, true
+		}
+		if post.ThreadID == 0 {
+			if err = os.Symlink(originalThumbPath, catalogThumbPath); err != nil {
+				os.Remove(filePath)
+				errEv.Err(err).Caller().
+					Str("filePath", filePath).Send()
+				server.ServeError(writer, "Failed creating symbolic link to thumbnail path", wantsJSON, nil)
+				return nil, true
+			}
 		}
 	} else {
 		// Attempt to load uploaded file with imaging library
@@ -296,26 +358,26 @@ func stripImageMetadata(filePath string, boardConfig *config.BoardConfig) (err e
 	return
 }
 
-func getVideoInfo(path string) (map[string]int, error) {
-	vidInfo := make(map[string]int)
+// func getVideoInfo(path string) (map[string]int, error) {
+// 	vidInfo := make(map[string]int)
 
-	outputBytes, err := exec.Command("ffprobe", "-v quiet", "-show_format", "-show_streams", path).CombinedOutput()
-	if err == nil && outputBytes != nil {
-		outputStringArr := strings.Split(string(outputBytes), "\n")
-		for _, line := range outputStringArr {
-			lineArr := strings.Split(line, "=")
-			if len(lineArr) < 2 {
-				continue
-			}
+// 	outputBytes, err := exec.Command("ffprobe", "-v quiet", "-show_format", "-show_streams", path).CombinedOutput()
+// 	if err == nil && outputBytes != nil {
+// 		outputStringArr := strings.Split(string(outputBytes), "\n")
+// 		for _, line := range outputStringArr {
+// 			lineArr := strings.Split(line, "=")
+// 			if len(lineArr) < 2 {
+// 				continue
+// 			}
 
-			if lineArr[0] == "width" || lineArr[0] == "height" || lineArr[0] == "size" {
-				value, _ := strconv.Atoi(lineArr[1])
-				vidInfo[lineArr[0]] = value
-			}
-		}
-	}
-	return vidInfo, err
-}
+// 			if lineArr[0] == "width" || lineArr[0] == "height" || lineArr[0] == "size" {
+// 				value, _ := strconv.Atoi(lineArr[1])
+// 				vidInfo[lineArr[0]] = value
+// 			}
+// 		}
+// 	}
+// 	return vidInfo, err
+// }
 
 func getNewFilename() string {
 	now := time.Now().Unix()

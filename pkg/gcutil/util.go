@@ -139,7 +139,7 @@ func GetRealIP(request *http.Request) string {
 }
 
 // GetThumbnailExt returns the extension to be used when creating a thumbnail of img. For non-image files,
-// it just returns the extension, in which case a generic icon will be (eventually) used
+// it returns an empty string, in which case a generic icon will be (eventually) used
 func GetThumbnailExt(filename string) string {
 	ext := filepath.Ext(strings.ToLower(filename))
 	switch ext {
@@ -248,19 +248,19 @@ func ParseDurationString(str string) (time.Duration, error) {
 }
 
 // ParseName takes a name string from a request object and returns the name and tripcode parts
-func ParseName(name string) map[string]string {
-	parsed := make(map[string]string)
+func ParseName(name string) (string, string) {
+	var namePart string
+	var tripcodePart string
 	if !strings.Contains(name, "#") {
-		parsed["name"] = name
-		parsed["tripcode"] = ""
+		namePart = name
 	} else if strings.Index(name, "#") == 0 {
-		parsed["tripcode"] = tripcode.Tripcode(name[1:])
+		tripcodePart = tripcode.Tripcode(name[1:])
 	} else if strings.Index(name, "#") > 0 {
 		postNameArr := strings.SplitN(name, "#", 2)
-		parsed["name"] = postNameArr[0]
-		parsed["tripcode"] = tripcode.Tripcode(postNameArr[1])
+		namePart = postNameArr[0]
+		tripcodePart = tripcode.Tripcode(postNameArr[1])
 	}
-	return parsed
+	return namePart, tripcodePart
 }
 
 // RandomString returns a randomly generated string of the given length

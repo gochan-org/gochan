@@ -16,9 +16,6 @@ import (
 const (
 	randomStringSize = 16
 	cookieMaxAgeEx   = ` (example: "1 year 2 months 3 days 4 hours", or "1y2mo3d4h"`
-	/* currentConfig = iota
-	oldConfig
-	invalidConfig */
 )
 
 var (
@@ -274,17 +271,17 @@ type SystemCriticalConfig struct {
 	Plugins      []string
 
 	SiteHeaderURL string
-	WebRoot       string `description:"The HTTP root appearing in the browser (e.g. '/', 'https://yoursite.net/', etc) that all internal links start with"`
-	SiteDomain    string `description:"The server's domain (e.g. gochan.org, 127.0.0.1, etc)"`
+	WebRoot       string
+	SiteDomain    string
 
 	DBtype     string `critical:"true"`
 	DBhost     string `critical:"true"`
 	DBname     string `critical:"true"`
 	DBusername string `critical:"true"`
 	DBpassword string `critical:"true"`
-	DBprefix   string `description:"Each table's name in the database will start with this, if it is set"`
+	DBprefix   string
 
-	DebugMode  bool `description:"Disables several spam/browser checks that can cause problems when hosting an instance locally."`
+	DebugMode  bool
 	RandomSeed string
 	Version    *GochanVersion `json:"-"`
 	TimeZone   int            `json:"-"`
@@ -295,24 +292,24 @@ type SystemCriticalConfig struct {
 type SiteConfig struct {
 	FirstPage       []string
 	Username        string
-	CookieMaxAge    string `description:"The amount of time that session cookies will exist before they expire (ex: 1y2mo3d4h or 1 year 2 months 3 days 4 hours). Default is 1 year"`
-	Lockdown        bool   `description:"Disables posting."`
-	LockdownMessage string `description:"Message displayed when someone tries to post while the site is on lockdown."`
+	CookieMaxAge    string
+	Lockdown        bool
+	LockdownMessage string
 
-	SiteName   string `description:"The name of the site that appears in the header of the front page."`
-	SiteSlogan string `description:"The text that appears below SiteName on the home page"`
-	Modboard   string `description:"A super secret clubhouse board that only staff can view/post to."`
+	SiteName   string
+	SiteSlogan string
+	Modboard   string
 
-	MaxRecentPosts        int  `description:"The maximum number of posts to show on the Recent Posts list on the front page."`
-	RecentPostsWithNoFile bool `description:"If checked, recent posts with no image/upload are shown on the front page (as well as those with images"`
+	MaxRecentPosts        int
+	RecentPostsWithNoFile bool
 	Verbosity             int
 	EnableAppeals         bool
-	MaxLogDays            int `description:"The maximum number of days to keep messages in the moderation/staff log file."`
+	MaxLogDays            int
 
-	MinifyHTML      bool   `description:"If checked, gochan will minify html files when building"`
-	MinifyJS        bool   `description:"If checked, gochan will minify js and json files when building"`
-	GeoIPDBlocation string `description:"Specifies the location of the GeoIP database file. If you're using CloudFlare, you can set it to cf to rely on CloudFlare for GeoIP information."`
-	AkismetAPIKey   string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+	MinifyHTML      bool
+	MinifyJS        bool
+	GeoIPDBlocation string
+	AkismetAPIKey   string
 
 	Captcha CaptchaConfig
 }
@@ -343,18 +340,18 @@ type PageBanner struct {
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json
 // If a board doesn't have board.json, the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
-	InheritGlobalStyles bool     `description:"If checked, a board uses the global Styles array + the board config's styles (with duplicates removed)"`
-	Styles              []Style  `description:"List of styles (one per line) that should be accessed online at <SiteWebFolder>/css/<Style>"`
-	DefaultStyle        string   `description:"Filename of the default Style. If this unset, the first entry in the Styles array will be used."`
-	Sillytags           []string `description:"List of randomly selected fake staff tags separated by line, e.g. ## Mod, to be randomly assigned to posts if UseSillytags is checked. Don't include the \"## \""`
-	UseSillytags        bool     `description:"Use Sillytags"`
+	InheritGlobalStyles bool
+	Styles              []Style
+	DefaultStyle        string
+	Sillytags           []string
+	UseSillytags        bool
 	Banners             []PageBanner
 
 	PostConfig
 	UploadConfig
 
-	DateTimeFormat         string `description:"The format used for dates. See <a href=\"https://golang.org/pkg/time/#Time.Format\">here</a> for more info."`
-	AkismetAPIKey          string `description:"The API key to be sent to Akismet for post spam checking. If the key is invalid, Akismet won't be used."`
+	DateTimeFormat         string
+	AkismetAPIKey          string
 	ShowPosterID           bool
 	EnableSpoileredImages  bool
 	EnableSpoileredThreads bool
@@ -377,13 +374,17 @@ type Style struct {
 }
 
 type UploadConfig struct {
-	RejectDuplicateImages bool `description:"Enabling this will cause gochan to reject a post if the image has already been uploaded for another post.\nThis may end up being removed or being made board-specific in the future."`
-	ThumbWidth            int  `description:"OP thumbnails use this as their max width.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger."`
-	ThumbHeight           int  `description:"OP thumbnails use this as their max height.<br />To keep the aspect ratio, the image will be scaled down to the ThumbWidth or ThumbHeight, whichever is larger."`
-	ThumbWidthReply       int  `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
-	ThumbHeightReply      int  `description:"Same as ThumbWidth and ThumbHeight but for reply images."`
-	ThumbWidthCatalog     int  `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
-	ThumbHeightCatalog    int  `description:"Same as ThumbWidth and ThumbHeight but for catalog images."`
+	RejectDuplicateImages bool
+	ThumbWidth            int
+	ThumbHeight           int
+	ThumbWidthReply       int
+	ThumbHeightReply      int
+	ThumbWidthCatalog     int
+	ThumbHeightCatalog    int
+
+	AllowUploadingZipFiles bool
+	AllowUploadingPDFs     bool
+	AllowOtherExtensions   []string
 
 	// Sets what (if any) metadata to remove from uploaded images using exiftool.
 	// Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata)
@@ -392,23 +393,58 @@ type UploadConfig struct {
 	ExiftoolPath string
 }
 
+func (uc *UploadConfig) AcceptexExtension(filename string) bool {
+	ext := strings.ToLower(path.Ext(filename))
+	switch ext {
+	// images
+	case ".gif":
+		fallthrough
+	case ".jfif":
+		fallthrough
+	case ".jpeg":
+		fallthrough
+	case ".jpg":
+		fallthrough
+	case ".png":
+		fallthrough
+	case ".webp":
+		fallthrough
+	// videos
+	case ".mp4":
+		fallthrough
+	case ".webm":
+		return true
+	// Other formats
+	case ".pdf":
+		return uc.AllowUploadingPDFs
+	case ".zip":
+		return uc.AllowUploadingZipFiles
+	}
+	for _, allowedExt := range uc.AllowOtherExtensions {
+		if ext == allowedExt {
+			return true
+		}
+	}
+	return false
+}
+
 type PostConfig struct {
-	MaxLineLength int      `description:"Any line in a post that exceeds this will be split into two (or more) lines.<br />I'm not really sure why this is here, so it may end up being removed."`
-	ReservedTrips []string `description:"Secure tripcodes (!!Something) can be reserved here.<br />Each reservation should go on its own line and should look like this:<br />TripPassword1##Tripcode1<br />TripPassword2##Tripcode2"`
+	MaxLineLength int
+	ReservedTrips []string
 
 	ThreadsPerPage           int
-	RepliesOnBoardPage       int `description:"Number of replies to a thread to show on the board page."`
-	StickyRepliesOnBoardPage int `description:"Same as above for stickied threads."`
+	RepliesOnBoardPage       int
+	StickyRepliesOnBoardPage int
 	NewThreadsRequireUpload  bool
 
 	BanColors        []string
-	BanMessage       string `description:"The default public ban message."`
-	EmbedWidth       int    `description:"The width for inline/expanded videos."`
-	EmbedHeight      int    `description:"The height for inline/expanded videos."`
-	EnableEmbeds     bool   `description:"If checked, adds [Embed] after a Youtube, Vimeo, etc link to toggle an inline video frame."`
-	ImagesOpenNewTab bool   `description:"If checked, thumbnails will open the respective image/video in a new tab instead of expanding them." `
-	NewTabOnOutlinks bool   `description:"If checked, links to external sites will open in a new tab."`
-	DisableBBcode    bool   `description:"If checked, gochan will not compile bbcode into HTML"`
+	BanMessage       string
+	EmbedWidth       int
+	EmbedHeight      int
+	EnableEmbeds     bool
+	ImagesOpenNewTab bool
+	NewTabOnOutlinks bool
+	DisableBBcode    bool
 }
 
 func WriteConfig() error {

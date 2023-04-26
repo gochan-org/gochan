@@ -109,9 +109,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	var emailCommand string
 	formName = request.FormValue("postname")
-	parsedName := gcutil.ParseName(formName)
-	post.Name = parsedName["name"]
-	post.Tripcode = parsedName["tripcode"]
+	post.Name, post.Tripcode = gcutil.ParseName(formName)
 
 	formEmail = request.FormValue("postemail")
 
