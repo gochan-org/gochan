@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"reflect"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
@@ -40,6 +41,20 @@ func ClosePlugins() {
 	}
 }
 
+type lvalueScanner struct {
+	val   lua.LValue
+	state *lua.LState
+}
+
+func (lvs *lvalueScanner) Scan(src any) error {
+	typeof := reflect.TypeOf(src)
+	if typeof != nil && typeof.String() == "[]uint8" {
+		src = string(src.([]uint8))
+	}
+	lvs.val = luar.New(lvs.state, src)
+	return nil
+}
+
 func lvalueToInterface(l *lua.LState, v lua.LValue) interface{} {
 	lt := v.Type()
 	switch lt {
@@ -50,7 +65,7 @@ func lvalueToInterface(l *lua.LState, v lua.LValue) interface{} {
 	case lua.LTNumber:
 		return lua.LVAsNumber(v)
 	case lua.LTString:
-		return v.String()
+		return lua.LVAsString(v)
 	case lua.LTUserData:
 		l.Push(v)
 		return l.CheckUserData(l.GetTop()).Value
@@ -141,13 +156,24 @@ func registerLuaFunctions() {
 	lState.Register("db_scan_rows", func(l *lua.LState) int {
 		rows := l.CheckUserData(1).Value.(*sql.Rows)
 		table := l.CheckTable(2)
-		var val any
-		err := rows.Scan(&val)
+		var scanners []any
+		colNames, err := rows.Columns()
 		if err != nil {
 			l.Push(luar.New(l, err))
 			return 1
 		}
-		table.Append(luar.New(l, val))
+
+		for _ = range colNames {
+			scanners = append(scanners, &lvalueScanner{state: l})
+		}
+
+		if err = rows.Scan(scanners...); err != nil {
+			l.Push(luar.New(l, err))
+			return 1
+		}
+		for i, name := range colNames {
+			table.RawSetString(name, scanners[i].(*lvalueScanner).val)
+		}
 		l.Push(lua.LNil)
 		return 1
 	})

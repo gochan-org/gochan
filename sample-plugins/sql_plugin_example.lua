@@ -1,6 +1,6 @@
 event_register({"db-initialized"}, function(tr)
 	print("Testing SELECT query from Lua plugin")
-	rows, err = db_query("SELECT message_raw FROM DBPREFIXposts where id = ?", {28})
+	rows, err = db_query("SELECT id, username FROM DBPREFIXstaff where id = ?", {1})
 	if(err ~= nil) then
 		print(err.Error(err))
 		return
@@ -8,13 +8,13 @@ event_register({"db-initialized"}, function(tr)
 
 	print("rows.Next():")
 	while rows.Next(rows) do
-		message_raw = "This should be different after rows.Scan"
 		rows_table = {}
-		db_scan_rows(rows, rows_table)
-		print("Message: " .. message_raw)
-		for v in rows_table do
-			print(string.format("%q", v))
+		err = db_scan_rows(rows, rows_table)
+		if(err ~= nil) then
+			print(err.Error(err))
+			return
 		end
+		print(string.format("rows_table.id: %#v, rorws_table.username: %#v", rows_table.id, rows_table.username))
 	end
 	rows.Close(rows)
 	print("Done")
