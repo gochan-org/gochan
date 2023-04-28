@@ -19,6 +19,7 @@ let doHoverPreview = false;
 let $hoverPreview = null;
 
 const videoTestRE = /\.(mp4)|(webm)$/;
+const imageTestRE = /\.(gif)|(jfif)|(jpe?g)|(png)|(webp)$/;
 const postrefRE = /\/([^\s/]+)\/res\/(\d+)\.html(#(\d+))?/;
 
 // data retrieved from /<board>/res/<thread>.json
@@ -163,13 +164,18 @@ export function initPostPreviews($post = null) {
  * @param {JQuery<HTMLElement>} $post the post (if set) to prepare the thumbnails for
  */
 export function prepareThumbnails($parent = null) {
-	let $container = $parent === null ? $("a.upload-container") : $parent.find("a");
+	const $container = $parent === null ? $("a.upload-container") : $parent.find("a");
 	$container.on("click", function(e) {
+		const $a = $(this);
+		const uploadHref = $a.siblings("div.file-info").children("a.file-orig").attr("href");
+		if(imageTestRE.exec(uploadHref) === null && videoTestRE.exec(uploadHref) === null)
+			return true; // not an image or a video
+
 		e.preventDefault();
-		let $a = $(this);
-		let thumb = $a.find("img.upload");
-		let thumbURL = thumb.attr("src");
-		let uploadURL = thumb.attr("alt");
+
+		const thumb = $a.find("img.upload");
+		const thumbURL = thumb.attr("src");
+		const uploadURL = thumb.attr("alt");
 		thumb.removeAttr("width").removeAttr("height");
 
 		var fileInfoElement = $a.prevAll(".file-info:first");

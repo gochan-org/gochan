@@ -1,10 +1,6 @@
 import $ from "jquery";
 
 export function setPageBanner() {
-	const data = {
-		url: `${webroot}util/banner`,
-		dataType: "json"
-	};
 	const slashArr = location.pathname.split("/");
 	const board = (slashArr.length >= 2)?slashArr[1]:"";
 
