@@ -1,6 +1,6 @@
 {{define "uploadinfo" -}}
 <div class="file-info">
-	File: <a href="../{{.BoardDir}}/src/{{.Filename}}" target="_blank">{{.Filename}}</a> - ({{formatFilesize .Filesize}} , {{.UploadWidth}}x{{.UploadHeight}}, <a href="../{{.BoardDir}}/src/{{.Filename}}" class="file-orig" download="{{.OriginalFilename}}">{{.OriginalFilename}}</a>)
+	File: <a href="../{{.BoardDir}}/src/{{.Filename}}" target="_blank">{{.Filename}}</a> - ({{formatFilesize .Filesize}}{{if and (gt .UploadHeight 0) (gt .UploadWidth 0)}}, {{.UploadWidth}}x{{.UploadHeight}}{{end}}, <a href="../{{.BoardDir}}/src/{{.Filename}}" class="file-orig" download="{{.OriginalFilename}}">{{.OriginalFilename}}</a>)
 </div>
 {{- end -}}
 <fieldset>

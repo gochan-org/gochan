@@ -1,6 +1,6 @@
 {{define "uploadinfo" -}}
 <div class="file-info">
-	File: <a href="{{.post.UploadPath}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}} , {{$.post.UploadWidth}}x{{$.post.UploadHeight}}, <a href="{{.post.UploadPath}}" class="file-orig" download="{{.post.OriginalFilename}}">{{.post.OriginalFilename}}</a>)
+	File: <a href="{{.post.UploadPath}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}}{{if and (gt $.post.UploadHeight 0) (gt $.post.UploadWidth 0)}}, {{$.post.UploadWidth}}x{{$.post.UploadHeight}}{{end}}, <a href="{{.post.UploadPath}}" class="file-orig" download="{{.post.OriginalFilename}}">{{.post.OriginalFilename}}</a>)
 </div>
 {{- end -}}
 {{define "nameline"}}
