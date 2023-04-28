@@ -175,9 +175,9 @@ function handleActions(action, postIDStr) {
 		case "Ban filename":
 		case "Ban file checksum": {
 			let banType = (action == "Ban filename")?"filename":"checksum";
-			getPostInfo(postID).then(info =>
-				banFile(banType, info.post.filename, info.post.md5, `Added from post dropdown for post /${board}/${postID}`)
-			).then(result => {
+			getPostInfo(postID).then(info => {
+				return banFile(banType, info.originalFilename, info.checksum, `Added from post dropdown for post /${board}/${postID}`);
+			}).then(result => {
 				if(result.error !== undefined && result.error != "") {
 					if(result.message !== undefined)
 						alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
@@ -186,8 +186,19 @@ function handleActions(action, postIDStr) {
 				} else {
 					alertLightbox(`Successfully applied ${banType} ban`, "Success");
 				}
-			}).catch(reason => {
-				alertLightbox(`Failed getting post info: ${reason.statusText}`, "Error");
+			}).catch((reason) => {
+				let messageDetail = "";
+				try {
+					const responseJSON = JSON.parse(reason.responseText);
+					if((typeof responseJSON.message) == "string" && responseJSON.message != "") {
+						messageDetail = responseJSON.message;
+					} else {
+						messageDetail = reason.statusText;
+					}
+				} catch(e) {
+					messageDetail = reason.statusText;
+				}
+				alertLightbox(`Failed banning file: ${messageDetail}`, "Error");
 			});
 		}
 	}

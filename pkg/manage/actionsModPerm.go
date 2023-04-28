@@ -150,6 +150,9 @@ func RegisterModeratorPages() {
 					return "", errors.New("Unable to get appeals: " + err.Error())
 				}
 
+				if wantsJSON {
+					return appeals, nil
+				}
 				manageAppealsBuffer := bytes.NewBufferString("")
 				pageData := map[string]interface{}{}
 				if len(appeals) > 0 {
@@ -165,6 +168,7 @@ func RegisterModeratorPages() {
 			ID:          "filebans",
 			Title:       "Filename and checksum bans",
 			Permissions: ModPerms,
+			JSONoutput:  OptionalJSON,
 			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 				delFilenameBanIDStr := request.FormValue("delfnb") // filename ban deletion
 				delChecksumBanIDStr := request.FormValue("delcsb") // checksum ban deletion
@@ -208,6 +212,9 @@ func RegisterModeratorPages() {
 						Bool("isregex", isRegex).
 						Int("boardid", boardid).
 						Msg("Created new filename ban")
+					if wantsJSON {
+						return "success", nil
+					}
 				} else if delFilenameBanIDStr != "" {
 					delFilenameBanID, err := strconv.Atoi(delFilenameBanIDStr)
 					if err != nil {
@@ -228,6 +235,9 @@ func RegisterModeratorPages() {
 						Int("deleteFilenameBanID", delFilenameBanID).
 						Int("boardid", boardid).
 						Msg("Filename ban deleted")
+					if wantsJSON {
+						return "success", nil
+					}
 				} else if request.FormValue("dochecksumban") != "" {
 					// creating a new file checksum ban
 					checksum := request.FormValue("checksum")
@@ -241,6 +251,9 @@ func RegisterModeratorPages() {
 						Str("checksum", checksum).
 						Int("boardid", boardid).
 						Msg("Created new file checksum ban")
+					if wantsJSON {
+						return "success", nil
+					}
 				} else if delChecksumBanIDStr != "" {
 					// user requested a checksum ban ID to delete
 					delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
@@ -257,6 +270,9 @@ func RegisterModeratorPages() {
 						return "", err
 					}
 					infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
+					if wantsJSON {
+						return "success", nil
+					}
 				}
 				filterBoardIDstr := request.FormValue("filterboardid")
 				var filterBoardID int
@@ -651,6 +667,14 @@ func RegisterModeratorPages() {
 					postInfo["ipFQDN"] = names
 				} else {
 					postInfo["ipFQDN"] = []string{err.Error()}
+				}
+				upload, err := post.GetUpload()
+				if err != nil {
+					return "", err
+				}
+				if upload != nil {
+					postInfo["originalFilename"] = upload.OriginalFilename
+					postInfo["checksum"] = upload.Checksum
 				}
 				return postInfo, nil
 			}},

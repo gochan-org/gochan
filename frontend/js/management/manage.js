@@ -90,9 +90,11 @@ export function banFile(banType, filename, checksum, staffNote = "") {
 	switch(banType) {
 		case "filename":
 			xhrFields.filename = filename;
+			xhrFields.dofilenameban = "Create";
 			break;
 		case "checksum":
 			xhrFields.checksum = checksum;
+			xhrFields.dochecksumban = "Create";
 			break;
 		default:
 			break;
