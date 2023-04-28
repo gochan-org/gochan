@@ -65,6 +65,12 @@
 	"ThumbWidthCatalog": 50,
 	"ThumbHeightCatalog": 50,
 
+	"AllowUploadingZipFiles": false,
+	"AllowUploadingPDFs": false,
+	"AllowOtherExtensions": [],
+	"StripImageMetadata": "none",
+	"ExifToolPath": "",
+
 	"ThreadsPerPage": 15,
 	"RepliesOnBoardPage": 3,
 	"StickyRepliesOnBoardPage": 1,

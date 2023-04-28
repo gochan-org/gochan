@@ -59,10 +59,8 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 
 ### Near future
 * Add more banners
-* Add config option to strip metadata from uploaded images
 * Add more plugin support (more event triggers)
 * Improve moderation tools
-* Add support for more filetypes (zip, pdf, etc)
 * Improve API support for existing chan browing phone apps
 
 ### Lower priority
