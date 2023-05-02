@@ -330,6 +330,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	errEv := gcutil.LogError(nil).
 		Str("boardDir", board.Dir).
 		Int("boardID", board.ID)
+	defer errEv.Discard()
 	if board.Dir == "" {
 		errEv.Err(ErrNoBoardDir).Caller().Send()
 		return ErrNoBoardDir
@@ -511,6 +512,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	}
 
 	if err = BuildBoardPages(board); err != nil {
+		errEv.Err(err).Caller().Send()
 		return err
 	}
 	if err = BuildThreads(true, board.ID, 0); err != nil {
@@ -527,10 +529,12 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	}
 	if board.EnableCatalog {
 		if err = BuildCatalog(board.ID); err != nil {
+			errEv.Err(err).Caller().Send()
 			return err
 		}
 	}
 	if err = BuildBoardListJSON(); err != nil {
+		errEv.Err(err).Caller().Send()
 		return err
 	}
 	return nil

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -104,6 +105,16 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 			Message:    "Requested mod page does not have a JSON output option",
 		}
 	} else {
+		defer func() {
+			if a := recover(); a != nil {
+				serveError(writer, "actionerror", actionID, "Internal server error", wantsJSON)
+				errEv.Caller().
+					Str("action", actionID).
+					Interface("recover", a).
+					Bytes("stack", debug.Stack()).
+					Msg("Recovered from panic while calling manage function")
+			}
+		}()
 		output, err = action.Callback(writer, request, staff, wantsJSON, infoEv, errEv)
 	}
 	if err != nil {

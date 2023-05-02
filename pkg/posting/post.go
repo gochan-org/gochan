@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -31,11 +32,20 @@ var (
 func MakePost(writer http.ResponseWriter, request *http.Request) {
 	request.ParseMultipartForm(maxFormBytes)
 	ip := gcutil.GetRealIP(request)
+	wantsJSON := serverutil.IsRequestingJSON(request)
+
 	errEv := gcutil.LogError(nil).
 		Str("IP", ip)
 	infoEv := gcutil.LogInfo().
 		Str("IP", ip)
 	defer func() {
+		if a := recover(); a != nil {
+			server.ServeError(writer, "Internal server error", wantsJSON, nil)
+			errEv.Caller().
+				Interface("recover", a).
+				Bytes("stack", debug.Stack()).
+				Msg("Recovered from panic while calling manage function")
+		}
 		errEv.Discard()
 		infoEv.Discard()
 	}()
@@ -56,7 +66,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	wantsJSON := serverutil.IsRequestingJSON(request)
 	post.IP = gcutil.GetRealIP(request)
 	var err error
 	threadidStr := request.FormValue("threadid")
