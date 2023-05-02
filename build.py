@@ -354,9 +354,9 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 		build()
 	print("Installing ", migration_exe, "to", path.join(prefix, "bin", migration_exe))
 	if symlinks:
-		symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
+		symlink(migration_exe, path.join(prefix, "bin", migration_exe))
 	else:
-		copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
+		copy(migration_exe, path.join(prefix, "bin", migration_exe))
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
@@ -421,6 +421,7 @@ def release(goos):
 		if srcinfo & PATH_DIR > 0:
 			shutil.copytree(file, path.join(release_dir, file))
 	copy(gochan_exe, path.join(release_dir, gochan_exe))
+	copy(migration_exe, path.join(release_dir, migration_exe))
 	archive_type = "zip" if goos in ('windows', 'darwin') else "gztar"
 	shutil.make_archive(release_dir, archive_type, root_dir="releases", base_dir=release_name)
 
