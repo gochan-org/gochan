@@ -74,13 +74,15 @@ func templateError(name string, err error) error {
 // InitTemplates loads the given templates by name. If no parameters are given,
 // or the first one is "all", all templates are (re)loaded
 func InitTemplates(which ...string) error {
-	gcsql.ResetBoardSectionArrays()
+	err := gcsql.ResetBoardSectionArrays()
+	if err != nil {
+		return err
+	}
 	if len(which) == 0 || which[0] == "all" {
 		return templateLoading("", true)
 	}
 	for _, t := range which {
-		err := templateLoading(t, false)
-		if err != nil {
+		if err = templateLoading(t, false); err != nil {
 			return err
 		}
 	}

@@ -19,46 +19,8 @@ const (
 )
 
 var (
-	cfg      *GochanConfig
-	cfgPath  string
-	defaults = map[string]any{
-		"WebRoot": "/",
-		// SiteConfig
-		"FirstPage":       []string{"index.html", "firstrun.html", "1.html"},
-		"CookieMaxAge":    "1y",
-		"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
-		"SiteName":        "Gochan",
-		"MinifyHTML":      true,
-		"MinifyJS":        true,
-		"MaxRecentPosts":  12,
-		"EnableAppeals":   true,
-		"MaxLogDays":      14,
-
-		// BoardConfig
-		"DateTimeFormat": "Mon, January 02, 2006 3:04:05 PM",
-
-		// PostConfig
-		"NewThreadDelay":           30,
-		"ReplyDelay":               7,
-		"MaxLineLength":            150,
-		"ThreadsPerPage":           15,
-		"RepliesOnBoardPage":       3,
-		"StickyRepliesOnBoardPage": 1,
-		"BanMessage":               "USER WAS BANNED FOR THIS POST",
-		"EmbedWidth":               200,
-		"EmbedHeight":              164,
-		"EnableEmbeds":             true,
-		"ImagesOpenNewTab":         true,
-		"NewTabOnOutlinks":         true,
-
-		// UploadConfig
-		"ThumbWidth":         200,
-		"ThumbHeight":        200,
-		"ThumbWidthReply":    125,
-		"ThumbHeightReply":   125,
-		"ThumbWidthCatalog":  50,
-		"ThumbHeightCatalog": 50,
-	}
+	cfg     *GochanConfig
+	cfgPath string
 
 	boardConfigs    = map[string]BoardConfig{}
 	acceptedDrivers = []string{"mysql", "postgres", "sqlite3"}
@@ -99,18 +61,6 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 	changed := false
 
-	if gcfg.WebRoot == "" {
-		gcfg.WebRoot = "/"
-		changed = true
-	}
-	if len(gcfg.FirstPage) == 0 {
-		gcfg.FirstPage = defaults["FirstPage"].([]string)
-		changed = true
-	}
-	if gcfg.CookieMaxAge == "" {
-		gcfg.CookieMaxAge = defaults["CookieMaxAge"].(string)
-		changed = true
-	}
 	_, err := gcutil.ParseDurationString(gcfg.CookieMaxAge)
 	if err == gcutil.ErrInvalidDurationString {
 		return &InvalidValueError{Field: "CookieMaxAge", Value: gcfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
@@ -118,9 +68,6 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		return err
 	}
 
-	if gcfg.LockdownMessage == "" {
-		gcfg.LockdownMessage = defaults["LockdownMessage"].(string)
-	}
 	if gcfg.DBtype == "postgresql" {
 		gcfg.DBtype = "postgres"
 	}
@@ -131,84 +78,19 @@ func (gcfg *GochanConfig) ValidateValues() error {
 			break
 		}
 	}
-
 	if !found {
 		return &InvalidValueError{
 			Field:   "DBtype",
 			Value:   gcfg.DBtype,
 			Details: "currently supported values: " + strings.Join(acceptedDrivers, ",")}
 	}
-	if len(gcfg.Styles) == 0 {
-		return &InvalidValueError{Field: "Styles", Value: gcfg.Styles}
-	}
-	if gcfg.DefaultStyle == "" {
-		gcfg.DefaultStyle = gcfg.Styles[0].Filename
-		changed = true
-	}
 
-	if gcfg.SiteName == "" {
-		gcfg.SiteName = defaults["SiteName"].(string)
-	}
-
-	if gcfg.MaxLineLength == 0 {
-		gcfg.MaxLineLength = defaults["MaxLineLength"].(int)
-		changed = true
-	}
-	if gcfg.ThumbWidth == 0 {
-		gcfg.ThumbWidth = defaults["ThumbWidth"].(int)
-		changed = true
-	}
-	if gcfg.ThumbHeight == 0 {
-		gcfg.ThumbHeight = defaults["ThumbHeight"].(int)
-		changed = true
-	}
-	if gcfg.ThumbWidthReply == 0 {
-		gcfg.ThumbWidthReply = defaults["ThumbWidthReply"].(int)
-		changed = true
-	}
-	if gcfg.ThumbHeightReply == 0 {
-		gcfg.ThumbHeightReply = defaults["ThumbHeightReply"].(int)
-		changed = true
-	}
-
-	if gcfg.ThumbWidthCatalog == 0 {
-		gcfg.ThumbWidthCatalog = defaults["ThumbWidthCatalog"].(int)
-		changed = true
-	}
-	if gcfg.ThumbHeightCatalog == 0 {
-		gcfg.ThumbHeightCatalog = defaults["ThumbHeightCatalog"].(int)
-		changed = true
-	}
-	if gcfg.ThreadsPerPage == 0 {
-		gcfg.ThreadsPerPage = defaults["ThreadsPerPage"].(int)
-		changed = true
-	}
-	if gcfg.RepliesOnBoardPage == 0 {
-		gcfg.RepliesOnBoardPage = defaults["RepliesOnBoardPage"].(int)
-		changed = true
-	}
-	if gcfg.StickyRepliesOnBoardPage == 0 {
-		gcfg.StickyRepliesOnBoardPage = defaults["StickyRepliesOnBoardPage"].(int)
-		changed = true
-	}
-	if gcfg.BanMessage == "" {
-		gcfg.BanMessage = defaults["BanMessage"].(string)
-		changed = true
-	}
-	if gcfg.DateTimeFormat == "" {
-		gcfg.DateTimeFormat = defaults["DateTimeFormat"].(string)
-		changed = true
-	}
-
-	if gcfg.EnableGeoIP {
-		if gcfg.GeoIPDBlocation == "" {
-			return &InvalidValueError{Field: "GeoIPDBlocation", Value: "", Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true"}
+	if gcfg.EnableGeoIP && gcfg.GeoIPDBlocation == "" {
+		return &InvalidValueError{
+			Field:   "GeoIPDBlocation",
+			Value:   "",
+			Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true",
 		}
-	}
-
-	if gcfg.MaxLogDays == 0 {
-		gcfg.MaxLogDays = defaults["MaxLogDays"].(int)
-		changed = true
 	}
 
 	if gcfg.RandomSeed == "" {
@@ -488,11 +370,12 @@ func UpdateBoardConfig(dir string) error {
 		}
 		return err
 	}
-	var config BoardConfig
-	if err = json.Unmarshal(ba, &config); err != nil {
+	boardcfg := cfg.BoardConfig
+	if err = json.Unmarshal(ba, &boardcfg); err != nil {
 		return err
 	}
-	boardConfigs[dir] = config
+
+	boardConfigs[dir] = boardcfg
 	return nil
 }
 
