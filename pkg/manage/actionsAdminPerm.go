@@ -426,6 +426,7 @@ func RegisterAdminPages() {
 				}
 				err = building.BuildBoards(false)
 				if err != nil {
+					errEv.Err(err).Caller().Msg("Unable to build boards")
 					return "", err
 				}
 				if wantsJSON {
