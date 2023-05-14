@@ -149,14 +149,17 @@ def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 	status = 0
 	if realtime:  # print the command's output in real time, ignores print_output
 		while True:
-			realtime_output = proc.stdout.readline().decode("utf-8")
-			if realtime_output == "" and status is not None:
-				return ("", status)
-			if realtime_output:
-				print(realtime_output.strip())
-				output += realtime_output
-			status = proc.poll()
-	else:  # wait until the command is finished to print the output
+			try:
+				realtime_output = proc.stdout.readline().decode("utf-8")
+				if realtime_output == "" and status is not None:
+					return ("", status)
+				if realtime_output:
+					print(realtime_output.strip())
+					output += realtime_output
+				status = proc.poll()
+			except KeyboardInterrupt as e:
+				return (output, 0)
+	else: # wait until the command is finished to print the output
 		output = proc.communicate()[0]
 		if output is not None:
 			output = output.decode("utf-8").strip()
