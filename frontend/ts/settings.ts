@@ -128,7 +128,7 @@ class NumberSetting extends Setting<number, HTMLInputElement> {
 
 function createLightbox() {
 	let settingsHTML =
-		`<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>`;
+		'<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>';
 	showLightBox("Settings", settingsHTML);
 	$("button#save-settings-button").on("click", () => {
 		settings.forEach((setting, key) => {

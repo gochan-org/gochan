@@ -39,7 +39,7 @@ function setupManagementEvents() {
 		const $post = $(el.parentElement);
 		const isLocked = isThreadLocked($post);
 		if(!dropdownHasItem(el, "Staff Actions")) {
-			$el.append(`<option disabled="disabled">Staff Actions</option>`);
+			$el.append('<option disabled="disabled">Staff Actions</option>');
 		}
 		if($post.hasClass("op-post")) {
 			if(isLocked) {
