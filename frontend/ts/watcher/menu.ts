@@ -59,7 +59,7 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 function removeThreadFromMenu(threadID: number) {
 	$watcherMenu.find(`div#thread${threadID}`).remove();
 	if($watcherMenu.find("div.watcher-item").length == 0)
-		$watcherMenu.append(`<i id="no-threads">no watched threads</i>`);
+		$watcherMenu.append('<i id="no-threads">no watched threads</i>');
 }
 
 function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
@@ -101,7 +101,7 @@ $(() => {
 		$watcherMenu = $("<div/>").prop({
 			id: "watchermenu",
 			class: "dropdown-menu"
-		}).append(`<b>Watched threads</b><br/><i id="no-threads">no watched threads</i>`);
+		}).append('<b>Watched threads</b><br/><i id="no-threads">no watched threads</i>');
 	}
 	if(watcherBtn === null) {
 		watcherBtn = new TopBarButton("Watcher", () => {

@@ -228,8 +228,8 @@ export function addPostDropdown($post: JQuery<HTMLElement>) {
 	let showHide = isPostVisible(idNum)?"Hide":"Show";
 	$ddownMenu.append(
 		`<option>${showHide} ${threadPost}</option>`,
-		`<option>Edit post</option>`,
-		`<option>Report post</option>`,
+		"<option>Edit post</option>",
+		"<option>Report post</option>",
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
 	.on("change", _e => {
@@ -237,7 +237,7 @@ export function addPostDropdown($post: JQuery<HTMLElement>) {
 		$ddownMenu.val("Actions");
 	});
 	if(hasUpload)
-		$ddownMenu.append(`<option>Delete file</option>`);
+		$ddownMenu.append("<option>Delete file</option>");
 	$post.trigger("postDropdownAdded", {
 		post: $post,
 		dropdown: $ddownMenu
