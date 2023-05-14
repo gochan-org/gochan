@@ -1,41 +1,53 @@
 module.exports = {
-    "env": {
-        "browser": true,
-        "es2021": true
+  "parser": "@typescript-eslint/parser",
+  "env": {
+    "browser": true,
+    "jest": true,
+    "node": true,
+    "es6": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+  ],
+  "ignorePatterns": ["**/legacy/**"],
+  "parserOptions": {
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true,
+      "jsx": true
     },
-    "globals": {
-        "styles": "readonly",
-        "defaultStyle": "readonly",
-        "webroot": "readonly",
-        "serverTZ": "readonly"
-    },
-    "extends": "eslint:recommended",
-    "parserOptions": {
-        "ecmaVersion": "latest",
-        "sourceType": "module"
-    },
-    "rules": {
-        "no-unused-vars": ["warn", {
-            "argsIgnorePattern": "^_"
-        }],
-        "semi": "warn",
-        "no-constant-condition": "warn",
-        "no-whitespace-before-property": "warn",
-        "linebreak-style": ["error", "unix"],
-        "brace-style": ["error", "1tbs"],
-        "array-bracket-spacing": ["error", "never"],
-        "block-spacing": ["error", "always"],
-        "func-call-spacing": ["error", "never"],
-        "space-before-blocks": ["warn", "always"],
-        "no-undef": "error",
-        "keyword-spacing": ["warn", {
-            "overrides": {
-                "if": {"after": false},
-                "for": {"after": false},
-                "catch": {"after": false},
-                "switch": {"after": false},
-                "while": {"after": false}
-            }
-        }]
-    }
-}
+    "sourceType": "module"
+  },
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "indent": ["error", "tab"],
+    "linebreak-style": ["error", "unix"],
+    "quotes": ["error", "double", {
+      "allowTemplateLiterals": true
+    }],
+    "semi": ["error", "always"],
+    "no-var": ["error"],
+    "brace-style": ["error"],
+    "array-bracket-spacing": ["error", "never"],
+    "block-spacing": ["error", "always"],
+    "no-spaced-func": ["error"],
+    "no-whitespace-before-property": ["error"],
+    "space-before-blocks": ["error", "always"],
+    "keyword-spacing": ["error", {
+      "overrides": {
+        "if": {"after": false},
+        "for": {"after": false},
+        "catch": {"after": false},
+        "switch": {"after": false},
+        "while": {"after": false}
+      }
+    }],
+    "no-constant-condition": ["off"],
+    "@typescript-eslint/no-explicit-any": ["off"],
+    "@typescript-eslint/no-unused-vars": ["warn", {
+      "argsIgnorePattern": "^_"
+    }],
+  }
+};

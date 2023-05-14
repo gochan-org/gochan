@@ -1,9 +1,0 @@
-{
-	// this is here since parcel and babel don't seem to get along
-	"extends": "@parcel/config-default",
-	"transformers": {
-		"*.js": [
-			"@parcel/transformer-js"
-		]
-	}
-}
