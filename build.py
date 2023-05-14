@@ -379,9 +379,9 @@ def js(watch=False):
 	delete("html/js/gochan.js.map")
 	npm_cmd = "npm --prefix frontend/ run"
 	if watch:
-		npm_cmd += " watch-js"
+		npm_cmd += " watch-ts"
 	else:
-		npm_cmd += " build-js"
+		npm_cmd += " build-ts"
 
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
