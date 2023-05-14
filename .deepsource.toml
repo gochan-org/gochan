@@ -5,16 +5,24 @@ exclude_patterns = [
   "**/node_modules/",
   "templates/**",
   "releases/**",
-  "sql/preapril2020migration/**"
+  "sql/preapril2020migration/**",
+  "frontend/tests/coverage/**"
 ]
 
 test_patterns = [
-  "frontend/tests/*.test.js",
+  "frontend/tests/*.test.ts",
+  "frontend/ts/**/*.ts",
   "**/*_test.go"
 ]
 
 [[analyzers]]
 name = "javascript"
+enabled = true
+  [analyzers.meta]
+    environment = ["jquery"]
+
+[[analyzers]]
+name = "typescript"
 enabled = true
   [analyzers.meta]
     environment = ["jquery"]
