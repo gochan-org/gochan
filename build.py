@@ -348,18 +348,24 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 	if path.exists(gochan_exe) is False:
 		build()
 	print("Installing", gochan_exe, "to", path.join(prefix, "bin", gochan_exe))
-	if symlinks:
-		symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
-	else:
-		copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
+	try:
+		if symlinks:
+			symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
+		else:
+			copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
+	except shutil.SameFileError:
+		print(gochan_exe, "and", path.join(prefix, "bin", gochan_exe), "are the same file, skipping")
 
 	if path.exists(migration_exe) is False:
 		build()
 	print("Installing ", migration_exe, "to", path.join(prefix, "bin", migration_exe))
-	if symlinks:
-		symlink(migration_exe, path.join(prefix, "bin", migration_exe))
-	else:
-		copy(migration_exe, path.join(prefix, "bin", migration_exe))
+	try:
+		if symlinks:
+			symlink(migration_exe, path.join(prefix, "bin", migration_exe))
+		else:
+			copy(migration_exe, path.join(prefix, "bin", migration_exe))
+	except shutil.SameFileError:
+		print(migration_exe, "and", path.join(prefix, "bin", migration_exe), "are the same file, skipping")
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
