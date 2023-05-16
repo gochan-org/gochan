@@ -222,6 +222,7 @@ func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
 			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+			&post.thread.Locked, &post.thread.Stickied,
 		)
 		if err != nil {
 			return nil, err
