@@ -7,21 +7,53 @@ from selenium.webdriver.support.select import Select
 
 from . import SeleniumTestCase
 from ..util.posting import make_post
+import random
 from ..util.manage import staff_login
 
 
 class TestManageActions(SeleniumTestCase):
-	def test_login(self):
+	def setUp(self) -> None:
 		staff_login(self.options)
+		return super().setUp()
+	
+	def test_login(self):
 		self.assertEqual(
 			self.driver.find_element(by=By.CSS_SELECTOR, value="header h1").text,
 			"Dashboard",
 			"Testing staff login")
 
+	def test_logoutEverywhere(self):
+		self.assertEqual(
+			self.driver.find_element(by=By.CSS_SELECTOR, value="header h1").text,
+			"Dashboard",
+			"Testing staff login")
+
+		logout_link = self.driver.find_element(by=By.LINK_TEXT, value="Log me out everywhere")
+		logout_link.click()
+		WebDriverWait(self.driver, 10).until(
+			EC.presence_of_element_located((By.CSS_SELECTOR, 'input[value="Login"]')))
+		self.assertEqual(
+			self.driver.find_element(by=By.ID, value="board-title").text, "Login", "At login page")
+
+	def test_recentPosts(self):
+		new_msg = "test_recentPosts %d" % random.randint(0, 9999)
+		old_msg = self.options.message
+		self.options.message = new_msg
+		make_post(self.options, "test", self)
+		self.options.message = old_msg
+		staff_login(self.options)
+		self.driver.find_element(by=By.LINK_TEXT, value="Recent posts").click()
+		tds = self.driver.find_elements(by=By.CSS_SELECTOR, value="#content table td")
+		post_exists = False
+		for td in tds:
+			if td.text == new_msg:
+				post_exists = True
+		self.assertTrue(post_exists, "Found recent post in recent posts list")
+		
+
 	def test_makeBoard(self):
 		if self.options.board_exists("seleniumtesting"):
 			raise Exception("Board /seleniumtests/ already exists")
-		staff_login(self.options)
 		self.options.goto_page("manage/boards")
 
 		# fill out the board creation form
