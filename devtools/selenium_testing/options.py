@@ -92,3 +92,7 @@ class TestingOptions:
 
 	def goto_page(self, page: str):
 		self.driver.get(urljoin(self.site, page))
+
+	def close(self):
+		if not self.keep_open:
+			self.driver.close()

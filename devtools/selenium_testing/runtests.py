@@ -8,19 +8,16 @@ import argparse
 import unittest
 
 from .options import TestingOptions
-
-from .tests.test_mgmt import add_manage_tests
-from .tests.test_posting import add_posting_tests
+from .tests import SeleniumTestCase
+from .tests.test_mgmt import TestManageActions
+from .tests.test_posting import TestPosting
 
 testingSite = "http://192.168.56.3"
 testingBoard = "test"
+options:TestingOptions = None
 
-
-class SimpleTests(unittest.TestCase):
-	def test_ok(self):
-		self.assertEqual(1, 1, "1 = 1")
-
-def startBrowserTests(browser:str, headless=False, keep_open=False, site="", board="", upload="", singleTest = ""):
+def start_tests(browser:str, headless=False, keep_open=False, site="", board="", upload="", single_test = ""):
+	global options
 	options = TestingOptions(browser, headless, keep_open)
 
 	if headless:
@@ -33,14 +30,39 @@ def startBrowserTests(browser:str, headless=False, keep_open=False, site="", boa
 		options.upload_path = upload
 
 	print("Using browser %s (headless: %s) on site %s" % (browser, options.headless, options.site))
-	suite = unittest.defaultTestLoader.loadTestsFromTestCase(SimpleTests)
-	add_manage_tests(options, suite)
-	add_posting_tests(options, suite)
+	if single_test == "":
+		suite = unittest.suite.TestSuite()
+		SeleniumTestCase.add(suite, options, TestPosting)
+		SeleniumTestCase.add(suite, options, TestManageActions)
+		unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
+	else:
+		import importlib.util
+		
+		rindex = -1
+		try:
+			rindex =  single_test.rindex(":")
+		except ValueError:
+			raise ValueError("Single test must be of the format /path/to/test.py:TestCaseClass")
+		test_location = single_test[:rindex]
+		test_class  = single_test[rindex+1:]
+		if test_location == "" or test_class == "":
+			raise ValueError("Single test must be of the format /path/to/test.py:TestCaseClass")
+		print("Single test module location:", test_location)
+		print("Single test class:", test_class)
+		
+		spec = importlib.util.spec_from_file_location(test_class, test_location)
+		module = importlib.util.module_from_spec(spec)
+		module.__package__ = "devtools.selenium_testing.tests"
+		spec.loader.exec_module(module)
+		
+		suite = unittest.suite.TestSuite()
+		SeleniumTestCase.add(suite, options, module.__dict__[test_class])
+		unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
+	options.close()
 
-	unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
-	if not options.keep_open:
-		options.driver.close()
-
+def close_tests():
+	if options != None:
+		options.close()
 
 def parseArgs(argParser:argparse.ArgumentParser):
 	testable_browsers = ("firefox","chrome","chromium", "edge")
@@ -62,6 +84,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Browser testing via Selenium")
 	args = parseArgs(parser)
 	try:
-		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board)
+		start_tests(args.browser, args.headless, args.keepopen, args.site, args.board, "", args.singletest)
 	except KeyboardInterrupt:
-		print("Tests interrupted, exiting")
+		print("Tests interrupted by KeyboardInterrupt, exiting")
+		close_tests()

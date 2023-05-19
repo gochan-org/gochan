@@ -564,9 +564,16 @@ if __name__ == "__main__":
 		args = parser.parse_args()
 		sass(args.minify, args.watch)
 	elif action == "selenium":
-		from devtools.selenium_testing.runtests import parseArgs,startBrowserTests
+		from devtools.selenium_testing.runtests import parseArgs, start_tests, close_tests
 		args = parseArgs(parser)
-		startBrowserTests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/static/notbanned.png", args.singletest)
+		try:
+			start_tests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/static/notbanned.png", args.singletest)
+		except KeyboardInterrupt:
+			print("Tests interrupted by KeyboardInterrupt, exiting")
+		except Exception:
+			traceback.print_exc()
+			close_tests()
+
 	elif action == "test":
 		parser.add_argument("--verbose","-v",
 			action="store_true",
