@@ -41,13 +41,17 @@ def make_post(options: TestingOptions, url: str, runner: unittest.TestCase):
 		options.name,
 		options.email,
 		options.subject,
-		options.message if options.message.find("%s") == -1 else (options.message % options.name),
+		options.message if options.message.find("%s") == -1
+			else (options.message % options.name),
 		path.abspath(options.upload_path),
 		options.password)
 	WebDriverWait(options.driver, 10).until(
 		EC.url_matches(threadRE))
 
 def delete_post(options: TestingOptions, postID:int, password:str):
+	qr_buttons = options.driver.find_element(by=By.ID, value="qr-buttons")
+	if qr_buttons.is_displayed():
+		qr_buttons.find_element(by=By.LINK_TEXT, value="X").click()
 	options.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%postID)).click()
 	if password != "":
 		delPasswordInput = options.driver.find_element(
