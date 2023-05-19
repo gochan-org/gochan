@@ -13,6 +13,7 @@ threadRE = re.compile(r".*/(\S+)/(\d+)(\+50)?.html")
 
 
 def send_post(postForm:WebElement, name="", email="", subject="", message="", file="", password=""):
+	postForm.find_element(by=By.NAME, value="postname").clear()
 	postForm.find_element(by=By.NAME, value="postname").send_keys(name)
 	postForm.find_element(by=By.NAME, value="postemail").clear()
 	postForm.find_element(by=By.NAME, value="postemail").send_keys(email)
