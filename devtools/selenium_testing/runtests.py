@@ -61,7 +61,7 @@ def start_tests(browser:str, headless=False, keep_open=False, site="", board="",
 	options.close()
 
 def close_tests():
-	if options != None:
+	if options is not None:
 		options.close()
 
 def parseArgs(argParser:argparse.ArgumentParser):
