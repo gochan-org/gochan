@@ -1,6 +1,4 @@
-from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.edge.webdriver import WebDriver # skipcq:  PYL-W0404
-from selenium.webdriver.firefox.webdriver import WebDriver # skipcq:  PYL-W0404
+from selenium.webdriver.remote.webdriver import WebDriver
 
 class LocalStorage():
 	# from https://stackoverflow.com/a/46361900

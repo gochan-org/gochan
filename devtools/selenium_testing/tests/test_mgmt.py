@@ -1,4 +1,4 @@
-import unittest
+import urllib.parse
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -6,7 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.select import Select
 
 from . import SeleniumTestCase
-from ..util.posting import make_post
+from ..util.posting import make_post, delete_post
 import random
 from ..util.manage import staff_login
 
@@ -15,6 +15,16 @@ class TestManageActions(SeleniumTestCase):
 	def setUp(self) -> None:
 		staff_login(self.options)
 		return super().setUp()
+
+	def get_recent_post_link(self, msg_text: str):
+		trs = self.driver.find_elements(by=By.CSS_SELECTOR, value="#content table tr")
+		for tr in trs:
+			tds = tr.find_elements(by=By.TAG_NAME, value="td")
+			for c in range(len(tds)):
+				if tds[c].text == msg_text:
+					# found the post we made
+					link = tds[c-2].find_element(by=By.LINK_TEXT, value="Post")
+					return link
 
 	def test_login(self):
 		self.assertEqual(
@@ -44,12 +54,22 @@ class TestManageActions(SeleniumTestCase):
 		self.options.message = old_msg
 		staff_login(self.options)
 		self.driver.find_element(by=By.LINK_TEXT, value="Recent posts").click()
-		tds = self.driver.find_elements(by=By.CSS_SELECTOR, value="#content table td")
-		post_exists = False
-		for td in tds:
-			if td.text == new_msg:
-				post_exists = True
-		self.assertTrue(post_exists, "Found recent post in recent posts list")
+		WebDriverWait(self.driver, 10).until(
+			EC.url_contains("/manage/recentposts"))
+		
+		post_link = self.get_recent_post_link(new_msg)
+		link_href = post_link.get_attribute("href")
+		self.assertIsNotNone(post_link, "Found recent post in recent posts list")
+		post_link.click()
+		WebDriverWait(self.driver, 10).until(
+			EC.url_contains(link_href)) # link_href should be something like "/seleniumtesting/ref/<threadOP>.html#<postID>"
+		
+		fragment = urllib.parse.urldefrag(self.driver.current_url).fragment
+		delete_post(self.options, fragment, self.options.password)
+
+		self.options.goto_page("/manage/recentposts")
+		post_link = self.get_recent_post_link(new_msg)
+		self.assertIsNone(post_link, "Confirmed that recent post was deleted")
 
 	def test_makeBoard(self):
 		if self.options.board_exists("seleniumtesting"):

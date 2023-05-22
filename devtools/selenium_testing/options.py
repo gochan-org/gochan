@@ -3,9 +3,7 @@ from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from selenium import webdriver
-from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.edge.webdriver import WebDriver # skipcq:  PYL-W0404
-from selenium.webdriver.firefox.webdriver import WebDriver # skipcq:  PYL-W0404
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.chrome.options import Options  as ChromeOptions
 from selenium.webdriver.edge.options import Options as EdgeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
