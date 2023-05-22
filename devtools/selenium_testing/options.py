@@ -63,7 +63,7 @@ class TestingOptions:
 				if self.keep_open:
 					options.add_experimental_option("detach", True)
 				self.driver = webdriver.Chrome(options=options)
-			
+
 			case "chromium":
 				options = ChromeOptions()
 				options.headless = headless
@@ -81,7 +81,7 @@ class TestingOptions:
 			case _:
 				raise ValueError("Unrecognized browser argument %s" % browser)
 
-	
+
 	def board_exists(self, board: str):
 		req = urlopen(urljoin(default_site, "boards.json"))
 		boards = json.load(req)['boards']

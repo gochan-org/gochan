@@ -37,7 +37,7 @@ def start_tests(browser:str, headless=False, keep_open=False, site="", board="",
 		unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
 	else:
 		import importlib.util
-		
+
 		rindex = -1
 		try:
 			rindex =  single_test.rindex(":")
@@ -49,12 +49,12 @@ def start_tests(browser:str, headless=False, keep_open=False, site="", board="",
 			raise ValueError("Single test must be of the format /path/to/test.py:TestCaseClass")
 		print("Single test module location:", test_location)
 		print("Single test class:", test_class)
-		
+
 		spec = importlib.util.spec_from_file_location(test_class, test_location)
 		module = importlib.util.module_from_spec(spec)
 		module.__package__ = "devtools.selenium_testing.tests"
 		spec.loader.exec_module(module)
-		
+
 		suite = unittest.suite.TestSuite()
 		SeleniumTestCase.add(suite, options, module.__dict__[test_class])
 		unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
