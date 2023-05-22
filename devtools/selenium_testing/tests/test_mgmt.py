@@ -20,8 +20,8 @@ class TestManageActions(SeleniumTestCase):
 		trs = self.driver.find_elements(by=By.CSS_SELECTOR, value="#content table tr")
 		for tr in trs:
 			tds = tr.find_elements(by=By.TAG_NAME, value="td")
-			for c in range(len(tds)):
-				if tds[c].text == msg_text:
+			for c, item in enumerate(tds):
+				if item.text == msg_text:
 					# found the post we made
 					link = tds[c-2].find_element(by=By.LINK_TEXT, value="Post")
 					return link
