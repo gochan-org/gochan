@@ -74,7 +74,7 @@ def pathinfo(loc):
 
 def delete(delpath):
 	"""
-	Deletes the given file, link, or directory and silently fail if nothing exists.
+	Deletes the given file, link, or directory and silently fails if nothing exists.
 	Returns the path info as well
 	"""
 	pinfo = pathinfo(delpath)
@@ -83,15 +83,16 @@ def delete(delpath):
 	if pinfo & PATH_FILE > 0 or pinfo & PATH_LINK > 0:
 		os.remove(delpath)
 		return pinfo
-	elif pinfo & PATH_DIR > 0:
+	if pinfo & PATH_DIR > 0:
 		shutil.rmtree(delpath)
+		return pinfo
 	return PATH_UNKNOWN
 
 
-def mkdir(dir, force = False):
-	if path.exists(dir):
+def mkdir(dirpath, force = False):
+	if path.exists(dirpath):
 		if force:
-			delete(dir)
+			delete(dirpath)
 		else:
 			return
 	os.makedirs(dir)
@@ -116,8 +117,8 @@ def copy(source, dest):
 		else:
 			for root, dirs, files in os.walk(source):
 				mkdir(path.join(dest, root))
-				for dir in dirs:
-					mkdir(path.join(dest, root, dir))
+				for dirpath in dirs:
+					mkdir(path.join(dest, root, dirpath))
 				for file in files:
 					shutil.copy(path.join(root, file), path.join(dest, root, file))
 
@@ -157,7 +158,7 @@ def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 					print(realtime_output.strip())
 					output += realtime_output
 				status = proc.poll()
-			except KeyboardInterrupt as e:
+			except KeyboardInterrupt:
 				return (output, 0)
 	else: # wait until the command is finished to print the output
 		output = proc.communicate()[0]
@@ -337,7 +338,7 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 				mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		except shutil.SameFileError as err:
 			print(err)
-		except FileNotFoundError as err:
+		except FileNotFoundError:
 			if file == "html/js/":
 				print("Missing html/js directory, this must be built before installation by running python3 build.py js, or mkdir html/js if you don't want JavaScript")
 			else:
@@ -435,7 +436,7 @@ def release(goos):
 	shutil.make_archive(release_dir, archive_type, root_dir="releases", base_dir=release_name)
 
 
-def sass(minify=False, watch=False):
+def sass(watch=False):
 	npm_cmd = "npm --prefix frontend/ run"
 	if watch:
 		npm_cmd += " watch-sass"
@@ -556,13 +557,12 @@ if __name__ == "__main__":
 		else:
 			release(gcos)
 	elif action == "sass":
-		parser.add_argument("--minify", "-m", action="store_true")
 		parser.add_argument("--watch", "-w",
 			action="store_true",
 			help="automatically rebuild when you change a file (keeps running)")
 
 		args = parser.parse_args()
-		sass(args.minify, args.watch)
+		sass(args.watch)
 	elif action == "selenium":
 		from devtools.selenium_testing.runtests import parseArgs, start_tests, close_tests
 		args = parseArgs(parser)

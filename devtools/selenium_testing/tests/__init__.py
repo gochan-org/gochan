@@ -6,6 +6,7 @@ from ..options import TestingOptions
 options: TestingOptions = None
 
 class SeleniumTestCase(unittest.TestCase):
+	@staticmethod
 	def add(suite: unittest.TestSuite, use_options: TestingOptions, test_class: Type[unittest.TestCase]):
 		global options
 		options = use_options

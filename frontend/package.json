@@ -13,7 +13,6 @@
     "tsc-check": "tsc --noEmit",
     "test": "jest --verbose",
     "build-sass": "sass --no-source-map sass:../html/css",
-    "minify-sass": "sass --no-source-map sass:../html/css",
     "watch-sass": "sass --no-source-map --watch sass:../html/css"
   },
   "author": "Eggbertx",

@@ -15,7 +15,7 @@ class TestManageActions(SeleniumTestCase):
 	def setUp(self) -> None:
 		staff_login(self.options)
 		return super().setUp()
-	
+
 	def test_login(self):
 		self.assertEqual(
 			self.driver.find_element(by=By.CSS_SELECTOR, value="header h1").text,
@@ -33,10 +33,11 @@ class TestManageActions(SeleniumTestCase):
 		WebDriverWait(self.driver, 10).until(
 			EC.presence_of_element_located((By.CSS_SELECTOR, 'input[value="Login"]')))
 		self.assertEqual(
-			self.driver.find_element(by=By.ID, value="board-title").text, "Login", "At login page")
+			self.driver.find_element(by=By.ID, value="board-title").\
+				text, "Login", "At login page")
 
 	def test_recentPosts(self):
-		new_msg = "test_recentPosts %d" % random.randint(0, 9999)
+		new_msg = f"test_recentPosts {random.randint(0, 9999)}"
 		old_msg = self.options.message
 		self.options.message = new_msg
 		make_post(self.options, "test", self)
@@ -49,7 +50,6 @@ class TestManageActions(SeleniumTestCase):
 			if td.text == new_msg:
 				post_exists = True
 		self.assertTrue(post_exists, "Found recent post in recent posts list")
-		
 
 	def test_makeBoard(self):
 		if self.options.board_exists("seleniumtesting"):
@@ -71,7 +71,6 @@ class TestManageActions(SeleniumTestCase):
 			EC.presence_of_element_located((
 				By.CSS_SELECTOR,
 				'div#topbar a[href="/seleniumtesting/"]')))
-
 		make_post(self.options, "seleniumtesting", self)
 
 		self.options.goto_page("manage/boards")
