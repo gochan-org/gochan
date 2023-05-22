@@ -128,7 +128,7 @@ func init() {
 	RegisterAdminPages()
 }
 
-func dashboardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
+func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	dashBuffer := bytes.NewBufferString("")
 	announcements, err := gcsql.GetAllAccouncements()
 	if err != nil {

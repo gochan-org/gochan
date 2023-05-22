@@ -164,7 +164,7 @@ func (dbu *GCDatabaseUpdater) MigratePosts() error {
 	return gcutil.ErrNotImplemented
 }
 
-func (dbu *GCDatabaseUpdater) MigrateStaff(password string) error {
+func (dbu *GCDatabaseUpdater) MigrateStaff(_ string) error {
 	return gcutil.ErrNotImplemented
 }
 

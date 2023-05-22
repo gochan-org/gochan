@@ -47,7 +47,7 @@ func (*KusabaXMigrator) MigratePosts() error {
 	return nil
 }
 
-func (*KusabaXMigrator) MigrateStaff(password string) error {
+func (*KusabaXMigrator) MigrateStaff(_ string) error {
 	return nil
 }
 

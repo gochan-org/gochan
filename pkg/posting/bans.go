@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func showBanpage(ban *gcsql.IPBan, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) {
+func showBanpage(ban *gcsql.IPBan, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, _ *http.Request) {
 	banPageBuffer := bytes.NewBufferString("")
 	err := serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
 		"systemCritical": config.GetSystemCriticalConfig(),
