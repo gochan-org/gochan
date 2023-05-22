@@ -47,7 +47,7 @@ func (*TinyBoardMigrator) MigratePosts() error {
 	return nil
 }
 
-func (*TinyBoardMigrator) MigrateStaff(password string) error {
+func (*TinyBoardMigrator) MigrateStaff(_ string) error {
 	return nil
 }
 

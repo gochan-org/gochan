@@ -92,7 +92,7 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	return available
 }
 
-func getStaffActions(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
+func getStaffActions(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (interface{}, error) {
 	availableActions := getAvailableActions(staff.Rank, false)
 	return availableActions, nil
 }

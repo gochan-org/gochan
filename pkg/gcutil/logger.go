@@ -18,7 +18,7 @@ var (
 
 type logHook struct{}
 
-func (*logHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+func (*logHook) Run(e *zerolog.Event, level zerolog.Level, _ string) {
 	if level != zerolog.Disabled && level != zerolog.NoLevel {
 		e.Timestamp()
 	}

@@ -121,7 +121,7 @@ func (p *Post) Stickied() bool {
 	return p.thread.Stickied
 }
 
-func GetBuildablePost(id int, boardid int) (*Post, error) {
+func GetBuildablePost(id int, _ int) (*Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
 	var post Post
 	var lastBump time.Time

@@ -131,7 +131,7 @@ func (ipb IPBan) IsGlobalBan() bool {
 	return ipb.BoardID == nil
 }
 
-func (ipb *IPBan) Deactivate(staffID int) error {
+func (ipb *IPBan) Deactivate(_ int) error {
 	const deactivateQuery = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?`
 	const auditInsertQuery = `INSERT INTO DBPREFIXip_ban_audit
 		(ip_ban_id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, staff_note, message, can_appeal)
@@ -367,13 +367,13 @@ func (ub filenameOrUsernameBanBase) IsGlobalBan() bool {
 	return ub.BoardID == nil
 }
 
-func (fnb *FilenameBan) Deactivate(staffID int) error {
+func (fnb *FilenameBan) Deactivate(_ int) error {
 	const deleteQuery = `DELETE FROM DBPREFIXfilename_ban WHERE id = ?`
 	_, err := ExecSQL(deleteQuery, fnb.ID)
 	return err
 }
 
-func (fnb *UsernameBan) Deactivate(staffID int) error {
+func (fnb *UsernameBan) Deactivate(_ int) error {
 	const deleteQuery = `DELETE FROM DBPREFIXusername_ban WHERE id = ?`
 	_, err := ExecSQL(deleteQuery, fnb.ID)
 	return err
@@ -482,7 +482,7 @@ func (fb *FileBan) IsGlobalBan() bool {
 	return fb.BoardID == nil
 }
 
-func (fb FileBan) Deactivate(staffID int) error {
+func (fb FileBan) Deactivate(_ int) error {
 	const deleteQuery = `DELETE FROM DBPREFIXfile_ban WHERE id = ?`
 	_, err := ExecSQL(deleteQuery, fb.ID)
 	return err
