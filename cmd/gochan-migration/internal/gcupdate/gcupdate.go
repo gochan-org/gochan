@@ -156,23 +156,23 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	return false, tx.Commit()
 }
 
-func (dbu *GCDatabaseUpdater) MigrateBoards() error {
+func (*GCDatabaseUpdater) MigrateBoards() error {
 	return gcutil.ErrNotImplemented
 }
 
-func (dbu *GCDatabaseUpdater) MigratePosts() error {
+func (*GCDatabaseUpdater) MigratePosts() error {
 	return gcutil.ErrNotImplemented
 }
 
-func (dbu *GCDatabaseUpdater) MigrateStaff(_ string) error {
+func (*GCDatabaseUpdater) MigrateStaff(_ string) error {
 	return gcutil.ErrNotImplemented
 }
 
-func (dbu *GCDatabaseUpdater) MigrateBans() error {
+func (*GCDatabaseUpdater) MigrateBans() error {
 	return gcutil.ErrNotImplemented
 }
 
-func (dbu *GCDatabaseUpdater) MigrateAnnouncements() error {
+func (*GCDatabaseUpdater) MigrateAnnouncements() error {
 	return gcutil.ErrNotImplemented
 }
 
