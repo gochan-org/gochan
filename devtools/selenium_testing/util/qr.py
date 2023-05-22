@@ -35,7 +35,7 @@ def openQR(driver: WebDriver):
 	body = driver.find_element(by=By.CSS_SELECTOR, value="body")
 	body.click()
 	body.send_keys("q")
-	
+
 
 def closeQR(driver: WebDriver):
 	if not qrIsVisible(driver):

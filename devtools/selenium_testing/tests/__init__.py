@@ -15,7 +15,7 @@ class SeleniumTestCase(unittest.TestCase):
 	@property
 	def options(self):
 		return options
-	
+
 	@property
 	def driver(self):
 		if options == None:

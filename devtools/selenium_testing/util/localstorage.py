@@ -6,7 +6,7 @@ class LocalStorage():
 	# from https://stackoverflow.com/a/46361900
 	def __init__(self, driver: WebDriver):
 		self.driver = driver
-	
+
 	def __len__(self):
 		return self.driver.execute_script("return window.localStorage.length;")
 
