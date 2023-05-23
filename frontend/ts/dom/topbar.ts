@@ -1,4 +1,4 @@
-import $ from "jquery";
+import $, { noop } from "jquery";
 
 import { getBooleanStorageVal } from "../storage";
 
@@ -20,7 +20,7 @@ export class TopBarButton {
 	 * @param title The text shown on the button
 	 * @param action The function executed when the button is clicked
 	 */
-	constructor(title: string, action: ()=>any = ()=>{}, beforeAfter:BeforeAfter = {}) {
+	constructor(title: string, action: ()=>any = noop, beforeAfter: BeforeAfter = {}) {
 		this.title = title;
 		this.buttonAction = action;
 		this.button = $<HTMLLinkElement>("<a/>").prop({
@@ -29,8 +29,8 @@ export class TopBarButton {
 			"id": title.toLowerCase()
 		}).text(title + "▼");
 
-		let $before = $topbar.find(beforeAfter.before);
-		let $after = $topbar.find(beforeAfter.after);		
+		const $before = $topbar.find(beforeAfter.before);
+		const $after = $topbar.find(beforeAfter.after);		
 		if($before.length > 0) {
 			this.button.insertBefore($before);
 		} else if($after.length > 0) {

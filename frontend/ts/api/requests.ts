@@ -20,7 +20,6 @@ export async function getBoardList() {
 			url: webroot + "boards.json",
 			cache: false,
 			dataType: "json",
-			success: (d2 => {}),
 			error: function(_err, _status, statusText) {
 				console.error("Error getting board list: " + statusText);
 				return nullBoardsList;
@@ -33,13 +32,12 @@ export async function getBoardList() {
 }
 
 export async function getCatalog(board = "") {
-	let useBoard = (board != "")?board:currentBoard();
+	const useBoard = (board != "")?board:currentBoard();
 
 	const data = await $.ajax({
 		url: webroot + useBoard + "/catalog.json",
 		cache: false,
 		dataType: "json",
-		success: (() => { }),
 		error: function (err, status, statusText) {
 			console.error(`Error getting catalog for /${board}/: ${statusText}`);
 		}
@@ -52,7 +50,7 @@ export async function getCatalog(board = "") {
 }
 
 export async function getThread(board = "", thread = 0) {
-	let threadInfo = currentThread();
+	const threadInfo = currentThread();
 	if(board != "")
 		threadInfo.board = board;
 	if(thread > 0)

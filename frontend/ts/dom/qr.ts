@@ -23,12 +23,12 @@ let threadCooldown = 0;
 let replyCooldown = 0;
 
 const qrButtonHTML = 
-	'<input type="file" id="imagefile" name="imagefile" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"/>' +
-	'<input type="submit" value="Post" style="float:right;min-width:50px"/>';
+	`<input type="file" id="imagefile" name="imagefile" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"/>` +
+	`<input type="submit" value="Post" style="float:right;min-width:50px"/>`;
 
 const qrTitleBar =
-	'<div id="qr-title">' +
-	'<span id="qr-message"></span>' +
+	`<div id="qr-title">` +
+	`<span id="qr-message"></span>` +
 	`<span id="qr-buttons"><a href="javascript:toBottom();">${downArrow}</a>` +
 	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
 
@@ -46,7 +46,7 @@ function setSubmitButtonText(text: string) {
 }
 
 function setSubmitButtonEnabled(enabled = true) {
-	let $submit = $qr.find("input[type=submit]");
+	const $submit = $qr.find("input[type=submit]");
 	if(enabled) {
 		$submit.removeAttr("disabled");
 	} else {
@@ -56,15 +56,15 @@ function setSubmitButtonEnabled(enabled = true) {
 
 function unsetQrUpload() {
 	$("#imagefile").val("");
-	let $uploadContainer = $qr.find("div#upload-container");
+	const $uploadContainer = $qr.find("div#upload-container");
 	$uploadContainer.empty();
 	$uploadContainer.css("display","none");
 }
 
 function qrUploadChange() {
-	let $uploadContainer = $qr.find("div#upload-container");
+	const $uploadContainer = $qr.find("div#upload-container");
 	$uploadContainer.empty();
-	let filename = getUploadFilename();
+	const filename = getUploadFilename();
 	$uploadContainer.append($(this).prop({
 		"title": filename
 	}).css({
@@ -78,7 +78,7 @@ function qrUploadChange() {
 
 function setButtonTimeout(prefix = "", cooldown = 5) {
 	let currentSeconds = cooldown;
-	let interval: NodeJS.Timer;
+	let interval: NodeJS.Timer = null;
 	const timeoutCB = () => {
 		if(currentSeconds == 0) {
 			setSubmitButtonEnabled(true);
@@ -103,8 +103,7 @@ export function initQR() {
 		return closeQR();
 	}
 
-
-	let onPostingPage = $("form input[name=boardid]").length > 0;
+	const onPostingPage = $("form input[name=boardid]").length > 0;
 	// don't open the QR box if we aren't on a board or thread page
 	if(!onPostingPage)
 		return;
@@ -113,10 +112,10 @@ export function initQR() {
 	const emailCookie = getCookie("email");
 	const $oldForm = $("form#postform");
 
-	let $qrbuttons = $("<div/>")
+	const $qrbuttons = $("<div/>")
 		.prop("id", "qrbuttons")
 		.append(qrButtonHTML);
-	let $postform = $("<form/>").prop({
+	const $postform = $("<form/>").prop({
 		id: "qrpostform",
 		name: "qrpostform",
 		action: webroot + "post",
@@ -168,10 +167,10 @@ export function initQR() {
 
 	let qrTop = 32;
 	
-	let pintopbar = getBooleanStorageVal("pintopbar", true);
+	const pintopbar = getBooleanStorageVal("pintopbar", true);
 	if(pintopbar)
 		qrTop = $topbar.outerHeight() + 16;
-	let qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16});
+	const qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16});
 	if(!(qrPos.top > -1))
 		qrPos.top = qrTop;
 	if(!(qrPos.left > -1))
@@ -210,10 +209,10 @@ export function initQR() {
 		return; 
 	}
 	$postform.on("submit", function(e) {
-		let $form = $<HTMLFormElement>(this as HTMLFormElement);
+		const $form = $<HTMLFormElement>(this as HTMLFormElement);
 		e.preventDefault();
 		copyCaptchaResponse($form);
-		let data = new FormData(this as HTMLFormElement);
+		const data = new FormData(this as HTMLFormElement);
 
 		$.ajax({
 			type: "POST",
@@ -228,10 +227,10 @@ export function initQR() {
 					return;
 				}
 				clearQR();
-				let cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
+				const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
 				setButtonTimeout("", cooldown);
 				updateThread().then(clearQR).then(() => {
-					let persist = getBooleanStorageVal("persistentqr", false);
+					const persist = getBooleanStorageVal("persistentqr", false);
 					if(!persist) closeQR();
 				});
 				return false;
@@ -245,12 +244,12 @@ export function initQR() {
 }
 
 function copyCaptchaResponse($copyToForm: JQuery<HTMLElement>) {
-	let $captchaResp = $("textarea[name=h-captcha-response]");
+	const $captchaResp = $("textarea[name=h-captcha-response]");
 	if($captchaResp.length > 0) {
 		$("<textarea/>").prop({
 			"name": "h-captcha-response"
 		}).val($("textarea[name=h-captcha-response]").val()).css("display", "none")
-		.appendTo($copyToForm);
+			.appendTo($copyToForm);
 	}
 }
 
@@ -279,7 +278,7 @@ export function closeQR() {
 window.closeQR = closeQR;
 
 $(() => {
-	let board = currentBoard();
+	const board = currentBoard();
 	if(board == "") return; // not on a board
 	getThreadCooldown(board).then(cd => threadCooldown = cd);
 	getReplyCooldown(board).then(cd => replyCooldown = cd);

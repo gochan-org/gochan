@@ -24,17 +24,17 @@ export function toBottom() {
 window.toBottom = toBottom;
 
 $(() => {
-	let style = getStorageVal("style", defaultStyle);
-	let themeElem = document.getElementById("theme");
+	const style = getStorageVal("style", defaultStyle);
+	const themeElem = document.getElementById("theme");
 	if(themeElem) themeElem.setAttribute("href", `${webroot}css/${style}`);
-	let pageThread = getPageThread();
+	const pageThread = getPageThread();
 	initStaff()
 		.then(createStaffMenu)
-	.catch(() => {
-		// not logged in
-	});
+		.catch(() => {
+			// not logged in
+		});
 
-	let passwordText = $("input#postpassword").val();
+	const passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
 	setPageBanner();

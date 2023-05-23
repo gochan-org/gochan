@@ -1,7 +1,8 @@
 import $ from "jquery";
 
-const emptyFunc = () => {};
-
+const noop = () => {
+	return;
+};
 export function removeLightbox(...customs: any) {
 	$(".lightbox, .lightbox-bg").remove();
 	for(const custom of customs) {
@@ -20,7 +21,7 @@ export function showLightBox(title: string, innerHTML: string) {
 function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: any[] = []) {
 	if(properties["class"] === undefined)
 		properties["class"] = "lightbox";
-	let defaultCSS: {[key: string]: string} = {
+	const defaultCSS: {[key: string]: string} = {
 		"display": "inline-block",
 		"top": "50%",
 		"left": "50%",
@@ -35,7 +36,7 @@ function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: an
 			customCSS[key] = defaultCSS[key];
 	}
 
-	let $box = $("<div/>").prop(properties).css(customCSS).prependTo(document.body).append($elements);
+	const $box = $("<div/>").prop(properties).css(customCSS).prependTo(document.body).append($elements);
 	$("<div />").prop({
 		class: "lightbox-bg"
 	}).on("click", function() {
@@ -45,21 +46,21 @@ function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: an
 	return $box;
 }
 
-export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<HTMLElement>, val: any) => any = emptyFunc, title = "") {
-	let $ok = $("<button/>").prop({
+export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<HTMLElement>, val: any) => any = noop, title = "") {
+	const $ok = $("<button/>").prop({
 		"id": "okbutton"
 	}).text("OK");
-	let $cancel = $("<button/>").prop({
+	const $cancel = $("<button/>").prop({
 		"id": "cancelbutton"
 	}).text("Cancel");
 
-	let val = (typeof defVal == "string")?defVal:"";
-	let $promptInput = $("<input/>").prop({
+	const val = (typeof defVal == "string")?defVal:"";
+	const $promptInput = $("<input/>").prop({
 		id: "promptinput",
 		type: isMasked?"password":"text"
 	}).val(val);
 
-	let $form = $("<form/>").prop({
+	const $form = $("<form/>").prop({
 		"action": "javascript:;",
 		"autocomplete": "off"
 	}).append(
@@ -69,7 +70,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<
 		$ok,
 		$cancel
 	);
-	let $lb = simpleLightbox({}, {}, [$form]);
+	const $lb = simpleLightbox({}, {}, [$form]);
 	$promptInput.trigger("focus");
 	$ok.on("click", function() {
 		if(onOk($lb, $promptInput.val()) == false)
@@ -82,11 +83,11 @@ export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<
 	return $lb;
 }
 
-export function alertLightbox(msg = "", title = location.hostname, onOk: ($el: JQuery<HTMLElement>) => any = emptyFunc) {
-	let $ok = $("<button/>").prop({
+export function alertLightbox(msg = "", title = location.hostname, onOk: ($el: JQuery<HTMLElement>) => any = noop) {
+	const $ok = $("<button/>").prop({
 		"id": "okbutton"
 	}).text("OK");
-	let $lb = simpleLightbox({}, {}, [
+	const $lb = simpleLightbox({}, {}, [
 		$("<b/>").prop({id:"alertTitle"}).text(title),
 		"<hr/>",
 		$("<span/>").prop({id:"alertText"}).text(msg),

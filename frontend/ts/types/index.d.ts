@@ -1,3 +1,5 @@
+/* eslint no-var: 0  */
+
 import "jquery";
 
 declare global {

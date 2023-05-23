@@ -9,7 +9,7 @@ function canNotify() {
 }
 
 export function notify(title: string, body: string, img = noteIcon) {
-	let n = new Notification(title, {
+	const n = new Notification(title, {
 		body: body,
 		image: img,
 		icon: noteIcon
@@ -19,7 +19,7 @@ export function notify(title: string, body: string, img = noteIcon) {
 	}, noteCloseTime);
 }
 
-$(document).on("ready", () => {
+$(() => {
 	if(!canNotify())
 		return;
 

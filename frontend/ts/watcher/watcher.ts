@@ -7,12 +7,12 @@ import "./menu";
 
 const subjectCuttoff = 24;
 
-let watcherInterval = -1;
+const watcherInterval = -1;
 
 export function updateWatchedThreads() {
-	let watched = getJsonStorageVal<any>("watched", {});
-	let boards = Object.keys(watched);
-	let currentPage = currentThread();
+	const watched = getJsonStorageVal<any>("watched", {});
+	const boards = Object.keys(watched);
+	const currentPage = currentThread();
 	for(const board of boards) {
 		if(!(watched[board] instanceof Array)) {
 			console.error(`Invalid data for board ${board}: expected Array object, deleting.`);
@@ -67,8 +67,8 @@ export interface WatchedThreadJSON {
 }
 
 export function isThreadWatched(threadID: number, board: string) {
-	let watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
-	let threads = watched[board];
+	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
+	const threads = watched[board];
 	if(threads == undefined) return false;
 	for(const thread of threads) {
 		if(thread.id == threadID) return true;
@@ -77,7 +77,7 @@ export function isThreadWatched(threadID: number, board: string) {
 }
 
 export function watchThread(threadID: string|number, board: string) {
-	let watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
+	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
 	if(typeof threadID == "string") {
 		threadID = parseInt(threadID);
 	}
@@ -93,7 +93,7 @@ export function watchThread(threadID: string|number, board: string) {
 	}
 	getThreadJSON(threadID, board).then(data => {
 		const op = data.posts[0];
-		let threadObj: WatchedThreadJSON = {
+		const threadObj: WatchedThreadJSON = {
 			id: threadID as number,
 			board: board,
 			posts: data.posts.length,
@@ -114,7 +114,7 @@ export function watchThread(threadID: string|number, board: string) {
 }
 
 export function unwatchThread(threadID: number, board: string) {
-	let watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
+	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
 	if(!(watched[board] instanceof Array))
 		return;
 	for(const i in watched[board]) {

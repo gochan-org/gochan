@@ -22,9 +22,9 @@ module.exports = {
     "@typescript-eslint"
   ],
   "rules": {
-    "indent": ["error", "tab"],
+    "indent": ["warn", "tab"],
     "linebreak-style": ["error", "unix"],
-    "quotes": ["error", "double", {
+    "quotes": ["warn", "double", {
       "allowTemplateLiterals": true
     }],
     "semi": ["error", "always"],

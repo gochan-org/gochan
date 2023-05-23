@@ -7,7 +7,7 @@ import { getThumbFilename } from "../postinfo";
  * creates an element from the given post data
  */
 export function createPostElement(post: ThreadPost, boardDir: string, elementClass = "inlinepostprev") {
-	let $post = $("<div/>")
+	const $post = $("<div/>")
 		.prop({
 			id: `reply${post.no}`,
 			class: elementClass
@@ -40,9 +40,9 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 				href: `javascript:quote(${post.no})`
 			}).text(post.no), "<br/>",
 	);
-	let $postInfo = $post.find("label.post-info");
-	let postName = (post.name == "" && post.trip == "")?"Anonymous":post.name;
-	let $postName = $("<span/>").prop({class: "postername"});
+	const $postInfo = $post.find("label.post-info");
+	const postName = (post.name == "" && post.trip == "")?"Anonymous":post.name;
+	const $postName = $("<span/>").prop({class: "postername"});
 	if(post.email == "") {
 		$postName.text(postName);
 	} else {
@@ -61,7 +61,7 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 		$postInfo.prepend($("<span/>").prop({class:"subject"}).text(post.sub), " ");
 
 	if(post.filename != "" && post.filename != "deleted") {
-		let thumbFile = getThumbFilename(post.tim);
+		const thumbFile = getThumbFilename(post.tim);
 		$post.append(
 			$("<div/>").prop({class: "file-info"})
 				.append(
@@ -102,8 +102,8 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 
 export function shrinkOriginalFilenames(elem = $(document.body)) {
 	elem.find<HTMLAnchorElement>("a.file-orig").each((i, el) => {
-		let ext = extname(el.innerText);
-		let noExt = el.innerText.slice(0,el.innerText.lastIndexOf("."));
+		const ext = extname(el.innerText);
+		const noExt = el.innerText.slice(0,el.innerText.lastIndexOf("."));
 		if(noExt.length > 16) {
 			const trimmed = noExt.slice(0, 15).trim() + "…" + ext;
 			el.setAttribute("trimmed", trimmed);

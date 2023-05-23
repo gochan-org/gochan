@@ -13,19 +13,23 @@ const settings: Map<string, Setting<boolean|number|string,HTMLElement>> = new Ma
 
 type ElementValue = string|number|string[];
 
+const noop = () => {
+	return;
+};
+
 class Setting<T = any, E extends HTMLElement = HTMLElement> {
 	key: string;
 	title: string;
 	defaultVal: T;
 	onSave: () => any;
-	element: JQuery<E>
+	element: JQuery<E>;
 	/**
 	 * @param key The name of the setting
 	 * @param title text that gets shown in the Settings lightbox
 	 * @param defaultVal the setting's default value
 	 * @param onSave function that gets called when you save the settings
 	 */
-	constructor(key: string, title: string, defaultVal:T, onSave = () => {}) {
+	constructor(key: string, title: string, defaultVal:T, onSave = noop) {
 		this.key = key;
 		this.title = title;
 		this.defaultVal = defaultVal;
@@ -55,11 +59,11 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 }
 
 class TextSetting extends Setting<string, HTMLTextAreaElement> {
-	constructor(key: string, title: string, defaultVal = "", onSave = () => {}) {
+	constructor(key: string, title: string, defaultVal = "", onSave = noop) {
 		super(key, title, defaultVal, onSave);
 		this.element = this.createElement("<textarea/>");
 		this.element.text(defaultVal);
-		let val = this.getStorageValue();
+		const val = this.getStorageValue();
 		if(val != "") {
 			this.setElementValue(val);
 		}
@@ -69,12 +73,11 @@ class TextSetting extends Setting<string, HTMLTextAreaElement> {
 	}
 }
 
-class DropdownSetting<T> extends Setting<ElementValue, HTMLSelectElement> {
-	constructor(key: string, title: string, options:any[] = [], defaultVal: ElementValue, onSave = () => {}) {
+class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
+	constructor(key: string, title: string, options:any[] = [], defaultVal: ElementValue, onSave = noop) {
 		super(key, title, defaultVal, onSave);
 		this.element = this.createElement("<select/>");
 		for(const option of options) {
-			let s: HTMLSelectElement
 			$<HTMLSelectElement>("<option/>").val(option.val).text(option.text).appendTo(this.element);
 		}
 		this.element.val(this.getStorageValue());
@@ -82,7 +85,7 @@ class DropdownSetting<T> extends Setting<ElementValue, HTMLSelectElement> {
 }
 
 class BooleanSetting extends Setting<boolean, HTMLInputElement> {
-	constructor(key: string, title: string, defaultVal = false, onSave = () => {}) {
+	constructor(key: string, title: string, defaultVal = false, onSave = noop) {
 		super(key, title, defaultVal, onSave);
 		this.element = this.createElement("<input/>", {
 			type: "checkbox",
@@ -96,7 +99,7 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 		this.element.prop("checked", newVal);
 	}
 	getStorageValue() {
-		let val = super.getStorageValue();
+		const val = super.getStorageValue();
 		return val == true;
 	}
 }
@@ -107,9 +110,9 @@ interface MinMax {
 	max?: number;
 }
 class NumberSetting extends Setting<number, HTMLInputElement> {
-	constructor(key: string, title: string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave = () => {}) {
+	constructor(key: string, title: string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave = noop) {
 		super(key, title, defaultVal, onSave);
-		let props: MinMax = {
+		const props: MinMax = {
 			type: "number"
 		};
 		if(typeof minMax.min == "number" && !isNaN(minMax.min))
@@ -127,8 +130,8 @@ class NumberSetting extends Setting<number, HTMLInputElement> {
 }
 
 function createLightbox() {
-	let settingsHTML =
-		'<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>';
+	const settingsHTML =
+		`<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>`;
 	showLightBox("Settings", settingsHTML);
 	$("button#save-settings-button").on("click", () => {
 		settings.forEach((setting, key) => {
@@ -136,9 +139,9 @@ function createLightbox() {
 			setting.onSave();
 		});
 	});
-	let $settingsTable = $("#settings-container table");
+	const $settingsTable = $("#settings-container table");
 	settings.forEach((setting) => {
-		let $tr = $("<tr/>").appendTo($settingsTable);
+		const $tr = $("<tr/>").appendTo($settingsTable);
 		$("<td/>").append($("<b/>").text(setting.title)).appendTo($tr);
 		$("<td/>").append(setting.element).appendTo($tr);
 	});
@@ -148,7 +151,7 @@ function createLightbox() {
  * executes the custom JavaScript set in the settings
  */
 export function setCustomJS() {
-	let customJS = getStorageVal("customjs");
+	const customJS = getStorageVal("customjs");
 	if(customJS != "") {
 		eval(customJS);
 	}
@@ -158,22 +161,21 @@ export function setCustomJS() {
  * applies the custom CSS set in the settings
  */
 export function setCustomCSS() {
-	let customCSS = getStorageVal("customcss");
+	const customCSS = getStorageVal("customcss");
 	if(customCSS != "") {
 		$("style#customCSS").remove();
 		$("<style/>").prop({
 			id: "customCSS"
-		}).html(customCSS)
-		.appendTo(document.head);
+		}).html(customCSS).appendTo(document.head);
 	}
 }
 
 $(() => {
-	let styleOptions = [];
+	const styleOptions = [];
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
 	}
-	settings.set("style", new DropdownSetting<string>("style", "Style", styleOptions, defaultStyle, function() {
+	settings.set("style", new DropdownSetting("style", "Style", styleOptions, defaultStyle, function() {
 		document.getElementById("theme").setAttribute("href",
 			`${webroot}css/${this.getElementValue()}`);
 	}) as Setting);

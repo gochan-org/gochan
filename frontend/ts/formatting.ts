@@ -3,7 +3,7 @@
  * @param dateStr timestamp string, assumed to be in ISO Date-Time format
  */
 export function formatDateString(dateStr: string) {
-	let date = new Date(dateStr);
+	const date = new Date(dateStr);
 	return date.toDateString() + ", " + date.toLocaleTimeString();
 }
 

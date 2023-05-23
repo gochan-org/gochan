@@ -1,10 +1,10 @@
-import $ from 'jquery';
+import $ from "jquery";
 
 import { alertLightbox } from "../dom/lightbox";
-import { $topbar, TopBarButton } from '../dom/topbar';
+import { $topbar, TopBarButton } from "../dom/topbar";
 import "./sections";
 import "./filebans";
-import { isThreadLocked } from '../api/management';
+import { isThreadLocked } from "../api/management";
 
 const notAStaff: StaffInfo = {
 	ID: 0,
@@ -39,7 +39,7 @@ function setupManagementEvents() {
 		const $post = $(el.parentElement);
 		const isLocked = isThreadLocked($post);
 		if(!dropdownHasItem(el, "Staff Actions")) {
-			$el.append('<option disabled="disabled">Staff Actions</option>');
+			$el.append(`<option disabled="disabled">Staff Actions</option>`);
 		}
 		if($post.hasClass("op-post")) {
 			if(isLocked) {
@@ -51,7 +51,7 @@ function setupManagementEvents() {
 		if(!dropdownHasItem(el, "Posts from this IP")) {
 			$el.append("<option>Posts from this IP</option>");
 		}
-		let filenameOrig = $post.find("div.file-info a.file-orig").text();
+		const filenameOrig = $post.find("div.file-info a.file-orig").text();
 		if(filenameOrig != "" && !dropdownHasItem(el, "Ban filename")) {
 			$el.append(
 				"<option>Ban filename</option>",
@@ -84,16 +84,16 @@ export function banFile(banType: string, filename: string, checksum: string, sta
 		json: 1
 	};
 	switch(banType) {
-		case "filename":
-			xhrFields.filename = filename;
-			xhrFields.dofilenameban = "Create";
-			break;
-		case "checksum":
-			xhrFields.checksum = checksum;
-			xhrFields.dochecksumban = "Create";
-			break;
-		default:
-			break;
+	case "filename":
+		xhrFields.filename = filename;
+		xhrFields.dofilenameban = "Create";
+		break;
+	case "checksum":
+		xhrFields.checksum = checksum;
+		xhrFields.dochecksumban = "Create";
+		break;
+	default:
+		break;
 	}
 	return $.ajax({
 		method: "POST",
@@ -121,7 +121,7 @@ export async function initStaff() {
 				staffActions = result;
 			}
 		},
-		error: (e) => {
+		error: (e: JQuery.jqXHR) => {
 			console.error("Error getting actions list:", e);
 		}
 	}).then(getStaffInfo).then(info => {
@@ -174,10 +174,10 @@ export async function isLoggedIn() {
 }
 
 export function banSelectedPost() {
-	let boardDirArr = location.pathname.split("/");
+	const boardDirArr = location.pathname.split("/");
 	if(boardDirArr.length < 2) return;
-	let boardDir = boardDirArr[1];
-	let checks = $("input[type=checkbox]");
+	const boardDir = boardDirArr[1];
+	const checks = $("input[type=checkbox]");
 	if(checks.length === 0) {
 		alertLightbox("No posts selected");
 		return false;
@@ -197,10 +197,10 @@ export function banSelectedPost() {
  */
 function menuItem(action: StaffAction|string, isCategory = false) {
 	return isCategory ? $("<div/>").append($("<b/>").text(action as string)) : $("<div/>").append(
-			$("<a/>").prop({
-				href: `${webroot}manage/${(action as StaffAction).id}`
-			}).text((action as StaffAction).title)
-		);
+		$("<a/>").prop({
+			href: `${webroot}manage/${(action as StaffAction).id}`
+		}).text((action as StaffAction).title)
+	);
 }
 
 function getAction(id: string) {
@@ -224,7 +224,7 @@ function filterAction(action: StaffAction, perms: number) {
  * @param staff an object representing the staff's username and rank
  */
 export function createStaffMenu(staff = staffInfo) {
-	let rank = staff.Rank;
+	const rank = staff.Rank;
 	if(rank === 0) return;
 	$staffMenu = $("<div/>").prop({
 		id: "staffmenu",
@@ -235,14 +235,14 @@ export function createStaffMenu(staff = staffInfo) {
 		menuItem(getAction("logout")),
 		menuItem(getAction("dashboard")));
 
-	let janitorActions = staffActions.filter(val => filterAction(val, 1));
+	const janitorActions = staffActions.filter(val => filterAction(val, 1));
 	$staffMenu.append(menuItem("Janitorial", true));
 	for(const action of janitorActions) {
 		$staffMenu.append(menuItem(action));
 	}
 
 	if(rank >= 2) {
-		let modActions = staffActions.filter(val => filterAction(val, 2));
+		const modActions = staffActions.filter(val => filterAction(val, 2));
 		if(modActions.length > 0)
 			$staffMenu.append(menuItem("Moderation", true));
 		for(const action of modActions) {
@@ -251,7 +251,7 @@ export function createStaffMenu(staff = staffInfo) {
 		getReports().then(updateReports);
 	}
 	if(rank == 3) {
-		let adminActions = staffActions.filter(val => filterAction(val, 3));
+		const adminActions = staffActions.filter(val => filterAction(val, 3));
 		if(adminActions.length > 0)
 			$staffMenu.append(menuItem("Administration", true));
 		for(const action of adminActions) {
@@ -273,7 +273,7 @@ function updateReports(reports: any[]) {
 	// append " (#)" to the Reports link, replacing # with the number of reports
 	$staffMenu.find("a").each((e, elem) => {
 		if(elem.text.search(reportsTextRE) != 0) return;
-		let $span = $("<span/>").text(` (${reports.length})`).appendTo(elem);
+		const $span = $("<span/>").text(` (${reports.length})`).appendTo(elem);
 		if(reports.length > 0) {
 			// make it bold and red if there are reports
 			$span.css({

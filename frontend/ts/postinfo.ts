@@ -5,7 +5,7 @@ const opRE = /\/res\/(\d+)(p(\d)+)?.html$/;
 const threadRE = /^\d+/;
 
 export function currentBoard() {
-	let board = $("form#main-form input[type=hidden][name=board]").val();
+	const board = $("form#main-form input[type=hidden][name=board]").val();
 	if(typeof board == "string")
 		return board;
 	return "";
@@ -15,12 +15,12 @@ export function getPageThread() {
 	let pathname = window.location.pathname;
 	if(typeof webroot == "string" && webroot != "/") {
 		pathname = pathname.slice(webroot.length);
-		if(pathname === "" || pathname[0] != '/') {
+		if(pathname === "" || pathname[0] != "/") {
 			pathname = "/" + pathname;
 		}
 	}
-	let arr = opRE.exec(pathname);
-	let info = {
+	const arr = opRE.exec(pathname);
+	const info = {
 		board: currentBoard(),
 		boardID: -1,
 		op: -1,
@@ -36,18 +36,18 @@ export function getPageThread() {
 
 export function currentThread(): WatchedThreadJSON {
 	// returns the board and thread ID if we are viewing a thread
-	let thread = {board: currentBoard(), id: 0};
+	const thread = {board: currentBoard(), id: 0};
 	let pathname = location.pathname;
 	if(typeof webroot == "string" && webroot != "/") {
 		pathname = pathname.slice(webroot.length);
-		if(pathname === "" || pathname[0] != '/') {
+		if(pathname === "" || pathname[0] != "/") {
 			pathname = "/" + pathname;
 		}
 	}
-	let splits = pathname.split("/");
+	const splits = pathname.split("/");
 	if(splits.length != 4)
 		return thread;
-	let reArr = threadRE.exec(splits[3]);
+	const reArr = threadRE.exec(splits[3]);
 	if(reArr.length > 0)
 		thread.id = Number.parseInt(reArr[0]);
 	return thread;
@@ -61,9 +61,9 @@ export function insideOP(elem: any) {
  * Return the appropriate thumbnail filename for the given upload filename (replacing gif/webm with jpg, etc)
  */
 export function getThumbFilename(filename: string) {
-	let nameParts = /([^.]+)\.([^.]+)$/.exec(filename);
+	const nameParts = /([^.]+)\.([^.]+)$/.exec(filename);
 	if(nameParts === null) return filename;
-	let name = nameParts[1] + "t";
+	const name = nameParts[1] + "t";
 	let ext = nameParts[2];
 	if(ext == "gif" || ext == "webm")
 		ext = "jpg";

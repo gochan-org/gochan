@@ -1,15 +1,16 @@
 import $ from "jquery";
 import { getStorageVal, setStorageVal } from "../storage";
 
-const emptyFunc = () => {};
-
+const noop = () => {
+	return;
+};
 
 /**
  * isPostVisible returns true if the post exists and is visible, otherwise false
  * @param id the id of the post
  */
 export function isPostVisible(id: number) {
-	let $post = $(`div#op${id}.op-post,div#reply${id}.reply`);
+	const $post = $(`div#op${id}.op-post,div#reply${id}.reply`);
 	if($post.length === 0)
 		return false;
 	return $post.find(".post-text").is(":visible");
@@ -22,21 +23,21 @@ export function isPostVisible(id: number) {
  * @param visibility the visibility to be set
  * @param onComplete called after the visibility is set
  */
-export function setPostVisibility(id: number|string, visibility: boolean, onComplete = emptyFunc) {
-	let $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
+export function setPostVisibility(id: number|string, visibility: boolean, onComplete = noop) {
+	const $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
 	
 	if($post.length === 0)
 		return false;
-	let $toSet = $post.find(".file-info,.post-text,.upload,.file-deleted-box,br");
-	let $backlink = $post.find("a.backlink-click");
-	let hiddenStorage = getStorageVal("hiddenposts", "").split(",");
+	const $toSet = $post.find(".file-info,.post-text,.upload,.file-deleted-box,br");
+	const $backlink = $post.find("a.backlink-click");
+	const hiddenStorage = getStorageVal("hiddenposts", "").split(",");
 	if(visibility) {
 		$toSet.show(0, onComplete);
 		$post.find<HTMLOptionElement>("select.post-actions option").each((e, elem) => {
 			elem.text = elem.text.replace("Show", "Hide");
 		});
 		$backlink.text(id);
-		let newHidden = [];
+		const newHidden = [];
 		for(const sID of hiddenStorage) {
 			if(sID != id && newHidden.indexOf(sID) == -1) newHidden.push(sID);
 		}
@@ -61,10 +62,10 @@ export function setPostVisibility(id: number|string, visibility: boolean, onComp
  * @param visibility the visibility to be set
  */
 export function setThreadVisibility(opID: number|string, visibility: boolean) {
-	let $thread = $(`div#op${opID}.op-post`).parent(".thread");
+	const $thread = $(`div#op${opID}.op-post`).parent(".thread");
 	if($thread.length === 0) return false;
 	return setPostVisibility(opID, visibility, () => {
-		let $toSet = $thread.find(".reply-container,b,br");
+		const $toSet = $thread.find(".reply-container,b,br");
 		if(visibility) {
 			$toSet.show();
 		} else {
@@ -79,7 +80,7 @@ $(() => {
 	let hiddenPosts = getStorageVal("hiddenposts", "").split(",");
 	if(typeof hiddenPosts === "number") hiddenPosts = [hiddenPosts];
 	for(let i = 0; i < hiddenPosts.length; i++) {
-		let id = hiddenPosts[i];
+		const id = hiddenPosts[i];
 		setThreadVisibility(id, false);
 		setPostVisibility(id, false);
 	}

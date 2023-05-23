@@ -7,10 +7,10 @@ const YEAR_IN_MS = 365*24*60*60*1000;
  */
 export function getCookie(name: string, defaultVal = "") {
 	let val = defaultVal;
-	let cookieArr = document.cookie.split("; ");
+	const cookieArr = document.cookie.split("; ");
 
 	for(const cookie of cookieArr) {
-		let pair = cookie.split("=");
+		const pair = cookie.split("=");
 		if(pair[0] != name) continue;
 		try {
 			val = decodeURIComponent(pair[1]).replace("+", " ");
@@ -47,7 +47,7 @@ export function setCookie(name: string, value: string, expires = "", root = webr
 	let expiresStr = "";
 	if(expires == "") {
 		expiresStr = ";expires=";
-		let d = new Date();
+		const d = new Date();
 		d.setTime(d.getTime() + YEAR_IN_MS);
 		expiresStr += d.toUTCString();
 	}

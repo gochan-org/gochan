@@ -11,7 +11,7 @@ import { updateThreadLock } from "../api/management";
 const idRe = /^((reply)|(op))(\d+)/;
 
 function editPost(id: number, _board: string) {
-	let cookiePass = getCookie("password");
+	const cookiePass = getCookie("password");
 	promptLightbox(cookiePass, true, (_jq, inputData) => {
 		$("input[type=checkbox]").prop("checked", false);
 		$(`input#check${id}`).prop("checked", true);
@@ -21,7 +21,7 @@ function editPost(id: number, _board: string) {
 }
 
 function moveThread(id: number, _board: string) {
-	let cookiePass = getCookie("password");
+	const cookiePass = getCookie("password");
 	promptLightbox(cookiePass, true, (_jq, inputData) => {
 		$("input[type=checkbox]").prop("checked", false);
 		$(`input#check${id}`).prop("checked", true);
@@ -33,7 +33,7 @@ function moveThread(id: number, _board: string) {
 function reportPost(id: number, board: string) {
 	promptLightbox("", false, ($lb, reason) => {
 		if(reason == "" || reason === null) return;
-		let xhrFields: {[k: string]: string} = {
+		const xhrFields: {[k: string]: string} = {
 			board: board,
 			report_btn: "Report",
 			reason: reason,
@@ -56,7 +56,7 @@ function reportPost(id: number, board: string) {
 }
 
 function deletePostFile(id: number) {
-	let $elem = $(`div#op${id}.op-post, div#reply${id}.reply`);
+	const $elem = $(`div#op${id}.op-post, div#reply${id}.reply`);
 	if($elem.length === 0) return;
 	$elem.find(".file-info,.upload-container").remove();
 	$("<div/>").prop({
@@ -68,7 +68,7 @@ function deletePostFile(id: number) {
 }
 
 function deletePostElement(id: number) {
-	let $elem = $(`div#op${id}.op-post`);
+	const $elem = $(`div#op${id}.op-post`);
 	if($elem.length > 0) {
 		$elem.parent().next().remove(); // also removes the <hr> element after
 		$elem.parent().remove();
@@ -79,9 +79,9 @@ function deletePostElement(id: number) {
 }
 
 function deletePost(id: number, board: string, fileOnly = false) {
-	let cookiePass = getCookie("password");
-	promptLightbox(cookiePass, true, ($lb, password) => {
-		let xhrFields: {[k: string]: any} = {
+	const cookiePass = getCookie("password");
+	promptLightbox(cookiePass, true, (_lb, password) => {
+		const xhrFields: {[k: string]: any} = {
 			board: board,
 			boardid: $("input[name=boardid]").val(),
 			delete_btn: "Delete",
@@ -117,106 +117,106 @@ function deletePost(id: number, board: string, fileOnly = false) {
 }
 
 function handleActions(action: string, postIDStr: string) {
-	let idArr = idRe.exec(postIDStr);
+	const idArr = idRe.exec(postIDStr);
 	if(!idArr) return;
-	let postID = Number.parseInt(idArr[4]);
-	let board = currentBoard();
+	const postID = Number.parseInt(idArr[4]);
+	const board = currentBoard();
 	switch(action) {
-		case "Watch thread":
-			watchThread(postID, board);
-			break;
-		case "Unwatch thread":
-			unwatchThread(postID, board);
-			break;
-		case "Show thread":
-			setThreadVisibility(postID, true);
-			break;
-		case "Hide thread":
-			setThreadVisibility(postID, false);
-			break;
-		case "Move thread":
-			moveThread(postID, board);
-			break;
-		case "Show post":
-			setPostVisibility(postID, true);
-			break;
-		case "Hide post":
-			setPostVisibility(postID, false);
-			break;
-		case "Edit post":
-			editPost(postID, board);
-			break;
-		case "Report post":
-			reportPost(postID, board);
-			break;
-		case "Delete file":
-			deletePost(postID, board, true);
-			break;
-		case "Delete thread":
-		case "Delete post":
-			deletePost(postID, board, false);
-			break;
-		// manage stuff
-		case "Lock thread":
-			console.log(`Locking /${board}/${postID}`);
-			updateThreadLock(board, postID, true);
-			break;
-		case "Unlock thread":
-			console.log(`Unlocking /${board}/${postID}`);
-			updateThreadLock(board, postID, false);
-			break;
-		case "Posts from this IP":
-			getPostInfo(postID).then((info: any) => {
-				window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.ip}`);
-			}).catch((reason: JQuery.jqXHR) => {
-				alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
-			});
-			break;
-		case "Ban filename":
-		case "Ban file checksum": {
-			let banType = (action == "Ban filename")?"filename":"checksum";
-			getPostInfo(postID).then((info: any) => {
-				return banFile(banType, info.originalFilename, info.checksum, `Added from post dropdown for post /${board}/${postID}`);
-			}).then((result: any) => {
-				if(result.error !== undefined && result.error != "") {
-					if(result.message !== undefined)
-						alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
-					else
-						alertLightbox(`Failed applying ${banType} ban: ${result.error}`, "Error");
+	case "Watch thread":
+		watchThread(postID, board);
+		break;
+	case "Unwatch thread":
+		unwatchThread(postID, board);
+		break;
+	case "Show thread":
+		setThreadVisibility(postID, true);
+		break;
+	case "Hide thread":
+		setThreadVisibility(postID, false);
+		break;
+	case "Move thread":
+		moveThread(postID, board);
+		break;
+	case "Show post":
+		setPostVisibility(postID, true);
+		break;
+	case "Hide post":
+		setPostVisibility(postID, false);
+		break;
+	case "Edit post":
+		editPost(postID, board);
+		break;
+	case "Report post":
+		reportPost(postID, board);
+		break;
+	case "Delete file":
+		deletePost(postID, board, true);
+		break;
+	case "Delete thread":
+	case "Delete post":
+		deletePost(postID, board, false);
+		break;
+	// manage stuff
+	case "Lock thread":
+		console.log(`Locking /${board}/${postID}`);
+		updateThreadLock(board, postID, true);
+		break;
+	case "Unlock thread":
+		console.log(`Unlocking /${board}/${postID}`);
+		updateThreadLock(board, postID, false);
+		break;
+	case "Posts from this IP":
+		getPostInfo(postID).then((info: any) => {
+			window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.ip}`);
+		}).catch((reason: JQuery.jqXHR) => {
+			alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
+		});
+		break;
+	case "Ban filename":
+	case "Ban file checksum": {
+		const banType = (action == "Ban filename")?"filename":"checksum";
+		getPostInfo(postID).then((info: any) => {
+			return banFile(banType, info.originalFilename, info.checksum, `Added from post dropdown for post /${board}/${postID}`);
+		}).then((result: any) => {
+			if(result.error !== undefined && result.error != "") {
+				if(result.message !== undefined)
+					alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
+				else
+					alertLightbox(`Failed applying ${banType} ban: ${result.error}`, "Error");
+			} else {
+				alertLightbox(`Successfully applied ${banType} ban`, "Success");
+			}
+		}).catch((reason: any) => {
+			let messageDetail = "";
+			try {
+				const responseJSON = JSON.parse(reason.responseText);
+				if((typeof responseJSON.message) == "string" && responseJSON.message != "") {
+					messageDetail = responseJSON.message;
 				} else {
-					alertLightbox(`Successfully applied ${banType} ban`, "Success");
-				}
-			}).catch((reason: any) => {
-				let messageDetail = "";
-				try {
-					const responseJSON = JSON.parse(reason.responseText);
-					if((typeof responseJSON.message) == "string" && responseJSON.message != "") {
-						messageDetail = responseJSON.message;
-					} else {
-						messageDetail = reason.statusText;
-					}
-				} catch(e) {
 					messageDetail = reason.statusText;
 				}
-				alertLightbox(`Failed banning file: ${messageDetail}`, "Error");
-			});
-		}
+			} catch(e) {
+				messageDetail = reason.statusText;
+			}
+			alertLightbox(`Failed banning file: ${messageDetail}`, "Error");
+		});
+	}
 	}
 }
 
 export function addPostDropdown($post: JQuery<HTMLElement>) {
 	if($post.find("select.post-actions").length > 0)
 		return $post;
-	let $postInfo = $post.find("label.post-info");
-	let isOP = $post.prop("class").split(" ").indexOf("op-post") > -1;
-	let hasUpload = $postInfo.siblings("div.file-info").length > 0;
-	let postID = $postInfo.parent().attr("id");
-	let threadPost = isOP?"thread":"post";
-	let $ddownMenu = $("<select />", {
+	const $postInfo = $post.find("label.post-info");
+	const isOP = $post.prop("class").split(" ").indexOf("op-post") > -1;
+	const hasUpload = $postInfo.siblings("div.file-info").length > 0;
+	const postID = $postInfo.parent().attr("id");
+	const threadPost = isOP?"thread":"post";
+	const $ddownMenu = $("<select />", {
 		class: "post-actions",
 		id: postID
 	}).append("<option disabled selected>Actions</option>");
-	let idNum = Number.parseInt(idRe.exec(postID)[4]);
+	const idNum = Number.parseInt(idRe.exec(postID)[4]);
 	if(isOP) {
 		if(isThreadWatched(idNum, currentBoard())) {
 			$ddownMenu.append("<option>Unwatch thread</option>");
@@ -225,17 +225,17 @@ export function addPostDropdown($post: JQuery<HTMLElement>) {
 		}
 		$ddownMenu.append("<option>Move thread</option>");
 	}
-	let showHide = isPostVisible(idNum)?"Hide":"Show";
+	const showHide = isPostVisible(idNum)?"Hide":"Show";
 	$ddownMenu.append(
 		`<option>${showHide} ${threadPost}</option>`,
 		"<option>Edit post</option>",
 		"<option>Report post</option>",
 		`<option>Delete ${threadPost}</option>`,
 	).insertAfter($postInfo)
-	.on("change", _e => {
-		handleActions($ddownMenu.val() as string, postID);
-		$ddownMenu.val("Actions");
-	});
+		.on("change", _e => {
+			handleActions($ddownMenu.val() as string, postID);
+			$ddownMenu.val("Actions");
+		});
 	if(hasUpload)
 		$ddownMenu.append("<option>Delete file</option>");
 	$post.trigger("postDropdownAdded", {

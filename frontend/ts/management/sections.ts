@@ -9,18 +9,18 @@ import { alertLightbox } from "../dom/lightbox";
 
 let $sectionsTable: JQuery<HTMLTableElement> = null;
 let changesButtonAdded = false;
-let initialOrders: string[] = [];
+const initialOrders: string[] = [];
 
 function applyOrderChanges() {
-	let $sections = $sectionsTable.find("tr.sectionrow");
+	const $sections = $sectionsTable.find("tr.sectionrow");
 	let errorShown = false; // only show one error if something goes wrong
 	$sections.each((i, el) => {
-		let $el = $(el);
-		let updatesection = /^section(\d+)$/.exec(el.id)[1];
-		let sectionname = $el.find(":nth-child(1)").html();
-		let sectionabbr = $el.find(":nth-child(2)").html();
-		let sectionpos = $el.find(":nth-child(3)").html();
-		let sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() == "yes"?"on":"off";
+		const $el = $(el);
+		const updatesection = /^section(\d+)$/.exec(el.id)[1];
+		const sectionname = $el.find(":nth-child(1)").html();
+		const sectionabbr = $el.find(":nth-child(2)").html();
+		const sectionpos = $el.find(":nth-child(3)").html();
+		const sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() == "yes"?"on":"off";
 		$.ajax({
 			method: "POST",
 			url: webroot + "manage/boardsections",
@@ -54,7 +54,7 @@ function applyOrderChanges() {
 
 function cancelOrderChanges() {
 	$sectionsTable.find("tbody").sortable("cancel");
-	let $sections = $sectionsTable.find("tr.sectionrow");
+	const $sections = $sectionsTable.find("tr.sectionrow");
 	$sections.each((i, el) => {
 		$(el).find(":nth-child(3)").text(initialOrders[i]);
 	});
@@ -85,7 +85,7 @@ $(() => {
 		items: "tr.sectionrow",
 		stop: () => {
 			$sectionsTable.find("tr.sectionrow").each((i, el) => {
-				let $order = $(el).find(":nth-child(3)");
+				const $order = $(el).find(":nth-child(3)");
 				initialOrders.push($order.text());
 				$order.text(i + 1);
 			});
