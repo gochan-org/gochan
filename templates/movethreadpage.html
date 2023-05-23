@@ -1,7 +1,4 @@
 {{template "page_header.html" .}}
-<header>
-	<h1 id="board-title">Move thread</h1>
-</header><hr />
 <form action="{{webPath "/util"}}" method="POST" id="main-form">
 	<input name="srcboardid" type="hidden" value="{{.srcBoard.ID}}" />
 	<input name="postid" type="hidden" value="{{.postid}}" />

@@ -2,7 +2,7 @@ package gcutil
 
 import (
 	"crypto/md5"
-	"crypto/sha1"
+	"crypto/sha1" // skipcq GSC-G505
 	"encoding/json"
 	"errors"
 	"fmt"

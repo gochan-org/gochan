@@ -153,7 +153,7 @@ var funcMap = template.FuncMap{
 		return dict, nil
 	},
 	"until": func(t time.Time) string {
-		return t.Sub(time.Now()).String()
+		return time.Until(t).String()
 	},
 	"dereference": func(a *int) int {
 		if a == nil {

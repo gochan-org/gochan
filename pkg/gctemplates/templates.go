@@ -104,7 +104,7 @@ func templateLoading(t string, buildAll bool) error {
 		}
 	}
 	if buildAll || t == "catalog" {
-		Catalog, err = LoadTemplate("catalog.html", "page_header.html", "page_footer.html")
+		Catalog, err = LoadTemplate("catalog.html", "topbar.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("catalog.html", err)
 		}
@@ -116,25 +116,25 @@ func templateLoading(t string, buildAll bool) error {
 		}
 	}
 	if buildAll || t == "front" {
-		FrontPage, err = LoadTemplate("front.html", "front_intro.html", "page_header.html", "page_footer.html")
+		FrontPage, err = LoadTemplate("front.html", "topbar.html", "front_intro.html", "page_header.html", "page_footer.html")
 		if err != nil {
 			return templateError("front.html", err)
 		}
 	}
 	if buildAll || t == "boardpage" {
-		BoardPage, err = LoadTemplate("boardpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
+		BoardPage, err = LoadTemplate("boardpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
 		if err != nil {
 			return templateError("boardpage.html", err)
 		}
 	}
 	if buildAll || t == "threadpage" {
-		ThreadPage, err = LoadTemplate("threadpage.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
+		ThreadPage, err = LoadTemplate("threadpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
 		if err != nil {
 			return templateError("threadpage.html", err)
 		}
 	}
 	if buildAll || t == "postedit" {
-		PostEdit, err = LoadTemplate("post_edit.html", "page_header.html", "page_footer.html")
+		PostEdit, err = LoadTemplate("post_edit.html", "page_header.html", "topbar.html", "page_footer.html")
 		if err != nil {
 			return templateError("threadpage.html", err)
 		}
@@ -230,13 +230,13 @@ func templateLoading(t string, buildAll bool) error {
 		}
 	}
 	if buildAll || t == "movethreadpage" {
-		MoveThreadPage, err = LoadTemplate("movethreadpage.html", "page_header.html", "page_footer.html")
+		MoveThreadPage, err = LoadTemplate("movethreadpage.html", "page_header.html", "topbar.html", "page_footer.html")
 		if err != nil {
 			return templateError("movethreadpage.html", err)
 		}
 	}
 	if buildAll || t == "pageheader" {
-		PageHeader, err = LoadTemplate("page_header.html")
+		PageHeader, err = LoadTemplate("page_header.html", "topbar.html")
 		if err != nil {
 			return templateError("page_header.html", err)
 		}

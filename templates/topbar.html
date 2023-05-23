@@ -1,0 +1,8 @@
+{{define "topbar" -}}
+<div id="topbar">
+	<a href="{{webPath "/"}}" class="topbar-item">home</a>
+	{{- range $i, $board := .boards -}}
+		<a href="{{webPath $board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>
+	{{- end -}}
+</div>
+{{- end -}}
