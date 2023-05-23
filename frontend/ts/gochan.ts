@@ -24,10 +24,10 @@ export function toBottom() {
 window.toBottom = toBottom;
 
 $(() => {
-	let pageThread = getPageThread();
 	let style = getStorageVal("style", defaultStyle);
 	let themeElem = document.getElementById("theme");
 	if(themeElem) themeElem.setAttribute("href", `${webroot}css/${style}`);
+	let pageThread = getPageThread();
 	initStaff()
 		.then(createStaffMenu)
 	.catch(() => {

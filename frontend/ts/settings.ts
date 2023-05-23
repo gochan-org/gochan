@@ -41,7 +41,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 		this.element.val(newVal as ElementValue);
 	}
 	getStorageValue(): T {
-		return getStorageVal(this.key, this.defaultVal.toString()) as T;
+		return getStorageVal(this.key, this.defaultVal as string) as T;
 	}
 	setStorageValue(newVal: T) {
 		setStorageVal(this.key, newVal);
@@ -90,10 +90,10 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 		});
 	}
 	getElementValue() {
-		return this.element.prop("checked");
+		return this.element.prop("checked") as boolean;
 	}
 	setElementValue(newVal: boolean) {
-		this.element.prop({checked: newVal?"on":"off"});
+		this.element.prop("checked", newVal);
 	}
 	getStorageValue() {
 		let val = super.getStorageValue();
@@ -178,13 +178,13 @@ $(() => {
 			`${webroot}css/${this.getElementValue()}`);
 	}) as Setting);
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
-	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", false, initPostPreviews));
+	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", true, initPostPreviews));
 	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true, initPostPreviews));
 	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, () => {
 		if(getBooleanStorageVal("useqr", true)) initQR();
 		else closeQR();
 	}));
-	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 10, {
+	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 15, {
 		min: 2
 	}, initWatcher));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
