@@ -25,8 +25,12 @@ div#topbar {
 		padding: 4px;
 		margin-left: 4px;
 	}
-	a.topbar-item {
+	a.topbar-item, .topbar-section {
 		display: inline-block;
+	}
+	.topbar-section {
+		padding-top: 0px!important;
+		padding-bottom: 0px!important;
 	}
 	a.dropdown-button {
 		float: right;
