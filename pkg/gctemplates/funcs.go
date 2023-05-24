@@ -161,6 +161,7 @@ var funcMap = template.FuncMap{
 		}
 		return *a
 	},
+
 	// Imageboard functions
 	"bannedForever": func(ban *gcsql.IPBan) bool {
 		return ban.IsActive && ban.Permanent && !ban.CanAppeal
@@ -243,6 +244,15 @@ var funcMap = template.FuncMap{
 	},
 	"webPath": func(part ...string) string {
 		return config.WebPath(part...)
+	},
+	"sectionBoards": func(sectionID int) []gcsql.Board {
+		var boards []gcsql.Board
+		for _, board := range gcsql.AllBoards {
+			if board.SectionID == sectionID && !board.IsHidden(false) {
+				boards = append(boards, board)
+			}
+		}
+		return boards
 	},
 	// Template convenience functions
 	"makeLoop": func(n int, offset int) []int {
