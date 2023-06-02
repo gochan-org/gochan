@@ -95,7 +95,7 @@ def mkdir(dirpath, force = False):
 			delete(dirpath)
 		else:
 			return
-	os.makedirs(dir)
+	os.makedirs(dirpath)
 
 
 def copy(source, dest):
@@ -337,7 +337,7 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 				copy(file, path.join(prefix, "share/gochan"))
 				mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		except shutil.SameFileError as err:
-			print(err)
+			print(err, "(skipping)")
 		except FileNotFoundError:
 			if file == "html/js/":
 				print("Missing html/js directory, this must be built before installation by running python3 build.py js, or mkdir html/js if you don't want JavaScript")
