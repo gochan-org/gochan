@@ -65,9 +65,11 @@
 	"ThumbWidthCatalog": 50,
 	"ThumbHeightCatalog": 50,
 
-	"AllowUploadingZipFiles": false,
-	"AllowUploadingPDFs": false,
-	"AllowOtherExtensions": [],
+	"AllowOtherExtensions": {
+		".zip": "archivethumb.png",
+		".pdf": "pdfthumb.png",
+		".dat": "otherthumb.png"
+	},
 	"StripImageMetadata": "none",
 	"ExifToolPath": "",
 

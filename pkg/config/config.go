@@ -264,24 +264,13 @@ type UploadConfig struct {
 	ThumbWidthCatalog     int
 	ThumbHeightCatalog    int
 
-	AllowUploadingZipFiles bool
-	AllowUploadingPDFs     bool
-	AllowOtherExtensions   []string
+	AllowOtherExtensions map[string]string
 
 	// Sets what (if any) metadata to remove from uploaded images using exiftool.
 	// Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata)
 	StripImageMetadata string
 	// The path to the exiftool command. If unset or empty, the system path will be used to find it
 	ExiftoolPath string
-}
-
-func (uc *UploadConfig) AcceptedOtherExtension(ext string) bool {
-	for _, allowedExt := range uc.AllowOtherExtensions {
-		if ext == allowedExt {
-			return true
-		}
-	}
-	return false
 }
 
 func (uc *UploadConfig) AcceptedExtension(filename string) bool {
@@ -305,13 +294,10 @@ func (uc *UploadConfig) AcceptedExtension(filename string) bool {
 		fallthrough
 	case ".webm":
 		return true
-	// Other formats
-	case ".pdf":
-		return uc.AllowUploadingPDFs
-	case ".zip":
-		return uc.AllowUploadingZipFiles
 	}
-	return uc.AcceptedOtherExtension(ext)
+	// other formats as configured
+	_, ok := uc.AllowOtherExtensions[ext]
+	return ok
 }
 
 type PostConfig struct {

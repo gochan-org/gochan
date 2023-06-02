@@ -190,7 +190,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 				upload.Width, upload.Height, postBoard.Dir, thumbType)
 		}
-	} else if ext == ".pdf" || ext == ".zip" || boardConfig.AcceptedOtherExtension(ext) {
+	} else if cfgThumb, ok := boardConfig.AllowOtherExtensions[ext]; ok {
 		stat, err := os.Stat(filePath)
 		if err != nil {
 			errEv.Err(err).Caller().
@@ -208,21 +208,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			upload.ThumbnailWidth = boardConfig.ThumbWidthReply
 			upload.ThumbnailHeight = boardConfig.ThumbHeightReply
 		}
-		var staticThumbPath string
-		switch ext {
-		case ".pdf":
-			staticThumbPath = "static/pdfthumb.png"
-		case ".txt":
-			staticThumbPath = "static/txtthumb.png"
-		case ".gz":
-			fallthrough
-		case ".xz":
-			fallthrough
-		case ".zip":
-			staticThumbPath = "static/archivethumb.png"
-		default:
-			staticThumbPath = "static/otherthumb.png"
-		}
+		staticThumbPath := path.Join("static/", cfgThumb)
 		originalThumbPath := path.Join(documentRoot, staticThumbPath)
 		if _, err = os.Stat(originalThumbPath); err != nil {
 			errEv.Err(err).Str("originalThumbPath", originalThumbPath).Send()
