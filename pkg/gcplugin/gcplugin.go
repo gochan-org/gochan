@@ -3,9 +3,12 @@ package gcplugin
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
+	"path"
+	"plugin"
 	"reflect"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -24,8 +27,9 @@ import (
 )
 
 var (
-	lState       *lua.LState
-	eventPlugins map[string][]*lua.LFunction
+	lState               *lua.LState
+	eventPlugins         map[string][]*lua.LFunction
+	ErrorInvalidInitFunc = errors.New("invalid InitPlugin, expected function with 0 arguments and 1 return value (error type)")
 )
 
 func initLua() {
@@ -98,7 +102,7 @@ func createLuaLogFunc(which string) lua.LGFunction {
 }
 
 func luaEventRegisterHandlerAdapter(l *lua.LState, fn *lua.LFunction) events.EventHandler {
-	return func(trigger string, data ...interface{}) {
+	return func(trigger string, data ...interface{}) error {
 		args := []lua.LValue{
 			luar.New(l, trigger),
 		}
@@ -107,9 +111,14 @@ func luaEventRegisterHandlerAdapter(l *lua.LState, fn *lua.LFunction) events.Eve
 		}
 		l.CallByParam(lua.P{
 			Fn:   fn,
-			NRet: 0,
+			NRet: 1,
 			// Protect: true,
 		}, args...)
+		errStr := lua.LVAsString(l.Get(-1))
+		if errStr != "" {
+			return errors.New(errStr)
+		}
+		return nil
 	}
 }
 
@@ -208,9 +217,9 @@ func registerLuaFunctions() {
 		fn := l.CheckFunction(5)
 		actionHandler := func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 			if err = l.CallByParam(lua.P{
-				Fn:      fn,
-				NRet:    2,
-				Protect: true,
+				Fn:   fn,
+				NRet: 2,
+				// Protect: true,
 			}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, infoEv), luar.New(l, errEv)); err != nil {
 				return "", err
 			}
@@ -272,20 +281,47 @@ func registerEventFunction(name string, fn *lua.LFunction) {
 
 func LoadPlugins(paths []string) error {
 	var err error
+	var luaInitialized bool
 	for _, pluginPath := range paths {
-		initLua()
-		if err = lState.DoFile(pluginPath); err != nil {
-			return err
-		}
-		pluginTable := lState.NewTable()
-		pluginTable.ForEach(func(key, val lua.LValue) {
-			keyStr := key.String()
-			fn, ok := val.(*lua.LFunction)
-			if !ok {
-				return
+		ext := path.Ext(pluginPath)
+		fmt.Println("Loading plugin", pluginPath)
+		switch ext {
+		case ".lua":
+			if !luaInitialized {
+				initLua()
+				luaInitialized = true
 			}
-			registerEventFunction(keyStr, fn)
-		})
+			if err = lState.DoFile(pluginPath); err != nil {
+				return err
+			}
+			pluginTable := lState.NewTable()
+			pluginTable.ForEach(func(key, val lua.LValue) {
+				keyStr := key.String()
+				fn, ok := val.(*lua.LFunction)
+				if !ok {
+					return
+				}
+				registerEventFunction(keyStr, fn)
+			})
+		case ".so":
+			nativePlugin, err := plugin.Open(pluginPath)
+			if err != nil {
+				return err
+			}
+			initFuncSymbol, err := nativePlugin.Lookup("InitPlugin")
+			if err != nil {
+				return err
+			}
+			initFunc, ok := initFuncSymbol.(func() error)
+			if !ok {
+				return ErrorInvalidInitFunc
+			}
+			if err = initFunc(); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unrecognized plugin type (expected .lua or .so extension): %s", pluginPath)
+		}
 	}
 	return nil
 }
