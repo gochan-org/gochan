@@ -121,11 +121,18 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		})
 		return nil, true
 	}
-	_, recovered := events.TriggerEvent("upload-saved", filePath)
+	_, err, recovered := events.TriggerEvent("upload-saved", filePath)
 	if recovered {
 		gcutil.LogWarning().Caller().
 			Str("filePath", filePath).Str("triggeredEvent", "upload-saved").
 			Msg("Recovered from a panic in event handler")
+	}
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			"filename":         upload.Filename,
+			"originalFilename": upload.OriginalFilename,
+		})
+		return nil, true
 	}
 
 	if ext == ".webm" || ext == ".mp4" {

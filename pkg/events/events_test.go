@@ -3,13 +3,17 @@ package events
 import "testing"
 
 func TestPanicRecover(t *testing.T) {
-	RegisterEvent([]string{"TestPanicRecoverEvt"}, func(tr string, i ...interface{}) {
+	RegisterEvent([]string{"TestPanicRecoverEvt"}, func(tr string, i ...interface{}) error {
 		t.Log("Testing panic recover")
 		t.Log(i[0])
+		return nil
 	})
-	handled, recovered := TriggerEvent("TestPanicRecoverEvt") // should panic
+	handled, err, recovered := TriggerEvent("TestPanicRecoverEvt") // should panic
 	if !handled {
 		t.Fatal("TriggerEvent for TestPanicRecoverEvt wasn't handled")
+	}
+	if err != nil {
+		t.Fatal(err.Error())
 	}
 	t.Log("TestPanicRecoverEvt recovered: ", recovered)
 	if !recovered {
@@ -18,9 +22,10 @@ func TestPanicRecover(t *testing.T) {
 }
 
 func TestEventEditValue(t *testing.T) {
-	RegisterEvent([]string{"TestEventEditValue"}, func(tr string, i ...interface{}) {
+	RegisterEvent([]string{"TestEventEditValue"}, func(tr string, i ...interface{}) error {
 		p := i[0].(*int)
 		*p += 1
+		return nil
 	})
 	var a int
 	t.Logf("a before TestEventEditValue triggered: %d", a)
@@ -33,8 +38,9 @@ func TestEventEditValue(t *testing.T) {
 
 func TestMultipleEventTriggers(t *testing.T) {
 	triggered := map[string]bool{}
-	RegisterEvent([]string{"a", "b"}, func(tr string, i ...interface{}) {
+	RegisterEvent([]string{"a", "b"}, func(tr string, i ...interface{}) error {
 		triggered[tr] = true
+		return nil
 	})
 	TriggerEvent("a")
 	TriggerEvent("b")
