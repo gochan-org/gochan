@@ -144,23 +144,24 @@ the server is running could have site breaking consequences. It should only be c
 file and restarting the server.
 */
 type SystemCriticalConfig struct {
-	ListenIP     string `critical:"true"`
-	Port         int    `critical:"true"`
-	UseFastCGI   bool   `critical:"true"`
-	DocumentRoot string `critical:"true"`
-	TemplateDir  string `critical:"true"`
-	LogDir       string `critical:"true"`
-	Plugins      []string
+	ListenIP       string
+	Port           int
+	UseFastCGI     bool
+	DocumentRoot   string
+	TemplateDir    string
+	LogDir         string
+	Plugins        []string
+	PluginSettings map[string]any
 
 	SiteHeaderURL string
 	WebRoot       string
 	SiteDomain    string
 
-	DBtype     string `critical:"true"`
-	DBhost     string `critical:"true"`
-	DBname     string `critical:"true"`
-	DBusername string `critical:"true"`
-	DBpassword string `critical:"true"`
+	DBtype     string
+	DBhost     string
+	DBname     string
+	DBusername string
+	DBpassword string
 	DBprefix   string
 
 	DebugMode  bool
