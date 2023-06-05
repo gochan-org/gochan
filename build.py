@@ -233,7 +233,7 @@ def build(debugging=False, plugin_path=""):
 	build_cmd += gcflags + ldflags
 
 	status = -1
-	if plugin_path != "":
+	if plugin_path != "" and plugin_path is not None:
 		status = run_cmd(build_cmd + " -buildmode=plugin " + plugin_path,
 			realtime=True, print_command=True)[1]
 		if status != 0:
