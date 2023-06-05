@@ -202,7 +202,7 @@ def set_vars(goos=""):
 	migration_exe = "gochan-migration" + exe
 
 
-def build(debugging=False):
+def build(debugging=False, plugin_path=""):
 	"""Build the gochan executable for the current GOOS"""
 	pwd = os.getcwd()
 	trimpath = "-trimpath=" + pwd
@@ -231,6 +231,16 @@ def build(debugging=False):
 		gcflags = gcflags.format("")
 		print("Building for", gcos)
 	build_cmd += gcflags + ldflags
+
+	status = -1
+	if plugin_path != "":
+		status = run_cmd(build_cmd + " -buildmode=plugin " + plugin_path,
+			realtime=True, print_command=True)[1]
+		if status != 0:
+			print("Failed building plugin at {}, see output for details".format(plugin_path))
+			sys.exit(1)
+		print("Built plugin successfully")
+		return
 
 	status = run_cmd(
 		build_cmd + " -o " + gochan_exe + " ./cmd/gochan",
@@ -484,8 +494,10 @@ if __name__ == "__main__":
 		parser.add_argument("--debug",
 			help="build gochan and gochan-migrate with debugging symbols",
 			action="store_true")
+		parser.add_argument("--plugin",
+		      help="if used, builds the gochan-compatible Go plugin at the specified directory")
 		args = parser.parse_args()
-		build(args.debug)
+		build(args.debug, args.plugin)
 	elif action == "clean":
 		clean()
 		sys.exit(0)
