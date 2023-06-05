@@ -303,6 +303,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		os.Remove(filePath)
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
+		post.Delete()
 		server.ServeErrorPage(writer, "Unable to attach upload: "+err.Error())
 		return
 	}
