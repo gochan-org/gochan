@@ -18,7 +18,7 @@ import (
 
 // manage actions that require at least janitor-level permission go here
 
-func RegisterJanitorPages() {
+func registerJanitorPages() {
 	actions = append(actions,
 		Action{
 			ID:          "logout",

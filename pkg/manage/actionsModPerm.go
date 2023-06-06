@@ -21,7 +21,7 @@ import (
 
 // manage actions that require moderator-level permission go here
 
-func RegisterModeratorPages() {
+func registerModeratorPages() {
 	actions = append(actions,
 		Action{
 			ID:          "bans",

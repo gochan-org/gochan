@@ -118,10 +118,10 @@ func GetStaffRank(request *http.Request) int {
 func init() {
 	RegisterManagePage("actions", "Staff actions", JanitorPerms, AlwaysJSON, getStaffActions)
 	RegisterManagePage("dashboard", "Dashboard", JanitorPerms, NoJSON, dashboardCallback)
-	RegisterNoPermPages()
-	RegisterJanitorPages()
-	RegisterModeratorPages()
-	RegisterAdminPages()
+	registerNoPermPages()
+	registerJanitorPages()
+	registerModeratorPages()
+	registerAdminPages()
 }
 
 func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {

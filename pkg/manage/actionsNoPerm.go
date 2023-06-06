@@ -60,7 +60,7 @@ var (
 	}
 )
 
-func RegisterNoPermPages() {
+func registerNoPermPages() {
 	actions = append(actions, *loginAction,
 		Action{
 			ID:          "staffinfo",

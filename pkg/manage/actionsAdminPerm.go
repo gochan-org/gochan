@@ -21,7 +21,7 @@ import (
 
 // manage actions that require admin-level permission go here
 
-func RegisterAdminPages() {
+func registerAdminPages() {
 	actions = append(actions,
 		Action{
 			ID:          "cleanup",
