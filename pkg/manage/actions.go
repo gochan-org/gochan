@@ -59,15 +59,20 @@ var actions []Action
 
 // returns the action by its ID, or nil if it doesn't exist
 func getAction(id string, rank int) *Action {
+	var action *Action
 	for a := range actions {
-		if rank == NoPerms && actions[a].Permissions > NoPerms {
-			id = "login"
-		}
 		if actions[a].ID == id {
-			return &actions[a]
+			action = &actions[a]
+			break
 		}
 	}
-	return nil
+	if action == nil {
+		return nil
+	}
+	if rank == NoPerms && action.Permissions > NoPerms {
+		return loginAction
+	}
+	return action
 }
 
 func RegisterManagePage(id string, title string, permissions int, jsonOutput int, callback CallbackFunction) {
