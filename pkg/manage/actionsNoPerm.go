@@ -48,7 +48,12 @@ func RegisterNoPermPages() {
 					output = manageLoginBuffer.String()
 				} else {
 					key := gcutil.Md5Sum(request.RemoteAddr + username + password + systemCritical.RandomSeed + gcutil.RandomString(3))[0:10]
-					createSession(key, username, password, request, writer)
+					if err = createSession(key, username, password, request, writer); err != nil {
+						if errors.Is(err, ErrBadCredentials) {
+							writer.WriteHeader(http.StatusUnauthorized)
+						}
+						return "", err
+					}
 					http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage/"+request.FormValue("redirect")), http.StatusFound)
 				}
 				return

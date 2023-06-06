@@ -3,6 +3,7 @@ package manage
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -17,20 +18,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	sSuccess = iota
-	sInvalidPassword
-	sOtherError
-)
-
 var (
-	chopPortNumRegex = regexp.MustCompile(`(.+|\w+):(\d+)$`)
+	chopPortNumRegex         = regexp.MustCompile(`(.+|\w+):(\d+)$`)
+	ErrSpambot               = errors.New("request looks like a spambot")
+	ErrBadCredentials        = errors.New("invalid username or password")
+	ErrUnableToCreateSession = errors.New("unable to create login session")
 )
 
-func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) int {
-	//returns 0 for successful, 1 for password mismatch, and 2 for other
+func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) error {
 	domain := request.Host
-	var err error
 	errEv := gcutil.LogError(nil).
 		Str("staff", username).
 		Str("IP", gcutil.GetRealIP(request))
@@ -44,16 +40,16 @@ func createSession(key, username, password string, request *http.Request, writer
 			Str("IP", gcutil.GetRealIP(request)).
 			Str("remoteAddr", request.Response.Request.RemoteAddr).
 			Msg("Rejected login from possible spambot")
-		return sOtherError
+		return ErrSpambot
 	}
 	staff, err := gcsql.GetStaffByUsername(username, true)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			errEv.Err(err).
 				Str("remoteAddr", request.RemoteAddr).
-				Caller().Msg("Invalid password")
+				Caller().Msg("Unrecognized username")
 		}
-		return sInvalidPassword
+		return ErrBadCredentials
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
@@ -61,7 +57,7 @@ func createSession(key, username, password string, request *http.Request, writer
 		// password mismatch
 		errEv.Caller().
 			Msg("Invalid password")
-		return sInvalidPassword
+		return ErrBadCredentials
 	}
 
 	// successful login, add cookie that expires in one month
@@ -84,10 +80,10 @@ func createSession(key, username, password string, request *http.Request, writer
 			Str("staff", username).
 			Str("sessionKey", key).
 			Caller().Msg("Error creating new staff session")
-		return sOtherError
+		return ErrUnableToCreateSession
 	}
 
-	return sSuccess
+	return nil
 }
 
 func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
