@@ -11,6 +11,7 @@
 	<td>{{$staff.RankTitle}}</td>
 	<td>{{formatTimestamp $staff.AddedOn}}</td>
 	<td>
+		<a href="{{webPath "/manage/staff"}}" title="Update your password">Update</a> | 
 		<a {{if eq $staff.Username $.currentUsername -}}
 			href="{{webPath "/manage/staff"}}" title="Cannot self terminate" style="color: black;"
 		{{- else -}}
@@ -26,6 +27,7 @@
 <table>
 	<tr><td>Username:</td><td><input id="username" name="username" type="text"/></td></tr>
 	<tr><td>Password:</td><td><input id="password" name="password" type="password"/></td></tr>
+	<tr><td>Confirm password:</td><td><input id="passwordconfirm" name="passwordconfirm" type="password"/></td></tr>
 	<tr><td>Rank:</td><td><select id="rank" name="rank">
 		<option value="3">Admin</option>
 		<option value="2">Moderator</option>

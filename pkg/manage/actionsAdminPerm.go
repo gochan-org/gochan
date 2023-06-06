@@ -19,6 +19,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+var (
+	ErrPasswordConfirm = errors.New("passwords do not match")
+)
+
 // manage actions that require admin-level permission go here
 
 func registerAdminPages() {
@@ -77,45 +81,44 @@ func registerAdminPages() {
 					return "", err
 				}
 
-				for _, staff := range allStaff {
-					username := request.FormValue("username")
-					password := request.FormValue("password")
-					rank := request.FormValue("rank")
-					rankI, _ := strconv.Atoi(rank)
-					if do == "add" {
-						if _, err = gcsql.NewStaff(username, password, rankI); err != nil {
-							errEv.
-								Str("newStaff", username).
-								Str("newPass", password).
-								Int("newRank", rankI).
-								Caller().Msg("Error creating new staff account")
-							return "", fmt.Errorf("Error creating new staff account %q by %q: %s",
-								username, staff.Username, err.Error())
-						}
-					} else if do == "del" && username != "" {
-						if err = gcsql.DeactivateStaff(username); err != nil {
-							errEv.Err(err).
-								Str("delStaff", username).
-								Caller().Msg("Error deleting staff account")
-							return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
-								username, staff.Username, err.Error())
-						}
+				username := request.FormValue("username")
+				password := request.FormValue("password")
+				passwordConfirm := request.FormValue("passwordconfirm")
+				if password != passwordConfirm {
+					return "", ErrPasswordConfirm
+				}
+				rankStr := request.FormValue("rank")
+				rank, err := strconv.Atoi(rankStr)
+				if err != nil {
+					errEv.Err(err).Caller().
+						Str("rank", rankStr).Send()
+					return "", err
+				}
+				if do == "add" {
+					fmt.Println("do = 'add'")
+					if _, err = gcsql.NewStaff(username, password, rank); err != nil {
+						errEv.Caller().
+							Str("newStaff", username).
+							Str("newPass", password).
+							Int("newRank", rank).
+							Msg("Error creating new staff account")
+						return "", fmt.Errorf("Error creating new staff account %q by %q: %s",
+							username, staff.Username, err.Error())
 					}
-					allStaff, err = getAllStaffNopass(true)
-					if err != nil {
-						errEv.Err(err).Caller().Msg("Error getting updated staff list")
-						err = errors.New("Error getting updated staff list: " + err.Error())
-						return "", err
+				} else if do == "del" && username != "" {
+					if err = gcsql.DeactivateStaff(username); err != nil {
+						errEv.Err(err).Caller().
+							Str("delStaff", username).
+							Msg("Error deleting staff account")
+						return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
+							username, staff.Username, err.Error())
 					}
-
-					switch {
-					case staff.Rank == 3:
-						rank = "admin"
-					case staff.Rank == 2:
-						rank = "mod"
-					case staff.Rank == 1:
-						rank = "janitor"
-					}
+				}
+				allStaff, err = getAllStaffNopass(true)
+				if err != nil {
+					errEv.Err(err).Caller().Msg("Error getting updated staff list")
+					err = errors.New("Error getting updated staff list: " + err.Error())
+					return "", err
 				}
 
 				staffBuffer := bytes.NewBufferString("")
