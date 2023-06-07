@@ -7,7 +7,7 @@ import "./menu";
 
 const subjectCuttoff = 24;
 
-const watcherInterval = -1;
+let watcherInterval = -1; // eslint-disable-line prefer-const
 
 export function updateWatchedThreads() {
 	const watched = getJsonStorageVal<any>("watched", {});
