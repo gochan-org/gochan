@@ -20,7 +20,8 @@ import (
 )
 
 var (
-	ErrPasswordConfirm = errors.New("passwords do not match")
+	ErrPasswordConfirm        = errors.New("passwords do not match")
+	ErrInsufficientPermission = errors.New("insufficient account permission")
 )
 
 // manage actions that require admin-level permission go here
@@ -63,7 +64,7 @@ func registerAdminPages() {
 		Action{
 			ID:          "staff",
 			Title:       "Staff",
-			Permissions: AdminPerms,
+			Permissions: JanitorPerms,
 			JSONoutput:  OptionalJSON,
 			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 				var outputStr string
@@ -81,21 +82,31 @@ func registerAdminPages() {
 					return "", err
 				}
 
+				updateUsername := request.FormValue("update")
 				username := request.FormValue("username")
 				password := request.FormValue("password")
 				passwordConfirm := request.FormValue("passwordconfirm")
-				if password != passwordConfirm {
+				if (do == "add" || do == "update") && password != passwordConfirm {
 					return "", ErrPasswordConfirm
 				}
+				fmt.Println(do, updateUsername)
 				rankStr := request.FormValue("rank")
-				rank, err := strconv.Atoi(rankStr)
-				if err != nil {
-					errEv.Err(err).Caller().
-						Str("rank", rankStr).Send()
-					return "", err
+				var rank int
+				if rankStr != "" {
+					if rank, err = strconv.Atoi(rankStr); err != nil {
+						errEv.Err(err).Caller().
+							Str("rank", rankStr).Send()
+						return "", err
+					}
 				}
+
 				if do == "add" {
-					fmt.Println("do = 'add'")
+					if staff.Rank < 3 {
+						writer.WriteHeader(http.StatusUnauthorized)
+						errEv.Err(ErrInsufficientPermission).Caller().
+							Int("rank", staff.Rank).Send()
+						return "", ErrInsufficientPermission
+					}
 					if _, err = gcsql.NewStaff(username, password, rank); err != nil {
 						errEv.Caller().
 							Str("newStaff", username).
@@ -106,6 +117,12 @@ func registerAdminPages() {
 							username, staff.Username, err.Error())
 					}
 				} else if do == "del" && username != "" {
+					if staff.Rank < 3 {
+						writer.WriteHeader(http.StatusUnauthorized)
+						errEv.Err(ErrInsufficientPermission).Caller().
+							Int("rank", staff.Rank).Send()
+						return "", ErrInsufficientPermission
+					}
 					if err = gcsql.DeactivateStaff(username); err != nil {
 						errEv.Err(err).Caller().
 							Str("delStaff", username).
@@ -113,18 +130,35 @@ func registerAdminPages() {
 						return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
 							username, staff.Username, err.Error())
 					}
+				} else if do == "update" && updateUsername != "" {
+					if staff.Username != updateUsername && staff.Rank < 3 {
+						writer.WriteHeader(http.StatusUnauthorized)
+						errEv.Err(ErrInsufficientPermission).Caller().
+							Int("rank", staff.Rank).Send()
+						return "", ErrInsufficientPermission
+					}
+					if err = gcsql.UpdatePassword(updateUsername, password); err != nil {
+						errEv.Err(err).Caller().
+							Str("updateStaff", username).
+							Msg("Error updating password")
+						return "", err
+					}
 				}
-				allStaff, err = getAllStaffNopass(true)
-				if err != nil {
-					errEv.Err(err).Caller().Msg("Error getting updated staff list")
-					err = errors.New("Error getting updated staff list: " + err.Error())
-					return "", err
+				if do == "add" || do == "del" {
+					allStaff, err = getAllStaffNopass(true)
+					if err != nil {
+						errEv.Err(err).Caller().Msg("Error getting updated staff list")
+						err = errors.New("Error getting updated staff list: " + err.Error())
+						return "", err
+					}
 				}
 
 				staffBuffer := bytes.NewBufferString("")
 				if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, map[string]interface{}{
-					"allstaff":        allStaff,
-					"currentUsername": staff.Username,
+					"do":             do,
+					"updateUsername": updateUsername,
+					"allstaff":       allStaff,
+					"currentStaff":   staff,
 				}, staffBuffer, "text/html"); err != nil {
 					errEv.Err(err).Str("template", "manage_staff.html").Send()
 					return "", errors.New("Error executing staff management page template: " + err.Error())

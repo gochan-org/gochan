@@ -83,6 +83,13 @@ func (s *Staff) RankTitle() string {
 	return ""
 }
 
+func UpdatePassword(username string, newPassword string) error {
+	const sqlUPDATE = `UPDATE DBPREFIXstaff SET password_checksum = ? WHERE username = ?`
+	checksum := gcutil.BcryptSum(newPassword)
+	_, err := ExecSQL(sqlUPDATE, checksum, username)
+	return err
+}
+
 // EndStaffSession deletes any session rows associated with the requests session cookie and then
 // makes the cookie expire, essentially deleting it
 func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
