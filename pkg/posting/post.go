@@ -13,6 +13,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/server"
@@ -157,6 +158,22 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]interface{}{
 			"boardDir": postBoard.Dir,
 		})
+		return
+	}
+
+	_, err, recovered := events.TriggerEvent("message-pre-format", post)
+	if recovered {
+		errEv.Caller().
+			Str("triggeredEvent", "message-pre-format").
+			Msg("Recovered from a panic in event handler")
+		server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, nil)
+		return
+	}
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("triggeredEvent", "message-pre-format").
+			Send()
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
 

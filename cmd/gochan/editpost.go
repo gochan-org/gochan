@@ -9,6 +9,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -193,6 +194,26 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				}
 			}
 		} else {
+			var recovered bool
+			_, err, recovered = events.TriggerEvent("message-pre-format", post)
+			if recovered {
+				errEv.Caller().
+					Str("triggeredEvent", "message-pre-format").
+					Msg("Recovered from a panic in event handler")
+				server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, map[string]interface{}{
+					"postid": post.ID,
+				})
+				return
+			}
+			if err != nil {
+				errEv.Err(err).Caller().
+					Str("triggeredEvent", "message-pre-format").
+					Send()
+				server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+					"postid": post.ID,
+				})
+				return
+			}
 			if err = post.UpdateContents(
 				request.FormValue("editemail"),
 				request.FormValue("editsubject"),

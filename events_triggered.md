@@ -10,6 +10,9 @@ This is a list of events that gochan may trigger at some point, that can be used
 - **incoming-upload**
 	- Triggered by the `gcsql` package when an upload is attached to a post. It is triggered before the upload is entered in the database
 
+- **message-pre-format**
+	- Triggered when an incoming post or post edit is about to be formatted
+
 - **shutdown**
 	- Triggered when gochan is about to shut down, in `main()` as a deferred call
 
