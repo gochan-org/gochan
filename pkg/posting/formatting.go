@@ -3,6 +3,7 @@ package posting
 import (
 	"fmt"
 	"html/template"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,7 @@ import (
 
 var (
 	msgfmtr *MessageFormatter
+	urlRE   = regexp.MustCompile(`(\w+)://(\S+)`)
 )
 
 // InitPosting prepares the formatter and the temp post pruner
@@ -70,7 +72,14 @@ func ApplyWordFilters(message string, boardDir string) (string, error) {
 	return msgfmtr.ApplyWordFilters(message, boardDir)
 }
 
+func wrapLinksInURL(urlStr string) string {
+	return "[url]" + urlStr + "[/url]"
+}
+
 func FormatMessage(message string, boardDir string) template.HTML {
+	if config.GetBoardConfig(boardDir).RenderURLsAsLinks {
+		message = urlRE.ReplaceAllStringFunc(message, wrapLinksInURL)
+	}
 	message = msgfmtr.Compile(message, boardDir)
 	// prepare each line to be formatted
 	postLines := strings.Split(message, "<br>")
