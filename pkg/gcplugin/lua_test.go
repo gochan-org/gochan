@@ -5,6 +5,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
@@ -36,13 +37,9 @@ func initPluginTests() {
 func TestVersionFunction(t *testing.T) {
 	initPluginTests()
 	err := lState.DoString(versionStr)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	assert.Nil(t, err)
 	testingVersionStr := lState.Get(-1).(lua.LString)
-	if testingVersionStr != "3.4.1" {
-		t.Fatalf(`%q != "3.4.1"`, testingVersionStr)
-	}
+	assert.EqualValues(t, "3.4.1", testingVersionStr)
 }
 
 func TestStructPassing(t *testing.T) {
@@ -55,9 +52,7 @@ func TestStructPassing(t *testing.T) {
 	}
 	lState.SetGlobal("post", luar.New(lState, p))
 	err := lState.DoString(structPassingStr)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	assert.Nil(t, err)
 	t.Logf("Modified message text after Lua: %q", p.MessageRaw)
 	if p.MessageRaw != "Message modified by a plugin\n" || p.Message != "Message modified by a plugin<br />" {
 		t.Fatal("message was not properly modified by plugin")
@@ -67,7 +62,5 @@ func TestStructPassing(t *testing.T) {
 func TestEventPlugins(t *testing.T) {
 	initPluginTests()
 	err := lState.DoString(eventsTestingStr)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	assert.Nil(t, err)
 }

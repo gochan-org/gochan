@@ -240,6 +240,7 @@ type BoardConfig struct {
 	Worksafe               bool
 	ThreadPage             int
 	Cooldowns              BoardCooldowns
+	RenderURLsAsLinks      bool
 	ThreadsPerPage         int
 	EnableGeoIP            bool
 }

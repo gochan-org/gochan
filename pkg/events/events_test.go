@@ -1,6 +1,10 @@
 package events
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestPanicRecover(t *testing.T) {
 	RegisterEvent([]string{"TestPanicRecoverEvt"}, func(tr string, i ...interface{}) error {
@@ -9,16 +13,11 @@ func TestPanicRecover(t *testing.T) {
 		return nil
 	})
 	handled, err, recovered := TriggerEvent("TestPanicRecoverEvt") // should panic
-	if !handled {
-		t.Fatal("TriggerEvent for TestPanicRecoverEvt wasn't handled")
-	}
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+
+	assert.True(t, handled, "TriggerEvent for TestPanicRecoverEvt should be handled")
+	assert.Nil(t, err)
 	t.Log("TestPanicRecoverEvt recovered: ", recovered)
-	if !recovered {
-		t.Fatal("TestPanicRecoverEvt should have caused a panic and recovered from it")
-	}
+	assert.True(t, recovered, "TestPanicRecoverEvt should have caused a panic and recovered from it")
 }
 
 func TestEventEditValue(t *testing.T) {
@@ -30,9 +29,7 @@ func TestEventEditValue(t *testing.T) {
 	var a int
 	t.Logf("a before TestEventEditValue triggered: %d", a)
 	TriggerEvent("TestEventEditValue", &a)
-	if a == 0 {
-		t.Fatal("TestEventEditValue event didn't properly increment the pointer to a passed to it when triggered")
-	}
+	assert.NotEqual(t, 0, a, "TestEventEditValue event should increment the pointer to an int passed to it when triggered")
 	t.Logf("a after TestEventEditValue triggered: %d", a)
 }
 
@@ -46,10 +43,6 @@ func TestMultipleEventTriggers(t *testing.T) {
 	TriggerEvent("b")
 	aTriggered := triggered["a"]
 	bTriggered := triggered["b"]
-	if !aTriggered {
-		t.Fatal("a event not triggered")
-	}
-	if !bTriggered {
-		t.Fatal("b event not triggered")
-	}
+	assert.True(t, aTriggered, "'a' event should be triggered")
+	assert.True(t, bTriggered, "'b' event should be triggered")
 }

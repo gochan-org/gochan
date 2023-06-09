@@ -60,6 +60,11 @@ var (
 				Reply:      7,
 				ImageReply: 7,
 			},
+			RenderURLsAsLinks: true,
 		},
 	}
 )
+
+func SetDefaults() {
+	cfg = defaultGochanConfig
+}

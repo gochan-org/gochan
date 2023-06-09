@@ -4,20 +4,18 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBadTypes(t *testing.T) {
 	var c GochanConfig
 	err := json.NewDecoder(strings.NewReader(badTypeJSON)).Decode(&c)
-	if err == nil {
-		t.Fatal(`"successfully" parsed JSON file with incorrect value type`)
-	}
+	assert.Error(t, err)
 }
 
 func TestValidJSON(t *testing.T) {
 	var c GochanConfig
 	err := json.NewDecoder(strings.NewReader(validCfgJSON)).Decode(&c)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	assert.Nil(t, err)
 }
