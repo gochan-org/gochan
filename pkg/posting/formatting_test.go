@@ -13,7 +13,7 @@ const (
 [u]Underline[/u]
 [url=https://gochan.org]URL[/url]
 [code]Code[/code]`
-	bbcodeMsgPostRender = `<b>Bold</b><br>` +
+	bbcodeMsgExpected = `<b>Bold</b><br>` +
 		`<i>Italics</i><br>` +
 		`<u>Underline</u><br>` +
 		`<a href="https://gochan.org">URL</a><br>` +
@@ -25,21 +25,32 @@ gochan.org with bad link: https://gochan.org/a">:)</a>`
 	linkTestExpected = `gochan.org: <a href="https://gochan.org">https://gochan.org</a><br>` +
 		`gochan.org with path: <a href="https://gochan.org/a">https://gochan.org/a</a><br>` +
 		`gochan.org with bad link: <a href="https://gochan.org/a%22%3E:%29%3C/a%3E">https://gochan.org/a&#34;&gt;:)&lt;/a&gt;</a>`
+
+	doubleTagPreRender = `[url=https://gochan.org]Gochan[/url] [url]https://gochan.org[/url]`
+	doubleTagExpected  = `<a href="https://gochan.org">Gochan</a> <a href="https://gochan.org">https://gochan.org</a>`
 )
 
 func TestBBCode(t *testing.T) {
 	config.SetDefaults()
 	var testFmtr MessageFormatter
-	testFmtr.InitBBcode()
+	testFmtr.Init()
 	rendered := testFmtr.Compile(bbcodeMsgPreRender, "")
-	assert.Equal(t, bbcodeMsgPostRender, rendered, "Testing BBcode rendering")
+	assert.Equal(t, bbcodeMsgExpected, rendered, "Testing BBcode rendering")
 }
 
 func TestLinks(t *testing.T) {
 	config.SetDefaults()
 	var testFmtr MessageFormatter
-	testFmtr.InitBBcode()
+	testFmtr.Init()
 	rendered := urlRE.ReplaceAllStringFunc(linkTestPreRender, wrapLinksInURL)
 	rendered = testFmtr.Compile(rendered, "")
 	assert.Equal(t, linkTestExpected, rendered)
+}
+
+func TestNoDoubleTags(t *testing.T) {
+	config.SetDefaults()
+	msgfmtr = new(MessageFormatter)
+	msgfmtr.Init()
+	rendered := FormatMessage(doubleTagPreRender, "")
+	assert.EqualValues(t, doubleTagExpected, rendered)
 }

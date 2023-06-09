@@ -15,13 +15,13 @@ import (
 
 var (
 	msgfmtr *MessageFormatter
-	urlRE   = regexp.MustCompile(`(\w+)://(\S+)`)
+	urlRE   = regexp.MustCompile(`https?://(\S+)`)
 )
 
 // InitPosting prepares the formatter and the temp post pruner
 func InitPosting() {
 	msgfmtr = new(MessageFormatter)
-	msgfmtr.InitBBcode()
+	msgfmtr.Init()
 	go tempCleaner()
 }
 
@@ -30,9 +30,10 @@ type MessageFormatter struct {
 	// Moving the bbcode compiler isntance (and eventually a Markdown compiler) to a struct
 	// appears to fix this
 	bbCompiler bbcode.Compiler
+	linkFixer  *strings.Replacer // used for fixing [url=http://...] being turned into [url=[url]http://...
 }
 
-func (mf *MessageFormatter) InitBBcode() {
+func (mf *MessageFormatter) Init() {
 	mf.bbCompiler = bbcode.NewCompiler(true, true)
 	mf.bbCompiler.SetTag("center", nil)
 	// mf.bbCompiler.SetTag("code", nil)
@@ -40,6 +41,11 @@ func (mf *MessageFormatter) InitBBcode() {
 	mf.bbCompiler.SetTag("img", nil)
 	mf.bbCompiler.SetTag("quote", nil)
 	mf.bbCompiler.SetTag("size", nil)
+	mf.linkFixer = strings.NewReplacer(
+		"[url=[url]", "[url=",
+		"[/url][/url]", "[/url]",
+		"[url][url]", "[url]",
+	)
 }
 
 func (*MessageFormatter) ApplyWordFilters(message string, boardDir string) (string, error) {
@@ -79,6 +85,7 @@ func wrapLinksInURL(urlStr string) string {
 func FormatMessage(message string, boardDir string) template.HTML {
 	if config.GetBoardConfig(boardDir).RenderURLsAsLinks {
 		message = urlRE.ReplaceAllStringFunc(message, wrapLinksInURL)
+		message = msgfmtr.linkFixer.Replace(message)
 	}
 	message = msgfmtr.Compile(message, boardDir)
 	// prepare each line to be formatted
