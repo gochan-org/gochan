@@ -30,7 +30,6 @@ type GochanConfig struct {
 	SystemCriticalConfig
 	SiteConfig
 	BoardConfig
-	BoardListConfig
 	jsonLocation string `json:"-"`
 	testing      bool
 }
@@ -243,11 +242,6 @@ type BoardConfig struct {
 	Cooldowns              BoardCooldowns
 	ThreadsPerPage         int
 	EnableGeoIP            bool
-}
-
-type BoardListConfig struct {
-	CustomLinks map[string]string // <a href="value">index</a> - can be internal or external
-	HideBoards  []string          // test,boardtohide,modboard,etc
 }
 
 // Style represents a theme (Pipes, Dark, etc)
