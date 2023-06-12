@@ -55,11 +55,7 @@ func (p *Post) AttachFile(upload *Upload) error {
 	}
 	_, err, recovered := events.TriggerEvent("incoming-upload", upload)
 	if recovered {
-		gcutil.LogWarning().Caller().
-			Str("triggeredEvent", "incoming-upload").
-			Str("originalFilename", upload.OriginalFilename).
-			Str("filename", upload.Filename).
-			Msg("Recovered from a panic in event handler")
+		return events.ErrRecovered
 	}
 	if err != nil {
 		return err

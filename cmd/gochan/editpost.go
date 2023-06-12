@@ -197,9 +197,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			var recovered bool
 			_, err, recovered = events.TriggerEvent("message-pre-format", post)
 			if recovered {
-				errEv.Caller().
-					Str("triggeredEvent", "message-pre-format").
-					Msg("Recovered from a panic in event handler")
+				writer.WriteHeader(http.StatusInternalServerError)
 				server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, map[string]interface{}{
 					"postid": post.ID,
 				})

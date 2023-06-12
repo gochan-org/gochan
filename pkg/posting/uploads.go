@@ -123,9 +123,10 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	}
 	_, err, recovered := events.TriggerEvent("upload-saved", filePath)
 	if recovered {
-		gcutil.LogWarning().Caller().
-			Str("filePath", filePath).Str("triggeredEvent", "upload-saved").
-			Msg("Recovered from a panic in event handler")
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Unable to save upload (recovered from a panic in event handler)", wantsJSON,
+			map[string]interface{}{"event": "upload-saved"})
+		return nil, true
 	}
 	if err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{

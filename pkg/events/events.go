@@ -1,6 +1,7 @@
 package events
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -11,6 +12,7 @@ import (
 var (
 	registeredEvents map[string][]EventHandler
 	testingMode      bool
+	ErrRecovered     = errors.New("recovered from a panic in event handler")
 )
 
 type EventHandler func(string, ...interface{}) error
@@ -29,7 +31,7 @@ func TriggerEvent(trigger string, data ...interface{}) (handled bool, err error,
 	defer func() {
 		if a := recover(); a != nil {
 			if !testingMode {
-				errEv.Err(fmt.Errorf("%s", a)).
+				errEv.Err(fmt.Errorf("%v", a)).
 					Str("event", trigger).
 					Msg("Recovered from panic while handling event")
 			}

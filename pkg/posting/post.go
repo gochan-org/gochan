@@ -163,15 +163,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	_, err, recovered := events.TriggerEvent("message-pre-format", post)
 	if recovered {
-		errEv.Caller().
-			Str("triggeredEvent", "message-pre-format").
-			Msg("Recovered from a panic in event handler")
+		writer.WriteHeader(http.StatusInternalServerError)
 		server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, nil)
 		return
 	}
 	if err != nil {
 		errEv.Err(err).Caller().
-			Str("triggeredEvent", "message-pre-format").
+			Str("event", "message-pre-format").
 			Send()
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return

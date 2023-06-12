@@ -27,9 +27,9 @@ import (
 )
 
 var (
-	lState               *lua.LState
-	eventPlugins         map[string][]*lua.LFunction
-	ErrorInvalidInitFunc = errors.New("invalid InitPlugin, expected function with 0 arguments and 1 return value (error type)")
+	lState             *lua.LState
+	eventPlugins       map[string][]*lua.LFunction
+	ErrInvalidInitFunc = errors.New("invalid InitPlugin, expected function with 0 arguments and 1 return value (error type)")
 )
 
 func initLua() {
@@ -172,7 +172,7 @@ func registerLuaFunctions() {
 			return 1
 		}
 
-		for _ = range colNames {
+		for range colNames {
 			scanners = append(scanners, &lvalueScanner{state: l})
 		}
 
@@ -314,7 +314,7 @@ func LoadPlugins(paths []string) error {
 			}
 			initFunc, ok := initFuncSymbol.(func() error)
 			if !ok {
-				return ErrorInvalidInitFunc
+				return ErrInvalidInitFunc
 			}
 			if err = initFunc(); err != nil {
 				return err
