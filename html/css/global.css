@@ -315,6 +315,14 @@ input.config-text {
   font-weight: bold;
 }
 
+textarea.viewlog {
+  width: 80%;
+  white-space: pre;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;

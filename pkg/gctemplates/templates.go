@@ -33,6 +33,7 @@ var (
 	ManageLogin       *template.Template
 	ManageReports     *template.Template
 	ManageStaff       *template.Template
+	ManageViewLog     *template.Template
 	MoveThreadPage    *template.Template
 	PageHeader        *template.Template
 	PageFooter        *template.Template
@@ -227,6 +228,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageStaff, err = LoadTemplate("manage_staff.html")
 		if err != nil {
 			return templateError("manage_staff.html", err)
+		}
+	}
+	if buildAll || t == "manageviewlog" {
+		ManageViewLog, err = LoadTemplate("manage_viewlog.html")
+		if err != nil {
+			return templateError("manage_viewlog.html", err)
 		}
 	}
 	if buildAll || t == "movethreadpage" {

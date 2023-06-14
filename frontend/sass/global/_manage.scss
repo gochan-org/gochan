@@ -40,3 +40,11 @@ input.config-text {
 	color:red;
 	font-weight: bold;
 }
+
+textarea.viewlog {
+	width: 80%;
+	white-space: pre;
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+}
