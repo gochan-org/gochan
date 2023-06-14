@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	registeredEvents map[string][]EventHandler
-	testingMode      bool
-	ErrRecovered     = errors.New("recovered from a panic in event handler")
+	registeredEvents        map[string][]EventHandler
+	testingMode             bool
+	ErrRecovered            = errors.New("recovered from a panic in event handler")
+	InvalidArgumentErrorStr = "invalid argument(s) passed to event %q"
 )
 
 type EventHandler func(string, ...interface{}) error

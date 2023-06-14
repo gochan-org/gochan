@@ -50,7 +50,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Discard()
 		infoEv.Discard()
 	}()
-	var post gcsql.Post
+
 	var formName string
 	var formEmail string
 
@@ -67,7 +67,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	post.IP = gcutil.GetRealIP(request)
+	post := &gcsql.Post{
+		IP: gcutil.GetRealIP(request),
+	}
 	var err error
 	threadidStr := request.FormValue("threadid")
 	// to avoid potential hiccups, we'll just treat the "threadid" form field as the OP ID and convert it internally
@@ -253,10 +255,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if checkIpBan(&post, postBoard, writer, request) {
+	if checkIpBan(post, postBoard, writer, request) {
 		return
 	}
-	if checkUsernameBan(&post, postBoard, writer, request) {
+	if checkUsernameBan(post, postBoard, writer, request) {
 		return
 	}
 
@@ -285,7 +287,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	upload, gotErr := AttachUploadFromRequest(request, writer, &post, postBoard)
+	upload, gotErr := AttachUploadFromRequest(request, writer, post, postBoard)
 	if gotErr {
 		// got an error receiving the upload, stop here (assuming an error page was actually shown)
 		return
