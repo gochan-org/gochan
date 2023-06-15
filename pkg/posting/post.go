@@ -299,6 +299,22 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		filePath = path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
 		thumbPath = path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
 		catalogThumbPath = path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
+		_, err, recovered = events.TriggerEvent("incoming-upload", upload)
+		if recovered {
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			writer.WriteHeader(http.StatusInternalServerError)
+			server.ServeError(writer, "Recovered from a panic in an event handler (incoming-upload)", wantsJSON, nil)
+			return
+		}
+		if err != nil {
+			errEv.Err(err).Caller().
+				Str("event", "incoming-upload").
+				Send()
+			server.ServeError(writer, "Unable to attach upload to post: "+err.Error(), wantsJSON, nil)
+			return
+		}
 	}
 
 	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
@@ -314,19 +330,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	_, err, recovered = events.TriggerEvent("incoming-upload", upload)
-	if recovered {
-		writer.WriteHeader(http.StatusInternalServerError)
-		server.ServeError(writer, "Recovered from a panic in an event handler (incoming-upload)", wantsJSON, nil)
-		return
-	}
-	if err != nil {
-		errEv.Err(err).Caller().
-			Str("event", "incoming-upload").
-			Send()
-		server.ServeError(writer, "Unable to attach upload to post: "+err.Error(), wantsJSON, nil)
-		return
-	}
 	if err = post.AttachFile(upload); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
