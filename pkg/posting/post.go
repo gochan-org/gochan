@@ -2,6 +2,7 @@ package posting
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -43,7 +44,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		if a := recover(); a != nil {
 			server.ServeError(writer, "Internal server error", wantsJSON, nil)
 			errEv.Caller().
-				Interface("recover", a).
+				Str("recover", fmt.Sprintf("%v", a)).
 				Bytes("stack", debug.Stack()).
 				Msg("Recovered from panic while calling manage function")
 		}
