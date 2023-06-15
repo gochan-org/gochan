@@ -20,8 +20,8 @@ register_manage_page("templateplugintest",
 			[[<b>Staff: </b> {{.staff.Username}}<br/>
 			This manage page rendered from a template provided by a Lua plugin]])
 		if(err ~= nil) then
-			print(err.Error(err))
-			return "", err.Error(err)
+			print(err:Error())
+			return "", err:Error()
 		end
 		
 		buf = strings.new_builder()
