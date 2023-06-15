@@ -3,7 +3,6 @@ package gcsql
 import (
 	"errors"
 
-	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -53,14 +52,6 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload == nil {
 		return nil // no upload to attach, so no error
 	}
-	_, err, recovered := events.TriggerEvent("incoming-upload", upload)
-	if recovered {
-		return events.ErrRecovered
-	}
-	if err != nil {
-		return err
-	}
-
 	const query = `INSERT INTO DBPREFIXfiles (
 		post_id, file_order, original_filename, filename, checksum, file_size,
 		is_spoilered, thumbnail_width, thumbnail_height, width, height)

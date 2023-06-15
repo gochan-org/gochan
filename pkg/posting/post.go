@@ -265,13 +265,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	captchaSuccess, err := SubmitCaptchaResponse(request)
 	if err != nil {
-		server.ServeErrorPage(writer, "Error submitting captcha response:"+err.Error())
+		server.ServeError(writer, "Error submitting captcha response:"+err.Error(), wantsJSON, nil)
 		errEv.Err(err).
 			Caller().Send()
 		return
 	}
 	if !captchaSuccess {
-		server.ServeErrorPage(writer, "Missing or invalid captcha response")
+		server.ServeError(writer, "Missing or invalid captcha response", wantsJSON, nil)
 		errEv.Msg("Missing or invalid captcha response")
 		return
 	}
@@ -310,10 +310,23 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)
 		}
-		server.ServeErrorPage(writer, "Unable to insert post: "+err.Error())
+		server.ServeError(writer, "Unable to insert post", wantsJSON, nil)
 		return
 	}
 
+	_, err, recovered = events.TriggerEvent("incoming-upload", upload)
+	if recovered {
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Recovered from a panic in an event handler (incoming-upload)", wantsJSON, nil)
+		return
+	}
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("event", "incoming-upload").
+			Send()
+		server.ServeError(writer, "Unable to attach upload to post: "+err.Error(), wantsJSON, nil)
+		return
+	}
 	if err = post.AttachFile(upload); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
@@ -322,7 +335,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
 		post.Delete()
-		server.ServeErrorPage(writer, "Unable to attach upload: "+err.Error())
+		server.ServeError(writer, "Unable to attach upload", wantsJSON, map[string]interface{}{
+			"filename": upload.OriginalFilename,
+		})
 		return
 	}
 	if upload != nil {
@@ -342,12 +357,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	// rebuild the board page
 	if err = building.BuildBoards(false, postBoard.ID); err != nil {
-		server.ServeErrorPage(writer, "Error building boards: "+err.Error())
+		server.ServeError(writer, "Unable to build boards", wantsJSON, nil)
 		return
 	}
 
 	if err = building.BuildFrontPage(); err != nil {
-		server.ServeErrorPage(writer, "Error building front page: "+err.Error())
+		server.ServeError(writer, "Unable to build front page", wantsJSON, nil)
 		return
 	}
 
