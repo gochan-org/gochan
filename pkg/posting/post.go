@@ -263,7 +263,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	captchaSuccess, err := SubmitCaptchaResponse(request)
+	captchaSuccess, err := submitCaptchaResponse(request)
 	if err != nil {
 		server.ServeError(writer, "Error submitting captcha response:"+err.Error(), wantsJSON, nil)
 		errEv.Err(err).

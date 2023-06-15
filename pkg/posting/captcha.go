@@ -50,8 +50,8 @@ func InitCaptcha() {
 	}
 }
 
-// SubmitCaptchaResponse parses the incoming captcha form values, submits them, and returns the results
-func SubmitCaptchaResponse(request *http.Request) (bool, error) {
+// submitCaptchaResponse parses the incoming captcha form values, submits them, and returns the results
+func submitCaptchaResponse(request *http.Request) (bool, error) {
 	captchaCfg := config.GetSiteConfig().Captcha
 	if !captchaCfg.UseCaptcha() {
 		return true, nil // captcha isn't required, skip the test
@@ -94,14 +94,22 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		fmt.Fprint(writer, captchaCfg.UseCaptcha())
 		return
 	}
+	errEv := gcutil.LogError(nil).
+		Str("IP", gcutil.GetRealIP(request))
+	defer func() {
+		errEv.Discard()
+	}()
+	wantsJSON := serverutil.IsRequestingJSON(request)
 	if !captchaCfg.UseCaptcha() {
-		server.ServeErrorPage(writer, "This site is not set up to require a CAPTCHA test")
+		server.ServeError(writer, "This site is not set up to require a CAPTCHA test", wantsJSON, nil)
 		return
 	}
 	if request.Method == "POST" {
-		result, err := SubmitCaptchaResponse(request)
+		result, err := submitCaptchaResponse(request)
 		if err != nil {
-			server.ServeErrorPage(writer, "Error checking results: "+err.Error())
+			errEv.Err(err).Caller().Send()
+			server.ServeError(writer, "Error checking CAPTCHA results: "+err.Error(), wantsJSON, nil)
+			return
 		}
 		fmt.Println("Success:", result)
 	}
@@ -111,6 +119,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		"siteKey":     captchaCfg.SiteKey,
 	}, writer, "text/html")
 	if err != nil {
-		server.ServeErrorPage(writer, "Error serving CAPTCHA: "+err.Error())
+		errEv.Err(err).Caller().Send()
+		server.ServeError(writer, "Error serving CAPTCHA: "+err.Error(), wantsJSON, nil)
 	}
 }
