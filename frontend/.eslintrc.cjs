@@ -25,7 +25,8 @@ module.exports = {
     "indent": ["warn", "tab"],
     "linebreak-style": ["error", "unix"],
     "quotes": ["warn", "double", {
-      "allowTemplateLiterals": true
+      "allowTemplateLiterals": true,
+      "avoidEscape": true
     }],
     "semi": ["error", "always"],
     "no-var": ["error"],
@@ -45,6 +46,7 @@ module.exports = {
       }
     }],
     "no-constant-condition": ["off"],
+    "eqeqeq": ["error"],
     "@typescript-eslint/no-explicit-any": ["off"],
     "@typescript-eslint/no-unused-vars": ["warn", {
       "argsIgnorePattern": "^_"

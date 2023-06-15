@@ -43,7 +43,7 @@ function updateThreadHTML() {
 	let numAdded = 0;
 	for(const post of currentThreadJSON.posts) {
 		let selector = "";
-		if(post.resto === 0 || post.resto == post.no)
+		if(post.resto === 0 || post.resto === post.no)
 			selector += `div#op${post.no}`;
 		else
 			selector += `div#reply${post.no}`;
@@ -95,7 +95,7 @@ function expandPost(e: JQuery.MouseEventBase) {
 	e.preventDefault();
 	if($hoverPreview !== null) $hoverPreview.remove();
 	const $next = $(e.target).next();
-	if($next.prop("class") == "inlinepostprev" && e.type == "click") {
+	if($next.prop("class") === "inlinepostprev" && e.type === "click") {
 		// inline preview is already opened, close it
 		$next.remove();
 		return;
@@ -107,14 +107,14 @@ function expandPost(e: JQuery.MouseEventBase) {
 
 	let $post = $(`div#op${postID}, div#reply${postID}`).first();
 	if($post.length > 0) {
-		const $preview = createPostPreview(e, $post, e.type == "click");
-		if(e.type == "mouseenter") {
+		const $preview = createPostPreview(e, $post, e.type === "click");
+		if(e.type === "mouseenter") {
 			$hoverPreview = $preview.insertAfter(e.target);
 			$(document.body).on("mousemove", previewMoveHandler);
 		}
 		return;
 	}
-	if(e.type == "click") {
+	if(e.type === "click") {
 		$.get(href, data => {
 			$post = $(data).find(`div#op${postID}, div#reply${postID}`).first();
 			if($post.length < 1) return; // post not on this page.
@@ -127,7 +127,7 @@ function expandPost(e: JQuery.MouseEventBase) {
 }
 
 export function initPostPreviews($post: JQuery<HTMLElement> = null) {
-	if(getPageThread().board == "" && $post === null) return;
+	if(getPageThread().board === "" && $post === null) return;
 	doClickPreview = getBooleanStorageVal("enablepostclick", true);
 	doHoverPreview = getBooleanStorageVal("enableposthover", false);
 	let $refs = null;
@@ -230,11 +230,11 @@ export function quote(no: number) {
 	}
 	const cursor = (msgbox.selectionStart !== undefined)?msgbox.selectionStart:msgbox.value.length;
 	let quoted = lines.join("\n");
-	if(quoted != "") quoted += "\n";
+	if(quoted !== "") quoted += "\n";
 	msgbox.value = msgbox.value.slice(0, cursor) + `>>${no}\n` +
 		quoted + msgbox.value.slice(cursor);
 	
-	if(msgbox.id == "postmsg")
+	if(msgbox.id === "postmsg")
 		window.scroll(0,msgbox.offsetTop - 48);
 	msgbox.focus();
 }

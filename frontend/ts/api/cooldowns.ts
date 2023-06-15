@@ -7,7 +7,7 @@ import $ from "jquery";
  */
 function getCooldown(data: BoardsJSON, board: string, type: string) {
 	for(const boardData of data.boards) {
-		if(boardData.board != board) continue;
+		if(boardData.board !== board) continue;
 		return (boardData.cooldowns as any)[type];
 	}
 }

@@ -38,7 +38,7 @@ $(() => {
 	$("input#delete-password").val(passwordText);
 
 	setPageBanner();
-	if(pageThread.board != "") {
+	if(pageThread.board !== "") {
 		prepareThumbnails();
 		if(getBooleanStorageVal("useqr", true))
 			initQR();

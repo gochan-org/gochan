@@ -4,7 +4,7 @@ const noteCloseTime = 4*1000; // 4 seconds
 const noteIcon = webroot + "/favicon.png";
 
 function canNotify() {
-	return (location.protocol == "https:")
+	return (location.protocol === "https:")
 		&& (typeof Notification !== "undefined");
 }
 
@@ -24,10 +24,10 @@ $(() => {
 		return;
 
 	Notification.requestPermission().then(granted => {
-		if(granted != "granted")
+		if(granted !== "granted")
 			return Promise.reject("denied");
 	}).catch(err => {
-		if(err != "denied")
+		if(err !== "denied")
 			console.log(`Error starting notifications: ${err}`);
 	});
 });

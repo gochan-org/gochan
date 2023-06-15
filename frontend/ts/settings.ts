@@ -64,7 +64,7 @@ class TextSetting extends Setting<string, HTMLTextAreaElement> {
 		this.element = this.createElement("<textarea/>");
 		this.element.text(defaultVal);
 		const val = this.getStorageValue();
-		if(val != "") {
+		if(val !== "") {
 			this.setElementValue(val);
 		}
 	}
@@ -100,7 +100,7 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 	}
 	getStorageValue() {
 		const val = super.getStorageValue();
-		return val == true;
+		return val === true;
 	}
 }
 
@@ -115,9 +115,9 @@ class NumberSetting extends Setting<number, HTMLInputElement> {
 		const props: MinMax = {
 			type: "number"
 		};
-		if(typeof minMax.min == "number" && !isNaN(minMax.min))
+		if(typeof minMax.min === "number" && !isNaN(minMax.min))
 			props.min = minMax.min;
-		if(typeof minMax.max == "number" && !isNaN(minMax.max))
+		if(typeof minMax.max === "number" && !isNaN(minMax.max))
 			props.max = minMax.max;
 		this.element = this.createElement("<input />", props).val(this.getStorageValue());
 	}
@@ -152,7 +152,7 @@ function createLightbox() {
  */
 export function setCustomJS() {
 	const customJS = getStorageVal("customjs");
-	if(customJS != "") {
+	if(customJS !== "") {
 		eval(customJS);
 	}
 }
@@ -162,7 +162,7 @@ export function setCustomJS() {
  */
 export function setCustomCSS() {
 	const customCSS = getStorageVal("customcss");
-	if(customCSS != "") {
+	if(customCSS !== "") {
 		$("style#customCSS").remove();
 		$("<style/>").prop({
 			id: "customCSS"

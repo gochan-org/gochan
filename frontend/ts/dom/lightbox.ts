@@ -54,7 +54,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<
 		"id": "cancelbutton"
 	}).text("Cancel");
 
-	const val = (typeof defVal == "string")?defVal:"";
+	const val = (typeof defVal === "string")?defVal:"";
 	const $promptInput = $("<input/>").prop({
 		id: "promptinput",
 		type: isMasked?"password":"text"
@@ -73,7 +73,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<
 	const $lb = simpleLightbox({}, {}, [$form]);
 	$promptInput.trigger("focus");
 	$ok.on("click", function() {
-		if(onOk($lb, $promptInput.val()) == false)
+		if(onOk($lb, $promptInput.val()) === false)
 			return;
 		removeLightbox(this, $lb);
 	});

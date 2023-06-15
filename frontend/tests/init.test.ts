@@ -13,7 +13,7 @@ test("Checks for valid mock server timezone (serverTZ)", () => {
 test("Checks mock themes to make sure the default one (defaultStyle) exists and is pipes.css", () => {
 	let styleName = "";
 	for(const style of styles) {
-		if(style.Filename == defaultStyle) {
+		if(style.Filename === defaultStyle) {
 			styleName = style.Name;
 		}
 	}

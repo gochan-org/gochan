@@ -4,9 +4,9 @@ import { openQR } from "./dom/qr";
 
 export function handleKeydown(e: JQuery.KeyDownEvent) {
 	const ta = e.target;
-	const isPostMsg = ta.nodeName == "TEXTAREA" && ta.name == "postmsg";
-	const inForm = ta.form != undefined;
-	if(!inForm && !e.ctrlKey && e.keyCode == 81) {
+	const isPostMsg = ta.nodeName === "TEXTAREA" && ta.name === "postmsg";
+	const inForm = ta.form !== undefined;
+	if(!inForm && !e.ctrlKey && e.key === "q") {
 		openQR();
 	} else if(isPostMsg && e.ctrlKey) {
 		applyBBCode(e);
@@ -15,29 +15,28 @@ export function handleKeydown(e: JQuery.KeyDownEvent) {
 
 export function applyBBCode(e: JQuery.KeyDownEvent) {
 	let tag = "";
-	switch(e.keyCode) {
-	case 10: // Enter key
-	case 13: // Enter key in Chrome/IE
+	switch(e.key) {
+	case "Enter":
 		// trigger the form submit event, whether the QR post box or the static post box is currently
 		$(e.target).parents("form#postform,form#qrpostform").trigger("submit");
 		break;
-	case 66: // B
+	case "b":
 		tag = "b"; // bold
 		break;
-	case 73: // I
+	case "i":
 		tag = "i"; // italics
 		break;
-	case 82: // R
+	case "r":
 		tag = "s"; // strikethrough
 		break;
-	case 83:
-		tag = "?"; // spoiler (not yet implemented)
+	case "s":
+		tag = "?";
 		break;
-	case 85: // U
+	case "u":
 		tag = "u"; // underline
 		break;
 	}
-	if(tag == "") return;
+	if(tag === "") return;
 
 	e.preventDefault();
 	const ta = e.target;

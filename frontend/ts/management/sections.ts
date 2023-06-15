@@ -20,7 +20,7 @@ function applyOrderChanges() {
 		const sectionname = $el.find(":nth-child(1)").html();
 		const sectionabbr = $el.find(":nth-child(2)").html();
 		const sectionpos = $el.find(":nth-child(3)").html();
-		const sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() == "yes"?"on":"off";
+		const sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() === "yes"?"on":"off";
 		$.ajax({
 			method: "POST",
 			url: webroot + "manage/boardsections",
@@ -76,7 +76,7 @@ function addButtons() {
 }
 
 $(() => {
-	if(window.location.pathname != webroot + "manage/boardsections")
+	if(window.location.pathname !== webroot + "manage/boardsections")
 		return;
 	
 	$sectionsTable = $("table#sections");

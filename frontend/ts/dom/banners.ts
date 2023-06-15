@@ -18,7 +18,7 @@ export function setPageBanner() {
 		},
 		dataType: "json"
 	}).then(data => {
-		if(!data || data.Filename == undefined || data.Filename == "") {
+		if(!data || data.Filename === undefined || data.Filename === "") {
 			return; // no banners :(
 		}
 		const props: BannerProps = {

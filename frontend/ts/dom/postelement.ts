@@ -41,9 +41,9 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 			}).text(post.no), "<br/>",
 	);
 	const $postInfo = $post.find("label.post-info");
-	const postName = (post.name == "" && post.trip == "")?"Anonymous":post.name;
+	const postName = (post.name === "" && post.trip === "")?"Anonymous":post.name;
 	const $postName = $("<span/>").prop({class: "postername"});
-	if(post.email == "") {
+	if(post.email === "") {
 		$postName.text(postName);
 	} else {
 		$postName.append($("<a/>").prop({
@@ -51,16 +51,16 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 		}).text(post.name));
 	}
 	$postInfo.prepend($postName);
-	if(post.trip != "") {
+	if(post.trip !== "") {
 		$postInfo.prepend($postName, $("<span/>").prop({class: "tripcode"}).text("!" + post.trip), " ");
 	} else {
 		$postInfo.prepend($postName, " ");
 	}
 
-	if(post.sub != "")
+	if(post.sub !== "")
 		$postInfo.prepend($("<span/>").prop({class:"subject"}).text(post.sub), " ");
 
-	if(post.filename != "" && post.filename != "deleted") {
+	if(post.filename !== "" && post.filename !== "deleted") {
 		const thumbFile = getThumbFilename(post.tim);
 		$post.append(
 			$("<div/>").prop({class: "file-info"})

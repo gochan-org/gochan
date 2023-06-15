@@ -26,7 +26,7 @@ export function updateWatchedThreads() {
 			getThreadJSON(thread.id, board).then(data => {
 				if(data.posts.length > thread.posts) {
 					// watched thread has new posts, trigger a menu update
-					if(currentPage.board == board && currentPage.id == thread.id) {
+					if(currentPage.board === board && currentPage.id === thread.id) {
 						// we're currently in the thread, update the cookie
 						watched[board][t].posts = data.posts.length;
 						watched[board][t].latest = data.posts[data.posts.length - 1].no;
@@ -40,7 +40,7 @@ export function updateWatchedThreads() {
 					});
 				}
 			}).catch(e => {
-				if(e.status == 404) {
+				if(e.status === 404) {
 					watched[board][t].err = e.statusText;
 					setStorageVal("watched", watched, true);
 				}
@@ -69,16 +69,16 @@ export interface WatchedThreadJSON {
 export function isThreadWatched(threadID: number, board: string) {
 	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
 	const threads = watched[board];
-	if(threads == undefined) return false;
+	if(threads === undefined) return false;
 	for(const thread of threads) {
-		if(thread.id == threadID) return true;
+		if(thread.id === threadID) return true;
 	}
 	return false;
 }
 
 export function watchThread(threadID: string|number, board: string) {
 	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
-	if(typeof threadID == "string") {
+	if(typeof threadID === "string") {
 		threadID = parseInt(threadID);
 	}
 	if(!(watched[board] instanceof Array))
@@ -89,7 +89,7 @@ export function watchThread(threadID: string|number, board: string) {
 		if(typeof thread === "number") {
 			thread = watched[board][t] = {id: thread};
 		}
-		if(thread.id == threadID) return; // thread is already in the watched list
+		if(thread.id === threadID) return; // thread is already in the watched list
 	}
 	getThreadJSON(threadID, board).then(data => {
 		const op = data.posts[0];
@@ -100,8 +100,8 @@ export function watchThread(threadID: string|number, board: string) {
 			op: op.name,
 			latest: data.posts[data.posts.length-1].no
 		};
-		if(op.trip != "") threadObj.op += "!" + op.trip;
-		if(op.sub != "") {
+		if(op.trip !== "") threadObj.op += "!" + op.trip;
+		if(op.sub !== "") {
 			if(op.sub.length > subjectCuttoff)
 				threadObj.subject = op.sub.slice(0, subjectCuttoff) + "...";
 			else
@@ -118,7 +118,7 @@ export function unwatchThread(threadID: number, board: string) {
 	if(!(watched[board] instanceof Array))
 		return;
 	for(const i in watched[board]) {
-		if(watched[board][i].id == threadID) {
+		if(watched[board][i].id === threadID) {
 			console.log(threadID);
 			watched[board].splice(i as any, 1);
 			setStorageVal("watched", watched, true);

@@ -17,12 +17,12 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 		updateThreadInWatcherMenu(thread);
 		return;
 	}
-	if(thread.op == "") thread.op = "Anonymous";
+	if(thread.op === "") thread.op = "Anonymous";
 	const $replyCounter = $("<span/>")
 		.prop({id: "reply-counter"})
 		.text(`(Replies: ${thread.posts - 1})`);
 	let infoElem = ` - <b>OP:</b> ${thread.op}<br/>`;
-	if(thread.subject === undefined || thread.subject == "") {
+	if(thread.subject === undefined || thread.subject === "") {
 		infoElem += "<b>Subject:</b> <i>[None]</i>";
 	} else {
 		infoElem += `<b>Subject: </b> ${thread.subject}`;
@@ -58,7 +58,7 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 
 function removeThreadFromMenu(threadID: number) {
 	$watcherMenu.find(`div#thread${threadID}`).remove();
-	if($watcherMenu.find("div.watcher-item").length == 0)
+	if($watcherMenu.find("div.watcher-item").length === 0)
 		$watcherMenu.append('<i id="no-threads">no watched threads</i>');
 }
 
@@ -66,13 +66,13 @@ function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
 	const currentPage = currentThread();
 	
 	const $item = $watcherMenu.find(`div#thread${thread.op}`);
-	if($item.length == 0) return; // watched thread isn't in the menu
+	if($item.length === 0) return; // watched thread isn't in the menu
 	$item.find("span#reply-counter").remove();
 	const $replyCounter = $("<span>").prop({
 		id: "reply-counter"
 	}).insertBefore($item.find(`a#unwatch${thread.op}`));
 
-	if(currentPage.board == thread.board && currentPage.id == thread.id) {
+	if(currentPage.board === thread.board && currentPage.id === thread.id) {
 		// we're currently in the thread
 		$replyCounter.text(` (Replies: ${thread.newNumPosts - 1}) `);
 	} else {
@@ -105,7 +105,7 @@ $(() => {
 	}
 	if(watcherBtn === null) {
 		watcherBtn = new TopBarButton("Watcher", () => {
-			$topbar.trigger("menuButtonClick", [$watcherMenu, $(document).find($watcherMenu).length == 0]);
+			$topbar.trigger("menuButtonClick", [$watcherMenu, $(document).find($watcherMenu).length === 0]);
 		}, {
 			before: "a#settings.dropdown-button"
 		});

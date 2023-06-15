@@ -3,7 +3,7 @@ const noop = ()=>{
 };
 
 export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad = noop) {
-	if($elem.length == 0) return;
+	if($elem.length === 0) return;
 	$elem[0].onchange = function() {
 		const img = new Image();
 		img.src = URL.createObjectURL((this as any).files[0]);

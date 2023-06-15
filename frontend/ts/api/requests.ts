@@ -32,7 +32,7 @@ export async function getBoardList() {
 }
 
 export async function getCatalog(board = "") {
-	const useBoard = (board != "")?board:currentBoard();
+	const useBoard = (board !== "")?board:currentBoard();
 
 	const data = await $.ajax({
 		url: webroot + useBoard + "/catalog.json",
@@ -51,7 +51,7 @@ export async function getCatalog(board = "") {
 
 export async function getThread(board = "", thread = 0) {
 	const threadInfo = currentThread();
-	if(board != "")
+	if(board !== "")
 		threadInfo.board = board;
 	if(thread > 0)
 		threadInfo.id = thread;

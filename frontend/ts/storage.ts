@@ -2,7 +2,7 @@ import { getCookie, setCookie } from "./cookies";
 
 
 export function getStorageVal(key: string, defaultVal = "") {
-	if(localStorage == undefined)
+	if(localStorage === undefined)
 		return getCookie(key, defaultVal);
 	const val = localStorage.getItem(key);
 	if(val === null)
@@ -12,7 +12,7 @@ export function getStorageVal(key: string, defaultVal = "") {
 
 export function getBooleanStorageVal(key: string, defaultVal = false) {
 	const val = getStorageVal(key, defaultVal?"true":"false");
-	return val == "true";
+	return val === "true";
 }
 
 export function getNumberStorageVal(key: string, defaultVal = 0) {
@@ -31,7 +31,7 @@ export function getJsonStorageVal<T>(key: string, defaultVal: T) {
 
 export function setStorageVal(key: string, val: any, isJSON = false) {
 	const storeVal = isJSON?JSON.stringify(val):val;
-	if(localStorage == undefined)
+	if(localStorage === undefined)
 		setCookie(key, storeVal);
 	else
 		localStorage.setItem(key, storeVal);

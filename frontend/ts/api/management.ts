@@ -5,7 +5,7 @@ import $ from "jquery";
  * @param $elem the jQuery element of the post
  */
 export function isThreadLocked($elem: JQuery<HTMLElement>) {
-	return $elem.find("span.status-icons img.locked-icon").length == 1;
+	return $elem.find("span.status-icons img.locked-icon").length === 1;
 }
 
 interface BoardLockJSON {
@@ -39,7 +39,7 @@ export async function updateThreadLock(board: string, op: number, lock: boolean)
 	}).then((_data) => {
 		alert("Thread " + (lock?"locked":"unlocked") + " successfully");
 		const $lockOpt = $(`select#op${op} option`)
-			.filter((_i, el) => el.textContent == "Lock thread" || el.textContent == "Unlock thread");
+			.filter((_i, el) => el.textContent === "Lock thread" || el.textContent === "Unlock thread");
 		if(lock) {
 			$(`div#op${op} span.status-icons`).append(
 				$("<img/>").attr({

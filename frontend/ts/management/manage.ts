@@ -53,7 +53,7 @@ function setupManagementEvents() {
 			$el.append("<option>Posts from this IP</option>");
 		}
 		const filenameOrig = $post.find("div.file-info a.file-orig").text();
-		if(filenameOrig != "" && !dropdownHasItem(el, "Ban filename")) {
+		if(filenameOrig !== "" && !dropdownHasItem(el, "Ban filename")) {
 			$el.append(
 				"<option>Ban filename</option>",
 				"<option>Ban file checksum</option>"
@@ -206,17 +206,17 @@ function menuItem(action: StaffAction|string, isCategory = false) {
 
 function getAction(id: string) {
 	for(const action of staffActions) {
-		if(action.id == id) {
+		if(action.id === id) {
 			return action;
 		}
 	}
 }
 
 function filterAction(action: StaffAction, perms: number) {
-	return action.title != "Logout"
-		&& action.title != "Dashboard"
+	return action.title !== "Logout"
+		&& action.title !== "Dashboard"
 		&& action.jsonOutput < 2
-		&& action.perms == perms;
+		&& action.perms === perms;
 }
 
 /**
@@ -251,7 +251,7 @@ export function createStaffMenu(staff = staffInfo) {
 		}
 		getReports().then(updateReports);
 	}
-	if(rank == 3) {
+	if(rank === 3) {
 		const adminActions = staffActions.filter(val => filterAction(val, 3));
 		if(adminActions.length > 0)
 			$staffMenu.append(menuItem("Administration", true));
@@ -266,14 +266,14 @@ function createStaffButton() {
 	if($staffBtn !== null || staffInfo.Rank === 0)
 		return;
 	$staffBtn = new TopBarButton("Staff", () => {
-		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length == 0]);
+		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);
 	});
 }
 
 function updateReports(reports: any[]) {
 	// append " (#)" to the Reports link, replacing # with the number of reports
 	$staffMenu.find("a").each((e, elem) => {
-		if(elem.text.search(reportsTextRE) != 0) return;
+		if(elem.text.search(reportsTextRE) !== 0) return;
 		const $span = $("<span/>").text(` (${reports.length})`).appendTo(elem);
 		if(reports.length > 0) {
 			// make it bold and red if there are reports

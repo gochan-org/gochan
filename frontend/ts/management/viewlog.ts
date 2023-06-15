@@ -11,7 +11,7 @@ interface LogFilter {
 let originalLog = "";
 
 function updateLogFilter($log: JQuery<HTMLTextAreaElement>, filter: LogFilter) {
-	let lines = originalLog.split("\n").filter((line) => {
+	const lines = originalLog.split("\n").filter((line) => {
 		try {
 			const lineObj = JSON.parse(line);
 			switch(lineObj.level) {
@@ -46,7 +46,7 @@ function updateLogFilter($log: JQuery<HTMLTextAreaElement>, filter: LogFilter) {
 }
 
 $(() => {
-	if(location.pathname.indexOf(webroot + "manage/viewlog") != 0)
+	if(location.pathname.indexOf(webroot + "manage/viewlog") !== 0)
 		return;
 	const $log = $<HTMLTextAreaElement>("textarea.viewlog");
 	originalLog = $log.text();
@@ -115,7 +115,7 @@ $(() => {
 			showErrors: $filters.filter("#level-error-chk").get(0).checked,
 			showWarnings: $filters.filter("#level-warning-chk").get(0).checked,
 			showInfo: $filters.filter("#level-info-chk").get(0).checked,
-			sortDesc: $filters.filter("select#log-sort").val() == "desc"
+			sortDesc: $filters.filter("select#log-sort").val() === "desc"
 		};
 		updateLogFilter($log, filter);
 	});

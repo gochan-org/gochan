@@ -31,8 +31,8 @@ function moveThread(id: number, _board: string) {
 }
 
 function reportPost(id: number, board: string) {
-	promptLightbox("", false, ($lb, reason) => {
-		if(reason == "" || reason === null) return;
+	promptLightbox("", false, (_$lb, reason) => {
+		if(reason === "" || reason === null) return;
 		const xhrFields: {[k: string]: string} = {
 			board: board,
 			report_btn: "Report",
@@ -96,7 +96,7 @@ function deletePost(id: number, board: string, fileOnly = false) {
 			if(data !== "")
 				alertLightbox(`Delete failed: ${data.error}`, "Error");
 		}).done(data => {
-			if(data.error == undefined || data == "") {
+			if(data.error === undefined || data === "") {
 				if(location.href.indexOf(`/${board}/res/${id}.html`) > -1) {
 					alertLightbox("Thread deleted", "Success");
 				} else if(fileOnly) {
@@ -174,11 +174,11 @@ function handleActions(action: string, postIDStr: string) {
 		break;
 	case "Ban filename":
 	case "Ban file checksum": {
-		const banType = (action == "Ban filename")?"filename":"checksum";
+		const banType = (action === "Ban filename")?"filename":"checksum";
 		getPostInfo(postID).then((info: any) => {
 			return banFile(banType, info.originalFilename, info.checksum, `Added from post dropdown for post /${board}/${postID}`);
 		}).then((result: any) => {
-			if(result.error !== undefined && result.error != "") {
+			if(result.error !== undefined && result.error !== "") {
 				if(result.message !== undefined)
 					alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
 				else
@@ -190,7 +190,7 @@ function handleActions(action: string, postIDStr: string) {
 			let messageDetail = "";
 			try {
 				const responseJSON = JSON.parse(reason.responseText);
-				if((typeof responseJSON.message) == "string" && responseJSON.message != "") {
+				if((typeof responseJSON.message) === "string" && responseJSON.message !== "") {
 					messageDetail = responseJSON.message;
 				} else {
 					messageDetail = reason.statusText;
@@ -248,12 +248,12 @@ export function addPostDropdown($post: JQuery<HTMLElement>) {
 $(() => {
 	$(document).on("watchThread", (_e, thread) => {
 		$<HTMLOptionElement>(`div#op${thread.id} select.post-actions > option`).each((i, el) => {
-			if(el.text == "Watch thread")
+			if(el.text === "Watch thread")
 				el.text = "Unwatch thread";
 		});
 	}).on("unwatchThread", (_e, threadID) => {
 		$<HTMLOptionElement>(`div#op${threadID} select.post-actions > option`).each((i, el) => {
-			if(el.text == "Unwatch thread")
+			if(el.text === "Unwatch thread")
 				el.text = "Watch thread";
 		});
 	});

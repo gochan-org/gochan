@@ -80,7 +80,7 @@ function setButtonTimeout(prefix = "", cooldown = 5) {
 	let currentSeconds = cooldown;
 	let interval: NodeJS.Timer = null;
 	const timeoutCB = () => {
-		if(currentSeconds == 0) {
+		if(currentSeconds === 0) {
 			setSubmitButtonEnabled(true);
 			resetSubmitButtonText();
 			clearInterval(interval);
@@ -263,7 +263,7 @@ function clearQR() {
 
 export function openQR() {
 	if($qr) {
-		if($qr.parent().length == 0) {
+		if($qr.parent().length === 0) {
 			$qr.insertAfter("div#content");
 		} else {
 			$qr.show();
@@ -279,7 +279,7 @@ window.closeQR = closeQR;
 
 $(() => {
 	const board = currentBoard();
-	if(board == "") return; // not on a board
+	if(board === "") return; // not on a board
 	getThreadCooldown(board).then(cd => threadCooldown = cd);
 	getReplyCooldown(board).then(cd => replyCooldown = cd);
 });

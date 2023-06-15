@@ -39,7 +39,7 @@ export function setPostVisibility(id: number|string, visibility: boolean, onComp
 		$backlink.text(id);
 		const newHidden = [];
 		for(const sID of hiddenStorage) {
-			if(sID != id && newHidden.indexOf(sID) == -1) newHidden.push(sID);
+			if(sID !== id && newHidden.indexOf(sID) === -1) newHidden.push(sID);
 		}
 		setStorageVal("hiddenposts", newHidden.join(","));
 	} else {
@@ -48,7 +48,7 @@ export function setPostVisibility(id: number|string, visibility: boolean, onComp
 			elem.text = elem.text.replace("Hide", "Show");
 		});
 		$backlink.text(`${id} (hidden)`);
-		if(hiddenStorage.indexOf(id as string) == -1) hiddenStorage.push(id as string);
+		if(hiddenStorage.indexOf(id as string) === -1) hiddenStorage.push(id as string);
 		setStorageVal("hiddenposts", hiddenStorage.join(","));
 	}
 

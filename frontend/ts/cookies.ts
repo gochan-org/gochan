@@ -11,7 +11,7 @@ export function getCookie(name: string, defaultVal = "") {
 
 	for(const cookie of cookieArr) {
 		const pair = cookie.split("=");
-		if(pair[0] != name) continue;
+		if(pair[0] !== name) continue;
 		try {
 			val = decodeURIComponent(pair[1]).replace("+", " ");
 		} catch(err) {
@@ -27,7 +27,7 @@ export function getNumberCookie(name: string, defaultVal = "0") {
 }
 
 export function getBooleanCookie(name: string, defaultVal = "true") {
-	return getCookie(name, defaultVal) == "true";
+	return getCookie(name, defaultVal) === "true";
 }
 
 function randomPassword(len = 8) {
@@ -45,7 +45,7 @@ function randomPassword(len = 8) {
  */
 export function setCookie(name: string, value: string, expires = "", root = webroot) {
 	let expiresStr = "";
-	if(expires == "") {
+	if(expires === "") {
 		expiresStr = ";expires=";
 		const d = new Date();
 		d.setTime(d.getTime() + YEAR_IN_MS);
@@ -56,7 +56,7 @@ export function setCookie(name: string, value: string, expires = "", root = webr
 
 export function initCookies() {
 	let pwCookie = getCookie("password");
-	if(pwCookie == "") {
+	if(pwCookie === "") {
 		pwCookie = randomPassword();
 		setCookie("password", pwCookie);
 	}
