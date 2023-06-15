@@ -23,12 +23,12 @@ let threadCooldown = 0;
 let replyCooldown = 0;
 
 const qrButtonHTML = 
-	`<input type="file" id="imagefile" name="imagefile" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"/>` +
-	`<input type="submit" value="Post" style="float:right;min-width:50px"/>`;
+	'<input type="file" id="imagefile" name="imagefile" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"/>' +
+	'<input type="submit" value="Post" style="float:right;min-width:50px"/>';
 
 const qrTitleBar =
-	`<div id="qr-title">` +
-	`<span id="qr-message"></span>` +
+	'<div id="qr-title">' +
+	'<span id="qr-message"></span>' +
 	`<span id="qr-buttons"><a href="javascript:toBottom();">${downArrow}</a>` +
 	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
 
