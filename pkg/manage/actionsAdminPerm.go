@@ -91,7 +91,7 @@ func registerAdminPages() {
 				if (do == "add" || do == "update") && password != passwordConfirm {
 					return "", ErrPasswordConfirm
 				}
-				fmt.Println(do, updateUsername)
+
 				rankStr := request.FormValue("rank")
 				var rank int
 				if rankStr != "" {

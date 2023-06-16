@@ -145,7 +145,6 @@ var funcMap = template.FuncMap{
 		for k := 0; k < len(values); k += 2 {
 			key, ok := values[k].(string)
 			if !ok {
-				fmt.Printf("%q\n\n", key)
 				return nil, ErrInvalidKey
 			}
 			dict[key] = values[k+1]
