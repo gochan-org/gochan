@@ -221,7 +221,8 @@ export function initQR() {
 			data: data, // $form.serialize(),
 			processData: false,
 			contentType: false,
-			success: (data, _status, _jqXHR) => {
+			dataType: "json",
+			success: (data: PostSubmitResponse, _status, _jqXHR) => {
 				if(data.error) {
 					alertLightbox(data.error, "Error");
 					return;
@@ -229,10 +230,10 @@ export function initQR() {
 				clearQR();
 				const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
 				setButtonTimeout("", cooldown);
-				updateThread().then(clearQR).then(() => {
-					const persist = getBooleanStorageVal("persistentqr", false);
-					if(!persist) closeQR();
-				});
+				$.get({
+					url: data.thread,
+					success: updateThreadSuccess
+				})
 				return false;
 			},
 			error: (_jqXHR, _status, error) => {
@@ -240,6 +241,19 @@ export function initQR() {
 			}
 		});
 		return false;
+	});
+}
+
+function updateThreadSuccess(data: any, status: string, xhr: JQueryXHR) {
+	const $doc = $(data);
+	const $replyContainers = $("div.reply-container");
+	$doc.find("div.reply-container").each((_i, el: HTMLElement) => {
+		const idSelector = `#${el.id}`;
+		const prevIDselector = `#${el.previousElementSibling.id}`;
+		if($replyContainers.filter(idSelector).length == 0) {
+			// new post
+			$(el).insertAfter($replyContainers.filter(prevIDselector));
+		}
 	});
 }
 

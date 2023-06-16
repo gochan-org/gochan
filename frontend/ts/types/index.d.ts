@@ -100,6 +100,13 @@ declare global {
 		last_modified: string;
 	}
 
+	interface PostSubmitResponse {
+		error?: string;
+		id: number;
+		time: Date;
+		thread: string;
+	}
+
 	/**
 	 * An object representing a staff member retreived by requesting /manage/staffinfo
 	 */

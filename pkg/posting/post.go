@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -42,6 +43,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		Str("IP", ip)
 	defer func() {
 		if a := recover(); a != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Internal server error", wantsJSON, nil)
 			errEv.Caller().
 				Str("recover", fmt.Sprintf("%v", a)).
@@ -369,7 +371,17 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if emailCommand == "noko" {
+	if wantsJSON {
+		topPost := post.ID
+		if !post.IsTopPost {
+			topPost, _ = post.TopPostID()
+		}
+		json.NewEncoder(writer).Encode(map[string]interface{}{
+			"time":   post.CreatedOn,
+			"id":     post.ID,
+			"thread": config.WebPath(postBoard.Dir, "/res/", strconv.Itoa(topPost)+".html"),
+		})
+	} else if emailCommand == "noko" {
 		if post.IsTopPost {
 			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
 		} else {
