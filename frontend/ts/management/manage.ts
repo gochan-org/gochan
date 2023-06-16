@@ -16,8 +16,7 @@ const notAStaff: StaffInfo = {
 const reportsTextRE = /^Reports( \(\d+\))?/;
 
 export let staffActions: StaffAction[] = [];
-export let staffInfo = notAStaff;
-let loginChecked = false;
+let staffInfo: StaffInfo = null;
 
 /**
  * The menu shown when the Staff button on the top bar is clicked
@@ -34,21 +33,22 @@ function dropdownHasItem(dropdown: any, item: string) {
 	return [...dropdown.children].filter(v => v.text === item).length > 0;
 }
 
-function setupManagementEvents() {
-	$<HTMLSelectElement>("select.post-actions").each((_i, el) => {
-		const $el = $(el);
-		const $post = $(el.parentElement);
-		const isLocked = isThreadLocked($post);
-		if(!dropdownHasItem(el, "Staff Actions")) {
-			$el.append('<option disabled="disabled">Staff Actions</option>');
+function addManageEvents(_i: number, el: HTMLSelectElement) {
+	if(staffInfo === null || staffInfo.Rank < 2) return;
+	const $el = $(el);
+	const $post = $(el.parentElement);
+	const isLocked = isThreadLocked($post);
+	if(!dropdownHasItem(el, "Staff Actions")) {
+		$el.append('<option disabled="disabled">Staff Actions</option>');
+	}
+	if(staffInfo.Rank === 3 && $post.hasClass("op-post")) {
+		if(isLocked) {
+			$el.append("<option>Unlock thread</option>");
+		} else {
+			$el.append("<option>Lock thread</option>");
 		}
-		if($post.hasClass("op-post")) {
-			if(isLocked) {
-				$el.append("<option>Unlock thread</option>");
-			} else {
-				$el.append("<option>Lock thread</option>");
-			}
-		}
+	}
+	if(staffInfo.Rank >= 2) {
 		if(!dropdownHasItem(el, "Posts from this IP")) {
 			$el.append("<option>Posts from this IP</option>");
 		}
@@ -62,12 +62,18 @@ function setupManagementEvents() {
 				"<option>Ban file checksum</option>"
 			);
 		}
-	});
-	$(document).on("postDropdownAdded", function(_e, data) {
-		if(!data.dropdown) return;
-		data.dropdown.append("<option>Posts from this IP</option>");
-		data.dropdown.append("<option>Ban IP address</option>")
-	});
+	}
+}
+
+function setupManagementEvents() {
+	getStaffInfo().then(() => {
+		$<HTMLSelectElement>("select.post-actions").each(addManageEvents);
+		$(document).on("postDropdownAdded", function(_e, data) {
+			if(!data.dropdown) return;
+			data.dropdown.append("<option>Posts from this IP</option>");
+			data.dropdown.append("<option>Ban IP address</option>")
+		});
+	})
 }
 
 interface BanFileJSON {
@@ -138,16 +144,14 @@ export async function initStaff() {
 	
 }
 
-export async function getStaffInfo() {
-	if(loginChecked)
-		// don't make multiple unnecessary AJAX requests if we're already logged in
+export async function getStaffInfo(): Promise<StaffInfo> {
+	if(staffInfo !== null)
+		// don't make multiple unnecessary AJAX requests
 		return staffInfo;
-	loginChecked = true;
 	return $.ajax({
 		method: "GET",
 		url: `${webroot}manage/staffinfo`,
 		async: true,
-		cache: true,
 		dataType: "json"
 	}).catch(() => {
 		return notAStaff;
@@ -267,7 +271,7 @@ export function createStaffMenu(staff = staffInfo) {
 }
 
 function createStaffButton() {
-	if($staffBtn !== null || staffInfo.Rank === 0)
+	if($staffBtn !== null || staffInfo == null || staffInfo.Rank === 0)
 		return;
 	$staffBtn = new TopBarButton("Staff", () => {
 		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);
