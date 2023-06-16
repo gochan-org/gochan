@@ -32,37 +32,25 @@ type recentPost struct {
 func getRecentPosts() ([]recentPost, error) {
 	siteCfg := config.GetSiteConfig()
 	query := `SELECT
-		DBPREFIXposts.id,
-		DBPREFIXposts.message_raw,
-		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir,
-		COALESCE(
-			(SELECT filename FROM DBPREFIXfiles WHERE DBPREFIXfiles.post_id = DBPREFIXposts.id`
-	if !siteCfg.RecentPostsWithNoFile {
-		query += ` AND filename != '' AND filename != 'deleted'`
-	}
-	query += ` ORDER BY DBPREFIXfiles.id DESC LIMIT 1), ''),
-		op.id
-	FROM
-		DBPREFIXposts
-	LEFT JOIN (
-		SELECT id, board_id FROM DBPREFIXthreads
-	) t ON t.id = DBPREFIXposts.thread_id
-	LEFT JOIN (
-		SELECT post_id, filename FROM DBPREFIXfiles
-	) f on f.post_id = DBPREFIXposts.id
-	INNER JOIN (
-		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
-	) op ON op.thread_id = DBPREFIXposts.thread_id
+	DBPREFIXposts.id, DBPREFIXposts.message_raw,
+	(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id),
+	f.filename, op.id
+	FROM DBPREFIXposts
+	LEFT JOIN (SELECT id, board_id FROM DBPREFIXthreads) t ON t.id = DBPREFIXposts.thread_id
+	LEFT JOIN (SELECT post_id, filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id
+	INNER JOIN (SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post) op ON op.thread_id = DBPREFIXposts.thread_id
 	WHERE DBPREFIXposts.is_deleted = FALSE`
+	if !siteCfg.RecentPostsWithNoFile {
+		query += " AND f.filename IS NOT NULL AND f.filename != '' AND f.filename != 'deleted'"
+	}
+	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 
-	query += "  LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 	rows, err := gcsql.QuerySQL(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var recentPosts []recentPost
-
 	for rows.Next() {
 		var post recentPost
 		var id, topPostID string
@@ -70,9 +58,6 @@ func getRecentPosts() ([]recentPost, error) {
 		err = rows.Scan(&id, &message, &boardDir, &filename, &topPostID)
 		if err != nil {
 			return nil, err
-		}
-		if filename == "" && !siteCfg.RecentPostsWithNoFile {
-			continue
 		}
 		message = bbcodeTagRE.ReplaceAllString(message, "")
 		if len(message) > 40 {
@@ -124,7 +109,6 @@ func BuildFrontPage() error {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed loading recent posts: " + err.Error())
 	}
-
 	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
 		"siteConfig":  siteCfg,
 		"sections":    gcsql.AllSections,
@@ -187,14 +171,12 @@ func BuildJS() error {
 		return fmt.Errorf("unable to update file ownership for consts.js: %s", err.Error())
 	}
 
-	if err = serverutil.MinifyTemplate(gctemplates.JsConsts,
-		map[string]interface{}{
-			"styles":       boardCfg.Styles,
-			"defaultStyle": boardCfg.DefaultStyle,
-			"webroot":      criticalCfg.WebRoot,
-			"timezone":     criticalCfg.TimeZone,
-		},
-		constsJSFile, "text/javascript"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.JsConsts, map[string]any{
+		"styles":       boardCfg.Styles,
+		"defaultStyle": boardCfg.DefaultStyle,
+		"webroot":      criticalCfg.WebRoot,
+		"timezone":     criticalCfg.TimeZone,
+	}, constsJSFile, "text/javascript"); err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("error building consts.js: %s", err.Error())
 	}
