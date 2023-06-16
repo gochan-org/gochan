@@ -21,6 +21,9 @@ See [`docker/README.md`](docker/README.md)
 ## Configuration
 See [config.md](config.md)
 
+## Plugins
+Gochan has a built-in [Lua](https://lua.org) interpreter and an event system to allow for extending your Gochan instance's functionality. See [events_triggered.md](./events_triggered.md) for a list of events and information about when they are used.
+
 ## Migration
 If you run gochan v3.0 or newer and get a message telling you that your database is out of date, please run gochan-migration -updatedb. If this does not work, please contact the developers.
 
