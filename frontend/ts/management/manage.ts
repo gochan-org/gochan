@@ -35,7 +35,7 @@ function dropdownHasItem(dropdown: any, item: string) {
 }
 
 function setupManagementEvents() {
-	$("select.post-actions").each((_i, el) => {
+	$<HTMLSelectElement>("select.post-actions").each((_i, el) => {
 		const $el = $(el);
 		const $post = $(el.parentElement);
 		const isLocked = isThreadLocked($post);
@@ -52,6 +52,9 @@ function setupManagementEvents() {
 		if(!dropdownHasItem(el, "Posts from this IP")) {
 			$el.append("<option>Posts from this IP</option>");
 		}
+		if(!dropdownHasItem(el, "Ban IP address")) {
+			$el.append("<option>Ban IP address</option>")
+		}
 		const filenameOrig = $post.find("div.file-info a.file-orig").text();
 		if(filenameOrig !== "" && !dropdownHasItem(el, "Ban filename")) {
 			$el.append(
@@ -63,6 +66,7 @@ function setupManagementEvents() {
 	$(document).on("postDropdownAdded", function(_e, data) {
 		if(!data.dropdown) return;
 		data.dropdown.append("<option>Posts from this IP</option>");
+		data.dropdown.append("<option>Ban IP address</option>")
 	});
 }
 

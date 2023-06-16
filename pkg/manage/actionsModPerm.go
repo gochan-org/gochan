@@ -32,26 +32,27 @@ func registerModeratorPages() {
 				var ban gcsql.IPBan
 				ban.StaffID = staff.ID
 				deleteIDStr := request.FormValue("delete")
+				postIDstr := request.FormValue("postid")
 				if deleteIDStr != "" {
 					// deleting a ban
 					ban.ID, err = strconv.Atoi(deleteIDStr)
 					if err != nil {
-						errEv.Err(err).
+						errEv.Err(err).Caller().
 							Str("deleteBan", deleteIDStr).
-							Caller().Send()
+							Send()
 						return "", err
 					}
 					if err = ban.Deactivate(staff.ID); err != nil {
-						errEv.Err(err).
+						errEv.Err(err).Caller().
 							Int("deleteBan", ban.ID).
-							Caller().Send()
+							Send()
 						return "", err
 					}
 
 				} else if request.FormValue("do") == "add" {
 					err := ipBanFromRequest(&ban, request, errEv)
 					if err != nil {
-						errEv.Err(err).
+						errEv.Err(err).Caller().
 							Str("banIP", ban.IP).
 							Time("expireAt", ban.ExpiresAt).
 							Time("appealAt", ban.AppealAt).
@@ -64,14 +65,25 @@ func registerModeratorPages() {
 						Bool("permanent", ban.Permanent).
 						Str("reason", ban.Message).
 						Msg("Added IP ban")
+				} else if postIDstr != "" {
+					postID, err := strconv.Atoi(postIDstr)
+					if err != nil {
+						errEv.Err(err).Caller().Send()
+						return "", err
+					}
+					if ban.IP, err = gcsql.GetPostIP(postID); err != nil {
+						errEv.Err(err).Caller().
+							Int("postID", postID).Send()
+						return "", err
+					}
 				}
 
 				filterBoardIDstr := request.FormValue("filterboardid")
 				var filterBoardID int
 				if filterBoardIDstr != "" {
 					if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
-						errEv.Err(err).
-							Str("filterboardid", filterBoardIDstr).Caller().Send()
+						errEv.Err(err).Caller().
+							Str("filterboardid", filterBoardIDstr).Send()
 						return "", err
 					}
 				}
@@ -79,14 +91,14 @@ func registerModeratorPages() {
 				limit := 200
 				if limitStr != "" {
 					if limit, err = strconv.Atoi(limitStr); err != nil {
-						errEv.Err(err).
-							Str("limit", limitStr).Caller().Send()
+						errEv.Err(err).Caller().
+							Str("limit", limitStr).Send()
 						return "", err
 					}
 				}
 				banlist, err := gcsql.GetIPBans(filterBoardID, limit, true)
 				if err != nil {
-					errEv.Err(err).Msg("Error getting ban list")
+					errEv.Err(err).Caller().Msg("Error getting ban list")
 					err = errors.New("Error getting ban list: " + err.Error())
 					return "", err
 				}

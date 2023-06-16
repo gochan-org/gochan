@@ -172,6 +172,9 @@ function handleActions(action: string, postIDStr: string) {
 			alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
 		});
 		break;
+	case "Ban IP address":
+		window.open(`${webroot}manage/bans?dir=${board}&postid=${postID}`);
+		break;
 	case "Ban filename":
 	case "Ban file checksum": {
 		const banType = (action === "Ban filename")?"filename":"checksum";

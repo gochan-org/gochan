@@ -48,6 +48,13 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 	return post, err
 }
 
+func GetPostIP(postID int) (string, error) {
+	sql := "SELECT ip FROM DBPREFIXposts WHERE id = ?"
+	var ip string
+	err := QueryRowSQL(sql, []interface{}{postID}, []interface{}{&ip})
+	return ip, err
+}
+
 // GetPostsFromIP gets the posts from the database with a matching IP address, specifying
 // optionally requiring them to not be deleted
 func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
