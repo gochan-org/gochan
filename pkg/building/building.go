@@ -34,7 +34,7 @@ func getRecentPosts() ([]recentPost, error) {
 	query := `SELECT
 	DBPREFIXposts.id, DBPREFIXposts.message_raw,
 	(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id),
-	f.filename, op.id
+	COALESCE(f.filename, ''), op.id
 	FROM DBPREFIXposts
 	LEFT JOIN (SELECT id, board_id FROM DBPREFIXthreads) t ON t.id = DBPREFIXposts.thread_id
 	LEFT JOIN (SELECT post_id, filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id
