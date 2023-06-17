@@ -21,7 +21,8 @@
 	<b>IP: </b> {{$post.IP}}<br />
 	<b>Board: </b>/{{$post.BoardDir}}/
 </td>
-<td>{{truncateMessage (stripHTML $post.Message) 300 16}}</td><td>
+<td>{{$post.Message}}</td>
+<td>
 	{{- if eq $post.Filename "deleted" -}}
 	<div class="file-deleted-box centered" style="text-align:center;">File removed</div>
 	{{- else if ne $post.Filename "" -}}
