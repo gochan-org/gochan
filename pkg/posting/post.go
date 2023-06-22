@@ -376,6 +376,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		if !post.IsTopPost {
 			topPost, _ = post.TopPostID()
 		}
+		writer.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(writer).Encode(map[string]interface{}{
 			"time":   post.CreatedOn,
 			"id":     post.ID,
