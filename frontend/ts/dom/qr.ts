@@ -12,11 +12,11 @@ import { upArrow, downArrow } from "../vars";
 import { getCookie } from "../cookies";
 import { $topbar, topbarHeight } from "./topbar";
 import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../storage";
-import { updateThread } from "../postutil";
 import { currentBoard, currentThread } from "../postinfo";
 import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
 import { getUploadFilename, updateUploadImage } from "./uploaddata";
 import { alertLightbox } from "./lightbox";
+import { addPostDropdown } from "./postdropdown";
 
 export let $qr: JQuery<HTMLElement> = null;
 let threadCooldown = 0;
@@ -115,7 +115,7 @@ export function initQR() {
 	const $qrbuttons = $("<div/>")
 		.prop("id", "qrbuttons")
 		.append(qrButtonHTML);
-	const $postform = $("<form/>").prop({
+	const $postform = $<HTMLFormElement>("<form/>").prop({
 		id: "qrpostform",
 		name: "qrpostform",
 		action: webroot + "post",
@@ -202,29 +202,29 @@ export function initQR() {
 	openQR();
 	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
-	if(currentThread().id < 1) {
-		$("form#qrpostform").on("submit", function(_e) {
-			copyCaptchaResponse($(this));
-		});
-		return;
-	}
+
 	$postform.on("submit", function(e) {
-		const $form = $<HTMLFormElement>(this as HTMLFormElement);
+		const $form = $<HTMLFormElement>(this);
 		e.preventDefault();
 		copyCaptchaResponse($form);
-		const data = new FormData(this as HTMLFormElement);
+		const data = new FormData(this);
 
 		$.ajax({
 			type: "POST",
 			url: $form.attr("action"),
 			enctype: "multipart/form-data",
-			data: data, // $form.serialize(),
+			data: data,
 			processData: false,
 			contentType: false,
 			dataType: "json",
 			success: (data: PostSubmitResponse, _status, _jqXHR) => {
 				if(data.error) {
 					alertLightbox(data.error, "Error");
+					return;
+				}
+				if(data.thread !== location.pathname) {
+					// new thread
+					location.pathname = data.thread;
 					return;
 				}
 				clearQR();
@@ -245,14 +245,12 @@ export function initQR() {
 }
 
 function updateThreadSuccess(data: any) {
-	const $doc = $(data);
-	const $replyContainers = $("div.reply-container");
-	$doc.find("div.reply-container").each((_i, el: HTMLElement) => {
-		const idSelector = `#${el.id}`;
-		const prevIDselector = `#${el.previousElementSibling.id}`;
-		if($replyContainers.filter(idSelector).length === 0) {
-			// new post
-			$(el).insertAfter($replyContainers.filter(prevIDselector));
+	const $checkPosts = $(data).find("div.thread").children().filter((_i, el) => !$(el).hasClass("op-post"));
+	let $replyContainers = $("div.thread").children();
+	$checkPosts.each((_i, el) => {
+		if($replyContainers.filter(`#${el.id}`).length < 1) {
+			addPostDropdown($(el).insertAfter(`#${el.previousElementSibling.id}`));
+			$replyContainers = $("div.thread").children();
 		}
 	});
 }
