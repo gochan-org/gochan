@@ -25,7 +25,7 @@ export function isPostVisible(id: number) {
  */
 export function setPostVisibility(id: number|string, visibility: boolean, onComplete = noop) {
 	const $post = $(`div#op${id}.op-post, div#reply${id}.reply`);
-	
+
 	if($post.length === 0)
 		return false;
 	const $toSet = $post.find(".file-info,.post-text,.upload,.file-deleted-box,br");

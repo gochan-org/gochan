@@ -88,7 +88,7 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 							width: post.tn_w,
 							height: post.tn_h
 						})
-				)	
+				)
 		);
 		shrinkOriginalFilenames($post);
 	}

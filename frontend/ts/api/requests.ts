@@ -55,7 +55,7 @@ export async function getThread(board = "", thread = 0) {
 		threadInfo.board = board;
 	if(thread > 0)
 		threadInfo.id = thread;
-	
+
 	if(threadInfo.board === "") {
 		return Promise.reject("not in a board");
 	}

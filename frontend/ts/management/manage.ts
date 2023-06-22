@@ -53,7 +53,7 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 			$el.append("<option>Posts from this IP</option>");
 		}
 		if(!dropdownHasItem(el, "Ban IP address")) {
-			$el.append("<option>Ban IP address</option>")
+			$el.append("<option>Ban IP address</option>");
 		}
 		const filenameOrig = $post.find("div.file-info a.file-orig").text();
 		if(filenameOrig !== "" && !dropdownHasItem(el, "Ban filename")) {
@@ -71,9 +71,9 @@ function setupManagementEvents() {
 		$(document).on("postDropdownAdded", function(_e, data) {
 			if(!data.dropdown) return;
 			data.dropdown.append("<option>Posts from this IP</option>");
-			data.dropdown.append("<option>Ban IP address</option>")
+			data.dropdown.append("<option>Ban IP address</option>");
 		});
-	})
+	});
 }
 
 interface BanFileJSON {
@@ -141,7 +141,7 @@ export async function initStaff() {
 		}
 		return info;
 	});
-	
+
 }
 
 export async function getStaffInfo(): Promise<StaffInfo> {
@@ -271,7 +271,7 @@ export function createStaffMenu(staff = staffInfo) {
 }
 
 function createStaffButton() {
-	if($staffBtn !== null || staffInfo == null || staffInfo.Rank === 0)
+	if($staffBtn !== null || staffInfo === null || staffInfo.Rank === 0)
 		return;
 	$staffBtn = new TopBarButton("Staff", () => {
 		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);

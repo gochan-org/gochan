@@ -22,7 +22,7 @@ export let $qr: JQuery<HTMLElement> = null;
 let threadCooldown = 0;
 let replyCooldown = 0;
 
-const qrButtonHTML = 
+const qrButtonHTML =
 	'<input type="file" id="imagefile" name="imagefile" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"/>' +
 	'<input type="submit" value="Post" style="float:right;min-width:50px"/>';
 
@@ -166,7 +166,7 @@ export function initQR() {
 	);
 
 	let qrTop = 32;
-	
+
 	const pintopbar = getBooleanStorageVal("pintopbar", true);
 	if(pintopbar)
 		qrTop = $topbar.outerHeight() + 16;
@@ -206,7 +206,7 @@ export function initQR() {
 		$("form#qrpostform").on("submit", function(_e) {
 			copyCaptchaResponse($(this));
 		});
-		return; 
+		return;
 	}
 	$postform.on("submit", function(e) {
 		const $form = $<HTMLFormElement>(this as HTMLFormElement);
@@ -233,7 +233,7 @@ export function initQR() {
 				$.get({
 					url: data.thread,
 					success: updateThreadSuccess
-				})
+				});
 				return false;
 			},
 			error: (_jqXHR, _status, error) => {
@@ -244,13 +244,13 @@ export function initQR() {
 	});
 }
 
-function updateThreadSuccess(data: any, status: string, xhr: JQueryXHR) {
+function updateThreadSuccess(data: any) {
 	const $doc = $(data);
 	const $replyContainers = $("div.reply-container");
 	$doc.find("div.reply-container").each((_i, el: HTMLElement) => {
 		const idSelector = `#${el.id}`;
 		const prevIDselector = `#${el.previousElementSibling.id}`;
-		if($replyContainers.filter(idSelector).length == 0) {
+		if($replyContainers.filter(idSelector).length === 0) {
 			// new post
 			$(el).insertAfter($replyContainers.filter(prevIDselector));
 		}

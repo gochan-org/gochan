@@ -35,7 +35,7 @@ function updateLogFilter($log: JQuery<HTMLTextAreaElement>, filter: LogFilter) {
 		const bObj = JSON.parse(b);
 		if(aObj.time === undefined || bObj.time === undefined)
 			return 0;
-		
+
 		if(filter.sortDesc)
 			return Date.parse(bObj.time) - Date.parse(aObj.time);
 		return Date.parse(aObj.time) - Date.parse(bObj.time);

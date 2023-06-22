@@ -50,7 +50,7 @@ function updateThreadHTML() {
 		const elementExists = $(selector).length > 0;
 		if(elementExists)
 			continue; // TODO: check for edits
-		
+
 		const $post = createPostElement(post, thread.board, "reply");
 		const $replyContainer = $("<div/>").prop({
 			id: `replycontainer${post.no}`,
@@ -171,7 +171,7 @@ export function prepareThumbnails($parent: JQuery<HTMLElement> = null) {
 		$thumb.removeAttr("width").removeAttr("height");
 
 		const $fileInfo = $a.prevAll(".file-info:first");
-		
+
 		if(videoTestRE.test(thumbURL + uploadURL)) {
 			// Upload is a video
 			$thumb.hide();
@@ -216,7 +216,7 @@ export function quote(no: number) {
 	if(getBooleanStorageVal("useqr", true)) {
 		openQR();
 	}
-	const msgboxID = "postmsg";	
+	const msgboxID = "postmsg";
 	let msgbox = document.getElementById("qr" + msgboxID) as HTMLInputElement;
 	if(msgbox === null)
 		msgbox = document.getElementById(msgboxID) as HTMLInputElement;
@@ -233,7 +233,7 @@ export function quote(no: number) {
 	if(quoted !== "") quoted += "\n";
 	msgbox.value = msgbox.value.slice(0, cursor) + `>>${no}\n` +
 		quoted + msgbox.value.slice(cursor);
-	
+
 	if(msgbox.id === "postmsg")
 		window.scroll(0,msgbox.offsetTop - 48);
 	msgbox.focus();

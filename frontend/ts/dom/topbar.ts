@@ -30,7 +30,7 @@ export class TopBarButton {
 		}).text(title + "▼");
 
 		const $before = $topbar.find(beforeAfter.before);
-		const $after = $topbar.find(beforeAfter.after);		
+		const $after = $topbar.find(beforeAfter.after);
 		if($before.length > 0) {
 			this.button.insertBefore($before);
 		} else if($after.length > 0) {

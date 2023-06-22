@@ -23,7 +23,7 @@ declare global {
 		defaultStyle: string;
 		webroot: string;
 		serverTZ: number;
-	
+
 		openQR: () => void;
 		closeQR: () => void;
 		toTop: () => void;
@@ -81,7 +81,7 @@ declare global {
 	interface ThreadPost {
 		no: number;
 		resto: number;
-		name: string; 
+		name: string;
 		trip: string;
 		email: string;
 		sub: string;

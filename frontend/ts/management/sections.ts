@@ -78,7 +78,7 @@ function addButtons() {
 $(() => {
 	if(window.location.pathname !== webroot + "manage/boardsections")
 		return;
-	
+
 	$sectionsTable = $("table#sections");
 	$sectionsTable.prev().append(" (drag to rearrange)");
 	$sectionsTable.find("tbody").sortable({

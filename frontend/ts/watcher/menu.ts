@@ -64,7 +64,7 @@ function removeThreadFromMenu(threadID: number) {
 
 function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
 	const currentPage = currentThread();
-	
+
 	const $item = $watcherMenu.find(`div#thread${thread.op}`);
 	if($item.length === 0) return; // watched thread isn't in the menu
 	$item.find("span#reply-counter").remove();
