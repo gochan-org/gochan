@@ -99,8 +99,8 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 		this.element.prop("checked", newVal);
 	}
 	getStorageValue() {
-		const val = super.getStorageValue();
-		return val === true;
+		const val = super.getStorageValue() as any as string;
+		return val === "true";
 	}
 }
 
