@@ -30,7 +30,7 @@ event_trigger("newPost", "blah", 16, 3.14, true, nil)`
 )
 
 func initPluginTests() {
-	config.SetVersion("3.4.1")
+	config.SetVersion("3.7.0")
 	initLua()
 }
 
@@ -39,7 +39,7 @@ func TestVersionFunction(t *testing.T) {
 	err := lState.DoString(versionStr)
 	assert.Nil(t, err)
 	testingVersionStr := lState.Get(-1).(lua.LString)
-	assert.EqualValues(t, "3.4.1", testingVersionStr)
+	assert.EqualValues(t, "3.7.0", testingVersionStr)
 }
 
 func TestStructPassing(t *testing.T) {
