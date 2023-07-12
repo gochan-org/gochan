@@ -8,5 +8,5 @@
 </form>
 
 {{range $_, $upload := $.uploads}}
-Post: <a href="{{webPath $.board "res" (intToString $upload.OpID)}}.html#{{$upload.PostID}}">/{{$.board}}/{{$upload.PostID}}</a>, Filename: {{$upload.Filename}}, Spoiler: {{$upload.Spoilered}}, Image size: {{$upload.Width}}x{{$upload.Height}}, Thumb size: {{$upload.ThumbWidth}}x{{$upload.ThumbHeight}}<br/>
+Post: <a href="{{webPath $.board "res" (intToString $upload.OpID)}}.html#{{$upload.PostID}}">/{{$.board}}/{{$upload.PostID}}</a>, Filename: <a href={{webPath $.board "src" $upload.Filename}}>{{$upload.Filename}}</a>, Spoiler: {{$upload.Spoilered}}, Image size: {{$upload.Width}}x{{$upload.Height}}, Thumb size: {{$upload.ThumbWidth}}x{{$upload.ThumbHeight}}<br/>
 {{end}}
