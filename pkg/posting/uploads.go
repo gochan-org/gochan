@@ -201,9 +201,9 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 					upload.FileSize = value
 				}
 			}
-			thumbType := "reply"
+			thumbType := ThumbnailReply
 			if post.ThreadID == 0 {
-				thumbType = "op"
+				thumbType = ThumbnailOP
 			}
 			upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 				upload.Width, upload.Height, postBoard.Dir, thumbType)
@@ -279,9 +279,9 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		// Get image width and height, as well as thumbnail width and height
 		upload.Width = img.Bounds().Max.X
 		upload.Height = img.Bounds().Max.Y
-		thumbType := "reply"
+		thumbType := ThumbnailReply
 		if post.ThreadID == 0 {
-			thumbType = "op"
+			thumbType = ThumbnailOP
 		}
 		upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 			upload.Width, upload.Height, postBoard.Dir, thumbType)
@@ -308,15 +308,15 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			}
 		}
 
-		shouldThumb := shouldCreateThumbnail(filePath,
+		shouldThumb := ShouldCreateThumbnail(filePath,
 			upload.Width, upload.Height, upload.ThumbnailWidth, upload.ThumbnailHeight)
 		if shouldThumb {
 			var thumbnail image.Image
 			var catalogThumbnail image.Image
 			if post.ThreadID == 0 {
 				// If this is a new thread, generate thumbnail and catalog thumbnail
-				thumbnail = createImageThumbnail(img, postBoard.Dir, "op")
-				catalogThumbnail = createImageThumbnail(img, postBoard.Dir, "catalog")
+				thumbnail = createImageThumbnail(img, postBoard.Dir, ThumbnailOP)
+				catalogThumbnail = createImageThumbnail(img, postBoard.Dir, ThumbnailCatalog)
 				if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
 					errEv.Err(err).Caller().
 						Str("thumbPath", catalogThumbPath).
@@ -327,7 +327,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 					return nil, true
 				}
 			} else {
-				thumbnail = createImageThumbnail(img, postBoard.Dir, "reply")
+				thumbnail = createImageThumbnail(img, postBoard.Dir, ThumbnailReply)
 			}
 			if err = imaging.Save(thumbnail, thumbPath); err != nil {
 				errEv.Err(err).Caller().
@@ -353,7 +353,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 			}
 			if post.ThreadID == 0 {
 				// Generate catalog thumbnail
-				catalogThumbnail := createImageThumbnail(img, postBoard.Dir, "catalog")
+				catalogThumbnail := createImageThumbnail(img, postBoard.Dir, ThumbnailCatalog)
 				if err = imaging.Save(catalogThumbnail, catalogThumbPath); err != nil {
 					errEv.Err(err).Caller().
 						Str("thumbPath", catalogThumbPath).
@@ -386,30 +386,9 @@ func stripImageMetadata(filePath string, boardConfig *config.BoardConfig) (err e
 	return
 }
 
-// func getVideoInfo(path string) (map[string]int, error) {
-// 	vidInfo := make(map[string]int)
-
-// 	outputBytes, err := exec.Command("ffprobe", "-v quiet", "-show_format", "-show_streams", path).CombinedOutput()
-// 	if err == nil && outputBytes != nil {
-// 		outputStringArr := strings.Split(string(outputBytes), "\n")
-// 		for _, line := range outputStringArr {
-// 			lineArr := strings.Split(line, "=")
-// 			if len(lineArr) < 2 {
-// 				continue
-// 			}
-
-// 			if lineArr[0] == "width" || lineArr[0] == "height" || lineArr[0] == "size" {
-// 				value, _ := strconv.Atoi(lineArr[1])
-// 				vidInfo[lineArr[0]] = value
-// 			}
-// 		}
-// 	}
-// 	return vidInfo, err
-// }
-
 func getNewFilename() string {
 	now := time.Now().Unix()
-	rand.Seed(now)
+	// rand.Seed(now)
 	return strconv.Itoa(int(now)) + strconv.Itoa(rand.Intn(98)+1)
 }
 

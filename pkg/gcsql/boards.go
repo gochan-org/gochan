@@ -132,6 +132,9 @@ func GetBoardFromDir(dir string) (*Board, error) {
 func GetBoardIDFromDir(dir string) (id int, err error) {
 	const query = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
 	err = QueryRowSQL(query, interfaceSlice(dir), interfaceSlice(&id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrBoardDoesNotExist
+	}
 	return id, err
 }
 

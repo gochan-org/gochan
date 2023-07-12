@@ -13,7 +13,15 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-func createImageThumbnail(imageObj image.Image, boardDir string, thumbType string) image.Image {
+type ThumbnailCategory int
+
+const (
+	ThumbnailOP ThumbnailCategory = iota
+	ThumbnailReply
+	ThumbnailCatalog
+)
+
+func createImageThumbnail(imageObj image.Image, boardDir string, thumbType ThumbnailCategory) image.Image {
 	thumbWidth, thumbHeight := getBoardThumbnailSize(boardDir, thumbType)
 
 	oldRect := imageObj.Bounds()
@@ -39,14 +47,14 @@ func createVideoThumbnail(video, thumb string, size int) error {
 	return err
 }
 
-func getBoardThumbnailSize(boardDir string, thumbType string) (int, int) {
+func getBoardThumbnailSize(boardDir string, thumbType ThumbnailCategory) (int, int) {
 	boardCfg := config.GetBoardConfig(boardDir)
 	switch thumbType {
-	case "op":
+	case ThumbnailOP:
 		return boardCfg.ThumbWidth, boardCfg.ThumbHeight
-	case "reply":
+	case ThumbnailReply:
 		return boardCfg.ThumbWidthReply, boardCfg.ThumbHeightReply
-	case "catalog":
+	case ThumbnailCatalog:
 		return boardCfg.ThumbWidth, boardCfg.ThumbHeight
 	}
 	// todo: use reflect package to print location to error log, because this shouldn't happen
@@ -54,7 +62,7 @@ func getBoardThumbnailSize(boardDir string, thumbType string) (int, int) {
 }
 
 // find out what out thumbnail's width and height should be, partially ripped from Kusaba X
-func getThumbnailSize(uploadWidth, uploadHeight int, boardDir string, thumbType string) (newWidth, newHeight int) {
+func getThumbnailSize(uploadWidth, uploadHeight int, boardDir string, thumbType ThumbnailCategory) (newWidth, newHeight int) {
 	thumbWidth, thumbHeight := getBoardThumbnailSize(boardDir, thumbType)
 	if uploadWidth < thumbWidth && uploadHeight < thumbHeight {
 		newWidth = uploadWidth
@@ -74,7 +82,7 @@ func getThumbnailSize(uploadWidth, uploadHeight int, boardDir string, thumbType 
 	}
 	return
 }
-func shouldCreateThumbnail(imgPath string, imgWidth int, imgHeight int, thumbWidth int, thumbHeight int) bool {
+func ShouldCreateThumbnail(imgPath string, imgWidth int, imgHeight int, thumbWidth int, thumbHeight int) bool {
 	ext := strings.ToLower(path.Ext(imgPath))
 	if ext == ".gif" {
 		numFrames, err := numImageFrames(imgPath)

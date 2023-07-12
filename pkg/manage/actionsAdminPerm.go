@@ -26,6 +26,17 @@ var (
 	ErrInsufficientPermission = errors.New("insufficient account permission")
 )
 
+type uploadInfo struct {
+	PostID      int
+	OpID        int
+	Filename    string
+	Spoilered   bool
+	Width       int
+	Height      int
+	ThumbWidth  int
+	ThumbHeight int
+}
+
 // manage actions that require admin-level permission go here
 
 func registerAdminPages() {
@@ -377,6 +388,52 @@ func registerAdminPages() {
 				output = pageBuffer.String()
 				return
 			}},
+		Action{
+			ID:          "fixthumbnails",
+			Title:       "Regenerate thumbnails",
+			Permissions: AdminPerms,
+			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+				board := request.FormValue("board")
+				var uploads []uploadInfo
+				if board != "" {
+					const query = `SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,
+					filename, is_spoilered, width, height, thumbnail_width, thumbnail_height
+					FROM DBPREFIXposts p1
+					JOIN DBPREFIXthreads t ON t.id = p1.thread_id
+					JOIN DBPREFIXboards b ON b.id = t.board_id
+					LEFT JOIN DBPREFIXfiles f ON f.post_id = p1.id
+					WHERE dir = ? AND p1.is_deleted = FALSE AND filename IS NOT NULL AND filename != 'deleted'
+					ORDER BY created_on DESC`
+					rows, err := gcsql.QuerySQL(query, board)
+					if err != nil {
+						return "", err
+					}
+					defer rows.Close()
+					for rows.Next() {
+						var info uploadInfo
+						if err = rows.Scan(
+							&info.PostID, &info.OpID, &info.Filename, &info.Spoilered, &info.Width, &info.Height,
+							&info.ThumbWidth, &info.ThumbHeight,
+						); err != nil {
+							errEv.Err(err).Caller().Send()
+							return "", err
+						}
+						uploads = append(uploads, info)
+					}
+				}
+				buffer := bytes.NewBufferString("")
+				err = serverutil.MinifyTemplate(gctemplates.ManageFixThumbnails, map[string]any{
+					"allBoards": gcsql.AllBoards,
+					"board":     board,
+					"uploads":   uploads,
+				}, buffer, "text/html")
+				if err != nil {
+					errEv.Err(err).Str("template", "manage_fixthumbnails.html").Caller().Send()
+					return "", err
+				}
+				return buffer.String(), nil
+			},
+		},
 		Action{
 			ID:          "rebuildfront",
 			Title:       "Rebuild front page",

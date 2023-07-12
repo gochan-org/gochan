@@ -1,0 +1,12 @@
+<form action="{{webPath "manage/fixthumbnails"}}" method="GET">
+<select name="board">
+{{- range $b, $board := $.allBoards -}}
+	<option value="{{$board.Dir}}" {{if eq $.board $board.Dir}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
+{{- end -}}
+</select>
+<input type="submit" value="Select board"/>
+</form>
+
+{{range $_, $upload := $.uploads}}
+Post: <a href="{{webPath $.board "res" (intToString $upload.OpID)}}.html#{{$upload.PostID}}">/{{$.board}}/{{$upload.PostID}}</a>, Filename: {{$upload.Filename}}, Spoiler: {{$upload.Spoilered}}, Image size: {{$upload.Width}}x{{$upload.Height}}, Thumb size: {{$upload.ThumbWidth}}x{{$upload.ThumbHeight}}<br/>
+{{end}}
