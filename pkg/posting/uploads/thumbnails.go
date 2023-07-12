@@ -1,4 +1,4 @@
-package posting
+package uploads
 
 import (
 	"errors"

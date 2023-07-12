@@ -18,6 +18,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
@@ -290,7 +291,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	upload, gotErr := AttachUploadFromRequest(request, writer, post, postBoard)
+	upload, gotErr := uploads.AttachUploadFromRequest(request, writer, post, postBoard)
 	if gotErr {
 		// got an error receiving the upload, stop here (assuming an error page was actually shown)
 		return

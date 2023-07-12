@@ -15,6 +15,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
 	"github.com/gochan-org/gochan/pkg/posting"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
@@ -147,7 +148,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				return
 			}
 
-			upload, gotErr := posting.AttachUploadFromRequest(request, writer, post, board)
+			upload, gotErr := uploads.AttachUploadFromRequest(request, writer, post, board)
 			if gotErr {
 				// AttachUploadFromRequest handles error serving/logging
 				return
