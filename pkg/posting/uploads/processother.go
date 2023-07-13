@@ -14,7 +14,7 @@ var (
 	ErrUnsupportedFileExt = errors.New("unsupported file extension")
 )
 
-func processOther(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, errEv *zerolog.Event) error {
+func processOther(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {
 	boardConfig := config.GetBoardConfig(board)
 	ext := path.Ext(filePath)
 	cfgThumb, ok := boardConfig.AllowOtherExtensions[ext]
@@ -62,5 +62,6 @@ func processOther(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 			return err
 		}
 	}
+	accessEv.Str("handler", "video")
 	return nil
 }

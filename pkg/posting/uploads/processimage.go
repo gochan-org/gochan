@@ -46,7 +46,7 @@ func numImageFrames(imgPath string) (int, error) {
 	return len(g.Image), nil
 }
 
-func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, errEv *zerolog.Event) error {
+func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {
 	img, err := imaging.Open(filePath)
 	if err != nil {
 		os.Remove(filePath)
@@ -133,5 +133,6 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 			}
 		}
 	}
+	accessEv.Str("handler", "image")
 	return nil
 }

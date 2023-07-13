@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	_ "golang.org/x/image/webp"
+
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"

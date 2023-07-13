@@ -21,7 +21,30 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	"github.com/rs/zerolog"
 )
+
+var (
+	uploadHandlers map[string]UploadHandler
+)
+
+type UploadHandler func(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error
+
+func RegisterUploadHandler(ext string, handler UploadHandler) {
+	gcutil.LogInfo().Str("ext", ext).Msg("Registering upload extension handler")
+	uploadHandlers[ext] = handler
+}
+
+func init() {
+	uploadHandlers = make(map[string]UploadHandler)
+	RegisterUploadHandler(".gif", processImage)
+	RegisterUploadHandler(".jpg", processImage)
+	RegisterUploadHandler(".jpeg", processImage)
+	RegisterUploadHandler(".png", processImage)
+	RegisterUploadHandler(".webp", processImage)
+	RegisterUploadHandler(".mp4", processVideo)
+	RegisterUploadHandler(".webm", processVideo)
+}
 
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
 // It returns the upload (if there was one) and whether or not any errors were served (meaning
@@ -86,6 +109,10 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
 	upload.Filename = getNewFilename() + ext
+	errorMap := map[string]any{
+		"filename":         upload.Filename,
+		"originalFilename": upload.OriginalFilename,
+	}
 
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
@@ -101,20 +128,14 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	if err = os.WriteFile(filePath, data, config.GC_FILE_MODE); err != nil {
 		errEv.Err(err).Caller().Send()
-		server.ServeError(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename), wantsJSON, map[string]interface{}{
-			"filename":         upload.Filename,
-			"originalFilename": upload.OriginalFilename,
-		})
+		server.ServeError(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename), wantsJSON, errorMap)
 		return nil, true
 	}
 
 	gcutil.LogStr("stripImageMetadata", boardConfig.StripImageMetadata, errEv, infoEv)
 	if err = stripImageMetadata(filePath, boardConfig); err != nil {
 		errEv.Err(err).Caller().Msg("Unable to strip metadata")
-		server.ServeError(writer, "Unable to strip metadata from image", wantsJSON, map[string]interface{}{
-			"filename":         upload.Filename,
-			"originalFilename": upload.OriginalFilename,
-		})
+		server.ServeError(writer, "Unable to strip metadata from image", wantsJSON, errorMap)
 		return nil, true
 	}
 
@@ -127,56 +148,31 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		return nil, true
 	}
 	if err != nil {
-		server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
-			"filename":         upload.Filename,
-			"originalFilename": upload.OriginalFilename,
-		})
+		server.ServeError(writer, err.Error(), wantsJSON, errorMap)
 		return nil, true
 	}
 
 	infoEv.Str("referer", request.Referer()).Str("filename", handler.Filename).Send()
-	access := gcutil.LogAccess(request).
+	accessEv := gcutil.LogAccess(request).
 		Str("filename", handler.Filename).
 		Str("referer", request.Referer())
 
 	upload.IsSpoilered = request.FormValue("spoiler") == "on"
-	switch ext {
-	// images
-	case ".gif":
-		fallthrough
-	case ".jpg":
-		fallthrough
-	case ".jpeg":
-		fallthrough
-	case ".png":
-		fallthrough
-	case ".webp":
-		if err = processImage(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, errEv); err != nil {
-			server.ServeError(writer, "Error processing image: "+err.Error(), wantsJSON, map[string]interface{}{
-				"filename": upload.OriginalFilename,
-			})
-		}
-		access.Str("handler", "image").Send()
-	// videos
-	case ".mp4":
-		fallthrough
-	case ".webm":
-		if err = processVideo(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, errEv); err != nil {
-			server.ServeError(writer, "Error processing video: "+err.Error(), wantsJSON, map[string]interface{}{
-				"filename": upload.OriginalFilename,
-			})
-		}
-		access.Str("handler", "video").Send()
-	default:
-		// other (.pdf, .zip, etc)
-		if err = processOther(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, errEv); err != nil {
-			server.ServeError(writer, "Error processing file: "+err.Error(), wantsJSON, map[string]interface{}{
-				"filename": upload.OriginalFilename,
-			})
-		}
-		access.Str("handler", "other").Send()
+
+	uploadHandler, ok := uploadHandlers[ext]
+	if !ok {
+		// ext isn't registered by default (jpg, jpeg, png, gif, webp, mp4, webm) or by a plugin,
+		// it's either unsupported or a static thumb as set in configuration
+		uploadHandler = processOther
 	}
 
+	if err = uploadHandler(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv); err != nil {
+		server.ServeError(writer, "Error processing upload: "+err.Error(), wantsJSON, map[string]interface{}{
+			"filename": upload.OriginalFilename,
+		})
+		return nil, true
+	}
+	accessEv.Send()
 	return upload, false
 }
 

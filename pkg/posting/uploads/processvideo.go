@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func processVideo(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, errEv *zerolog.Event) error {
+func processVideo(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {
 	boardConfig := config.GetBoardConfig(board)
 	infoEv.Str("post", "withVideo")
 	var err error
@@ -69,5 +69,6 @@ func processVideo(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 		upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 			upload.Width, upload.Height, board, thumbType)
 	}
+	accessEv.Str("handler", "video")
 	return nil
 }
