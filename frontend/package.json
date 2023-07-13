@@ -5,8 +5,8 @@
   "main": "./ts/main.ts",
   "private": true,
   "scripts": {
-    "build-ts": "webpack --progress",
-    "watch-ts": "webpack --progress -w",
+    "build-ts": "webpack --color --progress",
+    "watch-ts": "webpack --color --progress -w",
     "eslint": "eslint ./ts/",
     "eslint-tests": "eslint ./tests/ --env node",
     "eslint-fix": "eslint --fix ./ts/",
