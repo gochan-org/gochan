@@ -2,7 +2,6 @@ package uploads
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -14,7 +13,7 @@ var (
 	ErrFileNotAllowed     = errors.New("uploaded file not allowed")
 )
 
-func CheckFilenameBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) error {
+func CheckFilenameBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board) error {
 	filenameBan, err := gcsql.CheckFilenameBan(upload.OriginalFilename, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).
@@ -33,7 +32,7 @@ func CheckFilenameBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.B
 	return ErrFilenameNotAllowed
 }
 
-func CheckFileChecksumBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) error {
+func CheckFileChecksumBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board) error {
 	fileBan, err := gcsql.CheckFileChecksumBan(upload.Checksum, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).

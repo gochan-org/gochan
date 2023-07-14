@@ -77,7 +77,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		return nil, ErrUnsupportedFileExt
 	}
 
-	if err = CheckFilenameBan(upload, post, postBoard, writer, request); err != nil {
+	if err = CheckFilenameBan(upload, post, postBoard); err != nil {
 		// If checkFilenameBan returns true, an error occured or the file was
 		// rejected for having a banned filename, and the incident was logged either way
 		return nil, err
@@ -92,7 +92,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	// Calculate image checksum
 	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data)) // skipcq: GSC-G401
-	if err = CheckFileChecksumBan(upload, post, postBoard, writer, request); err != nil {
+	if err = CheckFileChecksumBan(upload, post, postBoard); err != nil {
 		// If CheckFileChecksumBan returns a non-nil error, an error occured or the file was
 		// rejected for having a banned checksum, and the incident was logged either way
 		return nil, err
@@ -143,7 +143,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	}
 
 	if err = uploadHandler(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv); err != nil {
-		return nil, errors.New("error processing upload:" + err.Error())
+		return nil, errors.New("error processing upload: " + err.Error())
 	}
 	accessEv.Send()
 	return upload, nil
