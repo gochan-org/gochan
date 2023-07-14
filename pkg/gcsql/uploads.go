@@ -2,8 +2,6 @@ package gcsql
 
 import (
 	"errors"
-
-	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -87,9 +85,4 @@ func (p *Post) AttachFile(upload *Upload) error {
 		return err
 	}
 	return tx.Commit()
-}
-
-// ThumbnailPath returns the thumbnail path of the upload, given an thumbnail type ("thumbnail" or "catalog")
-func (u *Upload) ThumbnailPath(thumbType string) string {
-	return gcutil.GetThumbnailPath(thumbType, u.Filename)
 }

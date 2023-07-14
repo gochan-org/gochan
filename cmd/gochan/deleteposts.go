@@ -15,6 +15,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
@@ -151,7 +152,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 					return
 				}
 				defer rows.Close()
-				var uploads []upload
+				var postUploads []upload
 				for rows.Next() {
 					var filename string
 					if err = rows.Scan(&filename); err != nil {
@@ -165,7 +166,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 						})
 						return
 					}
-					uploads = append(uploads, upload{
+					postUploads = append(postUploads, upload{
 						filename: filename,
 						boardDir: board.Dir,
 					})
@@ -173,7 +174,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 				// done as a goroutine to avoid delays if the thread has a lot of files
 				// the downside is of course that if something goes wrong, deletion errors
 				// won't be seen in the browser
-				go deleteUploads(uploads)
+				go deleteUploads(postUploads)
 			} else if deletePostUpload(post, board, writer, request, errEv) {
 				return
 			}
@@ -222,24 +223,24 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	}
 }
 
-func deleteUploads(uploads []upload) {
+func deleteUploads(postUploads []upload) {
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	var filePath, thumbPath, catalogThumbPath string
+	var filePath string
 	var err error
-	for _, upload := range uploads {
+	for _, upload := range postUploads {
 		filePath = path.Join(documentRoot, upload.boardDir, "src", upload.filename)
 		if err = os.Remove(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			gcutil.LogError(err).Caller().
 				Str("filePath", filePath).
 				Int("postid", upload.postID).Send()
 		}
-		thumbPath = path.Join(documentRoot, upload.boardDir, "thumb", gcutil.GetThumbnailPath("reply", upload.filename))
+		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
+			path.Join(documentRoot, upload.boardDir, "thumb", upload.filename))
 		if err = os.Remove(thumbPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			gcutil.LogError(err).Caller().
 				Str("thumbPath", thumbPath).
 				Int("postid", upload.postID).Send()
 		}
-		catalogThumbPath = path.Join(documentRoot, upload.boardDir, "thumb", gcutil.GetThumbnailPath("catalog", upload.filename))
 		if err = os.Remove(catalogThumbPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 			gcutil.LogError(err).Caller().
 				Str("catalogThumbPath", catalogThumbPath).
@@ -272,11 +273,11 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 			return true
 		}
 		// delete the file's thumbnail
-		thumbPath := path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("thumb"))
+		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
 		if err = os.Remove(thumbPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			errEv.Err(err).Caller().
 				Int("postid", post.ID).
-				Str("thumbnail", upload.ThumbnailPath("thumb")).
+				Str("thumbnail", thumbPath).
 				Msg("Unable to delete thumbnail")
 			server.ServeError(writer, "Unable to delete thumbnail: "+err.Error(),
 				wantsJSON, map[string]interface{}{"postid": post.ID})
@@ -284,11 +285,10 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 		}
 		// delete the catalog thumbnail
 		if post.IsTopPost {
-			thumbPath := path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("catalog"))
-			if err = os.Remove(thumbPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			if err = os.Remove(catalogThumbPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 				errEv.Err(err).Caller().
 					Int("postid", post.ID).
-					Str("catalogThumb", upload.ThumbnailPath("catalog")).
+					Str("catalogThumb", catalogThumbPath).
 					Msg("Unable to delete catalog thumbnail")
 				server.ServeError(writer, "Unable to delete catalog thumbnail: "+err.Error(),
 					wantsJSON, map[string]interface{}{"postid": post.ID})

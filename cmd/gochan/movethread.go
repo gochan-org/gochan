@@ -14,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
@@ -213,12 +214,13 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			}
 
 			// move the upload thumbnail
+			thumbnail, catalogThumbnail := uploads.GetThumbnailFilenames(upload.Filename)
 			if tmpErr = moveFileIfExists(
-				path.Join(documentRoot, srcBoard.Dir, "thumb", upload.ThumbnailPath("upload")),
-				path.Join(documentRoot, destBoard.Dir, "thumb", upload.ThumbnailPath("upload")),
+				path.Join(documentRoot, srcBoard.Dir, "thumb", thumbnail),
+				path.Join(documentRoot, destBoard.Dir, "thumb", thumbnail),
 			); tmpErr != nil {
 				errEv.Err(err).Caller().
-					Str("thumbnail", upload.ThumbnailPath("upload")).
+					Str("thumbnail", thumbnail).
 					Msg("Unable to move thumbnail from source board to destination board")
 				if err == nil {
 					err = tmpErr
@@ -227,11 +229,11 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			if upload.PostID == post.ID {
 				// move the upload catalog thumbnail
 				if tmpErr = moveFileIfExists(
-					path.Join(documentRoot, srcBoard.Dir, "thumb", upload.ThumbnailPath("catalog")),
-					path.Join(documentRoot, destBoard.Dir, "thumb", upload.ThumbnailPath("catalog")),
+					path.Join(documentRoot, srcBoard.Dir, "thumb", catalogThumbnail),
+					path.Join(documentRoot, destBoard.Dir, "thumb", catalogThumbnail),
 				); tmpErr != nil {
 					errEv.Err(err).Caller().
-						Str("catalogThumbnail", upload.ThumbnailPath("catalog")).
+						Str("catalogThumbnail", catalogThumbnail).
 						Msg("Unable to move catalog thumbnail from source board to destination board")
 				}
 				if err == nil {

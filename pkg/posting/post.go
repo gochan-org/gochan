@@ -291,18 +291,18 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	upload, gotErr := uploads.AttachUploadFromRequest(request, writer, post, postBoard)
-	if gotErr {
-		// got an error receiving the upload, stop here (assuming an error page was actually shown)
+	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard)
+	if err != nil {
+		// got an error receiving the upload or the upload was rejected
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	var filePath, thumbPath, catalogThumbPath string
 	if upload != nil {
 		filePath = path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
-		thumbPath = path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
-		catalogThumbPath = path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
-		_, err, recovered = events.TriggerEvent("incoming-upload", upload)
+		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
+			path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
 		if recovered {
 			os.Remove(filePath)
 			os.Remove(thumbPath)

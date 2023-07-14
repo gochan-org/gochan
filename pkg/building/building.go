@@ -13,6 +13,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
@@ -63,10 +64,11 @@ func getRecentPosts() ([]recentPost, error) {
 		if len(message) > 40 {
 			message = message[:37] + "..."
 		}
+		thumbnail, _ := uploads.GetThumbnailFilenames(filename)
 		post = recentPost{
 			Board:         boardDir,
 			URL:           config.WebPath(boardDir, "res", topPostID+".html") + "#" + id,
-			ThumbURL:      config.WebPath(boardDir, "thumb", gcutil.GetThumbnailPath("post", filename)),
+			ThumbURL:      config.WebPath(boardDir, "thumb", thumbnail),
 			Filename:      filename,
 			FileDeleted:   filename == "deleted",
 			MessageSample: message,

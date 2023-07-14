@@ -17,6 +17,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 
@@ -128,6 +129,34 @@ func registerLuaFunctions() {
 	lState.Register("info_log", createLuaLogFunc("info"))
 	lState.Register("warn_log", createLuaLogFunc("warn"))
 	lState.Register("error_log", createLuaLogFunc("error"))
+
+	lState.Register("register_upload_handler", func(l *lua.LState) int {
+		ext := l.CheckString(1)
+		handler := l.CheckFunction(2)
+		uploads.RegisterUploadHandler(ext, func(upload *gcsql.Upload, post *gcsql.Post, board, filePath, thumbPath, catalogThumbPath string, infoEv, accessEv, errEv *zerolog.Event) error {
+			l.CallByParam(lua.P{
+				Fn:   handler,
+				NRet: 1,
+				// Protect: true,
+			}, luar.New(l, upload), luar.New(l, post), lua.LString(board), lua.LString(filePath), lua.LString(thumbPath), lua.LString(catalogThumbPath))
+
+			errRet := l.CheckAny(-1)
+			fmt.Println("Error:", errRet, errRet == nil)
+			return nil
+		})
+		return 0
+	})
+	lState.Register("get_thumbnail_ext", func(l *lua.LState) int {
+		fileExt := l.CheckString(1)
+		l.Push(luar.New(l, uploads.GetThumbnailExtension(fileExt)))
+		return 1
+	})
+	lState.Register("set_thumbnail_ext", func(l *lua.LState) int {
+		fileExt := l.CheckString(1)
+		thumbExt := l.CheckString(2)
+		uploads.SetThumbnailExtension(fileExt, thumbExt)
+		return 0
+	})
 
 	lState.Register("system_critical_config", func(l *lua.LState) int {
 		l.Push(luar.New(l, config.GetSystemCriticalConfig()))

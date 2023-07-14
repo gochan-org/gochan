@@ -148,9 +148,9 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				return
 			}
 
-			upload, gotErr := uploads.AttachUploadFromRequest(request, writer, post, board)
-			if gotErr {
-				// AttachUploadFromRequest handles error serving/logging
+			upload, err := uploads.AttachUploadFromRequest(request, writer, post, board)
+			if err != nil {
+				server.ServeError(writer, err.Error(), wantsJSON, nil)
 				return
 			}
 			if upload == nil {
@@ -161,8 +161,8 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			var filePath, thumbPath, catalogThumbPath string
 			if oldUpload != nil {
 				filePath = path.Join(documentRoot, board.Dir, "src", oldUpload.Filename)
-				thumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("thumb"))
-				catalogThumbPath = path.Join(documentRoot, board.Dir, "thumb", oldUpload.ThumbnailPath("catalog"))
+				thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
+					path.Join(documentRoot, board.Dir, "thumb", oldUpload.Filename))
 				if err = post.UnlinkUploads(false); err != nil {
 					errEv.Err(err).Caller().Send()
 					server.ServeError(writer, "Error unlinking old upload from post: "+err.Error(), wantsJSON, nil)
@@ -186,8 +186,8 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 					"filename": upload.OriginalFilename,
 				})
 				filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
-				thumbPath = path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("thumb"))
-				catalogThumbPath = path.Join(documentRoot, board.Dir, "thumb", upload.ThumbnailPath("catalog"))
+				thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
+					path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
 				os.Remove(filePath)
 				os.Remove(thumbPath)
 				if post.IsTopPost {

@@ -1,15 +1,20 @@
 package uploads
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/server"
-	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
-func IsFilenameBanned(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+var (
+	ErrFilenameNotAllowed = errors.New("filename not allowed")
+	ErrCheckingFileBan    = errors.New("unable to check file ban info")
+	ErrFileNotAllowed     = errors.New("uploaded file not allowed")
+)
+
+func CheckFilenameBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) error {
 	filenameBan, err := gcsql.CheckFilenameBan(upload.OriginalFilename, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).
@@ -17,20 +22,18 @@ func IsFilenameBanned(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.B
 			Str("filename", upload.OriginalFilename).
 			Str("boardDir", postBoard.Dir).
 			Msg("Error getting name banned status")
-		server.ServeErrorPage(writer, "Error getting filename ban info")
-		return true
+		return ErrCheckingFileBan
 	}
 	if filenameBan == nil {
-		return false
+		return nil
 	}
-	server.ServeError(writer, "Filename not allowed", serverutil.IsRequestingJSON(request), map[string]interface{}{})
 	gcutil.LogWarning().
 		Str("originalFilename", upload.OriginalFilename).
 		Msg("File rejected for having a banned filename")
-	return true
+	return ErrFilenameNotAllowed
 }
 
-func IsChecksumBanned(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+func CheckFileChecksumBan(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) error {
 	fileBan, err := gcsql.CheckFileChecksumBan(upload.Checksum, postBoard.ID)
 	if err != nil {
 		gcutil.LogError(err).
@@ -38,16 +41,14 @@ func IsChecksumBanned(upload *gcsql.Upload, post *gcsql.Post, postBoard *gcsql.B
 			Str("boardDir", postBoard.Dir).
 			Str("checksum", upload.Checksum).
 			Msg("Error getting file checksum ban status")
-		server.ServeErrorPage(writer, "Error processing file: "+err.Error())
-		return true
+		return ErrCheckingFileBan
 	}
 	if fileBan == nil {
-		return false
+		return nil
 	}
-	server.ServeError(writer, "File not allowed", serverutil.IsRequestingJSON(request), map[string]interface{}{})
 	gcutil.LogWarning().
 		Str("originalFilename", upload.OriginalFilename).
 		Str("checksum", upload.Checksum).
 		Msg("File rejected for having a banned checksum")
-	return true
+	return ErrFileNotAllowed
 }

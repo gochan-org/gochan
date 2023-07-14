@@ -1,6 +1,7 @@
 package uploads
 
 import (
+	"errors"
 	"image"
 	"image/gif"
 	"os"
@@ -11,7 +12,12 @@ import (
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
+)
+
+var (
+	ErrStripMetadata = errors.New("unable to strip image metadata")
 )
 
 func stripImageMetadata(filePath string, boardConfig *config.BoardConfig) (err error) {
@@ -47,6 +53,14 @@ func numImageFrames(imgPath string) (int, error) {
 }
 
 func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {
+	boardConfig := config.GetBoardConfig(board)
+	gcutil.LogStr("stripImageMetadata", boardConfig.StripImageMetadata, errEv, infoEv)
+
+	err := stripImageMetadata(filePath, boardConfig)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to strip metadata")
+		return ErrStripMetadata
+	}
 	img, err := imaging.Open(filePath)
 	if err != nil {
 		os.Remove(filePath)

@@ -138,47 +138,6 @@ func GetRealIP(request *http.Request) string {
 	return remoteHost
 }
 
-// GetThumbnailExt returns the extension to be used when creating a thumbnail of img. For non-image files,
-// it returns an empty string, in which case a generic icon will be (eventually) used
-func GetThumbnailExt(filename string) string {
-	ext := filepath.Ext(strings.ToLower(filename))
-	switch ext {
-	case ".gif":
-		fallthrough
-	case ".mp4":
-		fallthrough
-	case ".png":
-		fallthrough
-	case ".webm":
-		fallthrough
-	case ".webp":
-		return "png"
-	case ".jfif":
-		fallthrough
-	case ".jpg":
-		fallthrough
-	case ".jpeg":
-		return "jpg"
-	default:
-		// invalid file format
-		return ""
-	}
-}
-
-// GetThumbnailPath returns the thumbnail path of the given filename
-func GetThumbnailPath(thumbType string, img string) string {
-	ext := GetThumbnailExt(img)
-	index := strings.LastIndex(img, ".")
-	if index < 0 || index > len(img) {
-		return ""
-	}
-	thumbSuffix := "t." + ext
-	if thumbType == "catalog" {
-		thumbSuffix = "c." + ext
-	}
-	return img[0:index] + thumbSuffix
-}
-
 // HackyStringToInt parses a string to an int, or 0 if error
 func HackyStringToInt(text string) int {
 	value, _ := strconv.Atoi(text)

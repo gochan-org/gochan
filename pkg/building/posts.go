@@ -8,7 +8,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
 const (
@@ -103,7 +103,11 @@ func (p Post) ThumbnailPath() string {
 	if p.Filename == "" {
 		return ""
 	}
-	return config.WebPath(p.BoardDir, "thumb", gcutil.GetThumbnailPath("reply", p.Filename))
+	thumbnail, catalogThumbnail := uploads.GetThumbnailFilenames(p.Filename)
+	if p.IsTopPost {
+		return config.WebPath(p.BoardDir, "thumb", catalogThumbnail)
+	}
+	return config.WebPath(p.BoardDir, "thumb", thumbnail)
 }
 
 func (p Post) UploadPath() string {

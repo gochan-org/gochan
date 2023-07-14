@@ -19,8 +19,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/server"
-	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
 
@@ -49,7 +47,7 @@ func init() {
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
 // It returns the upload (if there was one) and whether or not any errors were served (meaning
 // that it should stop processing the post
-func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board) (*gcsql.Upload, bool) {
+func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board) (*gcsql.Upload, error) {
 	errEv := gcutil.LogError(nil).
 		Str("IP", post.IP)
 	infoEv := gcutil.LogInfo().
@@ -58,16 +56,14 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		infoEv.Discard()
 		errEv.Discard()
 	}()
-	wantsJSON := serverutil.IsRequestingJSON(request)
 	file, handler, err := request.FormFile("imagefile")
 	if errors.Is(err, http.ErrMissingFile) {
 		// no file was submitted with the form
-		return nil, false
+		return nil, nil
 	}
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		server.ServeError(writer, err.Error(), wantsJSON, nil)
-		return nil, true
+		return nil, err
 	}
 	upload := &gcsql.Upload{
 		OriginalFilename: html.EscapeString(handler.Filename),
@@ -78,47 +74,37 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	boardConfig := config.GetBoardConfig(postBoard.Dir)
 	if !boardConfig.AcceptedExtension(upload.OriginalFilename) {
 		errEv.Caller().Msg("Upload filetype not supported")
-		server.ServeError(writer, "Upload filetype not supported", wantsJSON, map[string]interface{}{
-			"filename": upload.OriginalFilename,
-		})
-		return nil, true
+		return nil, ErrUnsupportedFileExt
 	}
 
-	if IsFilenameBanned(upload, post, postBoard, writer, request) {
+	if err = CheckFilenameBan(upload, post, postBoard, writer, request); err != nil {
 		// If checkFilenameBan returns true, an error occured or the file was
 		// rejected for having a banned filename, and the incident was logged either way
-		return nil, true
+		return nil, err
 	}
 
 	data, err := io.ReadAll(file)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		server.ServeError(writer, "Error while trying to read file: "+err.Error(), wantsJSON, map[string]interface{}{
-			"filename": upload.OriginalFilename,
-		})
-		return nil, true
+		return nil, errors.New("Error while trying to read file: " + err.Error())
 	}
 	defer file.Close()
 
 	// Calculate image checksum
 	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data)) // skipcq: GSC-G401
-	if IsChecksumBanned(upload, post, postBoard, writer, request) {
-		// If checkChecksumBan returns true, an error occured or the file was
+	if err = CheckFileChecksumBan(upload, post, postBoard, writer, request); err != nil {
+		// If CheckFileChecksumBan returns a non-nil error, an error occured or the file was
 		// rejected for having a banned checksum, and the incident was logged either way
-		return nil, true
+		return nil, err
 	}
 
 	ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
 	upload.Filename = getNewFilename() + ext
-	errorMap := map[string]any{
-		"filename":         upload.Filename,
-		"originalFilename": upload.OriginalFilename,
-	}
 
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
-	thumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("thumb"))
-	catalogThumbPath := path.Join(documentRoot, postBoard.Dir, "thumb", upload.ThumbnailPath("catalog"))
+	thumbPath, catalogThumbPath := GetThumbnailFilenames(
+		path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
 
 	errEv.
 		Str("originalFilename", upload.OriginalFilename).
@@ -129,28 +115,17 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	if err = os.WriteFile(filePath, data, config.GC_FILE_MODE); err != nil {
 		errEv.Err(err).Caller().Send()
-		server.ServeError(writer, fmt.Sprintf("Couldn't write file %q", upload.OriginalFilename), wantsJSON, errorMap)
-		return nil, true
-	}
-
-	gcutil.LogStr("stripImageMetadata", boardConfig.StripImageMetadata, errEv, infoEv)
-	if err = stripImageMetadata(filePath, boardConfig); err != nil {
-		errEv.Err(err).Caller().Msg("Unable to strip metadata")
-		server.ServeError(writer, "Unable to strip metadata from image", wantsJSON, errorMap)
-		return nil, true
+		return nil, fmt.Errorf("couldn't write file %q", upload.OriginalFilename)
 	}
 
 	// event triggered after the file is successfully written but be
 	_, err, recovered := events.TriggerEvent("upload-saved", filePath)
 	if recovered {
 		writer.WriteHeader(http.StatusInternalServerError)
-		server.ServeError(writer, "Unable to save upload (recovered from a panic in event handler)", wantsJSON,
-			map[string]interface{}{"event": "upload-saved"})
-		return nil, true
+		return nil, errors.New("unable to save upload (recovered from a panic in event handler)")
 	}
 	if err != nil {
-		server.ServeError(writer, err.Error(), wantsJSON, errorMap)
-		return nil, true
+		return nil, err
 	}
 
 	infoEv.Str("referer", request.Referer()).Str("filename", handler.Filename).Send()
@@ -168,13 +143,10 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	}
 
 	if err = uploadHandler(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv); err != nil {
-		server.ServeError(writer, "Error processing upload: "+err.Error(), wantsJSON, map[string]interface{}{
-			"filename": upload.OriginalFilename,
-		})
-		return nil, true
+		return nil, errors.New("error processing upload:" + err.Error())
 	}
 	accessEv.Send()
-	return upload, false
+	return upload, nil
 }
 
 func getNewFilename() string {

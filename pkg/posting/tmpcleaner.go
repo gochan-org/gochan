@@ -8,6 +8,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
 func tempCleaner() {
@@ -41,19 +42,19 @@ func tempCleaner() {
 					Str("filePath", fileSrc).Send()
 			}
 
-			thumbSrc := upload.ThumbnailPath("thread")
-			if err = os.Remove(thumbSrc); err != nil {
+			thumbnail, catalogThumbnail := uploads.GetThumbnailFilenames(
+				path.Join(systemCritical.DocumentRoot, board.Dir, "thumb", upload.Filename))
+			if err = os.Remove(thumbnail); err != nil {
 				gcutil.LogError(err).
 					Str("subject", "tempUpload").
-					Str("filePath", thumbSrc).Send()
+					Str("filePath", thumbnail).Send()
 			}
 
 			if post.IsTopPost {
-				catalogSrc := upload.ThumbnailPath("catalog")
-				if err = os.Remove(catalogSrc); err != nil {
+				if err = os.Remove(catalogThumbnail); err != nil {
 					gcutil.LogError(err).
 						Str("subject", "tempUpload").
-						Str("filePath", catalogSrc).Send()
+						Str("filePath", catalogThumbnail).Send()
 				}
 			}
 		}

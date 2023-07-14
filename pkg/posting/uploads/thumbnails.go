@@ -23,6 +23,40 @@ const (
 	ThumbnailCatalog
 )
 
+var (
+	thumbnailExtensions = map[string]string{
+		".gif":  ".png",
+		".mp4":  ".png",
+		".webm": ".png",
+		".webp": ".png",
+		".jfif": ".jpg",
+		".jpeg": ".jpg",
+	}
+)
+
+func GetThumbnailExtension(fileExt string) string {
+	thumbExt, ok := thumbnailExtensions[fileExt]
+	if !ok {
+		return fileExt
+	}
+	return thumbExt
+}
+
+func SetThumbnailExtension(fileExt, thumbExt string) {
+	thumbnailExtensions[fileExt] = thumbExt
+}
+
+// GetThumbnailFilenames returns the regular thumbnail and the catalog thumbnail filenames of the given upload
+// filename. It does not check if the catalog actually exists (for example, if it's a reply)
+func GetThumbnailFilenames(img string) (string, string) {
+	ext := GetThumbnailExtension(path.Ext(img))
+	index := strings.LastIndex(img, ".")
+	if index < 0 || index > len(img) {
+		return "", ""
+	}
+	return img[:index] + "t" + ext, img[:index] + "c" + ext
+}
+
 func createImageThumbnail(imageObj image.Image, boardDir string, thumbType ThumbnailCategory) image.Image {
 	thumbWidth, thumbHeight := getBoardThumbnailSize(boardDir, thumbType)
 

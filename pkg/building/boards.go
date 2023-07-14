@@ -12,6 +12,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
@@ -370,19 +371,19 @@ func buildBoard(board *gcsql.Board, force bool) error {
 					Str("upload", filePath).Send()
 				return err
 			}
-			filePath = path.Join(boardDir, "thumb", upload.ThumbnailPath("thumbnail"))
-			if err = os.Remove(filePath); err != nil {
+			thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
+				path.Join(boardDir, "thumb", upload.Filename))
+			if err = os.Remove(thumbPath); err != nil {
 				errEv.Err(err).Caller().
 					Int("postID", postID).
-					Str("upload", filePath).Send()
+					Str("thumbnail", thumbPath).Send()
 				return err
 			}
 			if post.IsTopPost && board.EnableCatalog {
-				filePath = path.Join(boardDir, "thumb", upload.ThumbnailPath("catalog"))
-				if err = os.Remove(filePath); err != nil {
+				if err = os.Remove(catalogThumbPath); err != nil {
 					errEv.Err(err).Caller().
 						Int("postID", postID).
-						Str("upload", filePath).Send()
+						Str("catalogThumbPath", catalogThumbPath).Send()
 					return err
 				}
 			}

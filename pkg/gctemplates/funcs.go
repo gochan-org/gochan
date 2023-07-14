@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
 var (
@@ -197,32 +199,19 @@ var funcMap = template.FuncMap{
 		return ban.IP
 	},
 	"getCatalogThumbnail": func(img string) string {
-		return gcutil.GetThumbnailPath("catalog", img)
+		_, catalogThumb := uploads.GetThumbnailFilenames(img)
+		return catalogThumb
 	},
 	"getTopPostID": func(post *gcsql.Post) int {
 		id, _ := post.TopPostID()
 		return id
 	},
 	"getThreadThumbnail": func(img string) string {
-		return gcutil.GetThumbnailPath("thread", img)
+		thumb, _ := uploads.GetThumbnailFilenames(img)
+		return thumb
 	},
 	"getUploadType": func(name string) string {
-		return gcutil.GetThumbnailExt(name)
-	},
-	"imageToThumbnailPath": func(thumbType string, img string) string {
-		filetype := strings.ToLower(img[strings.LastIndex(img, ".")+1:])
-		if filetype == "gif" || filetype == "webm" || filetype == "mp4" {
-			filetype = "jpg"
-		}
-		index := strings.LastIndex(img, ".")
-		if index < 0 || index > len(img) {
-			return ""
-		}
-		thumbSuffix := "t." + filetype
-		if thumbType == "catalog" {
-			thumbSuffix = "c." + filetype
-		}
-		return img[0:index] + thumbSuffix
+		return uploads.GetThumbnailExtension(path.Ext(name))
 	},
 	"numReplies": func(boardid, opID int) int {
 		num, err := gcsql.GetThreadReplyCountFromOP(opID)
