@@ -71,6 +71,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	}
 	upload := &gcsql.Upload{
 		OriginalFilename: html.EscapeString(handler.Filename),
+		FileSize:         int(handler.Size),
 	}
 	gcutil.LogStr("originalFilename", upload.OriginalFilename, errEv, infoEv)
 

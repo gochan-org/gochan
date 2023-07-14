@@ -54,14 +54,6 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 			Str("filePath", filePath).Send()
 		return err
 	}
-	// Get image filesize
-	stat, err := os.Stat(filePath)
-	if err != nil {
-		errEv.Err(err).Caller().
-			Str("filePath", filePath).Send()
-		return err
-	}
-	upload.FileSize = int(stat.Size())
 
 	// Get image width and height, as well as thumbnail width and height
 	upload.Width = img.Bounds().Max.X

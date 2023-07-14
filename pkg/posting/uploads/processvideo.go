@@ -58,8 +58,6 @@ func processVideo(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 				upload.Width = value
 			case "height":
 				upload.Height = value
-			case "size":
-				upload.FileSize = value
 			}
 		}
 		thumbType := ThumbnailReply
