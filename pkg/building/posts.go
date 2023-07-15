@@ -103,10 +103,7 @@ func (p Post) ThumbnailPath() string {
 	if p.Filename == "" {
 		return ""
 	}
-	thumbnail, catalogThumbnail := uploads.GetThumbnailFilenames(p.Filename)
-	if p.IsTopPost {
-		return config.WebPath(p.BoardDir, "thumb", catalogThumbnail)
-	}
+	thumbnail, _ := uploads.GetThumbnailFilenames(p.Filename)
 	return config.WebPath(p.BoardDir, "thumb", thumbnail)
 }
 
