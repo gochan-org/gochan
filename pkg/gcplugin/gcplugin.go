@@ -141,7 +141,9 @@ func registerLuaFunctions() {
 			}, luar.New(l, upload), luar.New(l, post), lua.LString(board), lua.LString(filePath), lua.LString(thumbPath), lua.LString(catalogThumbPath))
 
 			errRet := l.CheckAny(-1)
-			fmt.Println("Error:", errRet, errRet == nil)
+			if errRet != nil && errRet.Type() != lua.LTNil {
+				return errors.New(errRet.String())
+			}
 			return nil
 		})
 		return 0
