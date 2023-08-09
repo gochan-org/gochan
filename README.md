@@ -22,7 +22,7 @@ See [`docker/README.md`](docker/README.md)
 See [config.md](config.md)
 
 ## Plugins
-Gochan has a built-in [Lua](https://lua.org) interpreter and an event system to allow for extending your Gochan instance's functionality. See [events_triggered.md](./events_triggered.md) for a list of events and information about when they are used.
+Gochan has a built-in [Lua](https://lua.org) interpreter and an event system to allow for extending your Gochan instance's functionality. See [plugin_api.md](./plugin_api.md) for a list of functions and events, and information about when they are used.
 
 ## Migration
 If you run gochan v3.0 or newer and get a message telling you that your database is out of date, please run gochan-migration -updatedb. If this does not work, please contact the developers.
@@ -33,10 +33,9 @@ If you run gochan v3.0 or newer and get a message telling you that your database
 	- **Note on MySQL:** While MariaDB and mainline MySQL are very similar, there are a few features that MariaDB has that MySQL lacks that may cause issues. To specifically use the mainline MySQL server, run `GC_MYSQL_MAINLINE=1 vagrant up`
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 
-
-## For developers (using vscode)
-1. Install go, the vs-go extention and gcc (I think, let me know if you need something else)
-2. Install either postgreSQL or mariaDB. Setup a database with an account and enter the ip:post and login information into the gochan.json config. See "Configuration". (Tools like PG admin highly recommended for easy debugging of the database)
+## For developers (using VS Code)
+1. Install Go, the VS Code Go extention, and gcc
+2. Install MariaDB, PostgreSQL, or MySQL. Setup a database with an account and enter the ip:post and login information into the gochan.json config. See "Configuration". (Tools like PG admin highly recommended for easy debugging of the database)
 3. Set "DebugMode" to true. This will log all logs to the console and disable some checks.
 4. Open the folder containing everything in vscode (named gochan most likely), go to "Run"
 	1. Select "gochan" if you wish to run/debug the website itself
