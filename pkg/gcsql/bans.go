@@ -90,7 +90,7 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 	if boardID > 0 {
 		query += " WHERE board_id = ?"
 	}
-	query += " LIMIT " + strconv.Itoa(limit)
+	query += " ORDER BY issued_at DESC LIMIT " + strconv.Itoa(limit)
 	var rows *sql.Rows
 	var err error
 	if boardID > 0 {
@@ -101,7 +101,6 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var bans []IPBan
 	for rows.Next() {
 		var ban IPBan
@@ -110,6 +109,7 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 			&ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote,
 			&ban.Message, &ban.CanAppeal,
 		); err != nil {
+			rows.Close()
 			return nil, err
 		}
 		if onlyActive && !ban.IsActive {
@@ -117,7 +117,7 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 		}
 		bans = append(bans, ban)
 	}
-	return bans, nil
+	return bans, rows.Close()
 }
 
 func (ipb *IPBan) Appeal(msg string) error {
