@@ -5,6 +5,11 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/gochan-org/gochan/pkg/config"
 )
@@ -12,13 +17,10 @@ import (
 const (
 	// GochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
 	gochanVersionKeyConstant = "gochan"
-	UnsupportedSQLVersionMsg = `Received syntax error while preparing a SQL string.
-	This means that either there is a bug in gochan's code (hopefully not) or that you are using an unsupported MySQL/PostgreSQL version.
-	Before reporting an error, make sure that you are using the up to date version of your selected SQL server.
-	Error text: %s`
-	mysqlConnStr    = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
-	postgresConnStr = "postgres://%s:%s@%s/%s?sslmode=disable"
-	sqlite3ConnStr  = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
+	UnsupportedSQLVersionMsg = `syntax error in SQL query, confirm you are using a supported driver and SQL server (error text: %s)`
+	mysqlConnStr             = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
+	postgresConnStr          = "postgres://%s:%s@%s/%s?sslmode=disable"
+	sqlite3ConnStr           = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
 )
 
 var gcdb *GCDB
@@ -209,16 +211,19 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 	switch dbDriver {
 	case "mysql":
 		db.connStr = fmt.Sprintf(mysqlConnStr, username, password, host, dbName)
-		// db.nilTimestamp = "0000-00-00 00:00:00"
 	case "sqlite3":
 		db.connStr = fmt.Sprintf(sqlite3ConnStr, host, username, password)
 	case "postgres":
 		db.connStr = fmt.Sprintf(postgresConnStr, username, password, host, dbName)
-		// db.nilTimestamp = "0001-01-01 00:00:00"
 	default:
 		return nil, ErrUnsupportedDB
 	}
 	db.db, err = sql.Open(db.driver, db.connStr)
+	if err != nil {
+		db.db.SetConnMaxLifetime(time.Minute * 3)
+		db.db.SetMaxOpenConns(10)
+		db.db.SetMaxIdleConns(10)
+	}
 	return db, err
 }
 

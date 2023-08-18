@@ -18,10 +18,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/posting"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
