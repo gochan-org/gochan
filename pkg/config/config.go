@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -60,7 +61,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 	changed := false
 
-	_, err := gcutil.ParseDurationString(gcfg.CookieMaxAge)
+	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
 	if err == gcutil.ErrInvalidDurationString {
 		return &InvalidValueError{Field: "CookieMaxAge", Value: gcfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
 	} else if err != nil {

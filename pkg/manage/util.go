@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
@@ -63,7 +64,7 @@ func createSession(key, username, password string, request *http.Request, writer
 	// successful login, add cookie that expires in one month
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
-	maxAge, err := gcutil.ParseDurationString(siteConfig.CookieMaxAge)
+	maxAge, err := durationutil.ParseLongerDuration(siteConfig.CookieMaxAge)
 	if err != nil {
 		maxAge = gcutil.DefaultMaxAge
 	}

@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aquilax/tripcode"
 	"golang.org/x/crypto/bcrypt"
@@ -159,51 +158,6 @@ func MarshalJSON(data interface{}, indent bool) (string, error) {
 		jsonBytes, _ = json.Marshal(map[string]string{"error": err.Error()})
 	}
 	return string(jsonBytes), err
-}
-
-// ParseDurationString parses the given string into a duration and returns any errors
-// based on TinyBoard's parse_time function
-func ParseDurationString(str string) (time.Duration, error) {
-	if str == "" {
-		return 0, ErrEmptyDurationString
-	}
-
-	matches := durationRegexp.FindAllStringSubmatch(str, -1)
-	if len(matches) == 0 {
-		return 0, ErrInvalidDurationString
-	}
-
-	var expire int
-	if matches[0][2] != "" {
-		years, _ := strconv.Atoi(matches[0][2])
-		expire += years * 60 * 60 * 24 * 365
-	}
-	if matches[0][4] != "" {
-		months, _ := strconv.Atoi(matches[0][4])
-		expire += months * 60 * 60 * 24 * 30
-	}
-	if matches[0][6] != "" {
-		weeks, _ := strconv.Atoi(matches[0][6])
-		expire += weeks * 60 * 60 * 24 * 7
-	}
-	if matches[0][8] != "" {
-		days, _ := strconv.Atoi(matches[0][8])
-		expire += days * 60 * 60 * 24
-	}
-	if matches[0][10] != "" {
-		hours, _ := strconv.Atoi(matches[0][10])
-		expire += hours * 60 * 60
-	}
-	if matches[0][12] != "" {
-		minutes, _ := strconv.Atoi(matches[0][12])
-		expire += minutes * 60
-	}
-	if matches[0][14] != "" {
-		seconds, _ := strconv.Atoi(matches[0][14])
-		expire += seconds
-	}
-	dur, err := time.ParseDuration(strconv.Itoa(expire) + "s")
-	return dur, err
 }
 
 // ParseName takes a name string from a request object and returns the name and tripcode parts

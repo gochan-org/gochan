@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
 )
 
@@ -39,7 +39,7 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 		ban.ExpiresAt = now
 	} else {
 		durationStr := request.FormValue("duration")
-		duration, err := gcutil.ParseDurationString(durationStr)
+		duration, err := durationutil.ParseLongerDuration(durationStr)
 		if err != nil {
 			errEv.Err(err).
 				Str("duration", durationStr).
@@ -53,7 +53,7 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 	if ban.CanAppeal {
 		appealWaitStr := request.FormValue("appealwait")
 		if appealWaitStr != "" {
-			appealDuration, err := gcutil.ParseDurationString(appealWaitStr)
+			appealDuration, err := durationutil.ParseLongerDuration(appealWaitStr)
 			if err != nil {
 				errEv.Err(err).
 					Str("appealwait", appealWaitStr).
