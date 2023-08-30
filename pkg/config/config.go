@@ -62,7 +62,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	changed := false
 
 	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
-	if err == gcutil.ErrInvalidDurationString {
+	if errors.Is(err, durationutil.ErrInvalidDurationString) {
 		return &InvalidValueError{Field: "CookieMaxAge", Value: gcfg.CookieMaxAge, Details: err.Error() + cookieMaxAgeEx}
 	} else if err != nil {
 		return err

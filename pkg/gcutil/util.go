@@ -29,10 +29,7 @@ const (
 
 var (
 	// ErrNotImplemented should be used for unimplemented functionality when necessary, not for bugs
-	ErrNotImplemented        = errors.New("not implemented")
-	ErrEmptyDurationString   = errors.New("empty duration string")
-	ErrInvalidDurationString = errors.New("invalid duration string")
-	durationRegexp           = regexp.MustCompile(`^((\d+)\s?ye?a?r?s?)?\s?((\d+)\s?mon?t?h?s?)?\s?((\d+)\s?we?e?k?s?)?\s?((\d+)\s?da?y?s?)?\s?((\d+)\s?ho?u?r?s?)?\s?((\d+)\s?mi?n?u?t?e?s?)?\s?((\d+)\s?s?e?c?o?n?d?s?)?$`)
+	ErrNotImplemented = errors.New("not implemented")
 )
 
 // BcryptSum generates and returns a checksum using the bcrypt hashing function
