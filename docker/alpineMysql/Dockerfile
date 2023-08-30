@@ -1,4 +1,4 @@
-FROM alpine:3.17
+FROM alpine:3.18
 
 WORKDIR /app
 RUN apk --update add mysql && rm -f /var/cache/apk/*

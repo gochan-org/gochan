@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine3.17
+FROM golang:1.20-alpine3.18
 
 COPY docker/build-image.sh .
 

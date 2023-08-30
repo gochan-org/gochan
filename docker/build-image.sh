@@ -15,7 +15,7 @@ apk add \
 
 mkdir -p /root/bin
 
-ln -s /usr/lib/go-1.18/bin/* /root/bin/
+ln -s /usr/lib/go-1.20/bin/* /root/bin/
 export PATH=$PATH:/root/bin
 echo "export PATH=$PATH:/root/bin" >> /root/.bashrc
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
