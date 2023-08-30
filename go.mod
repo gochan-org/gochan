@@ -1,6 +1,6 @@
 module github.com/gochan-org/gochan
 
-go 1.18
+go 1.20
 
 require (
 	github.com/Eggbertx/durationutil v1.0.0
