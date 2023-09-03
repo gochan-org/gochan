@@ -129,7 +129,7 @@ func registerJanitorPages() {
 			Permissions: JanitorPerms,
 			JSONoutput:  AlwaysJSON,
 			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-				// return an array of announcements and any errors
+				// return an array of announcements (with staff name instead of ID) and any errors
 				return getAllAnnouncements()
 			}},
 		Action{

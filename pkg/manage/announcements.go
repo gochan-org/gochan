@@ -1,9 +1,14 @@
 package manage
 
 import (
+	"errors"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcsql"
+)
+
+var (
+	errMissingAnnouncementMessage = errors.New("missing message field in announcement")
 )
 
 type announcementWithName struct {

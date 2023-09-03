@@ -52,10 +52,83 @@ func registerAdminPages() {
 					errEv.Err(err).Caller().Msg("Unable to get staff announcements")
 					return "", err
 				}
+				data := map[string]any{}
+				editIdStr := request.FormValue("edit")
+				var editID int
+				deleteIdStr := request.FormValue("delete")
+				var deleteID int
+				var announcement announcementWithName
+				if editIdStr != "" {
+					if editID, err = strconv.Atoi(editIdStr); err != nil {
+						errEv.Err(err).Str("editID", editIdStr).Send()
+						return "", err
+					}
+					data["editID"] = editID
+					for _, ann := range announcements {
+						if ann.ID == uint(editID) {
+							announcement = ann
+							break
+						}
+					}
+					if announcement.ID < 1 {
+						return "", fmt.Errorf("no announcement found with id %d", editID)
+					}
+					fmt.Println(announcement)
+					if request.PostFormValue("doedit") == "Submit" {
+						// announcement update submitted
+						announcement.Subject = request.PostFormValue("subject")
+						announcement.Message = request.PostFormValue("message")
+						if announcement.Message == "" {
+							errEv.Err(errMissingAnnouncementMessage).Caller().Send()
+							return "", errMissingAnnouncementMessage
+						}
+						updateSQL := `UPDATE DBPREFIXannouncements SET subject = ?, message = ?, timestamp = CURRENT_TIMESTAMP WHERE id = ?`
+						if _, err = gcsql.ExecSQL(updateSQL,
+							announcement.Subject,
+							announcement.Message,
+							announcement.ID); err != nil {
+							errEv.Err(err).Caller().
+								Str("subject", announcement.Subject).
+								Str("message", announcement.Message).
+								Uint("id", announcement.ID).
+								Msg("Unable to update announcement")
+							return "", errors.New("unable to update announcement")
+						}
+						fmt.Printf("Updated announcement #%d, message = %s\n", announcement.ID, announcement.Message)
+					}
+				} else if deleteIdStr != "" {
+					if deleteID, err = strconv.Atoi(deleteIdStr); err != nil {
+						errEv.Err(err).Str("deleteID", deleteIdStr).Send()
+						return "", err
+					}
+					deleteSQL := `DELETE FROM DBPREFIXannouncements WHERE id = ?`
+					if _, err = gcsql.ExecSQL(deleteSQL, deleteID); err != nil {
+						errEv.Err(err).Caller().
+							Int("deleteID", deleteID).
+							Msg("Unable to delete announcement")
+						return "", errors.New("unable to delete announcement")
+					}
+				} else if request.PostFormValue("newannouncement") == "Submit" {
+					insertSQL := `INSERT INTO DBPREFIXannouncements (staff_id, subject, message) VALUES(?, ?, ?)`
+					announcement.Subject = request.PostFormValue("subject")
+					announcement.Message = request.PostFormValue("message")
+					if _, err = gcsql.ExecSQL(insertSQL, staff.ID, announcement.Subject, announcement.Message); err != nil {
+						errEv.Err(err).Caller().
+							Str("subject", announcement.Subject).
+							Str("message", announcement.Message).
+							Msg("Unable to submit new announcement")
+						return "", errors.New("unable to submit announcement")
+					}
+				}
+				// update announcements array in data so the creation/edit/deletion shows up immediately
+				if data["announcements"], err = getAllAnnouncements(); err != nil {
+					errEv.Err(err).Caller().Msg("Unable to get staff announcements")
+					return "", err
+				}
+				data["announcement"] = announcement
 				pageBuffer := bytes.NewBufferString("")
-				err = serverutil.MinifyTemplate(gctemplates.ManageAnnouncements, map[string]any{
-					"announcements": announcements,
-				}, pageBuffer, "tex/thtml")
+				err = serverutil.MinifyTemplate(gctemplates.ManageAnnouncements, data,
+					pageBuffer, "tex/thtml")
 				return pageBuffer.String(), err
 			}},
 		Action{

@@ -31,22 +31,6 @@ var funcMap = template.FuncMap{
 		return a - b
 	},
 
-	// Comparison functions (some copied from text/template for compatibility)
-	"ge": func(a int, b int) bool {
-		return a >= b
-	},
-	"gt": func(a int, b int) bool {
-		return a > b
-	},
-	"le": func(a int, b int) bool {
-		return a <= b
-	},
-	"lt": func(a int, b int) bool {
-		return a < b
-	},
-	"intEq": func(a, b int) bool {
-		return a == b
-	},
 	"isNil": func(i interface{}) bool {
 		return i == nil
 	},
