@@ -18,10 +18,10 @@ var (
 	FrontPage           *template.Template
 	BoardPage           *template.Template
 	JsConsts            *template.Template
+	ManageAnnouncements *template.Template
 	ManageAppeals       *template.Template
 	ManageBans          *template.Template
 	ManageBoards        *template.Template
-	ManageConfig        *template.Template
 	ManageDashboard     *template.Template
 	ManageFileBans      *template.Template
 	ManageFixThumbnails *template.Template
@@ -141,6 +141,12 @@ func templateLoading(t string, buildAll bool) error {
 			return templateError("threadpage.html", err)
 		}
 	}
+	if buildAll || t == "manageannouncements" {
+		ManageAnnouncements, err = LoadTemplate("manage_announcements.html", "page_header.html", "topbar.html", "page_footer.html")
+		if err != nil {
+			return templateError("manage_announcements.html", err)
+		}
+	}
 	if buildAll || t == "manageappeals" {
 		ManageAppeals, err = LoadTemplate("manage_appeals.html")
 		if err != nil {
@@ -169,12 +175,6 @@ func templateLoading(t string, buildAll bool) error {
 		ManageSections, err = LoadTemplate("manage_sections.html")
 		if err != nil {
 			return templateError("manage_sections.html", err)
-		}
-	}
-	if buildAll || t == "manageconfig" {
-		ManageConfig, err = LoadTemplate("manage_config.html")
-		if err != nil {
-			return templateError("manage_config.html", err)
 		}
 	}
 	if buildAll || t == "managedashboard" {

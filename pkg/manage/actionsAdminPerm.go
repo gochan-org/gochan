@@ -42,142 +42,21 @@ type uploadInfo struct {
 func registerAdminPages() {
 	actions = append(actions,
 		Action{
-			ID:          "cleanup",
-			Title:       "Cleanup",
+			ID:          "updateannouncements",
+			Title:       "Update staff announcements",
 			Permissions: AdminPerms,
-			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-				outputStr := ""
-				if request.FormValue("run") == "Run Cleanup" {
-					outputStr += "Removing deleted posts from the database.<hr />"
-					if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
-						errEv.Err(err).
-							Str("cleanup", "removeDeletedPosts").
-							Caller().Send()
-						err = errors.New("Error removing deleted posts from database: " + err.Error())
-						return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
-					}
-
-					outputStr += "Optimizing all tables in database.<hr />"
-					err = gcsql.OptimizeDatabase()
-					if err != nil {
-						errEv.Err(err).
-							Str("sql", "optimization").
-							Caller().Send()
-						err = errors.New("Error optimizing SQL tables: " + err.Error())
-						return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
-					}
-					outputStr += "Cleanup finished"
-				} else {
-					outputStr += `<form action="` + config.GetSystemCriticalConfig().WebRoot + `manage/cleanup" method="post">` +
-						`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
-						`</form>`
-				}
-				return outputStr, nil
-			}},
-		Action{
-			ID:          "staff",
-			Title:       "Staff",
-			Permissions: JanitorPerms,
-			JSONoutput:  OptionalJSON,
-			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-				var outputStr string
-				do := request.FormValue("do")
-				allStaff, err := getAllStaffNopass(true)
-				if wantsJSON {
-					if err != nil {
-						errEv.Err(err).Caller().Msg("Failed getting staff list")
-					}
-					return allStaff, err
-				}
+			JSONoutput:  NoJSON,
+			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
+				announcements, err := getAllAnnouncements()
 				if err != nil {
-					errEv.Err(err).Caller().Msg("Failed getting staff list")
-					err = errors.New("Error getting staff list: " + err.Error())
+					errEv.Err(err).Caller().Msg("Unable to get staff announcements")
 					return "", err
 				}
-
-				updateUsername := request.FormValue("update")
-				username := request.FormValue("username")
-				password := request.FormValue("password")
-				passwordConfirm := request.FormValue("passwordconfirm")
-				if (do == "add" || do == "update") && password != passwordConfirm {
-					return "", ErrPasswordConfirm
-				}
-
-				rankStr := request.FormValue("rank")
-				var rank int
-				if rankStr != "" {
-					if rank, err = strconv.Atoi(rankStr); err != nil {
-						errEv.Err(err).Caller().
-							Str("rank", rankStr).Send()
-						return "", err
-					}
-				}
-
-				if do == "add" {
-					if staff.Rank < 3 {
-						writer.WriteHeader(http.StatusUnauthorized)
-						errEv.Err(ErrInsufficientPermission).Caller().
-							Int("rank", staff.Rank).Send()
-						return "", ErrInsufficientPermission
-					}
-					if _, err = gcsql.NewStaff(username, password, rank); err != nil {
-						errEv.Caller().
-							Str("newStaff", username).
-							Str("newPass", password).
-							Int("newRank", rank).
-							Msg("Error creating new staff account")
-						return "", fmt.Errorf("Error creating new staff account %q by %q: %s",
-							username, staff.Username, err.Error())
-					}
-				} else if do == "del" && username != "" {
-					if staff.Rank < 3 {
-						writer.WriteHeader(http.StatusUnauthorized)
-						errEv.Err(ErrInsufficientPermission).Caller().
-							Int("rank", staff.Rank).Send()
-						return "", ErrInsufficientPermission
-					}
-					if err = gcsql.DeactivateStaff(username); err != nil {
-						errEv.Err(err).Caller().
-							Str("delStaff", username).
-							Msg("Error deleting staff account")
-						return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
-							username, staff.Username, err.Error())
-					}
-				} else if do == "update" && updateUsername != "" {
-					if staff.Username != updateUsername && staff.Rank < 3 {
-						writer.WriteHeader(http.StatusUnauthorized)
-						errEv.Err(ErrInsufficientPermission).Caller().
-							Int("rank", staff.Rank).Send()
-						return "", ErrInsufficientPermission
-					}
-					if err = gcsql.UpdatePassword(updateUsername, password); err != nil {
-						errEv.Err(err).Caller().
-							Str("updateStaff", username).
-							Msg("Error updating password")
-						return "", err
-					}
-				}
-				if do == "add" || do == "del" {
-					allStaff, err = getAllStaffNopass(true)
-					if err != nil {
-						errEv.Err(err).Caller().Msg("Error getting updated staff list")
-						err = errors.New("Error getting updated staff list: " + err.Error())
-						return "", err
-					}
-				}
-
-				staffBuffer := bytes.NewBufferString("")
-				if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, map[string]interface{}{
-					"do":             do,
-					"updateUsername": updateUsername,
-					"allstaff":       allStaff,
-					"currentStaff":   staff,
-				}, staffBuffer, "text/html"); err != nil {
-					errEv.Err(err).Str("template", "manage_staff.html").Send()
-					return "", errors.New("Error executing staff management page template: " + err.Error())
-				}
-				outputStr += staffBuffer.String()
-				return outputStr, nil
+				pageBuffer := bytes.NewBufferString("")
+				err = serverutil.MinifyTemplate(gctemplates.ManageAnnouncements, map[string]any{
+					"announcements": announcements,
+				}, pageBuffer, "tex/thtml")
+				return pageBuffer.String(), err
 			}},
 		Action{
 			ID:          "boards",
@@ -387,6 +266,39 @@ func registerAdminPages() {
 				}
 				output = pageBuffer.String()
 				return
+			}},
+		Action{
+			ID:          "cleanup",
+			Title:       "Cleanup",
+			Permissions: AdminPerms,
+			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+				outputStr := ""
+				if request.FormValue("run") == "Run Cleanup" {
+					outputStr += "Removing deleted posts from the database.<hr />"
+					if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
+						errEv.Err(err).
+							Str("cleanup", "removeDeletedPosts").
+							Caller().Send()
+						err = errors.New("Error removing deleted posts from database: " + err.Error())
+						return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
+					}
+
+					outputStr += "Optimizing all tables in database.<hr />"
+					err = gcsql.OptimizeDatabase()
+					if err != nil {
+						errEv.Err(err).
+							Str("sql", "optimization").
+							Caller().Send()
+						err = errors.New("Error optimizing SQL tables: " + err.Error())
+						return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
+					}
+					outputStr += "Cleanup finished"
+				} else {
+					outputStr += `<form action="` + config.GetSystemCriticalConfig().WebRoot + `manage/cleanup" method="post">` +
+						`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
+						`</form>`
+				}
+				return outputStr, nil
 			}},
 		Action{
 			ID:          "fixthumbnails",

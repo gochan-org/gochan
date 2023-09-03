@@ -127,7 +127,7 @@ func init() {
 
 func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	dashBuffer := bytes.NewBufferString("")
-	announcements, err := gcsql.GetAllAccouncements()
+	announcements, err := getAllAnnouncements()
 	if err != nil {
 		return nil, err
 	}

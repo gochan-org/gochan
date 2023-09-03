@@ -6,7 +6,6 @@ import (
 	"html"
 	"html/template"
 	"path"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -250,78 +249,10 @@ var funcMap = template.FuncMap{
 		}
 		return loopArr
 	},
-	"generateConfigTable": func() template.HTML {
-		siteCfg := config.GetSiteConfig()
-		boardCfg := config.GetBoardConfig("")
-		tableOut := `<table style="border-collapse: collapse;" id="config"><tr><th>Field name</th><th>Value</th><th>Type</th><th>Description</th></tr>`
-
-		tableOut += configTable(siteCfg) +
-			configTable(boardCfg) +
-			"</table>"
-		return template.HTML(tableOut)
-	},
 	"isStyleDefault": func(style string) bool {
 		return style == config.GetBoardConfig("").DefaultStyle
 	},
 	"version": func() string {
 		return config.GetVersion().String()
 	},
-}
-
-func configTable(cfg interface{}) string {
-	cVal := reflect.ValueOf(cfg)
-	if cVal.Kind() == reflect.Ptr {
-		cVal = cVal.Elem()
-	}
-	var tableOut string
-	if cVal.Kind() != reflect.Struct {
-		return ""
-	}
-	cType := cVal.Type()
-	numFields := cVal.NumField()
-
-	for f := 0; f < numFields; f++ {
-		field := cType.Field(f)
-		name := field.Name
-
-		fVal := reflect.Indirect(cVal).FieldByName(name)
-		fKind := fVal.Kind()
-		// interf := cVal.Field(f).Interface()
-		switch fKind {
-		case reflect.Int:
-			tableOut += `<input name="` + name + `" type="number" value="` + html.EscapeString(fmt.Sprintf("%v", f)) + `" class="config-text"/>`
-		case reflect.String:
-			tableOut += `<input name="` + name + `" type="text" value="` + html.EscapeString(fmt.Sprintf("%v", f)) + `" class="config-text"/>`
-		case reflect.Bool:
-			checked := ""
-			if fVal.Bool() {
-				checked = "checked"
-			}
-			tableOut += `<input name="` + name + `" type="checkbox" ` + checked + " />"
-
-		case reflect.Slice:
-			tableOut += `<textarea name="` + name + `" rows="4" cols="28">`
-			arrLength := fVal.Len()
-			for s := 0; s < arrLength; s++ {
-				newLine := "\n"
-				if s == arrLength-1 {
-					newLine = ""
-				}
-				tableOut += html.EscapeString(fVal.Slice(s, s+1).Index(0).String()) + newLine
-			}
-			tableOut += "</textarea>"
-		default:
-			tableOut += fmt.Sprintf("%v", fKind)
-		}
-
-		tableOut += "</td><td>" + fKind.String() + "</td><td>"
-		defaultTag := field.Tag.Get("default")
-		var defaultTagHTML string
-		if defaultTag != "" {
-			defaultTagHTML = " <b>Default: " + defaultTag + "</b>"
-		}
-		tableOut += field.Tag.Get("description") + defaultTagHTML + "</td>"
-		tableOut += "</tr>"
-	}
-	return tableOut
 }

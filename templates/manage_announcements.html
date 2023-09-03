@@ -1,0 +1,28 @@
+<table>
+	<tr><th>Subject</th><th>Message</th><th>Staff</th><th>Timestamp</th></tr>
+{{range $a, $announcement := $.announcements -}}<tr>
+	<td>{{$announcement.Subject}}</td>
+	<td>{{$announcement.Message}}</td>
+	<td>{{$announcement.Staff}}</td>
+	<td>{{formatTimestamp $announcement.Timestamp}}</td>
+</tr>{{else}}<i>No announcements</i>{{end}}
+</table>
+<hr/>
+<header>
+	<h1>Create new announcement</h1>
+</header>
+<form>
+	<table id="postbox-static">
+		<tr>
+			<th class="postblock">Subject</th>
+			<td>
+				<input type="text" name="subject" size="25" maxlength="100"/>
+				<input type="submit" value="Submit"/>
+			</td>
+		</tr>
+		<tr>
+			<th class="postblock">Message</th>
+			<td><textarea rows="5" cols="35" name="announcementmsg"></textarea></td>
+		</tr>
+	</table>
+</form>

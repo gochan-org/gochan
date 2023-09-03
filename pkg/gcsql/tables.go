@@ -7,11 +7,11 @@ import (
 
 // table: DBPREFIXannouncements
 type Announcement struct {
-	ID        uint      `json:"no"`   // sql: `id`
-	StaffID   string    `json:"name"` // sql: `staff_id`
-	Subject   string    `json:"sub"`  // sql: `subject`
-	Message   string    `json:"com"`  // sql: `message`
-	Timestamp time.Time `json:"-"`    // sql: `timestamp`
+	ID        uint      // sql: `id`
+	StaffID   uint      // sql: `staff_id`
+	Subject   string    // sql: `subject`
+	Message   string    // sql: `message`
+	Timestamp time.Time // sql: `timestamp`
 }
 
 // table: DBPREFIXboard_staff
