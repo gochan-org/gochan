@@ -1,7 +1,7 @@
 <fieldset><legend>Announcements</legend>
 {{range $a, $announcement := $.announcements}}
 	<div class="announcement">
-		<b>{{$announcement.Subject}}</b><br />
+		<b>{{$announcement.Subject}}</b> — <small>by {{$announcement.Staff}} at {{formatTimestamp $announcement.Timestamp}} </small><br />
 		{{$announcement.Message}}
 	</div>
 	{{if gt (len $.announcements) (add $a 1)}}<hr />{{end}}
