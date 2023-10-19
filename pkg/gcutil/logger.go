@@ -1,7 +1,7 @@
 package gcutil
 
 import (
-	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path"
@@ -9,20 +9,18 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	logFlags                = os.O_CREATE | os.O_APPEND | os.O_WRONLY
+	logFileMode fs.FileMode = 0644
+)
+
 var (
-	logFile      *os.File
-	accessFile   *os.File
+	logFile    *os.File
+	accessFile *os.File
+
 	logger       zerolog.Logger
 	accessLogger zerolog.Logger
 )
-
-type logHook struct{}
-
-func (*logHook) Run(e *zerolog.Event, level zerolog.Level, _ string) {
-	if level != zerolog.Disabled && level != zerolog.NoLevel {
-		e.Timestamp()
-	}
-}
 
 func LogStr(key, val string, events ...*zerolog.Event) {
 	for e := range events {
@@ -57,52 +55,54 @@ func LogDiscard(events ...*zerolog.Event) {
 	}
 }
 
-func InitLog(logPath string, debug bool) (err error) {
+func initLog(logPath string, debug bool) (err error) {
 	if logFile != nil {
 		// log file already initialized, skip
 		return nil
 	}
-	logFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640) // skipcq: GSC-G302
+	logFile, err = os.OpenFile(logPath, logFlags, logFileMode) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
 
 	if debug {
-		logger = zerolog.New(io.MultiWriter(logFile, zerolog.NewConsoleWriter())).Hook(&logHook{})
+		multi := zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) { w.Out = os.Stderr }))
+		logger = zerolog.New(multi).With().Timestamp().Logger()
 	} else {
-		logger = zerolog.New(logFile).Hook(&logHook{})
+		logger = zerolog.New(logFile).With().Timestamp().Logger()
 	}
 
 	return nil
 }
 
-func InitAccessLog(logPath string) (err error) {
+func initAccessLog(logPath string) (err error) {
 	if accessFile != nil {
 		// access log already initialized, skip
 		return nil
 	}
-	accessFile, err = os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0640) // skipcq: GSC-G302
+	accessFile, err = os.OpenFile(logPath, logFlags, logFileMode) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}
-	accessLogger = zerolog.New(accessFile).Hook(&logHook{})
+	accessLogger = zerolog.New(accessFile).With().Timestamp().Logger()
 	return nil
 }
 
 func InitLogs(logDir string, debug bool, uid int, gid int) (err error) {
-	if err = InitLog(path.Join(logDir, "gochan.log"), debug); err != nil {
+	if err = initLog(path.Join(logDir, "gochan.log"), debug); err != nil {
 		return err
 	}
 	if err = logFile.Chown(uid, gid); err != nil {
 		return err
 	}
 
-	if err = InitAccessLog(path.Join(logDir, "gochan_access.log")); err != nil {
+	if err = initAccessLog(path.Join(logDir, "gochan_access.log")); err != nil {
 		return err
 	}
 	if err = accessFile.Chown(uid, gid); err != nil {
 		return err
 	}
+
 	return nil
 }
 
