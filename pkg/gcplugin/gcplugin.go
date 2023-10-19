@@ -11,6 +11,7 @@ import (
 	"plugin"
 	"reflect"
 
+	"github.com/cjoudrey/gluahttp"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -21,6 +22,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 
+	async "github.com/CuberL/glua-async"
 	luaFilePath "github.com/vadv/gopher-lua-libs/filepath"
 	luaStrings "github.com/vadv/gopher-lua-libs/strings"
 	lua "github.com/yuin/gopher-lua"
@@ -126,6 +128,8 @@ func luaEventRegisterHandlerAdapter(l *lua.LState, fn *lua.LFunction) events.Eve
 func preloadLua() {
 	luaFilePath.Preload(lState)
 	luaStrings.Preload(lState)
+	lState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
+	async.Init(lState)
 
 	lState.PreloadModule("config", func(l *lua.LState) int {
 		t := l.NewTable()

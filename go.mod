@@ -23,6 +23,8 @@ require (
 )
 
 require (
+	github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d // indirect
+	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect

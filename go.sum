@@ -1,3 +1,5 @@
+github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d h1:lGZoWyUkx8m8e0LsP9hSv0zcK/f5ffJEEYo+B0RIJFM=
+github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d/go.mod h1:9LzvPuiPyVXXFvHZCKOCvXxy1KkFADRmePZJDFuuFgE=
 github.com/Eggbertx/durationutil v1.0.0 h1:/DJo6z/9tac/1KTwa/RGjpg5Q8Rrnx3p5w4OxKdeTkw=
 github.com/Eggbertx/durationutil v1.0.0/go.mod h1:eOfcV0W5B4qoKsEtjhOYUTsTm6KnrWVkfgOmMTC4XnY=
 github.com/VividCortex/ewma v1.1.1/go.mod h1:2Tkkvm3sRDVXaiyucHiACn4cqf7DpdyLvmxzcbUokwA=
@@ -18,6 +20,8 @@ github.com/cheggaaa/pb/v3 v3.0.5/go.mod h1:X1L61/+36nz9bjIsrDU52qHKOQukUQe2Ge+Yv
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
+github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9 h1:rdWOzitWlNYeUsXmz+IQfa9NkGEq3gA/qQ3mOEqBU6o=
+github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9/go.mod h1:X97UjDTXp+7bayQSFZk2hPvCTmTZIicUjZQRtkwgAKY=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
