@@ -1,11 +1,14 @@
 -- requires ghostscript to be installed
+
+local config = require("config")
 local os = require("os")
+local uploads = require("uploads")
 
 local cmd = "gs -q -sDEVICE=jpeg -dLastPage=1 -dNOPAUSE -r720 -g%dx%d -dPDFFitPage -dFIXEDMEDIA -dCompatibilityLevel=1.4 -o %q - <  %q" -- width, height outpath, inpath
 
-register_upload_handler(".pdf", function(upload, post, board, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv)
+uploads.register_handler(".pdf", function(upload, post, board, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv)
 	-- width, height = get_pdf_dimensions(filePath)
-	local boardcfg = board_config(board)
+	local boardcfg = config.board_config(board)
 	upload.ThumbnailWidth = boardcfg.ThumbWidthReply
 	upload.ThumbnailHeight = boardcfg.ThumbHeightReply
 	if (post.IsTopPost) then
@@ -24,4 +27,4 @@ register_upload_handler(".pdf", function(upload, post, board, filePath, thumbPat
 
 	return nil
 end)
-set_thumbnail_ext(".pdf", ".jpg")
+uploads.set_thumbnail_ext(".pdf", ".jpg")

@@ -1,7 +1,8 @@
 -- testing manage page registering from Lua plugins
 local strings = require("strings")
+local manage = require("manage")
 
-register_manage_page("mgmtplugintest",
+manage.register_manage_page("mgmtplugintest",
 	"Staff Plugin Testing",
 	3, 1,
 	function(writer, request, staff, wantsJSON, infoEv, errEv)
@@ -12,7 +13,7 @@ register_manage_page("mgmtplugintest",
 
 
 -- testing template parsing from Lua plugins
-register_manage_page("templateplugintest",
+manage.register_manage_page("templateplugintest",
 	"Template Plugin Testing",
 	3, 0,
 	function(writer, request, staff, wantsJSON, infoEv, errEv)

@@ -27,8 +27,8 @@ release_files = (
 	"html/favicon.png",
 	"html/firstrun.html",
 	"html/js/",
-	"sample-configs/",
-	"sample-plugins/",
+	"examples/configs/",
+	"examples/plugins/",
 	"templates/",
 	"sql/initdb_master.sql",
 	"sql/initdb_mysql.sql",
@@ -380,12 +380,12 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
-		"sample-configs/gochan.example.json to /etc/gochan/gochan.json (modify as needed)\n",
+		"examples/configs/gochan.example.json to /etc/gochan/gochan.json (modify as needed)\n",
 		"You may also need to go to https://yourgochansite/manage/rebuildall to rebuild the javascript config")
 	if gcos == "linux":
 		print(
 			"If your Linux distribution has systemd, you will also need to run the following commands:\n",
-			"cp sample-configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service\n",
+			"cp examples/configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service\n",
 			"systemctl daemon-reload\n",
 			"systemctl enable gochan.service\n",
 			"systemctl start gochan.service")

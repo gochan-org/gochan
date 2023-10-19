@@ -1,6 +1,9 @@
-event_register({"db-initialized"}, function(tr)
+local events = require('events')
+local gcsql = require("gcsql")
+
+events.register_event({"db-initialized"}, function(tr)
 	print("Testing SELECT query from Lua plugin")
-	rows, err = db_query("SELECT id, dir, title FROM DBPREFIXboards where id > ?", {1})
+	rows, err = gcsql.query_rows("SELECT id, dir, title FROM DBPREFIXboards where id > ?", {1})
 	if(err ~= nil) then
 		print(err:Error())
 		return
@@ -9,7 +12,7 @@ event_register({"db-initialized"}, function(tr)
 	print("Boards (id > 1):")
 	while rows:Next() do
 		rows_table = {}
-		err = db_scan_rows(rows, rows_table)
+		err = gcsql.scan_rows(rows, rows_table)
 		if(err ~= nil) then
 			print(err:Error())
 			rows:Close()
@@ -21,14 +24,14 @@ event_register({"db-initialized"}, function(tr)
 	rows:Close()
 
 	print("Testing SELECT COUNT(*) query from Lua plugin")
-	rows, err = db_query("SELECT COUNT(*) FROM DBPREFIXstaff WHERE id > ?", {1})
+	rows, err = gcsql.query_rows("SELECT COUNT(*) FROM DBPREFIXstaff WHERE id > ?", {1})
 	if(err ~= nil) then
 		print(err:Error())
 		return
 	end
 	while rows:Next() do
 		rows_table = {}
-		err = db_scan_rows(rows, rows_table)
+		err = gcsql.scan_rows(rows, rows_table)
 		if(err ~= nil) then
 			print(err:Error())
 			rows:Close()

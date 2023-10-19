@@ -68,7 +68,7 @@ func InitLog(logPath string, debug bool) (err error) {
 	}
 
 	if debug {
-		logger = zerolog.New(io.MultiWriter(logFile, os.Stdout)).Hook(&logHook{})
+		logger = zerolog.New(io.MultiWriter(logFile, zerolog.NewConsoleWriter())).Hook(&logHook{})
 	} else {
 		logger = zerolog.New(logFile).Hook(&logHook{})
 	}

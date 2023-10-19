@@ -1,9 +1,11 @@
 local string = require("string")
+local events = require("events")
+local gcsql = require("gcsql")
 
 local recognized_tlds = {"com", "net", "org", "edu", "gov", "us", "uk"}
 
 local function is_new_poster(ip)
-	rows, err = db_query("SELECT COUNT(*) FROM DBPREFIXposts WHERE ip = ?", {ip})
+	rows, err = gcsql.query_rows("SELECT COUNT(*) FROM DBPREFIXposts WHERE ip = ?", {ip})
 	if(err ~= nil) then
 		return true, err
 	end
@@ -11,7 +13,7 @@ local function is_new_poster(ip)
 	is_new = true
 	while rows:Next() do
 		rows_table = {}
-		err = db_scan_rows(rows, rows_table)
+		err = gcsql.scan_rows(rows, rows_table)
 		if(err ~= nil) then
 			rows:Close()
 			return true, err
@@ -26,7 +28,7 @@ local function is_new_poster(ip)
 end
 
 
-event_register({"message-pre-format"}, function(tr, post)
+events.register_event({"message-pre-format"}, function(tr, post)
 	is_new, err = is_new_poster(post.IP)
 	if(err ~= nil) then
 		error_log(err:Error())
