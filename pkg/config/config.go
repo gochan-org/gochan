@@ -192,9 +192,7 @@ type SiteConfig struct {
 	MinifyHTML      bool
 	MinifyJS        bool
 	GeoIPDBlocation string
-	AkismetAPIKey   string
-
-	Captcha CaptchaConfig
+	Captcha         CaptchaConfig
 }
 
 type CaptchaConfig struct {
@@ -234,7 +232,6 @@ type BoardConfig struct {
 	UploadConfig
 
 	DateTimeFormat         string
-	AkismetAPIKey          string
 	ShowPosterID           bool
 	EnableSpoileredImages  bool
 	EnableSpoileredThreads bool

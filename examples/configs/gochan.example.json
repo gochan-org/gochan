@@ -91,7 +91,6 @@
 	"MinifyJS": true,
 
 	"DateTimeFormat": "Mon, January 02, 2006 3:04 PM",
-	"AkismetAPIKey": "",
 	"_Captcha": {
 		"Type": "hcaptcha",
 		"OnlyNeededForThreads": true,

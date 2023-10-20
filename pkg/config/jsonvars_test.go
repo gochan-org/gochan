@@ -98,7 +98,6 @@ const (
 		"MinifyJS": true,
 	
 		"DateTimeFormat": "Mon, January 02, 2006 15:04 PM",
-		"AkismetAPIKey": "",
 		"UseCaptcha": false,
 		"CaptchaWidth": 240,
 		"CaptchaHeight": 80,

@@ -28,7 +28,7 @@ local function is_new_poster(ip)
 end
 
 
-events.register_event({"message-pre-format"}, function(tr, post)
+events.register_event({"message-pre-format"}, function(tr, post, req)
 	is_new, err = is_new_poster(post.IP)
 	if(err ~= nil) then
 		error_log(err:Error())

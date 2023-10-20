@@ -169,7 +169,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	_, err, recovered := events.TriggerEvent("message-pre-format", post)
+	_, err, recovered := events.TriggerEvent("message-pre-format", post, request)
 	if recovered {
 		writer.WriteHeader(http.StatusInternalServerError)
 		server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, nil)
@@ -215,26 +215,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			Msg("Rejected post from possible spambot")
 		server.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
 		return
-	}
-
-	akismetResult := serverutil.CheckPostForSpam(
-		post.IP, request.Header.Get("User-Agent"), request.Referer(),
-		post.Name, post.Email, post.MessageRaw,
-	)
-	logEvent := gcutil.LogInfo().
-		Str("User-Agent", request.Header.Get("User-Agent")).
-		Str("IP", post.IP)
-	switch akismetResult {
-	case "discard":
-		logEvent.Str("akismet", "discard").Send()
-		server.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
-		return
-	case "spam":
-		logEvent.Str("akismet", "spam").Send()
-		server.ServeError(writer, "Your post looks like spam.", wantsJSON, nil)
-		return
-	default:
-		logEvent.Discard()
 	}
 
 	var delay int

@@ -11,7 +11,6 @@ import (
 	"plugin"
 	"reflect"
 
-	"github.com/cjoudrey/gluahttp"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -21,6 +20,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
+	gluahttp "github.com/vadv/gopher-lua-libs/http"
 
 	async "github.com/CuberL/glua-async"
 	luaFilePath "github.com/vadv/gopher-lua-libs/filepath"
@@ -97,7 +97,11 @@ func createLuaLogFunc(which string) lua.LGFunction {
 			if numArgs == 0 {
 				l.Push(luar.New(l, gcutil.LogError(nil)))
 			} else {
-				l.Push(luar.New(l, gcutil.LogError(errors.New(l.CheckString(-1)))))
+				errVal := l.CheckAny(-1)
+				errI := lvalueToInterface(l, errVal)
+				err := fmt.Errorf("%v", errI)
+
+				l.Push(luar.New(l, gcutil.LogError(err)))
 			}
 		}
 		return 1
@@ -128,7 +132,7 @@ func luaEventRegisterHandlerAdapter(l *lua.LState, fn *lua.LFunction) events.Eve
 func preloadLua() {
 	luaFilePath.Preload(lState)
 	luaStrings.Preload(lState)
-	lState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
+	gluahttp.Preload(lState)
 	async.Init(lState)
 
 	lState.PreloadModule("config", func(l *lua.LState) int {
