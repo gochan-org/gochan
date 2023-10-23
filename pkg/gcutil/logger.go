@@ -66,7 +66,7 @@ func initLog(logPath string, debug bool) (err error) {
 	}
 
 	if debug {
-		multi := zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) { w.Out = os.Stderr }))
+		multi := zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter())
 		logger = zerolog.New(multi).With().Timestamp().Logger()
 	} else {
 		logger = zerolog.New(logFile).With().Timestamp().Logger()
