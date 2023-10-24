@@ -43,6 +43,18 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 	- Calls [gctemplates.ParseTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/gctemplates#ParseTemplate) with the given template name and Go template data, and returns a [Template](https://pkg.go.dev/html/template#Template) and an error object (or nil if there were no errors).
 
 ## manage
+- **manage.ban_ip(ip string, duration string, reason string, staff string|int, options table)**
+  - Bans the given IP for the given duration and gets/expects other optional ban data from the `options` table below
+
+Key | Type | Explanation
+---|---|---
+board | string\|int\|nil | The board directory or ID that the IP will be banned from. If this is nil or omitted, it will be a global ban
+post | int | The post ID
+is_thread_ban | bool | If true, the user will be able to post but unable to create threads
+appeal_after | string | User can appeal after this duration. If unset, the user can appeal immediately.
+appealable | bool | Sets whether or not the user can appeal the ban. If unset, the user is able to appeal.
+staff_note | string | A private note attached to the ban that only staff can see
+
 - **manage.register_manage_page(action string, title string, perms int, wants_json int, handler func(writer, request, staff, wants_json, info_ev, err_ev))**
 	- Registers the manage page accessible at /manage/`action` to be handled by `handler`. See [manage.RegisterManagePage](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/manage#RegisterManagePage) for info on how `handler` should be used, or [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
 
