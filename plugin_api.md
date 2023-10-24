@@ -44,7 +44,7 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 
 ## manage
 - **manage.ban_ip(ip string, duration string, reason string, staff string|int, options table)**
-  - Bans the given IP for the given duration and gets/expects other optional ban data from the `options` table below
+  - Bans the given IP for the given duration and gets other optional ban data from the `options` table below
 
 Key | Type | Explanation
 ---|---|---
