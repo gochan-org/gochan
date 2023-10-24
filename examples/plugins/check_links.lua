@@ -1,6 +1,7 @@
 local string = require("string")
 local events = require("events")
 local gcsql = require("gcsql")
+local log = require("gclog")
 
 local recognized_tlds = {"com", "net", "org", "edu", "gov", "us", "uk"}
 
@@ -31,7 +32,7 @@ end
 events.register_event({"message-pre-format"}, function(tr, post, req)
 	is_new, err = is_new_poster(post.IP)
 	if(err ~= nil) then
-		error_log(err:Error())
+		log.error_log(err:Error())
 			:Str("lua", "check_links.lua")
 			:Str("event", tr)
 			:Send()
