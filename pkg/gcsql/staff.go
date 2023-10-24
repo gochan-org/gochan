@@ -129,6 +129,13 @@ func GetStaffUsernameFromID(id int) (string, error) {
 	return username, err
 }
 
+func GetStaffID(username string) (int, error) {
+	const query = `SELECT id  FROM DBPREFIXstaff WHERE username = ?`
+	var id int
+	err := QueryRowSQL(query, []any{username}, []any{&id})
+	return id, err
+}
+
 // GetStaffBySession gets the staff that is logged in in the given session
 func GetStaffBySession(session string) (*Staff, error) {
 	const query = `SELECT 

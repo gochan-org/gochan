@@ -10,7 +10,9 @@ import (
 	"path"
 	"plugin"
 	"reflect"
+	"time"
 
+	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -27,6 +29,10 @@ import (
 	luaStrings "github.com/vadv/gopher-lua-libs/strings"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
+)
+
+const (
+	tableArgFmt = "invalid value for key %q passed to table, expected %s, got %s"
 )
 
 var (
@@ -316,6 +322,140 @@ func preloadLua() {
 	lState.PreloadModule("manage", func(l *lua.LState) int {
 		t := l.NewTable()
 		l.SetFuncs(t, map[string]lua.LGFunction{
+			"ban_ip": func(l *lua.LState) int {
+				now := time.Now()
+				ban := &gcsql.IPBan{
+					IP: l.CheckString(1),
+				}
+				ban.IsActive = true
+				ban.AppealAt = now
+				ban.CanAppeal = true
+
+				durOrNil := l.CheckAny(2)
+				var err error
+				switch durOrNil.Type() {
+				case lua.LTNil:
+					ban.Permanent = true
+				case lua.LTString:
+					var duration time.Duration
+					duration, err = durationutil.ParseLongerDuration(lua.LVAsString(durOrNil))
+					if err != nil {
+						l.Push(luar.New(l, err))
+						return 1
+					}
+					ban.ExpiresAt = time.Now().Add(duration)
+				default:
+					lState.ArgError(2, "Expected string or nil value")
+				}
+
+				ban.Message = l.CheckString(3)
+
+				if l.GetTop() > 3 {
+					t := l.CheckTable(4)
+					var failed bool
+					t.ForEach(func(keyLV, val lua.LValue) {
+						key := lua.LVAsString(keyLV)
+						valType := val.Type()
+						switch key {
+						case "board":
+							fallthrough
+						case "BoardID":
+							fallthrough
+						case "board_id":
+							switch valType {
+							case lua.LTNil:
+								// global
+							case lua.LTNumber:
+								ban.BoardID = new(int)
+								*ban.BoardID = int(lua.LVAsNumber(val))
+							case lua.LTString:
+								boardDir := lua.LVAsString(val)
+								if boardDir != "" {
+									var id int
+									if id, err = gcsql.GetBoardIDFromDir(boardDir); err != nil {
+										l.Push(luar.New(l, err))
+										return
+									}
+									ban.BoardID = new(int)
+									*ban.BoardID = id
+								}
+							default:
+								failed = true
+								l.Push(lua.LNil)
+								l.RaiseError(tableArgFmt, key, "string, number, or nil", valType)
+								return
+							}
+						case "staff":
+							fallthrough
+						case "staff_id":
+							fallthrough
+						case "StaffID":
+							switch valType {
+							case lua.LTString:
+								ban.StaffID, err = gcsql.GetStaffID(lua.LVAsString(val))
+								if err != nil {
+									l.Push(luar.New(l, err))
+									failed = true
+									return
+								}
+							case lua.LTNumber:
+								ban.StaffID = int(lua.LVAsNumber(val))
+							default:
+								failed = true
+								l.Push(lua.LNil)
+								l.RaiseError(tableArgFmt, key, "number or string", valType)
+							}
+						case "post_id":
+							fallthrough
+						case "post":
+							fallthrough
+						case "PostID":
+							if valType != lua.LTNumber {
+								failed = true
+								l.Push(lua.LNil)
+								l.RaiseError(tableArgFmt, key, "number", valType)
+								return
+							}
+						case "is_thread_ban":
+							fallthrough
+						case "IsThreadBan":
+							ban.IsThreadBan = lua.LVAsBool(val)
+						case "appeal_after":
+							fallthrough
+						case "AppealAfter":
+							str := lua.LVAsString(val)
+							dur, err := durationutil.ParseLongerDuration(str)
+							if err != nil {
+								l.Push(luar.New(l, err))
+								failed = true
+								return
+							}
+							ban.AppealAt = now.Add(dur)
+						case "can_appeal":
+							fallthrough
+						case "appealable":
+							fallthrough
+						case "CanAppeal":
+							ban.CanAppeal = lua.LVAsBool(val)
+						case "staff_note":
+							fallthrough
+						case "StaffNote":
+							ban.StaffNote = lua.LVAsString(val)
+						}
+					})
+					if failed {
+						return 1
+					}
+				}
+				if ban.StaffID < 1 {
+					l.Push(luar.New(l, errors.New("missing staff key in table")))
+					return 1
+				}
+				ban.IssuedAt = time.Now()
+				err = gcsql.NewIPBan(ban)
+				l.Push(luar.New(l, err))
+				return 1
+			},
 			"register_manage_page": func(l *lua.LState) int {
 				actionID := l.CheckString(1)
 				actionTitle := l.CheckString(2)
@@ -404,7 +544,7 @@ func LoadPlugins(paths []string) error {
 	var luaInitialized bool
 	for _, pluginPath := range paths {
 		ext := path.Ext(pluginPath)
-		fmt.Println("Loading plugin", pluginPath)
+		gcutil.LogInfo().Str("pluginPath", pluginPath).Msg("Loading plugin")
 		switch ext {
 		case ".lua":
 			if !luaInitialized {
