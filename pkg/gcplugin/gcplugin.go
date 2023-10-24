@@ -350,8 +350,22 @@ func preloadLua() {
 
 				ban.Message = l.CheckString(3)
 
-				if l.GetTop() > 3 {
-					t := l.CheckTable(4)
+				staff := l.CheckAny(4)
+				switch staff.Type() {
+				case lua.LTString:
+					ban.StaffID, err = gcsql.GetStaffID(lua.LVAsString(staff))
+					if err != nil {
+						l.Push(luar.New(l, err))
+						return 1
+					}
+				case lua.LTNumber:
+					ban.StaffID = int(lua.LVAsNumber(staff))
+				default:
+					l.TypeError(4, staff.Type())
+				}
+
+				if l.GetTop() > 4 {
+					t := l.CheckTable(5)
 					var failed bool
 					t.ForEach(func(keyLV, val lua.LValue) {
 						key := lua.LVAsString(keyLV)
@@ -384,26 +398,6 @@ func preloadLua() {
 								l.Push(lua.LNil)
 								l.RaiseError(tableArgFmt, key, "string, number, or nil", valType)
 								return
-							}
-						case "staff":
-							fallthrough
-						case "staff_id":
-							fallthrough
-						case "StaffID":
-							switch valType {
-							case lua.LTString:
-								ban.StaffID, err = gcsql.GetStaffID(lua.LVAsString(val))
-								if err != nil {
-									l.Push(luar.New(l, err))
-									failed = true
-									return
-								}
-							case lua.LTNumber:
-								ban.StaffID = int(lua.LVAsNumber(val))
-							default:
-								failed = true
-								l.Push(lua.LNil)
-								l.RaiseError(tableArgFmt, key, "number or string", valType)
 							}
 						case "post_id":
 							fallthrough

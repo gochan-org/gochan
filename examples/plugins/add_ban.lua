@@ -8,8 +8,7 @@ events.register_event({"message-pre-format"}, function(tr, post, req)
 		log.warn_log()
 			:Str("IP", post.IP)
 			:Msg("Banning post from Lua event")
-		err = manage.ban_ip(post.IP, nil, "banned from Lua plugin", {
-			staff = "admin",
+		err = manage.ban_ip(post.IP, nil, "banned from Lua plugin", "admin", {
 			board = "test"
 		})
 		if(err ~= nil) then
