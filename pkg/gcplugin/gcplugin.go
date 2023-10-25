@@ -3,6 +3,8 @@ package gcplugin
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"path"
 	"plugin"
 
@@ -13,7 +15,9 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
-	gluahttp "github.com/vadv/gopher-lua-libs/http"
+	luar "layeh.com/gopher-luar"
+
+	"github.com/cjoudrey/gluahttp"
 
 	async "github.com/CuberL/glua-async"
 	luaFilePath "github.com/vadv/gopher-lua-libs/filepath"
@@ -43,8 +47,40 @@ func ClosePlugins() {
 func preloadLua() {
 	luaFilePath.Preload(lState)
 	luaStrings.Preload(lState)
-	gluahttp.Preload(lState)
 	async.Init(lState)
+
+	lState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
+	lState.PreloadModule("url", func(l *lua.LState) int {
+		t := l.NewTable()
+		l.SetFuncs(t, map[string]lua.LGFunction{
+			"join_path": func(l *lua.LState) int {
+				argc := l.GetTop()
+				base := l.CheckString(1)
+				var pathArgs []string
+				for i := 2; i <= argc; i++ {
+					pathArgs = append(pathArgs, l.CheckString(i))
+				}
+				result, err := url.JoinPath(base, pathArgs...)
+				l.Push(lua.LString(result))
+				l.Push(luar.New(l, err))
+				return 2
+			},
+			"query_escape": func(l *lua.LState) int {
+				query := l.CheckString(1)
+				l.Push(lua.LString(url.QueryEscape(query)))
+				return 1
+			},
+			"query_unescape": func(l *lua.LState) int {
+				query := l.CheckString(1)
+				result, err := url.QueryUnescape(query)
+				l.Push(lua.LString(result))
+				l.Push(luar.New(l, err))
+				return 1
+			},
+		})
+		l.Push(t)
+		return 1
+	})
 
 	lState.PreloadModule("config", config.PreloadModule)
 	lState.PreloadModule("events", events.PreloadModule)
