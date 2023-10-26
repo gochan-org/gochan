@@ -2,11 +2,11 @@ package manage
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/Eggbertx/durationutil"
+	"github.com/gochan-org/gochan/pkg/gcplugin/luautil"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/rs/zerolog"
 	lua "github.com/yuin/gopher-lua"
@@ -17,76 +17,12 @@ const (
 	tableArgFmt = "invalid value for key %q passed to table, expected %s, got %s"
 )
 
-func tableCheck(key string, val lua.LValue, ban *gcsql.IPBan) error {
-	valType := val.Type()
-	var err error
-	switch key {
-	case "board":
-		fallthrough
-	case "BoardID":
-		fallthrough
-	case "board_id":
-		switch valType {
-		case lua.LTNil:
-			// global
-		case lua.LTNumber:
-			ban.BoardID = new(int)
-			*ban.BoardID = int(lua.LVAsNumber(val))
-		case lua.LTString:
-			boardDir := lua.LVAsString(val)
-			if boardDir != "" {
-				var id int
-				if id, err = gcsql.GetBoardIDFromDir(boardDir); err != nil {
-					return err
-				}
-				ban.BoardID = new(int)
-				*ban.BoardID = id
-			}
-		default:
-			return fmt.Errorf(tableArgFmt, key, "string, number, or nil", valType)
-		}
-	case "post_id":
-		fallthrough
-	case "post":
-		fallthrough
-	case "PostID":
-		if valType != lua.LTNumber {
-			return fmt.Errorf(tableArgFmt, key, "number", valType)
-		}
-	case "is_thread_ban":
-		fallthrough
-	case "IsThreadBan":
-		ban.IsThreadBan = lua.LVAsBool(val)
-	case "appeal_after":
-		fallthrough
-	case "AppealAfter":
-		str := lua.LVAsString(val)
-		dur, err := durationutil.ParseLongerDuration(str)
-		if err != nil {
-			return err
-		}
-		ban.AppealAt = time.Now().Add(dur)
-	case "can_appeal":
-		fallthrough
-	case "appealable":
-		fallthrough
-	case "CanAppeal":
-		ban.CanAppeal = lua.LVAsBool(val)
-	case "staff_note":
-		fallthrough
-	case "StaffNote":
-		ban.StaffNote = lua.LVAsString(val)
-	}
-	return nil
-}
-
 func luaBanIP(l *lua.LState) int {
-	now := time.Now()
 	ban := &gcsql.IPBan{
 		IP: l.CheckString(1),
 	}
 	ban.IsActive = true
-	ban.AppealAt = now
+	ban.AppealAt = time.Now()
 	ban.CanAppeal = true
 
 	durOrNil := l.CheckAny(2)
@@ -124,16 +60,59 @@ func luaBanIP(l *lua.LState) int {
 
 	if l.GetTop() > 4 {
 		t := l.CheckTable(5)
-		var failed bool
-		t.ForEach(func(keyLV, val lua.LValue) {
-			key := lua.LVAsString(keyLV)
-			if err = tableCheck(key, val, ban); err != nil {
-				l.Push(luar.New(l, err))
+		luautil.GetTableValueAliased(t)
+
+		val, key := luautil.GetTableValueAliased(t, "board", "BoardID", "board_id")
+		valType := val.Type()
+		switch valType {
+		case lua.LTNil:
+			// global
+		case lua.LTNumber:
+			ban.BoardID = new(int)
+			*ban.BoardID = int(lua.LVAsNumber(val))
+		case lua.LTString:
+			boardDir := lua.LVAsString(val)
+			if boardDir != "" {
+				var id int
+				if id, err = gcsql.GetBoardIDFromDir(boardDir); err != nil {
+					l.Push(luar.New(l, err))
+					return 1
+				}
+				ban.BoardID = new(int)
+				*ban.BoardID = id
 			}
-		})
-		if failed {
-			return 1
+		default:
+			l.RaiseError(tableArgFmt, key, "string, number, or nil", valType)
+			return 0
 		}
+		val, key = luautil.GetTableValueAliased(t, "post", "PostID", "post_id")
+		valType = val.Type()
+		if valType == lua.LTNumber {
+			ban.BannedForPostID = new(int)
+			*ban.BannedForPostID = int(lua.LVAsNumber(val))
+		} else if valType != lua.LTNil {
+			l.RaiseError(tableArgFmt, key, "number", valType)
+			return 0
+		}
+
+		val, _ = luautil.GetTableValueAliased(t, "is_thread_ban", "IsThreadBan")
+		ban.IsThreadBan = lua.LVAsBool(val)
+
+		durOrNil, _ = luautil.GetTableValueAliased(t, "appeal_after", "AppealAfter")
+		if durOrNil != lua.LNil {
+			str := lua.LVAsString(durOrNil)
+			dur, err := durationutil.ParseLongerDuration(str)
+			if err != nil {
+				l.Push(luar.New(l, err))
+				return 1
+			}
+			ban.AppealAt = time.Now().Add(dur)
+			ban.CanAppeal = true
+		}
+		val, _ = luautil.GetTableValueAliased(t, "can_appeal", "appealable", "CanAppeal")
+		ban.CanAppeal = lua.LVAsBool(val)
+		val, _ = luautil.GetTableValueAliased(t, "staff_note", "StaffNote")
+		ban.StaffNote = lua.LVAsString(val)
 	}
 	if ban.StaffID < 1 {
 		l.Push(luar.New(l, errors.New("missing staff key in table")))

@@ -23,3 +23,14 @@ func LValueToInterface(l *lua.LState, v lua.LValue) interface{} {
 	}
 	return nil
 }
+
+func GetTableValueAliased(t *lua.LTable, keys ...string) (lua.LValue, string) {
+	val := lua.LNil
+	for _, key := range keys {
+		val = t.RawGetString(key)
+		if val != lua.LNil {
+			return val, key
+		}
+	}
+	return val, ""
+}
