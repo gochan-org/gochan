@@ -10,17 +10,33 @@ local base_headers = {}
 base_headers["User-Agent"] = "gochan/3.8 | Akismet/0.1"
 base_headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-local key = "YOUR_KEY_HERE"
+local key = "" -- read from akismet_key.txt
 
 local function check_api_key()
-	local resp, err = http.request("POST", check_key_url, {
-		body = "blog=" .. url.query_escape("http://" .. config.system_critical_config().SiteDomain) ..
-				"&key=" .. key,
+	local form = "blog=" .. url.query_escape("http://" .. config.system_critical_config().SiteDomain) ..
+		"&key=" .. key
+	local resp, err = http.post(check_key_url, {
+		form = form,
 		headers = base_headers
 	})
 	if(err ~= nil) then
-		log.error_log(err):Str("url", check_key_url):Send()
+		log.error_log(err):
+			Str("url", check_key_url):
+			Msg("Unable to check Akismet API key")
 		return err
+	end
+	local errEv = log.error_log():
+		Str("url", check_key_url):
+		Str("form", form)
+	
+	local msg_header = "X-Akismet-Debug-Help"
+	local msg = resp.headers[msg_header]
+	if(msg == nil) then
+		msg_header = "X-Akismet-Alert-Msg"
+		msg = resp.headers[msg_header]
+	end
+	if(msg ~= nil) then
+		errEv:Str(msg_header, msg)
 	end
 	if(resp.body ~= "valid") then
 		log.error_log():Str("key", key):Msg("invalid Akismet API key or request")
@@ -48,7 +64,7 @@ local function check_akismet(post, user_agent, referrer)
 		headers = base_headers
 	})
 	if(err ~= nil) then
-		log.error_log(err):Caller()
+		log.error_log(err):
 			:Str("subject", "akismet")
 			:Msg("Unable to check Akismet")
 		return err
@@ -69,6 +85,10 @@ local function check_akismet(post, user_agent, referrer)
 	warn_ev:Discard()
 	return nil
 end
+
+local akismet_file = assert(io.open("/etc/gochan/akismet_key.txt", "r"))
+key = akismet_file:read("*a")
+
 
 local err = check_api_key()
 if(err ~= nil) then
