@@ -10,7 +10,7 @@ local base_headers = {}
 base_headers["User-Agent"] = "gochan/3.8 | Akismet/0.1"
 base_headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-local key = "b78cd8a0ba8c"
+local key = "YOUR_KEY_HERE"
 
 local function check_api_key()
 	local resp, err = http.request("POST", check_key_url, {
