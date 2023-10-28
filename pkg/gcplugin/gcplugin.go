@@ -23,6 +23,7 @@ import (
 	luaFilePath "github.com/vadv/gopher-lua-libs/filepath"
 	luaStrings "github.com/vadv/gopher-lua-libs/strings"
 	lua "github.com/yuin/gopher-lua"
+	luajson "layeh.com/gopher-json"
 )
 
 var (
@@ -48,6 +49,7 @@ func preloadLua() {
 	luaFilePath.Preload(lState)
 	luaStrings.Preload(lState)
 	async.Init(lState)
+	luajson.Preload(lState)
 
 	lState.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
 	lState.PreloadModule("url", func(l *lua.LState) int {
@@ -62,6 +64,17 @@ func preloadLua() {
 				}
 				result, err := url.JoinPath(base, pathArgs...)
 				l.Push(lua.LString(result))
+				l.Push(luar.New(l, err))
+				return 2
+			},
+			"path_escape": func(l *lua.LState) int {
+				escaped := url.PathEscape(l.CheckString(1))
+				l.Push(lua.LString(escaped))
+				return 1
+			},
+			"path_unescape": func(l *lua.LState) int {
+				unescaped, err := url.PathUnescape(l.CheckString(1))
+				l.Push(lua.LString(unescaped))
 				l.Push(luar.New(l, err))
 				return 2
 			},

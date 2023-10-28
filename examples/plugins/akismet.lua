@@ -64,7 +64,7 @@ local function check_akismet(post, user_agent, referrer)
 		headers = base_headers
 	})
 	if(err ~= nil) then
-		log.error_log(err):
+		log.error_log(err)
 			:Str("subject", "akismet")
 			:Msg("Unable to check Akismet")
 		return err
@@ -87,8 +87,8 @@ local function check_akismet(post, user_agent, referrer)
 end
 
 local akismet_file = assert(io.open("/etc/gochan/akismet_key.txt", "r"))
-key = akismet_file:read("*a")
-
+key = assert(akismet_file:read("*a")):gsub("%s+", "")
+akismet_file:close()
 
 local err = check_api_key()
 if(err ~= nil) then
