@@ -3,7 +3,12 @@
 	- The version string of the running Gochan server
 
 # Modules
-The following are modules that can be loaded via `require("modulename")`. See [./examples/plugins/](./examples/plugins/) for usage examples
+The following are modules that can be loaded via `require("modulename")`. See [./examples/plugins/](./examples/plugins/) for usage examples.
+## External modules
+- [async](https://pkg.go.dev/github.com/CuberL/glua-async@v0.0.0-20190614102843-43f22221106d)
+- [filepath](https://pkg.go.dev/github.com/vadv/gopher-lua-libs@v0.5.0/filepath)
+- [json](https://pkg.go.dev/layeh.com/gopher-json@v0.0.0-20201124131017-552bb3c4c3bf)
+- [strings](https://pkg.go.dev/github.com/vadv/gopher-lua-libs@v0.5.0/strings)
 ## config
 - **config.system_critical_config()**
   - Returns the [SystemCriticalConfig](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/config#SystemCriticalConfig)
@@ -65,6 +70,18 @@ staff_note | string | A private note attached to the ban that only staff can see
 	- Returns the configured (or built-in) thumbnail file extension to be used for the given upload extension
 - **uploads.set_thumbnail_ext(upload_ext string, thumbnail_ext string)**
 	- Sets the thumbnail extension to be used for the given upload extension
+
+## url
+- **url.join_path(base string, ext...string)**
+  - Returns a string representing a URL-compatible path, with `ext` joined to `base`
+- **path_escape(path string)**
+  - Returns a string with any special characters escaped to be compatible with URL paths
+- **path_unescape(escaped string)**
+  - Attempts to unescape the given string, and returns the result and any errors (or nil if it was successful)
+- **query_escape(query string)**
+  - Escapes the given string so that it can be used in a URL query
+- **query_unescape(escaped string)**
+  - Attempts to unescape the given query-escaped string, and returns the result and any errors (or nil if it was successful)
 
 
 # Events
