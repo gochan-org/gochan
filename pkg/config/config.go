@@ -224,8 +224,6 @@ type BoardConfig struct {
 	InheritGlobalStyles bool
 	Styles              []Style
 	DefaultStyle        string
-	Sillytags           []string
-	UseSillytags        bool
 	Banners             []PageBanner
 
 	PostConfig

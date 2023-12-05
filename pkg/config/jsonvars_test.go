@@ -42,7 +42,6 @@ const (
 		"DBtype_alt": "postgres",
 		"DBhost": "127.0.0.1:3306",
 		"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
-		"DBhost_alt": "unix(/var/run/mysqld/mysqld.sock)",
 		"DBname": "gochan",
 		"DBusername": "gochan",
 		"DBpassword": "",
@@ -50,8 +49,6 @@ const (
 	
 		"Lockdown": false,
 		"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
-		"Sillytags": ["Admin","Mod","Janitor","Faget","Kick me","Derpy","Troll","worst pony"],
-		"UseSillytags": false,
 		"Modboard": "staff",
 	
 		"SiteName": "Gochan",

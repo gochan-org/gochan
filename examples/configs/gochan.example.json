@@ -10,19 +10,18 @@
 	"TemplateDir": "templates",
 	"LogDir": "log",
 
-	"DBtype": "mysql/postgres",
+	"DBtype": "mysql|postgres|sqlite3",
+	"_DBtype_info":"DBtype refers to the SQL server/library gochan will connect to",
 	"DBhost": "127.0.0.1:3306",
-	"_comment": "gochan can use either a URL or a UNIX socket for MySQL connections",
-	"DBhost_alt": "unix(/var/run/mysqld/mysqld.sock)",
+	"_DBhost_info": "The domain:port or UNIX socket of the form 'unix(/path/to/socket)' of the MySQL/MariaDB or Postgres server, or the path to a SQLite3 database file, (DB file will be created if it doesn't exist)",
 	"DBname": "gochan",
 	"DBusername": "gochan",
 	"DBpassword": "",
 	"DBprefix": "gc_",
+	"_DBprefix_info": "The prefix automataically applied to tables when the database is being provisioned and queried",
 
 	"Lockdown": false,
 	"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
-	"Sillytags": ["Admin","Mod","Janitor","Dweeb","Kick me","Troll","worst pony"],
-	"UseSillytags": false,
 	"Modboard": "staff",
 
 	"SiteName": "Gochan",
@@ -98,13 +97,13 @@
 		"AccountSecret": "your account secret key goes here"
 	},
 	"EnableGeoIP": true,
-	"_comment": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
+	"_EnableGeoIP_info": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
 	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
 	"MaxRecentPosts": 12,
 	"RecentPostsWithNoFile": false,
 	"Verbosity": 0,
 	"EnableAppeals": true,
 	"MaxLogDays": 14,
-	"_comment": "Set RandomSeed to a (preferrably large) string of letters and numbers",
-	"RandomSeed": ""
+	"RandomSeed": "",
+	"_RandomSeed_info": "Set RandomSeed to a (preferrably large) string of letters and numbers"
 }
