@@ -27,7 +27,7 @@ echo "Extracting $RELEASE_GZ"
 tar -xf gochan-v2.12.0_linux.tar.gz
 cd $RELEASE_DIR
 
-cp sample-configs/gochan.example.json gochan.json
+cp examples/configs/gochan.example.json gochan.json
 echo "Modifying $PWD/gochan.json for testing migration"
 sed -i gochan.json \
 	-e 's/"Port": .*/"Port": 9000,/' \

@@ -1,8 +1,8 @@
 # gochan configuration
-See [gochan.example.json](sample-configs/gochan.example.json) for an example gochan.json.
+See [gochan.example.json](examples/configs/gochan.example.json) for an example gochan.json.
 
 ## Server-critical stuff
-* You'll need to edit some of the values (like `ListenIP` and `UseFastCGI` based on your system's setup. For an example nginx configuration, see [gochan-fastcgi.nginx](sample-configs/gochan-fastcgi.nginx) for FastCGI and [gochan-http.nginx](sample-configs/gochan-http.nginx) for passing through HTTP.
+* You'll need to edit some of the values like `ListenIP` and `UseFastCGI` based on your system's setup. For an example nginx configuration, see [gochan-fastcgi.nginx](examples/configs/gochan-fastcgi.nginx) for FastCGI and [gochan-http.nginx](examples/configs/gochan-http.nginx) for passing through HTTP.
 * `DocumentRoot` refers to the root directory on your filesystem where gochan will look for requested files.
 * `TemplateDir` refers to the directory where gochan will load the templates from.
 * `LogDir` refers to the directory where gochan will write the logs to.

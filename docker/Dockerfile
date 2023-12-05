@@ -6,8 +6,8 @@ RUN ["./build-image.sh"]
 
 WORKDIR /opt/gochan
 
-COPY sample-configs/gochan-fastcgi.nginx /etc/nginx/http.d/gochan.conf
-COPY sample-configs/gochan.example.json /etc/gochan/gochan.json
+COPY examples/configs/gochan-fastcgi.nginx /etc/nginx/http.d/gochan.conf
+COPY examples/configs/gochan.example.json /etc/gochan/gochan.json
 
 # Get all
 COPY . .

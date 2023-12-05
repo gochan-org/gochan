@@ -6,8 +6,7 @@ export DEBIAN_FRONTEND=noninteractive
 export GO_VERSION=1.20
 
 if [ -z "$DBTYPE" ]; then
-	echo "DBTYPE environment variable not set, must be 'mysql' or 'postgresql'."
-	echo "sqlite3 support has been dropped but it may come back eventually."
+	echo "DBTYPE environment variable not set, must be 'mysql', 'postgresql', or 'sqlite3'"
 	exit 1
 fi
 echo "Using DBTYPE $DBTYPE"
@@ -40,7 +39,7 @@ if [ "$DBTYPE" == "mysql" ]; then
 	fi
 	wait
 	if [ -d /lib/systemd ]; then
-		cp /vagrant/sample-configs/gochan-mysql.service /lib/systemd/system/gochan.service
+		cp /vagrant/examples/configs/gochan-mysql.service /lib/systemd/system/gochan.service
 		systemctl daemon-reload
 		systemctl enable gochan.service
 	fi
@@ -62,7 +61,7 @@ elif [ "$DBTYPE" == "postgresql" ]; then
 	systemctl start postgresql &
 	wait
 	if [ -d /lib/systemd ]; then
-		cp /vagrant/sample-configs/gochan-postgresql.service /lib/systemd/system/gochan.service
+		cp /vagrant/examples/configs/gochan-postgresql.service /lib/systemd/system/gochan.service
 		systemctl daemon-reload
 		systemctl enable gochan.service
 	fi
@@ -82,7 +81,7 @@ apt-get -y install git subversion mercurial nginx ffmpeg golang-${GO_VERSION}
 ln -sf /usr/lib/go-${GO_VERSION}/bin/* /usr/local/bin/
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
-ln -sf /vagrant/sample-configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
+ln -sf /vagrant/examples/configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
 ln -sf /etc/nginx/sites-available/gochan.nginx /etc/nginx/sites-enabled/
 
 # VirtualBox shared folders don't play nicely with sendfile.
@@ -105,7 +104,7 @@ systemctl restart nginx &
 wait
 
 mkdir -p /etc/gochan
-cp /vagrant/sample-configs/gochan.example.json /etc/gochan/gochan.json
+cp /vagrant/examples/configs/gochan.example.json /etc/gochan/gochan.json
 
 sed -i /etc/gochan/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
