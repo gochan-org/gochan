@@ -185,13 +185,23 @@ func InitConfig(versionStr string) {
 		cfg.WebRoot += "/"
 	}
 
-	if cfg.EnableGeoIP {
-		if _, err = os.Stat(cfg.GeoIPDBlocation); err != nil {
-			gcutil.LogError(err).
+	if !cfg.validGeoIPType() {
+		gcutil.LogFatal().Caller().
+			Str("GeoIPDBType", cfg.GeoIPDBType).
+			Msg("Invalid GeoIPDBType value, valid values are '', 'none', 'legacy', or 'geoip2'")
+	}
+
+	if cfg.GeoIPDBType != "" && cfg.GeoIPDBlocation != "" {
+		if _, err = os.Stat(cfg.GeoIPDBlocation); os.IsNotExist(err) {
+			gcutil.LogWarning().
 				Str("location", cfg.GeoIPDBlocation).
-				Msg("Unable to load GeoIP file location set in gochan.json, disabling GeoIP")
+				Msg("Unable to load GeoIP database location set in gochan.json, disabling GeoIP")
+			cfg.EnableGeoIP = false
+		} else if err != nil {
+			gcutil.LogFatal().Err(err).
+				Str("location", cfg.GeoIPDBlocation).
+				Msg("Unable to load GeoIP database location set in gochan.json")
 		}
-		cfg.EnableGeoIP = false
 	}
 
 	_, zoneOffset := time.Now().Zone()

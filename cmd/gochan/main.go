@@ -30,6 +30,7 @@ func main() {
 		gcsql.Close()
 		gcutil.CloseLog()
 		gcplugin.ClosePlugins()
+		posting.CloseGeoipDB()
 	}()
 
 	fmt.Printf("Starting gochan v%s\n", versionStr)
@@ -53,7 +54,10 @@ func main() {
 		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
 	}
 	events.TriggerEvent("db-connected")
-	fmt.Println("Connected to database")
+	gcutil.LogInfo().
+		Str("dbType", systemCritical.DBtype).
+		Msg("Connected to database")
+
 	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
 		fmt.Println("Failed to initialize the database:", err.Error())
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
@@ -61,8 +65,9 @@ func main() {
 	events.TriggerEvent("db-initialized")
 	parseCommandLine()
 	serverutil.InitMinifier()
-
+	posting.InitGeoIP()
 	posting.InitCaptcha()
+
 	if err = gctemplates.InitTemplates(); err != nil {
 		fmt.Println("Failed initializing templates:", err.Error())
 		gcutil.LogFatal().Err(err).Send()

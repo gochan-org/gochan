@@ -42,8 +42,6 @@ func InitCaptcha() {
 		}
 	}
 	if !typeIsValid {
-		fmt.Printf("Unrecognized Captcha.Type value in configuration: %q, valid values: %v\n",
-			captchaCfg.Type, validCaptchaTypes)
 		gcutil.LogFatal().
 			Str("captchaType", captchaCfg.Type).
 			Msg("Unsupported captcha type set in configuration")

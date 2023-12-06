@@ -192,7 +192,12 @@ type SiteConfig struct {
 	MinifyHTML      bool
 	MinifyJS        bool
 	GeoIPDBlocation string
+	GeoIPDBType     string
 	Captcha         CaptchaConfig
+}
+
+func (sc *SiteConfig) validGeoIPType() bool {
+	return sc.GeoIPDBType == "" || sc.GeoIPDBType == "legacy" || sc.GeoIPDBType == "geoip2"
 }
 
 type CaptchaConfig struct {
