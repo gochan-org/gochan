@@ -1,11 +1,11 @@
 {{define "topbar" -}}
 <div id="topbar">
-	<div class="topbar-section"><a href="{{webPath "/"}}" class="topbar-item">home</a></div>
+	<div class="topbar-section"><a href="{{webPathDir "/"}}" class="topbar-item">home</a></div>
 	{{- range $s, $section := .sections -}}
 		<div class="topbar-section">
 		{{- with $sectionBoards := sectionBoards $section.ID -}}
 			{{range $b, $board := $sectionBoards -}}
-				<a href="{{webPath $board.Dir}}/" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>
+				<a href="{{webPathDir $board.Dir}}" class="topbar-item" title="{{$board.Title}}">/{{$board.Dir}}/</a>
 			{{- end -}}
 		{{- end -}}
 		</div>

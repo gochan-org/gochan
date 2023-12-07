@@ -38,7 +38,7 @@
 	<table id="pages">
 		<tr>
 			{{- with .prevPage -}}
-				<td><a href="{{webPath "/" $.board.Dir (printf "%d.html" $.prevPage) }}">Prev</a></td>
+				<td><a href="{{webPathDir "/" $.board.Dir (printf "%d.html" $.prevPage) }}">Prev</a></td>
 			{{- end -}}
 			<td>{{range $_,$i := makeLoop .numPages 1 -}}
 				{{- if eq $.currentPage $i -}}
@@ -48,12 +48,12 @@
 				{{- end -}}
 			{{- end}}</td>
 			{{- with .nextPage -}}
-				<td><a href="{{webPath "/" $.board.Dir (printf "%d.html" $.nextPage) }}">Next</a></td>
+				<td><a href="{{webPathDir "/" $.board.Dir (printf "%d.html" $.nextPage) }}">Next</a></td>
 			{{- end -}}
 		</tr>
 	</table>
 	<span id="boardmenu-bottom">
-		[<a href="{{webPath `/`}}">home</a>]&nbsp;
+		[<a href="{{webPathDir `/`}}">home</a>]&nbsp;
 		[{{range $i, $boardlink := $.boards -}}
 			{{- if gt $i 0}}/{{end}} <a href="{{$boardlink.WebPath `` `boardPage`}}/">{{$boardlink.Dir}}</a> {{end}}]
 	</span>

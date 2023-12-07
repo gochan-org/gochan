@@ -12,6 +12,6 @@
 		</select></td></tr>
 	</table>
 	<input type="submit" value="Move thread" />
-	<input type="button" value="Cancel" onclick="window.location = '{{webPath .srcBoard.Dir}}/'">
+	<input type="button" value="Cancel" onclick="window.location = '{{webPathDir .srcBoard.Dir}}'">
 </form>
 {{- template "page_footer.html" .}}

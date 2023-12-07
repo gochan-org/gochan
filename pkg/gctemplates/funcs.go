@@ -216,6 +216,13 @@ var funcMap = template.FuncMap{
 	"webPath": func(part ...string) string {
 		return config.WebPath(part...)
 	},
+	"webPathDir": func(part ...string) string {
+		dir := config.WebPath(part...)
+		if len(dir) > 0 && dir[len(dir)-1] != '/' {
+			dir += "/"
+		}
+		return dir
+	},
 	"sectionBoards": func(sectionID int) []gcsql.Board {
 		var boards []gcsql.Board
 		for _, board := range gcsql.AllBoards {

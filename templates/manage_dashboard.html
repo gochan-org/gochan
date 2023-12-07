@@ -13,7 +13,7 @@
 {{with $.boards}}
 	<ul>
 	{{range $b, $board := $.boards}}
-		<li><a href="{{webPath $board.Dir}}/">/{{$board.Dir}}/</a> - {{$board.Title}}</li>
+		<li><a href="{{webPathDir $board.Dir}}">/{{$board.Dir}}/</a> - {{$board.Title}}</li>
 	{{end}}
 	</ul>
 {{else}}
