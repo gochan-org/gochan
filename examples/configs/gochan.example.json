@@ -2,7 +2,7 @@
 	"ListenIP": "127.0.0.1",
 	"Port": 8080,
 	"FirstPage": ["index.html","firstrun.html","1.html"],
-	"Username": "www-data",
+	"Username": "",
 	"UseFastCGI": false,
 	"DebugMode": false,
 
@@ -27,7 +27,6 @@
 	"SiteName": "Gochan",
 	"SiteSlogan": "",
 	"SiteDomain": "127.0.0.1",
-	"SiteHeaderURL": "",
 	"WebRoot": "/",
 
 	"Styles": [
