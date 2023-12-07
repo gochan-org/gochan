@@ -26,8 +26,14 @@ window.toBottom = toBottom;
 $(() => {
 	const style = getStorageVal("style", "");
 	const themeElem = document.getElementById("theme");
-	if(themeElem && style !== "")
-		themeElem.setAttribute("href", `${webroot}/css/${style}`);
+	if(webroot[webroot.length-1] !== "/")
+		webroot += "/";
+
+	if(themeElem) {
+		themeElem.setAttribute("default-href", themeElem.getAttribute("href"));
+		if(style !== "")
+			themeElem.setAttribute("href", `${webroot}css/${style}`);
+	}
 
 	const pageThread = getPageThread();
 	initStaff()

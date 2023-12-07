@@ -98,10 +98,6 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 	setElementValue(newVal: boolean) {
 		this.element.prop("checked", newVal);
 	}
-	getStorageValue() {
-		const val = super.getStorageValue() as any as string;
-		return val === "true";
-	}
 }
 
 interface MinMax {
@@ -171,13 +167,19 @@ export function setCustomCSS() {
 }
 
 $(() => {
-	const styleOptions = [];
+	const styleOptions = [{text: "Default", val: ""}];
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
 	}
-	settings.set("style", new DropdownSetting("style", "Style", styleOptions, defaultStyle, function() {
-		document.getElementById("theme").setAttribute("href",
-			`${webroot}css/${this.getElementValue()}`);
+	settings.set("style", new DropdownSetting("style", "Style", styleOptions, "", function() {
+		const val:string = this.getElementValue();
+		const themeElem = document.getElementById("theme");
+		if(!themeElem) return;
+		if(val === "" && themeElem.hasAttribute("default-href")) {
+			themeElem.setAttribute("href", themeElem.getAttribute("default-href"));
+		} else if(val !== "") {
+			themeElem.setAttribute("href", `${webroot}css/${val}`);
+		}
 	}) as Setting);
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
 	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", true, initPostPreviews));
