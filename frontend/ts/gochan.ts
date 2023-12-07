@@ -24,9 +24,11 @@ export function toBottom() {
 window.toBottom = toBottom;
 
 $(() => {
-	const style = getStorageVal("style", defaultStyle);
+	const style = getStorageVal("style", "");
 	const themeElem = document.getElementById("theme");
-	if(themeElem) themeElem.setAttribute("href", `${webroot}css/${style}`);
+	if(themeElem && style !== "")
+		themeElem.setAttribute("href", `${webroot}/css/${style}`);
+
 	const pageThread = getPageThread();
 	initStaff()
 		.then(createStaffMenu)

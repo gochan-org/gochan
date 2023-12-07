@@ -78,7 +78,7 @@ function qrUploadChange() {
 
 function setButtonTimeout(prefix = "", cooldown = 5) {
 	let currentSeconds = cooldown;
-	let interval: NodeJS.Timer = null;
+	let interval: NodeJS.Timeout = null;
 	const timeoutCB = () => {
 		if(currentSeconds === 0) {
 			setSubmitButtonEnabled(true);
