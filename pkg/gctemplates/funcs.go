@@ -210,6 +210,23 @@ var funcMap = template.FuncMap{
 		}
 		return dir
 	},
+	"getBoardDefaultStyle": func(dir string) string {
+		boardCfg := config.GetBoardConfig(dir)
+		if !boardCfg.IsGlobal() {
+			// /<board>/board.json exists, overriding the default them and theme set in SQL
+			return boardCfg.DefaultStyle
+		}
+		var defaultStyle string
+		err := gcsql.QueryRowSQL(`SELECT default_style FROM DBPREFIXboards WHERE dir = ?`,
+			[]any{dir}, []any{&defaultStyle})
+		if err != nil || defaultStyle == "" {
+			gcutil.LogError(err).Caller().
+				Str("board", dir).
+				Msg("Unable to get default style attribute of board")
+			return boardCfg.DefaultStyle
+		}
+		return defaultStyle
+	},
 	"boardPagePath": func(board *gcsql.Board, page int) string {
 		return config.WebPath(board.Dir, strconv.Itoa(page)+".html")
 	},

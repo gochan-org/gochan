@@ -13,7 +13,11 @@
 		<title>{{with $.pageTitle}}{{$.pageTitle}} - {{end}}{{.siteConfig.SiteName}}</title>
 	{{- end}}
 	<link rel="stylesheet" href="{{webPath "/css/global.css"}}" />
-	<link id="theme" rel="stylesheet" href="{{webPath "/css/" .boardConfig.DefaultStyle}}" />
+	{{with .board -}}
+		<link id="theme" rel="stylesheet" href="{{webPath "/css/" (getBoardDefaultStyle $.board.Dir)}}" />
+	{{- else -}}
+		<link id="theme" rel="stylesheet" href="{{webPath "/css/" .boardConfig.DefaultStyle}}" />
+	{{- end}}
 	<link rel="shortcut icon" href="{{webPath "/favicon.png"}}">
 	<script type="text/javascript" src="{{webPath "/js/consts.js"}}"></script>
 	<script type="text/javascript" src="{{webPath "/js/gochan.js"}}"></script>

@@ -244,6 +244,12 @@ type BoardConfig struct {
 	RenderURLsAsLinks      bool
 	ThreadsPerPage         int
 	EnableGeoIP            bool
+	isGlobal               bool
+}
+
+// IsGlobal returns
+func (bc *BoardConfig) IsGlobal() bool {
+	return bc.isGlobal
 }
 
 // Style represents a theme (Pipes, Dark, etc)
@@ -347,7 +353,7 @@ func GetBoardConfig(board string) *BoardConfig {
 func UpdateBoardConfig(dir string) error {
 	ba, err := os.ReadFile(path.Join(cfg.DocumentRoot, dir, "board.json"))
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if os.IsNotExist(err) {
 			// board doesn't have a custom config, use global config
 			return nil
 		}
@@ -357,7 +363,7 @@ func UpdateBoardConfig(dir string) error {
 	if err = json.Unmarshal(ba, &boardcfg); err != nil {
 		return err
 	}
-
+	boardcfg.isGlobal = false
 	boardConfigs[dir] = boardcfg
 	return nil
 }
