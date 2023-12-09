@@ -92,6 +92,9 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 			checked: this.getStorageValue()
 		});
 	}
+	getStorageValue(): boolean {
+		return super.getStorageValue() as any === "true";
+	}
 	getElementValue() {
 		return this.element.prop("checked") as boolean;
 	}
@@ -118,7 +121,7 @@ class NumberSetting extends Setting<number, HTMLInputElement> {
 		this.element = this.createElement("<input />", props).val(this.getStorageValue());
 	}
 	getStorageValue() {
-		let val = Number.parseFloat(super.getStorageValue() as unknown as string);
+		let val = Number.parseFloat(super.getStorageValue() as any);
 		if(isNaN(val))
 			val = this.defaultVal;
 		return val;
