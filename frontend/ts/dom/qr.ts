@@ -234,6 +234,8 @@ export function initQR() {
 					url: data.thread,
 					success: updateThreadSuccess
 				});
+				if(!getBooleanStorageVal("persistentqr", false))
+					closeQR();
 				return false;
 			},
 			error: (_jqXHR, _status, error) => {
