@@ -1,0 +1,8 @@
+<div style="text-align: center;">
+	<b>Editing: {{$.currentTemplate}}</b>
+	<form action="{{webPath "manage/templates"}}" method="POST" id="template-override">
+		<textarea class="template-text" rows="16" spellcheck="false">{{.templateText}}</textarea>
+		<input type="submit" name="dooverride" value="Submit" onsubmit="return prompt('Are you sure you want to override the template?')">
+		<input type="submit" name="cancel" value="Cancel"/>
+	</form>
+</div>

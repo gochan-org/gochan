@@ -579,6 +579,19 @@ func registerAdminPages() {
 				return outputStr, nil
 			}},
 		Action{
+			ID:          "templates",
+			Title:       "Creat/Edit template overrides",
+			Permissions: AdminPerms,
+			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+				buf := bytes.NewBufferString("")
+
+				serverutil.MinifyTemplate(gctemplates.ManageTemplateOverride, map[string]any{
+					"currentTemplate": "manage_stuff.html",
+					"templateText":    "template goes here",
+				}, buf, "text/html")
+				return buf.String(), nil
+			}},
+		Action{
 			ID:          "wordfilters",
 			Title:       "Wordfilters",
 			Permissions: AdminPerms,

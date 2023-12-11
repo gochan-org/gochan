@@ -11,35 +11,36 @@ import (
 )
 
 var (
-	Banpage             *template.Template
-	Captcha             *template.Template
-	Catalog             *template.Template
-	ErrorPage           *template.Template
-	FrontPage           *template.Template
-	BoardPage           *template.Template
-	JsConsts            *template.Template
-	ManageAnnouncements *template.Template
-	ManageAppeals       *template.Template
-	ManageBans          *template.Template
-	ManageBoards        *template.Template
-	ManageDashboard     *template.Template
-	ManageFileBans      *template.Template
-	ManageFixThumbnails *template.Template
-	ManageIPSearch      *template.Template
-	ManageLogin         *template.Template
-	ManageNameBans      *template.Template
-	ManageRecentPosts   *template.Template
-	ManageReports       *template.Template
-	ManageSections      *template.Template
-	ManageStaff         *template.Template
-	ManageThreadAttrs   *template.Template
-	ManageWordfilters   *template.Template
-	ManageViewLog       *template.Template
-	MoveThreadPage      *template.Template
-	PageHeader          *template.Template
-	PageFooter          *template.Template
-	PostEdit            *template.Template
-	ThreadPage          *template.Template
+	Banpage                *template.Template
+	Captcha                *template.Template
+	Catalog                *template.Template
+	ErrorPage              *template.Template
+	FrontPage              *template.Template
+	BoardPage              *template.Template
+	JsConsts               *template.Template
+	ManageAnnouncements    *template.Template
+	ManageAppeals          *template.Template
+	ManageBans             *template.Template
+	ManageBoards           *template.Template
+	ManageDashboard        *template.Template
+	ManageFileBans         *template.Template
+	ManageFixThumbnails    *template.Template
+	ManageIPSearch         *template.Template
+	ManageLogin            *template.Template
+	ManageNameBans         *template.Template
+	ManageRecentPosts      *template.Template
+	ManageReports          *template.Template
+	ManageSections         *template.Template
+	ManageStaff            *template.Template
+	ManageTemplateOverride *template.Template
+	ManageThreadAttrs      *template.Template
+	ManageWordfilters      *template.Template
+	ManageViewLog          *template.Template
+	MoveThreadPage         *template.Template
+	PageHeader             *template.Template
+	PageFooter             *template.Template
+	PostEdit               *template.Template
+	ThreadPage             *template.Template
 )
 
 func LoadTemplate(files ...string) (*template.Template, error) {
@@ -163,6 +164,12 @@ func templateLoading(t string, buildAll bool) error {
 		ManageBoards, err = LoadTemplate("manage_boards.html")
 		if err != nil {
 			return templateError("manage_boards.html", err)
+		}
+	}
+	if buildAll || t == "managetemplateoverride" {
+		ManageTemplateOverride, err = LoadTemplate("manage_templateoverride.html")
+		if err != nil {
+			return templateError("manage_templateoverride.html", err)
 		}
 	}
 	if buildAll || t == "managethreadattrs" {
