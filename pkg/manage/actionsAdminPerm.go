@@ -73,7 +73,6 @@ func registerAdminPages() {
 					if announcement.ID < 1 {
 						return "", fmt.Errorf("no announcement found with id %d", editID)
 					}
-					fmt.Println(announcement)
 					if request.PostFormValue("doedit") == "Submit" {
 						// announcement update submitted
 						announcement.Subject = request.PostFormValue("subject")
@@ -585,9 +584,9 @@ func registerAdminPages() {
 			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 				buf := bytes.NewBufferString("")
 
-				serverutil.MinifyTemplate(gctemplates.ManageTemplateOverride, map[string]any{
-					"currentTemplate": "manage_stuff.html",
-					"templateText":    "template goes here",
+				serverutil.MinifyTemplate(gctemplates.ManageTemplates, map[string]any{
+					"template":     "manage_stuff.html",
+					"templateText": "template goes here",
 				}, buf, "text/html")
 				return buf.String(), nil
 			}},

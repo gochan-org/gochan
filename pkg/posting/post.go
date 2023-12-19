@@ -51,7 +51,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				Bytes("stack", debug.Stack()).
 				Msg("Recovered from panic")
 			debug.PrintStack()
-			fmt.Println("Recovered from panic in MakePost:", a)
 		}
 		errEv.Discard()
 		infoEv.Discard()

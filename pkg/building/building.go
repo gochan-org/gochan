@@ -84,7 +84,7 @@ func BuildFrontPage() error {
 	errEv := gcutil.LogError(nil).
 		Str("template", "front")
 	defer errEv.Discard()
-	err := gctemplates.InitTemplates("front")
+	err := gctemplates.InitTemplates(gctemplates.FrontPage)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Error loading front page template: " + err.Error())
@@ -150,7 +150,7 @@ func BuildPageFooter(writer io.Writer) (err error) {
 // BuildJS minifies (if enabled) consts.js, which is built from a template
 func BuildJS() error {
 	// build consts.js from template
-	err := gctemplates.InitTemplates("js")
+	err := gctemplates.InitTemplates(gctemplates.JsConsts)
 	errEv := gcutil.LogError(nil).Str("building", "consts.js")
 	defer errEv.Discard()
 	if err != nil {

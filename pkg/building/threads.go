@@ -52,7 +52,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		errEv.Caller().Msg("non-OP passed to BuildThreadPages")
 		return gcsql.ErrNotTopPost
 	}
-	err := gctemplates.InitTemplates("threadpage")
+	err := gctemplates.InitTemplates(gctemplates.ThreadPage)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err

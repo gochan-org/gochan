@@ -1,6 +1,7 @@
 -- testing manage page registering from Lua plugins
 local strings = require("strings")
 local manage = require("manage")
+local serverutil = require("serverutil")
 
 manage.register_manage_page("mgmtplugintest",
 	"Staff Plugin Testing",
@@ -26,7 +27,7 @@ manage.register_manage_page("templateplugintest",
 		end
 		
 		buf = strings.new_builder()
-		err = minify_template(tmpl, {
+		err = serverutil.minify_template(tmpl, {
 			staff = staff
 		}, buf, "text/html")
 
