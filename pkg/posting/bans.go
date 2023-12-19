@@ -18,7 +18,7 @@ import (
 
 func showBanpage(ban *gcsql.IPBan, post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, _ *http.Request) {
 	banPageBuffer := bytes.NewBufferString("")
-	err := serverutil.MinifyTemplate(gctemplates.Banpage, map[string]interface{}{
+	err := serverutil.MinifyTemplate(gctemplates.BanPage, map[string]interface{}{
 		"systemCritical": config.GetSystemCriticalConfig(),
 		"siteConfig":     config.GetSiteConfig(),
 		"boardConfig":    config.GetBoardConfig(postBoard.Dir),

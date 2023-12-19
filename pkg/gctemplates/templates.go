@@ -1,6 +1,7 @@
 package gctemplates
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"os"
@@ -10,53 +11,184 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-var (
-	Banpage             *template.Template
-	Captcha             *template.Template
-	Catalog             *template.Template
-	ErrorPage           *template.Template
-	FrontPage           *template.Template
-	BoardPage           *template.Template
-	JsConsts            *template.Template
-	ManageAnnouncements *template.Template
-	ManageAppeals       *template.Template
-	ManageBans          *template.Template
-	ManageBoards        *template.Template
-	ManageDashboard     *template.Template
-	ManageFileBans      *template.Template
-	ManageFixThumbnails *template.Template
-	ManageIPSearch      *template.Template
-	ManageLogin         *template.Template
-	ManageNameBans      *template.Template
-	ManageRecentPosts   *template.Template
-	ManageReports       *template.Template
-	ManageSections      *template.Template
-	ManageStaff         *template.Template
-	ManageThreadAttrs   *template.Template
-	ManageWordfilters   *template.Template
-	ManageViewLog       *template.Template
-	MoveThreadPage      *template.Template
-	PageHeader          *template.Template
-	PageFooter          *template.Template
-	PostEdit            *template.Template
-	ThreadPage          *template.Template
+const (
+	BanPage             = "banpage.html"
+	BoardPage           = "boardpage.html"
+	Captcha             = "captcha.html"
+	Catalog             = "catalog.html"
+	JsConsts            = "consts.js"
+	ErrorPage           = "error.html"
+	FrontPage           = "front.html"
+	ManageAnnouncements = "manage_announcements.html"
+	ManageAppeals       = "manage_appeals.html"
+	ManageBans          = "manage_bans.html"
+	ManageBoards        = "manage_boards.html"
+	ManageDashboard     = "manage_dashboard.html"
+	ManageFileBans      = "manage_filebans.html"
+	ManageFixThumbnails = "manage_fixthumbnails.html"
+	ManageIPSearch      = "manage_ipsearch.html"
+	ManageLogin         = "manage_login.html"
+	ManageNameBans      = "manage_namebans.html"
+	ManageRecentPosts   = "manage_recentposts.html"
+	ManageReports       = "manage_reports.html"
+	ManageSections      = "manage_sections.html"
+	ManageStaff         = "manage_staff.html"
+	ManageTemplates     = "manage_templateoverride.html"
+	ManageThreadAttrs   = "manage_threadattrs.html"
+	ManageViewLog       = "manage_viewlog.html"
+	ManageWordfilters   = "manage_wordfilters.html"
+	MoveThreadPage      = "movethreadpage.html"
+	PageFooter          = "page_footer.html"
+	PageHeader          = "page_header.html"
+	PostEdit            = "post_edit.html"
+	ThreadPage          = "threadpage.html"
 )
 
-func LoadTemplate(files ...string) (*template.Template, error) {
+var (
+	ErrUnrecognizedTemplate = errors.New("unrecognized template")
+
+	templateMap = map[string]*gochanTemplate{
+		BanPage: {
+			files: []string{"banpage.html", "page_footer.html"},
+		},
+		BoardPage: {
+			files: []string{"boardpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},
+		},
+		Captcha: {
+			files: []string{"captcha.html"},
+		},
+		Catalog: {
+			files: []string{"catalog.html", "topbar.html", "page_header.html", "page_footer.html"},
+		},
+		JsConsts: {
+			files: []string{"consts.js"},
+		},
+		ErrorPage: {
+			files: []string{"error.html"},
+		},
+		FrontPage: {
+			files: []string{"front.html", "topbar.html", "front_intro.html", "page_header.html", "page_footer.html"},
+		},
+		ManageAnnouncements: {
+			files: []string{"manage_announcements.html", "page_header.html", "topbar.html", "page_footer.html"},
+		},
+		ManageAppeals: {
+			files: []string{"manage_appeals.html"},
+		},
+		ManageBans: {
+			files: []string{"manage_bans.html"},
+		},
+		ManageBoards: {
+			files: []string{"manage_boards.html"},
+		},
+		ManageDashboard: {
+			files: []string{"manage_dashboard.html"},
+		},
+		ManageFileBans: {
+			files: []string{"manage_filebans.html"},
+		},
+		ManageFixThumbnails: {
+			files: []string{"manage_fixthumbnails.html"},
+		},
+		ManageIPSearch: {
+			files: []string{"manage_ipsearch.html"},
+		},
+		ManageLogin: {
+			files: []string{"manage_login.html"},
+		},
+		ManageNameBans: {
+			files: []string{"manage_namebans.html"},
+		},
+		ManageRecentPosts: {
+			files: []string{"manage_recentposts.html"},
+		},
+		ManageReports: {
+			files: []string{"manage_reports.html"},
+		},
+		ManageSections: {
+			files: []string{"manage_sections.html"},
+		},
+		ManageStaff: {
+			files: []string{"manage_staff.html"},
+		},
+		ManageTemplates: {
+			files: []string{"manage_templateoverride.html"},
+		},
+		ManageThreadAttrs: {
+			files: []string{"manage_threadattrs.html"},
+		},
+		ManageViewLog: {
+			files: []string{"manage_viewlog.html"},
+		},
+		ManageWordfilters: {
+			files: []string{"manage_wordfilters.html"},
+		},
+		MoveThreadPage: {
+			files: []string{"movethreadpage.html", "page_header.html", "topbar.html", "page_footer.html"},
+		},
+		PageFooter: {
+			files: []string{"page_footer.html"},
+		},
+		PageHeader: {
+			files: []string{"page_header.html", "topbar.html"},
+		},
+		PostEdit: {
+			files: []string{"post_edit.html", "page_header.html", "topbar.html", "page_footer.html"},
+		},
+		ThreadPage: {
+			files: []string{"threadpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},
+		},
+	}
+)
+
+type gochanTemplate struct {
+	files []string
+	tmpl  *template.Template
+}
+
+func (gt *gochanTemplate) Load() (err error) {
+	gt.tmpl, err = loadTemplate(gt.files...)
+	return err
+}
+
+func (gt *gochanTemplate) Template() *template.Template {
+	return gt.tmpl
+}
+
+func GetTemplate(name string) (*template.Template, error) {
+	gctmpl, ok := templateMap[name]
+	if !ok {
+		fmt.Printf("Unrecognized template %q\n", name)
+		return nil, ErrUnrecognizedTemplate
+	}
+	if gctmpl.tmpl != nil {
+		return gctmpl.tmpl, nil
+	}
+	var err error
+	gctmpl.tmpl, err = loadTemplate(gctmpl.files...)
+	return gctmpl.tmpl, err
+}
+
+func loadTemplate(files ...string) (*template.Template, error) {
 	var templates []string
 	templateDir := config.GetSystemCriticalConfig().TemplateDir
+	var foundFiles []string
 	for i, file := range files {
+		foundFiles = append(foundFiles, file)
 		templates = append(templates, file)
 		tmplPath := path.Join(templateDir, "override", file)
 
-		if _, err := os.Stat(tmplPath); !os.IsNotExist(err) {
-			files[i] = tmplPath
+		if _, err := os.Stat(tmplPath); err == nil {
+			foundFiles[i] = tmplPath
+		} else if os.IsNotExist(err) {
+			foundFiles[i] = path.Join(templateDir, file)
 		} else {
-			files[i] = path.Join(templateDir, file)
+			return nil, err
 		}
 	}
 
-	return template.New(templates[0]).Funcs(funcMap).ParseFiles(files...)
+	tmpl, err := template.New(templates[0]).Funcs(funcMap).ParseFiles(foundFiles...)
+	return tmpl, templateError(templates[0], err)
 }
 
 func ParseTemplate(name, tmplStr string) (*template.Template, error) {
@@ -69,202 +201,30 @@ func templateError(name string, err error) error {
 	}
 	templateDir := config.GetSystemCriticalConfig().TemplateDir
 
-	return fmt.Errorf("failed loading template '%s/%s': %s",
+	return fmt.Errorf("failed loading template '%s: %s': %s",
 		templateDir, name, err.Error())
 }
 
 // InitTemplates loads the given templates by name. If no parameters are given,
-// or the first one is "all", all templates are (re)loaded
+// all templates are (re)loaded
 func InitTemplates(which ...string) error {
 	err := gcsql.ResetBoardSectionArrays()
 	if err != nil {
 		return err
 	}
-	if len(which) == 0 || which[0] == "all" {
-		return templateLoading("", true)
-	}
-	for _, t := range which {
-		if err = templateLoading(t, false); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
-func templateLoading(t string, buildAll bool) error {
-	var err error
-	if buildAll || t == "banpage" {
-		Banpage, err = LoadTemplate("banpage.html", "page_footer.html")
-		if err != nil {
-			return templateError("banpage.html", err)
+	if which == nil {
+		// no templates specified
+		for t := range templateMap {
+			if err = templateMap[t].Load(); err != nil {
+				return err
+			}
 		}
 	}
-	if buildAll || t == "captcha" {
-		Captcha, err = LoadTemplate("captcha.html")
-		if err != nil {
-			return templateError("captcha.html", err)
-		}
-	}
-	if buildAll || t == "catalog" {
-		Catalog, err = LoadTemplate("catalog.html", "topbar.html", "page_header.html", "page_footer.html")
-		if err != nil {
-			return templateError("catalog.html", err)
-		}
-	}
-	if buildAll || t == "error" {
-		ErrorPage, err = LoadTemplate("error.html")
-		if err != nil {
-			return templateError("error.html", err)
-		}
-	}
-	if buildAll || t == "front" {
-		FrontPage, err = LoadTemplate("front.html", "topbar.html", "front_intro.html", "page_header.html", "page_footer.html")
-		if err != nil {
-			return templateError("front.html", err)
-		}
-	}
-	if buildAll || t == "boardpage" {
-		BoardPage, err = LoadTemplate("boardpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
-		if err != nil {
-			return templateError("boardpage.html", err)
-		}
-	}
-	if buildAll || t == "threadpage" {
-		ThreadPage, err = LoadTemplate("threadpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html")
-		if err != nil {
-			return templateError("threadpage.html", err)
-		}
-	}
-	if buildAll || t == "postedit" {
-		PostEdit, err = LoadTemplate("post_edit.html", "page_header.html", "topbar.html", "page_footer.html")
-		if err != nil {
-			return templateError("threadpage.html", err)
-		}
-	}
-	if buildAll || t == "manageannouncements" {
-		ManageAnnouncements, err = LoadTemplate("manage_announcements.html", "page_header.html", "topbar.html", "page_footer.html")
-		if err != nil {
-			return templateError("manage_announcements.html", err)
-		}
-	}
-	if buildAll || t == "manageappeals" {
-		ManageAppeals, err = LoadTemplate("manage_appeals.html")
-		if err != nil {
-			return templateError("manage_appeals.html", err)
-		}
-	}
-	if buildAll || t == "managebans" {
-		ManageBans, err = LoadTemplate("manage_bans.html")
-		if err != nil {
-			return templateError("manage_bans.html", err)
-		}
-	}
-	if buildAll || t == "manageboards" {
-		ManageBoards, err = LoadTemplate("manage_boards.html")
-		if err != nil {
-			return templateError("manage_boards.html", err)
-		}
-	}
-	if buildAll || t == "managethreadattrs" {
-		ManageThreadAttrs, err = LoadTemplate("manage_threadattrs.html")
-		if err != nil {
-			return templateError("manage_threadattrs.html", err)
-		}
-	}
-	if buildAll || t == "managesections" {
-		ManageSections, err = LoadTemplate("manage_sections.html")
-		if err != nil {
-			return templateError("manage_sections.html", err)
-		}
-	}
-	if buildAll || t == "managedashboard" {
-		ManageDashboard, err = LoadTemplate("manage_dashboard.html")
-		if err != nil {
-			return templateError("manage_dashboard.html", err)
-		}
-	}
-	if buildAll || t == "managelogin" {
-		ManageLogin, err = LoadTemplate("manage_login.html")
-		if err != nil {
-			return templateError("manage_login.html", err)
-		}
-	}
-	if buildAll || t == "managereports" {
-		ManageReports, err = LoadTemplate("manage_reports.html")
-		if err != nil {
-			return templateError("manage_reports.html", err)
-		}
-	}
-	if buildAll || t == "managefilebans" {
-		ManageFileBans, err = LoadTemplate("manage_filebans.html")
-		if err != nil {
-			return templateError("manage_filebans.html", err)
-		}
-	}
-	if buildAll || t == "managenamebans" {
-		ManageNameBans, err = LoadTemplate("manage_namebans.html")
-		if err != nil {
-			return templateError("manage_namebans.html", err)
-		}
-	}
-	if buildAll || t == "manageipsearch" {
-		ManageIPSearch, err = LoadTemplate("manage_ipsearch.html")
-		if err != nil {
-			return templateError("manage_ipsearch.html", err)
-		}
-	}
-	if buildAll || t == "managerecents" {
-		ManageRecentPosts, err = LoadTemplate("manage_recentposts.html")
-		if err != nil {
-			return templateError("manage_recentposts.html", err)
-		}
-	}
-	if buildAll || t == "managewordfilters" {
-		ManageWordfilters, err = LoadTemplate("manage_wordfilters.html")
-		if err != nil {
-			return templateError("manage_wordfilters.html", err)
-		}
-	}
-	if buildAll || t == "managestaff" {
-		ManageStaff, err = LoadTemplate("manage_staff.html")
-		if err != nil {
-			return templateError("manage_staff.html", err)
-		}
-	}
-	if buildAll || t == "manageviewlog" {
-		ManageViewLog, err = LoadTemplate("manage_viewlog.html")
-		if err != nil {
-			return templateError("manage_viewlog.html", err)
-		}
-	}
-	if buildAll || t == "managefixthumbnails" {
-		ManageFixThumbnails, err = LoadTemplate("manage_fixthumbnails.html")
-		if err != nil {
-			return templateError("manage_viewlog.html", err)
-		}
-	}
-	if buildAll || t == "movethreadpage" {
-		MoveThreadPage, err = LoadTemplate("movethreadpage.html", "page_header.html", "topbar.html", "page_footer.html")
-		if err != nil {
-			return templateError("movethreadpage.html", err)
-		}
-	}
-	if buildAll || t == "pageheader" {
-		PageHeader, err = LoadTemplate("page_header.html", "topbar.html")
-		if err != nil {
-			return templateError("page_header.html", err)
-		}
-	}
-	if buildAll || t == "pagefooter" {
-		PageFooter, err = LoadTemplate("page_footer.html")
-		if err != nil {
-			return templateError("page_footer.html", err)
-		}
-	}
-	if buildAll || t == "js" {
-		JsConsts, err = LoadTemplate("consts.js")
-		if err != nil {
-			return templateError("consts.js", err)
+
+	for _, t := range which {
+		if _, err = GetTemplate(t); err != nil {
+			return err
 		}
 	}
 	return nil

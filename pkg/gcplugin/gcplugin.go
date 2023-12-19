@@ -15,6 +15,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	luar "layeh.com/gopher-luar"
 
 	"github.com/cjoudrey/gluahttp"
@@ -102,6 +103,7 @@ func preloadLua() {
 	lState.PreloadModule("gctemplates", gctemplates.PreloadModule)
 	lState.PreloadModule("manage", manage.PreloadModule)
 	lState.PreloadModule("uploads", uploads.PreloadModule)
+	lState.PreloadModule("serverutil", serverutil.PreloadModule)
 
 	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GetVersion().String()))
 }

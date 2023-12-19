@@ -95,7 +95,7 @@ func BuildCatalog(boardID int) error {
 	errEv := gcutil.LogError(nil).
 		Str("building", "catalog").
 		Int("boardID", boardID)
-	err := gctemplates.InitTemplates("catalog")
+	err := gctemplates.InitTemplates(gctemplates.Catalog)
 	if err != nil {
 		errEv.Err(err).Send()
 		return err

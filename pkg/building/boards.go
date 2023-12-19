@@ -54,7 +54,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		Int("boardID", board.ID).
 		Str("boardDir", board.Dir)
 	defer errEv.Discard()
-	err := gctemplates.InitTemplates("boardpage")
+	err := gctemplates.InitTemplates(gctemplates.BoardPage)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("unable to initialize boardpage template")
 		return err

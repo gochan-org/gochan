@@ -42,8 +42,6 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 ## gctemplates
 - **gctemplates.load_template(files...)**
 	- Calls [gctemplates.LoadTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/gctemplates#LoadTemplate) using the given `files` and returns a [Template](https://pkg.go.dev/html/template#Template) and an error object (or nil if there were no errors).
-- **gctemplates.minify_template(template, data_table, writer, media_type)**
-	- Calls [serverutil.MinifyTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/server/serverutil#MinifyTemplate) with the given `template` object, `data_table` (as variables passed to the template), `writer`, and `media_type`. See [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
 - **gctemplates.parse_template(template_name string, template_data string)**
 	- Calls [gctemplates.ParseTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/gctemplates#ParseTemplate) with the given template name and Go template data, and returns a [Template](https://pkg.go.dev/html/template#Template) and an error object (or nil if there were no errors).
 
@@ -62,6 +60,10 @@ staff_note | string | A private note attached to the ban that only staff can see
 
 - **manage.register_manage_page(action string, title string, perms int, wants_json int, handler func(writer, request, staff, wants_json, info_ev, err_ev))**
 	- Registers the manage page accessible at /manage/`action` to be handled by `handler`. See [manage.RegisterManagePage](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/manage#RegisterManagePage) for info on how `handler` should be used, or [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
+
+## serverutil
+- **serverutil.minify_template(template, data_table, writer, media_type)**
+	- Calls [serverutil.MinifyTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/server/serverutil#MinifyTemplate) with the given `template` object, `data_table` (as variables passed to the template), `writer`, and `media_type`. See [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
 
 ## uploads
 - **uploads.register_handler(ext string, function(upload, post, board, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv))**
