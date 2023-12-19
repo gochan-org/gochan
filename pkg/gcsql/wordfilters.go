@@ -119,7 +119,7 @@ func (wf *Wordfilter) Apply(message string) (string, error) {
 		}
 		message = re.ReplaceAllString(message, wf.ChangeTo)
 	} else {
-		message = strings.Replace(message, wf.Search, wf.ChangeTo, -1)
+		message = strings.ReplaceAll(message, wf.Search, wf.ChangeTo)
 	}
 	return message, nil
 }

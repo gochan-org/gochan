@@ -34,7 +34,7 @@ var (
 
 // BcryptSum generates and returns a checksum using the bcrypt hashing function
 func BcryptSum(str string) string {
-	digest, err := bcrypt.GenerateFromPassword([]byte(str), 4)
+	digest, err := bcrypt.GenerateFromPassword([]byte(str), 10)
 	if err == nil {
 		return string(digest)
 	}
@@ -177,7 +177,7 @@ func ParseName(name string) (string, string) {
 func RandomString(length int) string {
 	var str string
 	for i := 0; i < length; i++ {
-		num := rand.Intn(127)
+		num := rand.Intn(127) // skipcq: GSC-G404
 		if num < 32 {
 			num += 32
 		}

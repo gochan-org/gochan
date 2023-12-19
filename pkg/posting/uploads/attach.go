@@ -151,6 +151,5 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 func getNewFilename() string {
 	now := time.Now().Unix()
-	// rand.Seed(now)
-	return strconv.Itoa(int(now)) + strconv.Itoa(rand.Intn(98)+1)
+	return strconv.Itoa(int(now)) + strconv.Itoa(rand.Intn(98)+1) // skipcq: GSC-G404
 }

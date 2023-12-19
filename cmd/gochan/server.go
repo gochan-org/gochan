@@ -74,7 +74,7 @@ func randomBanner(writer http.ResponseWriter, request *http.Request) {
 	}
 	var banner config.PageBanner
 	if len(banners) > 0 {
-		banner = banners[rand.Intn(len(banners))]
+		banner = banners[rand.Intn(len(banners))] // skipcq: GSC-G404
 	}
 	err := json.NewEncoder(writer).Encode(banner)
 	if err != nil {

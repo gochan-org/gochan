@@ -1,10 +1,11 @@
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import WebDriverException
 
 def qrIsVisible(driver: WebDriver):
 	try:
 		return driver.find_element(by=By.CSS_SELECTOR, value="div#qr-box").is_displayed()
-	except Exception:
+	except WebDriverException:
 		return False
 
 def enableQR(driver: WebDriver):
