@@ -2,7 +2,6 @@ package gctemplates
 
 import (
 	"errors"
-	"fmt"
 	"html/template"
 	"os"
 	"path"
@@ -142,12 +141,28 @@ var (
 )
 
 type gochanTemplate struct {
-	files []string
-	tmpl  *template.Template
+	files      []string
+	tmpl       *template.Template
+	isOverride bool
+	filePath   string
 }
 
 func (gt *gochanTemplate) Load() (err error) {
-	gt.tmpl, err = loadTemplate(gt.files...)
+	templateDir := config.GetSystemCriticalConfig().TemplateDir
+
+	var filePaths []string
+	for _, file := range gt.files {
+
+		if _, err = os.Stat(path.Join(templateDir, "override", file)); os.IsNotExist(err) {
+			filePaths = append(filePaths, path.Join(templateDir, file))
+		} else if err == nil {
+			filePaths = append(filePaths, path.Join(templateDir, "override", file))
+		} else {
+			return err
+		}
+	}
+	gt.filePath = filePaths[0]
+	gt.tmpl, err = template.New(gt.files[0]).Funcs(funcMap).ParseFiles(filePaths...)
 	return err
 }
 
@@ -155,54 +170,50 @@ func (gt *gochanTemplate) Template() *template.Template {
 	return gt.tmpl
 }
 
+// IsOverride returns true if the base file is overriden (i.e., it exist in the overrides subdirectory
+// of the templates directory)
+func (gt *gochanTemplate) IsOverride() bool {
+	return gt.isOverride
+}
+
+// TemplatePath returns the path to the base template file
+func (gt *gochanTemplate) TemplatePath() string {
+	return gt.filePath
+}
+
+// GetTemplate takes the filename of the template and returns the template if it exists and
+// is already loaded, and attempts to load and then return it if it exists but isn't loaded
 func GetTemplate(name string) (*template.Template, error) {
 	gctmpl, ok := templateMap[name]
 	if !ok {
-		fmt.Printf("Unrecognized template %q\n", name)
 		return nil, ErrUnrecognizedTemplate
 	}
 	if gctmpl.tmpl != nil {
 		return gctmpl.tmpl, nil
 	}
-	var err error
-	gctmpl.tmpl, err = loadTemplate(gctmpl.files...)
+	err := gctmpl.Load()
 	return gctmpl.tmpl, err
 }
 
-func loadTemplate(files ...string) (*template.Template, error) {
-	var templates []string
-	templateDir := config.GetSystemCriticalConfig().TemplateDir
-	var foundFiles []string
-	for i, file := range files {
-		foundFiles = append(foundFiles, file)
-		templates = append(templates, file)
-		tmplPath := path.Join(templateDir, "override", file)
-
-		if _, err := os.Stat(tmplPath); err == nil {
-			foundFiles[i] = tmplPath
-		} else if os.IsNotExist(err) {
-			foundFiles[i] = path.Join(templateDir, file)
-		} else {
-			return nil, err
-		}
+func GetTemplatePath(name string) (string, error) {
+	gctmpl, ok := templateMap[name]
+	if !ok {
+		return "", ErrUnrecognizedTemplate
 	}
+	return gctmpl.filePath, nil
+}
 
-	tmpl, err := template.New(templates[0]).Funcs(funcMap).ParseFiles(foundFiles...)
-	return tmpl, templateError(templates[0], err)
+// GetTemplateList returns a string array of all valid template filenames
+func GetTemplateList() []string {
+	var templateList []string
+	for t := range templateMap {
+		templateList = append(templateList, t)
+	}
+	return templateList
 }
 
 func ParseTemplate(name, tmplStr string) (*template.Template, error) {
 	return template.New(name).Funcs(funcMap).Parse(tmplStr)
-}
-
-func templateError(name string, err error) error {
-	if err == nil {
-		return nil
-	}
-	templateDir := config.GetSystemCriticalConfig().TemplateDir
-
-	return fmt.Errorf("failed loading template '%s: %s': %s",
-		templateDir, name, err.Error())
 }
 
 // InitTemplates loads the given templates by name. If no parameters are given,

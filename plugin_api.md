@@ -41,7 +41,7 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 
 ## gctemplates
 - **gctemplates.load_template(files...)**
-	- Calls [gctemplates.LoadTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/gctemplates#LoadTemplate) using the given `files` and returns a [Template](https://pkg.go.dev/html/template#Template) and an error object (or nil if there were no errors).
+    - Loads the given file paths into a [Template](https://pkg.go.dev/html/template#Template), using the base filename as the name, and returns the template and an error if one occured.
 - **gctemplates.parse_template(template_name string, template_data string)**
 	- Calls [gctemplates.ParseTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/gctemplates#ParseTemplate) with the given template name and Go template data, and returns a [Template](https://pkg.go.dev/html/template#Template) and an error object (or nil if there were no errors).
 

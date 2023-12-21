@@ -419,6 +419,38 @@ func registerAdminPages() {
 			},
 		},
 		Action{
+			ID:          "templates",
+			Title:       "Override templates",
+			Permissions: AdminPerms,
+			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+				buf := bytes.NewBufferString("")
+
+				selectedTemplate := request.PostFormValue("templateselect")
+				var templateStr string
+				if selectedTemplate != "" {
+					errEv.Str("selectedTemplate", selectedTemplate)
+
+					templatePath, err := gctemplates.GetTemplatePath(selectedTemplate)
+					if err != nil {
+						errEv.Err(err).Caller().Msg("unable to load selected template")
+						return "", fmt.Errorf("template %q does not exist", selectedTemplate)
+					}
+					ba, err := os.ReadFile(templatePath)
+					if err != nil {
+						errEv.Err(err).Caller().Send()
+						return "", fmt.Errorf("unable to load selected template %q", selectedTemplate)
+					}
+					templateStr = string(ba)
+				}
+
+				serverutil.MinifyTemplate(gctemplates.ManageTemplates, map[string]any{
+					"templates":        gctemplates.GetTemplateList(),
+					"selectedTemplate": selectedTemplate,
+					"templateText":     templateStr,
+				}, buf, "text/html")
+				return buf.String(), nil
+			}},
+		Action{
 			ID:          "rebuildfront",
 			Title:       "Rebuild front page",
 			Permissions: AdminPerms,
@@ -576,19 +608,6 @@ func registerAdminPages() {
 				}
 				outputStr += "Done building boards<hr />"
 				return outputStr, nil
-			}},
-		Action{
-			ID:          "templates",
-			Title:       "Creat/Edit template overrides",
-			Permissions: AdminPerms,
-			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
-				buf := bytes.NewBufferString("")
-
-				serverutil.MinifyTemplate(gctemplates.ManageTemplates, map[string]any{
-					"template":     "manage_stuff.html",
-					"templateText": "template goes here",
-				}, buf, "text/html")
-				return buf.String(), nil
 			}},
 		Action{
 			ID:          "wordfilters",

@@ -1,6 +1,9 @@
 package gctemplates
 
 import (
+	"html/template"
+	"path"
+
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
@@ -14,7 +17,7 @@ func PreloadModule(l *lua.LState) int {
 			for i := 0; i < l.GetTop(); i++ {
 				tmplPaths = append(tmplPaths, l.CheckString(i+1))
 			}
-			tmpl, err := loadTemplate(tmplPaths...)
+			tmpl, err := template.New(path.Base(tmplPaths[0])).Funcs(funcMap).ParseFiles(tmplPaths...)
 			l.Push(luar.New(l, tmpl))
 			l.Push(luar.New(l, err))
 			return 2

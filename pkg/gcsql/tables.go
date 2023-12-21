@@ -165,8 +165,6 @@ type Post struct {
 	DeletedAt       time.Time     // sql: `deleted_at`
 	IsDeleted       bool          // sql: `is_deleted`
 	BannedMessage   string        // sql: `banned_message`
-
-	sanitized bool
 }
 
 // table: DBPREFIXreports
