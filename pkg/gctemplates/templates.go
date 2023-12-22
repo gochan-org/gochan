@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"os"
 	"path"
+	"sort"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -209,6 +210,7 @@ func GetTemplateList() []string {
 	for t := range templateMap {
 		templateList = append(templateList, t)
 	}
+	sort.Strings(templateList)
 	return templateList
 }
 
