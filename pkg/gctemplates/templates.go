@@ -18,6 +18,7 @@ const (
 	Catalog             = "catalog.html"
 	JsConsts            = "consts.js"
 	ErrorPage           = "error.html"
+	FrontIntro          = "front_intro.html"
 	FrontPage           = "front.html"
 	ManageAnnouncements = "manage_announcements.html"
 	ManageAppeals       = "manage_appeals.html"
@@ -65,6 +66,9 @@ var (
 		},
 		ErrorPage: {
 			files: []string{"error.html"},
+		},
+		FrontIntro: {
+			files: []string{"front_intro.html"},
 		},
 		FrontPage: {
 			files: []string{"front.html", "topbar.html", "front_intro.html", "page_header.html", "page_footer.html"},

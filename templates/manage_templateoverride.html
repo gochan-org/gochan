@@ -1,17 +1,30 @@
 <div style="text-align: center;">
-<form action="{{webPath "manage/templates"}}" method="POST" id="template-override">
+<form action="{{webPath "manage/templates"}}" method="{{with $.templateText}}POST{{else}}GET{{end}}" id="template-override">
 {{with $.templateText}}
 	<b>Editing: {{$.selectedTemplate}}</b>
+	<input type="hidden" name="overriding" value="{{$.selectedTemplate}}">
 	<textarea name="templatetext" class="template-text" rows="16" spellcheck="false">{{$.templateText}}</textarea>
-	<input type="submit" name="dooverride" value="Submit" onsubmit="return prompt('Are you sure you want to override the template?')">
-	<input type="submit" name="cancel" value="Cancel"/>
+	<input type="submit" name="dooverride" value="Submit" onclick="return confirm('Are you sure you want to override the template?')"/>
+	<input type="submit" name="cancel" value="Cancel"/ onclick="window.history.back()"/>
+</form>
+</div>
+<p>
+	When you submit your changes to a template, the latest change (or the original if there are no changes yet)
+	will be backed up to the "overrides" subdirectory of your configured templates directory, {{$.templatesDir}}, 
+	with a timestamp appended to the filename.
+</p>
 {{else}}
-	Select a template: <select name="templateselect">
+	{{- with .success}}
+	<div style="display:inline-block; outline: 4px solid green">
+		{{$.success}}<br/>
+		You may need to rebuild the respective page(s), or rebuild everything <a href='{{webPath "/manage/rebuildall"}}'>here</a>.
+	</div><br/><br/>{{- end -}}
+	Select a template: <select name="override">
 		{{range $t, $template := .templates}}
 			<option value="{{$template}}">{{$template}}</option>
 		{{end}}
 	</select>
-	<input type="submit" name="dotemplatechoose" value="Select template" />
-{{end}}
+	<input type="submit" value="Select template" />
 </form>
 </div>
+{{end}}

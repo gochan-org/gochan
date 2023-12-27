@@ -7,7 +7,7 @@ local url = require("url")
 local check_key_url = "https://rest.akismet.com/1.1/verify-key"
 
 local base_headers = {}
-base_headers["User-Agent"] = "gochan/3.8 | Akismet/0.1"
+base_headers["User-Agent"] = "gochan/3.9 | Akismet/0.1"
 base_headers["Content-Type"] = "application/x-www-form-urlencoded"
 
 local key = "" -- read from akismet_key.txt

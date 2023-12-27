@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -425,29 +426,125 @@ func registerAdminPages() {
 			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 				buf := bytes.NewBufferString("")
 
-				selectedTemplate := request.PostFormValue("templateselect")
+				selectedTemplate := request.FormValue("override")
+				templatesDir := config.GetSystemCriticalConfig().TemplateDir
+				var overriding string
 				var templateStr string
+				var templatePath string
+				var successStr string
 				if selectedTemplate != "" {
-					errEv.Str("selectedTemplate", selectedTemplate)
+					gcutil.LogStr("selectedTemplate", selectedTemplate, infoEv, errEv)
 
-					templatePath, err := gctemplates.GetTemplatePath(selectedTemplate)
-					if err != nil {
+					if templatePath, err = gctemplates.GetTemplatePath(selectedTemplate); err != nil {
 						errEv.Err(err).Caller().Msg("unable to load selected template")
 						return "", fmt.Errorf("template %q does not exist", selectedTemplate)
 					}
+					errEv.Str("templatePath", templatePath)
 					ba, err := os.ReadFile(templatePath)
 					if err != nil {
 						errEv.Err(err).Caller().Send()
 						return "", fmt.Errorf("unable to load selected template %q", selectedTemplate)
 					}
 					templateStr = string(ba)
+				} else if overriding = request.PostFormValue("overriding"); overriding != "" {
+					if templateStr = request.PostFormValue("templatetext"); templateStr == "" {
+						writer.WriteHeader(http.StatusBadRequest)
+						errEv.Caller().Int("status", http.StatusBadRequest).
+							Msg("received an empty template string")
+						return "", errors.New("received an empty template string")
+					}
+					if _, err = gctemplates.ParseTemplate(selectedTemplate, templateStr); err != nil {
+						// unable to parse submitted template
+						errEv.Err(err).Caller().Int("status", http.StatusBadRequest).Send()
+						writer.WriteHeader(http.StatusBadRequest)
+						return "", err
+					}
+					overrideDir := path.Join(templatesDir, "override")
+					overridePath := path.Join(overrideDir, overriding)
+					gcutil.LogStr("overridePath", overridePath, infoEv, errEv)
+
+					if _, err = os.Stat(overrideDir); os.IsNotExist(err) {
+						// override dir doesn't exist, create it
+						if err = os.Mkdir(overrideDir, config.GC_DIR_MODE); err != nil {
+							errEv.Err(err).Caller().
+								Int("status", http.StatusInternalServerError).
+								Msg("Unable to create override directory")
+							writer.WriteHeader(http.StatusInternalServerError)
+							return "", err
+						}
+					} else if err != nil {
+						// got an error checking for override dir
+						errEv.Err(err).Caller().
+							Int("status", http.StatusInternalServerError).
+							Msg("Unable to check if override directory exists")
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", err
+					}
+
+					// get the original template file, or the latest override if there are any
+					templatePath, err := gctemplates.GetTemplatePath(overriding)
+					if err != nil {
+						errEv.Err(err).Caller().
+							Int("status", http.StatusInternalServerError).
+							Msg("Unable to get original template path")
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", err
+					}
+
+					// read original template path into []byte to be backed up
+					ba, err := os.ReadFile(templatePath)
+					if err != nil {
+						errEv.Err(err).Caller().
+							Int("status", http.StatusInternalServerError).
+							Msg("Unable to read original template file")
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", err
+					}
+
+					// back up template to override/<overriding>-<timestamp>.bkp
+					backupPath := path.Join(overrideDir, overriding) + time.Now().Format("-2006-01-02_15-04-05.bkp")
+					gcutil.LogStr("backupPath", backupPath, infoEv, errEv)
+					if err = os.WriteFile(backupPath, ba, config.GC_FILE_MODE); err != nil {
+						errEv.Err(err).Caller().
+							Int("status", http.StatusInternalServerError).
+							Msg("Unable to back up template file")
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", errors.New("unable to back up original template file")
+					}
+
+					// write changes to disk
+					if err = os.WriteFile(overridePath, []byte(templateStr), config.GC_FILE_MODE); err != nil {
+						errEv.Err(err).Caller().
+							Int("status", http.StatusInternalServerError).
+							Msg("Unable to save changes")
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", err
+					}
+
+					// reload template
+					if err = gctemplates.InitTemplates(overriding); err != nil {
+						errEv.Err(err).Caller().
+							Int("status", http.StatusInternalServerError).
+							Msg("Unable to reinitialize template")
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", err
+					}
+					successStr = fmt.Sprintf("%q saved successfully.\n Original backed up to %s",
+						overriding, backupPath)
+					infoEv.Msg("Template successfully saved and reloaded")
 				}
 
-				serverutil.MinifyTemplate(gctemplates.ManageTemplates, map[string]any{
+				data := map[string]any{
 					"templates":        gctemplates.GetTemplateList(),
+					"templatesDir":     templatesDir,
+					"templatePath":     templatePath,
 					"selectedTemplate": selectedTemplate,
-					"templateText":     templateStr,
-				}, buf, "text/html")
+					"success":          successStr,
+				}
+				if templateStr != "" && successStr == "" {
+					data["templateText"] = templateStr
+				}
+				serverutil.MinifyTemplate(gctemplates.ManageTemplates, data, buf, "text/html")
 				return buf.String(), nil
 			}},
 		Action{
