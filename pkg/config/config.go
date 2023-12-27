@@ -85,13 +85,13 @@ func (gcfg *GochanConfig) ValidateValues() error {
 			Details: "currently supported values: " + strings.Join(acceptedDrivers, ",")}
 	}
 
-	if gcfg.EnableGeoIP && gcfg.GeoIPDBlocation == "" {
-		return &InvalidValueError{
-			Field:   "GeoIPDBlocation",
-			Value:   "",
-			Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true",
-		}
-	}
+	// if gcfg.EnableGeoIP && gcfg.GeoIPDBlocation == "" {
+	// 	return &InvalidValueError{
+	// 		Field:   "GeoIPDBlocation",
+	// 		Value:   "",
+	// 		Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true",
+	// 	}
+	// }
 
 	if gcfg.RandomSeed == "" {
 		gcfg.RandomSeed = gcutil.RandomString(randomStringSize)

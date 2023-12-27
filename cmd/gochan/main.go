@@ -65,8 +65,8 @@ func main() {
 	events.TriggerEvent("db-initialized")
 	parseCommandLine()
 	serverutil.InitMinifier()
-	posting.InitGeoIP()
-	posting.InitCaptcha()
+	// posting.InitGeoIP()
+	// posting.InitCaptcha()
 
 	if err = gctemplates.InitTemplates(); err != nil {
 		fmt.Println("Failed initializing templates:", err.Error())

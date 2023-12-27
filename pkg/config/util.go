@@ -185,7 +185,7 @@ func InitConfig(versionStr string) {
 		cfg.WebRoot += "/"
 	}
 
-	if !cfg.validGeoIPType() {
+	/* if !cfg.validGeoIPType() {
 		gcutil.LogFatal().Caller().
 			Str("GeoIPDBType", cfg.GeoIPDBType).
 			Msg("Invalid GeoIPDBType value, valid values are '', 'none', 'legacy', or 'geoip2'")
@@ -202,7 +202,7 @@ func InitConfig(versionStr string) {
 				Str("location", cfg.GeoIPDBlocation).
 				Msg("Unable to load GeoIP database location set in gochan.json")
 		}
-	}
+	} */
 
 	_, zoneOffset := time.Now().Zone()
 	cfg.TimeZone = zoneOffset / 60 / 60
