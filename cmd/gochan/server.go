@@ -25,7 +25,7 @@ func initServer() {
 
 	listener, err := net.Listen("tcp", systemCritical.ListenIP+":"+strconv.Itoa(systemCritical.Port))
 	if err != nil {
-		if !systemCritical.DebugMode {
+		if !systemCritical.Verbose {
 			fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
 		}
 		gcutil.LogFatal().Err(err).Caller().
@@ -56,7 +56,7 @@ func initServer() {
 	}
 
 	if err != nil {
-		if !systemCritical.DebugMode {
+		if !systemCritical.Verbose {
 			fmt.Println("Error initializing server:", err.Error())
 		}
 		gcutil.Logger().Fatal().

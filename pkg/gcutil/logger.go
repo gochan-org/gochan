@@ -57,8 +57,10 @@ func LogDiscard(events ...*zerolog.Event) {
 
 func initLog(logPath string, debug bool) (err error) {
 	if logFile != nil {
-		// log file already initialized, skip
-		return nil
+		// log already initialized
+		if err = logFile.Close(); err != nil {
+			return err
+		}
 	}
 	logFile, err = os.OpenFile(logPath, logFlags, logFileMode) // skipcq: GSC-G302
 	if err != nil {
@@ -77,8 +79,10 @@ func initLog(logPath string, debug bool) (err error) {
 
 func initAccessLog(logPath string) (err error) {
 	if accessFile != nil {
-		// access log already initialized, skip
-		return nil
+		// access log already initialized, close it first before reopening
+		if err = accessFile.Close(); err != nil {
+			return err
+		}
 	}
 	accessFile, err = os.OpenFile(logPath, logFlags, logFileMode) // skipcq: GSC-G302
 	if err != nil {
@@ -88,8 +92,8 @@ func initAccessLog(logPath string) (err error) {
 	return nil
 }
 
-func InitLogs(logDir string, debug bool, uid int, gid int) (err error) {
-	if err = initLog(path.Join(logDir, "gochan.log"), debug); err != nil {
+func InitLogs(logDir string, verbose bool, uid int, gid int) (err error) {
+	if err = initLog(path.Join(logDir, "gochan.log"), verbose); err != nil {
 		return err
 	}
 	if err = logFile.Chown(uid, gid); err != nil {
@@ -144,6 +148,7 @@ func LogDebug() *zerolog.Event {
 }
 
 func CloseLog() error {
+
 	if logFile == nil {
 		return nil
 	}

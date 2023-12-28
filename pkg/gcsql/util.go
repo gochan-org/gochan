@@ -63,7 +63,7 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 		}
 		prepared = strings.Join(arr, "")
 	case "sqlmock":
-		if config.GetDebugMode() {
+		if config.VerboseMode() {
 			prepared = query
 			break
 		}

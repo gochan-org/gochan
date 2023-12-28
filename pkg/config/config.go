@@ -164,7 +164,7 @@ type SystemCriticalConfig struct {
 	DBpassword string
 	DBprefix   string
 
-	DebugMode  bool
+	Verbose    bool `json:"DebugMode"`
 	RandomSeed string
 	Version    *GochanVersion `json:"-"`
 	TimeZone   int            `json:"-"`
@@ -185,7 +185,6 @@ type SiteConfig struct {
 
 	MaxRecentPosts        int
 	RecentPostsWithNoFile bool
-	Verbosity             int
 	EnableAppeals         bool
 	MaxLogDays            int
 
@@ -374,8 +373,12 @@ func DeleteBoardConfig(dir string) {
 	delete(boardConfigs, dir)
 }
 
-func GetDebugMode() bool {
-	return cfg.testing || cfg.SystemCriticalConfig.DebugMode
+func VerboseMode() bool {
+	return cfg.testing || cfg.SystemCriticalConfig.Verbose
+}
+
+func SetVerbose(verbose bool) {
+	cfg.Verbose = verbose
 }
 
 func GetVersion() *GochanVersion {

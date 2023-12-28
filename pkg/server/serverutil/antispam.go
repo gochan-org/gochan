@@ -11,7 +11,7 @@ import (
 
 // ValidReferer checks to make sure that the incoming request is from the same domain (or if debug mode is enabled)
 func ValidReferer(request *http.Request) bool {
-	if config.GetDebugMode() {
+	if config.VerboseMode() {
 		return true
 	}
 	referer := request.Referer()

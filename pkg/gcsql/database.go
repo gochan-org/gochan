@@ -259,7 +259,7 @@ func sqlVersionError(err error, dbDriver string, query *string) error {
 			return err
 		}
 	}
-	if config.GetSystemCriticalConfig().DebugMode {
+	if config.GetSystemCriticalConfig().Verbose {
 		return fmt.Errorf(UnsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
 	}
 	return fmt.Errorf(UnsupportedSQLVersionMsg, errText)

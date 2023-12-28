@@ -35,11 +35,17 @@ func main() {
 
 	fmt.Printf("Starting gochan v%s\n", versionStr)
 	config.InitConfig(versionStr)
+	config.SetVerbose(true)
 
+	uid, gid := config.GetUser()
 	systemCritical := config.GetSystemCriticalConfig()
-
-	err := gcplugin.LoadPlugins(systemCritical.Plugins)
+	err := gcutil.InitLogs(systemCritical.LogDir, true, uid, gid)
 	if err != nil {
+		fmt.Println("Error opening logs:", err.Error())
+		os.Exit(1)
+	}
+
+	if err = gcplugin.LoadPlugins(systemCritical.Plugins); err != nil {
 		gcutil.LogFatal().Err(err).Msg("failed loading plugins")
 	}
 
@@ -59,14 +65,13 @@ func main() {
 		Msg("Connected to database")
 
 	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
-		fmt.Println("Failed to initialize the database:", err.Error())
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
 	parseCommandLine()
 	serverutil.InitMinifier()
 	// posting.InitGeoIP()
-	// posting.InitCaptcha()
+	posting.InitCaptcha()
 
 	if err = gctemplates.InitTemplates(); err != nil {
 		fmt.Println("Failed initializing templates:", err.Error())
@@ -85,6 +90,10 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	posting.InitPosting()
+	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.Verbose, uid, gid); err != nil {
+		fmt.Println("Error opening logs:", err.Error())
+		os.Exit(1)
+	}
 	go initServer()
 	<-sc
 }

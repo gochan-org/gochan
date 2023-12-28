@@ -51,6 +51,12 @@ func (iv *InvalidValueError) Error() string {
 	return str
 }
 
+// GetUser returns the IDs of the user and group gochan should be acting as
+// when creating files. If they are 0, it is using the current user
+func GetUser() (int, int) {
+	return uid, gid
+}
+
 func TakeOwnership(fp string) (err error) {
 	if runtime.GOOS == "windows" || fp == "" || cfg.Username == "" {
 		// Chown returns an error in Windows so skip it, also skip if Username isn't set
@@ -78,7 +84,6 @@ func InitConfig(versionStr string) {
 		cfg.ListenIP = "127.0.0.1"
 		cfg.Port = 8080
 		cfg.UseFastCGI = true
-		cfg.DebugMode = true
 		cfg.testing = true
 		cfg.TemplateDir = "templates"
 		cfg.DBtype = "sqlite3"
@@ -89,7 +94,7 @@ func InitConfig(versionStr string) {
 		cfg.RandomSeed = "test"
 		cfg.Version = ParseVersion(versionStr)
 		cfg.SiteSlogan = "Gochan testing"
-		cfg.Verbosity = 1
+		cfg.Verbose = true
 		cfg.Captcha.OnlyNeededForThreads = true
 		cfg.Cooldowns = BoardCooldowns{0, 0, 0}
 		cfg.BanColors = []string{
@@ -161,10 +166,6 @@ func InitConfig(versionStr string) {
 	}
 
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
-	if err = gcutil.InitLogs(cfg.LogDir, cfg.DebugMode, uid, gid); err != nil {
-		fmt.Println("Error opening logs:", err.Error())
-		os.Exit(1)
-	}
 
 	if cfg.Port == 0 {
 		cfg.Port = 80
