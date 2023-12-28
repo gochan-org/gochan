@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -42,6 +43,14 @@ func LogBool(key string, b bool, events ...*zerolog.Event) {
 	for e := range events {
 		if events[e] != nil {
 			events[e] = events[e].Bool(key, b)
+		}
+	}
+}
+
+func LogTime(key string, t time.Time, events ...*zerolog.Event) {
+	for e := range events {
+		if events[e] != nil {
+			events[e] = events[e].Time(key, t)
 		}
 	}
 }

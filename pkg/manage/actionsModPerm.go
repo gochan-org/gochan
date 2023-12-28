@@ -50,21 +50,24 @@ func registerModeratorPages() {
 					}
 
 				} else if request.FormValue("do") == "add" {
+					gcutil.LogStr("banIP", ban.IP, infoEv, errEv)
+					gcutil.LogStr("reason", ban.Message, infoEv, errEv)
+					if ban.Permanent {
+						gcutil.LogBool("permanent", true, infoEv, errEv)
+					} else {
+						gcutil.LogTime("expiresAt", ban.ExpiresAt)
+					}
+					gcutil.LogBool("appealable", ban.CanAppeal, infoEv, errEv)
+					if ban.CanAppeal {
+						gcutil.LogTime("appealAt", ban.AppealAt)
+					}
 					err := ipBanFromRequest(&ban, request, errEv)
 					if err != nil {
 						errEv.Err(err).Caller().
-							Str("banIP", ban.IP).
-							Time("expireAt", ban.ExpiresAt).
-							Time("appealAt", ban.AppealAt).
 							Msg("Unable to create new ban")
 						return "", err
 					}
-					infoEv.
-						Str("bannedIP", ban.IP).
-						Str("expires", ban.ExpiresAt.String()).
-						Bool("permanent", ban.Permanent).
-						Str("reason", ban.Message).
-						Msg("Added IP ban")
+					infoEv.Msg("Added IP ban")
 				} else if postIDstr != "" {
 					postID, err := strconv.Atoi(postIDstr)
 					if err != nil {
