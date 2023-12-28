@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -155,6 +156,83 @@ func MarshalJSON(data interface{}, indent bool) (string, error) {
 		jsonBytes, _ = json.Marshal(map[string]string{"error": err.Error()})
 	}
 	return string(jsonBytes), err
+}
+
+// ParseIPRange takes a single IP address or an IP range of the form "networkIP/netmaskbits" and
+// gives the starting IP and ending IP in the subnet
+//
+// More info: https://en.wikipedia.org/wiki/Subnet
+func ParseIPRange(ipOrCIDR string) (string, string, error) {
+	var ipStart netip.Addr
+
+	if strings.ContainsRune(ipOrCIDR, '/') {
+		var ipEnd netip.Addr
+		// CIDR range
+		prefix, err := netip.ParsePrefix(ipOrCIDR)
+		if err != nil {
+			return "", "", err
+		}
+		ipStart = prefix.Addr()
+		ipEnd = prefix.Addr()
+		var tmp netip.Addr
+		for {
+			tmp = ipEnd.Next()
+			if !prefix.Contains(tmp) {
+				break
+			}
+			ipEnd = tmp
+		}
+		return ipStart.String(), ipEnd.String(), nil
+	}
+	// single IP
+	var err error
+	if ipStart, err = netip.ParseAddr(ipOrCIDR); err != nil {
+		return "", "", err
+	}
+	return ipStart.String(), ipStart.String(), nil
+}
+
+// GetIPRangeString returns an IP address if start == end, or the subnet of all IP
+// addresses between start and end
+func GetIPRangeString(start string, end string) (string, error) {
+	if start == end {
+		return start, nil
+	}
+	startIP := net.ParseIP(start)
+	endIP := net.ParseIP(end)
+	if startIP == nil {
+		return "", fmt.Errorf("invalid IP address %s", start)
+	}
+	if endIP == nil {
+		return "", fmt.Errorf("invalid IP address %s", end)
+	}
+	if len(startIP) != len(endIP) {
+		return "", errors.New("ip addresses must both be IPv4 or IPv6")
+	}
+
+	if startIP.To4() != nil {
+		startIP = startIP.To4()
+		endIP = endIP.To4()
+	}
+
+	bits := 0
+	var ipn net.IPNet
+	for b := range startIP {
+		if startIP[b] == endIP[b] {
+			bits += 8
+			continue
+		}
+		for i := 7; i >= 0; i-- {
+			if startIP[b]&(1<<i) == endIP[b]&(1<<i) {
+				bits++
+				continue
+			}
+			ipn = net.IPNet{IP: startIP, Mask: net.CIDRMask(bits, len(startIP)*8)}
+			return ipn.String(), nil
+		}
+	}
+	ipn = net.IPNet{IP: startIP, Mask: net.CIDRMask(bits, len(startIP)*8)}
+	return ipn.String(), nil
 }
 
 // ParseName takes a name string from a request object and returns the name and tripcode parts

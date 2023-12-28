@@ -65,7 +65,9 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		tx.Rollback()
+	}()
 
 	switch criticalConfig.DBtype {
 	case "mysql":
@@ -108,7 +110,9 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		defer rows.Close()
+		defer func() {
+			rows.Close()
+		}()
 		for rows.Next() {
 			var tableName string
 			err = rows.Scan(&tableName)
@@ -118,6 +122,49 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 			query = `ALTER TABLE ` + tableName + ` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
 			if _, err = tx.Exec(query); err != nil {
 				return false, err
+			}
+		}
+		if err = rows.Close(); err != nil {
+			return false, err
+		}
+		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		AND TABLE_NAME = 'DBPREFIXip_ban'
+		AND COLUMN_NAME = 'ip'`
+		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
+			return false, err
+		}
+		if numColumns > 0 {
+			// add range_start and range_end columns
+			query = `ALTER TABLE DBPREFIXip_ban
+			ADD COLUMN IF NOT EXISTS range_start VARBINARY(16) NOT NULL
+			ADD COLUMN IF NOT EXISTS range_end VARBINARY(16) NOT NULL`
+			if _, err = gcsql.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+			// convert string to IP range
+			if rows, err = dbu.db.QuerySQL(`SELECT id, ip FROM DBPREFIXip_ban`); err != nil {
+				return false, err
+			}
+			var rangeStart string
+			var rangeEnd string
+			for rows.Next() {
+				var id int
+				var ipOrCIDR string
+				if err = rows.Scan(&id, &ipOrCIDR); err != nil {
+					return false, err
+				}
+				if rangeStart, rangeEnd, err = gcutil.ParseIPRange(ipOrCIDR); err != nil {
+					return false, err
+				}
+				query = `UPDATE DBPREFIXip_ban SET range_start = INET6_ATON(?), range_end = ? WHERE id = ?`
+				if _, err = gcsql.ExecTxSQL(tx, query, rangeStart, rangeEnd, id); err != nil {
+					return false, err
+				}
+				query = `ALTER TABLE DBPREFIXip_ban DROP COLUMN ip`
+				if _, err = gcsql.ExecTxSQL(tx, query); err != nil {
+					return false, err
+				}
 			}
 		}
 		err = nil

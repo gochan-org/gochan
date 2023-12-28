@@ -16,7 +16,7 @@ const (
 	DBUpToDate
 	DBModernButAhead
 
-	targetDatabaseVersion = 2
+	targetDatabaseVersion = 3
 )
 
 var (

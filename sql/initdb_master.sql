@@ -146,7 +146,8 @@ CREATE TABLE DBPREFIXip_ban(
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
 	is_active BOOL NOT NULL,
-	ip VARCHAR(45) NOT NULL,
+	range_start VARBINARY(16) NOT NULL,
+	range_end VARBINARY(16) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	appeal_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	expires_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -268,4 +269,4 @@ CREATE TABLE DBPREFIXwordfilters(
 );
 
 INSERT INTO DBPREFIXdatabase_version(component, version)
-VALUES('gochan', 2);
+VALUES('gochan', 3);

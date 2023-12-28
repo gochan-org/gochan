@@ -114,6 +114,8 @@ type IPBan struct {
 	BannedForPostID *int
 	CopyPostText    template.HTML
 	IP              string
+	IPRangeStart    string
+	IPRangeEnd      string
 	IssuedAt        time.Time
 	ipBanBase
 }

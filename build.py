@@ -39,7 +39,7 @@ release_files = (
 )
 
 GOCHAN_VERSION = "3.9.0"
-DATABASE_VERSION = "2" # stored in DBNAME.DBPREFIXdatabase_version
+DATABASE_VERSION = "3" # stored in DBNAME.DBPREFIXdatabase_version
 
 PATH_NOTHING = -1
 PATH_UNKNOWN = 0
