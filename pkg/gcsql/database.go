@@ -195,10 +195,23 @@ func (db *GCDB) QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
 func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
 	db = &GCDB{
 		driver: dbDriver,
-		replacer: strings.NewReplacer(
+	}
+	if dbDriver == "mysql" {
+		db.replacer = strings.NewReplacer(
 			"DBNAME", dbName,
 			"DBPREFIX", prefix,
-			"\n", " "),
+			"INET_RANGE_START", "INET6_ATON(range_start)",
+			"INET_RANGE_END", "INET6_ATON(range_end)",
+			"INET_PARAM", "INET6_ATON(?)",
+			"\n", " ")
+	} else {
+		db.replacer = strings.NewReplacer(
+			"DBNAME", dbName,
+			"DBPREFIX", prefix,
+			"INET_RANGE_START", "range_start",
+			"INET_RANGE_END", "range_end",
+			"INET_PARAM", "?",
+			"\n", " ")
 	}
 
 	if dbDriver != "sqlite3" {

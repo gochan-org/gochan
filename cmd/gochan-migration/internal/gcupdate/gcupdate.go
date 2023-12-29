@@ -13,7 +13,7 @@ import (
 
 const (
 	// if the database version is less than this, it is assumed to be out of date, and the schema needs to be adjusted
-	latestDatabaseVersion = 2
+	latestDatabaseVersion = 3
 )
 
 type GCDatabaseUpdater struct {
@@ -94,7 +94,7 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		}
 		if numColumns == 0 {
 			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
-			if _, err = gcsql.ExecTxSQL(tx, query); err != nil {
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
 				return false, err
 			}
 		}
@@ -137,9 +137,9 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		if numColumns > 0 {
 			// add range_start and range_end columns
 			query = `ALTER TABLE DBPREFIXip_ban
-			ADD COLUMN IF NOT EXISTS range_start VARBINARY(16) NOT NULL
+			ADD COLUMN IF NOT EXISTS range_start VARBINARY(16) NOT NULL,
 			ADD COLUMN IF NOT EXISTS range_end VARBINARY(16) NOT NULL`
-			if _, err = gcsql.ExecTxSQL(tx, query); err != nil {
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
 				return false, err
 			}
 			// convert string to IP range
@@ -157,12 +157,13 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 				if rangeStart, rangeEnd, err = gcutil.ParseIPRange(ipOrCIDR); err != nil {
 					return false, err
 				}
-				query = `UPDATE DBPREFIXip_ban SET range_start = INET6_ATON(?), range_end = ? WHERE id = ?`
-				if _, err = gcsql.ExecTxSQL(tx, query, rangeStart, rangeEnd, id); err != nil {
+				query = `UPDATE DBPREFIXip_ban
+				SET range_start = INET6_ATON(?), range_end = INET6_ATON(?) WHERE id = ?`
+				if _, err = dbu.db.ExecTxSQL(tx, query, rangeStart, rangeEnd, id); err != nil {
 					return false, err
 				}
 				query = `ALTER TABLE DBPREFIXip_ban DROP COLUMN ip`
-				if _, err = gcsql.ExecTxSQL(tx, query); err != nil {
+				if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
 					return false, err
 				}
 			}
@@ -178,7 +179,7 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 			return false, err
 		}
 	case "sqlite3":
-		_, err = gcsql.ExecSQL(`PRAGMA foreign_keys = ON`)
+		_, err = dbu.db.ExecSQL(`PRAGMA foreign_keys = ON`)
 		if err != nil {
 			return false, err
 		}

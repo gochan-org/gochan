@@ -50,21 +50,19 @@ func registerModeratorPages() {
 					}
 
 				} else if request.FormValue("do") == "add" {
-					gcutil.LogStr("banIP", ban.IP, infoEv, errEv)
-					gcutil.LogStr("reason", ban.Message, infoEv, errEv)
-					if ban.Permanent {
-						gcutil.LogBool("permanent", true, infoEv, errEv)
-					} else {
-						gcutil.LogTime("expiresAt", ban.ExpiresAt)
-					}
-					gcutil.LogBool("appealable", ban.CanAppeal, infoEv, errEv)
-					if ban.CanAppeal {
-						gcutil.LogTime("appealAt", ban.AppealAt)
-					}
-					err := ipBanFromRequest(&ban, request, errEv)
+					ip := request.PostFormValue("ip")
+					ban.RangeStart, ban.RangeEnd, err = gcutil.ParseIPRange(ip)
 					if err != nil {
 						errEv.Err(err).Caller().
-							Msg("Unable to create new ban")
+							Str("ip", ip)
+						return "", err
+					}
+					gcutil.LogStr("rangeStart", ban.RangeStart, infoEv, errEv)
+					gcutil.LogStr("rangeEnd", ban.RangeEnd, infoEv, errEv)
+					gcutil.LogStr("reason", ban.Message, infoEv, errEv)
+					gcutil.LogBool("appealable", ban.CanAppeal, infoEv, errEv)
+					err := ipBanFromRequest(&ban, request, infoEv, errEv)
+					if err != nil {
 						return "", err
 					}
 					infoEv.Msg("Added IP ban")
@@ -74,11 +72,12 @@ func registerModeratorPages() {
 						errEv.Err(err).Caller().Send()
 						return "", err
 					}
-					if ban.IP, err = gcsql.GetPostIP(postID); err != nil {
+					if ban.RangeStart, err = gcsql.GetPostIP(postID); err != nil {
 						errEv.Err(err).Caller().
 							Int("postID", postID).Send()
 						return "", err
 					}
+					ban.RangeEnd = ban.RangeStart
 				}
 
 				filterBoardIDstr := request.FormValue("filterboardid")

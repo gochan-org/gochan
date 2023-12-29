@@ -8,6 +8,7 @@ import (
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcplugin/luautil"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
@@ -18,15 +19,20 @@ const (
 )
 
 func luaBanIP(l *lua.LState) int {
-	ban := &gcsql.IPBan{
-		IP: l.CheckString(1),
+	ban := &gcsql.IPBan{}
+	ip := l.CheckString(1)
+	var err error
+	ban.RangeStart, ban.RangeEnd, err = gcutil.ParseIPRange(ip)
+	if err != nil {
+		l.Push(luar.New(l, err))
+		return 1
 	}
+
 	ban.IsActive = true
 	ban.AppealAt = time.Now()
 	ban.CanAppeal = true
 
 	durOrNil := l.CheckAny(2)
-	var err error
 	switch durOrNil.Type() {
 	case lua.LTNil:
 		ban.Permanent = true

@@ -179,7 +179,14 @@ var funcMap = template.FuncMap{
 		if err != nil || ban == nil {
 			return "?"
 		}
-		return ban.IP
+		if ban.RangeStart == ban.RangeEnd {
+			return ban.RangeStart
+		}
+		ipn, err := gcutil.GetIPRangeSubnet(ban.RangeStart, ban.RangeEnd)
+		if err != nil {
+			return "?"
+		}
+		return ipn.String()
 	},
 	"getCatalogThumbnail": func(img string) string {
 		_, catalogThumb := uploads.GetThumbnailFilenames(img)

@@ -94,7 +94,7 @@ func checkUsernameBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.Resp
 	return true
 }
 
-func handleAppeal(writer http.ResponseWriter, request *http.Request, errEv *zerolog.Event) {
+func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zerolog.Event, errEv *zerolog.Event) {
 	banIDstr := request.FormValue("banid")
 	if banIDstr == "" {
 		errEv.Caller().Msg("Appeal sent without banid field")
@@ -114,7 +114,8 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, errEv *zero
 		server.ServeErrorPage(writer, fmt.Sprintf("Invalid banid value %q", banIDstr))
 		return
 	}
-	errEv.Int("banID", banID)
+	gcutil.LogInt("banID", banID, infoEv, errEv)
+
 	ban, err := gcsql.GetIPBanByID(banID)
 	if err != nil {
 		errEv.Err(err).
@@ -124,14 +125,21 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, errEv *zero
 	}
 	if ban == nil {
 		errEv.Caller().Msg("GetIPBanByID returned a nil ban (presumably not banned)")
-		server.ServeErrorPage(writer, fmt.Sprintf("Invalid banid %d", banID))
+		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban ID %d", banID))
 		return
 	}
-	if ban.IP != gcutil.GetRealIP(request) {
+	gcutil.LogStr("rangeStart", ban.RangeStart, infoEv, errEv)
+	gcutil.LogStr("rangeEnd", ban.RangeEnd, infoEv, errEv)
+
+	isCorrectIP, err := ban.IsBanned(gcutil.GetRealIP(request))
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		server.ServeErrorPage(writer, err.Error())
+	}
+	if !isCorrectIP {
 		errEv.Caller().
-			Str("banIP", ban.IP).
 			Msg("User tried to appeal a ban from a different IP")
-		server.ServeErrorPage(writer, fmt.Sprintf("Invalid banid %d", banID))
+		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban id", banID))
 		return
 	}
 	if !ban.IsActive {
@@ -157,10 +165,6 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, errEv *zero
 		return
 	}
 	board := request.FormValue("board")
-	gcutil.LogInfo().
-		Str("IP", gcutil.GetRealIP(request)).
-		Int("banID", banID).
-		Str("board", board).
-		Msg("Appeal submitted")
+	infoEv.Str("board", board).Msg("Appeal submitted")
 	http.Redirect(writer, request, config.WebPath(request.FormValue("board")), http.StatusFound)
 }

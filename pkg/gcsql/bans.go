@@ -5,13 +5,15 @@ import (
 	"errors"
 	"regexp"
 	"strconv"
+
+	"github.com/gochan-org/gochan/pkg/config"
 )
 
 const (
 	ipBanQueryBase = `SELECT
 	id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
-	is_active, ip, issued_at, appeal_at, expires_at, permanent, staff_note,
-	message, can_appeal
+	is_active, INET_START, INET_END, issued_at, appeal_at, expires_at,
+	permanent, staff_note, message, can_appeal
 	FROM DBPREFIXip_ban`
 )
 
@@ -26,9 +28,10 @@ type Ban interface {
 
 func NewIPBan(ban *IPBan) error {
 	const query = `INSERT INTO DBPREFIXip_ban
-	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban, is_active, ip,
-		appeal_at, expires_at, permanent, staff_note, message, can_appeal)
-	VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
+		is_active, INET_RANGE_START, INET_RANGE_END, appeal_at, expires_at,
+		permanent, staff_note, message, can_appeal)
+	VALUES(?, ?, ?, ?, ?, ?, INET_PARAM, INET_PARAM, ?, ?, ?, ?, ?, ?)`
 	if ban.ID > 0 {
 		return ErrBanAlreadyInserted
 	}
@@ -43,8 +46,9 @@ func NewIPBan(ban *IPBan) error {
 	}
 	defer stmt.Close()
 	if _, err = stmt.Exec(
-		ban.StaffID, ban.BoardID, ban.BannedForPostID, ban.CopyPostText, ban.IsThreadBan, ban.IsActive, ban.IP,
-		ban.AppealAt, ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal,
+		ban.StaffID, ban.BoardID, ban.BannedForPostID, ban.CopyPostText,
+		ban.IsThreadBan, ban.IsActive, ban.RangeStart, ban.RangeEnd, ban.AppealAt,
+		ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal,
 	); err != nil {
 		return err
 	}
@@ -55,17 +59,26 @@ func NewIPBan(ban *IPBan) error {
 	return tx.Commit()
 }
 
-// CheckIPBan returns the latest active IP ban for the given IP, as well as any errors. If the
-// IPBan pointer is nil, the IP has no active bans
+// CheckIPBan returns the latest active IP ban for the given IP, as well as any
+// errors. If the IPBan pointer is nil, the IP has no active bans. Because
+// SQLite 3 does not support a native IP type, range bans are not supported if
+// DBtype == "sqlite3"
 func CheckIPBan(ip string, boardID int) (*IPBan, error) {
-	const query = ipBanQueryBase + ` WHERE ip = ? AND (board_id IS NULL OR board_id = ?) AND
-		is_active AND (expires_at > CURRENT_TIMESTAMP OR permanent)
+	query := ipBanQueryBase + " WHERE "
+	if config.GetSystemCriticalConfig().DBtype == "sqlite3" {
+		query += "INET_RANGE_START = ? OR INET_RANGE_END = ?"
+	} else {
+		query += "INET_RANGE_START <= INET_PARAM AND INET_PARAM <= INET_RANGE_END"
+	}
+	query += ` AND (board_id IS NULL OR board_id = ?) AND is_active AND
+		(expires_at > CURRENT_TIMESTAMP OR permanent)
 	ORDER BY id DESC LIMIT 1`
 	var ban IPBan
 	err := QueryRowSQL(query, interfaceSlice(ip, boardID), interfaceSlice(
-		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan,
-		&ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote,
-		&ban.Message, &ban.CanAppeal))
+		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,
+		&ban.IsThreadBan, &ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt,
+		&ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message,
+		&ban.CanAppeal))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -76,9 +89,10 @@ func GetIPBanByID(id int) (*IPBan, error) {
 	const query = ipBanQueryBase + " WHERE id = ?"
 	var ban IPBan
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
-		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan,
-		&ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote,
-		&ban.Message, &ban.CanAppeal))
+		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,
+		&ban.IsThreadBan, &ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt,
+		&ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message,
+		&ban.CanAppeal))
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +120,8 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 		var ban IPBan
 		if err = rows.Scan(
 			&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText, &ban.IsThreadBan,
-			&ban.IsActive, &ban.IP, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote,
-			&ban.Message, &ban.CanAppeal,
+			&ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt, &ban.AppealAt, &ban.ExpiresAt,
+			&ban.Permanent, &ban.StaffNote, &ban.Message, &ban.CanAppeal,
 		); err != nil {
 			rows.Close()
 			return nil, err
@@ -199,7 +213,9 @@ func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
 }
 
 func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote string) (*UsernameBan, error) {
-	const query = `INSERT INTO DBPREFIXusername_ban (board_id, staff_id, staff_note, username, is_regex) VALUES(?,?,?,?,?)`
+	const query = `INSERT INTO DBPREFIXusername_ban
+	(board_id, staff_id, staff_note, username, is_regex)
+	VALUES(?,?,?,?,?)`
 	var ban UsernameBan
 	if boardID > 0 {
 		ban.BoardID = new(int)
@@ -234,7 +250,9 @@ func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote s
 }
 
 func GetNameBans(boardID int, limit int) ([]UsernameBan, error) {
-	query := `SELECT id, board_id, staff_id, staff_note, issued_at, username, is_regex FROM DBPREFIXusername_ban`
+	query := `SELECT
+	id, board_id, staff_id, staff_note, issued_at, username, is_regex
+	FROM DBPREFIXusername_ban`
 	limitStr := ""
 	if limit > 0 {
 		limitStr = " LIMIT " + strconv.Itoa(limit)
@@ -446,7 +464,8 @@ func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
 }
 
 func NewFileChecksumBan(checksum string, boardID int, staffID int, staffNote string) (*FileBan, error) {
-	const query = `INSERT INTO DBPREFIXfile_ban (board_id, staff_id, staff_note, checksum) VALUES(?,?,?,?)`
+	const query = `INSERT INTO DBPREFIXfile_ban
+	(board_id, staff_id, staff_note, checksum) VALUES(?,?,?,?)`
 	var ban FileBan
 	var err error
 

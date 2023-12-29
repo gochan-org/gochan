@@ -1,8 +1,12 @@
 package gcsql
 
 import (
+	"errors"
 	"html/template"
+	"net"
 	"time"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 // table: DBPREFIXannouncements
@@ -113,11 +117,22 @@ type IPBan struct {
 	BoardID         *int
 	BannedForPostID *int
 	CopyPostText    template.HTML
-	IP              string
-	IPRangeStart    string
-	IPRangeEnd      string
+	RangeStart      string
+	RangeEnd        string
 	IssuedAt        time.Time
 	ipBanBase
+}
+
+func (ipb *IPBan) IsBanned(ipStr string) (bool, error) {
+	ipn, err := gcutil.GetIPRangeSubnet(ipb.RangeStart, ipb.RangeEnd)
+	if err != nil {
+		return false, err
+	}
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false, errors.New("invalid IP address")
+	}
+	return ipn.Contains(ip), nil
 }
 
 // table: DBPREFIXip_ban_audit

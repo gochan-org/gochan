@@ -68,7 +68,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if request.FormValue("doappeal") != "" {
-		handleAppeal(writer, request, errEv)
+		handleAppeal(writer, request, infoEv, errEv)
 		return
 	}
 

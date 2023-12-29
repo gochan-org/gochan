@@ -9,31 +9,39 @@ import (
 
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
 )
 
-func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Event) error {
+func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, infoEv *zerolog.Event, errEv *zerolog.Event) error {
 	now := time.Now()
 	banIDStr := request.FormValue("edit")
 	if banIDStr != "" && request.FormValue("do") == "edit" {
 		banID, err := strconv.Atoi(banIDStr)
 		if err != nil {
-			errEv.Err(err).
-				Str("editBanID", banIDStr).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("editBanID", banIDStr).Send()
 			return errors.New("invalid 'edit' field value (must be int)")
 		}
 		editing, err := gcsql.GetIPBanByID(banID)
 		if err != nil {
-			errEv.Err(err).
-				Int("editBanID", banID).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Int("editBanID", banID).Send()
 			return errors.New("Unable to get ban with id " + banIDStr + " (SQL error)")
 		}
 		*ban = *editing
 		return nil
 	}
-	ban.IP = request.FormValue("ip")
+	var err error
+	ip := request.PostFormValue("ip")
+	ban.RangeStart, ban.RangeEnd, err = gcutil.ParseIPRange(ip)
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("ip", ip)
+	}
+	gcutil.LogStr("rangeStart", ban.RangeStart, infoEv, errEv)
+	gcutil.LogStr("rangeEnd", ban.RangeEnd, infoEv, errEv)
+
 	ban.Permanent = request.FormValue("permanent") == "on"
 	if ban.Permanent {
 		ban.ExpiresAt = now
@@ -55,9 +63,9 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 		if appealWaitStr != "" {
 			appealDuration, err := durationutil.ParseLongerDuration(appealWaitStr)
 			if err != nil {
-				errEv.Err(err).
+				errEv.Err(err).Caller().
 					Str("appealwait", appealWaitStr).
-					Caller().Msg("Invalid appeal delay duration string")
+					Msg("Invalid appeal delay duration string")
 				return err
 			}
 			ban.AppealAt = now.Add(appealDuration)
@@ -73,16 +81,18 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, errEv *zerolog.Ev
 	if boardIDstr != "" && boardIDstr != "0" {
 		boardID, err := strconv.Atoi(boardIDstr)
 		if err != nil {
-			errEv.Err(err).
-				Str("boardid", boardIDstr).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("boardid", boardIDstr).Send()
 			return err
 		}
+		gcutil.LogInt("boardID", boardID, infoEv, errEv)
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
 	ban.Message = html.EscapeString(request.FormValue("reason"))
 	ban.StaffNote = html.EscapeString(request.FormValue("staffnote"))
 	ban.IsActive = true
+	gcutil.LogStr("banMessage", request.FormValue("reason"), infoEv, errEv)
+	gcutil.LogStr("staffNote", request.FormValue("staffnote"), infoEv, errEv)
 	return gcsql.NewIPBan(ban)
 }

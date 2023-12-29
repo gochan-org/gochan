@@ -192,22 +192,19 @@ func ParseIPRange(ipOrCIDR string) (string, string, error) {
 	return ipStart.String(), ipStart.String(), nil
 }
 
-// GetIPRangeString returns an IP address if start == end, or the subnet of all IP
-// addresses between start and end
-func GetIPRangeString(start string, end string) (string, error) {
-	if start == end {
-		return start, nil
-	}
+// GetIPRangeSubnet returns the smallest subnet that contains the start and end
+// IP addresses, and any errors that occured
+func GetIPRangeSubnet(start string, end string) (*net.IPNet, error) {
 	startIP := net.ParseIP(start)
 	endIP := net.ParseIP(end)
 	if startIP == nil {
-		return "", fmt.Errorf("invalid IP address %s", start)
+		return nil, fmt.Errorf("invalid IP address %s", start)
 	}
 	if endIP == nil {
-		return "", fmt.Errorf("invalid IP address %s", end)
+		return nil, fmt.Errorf("invalid IP address %s", end)
 	}
 	if len(startIP) != len(endIP) {
-		return "", errors.New("ip addresses must both be IPv4 or IPv6")
+		return nil, errors.New("ip addresses must both be IPv4 or IPv6")
 	}
 
 	if startIP.To4() != nil {
@@ -216,7 +213,7 @@ func GetIPRangeString(start string, end string) (string, error) {
 	}
 
 	bits := 0
-	var ipn net.IPNet
+	var ipn *net.IPNet
 	for b := range startIP {
 		if startIP[b] == endIP[b] {
 			bits += 8
@@ -227,12 +224,11 @@ func GetIPRangeString(start string, end string) (string, error) {
 				bits++
 				continue
 			}
-			ipn = net.IPNet{IP: startIP, Mask: net.CIDRMask(bits, len(startIP)*8)}
-			return ipn.String(), nil
+			ipn = &net.IPNet{IP: startIP, Mask: net.CIDRMask(bits, len(startIP)*8)}
+			return ipn, nil
 		}
 	}
-	ipn = net.IPNet{IP: startIP, Mask: net.CIDRMask(bits, len(startIP)*8)}
-	return ipn.String(), nil
+	return &net.IPNet{IP: startIP, Mask: net.CIDRMask(bits, len(startIP)*8)}, nil
 }
 
 // ParseName takes a name string from a request object and returns the name and tripcode parts
