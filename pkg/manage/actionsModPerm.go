@@ -63,6 +63,8 @@ func registerModeratorPages() {
 					gcutil.LogBool("appealable", ban.CanAppeal, infoEv, errEv)
 					err := ipBanFromRequest(&ban, request, infoEv, errEv)
 					if err != nil {
+						errEv.Err(err).Caller().
+							Msg("unable to submit ban")
 						return "", err
 					}
 					infoEv.Msg("Added IP ban")

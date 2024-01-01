@@ -153,6 +153,16 @@ var funcMap = template.FuncMap{
 	"isBanned": func(ban *gcsql.IPBan, board string) bool {
 		return ban.IsActive && ban.BoardID != nil
 	},
+	"banMask": func(ban gcsql.IPBan) string {
+		if ban.ID < 1 {
+			return ""
+		}
+		ipn, err := gcutil.GetIPRangeSubnet(ban.RangeStart, ban.RangeEnd)
+		if err != nil {
+			return "?"
+		}
+		return ipn.String()
+	},
 	"getBoardDirFromID": func(id int) string {
 		dir, _ := gcsql.GetBoardDir(id)
 		return dir

@@ -12,7 +12,7 @@ import (
 const (
 	ipBanQueryBase = `SELECT
 	id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
-	is_active, INET_START, INET_END, issued_at, appeal_at, expires_at,
+	is_active, RANGE_START_NTOA, RANGE_END_NTOA, issued_at, appeal_at, expires_at,
 	permanent, staff_note, message, can_appeal
 	FROM DBPREFIXip_ban`
 )
@@ -29,9 +29,9 @@ type Ban interface {
 func NewIPBan(ban *IPBan) error {
 	const query = `INSERT INTO DBPREFIXip_ban
 	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
-		is_active, INET_RANGE_START, INET_RANGE_END, appeal_at, expires_at,
+		is_active, range_start, range_end, appeal_at, expires_at,
 		permanent, staff_note, message, can_appeal)
-	VALUES(?, ?, ?, ?, ?, ?, INET_PARAM, INET_PARAM, ?, ?, ?, ?, ?, ?)`
+	VALUES(?, ?, ?, ?, ?, ?, INET_PARAM_ATON, INET_PARAM_ATON, ?, ?, ?, ?, ?, ?)`
 	if ban.ID > 0 {
 		return ErrBanAlreadyInserted
 	}
@@ -66,21 +66,23 @@ func NewIPBan(ban *IPBan) error {
 func CheckIPBan(ip string, boardID int) (*IPBan, error) {
 	query := ipBanQueryBase + " WHERE "
 	if config.GetSystemCriticalConfig().DBtype == "sqlite3" {
-		query += "INET_RANGE_START = ? OR INET_RANGE_END = ?"
+		query += "range_start = ? OR range_end = ?"
 	} else {
-		query += "INET_RANGE_START <= INET_PARAM AND INET_PARAM <= INET_RANGE_END"
+		query += "range_start <= INET_PARAM_ATON AND INET_PARAM_ATON <= range_end"
 	}
 	query += ` AND (board_id IS NULL OR board_id = ?) AND is_active AND
 		(expires_at > CURRENT_TIMESTAMP OR permanent)
 	ORDER BY id DESC LIMIT 1`
 	var ban IPBan
-	err := QueryRowSQL(query, interfaceSlice(ip, boardID), interfaceSlice(
+	err := QueryRowSQL(query, interfaceSlice(ip, ip, boardID), interfaceSlice(
 		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,
 		&ban.IsThreadBan, &ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt,
 		&ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message,
 		&ban.CanAppeal))
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
+	} else if err != nil {
+		return nil, err
 	}
 	return &ban, nil
 }

@@ -22,6 +22,7 @@ func showBanpage(ban *gcsql.IPBan, post *gcsql.Post, postBoard *gcsql.Board, wri
 		"systemCritical": config.GetSystemCriticalConfig(),
 		"siteConfig":     config.GetSiteConfig(),
 		"boardConfig":    config.GetBoardConfig(postBoard.Dir),
+		"ip":             post.IP,
 		"ban":            ban,
 		"board":          postBoard,
 		"permanent":      ban.Permanent,
@@ -139,7 +140,7 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 	if !isCorrectIP {
 		errEv.Caller().
 			Msg("User tried to appeal a ban from a different IP")
-		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban id", banID))
+		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban id: %d", banID))
 		return
 	}
 	if !ban.IsActive {

@@ -2,7 +2,7 @@
 <input type="hidden" name="do" value="add" />
 <h2>Add IP ban</h2>
 <table>
-	<tr><th>IP address</th><td><input type="text" name="ip" value="{{.ban.IP}}" style="width: 100%;"/></td></tr>
+	<tr><th>Mask</th><td><input type="text" name="ip" value="{{banMask .ban}}" style="width: 100%;"/></td></tr>
 	<tr><th>Duration</th><td><input type="text" name="duration" style="width: 100%;" {{if gt .ban.ID 0}}value="{{until .ban.ExpiresAt}}"{{end}}/></td></tr>
 	<tr><th></th><td>e.g. '1y2mo3w4d5h6m7s',<br />'1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds'<br/>Optional if "Permanent" is checked, required otherwise</td></tr>
 	<tr><th>Permanent</th><td><input type="checkbox" name="permanent" id="permanent" {{if .ban.Permanent}}checked{{end}}> (overrides the duration)</td></tr>
@@ -37,7 +37,7 @@ Filter board: <select name="filterboardid" id="filterboardid" onchange="window.l
 {{range $_, $ban := $.banlist -}}
 	<tr>
 		<td> <a href="{{webPath "manage/bans?edit="}}{{$ban.ID}}">Edit</a> | <a href="{{webPath "manage/bans?delete="}}{{$ban.ID}}">Delete</a> </td>
-		<td>{{$ban.IP}}</td>
+		<td>{{banMask $ban}}</td>
 		<td>{{if not $ban.BoardID}}<i>all</i>{{else}}/{{getBoardDirFromID $ban.BoardID}}/{{end}}</td>
 		<td>{{$ban.Message}}</td>
 		<td>{{getStaffNameFromID $ban.StaffID}}</td>

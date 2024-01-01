@@ -200,17 +200,23 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 		db.replacer = strings.NewReplacer(
 			"DBNAME", dbName,
 			"DBPREFIX", prefix,
-			"INET_RANGE_START", "INET6_ATON(range_start)",
-			"INET_RANGE_END", "INET6_ATON(range_end)",
-			"INET_PARAM", "INET6_ATON(?)",
+			"RANGE_START_ATON", "INET6_ATON(range_start)",
+			"RANGE_START_NTOA", "INET6_NTOA(range_start)",
+			"RANGE_END_ATON", "INET6_ATON(range_end)",
+			"RANGE_END_NTOA", "INET6_NTOA(range_end)",
+			"INET_PARAM_ATON", "INET6_ATON(?)",
+			"INET_PARAM_NTOA", "INET6_NTOA(?)",
 			"\n", " ")
 	} else {
 		db.replacer = strings.NewReplacer(
 			"DBNAME", dbName,
 			"DBPREFIX", prefix,
-			"INET_RANGE_START", "range_start",
-			"INET_RANGE_END", "range_end",
-			"INET_PARAM", "?",
+			"RANGE_START_ATON", "range_start",
+			"RANGE_START_NTOA", "range_start",
+			"RANGE_END_ATON", "range_end",
+			"RANGE_END_NTOA", "range_end",
+			"INET_PARAM_ATON", "?",
+			"INET_PARAM_NTOA", "?",
 			"\n", " ")
 	}
 
