@@ -467,7 +467,7 @@ func registerModeratorPages() {
 				rows, err := gcsql.QuerySQL(`SELECT id,
 					handled_by_staff_id as staff_id,
 					(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
-					post_id, ip, reason, is_cleared from DBPREFIXreports WHERE is_cleared = FALSE`)
+					post_id, IP_NTOA, reason, is_cleared from DBPREFIXreports WHERE is_cleared = FALSE`)
 				if err != nil {
 					return nil, err
 				}

@@ -24,10 +24,10 @@ if [ "$DBTYPE" == "mysql" ]; then
 		apt-get -y install mariadb-server mariadb-client 
 	fi
 	mysql -uroot <<- EOF
+	CREATE USER 'gochan'@'%' IDENTIFIED BY 'gochan';
 	CREATE DATABASE IF NOT EXISTS gochan;
-	GRANT USAGE ON *.* TO gochan IDENTIFIED BY 'gochan'; \
+	GRANT USAGE ON *.* TO gochan; \
 	GRANT ALL PRIVILEGES ON gochan.* TO gochan; \
-	SET PASSWORD FOR 'gochan'@'%' = PASSWORD('gochan');
 	FLUSH PRIVILEGES;
 	EOF
 	if [ "$MYSQL_MAINLINE" == "1" ]; then

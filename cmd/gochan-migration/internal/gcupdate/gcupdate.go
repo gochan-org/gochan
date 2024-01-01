@@ -56,6 +56,11 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	}
 
 	var query string
+	var tableName string
+	var numConstraints int
+	var numColumns int
+	var rangeStart string
+	var rangeEnd string
 	criticalConfig := config.GetSystemCriticalConfig()
 	ctx := context.Background()
 	tx, err := dbu.db.BeginTx(ctx, &sql.TxOptions{
@@ -74,7 +79,6 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		query = `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
 		WHERE CONSTRAINT_NAME = 'wordfilters_board_id_fk'
 		AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
-		var numConstraints int
 
 		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numConstraints}); err != nil {
 			return false, err
@@ -88,7 +92,6 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		WHERE TABLE_SCHEMA = DATABASE()
 		AND TABLE_NAME = 'DBPREFIXwordfilters'
 		AND COLUMN_NAME = 'board_dirs'`
-		var numColumns int
 		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
 			return false, err
 		}
@@ -114,7 +117,6 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 			rows.Close()
 		}()
 		for rows.Next() {
-			var tableName string
 			err = rows.Scan(&tableName)
 			if err != nil {
 				return false, err
@@ -142,12 +144,10 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
 				return false, err
 			}
-			// convert string to IP range
+			// convert ban IP string to IP range
 			if rows, err = dbu.db.QuerySQL(`SELECT id, ip FROM DBPREFIXip_ban`); err != nil {
 				return false, err
 			}
-			var rangeStart string
-			var rangeEnd string
 			for rows.Next() {
 				var id int
 				var ipOrCIDR string
@@ -162,10 +162,81 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 				if _, err = dbu.db.ExecTxSQL(tx, query, rangeStart, rangeEnd, id); err != nil {
 					return false, err
 				}
-				query = `ALTER TABLE DBPREFIXip_ban DROP COLUMN ip`
+				query = `ALTER TABLE DBPREFIXip_ban DROP COLUMN IF EXISTS ip`
 				if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
 					return false, err
 				}
+			}
+			if err = rows.Close(); err != nil {
+				return false, err
+			}
+		}
+
+		// Convert DBPREFIXposts.ip to from varchar to varbinary
+		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'DBPREFIXposts'
+			AND COLUMN_NAME = 'ip'
+			AND DATA_TYPE = 'varchar'`
+		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
+			return false, err
+		}
+		if numColumns == 1 {
+			// rename `ip` to a temporary column to then be removed
+			query = `ALTER TABLE DBPREFIXposts CHANGE ip ip_str varchar(45)`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+
+			query = `ALTER TABLE DBPREFIXposts
+			ADD COLUMN IF NOT EXISTS ip VARBINARY(16) NOT NULL`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+
+			// convert post IP VARCHAR(45) to VARBINARY(16)
+			query = `UPDATE DBPREFIXposts SET ip = INET6_ATON(ip_str)`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+
+			query = `ALTER TABLE DBPREFIXposts DROP COLUMN IF EXISTS ip_str`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+		}
+
+		// Convert DBPREFIXreports.ip to from varchar to varbinary
+		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
+			WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'DBPREFIXreports'
+			AND COLUMN_NAME = 'ip'
+			AND DATA_TYPE = 'varchar'`
+		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
+			return false, err
+		}
+		if numColumns == 1 {
+			// rename `ip` to a temporary column to then be removed
+			query = `ALTER TABLE DBPREFIXreports CHANGE ip ip_str varchar(45)`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+
+			query = `ALTER TABLE DBPREFIXreports
+			ADD COLUMN IF NOT EXISTS ip VARBINARY(16) NOT NULL`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+
+			// convert post IP VARCHAR(45) to VARBINARY(16)
+			query = `UPDATE DBPREFIXreports SET ip = INET6_ATON(ip_str)`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
+			}
+
+			query = `ALTER TABLE DBPREFIXreports DROP COLUMN IF EXISTS ip_str`
+			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
+				return false, err
 			}
 		}
 		err = nil

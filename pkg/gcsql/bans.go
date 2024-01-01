@@ -31,7 +31,7 @@ func NewIPBan(ban *IPBan) error {
 	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
 		is_active, range_start, range_end, appeal_at, expires_at,
 		permanent, staff_note, message, can_appeal)
-	VALUES(?, ?, ?, ?, ?, ?, INET_PARAM_ATON, INET_PARAM_ATON, ?, ?, ?, ?, ?, ?)`
+	VALUES(?, ?, ?, ?, ?, ?, PARAM_ATON, PARAM_ATON, ?, ?, ?, ?, ?, ?)`
 	if ban.ID > 0 {
 		return ErrBanAlreadyInserted
 	}
@@ -68,7 +68,7 @@ func CheckIPBan(ip string, boardID int) (*IPBan, error) {
 	if config.GetSystemCriticalConfig().DBtype == "sqlite3" {
 		query += "range_start = ? OR range_end = ?"
 	} else {
-		query += "range_start <= INET_PARAM_ATON AND INET_PARAM_ATON <= range_end"
+		query += "range_start <= PARAM_ATON AND PARAM_ATON <= range_end"
 	}
 	query += ` AND (board_id IS NULL OR board_id = ?) AND is_active AND
 		(expires_at > CURRENT_TIMESTAMP OR permanent)

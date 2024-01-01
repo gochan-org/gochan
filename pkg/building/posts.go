@@ -2,6 +2,7 @@ package building
 
 import (
 	"html/template"
+	"net"
 	"path"
 	"strconv"
 	"time"
@@ -53,7 +54,7 @@ type Post struct {
 	IsTopPost        bool          `json:"-"`
 	BoardID          int           `json:"-"`
 	BoardDir         string        `json:"-"`
-	IP               string        `json:"-"`
+	IP               net.IP        `json:"-"`
 	Name             string        `json:"name"`
 	Tripcode         string        `json:"trip"`
 	Email            string        `json:"email"`

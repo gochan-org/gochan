@@ -192,6 +192,31 @@ func (db *GCDB) QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
 	return stmt.Query(a...)
 }
 
+/*
+QueryTxSQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
+Automatically escapes the given values and caches the query
+Example:
+
+	tx, _ := db.Begin()
+	rows, err := db.QueryTxSQL(tx, "SELECT * FROM table")
+	if err == nil {
+		for rows.Next() {
+			var intVal int
+			var stringVal string
+			rows.Scan(&intVal, &stringVal)
+			// do something with intVal and stringVal
+		}
+	}
+*/
+func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Rows, error) {
+	stmt, err := db.PrepareSQL(query, tx)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	return stmt.Query(a...)
+}
+
 func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
 	db = &GCDB{
 		driver: dbDriver,
@@ -204,8 +229,10 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 			"RANGE_START_NTOA", "INET6_NTOA(range_start)",
 			"RANGE_END_ATON", "INET6_ATON(range_end)",
 			"RANGE_END_NTOA", "INET6_NTOA(range_end)",
-			"INET_PARAM_ATON", "INET6_ATON(?)",
-			"INET_PARAM_NTOA", "INET6_NTOA(?)",
+			"IP_ATON", "INET6_ATON(ip)",
+			"IP_NTOA", "INET6_NTOA(ip)",
+			"PARAM_ATON", "INET6_ATON(?)",
+			"PARAM_NTOA", "INET6_NTOA(?)",
 			"\n", " ")
 	} else {
 		db.replacer = strings.NewReplacer(
@@ -215,8 +242,10 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 			"RANGE_START_NTOA", "range_start",
 			"RANGE_END_ATON", "range_end",
 			"RANGE_END_NTOA", "range_end",
-			"INET_PARAM_ATON", "?",
-			"INET_PARAM_NTOA", "?",
+			"IP_ATON", "ip",
+			"IP_NTOA", "ip",
+			"PARAM_ATON", "?",
+			"PARAM_NTOA", "?",
 			"\n", " ")
 	}
 

@@ -6,7 +6,7 @@ import "time"
 // errors encountered
 func CreateReport(postID int, ip string, reason string) (*Report, error) {
 	currentTime := time.Now()
-	sql := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, ?, ?, FALSE)`
+	sql := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, PARAM_ATON, ?, FALSE)`
 	result, err := ExecSQL(sql, postID, ip, reason)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 // GetReports returns a Report array and any errors encountered. If `includeCleared` is true,
 // the array will include reports that have already been dismissed
 func GetReports(includeCleared bool) ([]Report, error) {
-	sql := `SELECT id,handled_by_staff_id,post_id,ip,reason,is_cleared FROM DBPREFIXreports`
+	sql := `SELECT id,handled_by_staff_id,post_id,IP_NTOA,reason,is_cleared FROM DBPREFIXreports`
 	if !includeCleared {
 		sql += ` WHERE is_cleared = FALSE`
 	}

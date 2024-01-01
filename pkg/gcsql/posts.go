@@ -16,7 +16,7 @@ const (
 		SELECT board_id FROM DBPREFIXthreads WHERE id = (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?))`
 	selectPostsBaseSQL = `SELECT 
-	id, thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature,
+	id, thread_id, is_top_post, IP_NTOA, created_on, name, tripcode, is_role_signature,
 	email, subject, message, message_raw, password, deleted_at, is_deleted, COALESCE(banned_message,'') AS banned_message
 	FROM DBPREFIXposts `
 )
@@ -49,7 +49,7 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 }
 
 func GetPostIP(postID int) (string, error) {
-	sql := "SELECT ip FROM DBPREFIXposts WHERE id = ?"
+	sql := "SELECT IP_NTOA FROM DBPREFIXposts WHERE id = ?"
 	var ip string
 	err := QueryRowSQL(sql, []interface{}{postID}, []interface{}{&ip})
 	return ip, err
@@ -58,7 +58,7 @@ func GetPostIP(postID int) (string, error) {
 // GetPostsFromIP gets the posts from the database with a matching IP address, specifying
 // optionally requiring them to not be deleted
 func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
-	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = ?`
+	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = PARAM_ATON`
 	if onlyNotDeleted {
 		sql += " AND is_deleted = FALSE"
 	}
@@ -346,7 +346,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	insertSQL := `INSERT INTO DBPREFIXposts
 	(thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject,
 		message, message_raw, password) 
-	VALUES(?,?,?,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?)`
+	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
 	tx, err := BeginTx()
