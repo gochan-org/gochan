@@ -47,11 +47,11 @@ func showBanpage(ban *gcsql.IPBan, post *gcsql.Post, postBoard *gcsql.Board, wri
 func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
 	ipBan, err := gcsql.CheckIPBan(post.IP, postBoard.ID)
 	if err != nil {
-		gcutil.LogError(err).
+		gcutil.LogError(err).Caller().
 			Str("IP", post.IP).
 			Str("boardDir", postBoard.Dir).
 			Msg("Error getting IP banned status")
-		server.ServeErrorPage(writer, "Error getting ban info"+err.Error())
+		server.ServeErrorPage(writer, "Error checking banned status: "+err.Error())
 		return true
 	}
 	if ipBan == nil {
@@ -73,7 +73,7 @@ func checkUsernameBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.Resp
 
 	nameBan, err := gcsql.CheckNameBan(nameTrip, postBoard.ID)
 	if err != nil {
-		gcutil.LogError(err).
+		gcutil.LogError(err).Caller().
 			Str("IP", post.IP).
 			Str("nameTrip", nameTrip).
 			Str("boardDir", postBoard.Dir).
@@ -119,13 +119,12 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 
 	ban, err := gcsql.GetIPBanByID(banID)
 	if err != nil {
-		errEv.Err(err).
-			Caller().Send()
+		errEv.Err(err).Caller().Send()
 		server.ServeErrorPage(writer, "Error getting ban info: "+err.Error())
 		return
 	}
 	if ban == nil {
-		errEv.Caller().Msg("GetIPBanByID returned a nil ban (presumably not banned)")
+		infoEv.Caller().Msg("GetIPBanByID returned a nil ban (presumably not banned)")
 		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban ID %d", banID))
 		return
 	}

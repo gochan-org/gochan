@@ -155,6 +155,9 @@ var funcMap = template.FuncMap{
 	},
 	"banMask": func(ban gcsql.IPBan) string {
 		if ban.ID < 1 {
+			if ban.RangeStart == ban.RangeEnd {
+				return ban.RangeStart
+			}
 			return ""
 		}
 		ipn, err := gcutil.GetIPRangeSubnet(ban.RangeStart, ban.RangeEnd)
