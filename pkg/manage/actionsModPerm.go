@@ -413,20 +413,19 @@ func registerModeratorPages() {
 
 					data["posts"], err = building.GetBuildablePostsByIP(ipQuery, limit)
 					if err != nil {
-						errEv.Err(err).
+						errEv.Err(err).Caller().
 							Str("ipQuery", ipQuery).
 							Int("limit", limit).
 							Bool("onlyNotDeleted", true).
-							Caller().Send()
+							Send()
 						return "", fmt.Errorf("Error getting list of posts from %q by staff %s: %s", ipQuery, staff.Username, err.Error())
 					}
 				}
 
 				manageIpBuffer := bytes.NewBufferString("")
 				if err = serverutil.MinifyTemplate(gctemplates.ManageIPSearch, data, manageIpBuffer, "text/html"); err != nil {
-					errEv.Err(err).
-						Str("template", "manage_ipsearch.html").
-						Caller().Send()
+					errEv.Err(err).Caller().
+						Str("template", "manage_ipsearch.html").Send()
 					return "", errors.New("Error executing IP search page template:" + err.Error())
 				}
 				return manageIpBuffer.String(), nil

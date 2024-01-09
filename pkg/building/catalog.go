@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -71,23 +70,12 @@ func getBoardTopPosts(boardID int) ([]Post, error) {
 	}
 	defer rows.Close()
 	var posts []Post
-	var lastBump time.Time
-	for rows.Next() {
-		var post Post
-		err = rows.Scan(
-			&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
-			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied,
-		)
-		if err != nil {
-			return nil, err
-		}
-		post.IsTopPost = post.ParentID == 0 || post.ParentID == post.ID
-		posts = append(posts, post)
-	}
-	return posts, nil
+
+	err = QueryPosts(query, []any{boardID}, func(p Post) error {
+		posts = append(posts, p)
+		return nil
+	})
+	return posts, err
 }
 
 // BuildCatalog builds the catalog for a board with a given id

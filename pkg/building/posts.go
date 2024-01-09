@@ -1,6 +1,7 @@
 package building
 
 import (
+	"fmt"
 	"html/template"
 	"net"
 	"path"
@@ -123,19 +124,79 @@ func (p *Post) Stickied() bool {
 	return p.thread.Stickied
 }
 
+func QueryPosts(query string, params []any, cb func(Post) error) error {
+	rows, err := gcsql.QuerySQL(query, params...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	dbType := config.GetSystemCriticalConfig().DBtype
+
+	for rows.Next() {
+		var post Post
+		dest := []any{&post.ID, &post.thread.ID}
+		var ip string
+		if dbType == "mysql" {
+			dest = append(dest, &post.IP)
+		} else {
+			dest = append(dest, &ip)
+		}
+		var lastBump time.Time
+		dest = append(dest,
+			&post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
+			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
+			&post.thread.Locked, &post.thread.Stickied)
+
+		if err = rows.Scan(dest...); err != nil {
+			return err
+		}
+		if dbType != "mysql" {
+			post.IP = net.ParseIP(ip)
+			if post.IP == nil {
+				return fmt.Errorf("invalid IP address %q", ip)
+			}
+		}
+		post.IsTopPost = post.ParentID == 0 || post.ParentID == post.ID
+		if post.Filename != "" {
+			post.Extension = path.Ext(post.Filename)
+		}
+		if err = cb(post); err != nil {
+			return err
+		}
+	}
+	return rows.Close()
+}
+
 func GetBuildablePost(id int, _ int) (*Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
+
 	var post Post
 	var lastBump time.Time
-	err := gcsql.QueryRowSQL(query, []interface{}{id}, []interface{}{
-		&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+	var ip string
+	out := []any{&post.ID, &post.thread.ID}
+	dbType := config.GetSystemCriticalConfig().DBtype
+	if dbType == "mysql" {
+		out = append(out, &post.IP)
+	} else {
+		out = append(out, &ip)
+	}
+	out = append(out, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
 		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
 		&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-		&post.thread.Locked, &post.thread.Stickied,
-	})
+		&post.thread.Locked, &post.thread.Stickied)
+
+	err := gcsql.QueryRowSQL(query, []any{id}, out)
 	if err != nil {
 		return nil, err
+	}
+	if dbType != "mysql" {
+		post.IP = net.ParseIP(ip)
+		if post.IP == nil {
+			return nil, fmt.Errorf("invalid post IP address %q", ip)
+		}
 	}
 	post.IsTopPost = post.ParentID == 0
 	post.Extension = path.Ext(post.Filename)
@@ -147,61 +208,28 @@ func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
-	rows, err := gcsql.QuerySQL(query, ip)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+
 	var posts []Post
-	var lastBump time.Time
-	for rows.Next() {
-		var post Post
-		if err = rows.Scan(
-			&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
-			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied,
-		); err != nil {
-			return nil, err
-		}
-		post.IsTopPost = post.ParentID == 0
-		post.Extension = path.Ext(post.Filename)
-		posts = append(posts, post)
-	}
-	return posts, nil
+	err := QueryPosts(query, []any{ip}, func(p Post) error {
+		posts = append(posts, p)
+		return nil
+	})
+	return posts, err
 }
 
 func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ? ORDER BY DBPREFIXposts.id ASC"
-	rows, err := gcsql.QuerySQL(query, thread.ID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	var posts []Post
-	var lastBump time.Time
-	for rows.Next() {
-		var post Post
-		err = rows.Scan(
-			&post.ID, &post.thread.ID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
-			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied,
-		)
-		if err != nil {
-			return nil, err
-		}
-		post.IsTopPost = post.ParentID == 0 || post.ParentID == post.ID
-		posts = append(posts, post)
-	}
-	return posts, nil
+	err := QueryPosts(query, []any{thread.ID}, func(p Post) error {
+		posts = append(posts, p)
+		return nil
+	})
+	return posts, err
 }
 
 func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 	query := postQueryBase
-	var args []interface{} = []interface{}{}
+	args := []any{}
 
 	if boardid > 0 {
 		query += " WHERE t.board_id = ?"
@@ -209,30 +237,14 @@ func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 	}
 
 	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(limit)
-	rows, err := gcsql.QuerySQL(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+
 	var posts []Post
-	var lastBump time.Time
-	for rows.Next() {
-		var post Post
-		var threadID int
-		err = rows.Scan(
-			&post.ID, &threadID, &post.IP, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
-			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied,
-		)
-		if err != nil {
-			return nil, err
-		}
+	err := QueryPosts(query, args, func(post Post) error {
 		if boardid == 0 || post.BoardID == boardid {
 			post.Extension = path.Ext(post.Filename)
 			posts = append(posts, post)
 		}
-	}
-	return posts, nil
+		return nil
+	})
+	return posts, err
 }
