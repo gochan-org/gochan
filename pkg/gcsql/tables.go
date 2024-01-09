@@ -123,6 +123,21 @@ type IPBan struct {
 	ipBanBase
 }
 
+// IP was previously a field in the IPBan struct before range bans were
+// implemented. This is here as a fallback for templates
+//
+// Deprecated: Use the RangeStart and RangeEnd fields or gcutil.GetIPRangeSubnet
+func (ipb *IPBan) IP() string {
+	if ipb.RangeStart == ipb.RangeEnd {
+		return ipb.RangeStart
+	}
+	inet, err := gcutil.GetIPRangeSubnet(ipb.RangeStart, ipb.RangeEnd)
+	if err != nil {
+		return "?"
+	}
+	return inet.String()
+}
+
 func (ipb *IPBan) IsBanned(ipStr string) (bool, error) {
 	ipn, err := gcutil.GetIPRangeSubnet(ipb.RangeStart, ipb.RangeEnd)
 	if err != nil {

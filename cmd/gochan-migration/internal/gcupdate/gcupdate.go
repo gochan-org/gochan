@@ -55,13 +55,9 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		return migrated, err
 	}
 
-	var query string
-	var tableName string
-	var numConstraints int
-	var numColumns int
-	var rangeStart string
-	var rangeEnd string
 	criticalConfig := config.GetSystemCriticalConfig()
+	dbName := criticalConfig.DBname
+	dbType := criticalConfig.DBtype
 	ctx := context.Background()
 	tx, err := dbu.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: 0,
@@ -70,204 +66,21 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer func() {
-		tx.Rollback()
-	}()
+	defer tx.Rollback()
 
 	switch criticalConfig.DBtype {
 	case "mysql":
-		query = `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-		WHERE CONSTRAINT_NAME = 'wordfilters_board_id_fk'
-		AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
-
-		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numConstraints}); err != nil {
-			return false, err
-		}
-		if numConstraints > 0 {
-			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY wordfilters_board_id_fk`
-		} else {
-			query = ""
-		}
-		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
-		WHERE TABLE_SCHEMA = DATABASE()
-		AND TABLE_NAME = 'DBPREFIXwordfilters'
-		AND COLUMN_NAME = 'board_dirs'`
-		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
-			return false, err
-		}
-		if numColumns == 0 {
-			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-		}
-
-		// Yay, collation! Everybody loves MySQL's default collation!
-		query = `ALTER DATABASE ` + criticalConfig.DBname + ` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci`
-		if _, err = tx.Exec(query); err != nil {
-			return false, err
-		}
-
-		query = `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`
-		rows, err := dbu.db.QuerySQL(query, criticalConfig.DBname)
-		if err != nil {
-			return false, err
-		}
-		defer func() {
-			rows.Close()
-		}()
-		for rows.Next() {
-			err = rows.Scan(&tableName)
-			if err != nil {
-				return false, err
-			}
-			query = `ALTER TABLE ` + tableName + ` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-			if _, err = tx.Exec(query); err != nil {
-				return false, err
-			}
-		}
-		if err = rows.Close(); err != nil {
-			return false, err
-		}
-		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
-		WHERE TABLE_SCHEMA = DATABASE()
-		AND TABLE_NAME = 'DBPREFIXip_ban'
-		AND COLUMN_NAME = 'ip'`
-		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
-			return false, err
-		}
-		if numColumns > 0 {
-			// add range_start and range_end columns
-			query = `ALTER TABLE DBPREFIXip_ban
-			ADD COLUMN IF NOT EXISTS range_start VARBINARY(16) NOT NULL,
-			ADD COLUMN IF NOT EXISTS range_end VARBINARY(16) NOT NULL`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-			// convert ban IP string to IP range
-			if rows, err = dbu.db.QuerySQL(`SELECT id, ip FROM DBPREFIXip_ban`); err != nil {
-				return false, err
-			}
-			for rows.Next() {
-				var id int
-				var ipOrCIDR string
-				if err = rows.Scan(&id, &ipOrCIDR); err != nil {
-					return false, err
-				}
-				if rangeStart, rangeEnd, err = gcutil.ParseIPRange(ipOrCIDR); err != nil {
-					return false, err
-				}
-				query = `UPDATE DBPREFIXip_ban
-				SET range_start = INET6_ATON(?), range_end = INET6_ATON(?) WHERE id = ?`
-				if _, err = dbu.db.ExecTxSQL(tx, query, rangeStart, rangeEnd, id); err != nil {
-					return false, err
-				}
-				query = `ALTER TABLE DBPREFIXip_ban DROP COLUMN IF EXISTS ip`
-				if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-					return false, err
-				}
-			}
-			if err = rows.Close(); err != nil {
-				return false, err
-			}
-		}
-
-		// Convert DBPREFIXposts.ip to from varchar to varbinary
-		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
-			WHERE TABLE_SCHEMA = DATABASE()
-			AND TABLE_NAME = 'DBPREFIXposts'
-			AND COLUMN_NAME = 'ip'
-			AND DATA_TYPE = 'varchar'`
-		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
-			return false, err
-		}
-		if numColumns == 1 {
-			// rename `ip` to a temporary column to then be removed
-			query = `ALTER TABLE DBPREFIXposts CHANGE ip ip_str varchar(45)`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-
-			query = `ALTER TABLE DBPREFIXposts
-			ADD COLUMN IF NOT EXISTS ip VARBINARY(16) NOT NULL`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-
-			// convert post IP VARCHAR(45) to VARBINARY(16)
-			query = `UPDATE DBPREFIXposts SET ip = INET6_ATON(ip_str)`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-
-			query = `ALTER TABLE DBPREFIXposts DROP COLUMN IF EXISTS ip_str`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-		}
-
-		// Convert DBPREFIXreports.ip to from varchar to varbinary
-		query = `SELECT COUNT(*) FROM information_schema.COLUMNS
-			WHERE TABLE_SCHEMA = DATABASE()
-			AND TABLE_NAME = 'DBPREFIXreports'
-			AND COLUMN_NAME = 'ip'
-			AND DATA_TYPE = 'varchar'`
-		if err = dbu.db.QueryRowTxSQL(tx, query, nil, []any{&numColumns}); err != nil {
-			return false, err
-		}
-		if numColumns == 1 {
-			// rename `ip` to a temporary column to then be removed
-			query = `ALTER TABLE DBPREFIXreports CHANGE ip ip_str varchar(45)`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-
-			query = `ALTER TABLE DBPREFIXreports
-			ADD COLUMN IF NOT EXISTS ip VARBINARY(16) NOT NULL`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-
-			// convert post IP VARCHAR(45) to VARBINARY(16)
-			query = `UPDATE DBPREFIXreports SET ip = INET6_ATON(ip_str)`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-
-			query = `ALTER TABLE DBPREFIXreports DROP COLUMN IF EXISTS ip_str`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-		}
-		err = nil
+		err = updateMysqlDB(dbu.db, tx, dbName, dbType)
 	case "postgres":
-		_, err = gcsql.ExecSQL(`ALTER TABLE DBPREFIXwordfilters DROP CONSTRAINT IF EXISTS board_id_fk`)
-		if err != nil {
-			return false, err
-		}
-		query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN IF NOT EXISTS board_dirs varchar(255) DEFAULT '*'`
-		if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-			return false, err
-		}
+		err = updatePostgresDB(dbu.db, tx, dbName, dbType)
 	case "sqlite3":
-		_, err = dbu.db.ExecSQL(`PRAGMA foreign_keys = ON`)
-		if err != nil {
-			return false, err
-		}
-		query = `SELECT COUNT(*) FROM PRAGMA_TABLE_INFO('DBPREFIXwordfilters') WHERE name = 'board_dirs'`
-		var numColumns int
-		if err = dbu.db.QueryRowSQL(query, nil, []any{&numColumns}); err != nil {
-			return false, err
-		}
-		if numColumns == 0 {
-			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
-			if _, err = dbu.db.ExecTxSQL(tx, query); err != nil {
-				return false, err
-			}
-		}
+		err = updateSqliteDB(dbu.db, tx, dbName, dbType)
+	}
+	if err != nil {
+		return false, err
 	}
 
-	query = `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
+	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
 	_, err = dbu.db.ExecTxSQL(tx, query, latestDatabaseVersion)
 	if err != nil {
 		return false, err
