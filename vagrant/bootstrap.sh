@@ -131,7 +131,8 @@ chmod +x /home/vagrant/dbconnect.sh
 
 # used for testing migration from the pre-2021 db schema
 ln -s {/vagrant/devtools,/home/vagrant}/get_pre2021.sh
-chmod +x get_pre2021.sh
+ln -s {/vagrant/devtools,/home/vagrant}/get_previous_version.sh
+chmod +x get_{pre2021,previous_version}.sh
 
 cat <<EOF >>/home/vagrant/.bashrc
 export DBTYPE=$DBTYPE
