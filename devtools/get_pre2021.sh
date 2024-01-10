@@ -3,6 +3,8 @@
 # Shell script that downloads a pre-migration gochan release for testing gochan-migration
 # This should only be used in a development environment
 
+set -euo pipefail
+
 TESTING_VERSION="v2.12.0"
 RELEASE_DIR="gochan-${TESTING_VERSION}_linux"
 RELEASE_GZ="$RELEASE_DIR.tar.gz"

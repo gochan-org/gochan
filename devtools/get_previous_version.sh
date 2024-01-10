@@ -3,6 +3,8 @@
 # Shell script that downloads a previous gochan release for testing gochan-migration -updatedb
 # This should only be used in a development environment
 
+set -euo pipefail
+
 TESTING_VERSION="v3.7.0"
 RELEASE_DIR="gochan-${TESTING_VERSION}_linux"
 RELEASE_GZ="$RELEASE_DIR.tar.gz"
@@ -21,14 +23,18 @@ echo "Extracting $RELEASE_GZ"
 tar -xf gochan-${TESTING_VERSION}_linux.tar.gz
 cd $RELEASE_DIR
 
-cp examples/configs/gochan.example.json gochan.json
+cp sample-configs/gochan.example.json gochan.json
 echo "Modifying $PWD/gochan.json for testing migration"
 sed -i gochan.json \
 	-e 's/"Port": .*/"Port": 9000,/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
 	-e "s/\"DBtype\": .*/\"DBtype\": \""$DBTYPE"\",/" \
 	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
+	-e 's/"LogDir": .*/"LogDir": "log"/' \
+	-e 's/"TemplateDir": .*/"TemplateDir": "templates"/' \
+	-e 's/"DocumentRoot": .*/"DocumentRoot": "html"/' \
 	-e 's/"DBname": "gochan"/"DBname": "gochan_37"/' \
+	-e 's/"DBprefix": .*/"DBprefix": ""/' \
 	-e 's/"SiteName": "Gochan"/"SiteName": "Gochan Migration Test"/' \
 	-e 's/"SiteSlogan": ""/"SiteSlogan": "Gochan instance used for testing gochan-migrate -updatedb"/' \
 	-e 's/"DebugMode": false/"DebugMode": true/' \
@@ -56,4 +62,5 @@ else
 	exit 1
 fi
 
+mkdir -p log
 sudo ./gochan

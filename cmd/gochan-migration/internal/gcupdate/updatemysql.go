@@ -4,13 +4,15 @@ import (
 	"database/sql"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) error {
+func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCriticalConfig) error {
 	var numConstraints int
 	var err error
+	dbName := criticalCfg.DBname
 	query := `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
 	WHERE CONSTRAINT_NAME = 'wordfilters_board_id_fk'
 	AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
@@ -23,7 +25,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) err
 	} else {
 		query = ""
 	}
-	dataType, err := common.ColumnType(db, tx, "board_dirs", "DBPREFIXwordfilters", dbName, dbType)
+	dataType, err := common.ColumnType(db, tx, "board_dirs", "DBPREFIXwordfilters", criticalCfg)
 	if err != nil {
 		return err
 	}
@@ -62,11 +64,11 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) err
 	if err = rows.Close(); err != nil {
 		return err
 	}
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", dbName, dbType)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", criticalCfg)
 	if err != nil {
 		return err
 	}
-	if dataType == "" {
+	if dataType != "" {
 		// add range_start and range_end columns
 		query = `ALTER TABLE DBPREFIXip_ban
 		ADD COLUMN IF NOT EXISTS range_start VARBINARY(16) NOT NULL,
@@ -104,7 +106,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) err
 	}
 
 	// Convert DBPREFIXposts.ip to from varchar to varbinary
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXposts", dbName, dbType)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXposts", criticalCfg)
 	if err != nil {
 		return err
 	}
@@ -134,7 +136,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) err
 	}
 
 	// Convert DBPREFIXreports.ip to from varchar to varbinary
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXreports", dbName, dbType)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXreports", criticalCfg)
 	if err != nil {
 		return err
 	}

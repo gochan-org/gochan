@@ -56,8 +56,6 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	}
 
 	criticalConfig := config.GetSystemCriticalConfig()
-	dbName := criticalConfig.DBname
-	dbType := criticalConfig.DBtype
 	ctx := context.Background()
 	tx, err := dbu.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: 0,
@@ -70,11 +68,11 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 
 	switch criticalConfig.DBtype {
 	case "mysql":
-		err = updateMysqlDB(dbu.db, tx, dbName, dbType)
+		err = updateMysqlDB(dbu.db, tx, &criticalConfig)
 	case "postgres":
-		err = updatePostgresDB(dbu.db, tx, dbName, dbType)
+		err = updatePostgresDB(dbu.db, tx, &criticalConfig)
 	case "sqlite3":
-		err = updateSqliteDB(dbu.db, tx, dbName, dbType)
+		err = updateSqliteDB(dbu.db, tx, &criticalConfig)
 	}
 	if err != nil {
 		return false, err

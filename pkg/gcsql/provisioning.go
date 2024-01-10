@@ -105,10 +105,7 @@ func CheckAndInitializeDatabase(dbType string) error {
 	default:
 		err = ErrInvalidDBVersion
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func buildNewDatabase(dbType string) error {

@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -18,12 +19,14 @@ var (
 
 // ColumnType returns a string representation of the column's data type. It does not return an error
 // if the column does not exist, instead returning an empty string.
-func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string, dbName string, dbType string) (string, error) {
+func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string, criticalCfg *config.SystemCriticalConfig) (string, error) {
 	var query string
 	var dataType string
 	var err error
 	var params []any
-	switch dbType {
+	tableName = strings.ReplaceAll(tableName, "DBPREFIX", criticalCfg.DBprefix)
+	dbName := criticalCfg.DBname
+	switch criticalCfg.DBtype {
 	case "mysql":
 		query = `SELECT DATA_TYPE FROM information_schema.COLUMNS
 		WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`

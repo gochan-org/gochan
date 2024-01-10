@@ -4,10 +4,11 @@ import (
 	"database/sql"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) error {
+func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCriticalConfig) error {
 	query := `ALTER TABLE DBPREFIXwordfilters
 	DROP CONSTRAINT IF EXISTS board_id_fk`
 	_, err := db.ExecSQL(query)
@@ -20,7 +21,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) 
 		return err
 	}
 
-	dataType, err := common.ColumnType(db, tx, "ip", "DBPREFIXposts", dbName, dbType)
+	dataType, err := common.ColumnType(db, tx, "ip", "DBPREFIXposts", criticalCfg)
 	if err != nil {
 		return err
 	}
@@ -50,7 +51,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, dbName string, dbType string) 
 		}
 	}
 
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", dbName, dbType)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", criticalCfg)
 	if err != nil {
 		return err
 	}
