@@ -164,5 +164,30 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 			return err
 		}
 	}
+
+	// add flag column to DBPREFIXposts
+	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", criticalCfg)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXposts ADD COLUMN flag VARCHAR(45) NOT NULL DEFAULT ''`
+		if _, err = db.ExecTxSQL(tx, query); err != nil {
+			return err
+		}
+	}
+
+	// add country column to DBPREFIXposts
+	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", criticalCfg)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''`
+		if _, err = db.ExecTxSQL(tx, query); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

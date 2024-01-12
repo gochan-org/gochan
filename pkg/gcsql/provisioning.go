@@ -24,7 +24,7 @@ var (
 	// but zero or more than one versions were found
 	ErrInvalidVersion   = errors.New("database contains database_version table but zero or more than one versions were found")
 	ErrCorruptedDB      = errors.New("database contains gochan prefixed tables but is missing versioning tables (possibly corrupted)")
-	ErrDeprecatedDB     = errors.New("database layout is deprecated, please run gochan-migrate -updatedb")
+	ErrDeprecatedDB     = errors.New("database layout is deprecated, please run gochan-migration -updatedb")
 	ErrInvalidDBVersion = errors.New("invalid version flag returned by GetCompleteDatabaseVersion()")
 )
 
@@ -51,7 +51,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 	if versionTableExists {
 		databaseVersion, versionError := getDatabaseVersion(gochanVersionKeyConstant)
 		if versionError != nil {
-			return 0, 0, ErrInvalidVersion
+			return 0, 0, versionError
 		}
 		if databaseVersion < targetDatabaseVersion {
 			return databaseVersion, DBModernButBehind, nil
