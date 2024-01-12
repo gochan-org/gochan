@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	ErrMissingDBArg = errors.New("missing database argument")
-	mmdb            *mmdbHandler
+	ErrInvalidISOCode = errors.New("invalid configured geoip ISO code")
+	ErrMissingDBArg   = errors.New("missing database argument")
+	mmdb              *mmdbHandler
 )
 
 type mmdbRecord struct {
@@ -24,7 +25,8 @@ type mmdbRecord struct {
 }
 
 type mmdbHandler struct {
-	db *maxminddb.Reader
+	db      *maxminddb.Reader
+	isoCode string
 }
 
 func (mh *mmdbHandler) Init(options map[string]any) error {
@@ -37,20 +39,37 @@ func (mh *mmdbHandler) Init(options map[string]any) error {
 		return ErrMissingDBArg
 	}
 
+	mh.isoCode = "en" // default to English if another ISO code isn't specified
 	var dbLocation string
 	var ok bool
 	var err error
 	for k, v := range options {
 		key := strings.ToLower(k)
-		if key == "dbLocation" || key == "database" || key == "mmdb" {
+		switch key {
+		case "database":
+			fallthrough
+		case "mmdb":
+			fallthrough
+		case "dblocation":
 			dbLocation, ok = v.(string)
 			if !ok {
-				err = fmt.Errorf("invalid database argument (expected string, got %T)", v)
+				err = fmt.Errorf("invalid %q argument (expected string, got %T)", k, v)
 				errEv.Err(err).Caller().
-					Interface("dbLocation", options["dbLocation"]).Send()
+					Interface("dbLocation", v).Send()
 				return err
 			}
-			break
+		case "iso":
+			fallthrough
+		case "isocode":
+			mh.isoCode, ok = v.(string)
+			if !ok {
+				err = fmt.Errorf("invalid %q value (expected string, got %T)", k, v)
+				errEv.Err(err).Caller().
+					Interface("isoCode", v).Send()
+				return err
+			}
+			mh.isoCode = strings.ToLower(mh.isoCode)
+			infoEv.Str("isoCode", mh.isoCode)
 		}
 	}
 	if dbLocation == "" {
@@ -82,10 +101,17 @@ func (mh *mmdbHandler) GetCountry(request *http.Request, board string) (*Country
 	if err != nil {
 		return nil, err
 	}
-	return &Country{
-		Name: record.Country.ISOCode,
-		Flag: record.Country.Names["en"],
-	}, nil
+
+	country := &Country{
+		Flag: record.Country.ISOCode,
+	}
+	var ok bool
+	country.Name, ok = record.Country.Names[mh.isoCode]
+	if !ok {
+		return nil, ErrInvalidISOCode
+	}
+
+	return country, nil
 }
 
 func (mh *mmdbHandler) Close() error {

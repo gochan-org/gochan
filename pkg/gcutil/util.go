@@ -118,10 +118,13 @@ func GetFormattedFilesize(size float64) string {
 	return fmt.Sprintf("%0.2fGB", size/1024.0/1024.0/1024.0)
 }
 
-// GetRealIP checks the HTTP_CF_CONNCTING_IP and X-Forwarded-For HTTP headers to get a
-// potentially obfuscated IP address, before getting the requests reported remote address
-// if neither header is set
+// GetRealIP checks the GC_TESTIP environment variable as well as HTTP_CF_CONNCTING_IP
+// and X-Forwarded-For HTTP headers to get a potentially obfuscated IP address, before
+// getting the request's reported remote address
 func GetRealIP(request *http.Request) string {
+	if ip, ok := os.LookupEnv("GC_TESTIP"); ok {
+		return ip
+	}
 	if request.Header.Get("HTTP_CF_CONNECTING_IP") != "" {
 		return request.Header.Get("HTTP_CF_CONNECTING_IP")
 	}
