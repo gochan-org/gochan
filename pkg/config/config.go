@@ -85,14 +85,6 @@ func (gcfg *GochanConfig) ValidateValues() error {
 			Details: "currently supported values: " + strings.Join(acceptedDrivers, ",")}
 	}
 
-	// if gcfg.EnableGeoIP && gcfg.GeoIPDBlocation == "" {
-	// 	return &InvalidValueError{
-	// 		Field:   "GeoIPDBlocation",
-	// 		Value:   "",
-	// 		Details: "GeoIPDBlocation must be set in gochan.json if EnableGeoIP is true",
-	// 	}
-	// }
-
 	if gcfg.RandomSeed == "" {
 		gcfg.RandomSeed = gcutil.RandomString(randomStringSize)
 		changed = true
@@ -188,15 +180,11 @@ type SiteConfig struct {
 	EnableAppeals         bool
 	MaxLogDays            int
 
-	MinifyHTML      bool
-	MinifyJS        bool
-	GeoIPDBlocation string
-	GeoIPDBType     string
-	Captcha         CaptchaConfig
-}
-
-func (sc *SiteConfig) validGeoIPType() bool {
-	return sc.GeoIPDBType == "" || sc.GeoIPDBType == "legacy" || sc.GeoIPDBType == "geoip2"
+	MinifyHTML   bool
+	MinifyJS     bool
+	GeoIPType    string
+	GeoIPOptions map[string]any
+	Captcha      CaptchaConfig
 }
 
 type CaptchaConfig struct {
@@ -243,10 +231,13 @@ type BoardConfig struct {
 	RenderURLsAsLinks      bool
 	ThreadsPerPage         int
 	EnableGeoIP            bool
+	EnableNoFlag           bool
+	CustomFlags            map[string]string
 	isGlobal               bool
 }
 
-// IsGlobal returns
+// IsGlobal returns true if this is the global configuration applied to all
+// boards by default, or false if it is an explicitly configured board
 func (bc *BoardConfig) IsGlobal() bool {
 	return bc.isGlobal
 }

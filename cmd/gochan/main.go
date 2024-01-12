@@ -17,6 +17,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/posting"
+	"github.com/gochan-org/gochan/pkg/posting/geoip"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
@@ -30,7 +31,7 @@ func main() {
 		gcsql.Close()
 		gcutil.CloseLog()
 		gcplugin.ClosePlugins()
-		posting.CloseGeoipDB()
+		geoip.Close()
 	}()
 
 	fmt.Printf("Starting gochan v%s\n", versionStr)
@@ -70,7 +71,8 @@ func main() {
 	events.TriggerEvent("db-initialized")
 	parseCommandLine()
 	serverutil.InitMinifier()
-	// posting.InitGeoIP()
+	siteCfg := config.GetSiteConfig()
+	geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions)
 	posting.InitCaptcha()
 
 	if err = gctemplates.InitTemplates(); err != nil {
