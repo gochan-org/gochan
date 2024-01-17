@@ -6,11 +6,6 @@ import (
 	"net/http"
 )
 
-const (
-	CustomFlag FlagType = iota
-	GeoIPFlag
-)
-
 var (
 	geoipHandlers = make(map[string]GeoIPHandler)
 	activeHandler GeoIPHandler
@@ -20,18 +15,16 @@ var (
 	ErrUnrecognized  = errors.New("unrecognized GeoIP handler ID")
 )
 
-type FlagType int
-
 type Country struct {
 	Name string
 	Flag string
 }
 
-func (c *Country) Type() FlagType {
+func (c *Country) IsGeoIP() bool {
 	if _, ok := abbrMap[c.Flag]; ok {
-		return GeoIPFlag
+		return true
 	}
-	return CustomFlag
+	return false
 }
 
 type GeoIPHandler interface {

@@ -197,6 +197,8 @@ type Post struct {
 	DeletedAt       time.Time     // sql: `deleted_at`
 	IsDeleted       bool          // sql: `is_deleted`
 	BannedMessage   string        // sql: `banned_message`
+	Flag            string        // sql: `flag`
+	Country         string        // sql: `country`
 }
 
 // table: DBPREFIXreports
