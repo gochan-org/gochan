@@ -42,6 +42,7 @@ const (
 	PageFooter          = "page_footer.html"
 	PageHeader          = "page_header.html"
 	PostEdit            = "post_edit.html"
+	PostFlag            = "flag.html"
 	ThreadPage          = "threadpage.html"
 )
 
@@ -53,7 +54,7 @@ var (
 			files: []string{"banpage.html", "page_footer.html"},
 		},
 		BoardPage: {
-			files: []string{"boardpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},
+			files: []string{"boardpage.html", "topbar.html", "post_flag.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},
 		},
 		Captcha: {
 			files: []string{"captcha.html"},
@@ -139,8 +140,11 @@ var (
 		PostEdit: {
 			files: []string{"post_edit.html", "page_header.html", "topbar.html", "page_footer.html"},
 		},
+		PostFlag: {
+			files: []string{"post_flag.html"},
+		},
 		ThreadPage: {
-			files: []string{"threadpage.html", "topbar.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},
+			files: []string{"threadpage.html", "topbar.html", "post_flag.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},
 		},
 	}
 )
