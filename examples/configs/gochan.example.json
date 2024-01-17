@@ -95,11 +95,12 @@
 		"SiteKey": "your site key goes here (if you want a captcha, make sure to replace '_Captcha' with 'Captcha'",
 		"AccountSecret": "your account secret key goes here"
 	},
+	"_GeoIPType": "mmdb",
+	"_GeoIPOptions": {
+		"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
+		"isoCode": "en"
+	},
 	"EnableGeoIP": false,
-	"GeoIPDBType": "",
-	"GeoIPDBType_info": "valid GeoIPDBType values are '', 'none', 'legacy', and 'geoip2'. '' and 'none' are treated as the same. 'geoip2' is used for MaxMind's GeoIP2 and GeoLite2 .mmdb databases. 'legacy' will eventually support the legacy GeoIP databases",
-	"_EnableGeoIP_info": "set GeoIPDBlocation to cf to use Cloudflare's GeoIP",
-	"GeoIPDBlocation": "/usr/share/GeoIP/GeoIP.dat",
 	"MaxRecentPosts": 12,
 	"RecentPostsWithNoFile": false,
 	"Verbosity": 0,
