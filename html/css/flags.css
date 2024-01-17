@@ -1,6 +1,6 @@
 /*https://www.flag-sprites.com/ */ 
 
-.flag-geoip {display: inline-block;width: 16px;height: 11px;background: url('flags.png') no-repeat;}
+.flag-geoip {display: inline-block;width: 16px;height: 11px;background: url("res/flags.png") no-repeat;}
 .flag-geoip.flag-cz{background-position:-64px -33px}
 .flag-geoip.flag-ne{background-position:-16px -110px}
 .flag-geoip.flag-jm{background-position:-240px -66px}
