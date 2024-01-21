@@ -1,3 +1,8 @@
 {{define "post_flag"}}
-	<div class="flag-geoip flag-{{.Flag}}"></div>
+	<img {{if .IsGeoIP -}}
+			class="flag-geoip flag-{{.Flag}}"
+		{{- else -}}
+			class="flag-geoip" src="{{webPath `/static/flags/` .Flag}}"
+		{{- end -}}
+		title="{{.Name}}" />
 {{- end -}}

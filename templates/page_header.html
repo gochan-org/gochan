@@ -19,6 +19,9 @@
 		<link id="theme" rel="stylesheet" href="{{webPath "/css/" .boardConfig.DefaultStyle}}" />
 	{{- end}}
 	<link rel="shortcut icon" href="{{webPath "/favicon.png"}}">
+	{{- if .boardConfig.EnableGeoIP -}}
+		<link id="flags" rel="stylesheet" href="{{webPath `/css/flags.css`}}"/>
+	{{- end -}}
 	<script type="text/javascript" src="{{webPath "/js/consts.js"}}"></script>
 	<script type="text/javascript" src="{{webPath "/js/gochan.js"}}"></script>
 </head>

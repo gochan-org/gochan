@@ -18,6 +18,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/geoip"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
@@ -245,6 +246,17 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 	if checkUsernameBan(post, postBoard, writer, request) {
 		return
+	}
+
+	if boardConfig.EnableGeoIP {
+		geoipInfo, err := geoip.GetCountry(request, postBoard.Dir, errEv)
+		if err != nil {
+			// GetCountry logs the error
+			server.ServeError(writer, "Unable to get post info", wantsJSON, nil)
+			return
+		}
+		post.Country = geoipInfo.Name
+		post.Flag = strings.ToLower(geoipInfo.Flag)
 	}
 
 	captchaSuccess, err := submitCaptchaResponse(request)

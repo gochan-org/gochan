@@ -1,5 +1,14 @@
 package geoip
 
+import (
+	"errors"
+	"strings"
+)
+
+var (
+	ErrInvalidCountry = errors.New("unrecognized country abbreviation")
+)
+
 var abbrMap = map[string]string{
 	"af": "Afghanistan",
 	"ax": "Aland Islands",
@@ -246,4 +255,12 @@ var abbrMap = map[string]string{
 	"ye": "Yemen",
 	"zm": "Zambia",
 	"zw": "Zimbabwe",
+}
+
+func GetCountryName(abbr string) (string, error) {
+	title, ok := abbrMap[strings.ToLower(abbr)]
+	if !ok {
+		return "", ErrInvalidCountry
+	}
+	return title, nil
 }

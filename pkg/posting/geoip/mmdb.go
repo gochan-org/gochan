@@ -9,6 +9,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/oschwald/maxminddb-golang"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -87,18 +88,23 @@ func (mh *mmdbHandler) Init(options map[string]any) error {
 	return nil
 }
 
-func (mh *mmdbHandler) GetCountry(request *http.Request, board string) (*Country, error) {
-	var err error
+func (mh *mmdbHandler) GetCountry(request *http.Request, board string, errEv *zerolog.Event) (*Country, error) {
 	if mh.db == nil {
-		return nil, err
+		return nil, nil
 	}
+	errEv.Str("board", board)
 	ip := net.ParseIP(gcutil.GetRealIP(request))
 	if ip == nil {
+		// this shouldn't happen unless something has gone very wrong
+		errEv.Err(ErrInvalidIP).Caller().Caller(1).Send()
 		return nil, ErrInvalidIP
 	}
 	var record mmdbRecord
-	err = mh.db.Lookup(ip, &record)
+	err := mh.db.Lookup(ip, &record)
 	if err != nil {
+		// thrown if something went wrong trying to unmarshal the database data, not
+		// if the country couldn't be found from the IP
+		errEv.Err(err).Caller().Caller(1).Send()
 		return nil, err
 	}
 
@@ -106,8 +112,16 @@ func (mh *mmdbHandler) GetCountry(request *http.Request, board string) (*Country
 		Flag: record.Country.ISOCode,
 	}
 	var ok bool
+	if record.Country.Names == nil {
+		// Country not found (possibly private IP)
+		country.Flag = "unknown.png"
+		country.Name = "Unknown Country"
+		return country, nil
+	}
 	country.Name, ok = record.Country.Names[mh.isoCode]
 	if !ok {
+		errEv.Err(ErrInvalidISOCode).Caller().Caller(1).
+			Str("isoCode", mh.isoCode).Send()
 		return nil, ErrInvalidISOCode
 	}
 

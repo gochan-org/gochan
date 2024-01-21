@@ -345,8 +345,8 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	}
 	insertSQL := `INSERT INTO DBPREFIXposts
 	(thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject,
-		message, message_raw, password) 
-	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?)`
+		message, message_raw, password, flag, country) 
+	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
 	tx, err := BeginTx()
@@ -381,7 +381,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	}
 	if _, err = stmt.Exec(
 		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
-		p.Message, p.MessageRaw, p.Password,
+		p.Message, p.MessageRaw, p.Password, p.Flag, p.Country,
 	); err != nil {
 		return err
 	}

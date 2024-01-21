@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -15,13 +18,21 @@ var (
 	ErrUnrecognized  = errors.New("unrecognized GeoIP handler ID")
 )
 
+// Country represents the GeoIP data used by gochan (the country/flag name and
+// country abbreviation/flag filename, accessible in /static/flags/{flag}).
 type Country struct {
 	Name string
 	Flag string
 }
 
-func (c *Country) IsGeoIP() bool {
-	if _, ok := abbrMap[c.Flag]; ok {
+// IsGeoIP is true of the country has a recognized abbreviation set as its
+// flag. Otherwise it is assumed to be either a custom flag, or no flag if
+// the string is blank
+func (c Country) IsGeoIP() bool {
+	if c.Flag == "" || c.Name == "" {
+		return false
+	}
+	if _, err := GetCountryName(c.Flag); err == nil {
 		return true
 	}
 	return false
@@ -29,7 +40,7 @@ func (c *Country) IsGeoIP() bool {
 
 type GeoIPHandler interface {
 	Init(options map[string]any) error
-	GetCountry(request *http.Request, board string) (*Country, error)
+	GetCountry(request *http.Request, board string, errEv *zerolog.Event) (*Country, error)
 	Close() error
 }
 
@@ -60,11 +71,21 @@ func SetupGeoIP(id string, options map[string]any) (err error) {
 	return activeHandler.Init(options)
 }
 
-func LookupCountry(request *http.Request, board string) (*Country, error) {
+// GetCountry looks up the country the request comes from using the active handler.
+// It throws ErrNotConfigured if one has not been configured
+func GetCountry(request *http.Request, board string, errEv ...*zerolog.Event) (*Country, error) {
 	if activeHandler == nil {
 		return nil, ErrNotConfigured
 	}
-	return activeHandler.GetCountry(request, board)
+	var ev *zerolog.Event
+	if errEv != nil {
+		ev = errEv[0]
+	} else {
+		ev = gcutil.LogError(nil).
+			Str("ip", gcutil.GetRealIP(request))
+		defer ev.Discard()
+	}
+	return activeHandler.GetCountry(request, board, ev)
 }
 
 func Close() error {
