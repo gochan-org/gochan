@@ -166,6 +166,9 @@ var funcMap = template.FuncMap{
 		}
 		return ipn.String()
 	},
+	"customFlagsEnabled": func(board string) bool {
+		return config.GetBoardConfig(board).CustomFlags != nil
+	},
 	"getBoardDirFromID": func(id int) string {
 		dir, _ := gcsql.GetBoardDir(id)
 		return dir

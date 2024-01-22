@@ -15,6 +15,25 @@
 				<input type="submit" value="{{with .op}}Reply{{else}}Post{{end}}"/></td></tr>
 			<tr><th class="postblock">Message</th><td><textarea rows="5" cols="35" name="postmsg" id="postmsg"></textarea></td></tr>
 			<tr><th class="postblock">File</th><td><input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
+			{{- if or (customFlagsEnabled $.board.Dir) $.board.Config.EnableGeoIP -}}
+			<tr>
+				<th class="postblock">Flag</th>
+				<td>
+					<select name="flag" id="post-flag">
+						{{- if $.boardConfig.EnableGeoIP -}}
+							<option value="geoip">Local flag</option>
+						{{- end -}}
+						{{- if $.boardConfig.EnableNoFlag -}}
+							<option value="">No flag</option>
+						{{- end -}}
+						{{- range $_,$flag := $.boardConfig.CustomFlags -}}
+							<option value="{{$flag.Flag}}">{{$flag.Name}}</option>
+						{{- end -}}
+					</select>
+					<img class="flag-preview" src="{{webPath `/static/flags/blank.gif`}}">
+				</td>
+			</tr>
+			{{- end -}}
 			<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			{{if .useCaptcha -}}
 				<tr><th class="postblock">CAPTCHA</th><td>
