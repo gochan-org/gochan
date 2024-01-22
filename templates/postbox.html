@@ -15,7 +15,7 @@
 				<input type="submit" value="{{with .op}}Reply{{else}}Post{{end}}"/></td></tr>
 			<tr><th class="postblock">Message</th><td><textarea rows="5" cols="35" name="postmsg" id="postmsg"></textarea></td></tr>
 			<tr><th class="postblock">File</th><td><input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4"><input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>
-			{{- if or (customFlagsEnabled $.board.Dir) $.board.Config.EnableGeoIP -}}
+			{{- if or (customFlagsEnabled $.board.Dir) $.boardConfig.EnableGeoIP -}}
 			<tr>
 				<th class="postblock">Flag</th>
 				<td>
