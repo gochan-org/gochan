@@ -41,7 +41,6 @@ if [ "$DBTYPE" == "mysql" ]; then
 	if [ -d /lib/systemd ]; then
 		cp /vagrant/examples/configs/gochan-mysql.service /lib/systemd/system/gochan.service
 		systemctl daemon-reload
-		systemctl enable gochan.service
 	fi
 elif [ "$DBTYPE" == "postgresql" ]; then
 	# using PostgreSQL (mostly stable)
@@ -63,7 +62,6 @@ elif [ "$DBTYPE" == "postgresql" ]; then
 	if [ -d /lib/systemd ]; then
 		cp /vagrant/examples/configs/gochan-postgresql.service /lib/systemd/system/gochan.service
 		systemctl daemon-reload
-		systemctl enable gochan.service
 	fi
 elif [ "$DBTYPE" == "sqlite3" ]; then
 	apt install sqlite3
@@ -140,6 +138,7 @@ export GOPATH=/home/vagrant/go
 EOF
 
 su - vagrant <<EOF
+echo 'alias bbig="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan"' >> /home/vagrant/.bash_aliases
 mkdir -p /home/vagrant/go
 source /home/vagrant/.bashrc
 cd /vagrant/devtools
