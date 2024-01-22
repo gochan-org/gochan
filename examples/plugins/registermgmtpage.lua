@@ -1,5 +1,6 @@
 -- testing manage page registering from Lua plugins
 local strings = require("strings")
+local gctemplates = require("gctemplates")
 local manage = require("manage")
 local serverutil = require("serverutil")
 
@@ -18,7 +19,7 @@ manage.register_manage_page("templateplugintest",
 	"Template Plugin Testing",
 	3, 0,
 	function(writer, request, staff, wantsJSON, infoEv, errEv)
-		local tmpl, err = parse_template("parse_template_test",
+		local tmpl, err = gctemplates.parse_template("parse_template_test",
 			[[<b>Staff: </b> {{.staff.Username}}<br/>
 			This manage page rendered from a template provided by a Lua plugin]])
 		if(err ~= nil) then

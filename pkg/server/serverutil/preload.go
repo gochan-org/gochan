@@ -28,6 +28,6 @@ func PreloadModule(l *lua.LState) int {
 			return 1
 		},
 	})
-
+	l.Push(t)
 	return 1
 }
