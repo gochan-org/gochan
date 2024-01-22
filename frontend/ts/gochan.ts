@@ -10,6 +10,7 @@ import { initStaff, createStaffMenu } from "./management/manage";
 import { getPageThread } from "./postinfo";
 import { prepareThumbnails, initPostPreviews } from "./postutil";
 import { addPostDropdown } from "./dom/postdropdown";
+import { initFlags } from "./dom/flags";
 import { initQR } from "./dom/qr";
 import { getBooleanStorageVal, getStorageVal } from "./storage";
 
@@ -56,6 +57,7 @@ $(() => {
 		addPostDropdown($(elem));
 	});
 	$(document).on("keydown", handleKeydown);
+	initFlags();
 	setCustomCSS();
 	setCustomJS();
 });
