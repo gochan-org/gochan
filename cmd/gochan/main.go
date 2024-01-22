@@ -46,6 +46,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	testIP := os.Getenv("GC_TESTIP")
+	if testIP != "" {
+		gcutil.LogInfo().Str("GC_TESTIP", testIP).
+			Msg("Custom testing IP address set from environment variable")
+	}
+
 	if err = gcplugin.LoadPlugins(systemCritical.Plugins); err != nil {
 		gcutil.LogFatal().Err(err).Msg("failed loading plugins")
 	}
