@@ -18,11 +18,14 @@ var (
 	ErrUnrecognized  = errors.New("unrecognized GeoIP handler ID")
 )
 
-// Country represents the GeoIP data used by gochan (the country/flag name and
-// country abbreviation/flag filename, accessible in /static/flags/{flag}).
+// Country represents the country data (or custom flag data) used by gochan.
+// For posts set to use the poster's country, `Flag` is the country's
+// abbreviation, and `Name` is the country name. If a custom flag is selected,
+// Flag is the filename accessible in /static/flags/{flag}, and Name is the
+// configured flag name. This package does not handle custom flag validation.
 type Country struct {
-	Name string
 	Flag string
+	Name string
 }
 
 // IsGeoIP is true of the country has a recognized abbreviation set as its

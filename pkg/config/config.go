@@ -12,6 +12,7 @@ import (
 
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/geoip"
 )
 
 const (
@@ -232,8 +233,19 @@ type BoardConfig struct {
 	ThreadsPerPage         int
 	EnableGeoIP            bool
 	EnableNoFlag           bool
-	CustomFlags            map[string]string
+	CustomFlags            []geoip.Country
 	isGlobal               bool
+}
+
+// CheckFlag returns true if the given flag and name are configured for
+// the board (or are globally set)
+func (bc *BoardConfig) CheckFlag(flag string, name string) bool {
+	for _, country := range bc.CustomFlags {
+		if flag == country.Flag && name == country.Name {
+			return true
+		}
+	}
+	return false
 }
 
 // IsGlobal returns true if this is the global configuration applied to all

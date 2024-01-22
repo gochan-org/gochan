@@ -42,6 +42,17 @@
 	],
 	"DefaultStyle": "pipes.css",
 
+	"CustomFlags": [
+		{"Flag":"california.png", "Name": "California"},
+		{"Flag":"cia.png", "Name": "CIA"},
+		{"Flag":"lgbtq.png", "Name": "LGBTQ"},
+		{"Flag":"ms-dos.png", "Name": "MS-DOS"},
+		{"Flag":"stallman.png", "Name": "Stallman"},
+		{"Flag":"templeos.png", "Name": "TempleOS"},
+		{"Flag":"tux.png", "Name": "Linux"},
+		{"Flag":"windows9x.png", "Name": "Windows 9x"}
+	],
+
 	"Banners": [
 		{"Filename": "gochan_go-parody.png", "Width": 300, "Height": 100}
 	],
