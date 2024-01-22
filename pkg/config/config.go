@@ -237,15 +237,15 @@ type BoardConfig struct {
 	isGlobal               bool
 }
 
-// CheckFlag returns true if the given flag and name are configured for
+// CheckCustomFlag returns true if the given flag and name are configured for
 // the board (or are globally set)
-func (bc *BoardConfig) CheckFlag(flag string, name string) bool {
+func (bc *BoardConfig) CheckCustomFlag(flag string) (string, bool) {
 	for _, country := range bc.CustomFlags {
-		if flag == country.Flag && name == country.Name {
-			return true
+		if flag == country.Flag {
+			return country.Name, true
 		}
 	}
-	return false
+	return "", false
 }
 
 // IsGlobal returns true if this is the global configuration applied to all

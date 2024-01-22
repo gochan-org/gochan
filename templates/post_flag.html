@@ -2,7 +2,7 @@
 	<img {{if .IsGeoIP -}}
 			class="flag-geoip flag-{{.Flag}}"
 		{{- else -}}
-			class="flag-geoip" src="{{webPath `/static/flags/` .Flag}}"
+			src="{{webPath `/static/flags/` .Flag}}"
 		{{- end -}}
 		title="{{.Name}}" />
 {{- end -}}

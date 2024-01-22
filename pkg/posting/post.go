@@ -31,6 +31,7 @@ const (
 
 var (
 	ErrorPostTooLong = errors.New("post is too long")
+	ErrInvalidFlag   = errors.New("invalid selected flag")
 )
 
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
@@ -248,24 +249,57 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if boardConfig.EnableGeoIP {
-		geoipInfo, err := geoip.GetCountry(request, postBoard.Dir, errEv)
-		if err != nil {
-			// GetCountry logs the error
-			server.ServeError(writer, "Unable to get post info", wantsJSON, nil)
-			return
-		}
-		post.Country = geoipInfo.Name
-		post.Flag = strings.ToLower(geoipInfo.Flag)
-	}
-
 	captchaSuccess, err := submitCaptchaResponse(request)
 	if err != nil {
-		server.ServeError(writer, "Error submitting captcha response:"+err.Error(), wantsJSON, nil)
 		errEv.Err(err).
 			Caller().Send()
+		server.ServeError(writer, "Error submitting captcha response:"+err.Error(), wantsJSON, nil)
 		return
 	}
+
+	flag := request.PostFormValue("post-flag")
+	if flag != "" {
+		errEv.Str("flag", flag)
+	}
+	switch flag {
+	case "geoip":
+		if boardConfig.EnableGeoIP {
+			geoipInfo, err := geoip.GetCountry(request, postBoard.Dir, errEv)
+			if err != nil {
+				// GetCountry logs the error
+				break
+			}
+			post.Country = geoipInfo.Name
+			post.Flag = strings.ToLower(geoipInfo.Flag)
+		} else {
+			err = ErrInvalidFlag
+			errEv.Caller().
+				Msg("User selected 'geoip' on a non-geoip board")
+		}
+	case "":
+		// "No flag"
+		if !boardConfig.EnableNoFlag {
+			err = ErrInvalidFlag
+			errEv.Caller().
+				Msg("User submitted 'No flag' on a board without it enabled")
+		}
+	default:
+		// custom flag
+		var validFlag bool
+		post.Country, validFlag = boardConfig.CheckCustomFlag(flag)
+		if !validFlag {
+			err = ErrInvalidFlag
+			errEv.Caller().Msg("User submitted invalid custom flag")
+		}
+		post.Flag = flag
+	}
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
+			"flag": flag,
+		})
+		return
+	}
+
 	if !captchaSuccess {
 		server.ServeError(writer, "Missing or invalid captcha response", wantsJSON, nil)
 		errEv.Msg("Missing or invalid captcha response")
