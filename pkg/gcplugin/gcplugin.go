@@ -14,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/posting/geoip"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	luar "layeh.com/gopher-luar"
@@ -101,6 +102,7 @@ func preloadLua() {
 	lState.PreloadModule("gclog", gcutil.PreloadModule)
 	lState.PreloadModule("gcsql", gcsql.PreloadModule)
 	lState.PreloadModule("gctemplates", gctemplates.PreloadModule)
+	lState.PreloadModule("geoip", geoip.PreloadModule)
 	lState.PreloadModule("manage", manage.PreloadModule)
 	lState.PreloadModule("uploads", uploads.PreloadModule)
 	lState.PreloadModule("serverutil", serverutil.PreloadModule)

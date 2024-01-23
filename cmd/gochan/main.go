@@ -30,8 +30,8 @@ func main() {
 		fmt.Println("Cleaning up")
 		gcsql.Close()
 		gcutil.CloseLog()
-		gcplugin.ClosePlugins()
 		geoip.Close()
+		gcplugin.ClosePlugins()
 	}()
 
 	fmt.Printf("Starting gochan v%s\n", versionStr)
@@ -78,7 +78,9 @@ func main() {
 	parseCommandLine()
 	serverutil.InitMinifier()
 	siteCfg := config.GetSiteConfig()
-	geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions)
+	if err = geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions); err != nil {
+		gcutil.LogFatal().Err(err).Msg("Unable to initialize GeoIP")
+	}
 	posting.InitCaptcha()
 
 	if err = gctemplates.InitTemplates(); err != nil {
