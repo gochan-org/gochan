@@ -1,6 +1,7 @@
 package gcutil
 
 import (
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -64,7 +65,18 @@ func LogDiscard(events ...*zerolog.Event) {
 	}
 }
 
-func initLog(logPath string, debug bool) (err error) {
+// isTerminal returns true if the ModeCharDevice bit is set, meaning that
+// gochan is probably running in a standard terminal and not being piped
+// to a file
+func isTerminal() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return (fi.Mode() & os.ModeCharDevice) == os.ModeCharDevice
+}
+
+func initLog(logPath string, logToConsole bool) (err error) {
 	if logFile != nil {
 		// log already initialized
 		if err = logFile.Close(); err != nil {
@@ -76,12 +88,15 @@ func initLog(logPath string, debug bool) (err error) {
 		return err
 	}
 
-	if debug {
-		multi := zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter())
-		logger = zerolog.New(multi).With().Timestamp().Logger()
+	var writer io.Writer
+	if logToConsole {
+		cw := zerolog.NewConsoleWriter()
+		cw.NoColor = !isTerminal()
+		writer = zerolog.MultiLevelWriter(logFile, cw)
 	} else {
-		logger = zerolog.New(logFile).With().Timestamp().Logger()
+		writer = logFile
 	}
+	logger = zerolog.New(writer).With().Timestamp().Logger()
 
 	return nil
 }

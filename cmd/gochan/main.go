@@ -27,11 +27,11 @@ var (
 
 func main() {
 	defer func() {
-		fmt.Println("Cleaning up")
+		gcutil.LogInfo().Msg("Cleaning up")
 		gcsql.Close()
-		gcutil.CloseLog()
 		geoip.Close()
 		gcplugin.ClosePlugins()
+		gcutil.CloseLog()
 	}()
 
 	fmt.Printf("Starting gochan v%s\n", versionStr)
