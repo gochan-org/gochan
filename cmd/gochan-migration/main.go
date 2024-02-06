@@ -122,7 +122,6 @@ func main() {
 			options.ChanType, err.Error())
 		return
 	}
-	defer migrator.Close()
 	var migrated bool
 
 	if migrated, err = migrator.MigrateDB(); err != nil {

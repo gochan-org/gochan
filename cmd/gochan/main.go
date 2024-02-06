@@ -34,8 +34,6 @@ func close() {
 }
 
 func main() {
-	defer close()
-
 	fmt.Printf("Starting gochan v%s\n", versionStr)
 	config.InitConfig(versionStr)
 	config.SetVerbose(true)
