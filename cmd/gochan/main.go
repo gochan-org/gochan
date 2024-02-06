@@ -59,7 +59,6 @@ func main() {
 	}
 
 	events.TriggerEvent("startup")
-	defer events.TriggerEvent("shutdown")
 
 	if err = gcsql.ConnectToDB(
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
@@ -110,8 +109,9 @@ func main() {
 	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.Verbose, uid, gid); err != nil {
 		fmt.Println("Error opening logs:", err.Error())
 		close()
-		os.Exit(1)
+		os.Exit(1) // skipcq: CRT-D0011
 	}
+	defer events.TriggerEvent("shutdown")
 	go initServer()
 	<-sc
 }
