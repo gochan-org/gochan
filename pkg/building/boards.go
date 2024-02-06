@@ -166,7 +166,6 @@ func BuildBoardPages(board *gcsql.Board) error {
 				Msg("Failed getting board page")
 			return fmt.Errorf("failed opening /%s/board.html: %s", board.Dir, err.Error())
 		}
-		defer boardPageFile.Close()
 
 		if err = config.TakeOwnershipOfFile(boardPageFile); err != nil {
 			errEv.Err(err).Caller().
@@ -192,7 +191,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 				Caller().Msg("Failed building board")
 			return fmt.Errorf("failed building /%s/: %s", board.Dir, err.Error())
 		}
-		return nil
+		return boardPageFile.Close()
 	}
 
 	// Create the archive pages.
@@ -208,7 +207,6 @@ func BuildBoardPages(board *gcsql.Board) error {
 			Msg("Failed opening catalog.json")
 		return fmt.Errorf("failed opening /%s/catalog.json: %s", board.Dir, err.Error())
 	}
-	defer catalogJSONFile.Close()
 
 	if err = config.TakeOwnershipOfFile(catalogJSONFile); err != nil {
 		errEv.Err(err).Caller().
@@ -227,7 +225,6 @@ func BuildBoardPages(board *gcsql.Board) error {
 				Msg("Failed getting board page")
 			continue
 		}
-		defer currentPageFile.Close()
 
 		if err = config.TakeOwnershipOfFile(currentPageFile); err != nil {
 			errEv.Err(err).Caller().
@@ -261,9 +258,12 @@ func BuildBoardPages(board *gcsql.Board) error {
 			data["nextPage"] = catalog.currentPage + 1
 		}
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, data, currentPageFile, "text/html"); err != nil {
-			errEv.Err(err).
-				Caller().Send()
+			errEv.Err(err).Caller().Send()
 			return fmt.Errorf("failed building /%s/ boardpage: %s", board.Dir, err.Error())
+		}
+		if err = currentPageFile.Close(); err != nil {
+			errEv.Err(err).Caller().Send()
+			return fmt.Errorf("failed building /%s/ board page", board.Dir)
 		}
 
 		// Collect up threads for this page.
@@ -283,7 +283,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 			Caller().Msg("Failed writing catalog.json")
 		return fmt.Errorf("failed writing /%s/catalog.json: %s", board.Dir, err.Error())
 	}
-	return nil
+	return catalogJSONFile.Close()
 }
 
 // BuildBoards builds the specified board IDs, or all boards if no arguments are passed
@@ -551,7 +551,6 @@ func BuildBoardListJSON() error {
 		errEv.Err(err).Caller().Send()
 		return errors.New("unable to open boards.json for writing: " + err.Error())
 	}
-	defer boardListFile.Close()
 
 	if err = config.TakeOwnershipOfFile(boardListFile); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -587,5 +586,5 @@ func BuildBoardListJSON() error {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed writing boards.json file: " + err.Error())
 	}
-	return nil
+	return boardListFile.Close()
 }

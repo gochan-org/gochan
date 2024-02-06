@@ -88,7 +88,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("unable to open /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
-	defer threadPageFile.Close()
+
 	if err = config.TakeOwnershipOfFile(threadPageFile); err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("unable to set file permissions for /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
@@ -111,6 +111,10 @@ func BuildThreadPages(op *gcsql.Post) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, posts[0].ID, err.Error())
 	}
+	if err = threadPageFile.Close(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return errors.New("failed closing thread page file")
+	}
 
 	// Put together the thread JSON
 	threadJSONFile, err := os.OpenFile(
@@ -120,7 +124,6 @@ func BuildThreadPages(op *gcsql.Post) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
-	defer threadJSONFile.Close()
 
 	if err = config.TakeOwnershipOfFile(threadJSONFile); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -140,5 +143,5 @@ func BuildThreadPages(op *gcsql.Post) error {
 			Caller().Send()
 		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
 	}
-	return nil
+	return threadJSONFile.Close()
 }

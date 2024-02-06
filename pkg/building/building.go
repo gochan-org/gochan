@@ -97,7 +97,6 @@ func BuildFrontPage() error {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed opening front page for writing: " + err.Error())
 	}
-	defer frontFile.Close()
 
 	if err = config.TakeOwnershipOfFile(frontFile); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -121,7 +120,7 @@ func BuildFrontPage() error {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed executing front page template: " + err.Error())
 	}
-	return nil
+	return frontFile.Close()
 }
 
 // BuildPageHeader is a convenience function for automatically generating the top part
@@ -166,7 +165,6 @@ func BuildJS() error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("error opening consts.js for writing: %s", err.Error())
 	}
-	defer constsJSFile.Close()
 
 	if err = config.TakeOwnershipOfFile(constsJSFile); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -182,5 +180,5 @@ func BuildJS() error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("error building consts.js: %s", err.Error())
 	}
-	return nil
+	return constsJSFile.Close()
 }

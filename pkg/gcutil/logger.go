@@ -127,11 +127,7 @@ func InitLogs(logDir string, verbose bool, uid int, gid int) (err error) {
 	if err = initAccessLog(path.Join(logDir, "gochan_access.log")); err != nil {
 		return err
 	}
-	if err = accessFile.Chown(uid, gid); err != nil {
-		return err
-	}
-
-	return nil
+	return accessFile.Chown(uid, gid)
 }
 
 func Logger() *zerolog.Logger {

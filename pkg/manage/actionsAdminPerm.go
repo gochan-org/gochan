@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path"
@@ -809,20 +808,14 @@ func registerAdminPages() {
 			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event,
 				errEv *zerolog.Event) (output interface{}, err error) {
 				logPath := path.Join(config.GetSystemCriticalConfig().LogDir, "gochan.log")
-				logFile, err := os.Open(logPath)
+				logBytes, err := os.ReadFile(logPath)
 				if err != nil {
 					errEv.Err(err).Caller().Send()
 					return "", errors.New("unable to open log file")
 				}
-				defer logFile.Close()
-				ba, err := io.ReadAll(logFile)
-				if err != nil {
-					errEv.Err(err).Caller().Send()
-					return "", err
-				}
 				buf := bytes.NewBufferString("")
 				err = serverutil.MinifyTemplate(gctemplates.ManageViewLog, map[string]interface{}{
-					"logText": string(ba),
+					"logText": string(logBytes),
 				}, buf, "text/html")
 				return buf.String(), err
 			},

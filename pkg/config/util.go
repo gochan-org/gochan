@@ -112,14 +112,13 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	cfgFile, err := os.Open(cfgPath)
+	cfgBytes, err := os.ReadFile(cfgPath)
 	if err != nil {
 		fmt.Printf("Error reading %s: %s\n", cfgPath, err.Error())
 		os.Exit(1)
 	}
-	defer cfgFile.Close()
 
-	if err = json.NewDecoder(cfgFile).Decode(cfg); err != nil {
+	if err = json.Unmarshal(cfgBytes, cfg); err != nil {
 		fmt.Printf("Error parsing %s: %s", cfgPath, err.Error())
 		os.Exit(1)
 	}
@@ -185,25 +184,6 @@ func InitConfig(versionStr string) {
 	if cfg.WebRoot[len(cfg.WebRoot)-1] != '/' {
 		cfg.WebRoot += "/"
 	}
-
-	/* if !cfg.validGeoIPType() {
-		gcutil.LogFatal().Caller().
-			Str("GeoIPDBType", cfg.GeoIPDBType).
-			Msg("Invalid GeoIPDBType value, valid values are '', 'none', 'legacy', or 'geoip2'")
-	}
-
-	if cfg.GeoIPDBType != "" && cfg.GeoIPDBlocation != "" {
-		if _, err = os.Stat(cfg.GeoIPDBlocation); os.IsNotExist(err) {
-			gcutil.LogWarning().
-				Str("location", cfg.GeoIPDBlocation).
-				Msg("Unable to load GeoIP database location set in gochan.json, disabling GeoIP")
-			cfg.EnableGeoIP = false
-		} else if err != nil {
-			gcutil.LogFatal().Err(err).
-				Str("location", cfg.GeoIPDBlocation).
-				Msg("Unable to load GeoIP database location set in gochan.json")
-		}
-	} */
 
 	_, zoneOffset := time.Now().Zone()
 	cfg.TimeZone = zoneOffset / 60 / 60

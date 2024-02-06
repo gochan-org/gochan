@@ -32,7 +32,24 @@ for the threads and board pages`
 var (
 	versionStr   string
 	dbVersionStr string
+	migrator     common.DBMigrator
 )
+
+func close() int {
+	returnVal := 0
+	var err error
+	if migrator != nil {
+		if err = migrator.Close(); err != nil {
+			returnVal = 1
+			log.Println("Error closing migrator:", err.Error())
+		}
+	}
+	if err = gcsql.Close(); err != nil {
+		returnVal = 1
+		log.Println("Error closing SQL connection:", err.Error())
+	}
+	return returnVal
+}
 
 func main() {
 	var options common.MigrationOptions
@@ -69,7 +86,6 @@ func main() {
 	}
 
 	log.Printf(banner, versionStr)
-	var migrator common.DBMigrator
 	switch options.ChanType {
 	case "gcupdate":
 		migrator = &gcupdate.GCDatabaseUpdater{}
@@ -98,10 +114,10 @@ func main() {
 		if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
 			log.Fatalf("Failed to initialize the database: %s", err.Error())
 		}
-		defer gcsql.Close()
 	}
 
 	if err = migrator.Init(&options); err != nil {
+		close()
 		log.Fatalf("Unable to initialize %s migrator: %s\n",
 			options.ChanType, err.Error())
 		return
@@ -110,15 +126,17 @@ func main() {
 	var migrated bool
 
 	if migrated, err = migrator.MigrateDB(); err != nil {
+		close()
 		log.Fatalln("Error migrating database:", err.Error())
 	}
 	if migrated {
 		log.Println("Database is already migrated")
-		os.Exit(0)
+		return
 	}
 	if updateDB {
 		log.Println("Database schema updated successfully")
 	} else {
 		log.Println(migrateCompleteTxt)
 	}
+	os.Exit(close())
 }

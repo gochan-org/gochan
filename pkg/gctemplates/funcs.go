@@ -253,9 +253,7 @@ var funcMap = template.FuncMap{
 	"boardPagePath": func(board *gcsql.Board, page int) string {
 		return config.WebPath(board.Dir, strconv.Itoa(page)+".html")
 	},
-	"webPath": func(part ...string) string {
-		return config.WebPath(part...)
-	},
+	"webPath": config.WebPath,
 	"webPathDir": func(part ...string) string {
 		dir := config.WebPath(part...)
 		if len(dir) > 0 && dir[len(dir)-1] != '/' {

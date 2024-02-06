@@ -44,12 +44,11 @@ func numImageFrames(imgPath string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer fi.Close()
 	g, err := gif.DecodeAll(fi)
 	if err != nil {
 		return 0, err
 	}
-	return len(g.Image), nil
+	return len(g.Image), fi.Close()
 }
 
 func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {

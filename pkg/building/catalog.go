@@ -98,7 +98,6 @@ func BuildCatalog(boardID int) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed opening /%s/catalog.html: %s", board.Dir, err.Error())
 	}
-	defer catalogFile.Close()
 
 	if err = config.TakeOwnershipOfFile(catalogFile); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -122,5 +121,5 @@ func BuildCatalog(boardID int) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed building catalog for /%s/: %s", board.Dir, err.Error())
 	}
-	return nil
+	return catalogFile.Close()
 }
