@@ -22,12 +22,6 @@ enabled = true
     environment = ["jquery"]
 
 [[analyzers]]
-name = "typescript"
-enabled = true
-  [analyzers.meta]
-    environment = ["jquery"]
-
-[[analyzers]]
 name = "go"
 enabled = true
 
