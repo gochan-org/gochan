@@ -232,7 +232,7 @@ func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
 
 func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 	query := postQueryBase
-	args := []any{}
+	var args []any
 
 	if boardid > 0 {
 		query += " WHERE t.board_id = ?"

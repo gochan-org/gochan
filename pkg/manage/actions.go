@@ -86,7 +86,8 @@ func RegisterManagePage(id string, title string, permissions int, jsonOutput int
 }
 
 func getAvailableActions(rank int, noJSON bool) []Action {
-	available := []Action{}
+	var available []Action
+
 	for _, action := range actions {
 		if (rank < action.Permissions || action.Permissions == NoPerms) ||
 			(noJSON && action.JSONoutput == AlwaysJSON) {
