@@ -23,7 +23,8 @@ func HandleReport(request *http.Request) error {
 	if request.Method != "POST" {
 		return ErrInvalidReport
 	}
-	reportedPosts := []int{}
+	var reportedPosts []int
+
 	var id int
 	if !gcsql.DoesBoardExistByDir(board) {
 		return gcsql.ErrBoardDoesNotExist
