@@ -30,12 +30,11 @@ for the threads and board pages`
 )
 
 var (
-	versionStr   string
-	dbVersionStr string
-	migrator     common.DBMigrator
+	versionStr string
+	migrator   common.DBMigrator
 )
 
-func close() int {
+func cleanup() int {
 	returnVal := 0
 	var err error
 	if migrator != nil {
@@ -117,7 +116,7 @@ func main() {
 	}
 
 	if err = migrator.Init(&options); err != nil {
-		close()
+		cleanup()
 		log.Fatalf("Unable to initialize %s migrator: %s\n",
 			options.ChanType, err.Error())
 		return
@@ -125,7 +124,7 @@ func main() {
 	var migrated bool
 
 	if migrated, err = migrator.MigrateDB(); err != nil {
-		close()
+		cleanup()
 		log.Fatalln("Error migrating database:", err.Error())
 	}
 	if migrated {
@@ -137,5 +136,5 @@ func main() {
 	} else {
 		log.Println(migrateCompleteTxt)
 	}
-	os.Exit(close())
+	os.Exit(cleanup())
 }

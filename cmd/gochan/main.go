@@ -25,7 +25,7 @@ var (
 	versionStr string
 )
 
-func close() {
+func cleanup() {
 	gcsql.Close()
 	geoip.Close()
 	gcplugin.ClosePlugins()
@@ -41,7 +41,7 @@ func main() {
 	err := gcutil.InitLogs(systemCritical.LogDir, true, uid, gid)
 	if err != nil {
 		fmt.Println("Error opening logs:", err.Error())
-		close()
+		cleanup()
 		os.Exit(1)
 	}
 
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	if err = gcplugin.LoadPlugins(systemCritical.Plugins); err != nil {
-		close()
+		cleanup()
 		gcutil.LogFatal().Err(err).Msg("failed loading plugins")
 	}
 
@@ -63,7 +63,7 @@ func main() {
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix,
 	); err != nil {
 		fmt.Println("Failed to connect to the database:", err.Error())
-		close()
+		cleanup()
 		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
 	}
 	events.TriggerEvent("db-connected")
@@ -72,7 +72,7 @@ func main() {
 		Msg("Connected to database")
 
 	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
-		close()
+		cleanup()
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
@@ -80,21 +80,21 @@ func main() {
 	serverutil.InitMinifier()
 	siteCfg := config.GetSiteConfig()
 	if err = geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions); err != nil {
-		close()
+		cleanup()
 		gcutil.LogFatal().Err(err).Msg("Unable to initialize GeoIP")
 	}
 	posting.InitCaptcha()
 
 	if err = gctemplates.InitTemplates(); err != nil {
 		fmt.Println("Failed initializing templates:", err.Error())
-		close()
+		cleanup()
 		gcutil.LogFatal().Err(err).Send()
 	}
 
 	for _, board := range gcsql.AllBoards {
 		if _, err = board.DeleteOldThreads(); err != nil {
 			fmt.Printf("Error deleting old threads for board /%s/: %s\n", board.Dir, err)
-			close()
+			cleanup()
 			gcutil.LogFatal().Err(err).Caller().
 				Str("board", board.Dir).
 				Msg("Failed deleting old threads")
@@ -106,7 +106,7 @@ func main() {
 	posting.InitPosting()
 	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.Verbose, uid, gid); err != nil {
 		fmt.Println("Error opening logs:", err.Error())
-		close()
+		cleanup()
 		os.Exit(1) // skipcq: CRT-D0011
 	}
 	defer events.TriggerEvent("shutdown")

@@ -736,9 +736,9 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 	var editFilter *gcsql.Wordfilter
 	if editIDstr != "" {
 		editID := gcutil.HackyStringToInt(editIDstr)
-		for _, filter := range wordfilters {
+		for w, filter := range wordfilters {
 			if filter.ID == editID {
-				editFilter = &filter
+				editFilter = &wordfilters[w]
 				break
 			}
 		}
