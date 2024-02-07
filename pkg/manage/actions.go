@@ -70,7 +70,7 @@ func getAction(id string, rank int) *Action {
 		return nil
 	}
 	if rank == NoPerms && action.Permissions > NoPerms {
-		return loginAction
+		return &loginAction
 	}
 	return action
 }
