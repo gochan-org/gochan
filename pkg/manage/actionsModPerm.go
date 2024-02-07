@@ -21,7 +21,7 @@ import (
 
 // manage actions that require moderator-level permission go here
 
-func bansCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	var outputStr string
 	var ban gcsql.IPBan
 	ban.StaffID = staff.ID
@@ -115,7 +115,7 @@ func bansCallback(writer http.ResponseWriter, request *http.Request, staff *gcsq
 	return outputStr, nil
 }
 
-func appealsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 	banIDstr := request.FormValue("banid")
 	var banID int
 	if banIDstr != "" {
@@ -171,7 +171,7 @@ func appealsCallback(writer http.ResponseWriter, request *http.Request, staff *g
 	return manageAppealsBuffer.String(), err
 }
 
-func fileBansCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 	delFilenameBanIDStr := request.FormValue("delfnb") // filename ban deletion
 	delChecksumBanIDStr := request.FormValue("delcsb") // checksum ban deletion
 
@@ -317,7 +317,7 @@ func fileBansCallback(writer http.ResponseWriter, request *http.Request, staff *
 	return outputStr, nil
 }
 
-func nameBansCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
 	doNameBan := request.FormValue("donameban")
 	deleteIDstr := request.FormValue("del")
 	if deleteIDstr != "" {
@@ -370,7 +370,7 @@ func nameBansCallback(writer http.ResponseWriter, request *http.Request, staff *
 	return buf.String(), nil
 }
 
-func ipSearchCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	ipQuery := request.FormValue("ip")
 	limitStr := request.FormValue("limit")
 	data := map[string]interface{}{
@@ -410,7 +410,7 @@ func ipSearchCallback(writer http.ResponseWriter, request *http.Request, staff *
 	return manageIpBuffer.String(), nil
 }
 
-func reportsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	dismissIDstr := request.FormValue("dismiss")
 	if dismissIDstr != "" {
 		// staff is dismissing a report
@@ -493,7 +493,7 @@ func reportsCallback(writer http.ResponseWriter, request *http.Request, staff *g
 	return
 }
 
-func threadAttrsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 	boardDir := request.FormValue("board")
 	attrBuffer := bytes.NewBufferString("")
 	data := map[string]interface{}{
@@ -626,7 +626,7 @@ func threadAttrsCallback(writer http.ResponseWriter, request *http.Request, staf
 	return attrBuffer.String(), nil
 }
 
-func postInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	postIDstr := request.FormValue("postid")
 	if postIDstr == "" {
 		return "", errors.New("invalid request (missing postid)")

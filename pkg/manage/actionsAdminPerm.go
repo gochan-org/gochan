@@ -39,7 +39,7 @@ type uploadInfo struct {
 
 // manage actions that require admin-level permission go here
 
-func updateAnnouncementsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
+func updateAnnouncementsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
 	announcements, err := getAllAnnouncements()
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get staff announcements")
@@ -124,7 +124,7 @@ func updateAnnouncementsCallback(writer http.ResponseWriter, request *http.Reque
 	return pageBuffer.String(), err
 }
 
-func boardsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	board := &gcsql.Board{
 		MaxFilesize:      1000 * 1000 * 15,
 		AnonymousName:    "Anonymous",
@@ -229,7 +229,7 @@ func boardsCallback(writer http.ResponseWriter, request *http.Request, staff *gc
 	return pageBuffer.String(), nil
 }
 
-func boardSectionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func boardSectionsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	section := &gcsql.Section{}
 	editID := request.Form.Get("edit")
 	updateID := request.Form.Get("updatesection")
@@ -325,7 +325,7 @@ func boardSectionsCallback(writer http.ResponseWriter, request *http.Request, st
 	return
 }
 
-func cleanupCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func cleanupCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	outputStr := ""
 	if request.FormValue("run") == "Run Cleanup" {
 		outputStr += "Removing deleted posts from the database.<hr />"
@@ -355,7 +355,7 @@ func cleanupCallback(writer http.ResponseWriter, request *http.Request, staff *g
 	return outputStr, nil
 }
 
-func fixThumbnailsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func fixThumbnailsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
 	board := request.FormValue("board")
 	var uploads []uploadInfo
 	if board != "" {
@@ -397,7 +397,7 @@ func fixThumbnailsCallback(writer http.ResponseWriter, request *http.Request, st
 	return buffer.String(), nil
 }
 
-func templatesCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func templatesCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 	buf := bytes.NewBufferString("")
 
 	selectedTemplate := request.FormValue("override")
@@ -522,7 +522,7 @@ func templatesCallback(writer http.ResponseWriter, request *http.Request, staff 
 	return buf.String(), nil
 }
 
-func rebuildFrontCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func rebuildFrontCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	if err = gctemplates.InitTemplates(); err != nil {
 		return "", err
 	}
@@ -535,7 +535,7 @@ func rebuildFrontCallback(writer http.ResponseWriter, request *http.Request, sta
 	return "Built front page successfully", err
 }
 
-func rebuildAllCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func rebuildAllCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	gctemplates.InitTemplates()
 	if err = gcsql.ResetBoardSectionArrays(); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -590,7 +590,7 @@ func rebuildAllCallback(writer http.ResponseWriter, request *http.Request, staff
 	return buildStr, nil
 }
 
-func rebuildBoardsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func rebuildBoardsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	if err = gctemplates.InitTemplates(); err != nil {
 		errEv.Err(err).Caller().Msg("Unable to initialize templates")
 		return "", err
@@ -609,7 +609,7 @@ func rebuildBoardsCallback(writer http.ResponseWriter, request *http.Request, st
 	return "Boards built successfully", nil
 }
 
-func reparseHTMLCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	var outputStr string
 	tx, err := gcsql.BeginTx()
 	if err != nil {
@@ -666,7 +666,7 @@ func reparseHTMLCallback(writer http.ResponseWriter, request *http.Request, staf
 	return outputStr, nil
 }
 
-func wordfiltersCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	managePageBuffer := bytes.NewBufferString("")
 	editIDstr := request.FormValue("edit")
 	deleteIDstr := request.FormValue("delete")
@@ -758,7 +758,7 @@ func wordfiltersCallback(writer http.ResponseWriter, request *http.Request, staf
 	return managePageBuffer.String(), err
 }
 
-func viewLogCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event,
+func viewLogCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event,
 	errEv *zerolog.Event) (output interface{}, err error) {
 	logPath := path.Join(config.GetSystemCriticalConfig().LogDir, "gochan.log")
 	logBytes, err := os.ReadFile(logPath)

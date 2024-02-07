@@ -23,7 +23,7 @@ var (
 	}
 )
 
-func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if staff.Rank > 0 {
 		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
