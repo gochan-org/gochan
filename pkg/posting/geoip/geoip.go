@@ -50,10 +50,6 @@ type GeoIPHandler interface {
 // RegisterGeoIPHandler registers an object that can handle incoming posts, name allows it
 // to be used as config.SiteConfig.GeoIP.Type
 func RegisterGeoIPHandler(id string, cb GeoIPHandler) error {
-	if id == "" {
-		// not using GeoIP
-		return nil
-	}
 	_, ok := geoipHandlers[id]
 	if ok {
 		return fmt.Errorf("a geoip handler has already been registered to the ID %q", id)
@@ -65,6 +61,10 @@ func RegisterGeoIPHandler(id string, cb GeoIPHandler) error {
 // SetupGeoIP sets the handler to be used for GeoIP requests. If the ID has not been registered
 // by a handler, it will return ErrUnrecognized
 func SetupGeoIP(id string, options map[string]any) (err error) {
+	if id == "" {
+		// not using GeoIP
+		return nil
+	}
 	var ok bool
 	activeHandler, ok = geoipHandlers[id]
 	if !ok {

@@ -26,11 +26,9 @@ var (
 )
 
 func close() {
-	gcutil.LogInfo().Msg("Cleaning up")
 	gcsql.Close()
 	geoip.Close()
 	gcplugin.ClosePlugins()
-	gcutil.CloseLog()
 }
 
 func main() {
@@ -64,8 +62,8 @@ func main() {
 		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
 		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix,
 	); err != nil {
-		close()
 		fmt.Println("Failed to connect to the database:", err.Error())
+		close()
 		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
 	}
 	events.TriggerEvent("db-connected")
