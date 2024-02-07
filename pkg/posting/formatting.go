@@ -135,5 +135,5 @@ func FormatMessage(message string, boardDir string) template.HTML {
 		}
 		postLines[i] = line
 	}
-	return template.HTML(strings.Join(postLines, "<br />"))
+	return template.HTML(strings.Join(postLines, "<br />")) // skipcq: GSC-G203
 }

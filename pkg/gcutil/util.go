@@ -51,7 +51,7 @@ func Md5Sum(str string) string {
 
 // Sha1Sum generates and returns a checksum using the SHA-1 hashing function
 func Sha1Sum(str string) string {
-	hash := sha1.New() // skipcq: GSC-G401
+	hash := sha1.New() // skipcq: GSC-G401, GO-S1025
 	io.WriteString(hash, str)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }

@@ -19,7 +19,7 @@ func truncateHTML(htmlText template.HTML, characterLimit, maxLines int) template
 	truncateHTMLNodes(dom, characterLimit, maxLines)
 	buf := new(bytes.Buffer)
 	x_html.Render(buf, dom)
-	return template.HTML(buf.String())
+	return template.HTML(buf.String()) // skipcq: GSC-G203
 }
 
 func removeNextSiblings(node *x_html.Node) {

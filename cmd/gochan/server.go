@@ -9,6 +9,7 @@ import (
 	"net/http/fcgi"
 	"path"
 	"strconv"
+	"time"
 
 	"github.com/uptrace/bunrouter"
 
@@ -21,17 +22,10 @@ import (
 )
 
 func initServer() {
+	var listener net.Listener
+	var err error
 	systemCritical := config.GetSystemCriticalConfig()
-
-	listener, err := net.Listen("tcp", systemCritical.ListenIP+":"+strconv.Itoa(systemCritical.Port))
-	if err != nil {
-		if !systemCritical.Verbose {
-			fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
-		}
-		gcutil.LogFatal().Err(err).Caller().
-			Str("ListenIP", systemCritical.ListenIP).
-			Int("Port", systemCritical.Port).Send()
-	}
+	listenAddr := net.JoinHostPort(systemCritical.ListenIP, strconv.Itoa(systemCritical.Port))
 
 	router := server.GetRouter()
 	router.GET(config.WebPath("/captcha"), bunrouter.HTTPHandlerFunc(posting.ServeCaptcha))
@@ -50,17 +44,30 @@ func initServer() {
 	// like /plugin
 
 	if systemCritical.UseFastCGI {
+		listener, err = net.Listen("tcp", listenAddr)
+		if err != nil {
+			if !systemCritical.Verbose {
+				fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
+			}
+			gcutil.LogFatal().Err(err).Caller().
+				Str("ListenIP", systemCritical.ListenIP).
+				Int("Port", systemCritical.Port).Send()
+		}
 		err = fcgi.Serve(listener, router)
 	} else {
-		err = http.Serve(listener, router)
+		httpServer := &http.Server{
+			Addr:              listenAddr,
+			Handler:           router,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
+		err = httpServer.ListenAndServe()
 	}
 
 	if err != nil {
 		if !systemCritical.Verbose {
 			fmt.Println("Error initializing server:", err.Error())
 		}
-		gcutil.Logger().Fatal().
-			Err(err).
+		gcutil.LogFatal().Err(err).Caller().
 			Msg("Error initializing server")
 	}
 }
