@@ -19,7 +19,7 @@ import (
 
 // manage actions that require at least janitor-level permission go here
 
-func logoutCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	if err = gcsql.EndStaffSession(writer, request); err != nil {
 		return "", err
 	}
@@ -29,7 +29,7 @@ func logoutCallback(writer http.ResponseWriter, request *http.Request, staff *gc
 	return "Logged out successfully", nil
 }
 
-func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	session, err := request.Cookie("sessiondata")
 	if err != nil {
 		// doesn't have a login session cookie, return with no errors
@@ -70,7 +70,7 @@ func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, 
 	return "Logged out successfully", nil
 }
 
-func recentPostsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, _, errEv *zerolog.Event) (output interface{}, err error) {
 	limit := 20
 	limitStr := request.FormValue("limit")
 	if limitStr != "" {
@@ -110,12 +110,12 @@ func recentPostsCallback(writer http.ResponseWriter, request *http.Request, staf
 	return manageRecentsBuffer.String(), nil
 }
 
-func announcementsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	// return an array of announcements (with staff name instead of ID) and any errors
 	return getAllAnnouncements()
 }
 
-func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	var outputStr string
 	do := request.FormValue("do")
 	allStaff, err := getAllStaffNopass(true)
