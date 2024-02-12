@@ -54,12 +54,15 @@ type Board struct {
 // FileBan contains the information associated with a specific file ban.
 // table: DBPREFIXfile_ban
 type FileBan struct {
-	ID        int       // sql: `id`
-	BoardID   *int      // sql: `board_id`
-	StaffID   int       // sql: `staff_id`
-	StaffNote string    // sql: `staff_note`
-	IssuedAt  time.Time // sql: `issued_at`
-	Checksum  string    // sql: `checksum`
+	ID            int       // sql: `id`
+	BoardID       *int      // sql: `board_id`
+	StaffID       int       // sql: `staff_id`
+	StaffNote     string    // sql: `staff_note`
+	IssuedAt      time.Time // sql: `issued_at`
+	Checksum      string    // sql: `checksum`
+	Fingerprinter *string   // sql: `fingerprinter`
+	BanIP         bool      // sql: `ban_ip`
+	BanIPMessage  *string   // sql: `ban_ip_message`
 }
 
 type filenameOrUsernameBanBase struct {

@@ -186,6 +186,8 @@ type SiteConfig struct {
 	GeoIPType    string
 	GeoIPOptions map[string]any
 	Captcha      CaptchaConfig
+
+	FingerprinterOptions map[string]map[string]any
 }
 
 type CaptchaConfig struct {

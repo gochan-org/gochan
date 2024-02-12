@@ -85,7 +85,7 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 			return err
 		}
 		if err = syscall.Symlink(path.Join(documentRoot, "spoiler.png"), thumbPath); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("thumbPath", thumbPath).
 				Msg("Error creating symbolic link to thumbnail path")
 			return err
