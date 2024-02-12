@@ -189,5 +189,41 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 		}
 	}
 
+	// add fingerprinter column to DBPREFIXfile_ban
+	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", criticalCfg)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN fingerprinter VARCHAR(64)`
+		if _, err = db.ExecTxSQL(tx, query); err != nil {
+			return err
+		}
+	}
+
+	// add ban_ip column to DBPREFIXfile_ban
+	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", criticalCfg)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip BOOL NOT NULL`
+		if _, err = db.ExecTxSQL(tx, query); err != nil {
+			return err
+		}
+	}
+
+	// add ban_ip_message column to DBPREFIXfile_ban
+	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", criticalCfg)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip_message TEXT`
+		if _, err = db.ExecTxSQL(tx, query); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
