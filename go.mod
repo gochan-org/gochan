@@ -7,6 +7,7 @@ require (
 	github.com/Eggbertx/durationutil v1.0.0
 	github.com/aquilax/tripcode v1.0.1
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
+	github.com/devedge/imagehash v0.0.0-20180324030135-7061aa3b4066
 	github.com/disintegration/imaging v1.6.2
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
 	github.com/go-sql-driver/mysql v1.7.1
@@ -28,7 +29,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/devedge/imagehash v0.0.0-20180324030135-7061aa3b4066 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

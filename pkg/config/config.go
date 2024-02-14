@@ -179,7 +179,6 @@ type SiteConfig struct {
 	MaxRecentPosts        int
 	RecentPostsWithNoFile bool
 	EnableAppeals         bool
-	MaxLogDays            int
 
 	MinifyHTML   bool
 	MinifyJS     bool
@@ -187,7 +186,8 @@ type SiteConfig struct {
 	GeoIPOptions map[string]any
 	Captcha      CaptchaConfig
 
-	FingerprinterOptions map[string]map[string]any
+	FingerprintVideoThumbnails bool
+	FingerprintHashLength      int
 }
 
 type CaptchaConfig struct {

@@ -23,7 +23,13 @@ import (
 )
 
 var (
-	uploadHandlers map[string]UploadHandler
+	uploadHandlers  map[string]UploadHandler
+	imageExtensions = []string{
+		".bmp", ".gif", ".jpg", ".jpeg", ".png", ".webp",
+	}
+	videoExtensions = []string{
+		".mp4", ".webm",
+	}
 )
 
 type UploadHandler func(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error
@@ -35,13 +41,12 @@ func RegisterUploadHandler(ext string, handler UploadHandler) {
 
 func init() {
 	uploadHandlers = make(map[string]UploadHandler)
-	RegisterUploadHandler(".gif", processImage)
-	RegisterUploadHandler(".jpg", processImage)
-	RegisterUploadHandler(".jpeg", processImage)
-	RegisterUploadHandler(".png", processImage)
-	RegisterUploadHandler(".webp", processImage)
-	RegisterUploadHandler(".mp4", processVideo)
-	RegisterUploadHandler(".webm", processVideo)
+	for _, ext := range imageExtensions {
+		uploadHandlers[ext] = processImage
+	}
+	for _, ext := range videoExtensions {
+		uploadHandlers[ext] = processVideo
+	}
 }
 
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
