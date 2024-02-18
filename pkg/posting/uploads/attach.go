@@ -24,10 +24,10 @@ import (
 
 var (
 	uploadHandlers  map[string]UploadHandler
-	imageExtensions = []string{
+	ImageExtensions = []string{
 		".bmp", ".gif", ".jpg", ".jpeg", ".png", ".webp",
 	}
-	videoExtensions = []string{
+	VideoExtensions = []string{
 		".mp4", ".webm",
 	}
 )
@@ -41,10 +41,10 @@ func RegisterUploadHandler(ext string, handler UploadHandler) {
 
 func init() {
 	uploadHandlers = make(map[string]UploadHandler)
-	for _, ext := range imageExtensions {
+	for _, ext := range ImageExtensions {
 		uploadHandlers[ext] = processImage
 	}
-	for _, ext := range videoExtensions {
+	for _, ext := range VideoExtensions {
 		uploadHandlers[ext] = processVideo
 	}
 }

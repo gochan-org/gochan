@@ -61,13 +61,13 @@ func fingerprintFile(filePath string, board string) (*gcsql.FileBan, error) {
 func canFingerprint(filename string) bool {
 	siteCfg := config.GetSiteConfig()
 	ext := path.Ext(filename)
-	for _, iExt := range imageExtensions {
+	for _, iExt := range ImageExtensions {
 		if iExt == ext {
 			return true
 		}
 	}
 	if siteCfg.FingerprintVideoThumbnails {
-		for _, vExt := range videoExtensions {
+		for _, vExt := range VideoExtensions {
 			if vExt == ext {
 				return true
 			}

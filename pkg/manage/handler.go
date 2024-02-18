@@ -115,7 +115,12 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 					Msg("Recovered from panic while calling manage function")
 			}
 		}()
-		output, err = action.Callback(writer, request, staff, wantsJSON, infoEv, errEv)
+		if action.Callback == nil {
+			output = ""
+			err = fmt.Errorf("action %q exists but has no defined callback", action.ID)
+		} else {
+			output, err = action.Callback(writer, request, staff, wantsJSON, infoEv, errEv)
+		}
 	}
 	if err != nil {
 		writer.WriteHeader(http.StatusInternalServerError)

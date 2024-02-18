@@ -626,6 +626,15 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	return attrBuffer.String(), nil
 }
 
+type postInfoJSON struct {
+	Post *gcsql.Post `json:"post"`
+	IP   string      `json:"ip"`
+	FQDN []string    `json:"ipFQDN"`
+
+	OriginalFilename string `json:"originalFilename,omitempty"`
+	Checksum         string `json:"checksum,omitempty"`
+}
+
 func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	postIDstr := request.FormValue("postid")
 	if postIDstr == "" {
@@ -640,23 +649,23 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 		return "", err
 	}
 
-	postInfo := map[string]interface{}{
-		"post": post,
-		"ip":   post.IP,
+	postInfo := postInfoJSON{
+		Post: post,
+		IP:   post.IP,
 	}
 	names, err := net.LookupAddr(post.IP)
 	if err == nil {
-		postInfo["ipFQDN"] = names
+		postInfo.FQDN = names
 	} else {
-		postInfo["ipFQDN"] = []string{err.Error()}
+		postInfo.FQDN = []string{err.Error()}
 	}
 	upload, err := post.GetUpload()
 	if err != nil {
 		return "", err
 	}
 	if upload != nil {
-		postInfo["originalFilename"] = upload.OriginalFilename
-		postInfo["checksum"] = upload.Checksum
+		postInfo.OriginalFilename = upload.OriginalFilename
+		postInfo.Checksum = upload.Checksum
 	}
 	return postInfo, nil
 }
