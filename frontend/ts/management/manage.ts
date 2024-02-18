@@ -7,12 +7,6 @@ import "./filebans";
 import "./viewlog";
 import { isThreadLocked } from "../api/management";
 
-const notAStaff: StaffInfo = {
-	ID: 0,
-	Username: "",
-	Rank: 0
-};
-
 const reportsTextRE = /^Reports( \(\d+\))?/;
 
 export let staffActions: StaffAction[] = [];
@@ -34,21 +28,21 @@ function dropdownHasItem(dropdown: any, item: string) {
 }
 
 function addManageEvents(_i: number, el: HTMLSelectElement) {
-	if(staffInfo === null || staffInfo.Rank < 2) return;
+	if(staffInfo === null || staffInfo.rank < 2) return;
 	const $el = $(el);
 	const $post = $(el.parentElement);
 	const isLocked = isThreadLocked($post);
 	if(!dropdownHasItem(el, "Staff Actions")) {
 		$el.append('<option disabled="disabled">Staff Actions</option>');
 	}
-	if(staffInfo.Rank === 3 && $post.hasClass("op-post")) {
+	if(staffInfo.rank === 3 && $post.hasClass("op-post")) {
 		if(isLocked) {
 			$el.append("<option>Unlock thread</option>");
 		} else {
 			$el.append("<option>Lock thread</option>");
 		}
 	}
-	if(staffInfo.Rank >= 2) {
+	if(staffInfo.rank >= 2) {
 		if(!dropdownHasItem(el, "Posts from this IP")) {
 			$el.append("<option>Posts from this IP</option>");
 		}
@@ -66,13 +60,12 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 }
 
 function setupManagementEvents() {
-	getStaffInfo().then(() => {
-		$<HTMLSelectElement>("select.post-actions").each(addManageEvents);
-		$(document).on("postDropdownAdded", function(_e, data) {
-			if(!data.dropdown) return;
-			data.dropdown.append("<option>Posts from this IP</option>");
-			data.dropdown.append("<option>Ban IP address</option>");
-		});
+	if(staffInfo === null || !staffInfo.actions) return;
+	$<HTMLSelectElement>("select.post-actions").each(addManageEvents);
+	$(document).on("postDropdownAdded", function(_e, data) {
+		if(!data.dropdown) return;
+		data.dropdown.append("<option>Posts from this IP</option>");
+		data.dropdown.append("<option>Ban IP address</option>");
 	});
 }
 
@@ -114,52 +107,37 @@ export function banFile(banType: string, filename: string, checksum: string, sta
 }
 
 export async function initStaff() {
+	if(staffInfo !== null || staffActions?.length > 0)
+		// don't make multiple unnecessary AJAX requests
+		return staffInfo;
+
 	return $.ajax({
 		method: "GET",
-		url: `${webroot}manage/actions`,
+		url: `${webroot}manage/staffinfo`,
 		async: true,
 		cache: false,
-		success: result => {
+		dataType: "json",
+		success: (result:string|StaffInfo) => {
 			if(typeof result === "string") {
 				try {
-					staffActions = JSON.parse(result);
-
+					staffInfo = JSON.parse(result);
 				} catch(e) {
 					// presumably not logged in
 					staffActions = [];
 				}
 			} else if(typeof result === "object") {
-				staffActions = result;
+				staffInfo = result;
 			}
+			staffActions = staffInfo.actions;
+			return staffInfo;
 		},
 		error: (e: JQuery.jqXHR) => {
 			console.error("Error getting actions list:", e);
 		}
-	}).then(getStaffInfo).then(info => {
-		if(info.Rank > 0) {
+	}).then(() => {
+		if(staffInfo.rank > 0)
 			setupManagementEvents();
-		}
-		return info;
-	});
-
-}
-
-export async function getStaffInfo(): Promise<StaffInfo> {
-	if(staffInfo !== null)
-		// don't make multiple unnecessary AJAX requests
 		return staffInfo;
-	return $.ajax({
-		method: "GET",
-		url: `${webroot}manage/staffinfo`,
-		async: true,
-		dataType: "json"
-	}).catch(() => {
-		return notAStaff;
-	}).then((info: any) => {
-		if(info.error)
-			return notAStaff;
-		staffInfo = info;
-		return info;
 	});
 }
 
@@ -177,8 +155,8 @@ export async function getPostInfo(id: number) {
 }
 
 export async function isLoggedIn() {
-	return getStaffInfo().then(info => {
-		return info.ID > 0;
+	return initStaff().then(info => {
+		return info.rank > 0;
 	});
 }
 
@@ -233,7 +211,7 @@ function filterAction(action: StaffAction, perms: number) {
  * @param staff an object representing the staff's username and rank
  */
 export function createStaffMenu(staff = staffInfo) {
-	const rank = staff.Rank;
+	const rank = staff.rank;
 	if(rank === 0) return;
 	$staffMenu = $("<div/>").prop({
 		id: "staffmenu",
@@ -271,7 +249,7 @@ export function createStaffMenu(staff = staffInfo) {
 }
 
 function createStaffButton() {
-	if($staffBtn !== null || staffInfo === null || staffInfo.Rank === 0)
+	if($staffBtn !== null || staffInfo === null || staffInfo.rank === 0)
 		return;
 	$staffBtn = new TopBarButton("Staff", () => {
 		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);

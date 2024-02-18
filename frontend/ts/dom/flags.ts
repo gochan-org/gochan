@@ -35,7 +35,7 @@ function loadFlagSelection() {
 		const $sel = $<HTMLSelectElement>("select")
 			.filter((_,el) => el.name === "post-flag");
 		const num = $sel.find("option")
-				.filter((_,el) => el.value === savedFlag).length;
+			.filter((_,el) => el.value === savedFlag).length;
 		if(num > 0) {
 			$sel.val(savedFlag);
 			$sel.trigger("change");
