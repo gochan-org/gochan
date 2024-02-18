@@ -13,7 +13,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
@@ -109,22 +108,6 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		return "", errors.New("Error executing ban management page template: " + err.Error())
 	}
 	return manageRecentsBuffer.String(), nil
-}
-
-type staffOptionsJSON struct {
-	FingerprintVideoThumbs bool     `json:"fingerprintVideoThumbs"`
-	ImageExtensions        []string `json:"imageExtensions,omitempty"`
-	VideoExtensions        []string `json:"videoExtensions,omitempty"`
-}
-
-func staffOptionsCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
-	staffOptions := staffOptionsJSON{}
-	if staff.Rank > JanitorPerms {
-		staffOptions.FingerprintVideoThumbs = config.GetSiteConfig().FingerprintVideoThumbnails
-		staffOptions.ImageExtensions = uploads.ImageExtensions
-		staffOptions.VideoExtensions = uploads.VideoExtensions
-	}
-	return staffOptions, nil
 }
 
 func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
@@ -268,13 +251,6 @@ func registerJanitorPages() {
 			Permissions: JanitorPerms,
 			JSONoutput:  OptionalJSON,
 			Callback:    staffCallback,
-		},
-		Action{
-			ID:          "staffoptions",
-			Title:       "Staff-specific options",
-			Permissions: JanitorPerms,
-			JSONoutput:  AlwaysJSON,
-			Callback:    staffOptionsCallback,
 		},
 	)
 }

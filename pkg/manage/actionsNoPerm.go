@@ -10,6 +10,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
@@ -62,14 +63,44 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	return
 }
 
+type fingerprintingOptions struct {
+	FingerprintVideoThumbs bool     `json:"fingerprintVideoThumbs"`
+	ImageExtensions        []string `json:"imageExtensions,omitempty"`
+	VideoExtensions        []string `json:"videoExtensions,omitempty"`
+}
+
+type staffInfoJSON struct {
+	Username       string                 `json:"username"`
+	Rank           int                    `json:"rank"`
+	Actions        []Action               `json:"actions,omitempty"`
+	Fingerprinting *fingerprintingOptions `json:"fingerprinting,omitempty"`
+}
+
+func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+	info := staffInfoJSON{
+		Username: staff.Username,
+		Rank:     staff.Rank,
+	}
+	if staff.Rank >= JanitorPerms {
+		info.Actions = getAvailableActions(staff.Rank, false)
+	}
+	if staff.Rank >= ModPerms {
+		info.Fingerprinting = &fingerprintingOptions{
+			FingerprintVideoThumbs: config.GetSiteConfig().FingerprintVideoThumbnails,
+			ImageExtensions:        uploads.ImageExtensions,
+			VideoExtensions:        uploads.VideoExtensions,
+		}
+	}
+	return info, nil
+}
+
 func registerNoPermPages() {
 	actions = append(actions, loginAction,
 		Action{
 			ID:          "staffinfo",
 			Permissions: NoPerms,
 			JSONoutput:  AlwaysJSON,
-			Callback: func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-				return staff, nil
-			}},
+			Callback:    staffInfoCallback,
+		},
 	)
 }
