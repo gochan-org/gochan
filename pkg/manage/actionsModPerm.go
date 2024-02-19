@@ -2,11 +2,13 @@ package manage
 
 import (
 	"bytes"
+	"database/sql"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"strconv"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
@@ -671,6 +674,56 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 	return postInfo, nil
 }
 
+type fingerprintJSON struct {
+	Filename    string `json:"file"`
+	Fingerprint string `json:"fingerprint"`
+}
+
+func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+	postIDstr := request.Form.Get("post")
+	if postIDstr == "" {
+		return "", errors.New("missing 'post' field")
+	}
+	postID, err := strconv.Atoi(postIDstr)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", err
+	}
+	const query = `SELECT
+	(SELECT dir from DBPREFIXboards WHERE id = (SELECT thread_id FROM DBPREFIXposts WHERE id = ?))
+	AS board, filename, is_spoilered FROM DBPREFIXfiles WHERE post_id = ? LIMIT 1`
+	var board, filename string
+	var spoiler bool
+	err = gcsql.QueryRowSQL(query, []any{postID, postID}, []any{&board, &filename, &spoiler})
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", errors.New("post has no files")
+	} else if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", err
+	}
+	fpVideoThumbs := config.GetSiteConfig().FingerprintVideoThumbnails
+	if !uploads.IsImage(filename) && !uploads.IsVideo(filename) {
+		return "", fmt.Errorf(
+			"unable to fingerprint file %q (not an image or a video)", filename)
+	} else if uploads.IsVideo(filename) && !fpVideoThumbs {
+		return "", fmt.Errorf(
+			"unable to fingerprint file %q (video thumbnail fingerprinting not enabled)",
+			filename)
+	}
+	docRoot := config.GetSystemCriticalConfig().DocumentRoot
+	filePath := path.Join(docRoot, board, "src", filename)
+	fingerprintHash, err := uploads.FingerprintFile(filePath)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", err
+	}
+
+	return fingerprintJSON{
+		Filename:    filename,
+		Fingerprint: fingerprintHash,
+	}, nil
+}
+
 func registerModeratorPages() {
 	actions = append(actions,
 		Action{
@@ -726,6 +779,13 @@ func registerModeratorPages() {
 			Permissions: ModPerms,
 			JSONoutput:  AlwaysJSON,
 			Callback:    postInfoCallback,
+		},
+		Action{
+			ID:          "fingerprint",
+			Title:       "Get image/thumbnail fingerprint",
+			Permissions: ModPerms,
+			JSONoutput:  AlwaysJSON,
+			Callback:    fingerprintCallback,
 		},
 	)
 }

@@ -39,6 +39,26 @@ func RegisterUploadHandler(ext string, handler UploadHandler) {
 	uploadHandlers[ext] = handler
 }
 
+func IsImage(file string) bool {
+	ext := path.Ext(file)
+	for _, iExt := range ImageExtensions {
+		if ext == iExt {
+			return true
+		}
+	}
+	return false
+}
+
+func IsVideo(file string) bool {
+	ext := path.Ext(file)
+	for _, vExt := range VideoExtensions {
+		if ext == vExt {
+			return true
+		}
+	}
+	return false
+}
+
 func init() {
 	uploadHandlers = make(map[string]UploadHandler)
 	for _, ext := range ImageExtensions {

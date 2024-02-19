@@ -1,10 +1,10 @@
 package uploads
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"net/http"
-	"path"
 
 	"github.com/devedge/imagehash"
 	"github.com/disintegration/imaging"
@@ -12,8 +12,12 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
+var (
+	ErrVideoThumbFingerprint = errors.New("video thumbnail fingerprinting not enabled")
+)
+
 const (
-	defaultFingerprintHashLength = 16
+	defaultFingerprintHashLength = 8
 )
 
 type FingerprintSource struct {
@@ -22,11 +26,16 @@ type FingerprintSource struct {
 	Request  *http.Request
 }
 
-func fingerprintImage(img image.Image, board string) (*gcsql.FileBan, error) {
+func getHashLength() int {
 	hashLength := config.GetSiteConfig().FingerprintHashLength
 	if hashLength < 1 {
-		hashLength = defaultFingerprintHashLength
+		return defaultFingerprintHashLength
 	}
+	return hashLength
+}
+
+func checkImageFingerprintBan(img image.Image, board string) (*gcsql.FileBan, error) {
+	hashLength := getHashLength()
 	ba, err := imagehash.Ahash(img, hashLength)
 	if err != nil {
 		return nil, err
@@ -50,28 +59,29 @@ func fingerprintImage(img image.Image, board string) (*gcsql.FileBan, error) {
 	return &fileBan, err
 }
 
-func fingerprintFile(filePath string, board string) (*gcsql.FileBan, error) {
+func FingerprintFile(filePath string) (string, error) {
+	img, err := imaging.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Println("hash length:", getHashLength())
+	ba, err := imagehash.Ahash(img, getHashLength())
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", ba), nil
+}
+
+func checkFileFingerprintBan(filePath string, board string) (*gcsql.FileBan, error) {
 	img, err := imaging.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	return fingerprintImage(img, board)
+	return checkImageFingerprintBan(img, board)
 }
 
 func canFingerprint(filename string) bool {
 	siteCfg := config.GetSiteConfig()
-	ext := path.Ext(filename)
-	for _, iExt := range ImageExtensions {
-		if iExt == ext {
-			return true
-		}
-	}
-	if siteCfg.FingerprintVideoThumbnails {
-		for _, vExt := range VideoExtensions {
-			if vExt == ext {
-				return true
-			}
-		}
-	}
-	return false
+	return IsImage(filename) || (IsVideo(filename) && siteCfg.FingerprintVideoThumbnails)
 }
