@@ -65,7 +65,6 @@ func FingerprintFile(filePath string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println("hash length:", getHashLength())
 	ba, err := imagehash.Ahash(img, getHashLength())
 	if err != nil {
 		return "", err
