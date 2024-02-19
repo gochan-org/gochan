@@ -292,7 +292,7 @@ func DeleteNameBan(id int) error {
 }
 
 func GetFileBans(boardID int, limit int) ([]FileBan, error) {
-	query := `SELECT id, board_id, staff_id, staff_note, issued_at, checksum FROM DBPREFIXfile_ban`
+	query := `SELECT id, board_id, staff_id, staff_note, issued_at, checksum, fingerprinter, ban_ip, ban_ip_message FROM DBPREFIXfile_ban`
 	limitStr := ""
 	if limit > 0 {
 		limitStr = " LIMIT " + strconv.Itoa(limit)
@@ -312,7 +312,10 @@ func GetFileBans(boardID int, limit int) ([]FileBan, error) {
 	var bans []FileBan
 	for rows.Next() {
 		var ban FileBan
-		if err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum); err != nil {
+		if err = rows.Scan(
+			&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt,
+			&ban.Checksum, &ban.Fingerprinter, &ban.BanIP, &ban.BanIPMessage,
+		); err != nil {
 			return nil, err
 		}
 		bans = append(bans, ban)

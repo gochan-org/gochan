@@ -309,6 +309,7 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 		"checksumBans":  checksumBans,
 		"filenameBans":  filenameBans,
 		"filterboardid": filterBoardID,
+		"currentStaff":  staff.Username,
 	}, manageBansBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_filebans.html").Caller().Send()
 		return "", errors.New("Error executing ban management page template: " + err.Error())
