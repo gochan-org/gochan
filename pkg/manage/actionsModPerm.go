@@ -188,6 +188,7 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 			return "", err
 		}
 	}
+	gcutil.LogInt("boardid", boardid, infoEv, errEv)
 	staffnote := request.FormValue("staffnote")
 
 	if request.FormValue("dofilenameban") != "" {
@@ -205,16 +206,14 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 			}
 		}
 		if _, err = gcsql.NewFilenameBan(filename, isRegex, boardid, staff.ID, staffnote); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("filename", filename).
-				Bool("isregex", isRegex).
-				Caller().Send()
+				Bool("isregex", isRegex).Send()
 			return "", err
 		}
 		infoEv.
 			Str("filename", filename).
 			Bool("isregex", isRegex).
-			Int("boardid", boardid).
 			Msg("Created new filename ban")
 		if wantsJSON {
 			return "success", nil
@@ -222,38 +221,50 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	} else if delFilenameBanIDStr != "" {
 		delFilenameBanID, err := strconv.Atoi(delFilenameBanIDStr)
 		if err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("delfnb", delFilenameBanIDStr).
-				Caller().Send()
+				Send()
 			return "", err
 		}
 		var fnb gcsql.FilenameBan
 		fnb.ID = delFilenameBanID
 		if err = fnb.Deactivate(staff.ID); err != nil {
-			errEv.Err(err).
-				Int("deleteFilenameBanID", delFilenameBanID).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Int("deleteFilenameBanID", delFilenameBanID).Send()
 			return "", err
 		}
 		infoEv.
 			Int("deleteFilenameBanID", delFilenameBanID).
-			Int("boardid", boardid).
 			Msg("Filename ban deleted")
 		if wantsJSON {
 			return "success", nil
 		}
-	} else if request.FormValue("dochecksumban") != "" {
+	} else if request.PostFormValue("dochecksumban") != "" {
 		// creating a new file checksum ban
-		checksum := request.FormValue("checksum")
-		if _, err = gcsql.NewFileChecksumBan(checksum, boardid, staff.ID, staffnote); err != nil {
-			errEv.Err(err).
-				Str("checksum", checksum).
-				Caller().Send()
+		checksum := request.PostFormValue("checksum")
+		ipBan := request.PostFormValue("ban") != ""
+		var reason string
+		if ipBan {
+			reason = request.PostFormValue("banmsg")
+			if reason == "" {
+				return "", errors.New("ban reason required if IP ban is set")
+			}
+		}
+		gcutil.LogBool("ipBan", ipBan, infoEv, errEv)
+		fingerprinter := request.PostFormValue("fingerprinter")
+		if fingerprinter == "checksum" {
+			fingerprinter = ""
+		}
+		gcutil.LogStr("fingerprinter", fingerprinter, infoEv, errEv)
+		if _, err = gcsql.NewFileChecksumBan(
+			checksum, fingerprinter, boardid, staff.ID, staffnote, ipBan, reason,
+		); err != nil {
+			errEv.Err(err).Caller().
+				Str("checksum", checksum).Send()
 			return "", err
 		}
 		infoEv.
 			Str("checksum", checksum).
-			Int("boardid", boardid).
 			Msg("Created new file checksum ban")
 		if wantsJSON {
 			return "success", nil
@@ -291,8 +302,8 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	limit := 200
 	if limitStr != "" {
 		if limit, err = strconv.Atoi(limitStr); err != nil {
-			errEv.Err(err).
-				Str("limit", limitStr).Caller().Send()
+			errEv.Err(err).Caller().
+				Str("limit", limitStr).Send()
 			return "", err
 		}
 	}

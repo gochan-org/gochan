@@ -468,9 +468,10 @@ func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
 	return bans, nil
 }
 
-func NewFileChecksumBan(checksum string, boardID int, staffID int, staffNote string) (*FileBan, error) {
+func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staffID int, staffNote string, banIP bool, banReason string) (*FileBan, error) {
 	const query = `INSERT INTO DBPREFIXfile_ban
-	(board_id, staff_id, staff_note, checksum) VALUES(?,?,?,?)`
+	(board_id, staff_id, staff_note, checksum, fingerprinter, ban_ip, ban_ip_message)
+	VALUES(?,?,?,?,?,?,?)`
 	var ban FileBan
 	var err error
 
@@ -478,6 +479,12 @@ func NewFileChecksumBan(checksum string, boardID int, staffID int, staffNote str
 		ban.BoardID = new(int)
 		*ban.BoardID = boardID
 	}
+	if banIP {
+		ban.BanIP = banIP
+		ban.BanIPMessage = new(string)
+		*ban.BanIPMessage = banReason
+	}
+
 	tx, err := BeginTx()
 	if err != nil {
 		return nil, err
@@ -487,7 +494,9 @@ func NewFileChecksumBan(checksum string, boardID int, staffID int, staffNote str
 	if err != nil {
 		return nil, err
 	}
-	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, checksum); err != nil {
+	if _, err = stmt.Exec(
+		ban.BoardID, staffID, staffNote, checksum, fingerprinter, banIP, banReason,
+	); err != nil {
 		return nil, err
 	}
 	if ban.ID, err = getLatestID("DBPREFIXfile_ban", tx); err != nil {
