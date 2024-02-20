@@ -5,7 +5,7 @@ import { isPostVisible, setPostVisibility, setThreadVisibility } from "./posthid
 import { currentBoard } from "../postinfo";
 import { getCookie } from "../cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
-import { banFile, getPostInfo } from "../management/manage";
+import { banFile, banFileFingerprint, getPostInfo } from "../management/manage";
 import { updateThreadLock } from "../api/management";
 
 const idRe = /^((reply)|(op))(\d+)/;
@@ -109,7 +109,6 @@ function deletePost(id: number, board: string, fileOnly = false) {
 					alertLightbox(data.error, `Error deleting post #${id}`);
 				} else if(data !== "") {
 					alertLightbox(`Error deleting post #${id}`, "Error");
-					console.error(data);
 				}
 			}
 		}, "json" as any);
@@ -167,7 +166,7 @@ function handleActions(action: string, postIDStr: string) {
 		break;
 	case "Posts from this IP":
 		getPostInfo(postID).then((info: any) => {
-			window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.ip}`);
+			window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.post.IP}`);
 		}).catch((reason: JQuery.jqXHR) => {
 			alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
 		});
@@ -178,9 +177,10 @@ function handleActions(action: string, postIDStr: string) {
 	case "Ban filename":
 	case "Ban file checksum": {
 		const banType = (action === "Ban filename")?"filename":"checksum";
-		getPostInfo(postID).then((info: any) => {
-			return banFile(banType, info.originalFilename, info.checksum, `Added from post dropdown for post /${board}/${postID}`);
-		}).then((result: any) => {
+		getPostInfo(postID).then((info) => banFile(
+			banType, info.originalFilename, info.checksum,
+			`Added from post dropdown for post /${board}/${postID} (filename: ${info.originalFilename})`
+		)).then((result: any) => {
 			if(result.error !== undefined && result.error !== "") {
 				if(result.message !== undefined)
 					alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
@@ -203,7 +203,24 @@ function handleActions(action: string, postIDStr: string) {
 			}
 			alertLightbox(`Failed banning file: ${messageDetail}`, "Error");
 		});
+		break;
 	}
+	case "Ban fingerprint":
+		getPostInfo(postID).then((info) => banFileFingerprint(
+			info.fingerprint, false).then(() => alertLightbox(
+			"Successfully applied fingerprint ban", "Success"
+		)));
+		break;
+	case "Ban fingerprint (IP ban)":
+		getPostInfo(postID).then((info) => {
+			promptLightbox("", false, (_, val) => banFileFingerprint(
+				info.fingerprint, true, val,
+				`Added from post /${board}/${postID} (filename: ${info.originalFilename})`
+			).then(() => alertLightbox(
+				"Successfully applied fingerprint ban", "Success"
+			)));
+		});
+		break;
 	}
 }
 

@@ -242,7 +242,7 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	} else if request.PostFormValue("dochecksumban") != "" {
 		// creating a new file checksum ban
 		checksum := request.PostFormValue("checksum")
-		ipBan := request.PostFormValue("ban") != ""
+		ipBan := request.PostFormValue("ban") == "on"
 		var reason string
 		if ipBan {
 			reason = request.PostFormValue("banmsg")

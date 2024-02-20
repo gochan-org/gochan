@@ -39,23 +39,6 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 		$el.append('<option disabled="disabled">Staff Actions</option>');
 	}
 
-	if($thumb.length > 0) {
-		const fingerprintOpts = staffInfo.fingerprinting
-		const uploadExt = path.extname($thumb.attr("alt")).toLowerCase();
-		const isImage = fingerprintOpts.imageExtensions.indexOf(uploadExt) > -1;
-		const isVideo = fingerprintOpts.videoExtensions.indexOf(uploadExt) > -1;
-		const enableFingerprint = isImage || (isVideo && fingerprintOpts.fingerprintVideoThumbs);
-		console.log(uploadExt, enableFingerprint);
-		if(enableFingerprint) {
-			if(!dropdownHasItem(el, "Ban fingerprint")) {
-				$el.append('<option>Ban fingerprint</option>');
-			}
-			if(!dropdownHasItem(el, "Ban fingerprint (IP ban)")) {
-				$el.append('<option>Ban fingerprint (IP ban)</option>');
-			}
-		}
-	}
-	
 	if(staffInfo.rank === 3 && $post.hasClass("op-post")) {
 		if(isLocked) {
 			$el.append("<option>Unlock thread</option>");
@@ -70,12 +53,26 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 		if(!dropdownHasItem(el, "Ban IP address")) {
 			$el.append("<option>Ban IP address</option>");
 		}
-		const filenameOrig = $post.find("div.file-info a.file-orig").text();
-		if(filenameOrig !== "" && !dropdownHasItem(el, "Ban filename")) {
+	}
+
+	if($thumb.length > 0) {
+		const fpOpts = staffInfo.fingerprinting;
+		const uploadExt = path.extname($thumb.attr("alt")).toLowerCase();
+		const isImage = fpOpts.imageExtensions.indexOf(uploadExt) > -1;
+		const isVideo = fpOpts.videoExtensions.indexOf(uploadExt) > -1;
+		if(!dropdownHasItem(el, "Ban filename")) {
 			$el.append(
 				"<option>Ban filename</option>",
 				"<option>Ban file checksum</option>"
 			);
+		}
+		if(isImage || (isVideo && fpOpts.fingerprintVideoThumbs)) {
+			if(!dropdownHasItem(el, "Ban fingerprint")) {
+				$el.append("<option>Ban fingerprint</option>");
+			}
+			if(!dropdownHasItem(el, "Ban fingerprint (IP ban)")) {
+				$el.append("<option>Ban fingerprint (IP ban)</option>");
+			}
 		}
 	}
 }
@@ -92,9 +89,12 @@ function setupManagementEvents() {
 
 interface BanFileJSON {
 	bantype: string;
-	board: string;
+	board?: string;
+	fingerprinter?: string;
 	json: number;
 	staffnote: string;
+	ban?: string;
+	banmsg?: string;
 	filename?: string;
 	dofilenameban?: string;
 	checksum?: string;
@@ -104,7 +104,6 @@ interface BanFileJSON {
 export function banFile(banType: string, filename: string, checksum: string, staffNote = "") {
 	const xhrFields: BanFileJSON = {
 		bantype: banType,
-		board: "",
 		staffnote: staffNote,
 		json: 1
 	};
@@ -120,12 +119,29 @@ export function banFile(banType: string, filename: string, checksum: string, sta
 	default:
 		break;
 	}
-	return $.ajax({
-		method: "POST",
+	return $.post({
 		url: `${webroot}manage/filebans`,
 		data: xhrFields
 	});
 }
+
+export function banFileFingerprint(fingerprint: string, ipBan: boolean, reason?: string, staffNote?: string) {
+	const xhrFields: BanFileJSON = {
+		bantype: "checksum",
+		checksum: fingerprint,
+		fingerprinter: fingerprint,
+		ban: ipBan?"on":"",
+		banmsg: reason,
+		staffnote: staffNote,
+		json: 1,
+		dochecksumban: "Create"
+	};
+	return $.post({
+		url: `${webroot}manage/filebans`,
+		data: xhrFields
+	});
+}
+
 
 export async function initStaff() {
 	if(staffInfo !== null || staffActions?.length > 0)
@@ -162,7 +178,7 @@ export async function initStaff() {
 	});
 }
 
-export async function getPostInfo(id: number) {
+export async function getPostInfo(id: number):Promise<PostInfo> {
 	return $.ajax({
 		method: "GET",
 		url: `${webroot}manage/postinfo`,

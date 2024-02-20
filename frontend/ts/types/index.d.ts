@@ -107,6 +107,38 @@ declare global {
 		thread: string;
 	}
 
+	interface PostInfoPost {
+		ID: number;
+		ThreadID: number;
+		IsTopPost: boolean;
+		IP: string;
+		CreatedOn: string;
+		Name: string;
+		Tripcode: string;
+		IsRoleSignature: boolean;
+		Email: string;
+		Subject: string;
+		Message: string;
+		MessageRaw: string;
+		DeletedAt: string;
+		IsDeleted: boolean;
+		BannedMessage: string;
+		Flag: string;
+		Country: string;
+	}
+
+	/**
+	 * Returned by /manage/postinfo?postid=#
+	 */
+	interface PostInfo {
+		post: PostInfoPost;
+		ip: string;
+		ipFQDN: string[];
+		originalFilename?: string;
+		checksum?: string;
+		fingerprint?: string;
+	}
+
 	/**
 	 * An object representing the settings for fingerprinting images and if enabled,
 	 * video thumbnails
