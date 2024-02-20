@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"regexp"
 	"strconv"
 
@@ -632,11 +631,11 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 
 type postInfoJSON struct {
 	Post *gcsql.Post `json:"post"`
-	IP   string      `json:"ip"`
 	FQDN []string    `json:"ipFQDN"`
 
 	OriginalFilename string `json:"originalFilename,omitempty"`
 	Checksum         string `json:"checksum,omitempty"`
+	Fingerprint      string `json:"fingerprint,omitempty"`
 }
 
 func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
@@ -655,7 +654,6 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 
 	postInfo := postInfoJSON{
 		Post: post,
-		IP:   post.IP,
 	}
 	names, err := net.LookupAddr(post.IP)
 	if err == nil {
@@ -670,12 +668,15 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 	if upload != nil {
 		postInfo.OriginalFilename = upload.OriginalFilename
 		postInfo.Checksum = upload.Checksum
+		postInfo.Fingerprint, err = uploads.GetPostImageFingerprint(postID)
+		if err != nil {
+			return "", err
+		}
 	}
 	return postInfo, nil
 }
 
 type fingerprintJSON struct {
-	Filename    string `json:"file"`
 	Fingerprint string `json:"fingerprint"`
 }
 
@@ -689,38 +690,15 @@ func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		errEv.Err(err).Caller().Send()
 		return "", err
 	}
-	const query = `SELECT
-	(SELECT dir from DBPREFIXboards WHERE id = (SELECT thread_id FROM DBPREFIXposts WHERE id = ?))
-	AS board, filename, is_spoilered FROM DBPREFIXfiles WHERE post_id = ? LIMIT 1`
-	var board, filename string
-	var spoiler bool
-	err = gcsql.QueryRowSQL(query, []any{postID, postID}, []any{&board, &filename, &spoiler})
+	fingerprint, err := uploads.GetPostImageFingerprint(postID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", errors.New("post has no files")
+		return "", errors.New("post has no files or post doesn't exist")
 	} else if err != nil {
 		errEv.Err(err).Caller().Send()
 		return "", err
 	}
-	fpVideoThumbs := config.GetSiteConfig().FingerprintVideoThumbnails
-	if !uploads.IsImage(filename) && !uploads.IsVideo(filename) {
-		return "", fmt.Errorf(
-			"unable to fingerprint file %q (not an image or a video)", filename)
-	} else if uploads.IsVideo(filename) && !fpVideoThumbs {
-		return "", fmt.Errorf(
-			"unable to fingerprint file %q (video thumbnail fingerprinting not enabled)",
-			filename)
-	}
-	docRoot := config.GetSystemCriticalConfig().DocumentRoot
-	filePath := path.Join(docRoot, board, "src", filename)
-	fingerprintHash, err := uploads.FingerprintFile(filePath)
-	if err != nil {
-		errEv.Err(err).Caller().Send()
-		return "", err
-	}
-
 	return fingerprintJSON{
-		Filename:    filename,
-		Fingerprint: fingerprintHash,
+		Fingerprint: fingerprint,
 	}, nil
 }
 

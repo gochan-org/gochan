@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"net/http"
+	"path"
 
 	"github.com/devedge/imagehash"
 	"github.com/disintegration/imaging"
@@ -59,7 +60,37 @@ func checkImageFingerprintBan(img image.Image, board string) (*gcsql.FileBan, er
 	return &fileBan, err
 }
 
-func FingerprintFile(filePath string) (string, error) {
+func GetPostImageFingerprint(postID int) (string, error) {
+	const query = `SELECT filename, dir
+	FROM DBPREFIXfiles
+	JOIN DBPREFIXposts ON post_id = DBPREFIXposts.id
+	JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id
+	JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id
+	WHERE DBPREFIXposts.id = ?
+	LIMIT 1`
+	var filename, board string
+	err := gcsql.QueryRowSQL(query,
+		[]any{postID}, []any{&filename, &board})
+	if err != nil {
+		return "", err
+	}
+	subDir := "src"
+	if !IsImage(filename) && !IsVideo(filename) {
+		return "", ErrUnsupportedFileExt
+	} else if IsVideo(filename) {
+		if !config.GetSiteConfig().FingerprintVideoThumbnails {
+			return "", ErrVideoThumbFingerprint
+		}
+		filename, _ = GetThumbnailFilenames(filename)
+		subDir = "thumb"
+	}
+	filePath := path.Join(config.GetSystemCriticalConfig().DocumentRoot,
+		board, subDir, filename)
+
+	return GetFileFingerprint(filePath)
+}
+
+func GetFileFingerprint(filePath string) (string, error) {
 	img, err := imaging.Open(filePath)
 	if err != nil {
 		return "", err
