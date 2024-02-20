@@ -15,9 +15,11 @@ const (
 	boardFromPostIdSuffixSQL = ` WHERE DBPREFIXboards.id = (
 		SELECT board_id FROM DBPREFIXthreads WHERE id = (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?))`
+
 	selectPostsBaseSQL = `SELECT 
 	id, thread_id, is_top_post, IP_NTOA, created_on, name, tripcode, is_role_signature,
-	email, subject, message, message_raw, password, deleted_at, is_deleted, COALESCE(banned_message,'') AS banned_message
+	email, subject, message, message_raw, password, deleted_at, is_deleted,
+	COALESCE(banned_message,'') AS banned_message, flag, country
 	FROM DBPREFIXposts `
 )
 
@@ -39,7 +41,8 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
+		&post.BannedMessage, &post.Flag, &post.Country,
 	))
 	if err == sql.ErrNoRows {
 		return nil, ErrPostDoesNotExist
@@ -75,7 +78,8 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 		if err = rows.Scan(
 			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
+			&post.BannedMessage, &post.Flag, &post.Country,
 		); err != nil {
 			return nil, err
 		}
@@ -125,7 +129,8 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 	err := QueryRowSQL(query, interfaceSlice(threadID), interfaceSlice(
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
+		&post.BannedMessage, &post.Flag, &post.Country,
 	))
 	return post, err
 }
