@@ -25,7 +25,7 @@ import (
 var (
 	uploadHandlers  map[string]UploadHandler
 	ImageExtensions = []string{
-		".bmp", ".gif", ".jpg", ".jpeg", ".png", ".webp",
+		".gif", ".jpg", ".jpeg", ".png", ".webp",
 	}
 	VideoExtensions = []string{
 		".mp4", ".webm",
