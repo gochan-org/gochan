@@ -544,6 +544,10 @@ div.dropdown-menu div {
   padding: 2px;
 }
 
+div#staffmenu a {
+  display: block;
+}
+
 div.section-block {
   margin-bottom: 8px;
 }
