@@ -76,7 +76,7 @@ type staffInfoJSON struct {
 	Fingerprinting *fingerprintingOptions `json:"fingerprinting,omitempty"`
 }
 
-func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,
