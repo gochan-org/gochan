@@ -36,7 +36,7 @@ func getHashLength() int {
 	return hashLength
 }
 
-func checkImageFingerprintBan(img image.Image, board string) (*gcsql.FileBan, error) {
+func checkImageFingerprintBan(img image.Image, _ string) (*gcsql.FileBan, error) {
 	hashLength := getHashLength()
 	ba, err := imagehash.Ahash(img, hashLength)
 	if err != nil {
