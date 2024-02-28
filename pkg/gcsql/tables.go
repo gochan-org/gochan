@@ -65,6 +65,39 @@ type FileBan struct {
 	BanIPMessage  *string   // sql: `ban_ip_message`
 }
 
+// ApplyIPBan bans the given IP if it posted a banned image
+// If BanIP is false, it returns with no error
+func (fb *FileBan) ApplyIPBan(postIP string) error {
+	if !fb.BanIP {
+		return nil
+	}
+	now := time.Now()
+	ipBan := &IPBan{
+		RangeStart: postIP,
+		RangeEnd:   postIP,
+		IssuedAt:   now,
+	}
+	ipBan.IsActive = true
+	ipBan.CanAppeal = true
+	ipBan.AppealAt = now
+	ipBan.StaffID = fb.StaffID
+	ipBan.Permanent = true
+	if fb.BoardID != nil {
+		ipBan.BoardID = new(int)
+		*ipBan.BoardID = *fb.BoardID
+	}
+	if fb.BanIPMessage == nil {
+		ipBan.Message = "posting disallowed image, resulting in ban"
+	} else {
+		ipBan.Message = *fb.BanIPMessage
+	}
+	if fb.StaffNote == "" {
+		ipBan.StaffNote = "fingerprint"
+	}
+
+	return NewIPBan(ipBan)
+}
+
 type filenameOrUsernameBanBase struct {
 	ID        int       // sql: id
 	BoardID   *int      // sql: board_id

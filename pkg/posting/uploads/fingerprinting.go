@@ -1,6 +1,7 @@
 package uploads
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"image"
@@ -18,7 +19,7 @@ var (
 )
 
 const (
-	defaultFingerprintHashLength = 8
+	defaultFingerprintHashLength = 16
 )
 
 type FingerprintSource struct {
@@ -41,21 +42,21 @@ func checkImageFingerprintBan(img image.Image, board string) (*gcsql.FileBan, er
 	if err != nil {
 		return nil, err
 	}
-	const query = `SELECT id,board_id,staff_id,staff_note,issued_at,checksum,fingerprinter,ban_ip,ban_message
+	fmt.Printf("fingerprint: %x\n", ba)
+	const query = `SELECT id,board_id,staff_id,staff_note,issued_at,checksum,fingerprinter,
+	ban_ip,ban_ip_message
 	FROM DBPREFIXfile_ban WHERE fingerprinter = 'ahash' AND checksum = ? LIMIT 1`
 
 	var fileBan gcsql.FileBan
-	if err = gcsql.QueryRowSQL(query, []any{fmt.Sprintf("%x", ba)}, []any{
+	err = gcsql.QueryRowSQL(query, []any{fmt.Sprintf("%x", ba)}, []any{
 		&fileBan.ID, &fileBan.BoardID, &fileBan.StaffID, &fileBan.StaffNote,
 		&fileBan.IssuedAt, &fileBan.Checksum, &fileBan.Fingerprinter,
 		&fileBan.BanIP, &fileBan.BanIPMessage,
-	}); err != nil {
-		return nil, err
-	}
-
-	if fileBan.ID == 0 {
-		// no matches
+	})
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
+	} else if err != nil {
+		return nil, err
 	}
 	return &fileBan, err
 }

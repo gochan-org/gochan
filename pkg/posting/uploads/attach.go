@@ -1,6 +1,7 @@
 package uploads
 
 import (
+	"bytes"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -138,8 +140,29 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		errEv.Str("catalogThumbPath", catalogThumbPath)
 	}
 
+	if IsImage(filePath) {
+		img, err := imaging.Decode(bytes.NewReader(data))
+		if err != nil {
+			errEv.Err(err).Caller().Msg("unable to decode file")
+			return nil, errors.New("unable to decode image")
+		}
+		fileBan, err := checkImageFingerprintBan(img, postBoard.Dir)
+		if err != nil {
+			errEv.Err(err).Caller().Msg("unable to fingerprint image")
+			return nil, err
+		}
+		if fileBan != nil {
+			// image is fingerprint-banned
+			if err = fileBan.ApplyIPBan(post.IP); err != nil {
+				errEv.Err(err).Caller().Msg("unable to apply IP ban")
+			}
+			return nil, ErrFileNotAllowed
+		}
+	}
+
 	if err = os.WriteFile(filePath, data, config.GC_FILE_MODE); err != nil {
 		errEv.Err(err).Caller().Send()
+		writer.WriteHeader(http.StatusInternalServerError)
 		return nil, fmt.Errorf("couldn't write file %q", upload.OriginalFilename)
 	}
 
@@ -170,6 +193,22 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	if err = uploadHandler(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv); err != nil {
 		return nil, errors.New("error processing upload: " + err.Error())
 	}
+
+	if IsVideo(filePath) && config.GetSiteConfig().FingerprintVideoThumbnails {
+		fileBan, err := checkFileFingerprintBan(thumbPath, postBoard.Dir)
+		if err != nil {
+			errEv.Err(err).Caller().Msg("unable to check video thumbnail ban")
+			return nil, err
+		}
+		if fileBan != nil {
+			// video thumbnail is fingerprint-banned
+			if err = fileBan.ApplyIPBan(post.IP); err != nil {
+				errEv.Err(err).Caller().Msg("unable to apply IP ban")
+			}
+			return nil, ErrFileNotAllowed
+		}
+	}
+
 	accessEv.Send()
 	return upload, nil
 }
