@@ -8,7 +8,7 @@ function updateFlagPreview($sel: JQuery<HTMLSelectElement>) {
 	if(val === "" || val === "geoip") {
 		val = "blank.gif";
 	}
-	$preview.attr("src", path.join(webroot || "/", "static/flags", val));
+	$preview.attr("src", path.join(webroot ?? "/", "static/flags", val));
 }
 
 function setupQRFlags($flags: JQuery<HTMLSelectElement>) {
@@ -17,7 +17,7 @@ function setupQRFlags($flags: JQuery<HTMLSelectElement>) {
 		$("<div/>").append(
 			$flags.clone(true, true).attr("id", "qrpost-flag"),
 			$("<img/>").addClass("flag-preview")
-				.attr("src", path.join(webroot || "/", "static/flags/blank.gif"))
+				.attr("src", path.join(webroot ?? "/", "static/flags/blank.gif"))
 		)
 	);
 }
@@ -65,6 +65,6 @@ export function initFlags() {
 
 	loadFlagSelection();
 	$("form").filter((_,el) =>
-		el.getAttribute("action") === path.join(webroot || "/", "post"))
+		el.getAttribute("action") === path.join(webroot ?? "/", "post"))
 		.on("submit", saveFlagSelection);
 }

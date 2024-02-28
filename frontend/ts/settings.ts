@@ -150,10 +150,13 @@ function createLightbox() {
  * executes the custom JavaScript set in the settings
  */
 export function setCustomJS() {
-	const customJS = getStorageVal("customjs");
-	if(customJS !== "") {
-		eval(customJS);
-	}
+	const customJS = getStorageVal("customjs", "");
+	$("script.customjs").remove();
+	if(customJS === "") return;
+	$("<script/>")
+		.addClass("customjs")
+		.text(customJS)
+		.appendTo(document.head);
 }
 
 /**
