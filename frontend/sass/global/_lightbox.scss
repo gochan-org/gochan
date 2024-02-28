@@ -95,3 +95,8 @@
 	// box-shadow: 0px 0px 0px 0px #000000;
 	@include shadow-filter(0px 0px 0px #000);
 }
+
+#settings-container table textarea {
+	width: 75%;
+	height: 6em;
+}
