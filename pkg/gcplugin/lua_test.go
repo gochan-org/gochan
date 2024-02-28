@@ -80,5 +80,5 @@ func TestConfigModule(t *testing.T) {
 	returnTable := lState.CheckTable(-1)
 	assert.Equal(t, "127.0.0.1", returnTable.RawGetString("ListenIP").(lua.LString).String())
 	assert.Equal(t, "Gochan testing", returnTable.RawGetString("SiteSlogan").(lua.LString).String())
-	assert.Equal(t, "test.css", returnTable.RawGetString("DefaultStyle").(lua.LString).String())
+	assert.Equal(t, "pipes.css", returnTable.RawGetString("DefaultStyle").(lua.LString).String())
 }
