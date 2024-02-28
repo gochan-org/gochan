@@ -119,7 +119,6 @@ export function unwatchThread(threadID: number, board: string) {
 		return;
 	for(const i in watched[board]) {
 		if(watched[board][i].id === threadID) {
-			console.log(threadID);
 			watched[board].splice(i as any, 1);
 			setStorageVal("watched", watched, true);
 			$(document).trigger("unwatchThread", threadID);

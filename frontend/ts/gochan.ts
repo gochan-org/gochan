@@ -4,7 +4,7 @@ import "./vars";
 import "./cookies";
 import "./notifications";
 import { setPageBanner } from "./dom/banners";
-import { setCustomCSS, setCustomJS } from "./settings";
+import { setCustomCSS, setCustomJS, setTheme } from "./settings";
 import { handleKeydown } from "./boardevents";
 import { initStaff, createStaffMenu } from "./management/manage";
 import { getPageThread } from "./postinfo";
@@ -12,7 +12,7 @@ import { prepareThumbnails, initPostPreviews } from "./postutil";
 import { addPostDropdown } from "./dom/postdropdown";
 import { initFlags } from "./dom/flags";
 import { initQR } from "./dom/qr";
-import { getBooleanStorageVal, getStorageVal } from "./storage";
+import { getBooleanStorageVal } from "./storage";
 
 export function toTop() {
 	window.scrollTo(0,0);
@@ -25,16 +25,7 @@ export function toBottom() {
 window.toBottom = toBottom;
 
 $(() => {
-	const style = getStorageVal("style", "");
-	const themeElem = document.getElementById("theme");
-	if(webroot[webroot.length-1] !== "/")
-		webroot += "/";
-
-	if(themeElem) {
-		themeElem.setAttribute("default-href", themeElem.getAttribute("href"));
-		if(style !== "")
-			themeElem.setAttribute("href", `${webroot}css/${style}`);
-	}
+	setTheme();
 
 	const pageThread = getPageThread();
 	initStaff()

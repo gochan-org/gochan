@@ -1,4 +1,5 @@
 import $ from "jquery";
+import path from "path-browserify";
 
 import { showLightBox } from "./dom/lightbox";
 import { initTopBar, TopBarButton } from "./dom/topbar";
@@ -45,7 +46,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 		this.element.val(newVal as ElementValue);
 	}
 	getStorageValue(): T {
-		return getStorageVal(this.key, this.defaultVal as string) as T;
+		return getStorageVal(this.key, this.defaultVal as any) as T;
 	}
 	setStorageValue(newVal: T) {
 		setStorageVal(this.key, newVal);
@@ -128,22 +129,77 @@ class NumberSetting extends Setting<number, HTMLInputElement> {
 	}
 }
 
+function updateSettingsTextArea(_i: number, el:HTMLTextAreaElement) {
+	switch(el.id) {
+	case "customjs":
+		el.placeholder = "// JavaScript entered here will run when the page loads";
+		break;
+	case "customcss":
+		el.placeholder = "body {\n  background: darkblue;\n}";
+		break;
+	}
+	$("<button/>").attr({
+		id: `${el.id}-apply`
+	}).css("display", "block").on("click", () => {
+		setStorageVal(el.id, el.value);
+		switch(el.id) {
+		case "customcss":
+			setCustomCSS();
+			break;
+		case "customjs":
+			setCustomJS();
+			break;
+		}
+	}).text("Apply").insertAfter(el);
+}
+
 function createLightbox() {
 	const settingsHTML =
-		'<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div><div class="lightbox-footer"><hr /><button id="save-settings-button">Save Settings</button></div>';
+		'<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div>';
 	showLightBox("Settings", settingsHTML);
-	$("button#save-settings-button").on("click", () => {
-		settings.forEach((setting, key) => {
-			setStorageVal(key, setting.getElementValue());
-			setting.onSave();
-		});
-	});
+
 	const $settingsTable = $("#settings-container table");
 	settings.forEach((setting) => {
 		const $tr = $("<tr/>").appendTo($settingsTable);
+		const val = getStorageVal(setting.key, setting.defaultVal as any) as string|boolean|number;
+		if(val === true)
+			setting.element.prop("checked", true);
+		else
+			setting.element.val(val as string|number);
 		$("<td/>").append($("<b/>").text(setting.title)).appendTo($tr);
 		$("<td/>").append(setting.element).appendTo($tr);
 	});
+
+	$settingsTable.find<HTMLInputElement>("input,select").on("change", (ev: JQuery.ChangeEvent) => {
+		const $el: JQuery<HTMLInputElement> = $(ev.target);
+		const elType = $el.attr("type");
+		const val: string|boolean = (elType === "checkbox")?$el.prop("checked"):$el.val();
+		setStorageVal($el.attr("id"), val);
+		if(ev.target.id === "style") {
+			setTheme();
+		}
+	});
+
+	$settingsTable
+		.find<HTMLTextAreaElement>("textarea")
+		.each(updateSettingsTextArea);
+}
+
+/**
+ * applies the theme set by the user, or the default if none is set
+ */
+export function setTheme() {
+	const style = getStorageVal("style", "");
+	const themeElem = document.getElementById("theme");
+
+	if(themeElem) {
+		if(!themeElem.hasAttribute("default-href"))
+			themeElem.setAttribute("default-href", themeElem.getAttribute("href"));
+		if(style === "")
+			themeElem.setAttribute("href", themeElem.getAttribute("default-href"));
+		else
+			themeElem.setAttribute("href", path.join(webroot ?? "/", "css", style));
+	}
 }
 
 /**
@@ -163,13 +219,13 @@ export function setCustomJS() {
  * applies the custom CSS set in the settings
  */
 export function setCustomCSS() {
-	const customCSS = getStorageVal("customcss");
-	if(customCSS !== "") {
-		$("style#customCSS").remove();
-		$("<style/>").prop({
-			id: "customCSS"
-		}).html(customCSS).appendTo(document.head);
-	}
+	const customCSS = getStorageVal("customcss", "");
+	$("style.customcss").remove();
+	if(customCSS === "") return;
+	$("<style/>")
+		.addClass("customcss")
+		.text(customCSS)
+		.appendTo(document.head);
 }
 
 $(() => {
@@ -199,7 +255,7 @@ $(() => {
 	}, initWatcher));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 
-	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript (ran on page load)", ""));
+	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", ""));
 	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));
 
 	if($settingsButton === null)
