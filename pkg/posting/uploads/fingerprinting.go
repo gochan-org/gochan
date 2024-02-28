@@ -111,8 +111,3 @@ func checkFileFingerprintBan(filePath string, board string) (*gcsql.FileBan, err
 	}
 	return checkImageFingerprintBan(img, board)
 }
-
-func canFingerprint(filename string) bool {
-	siteCfg := config.GetSiteConfig()
-	return IsImage(filename) || (IsVideo(filename) && siteCfg.FingerprintVideoThumbnails)
-}
