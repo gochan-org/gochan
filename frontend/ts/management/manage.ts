@@ -129,7 +129,7 @@ export function banFileFingerprint(fingerprint: string, ipBan: boolean, reason?:
 	const xhrFields: BanFileJSON = {
 		bantype: "checksum",
 		checksum: fingerprint,
-		fingerprinter: fingerprint,
+		fingerprinter: "ahash",
 		ban: ipBan?"on":"",
 		banmsg: reason,
 		staffnote: staffNote,
