@@ -137,6 +137,8 @@ function updateSettingsTextArea(_i: number, el:HTMLTextAreaElement) {
 	case "customcss":
 		el.placeholder = "body {\n  background: darkblue;\n}";
 		break;
+	default:
+		break;
 	}
 	$("<button/>").attr({
 		id: `${el.id}-apply`
@@ -148,6 +150,8 @@ function updateSettingsTextArea(_i: number, el:HTMLTextAreaElement) {
 			break;
 		case "customjs":
 			setCustomJS();
+			break;
+		default:
 			break;
 		}
 	}).text("Apply").insertAfter(el);
