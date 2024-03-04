@@ -11,6 +11,7 @@ require (
 	github.com/disintegration/imaging v1.6.2
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/ip2location/ip2location-go/v9 v9.7.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/oschwald/maxminddb-golang v1.12.0
@@ -41,4 +42,5 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	lukechampine.com/uint128 v1.2.0 // indirect
 )
