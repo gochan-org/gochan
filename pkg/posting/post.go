@@ -319,11 +319,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard)
-	if err != nil {
-		// got an error receiving the upload or the upload was rejected
-		server.ServeError(writer, err.Error(), wantsJSON, nil)
-		return
-	}
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	var filePath, thumbPath, catalogThumbPath string
 	if upload != nil {
@@ -345,6 +340,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			server.ServeError(writer, "Unable to attach upload to post: "+err.Error(), wantsJSON, nil)
 			return
 		}
+	} else if err != nil {
+		errEv.Err(err).Caller().Send()
+		// got an error receiving the upload or the upload was rejected
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
 	}
 
 	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
