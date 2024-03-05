@@ -13,8 +13,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// [Your site name or product name] uses the IP2Location LITE database for <a href="https://lite.ip2location.com">IP geolocation</a>.
-
 var (
 	i2ldb = &ip2locationDB{}
 )
