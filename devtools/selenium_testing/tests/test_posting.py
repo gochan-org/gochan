@@ -38,7 +38,7 @@ class TestPosting(SeleniumTestCase):
 
 			# fill out the board creation form
 			self.driver.find_element(by=By.NAME, value="dir").send_keys("test2")
-			self.driver.find_element(by=By.NAME, value="title").send_keys("Testing board #2")
+			self.driver.find_element(by=By.NAME, value="title").send_keys("Testing board 2")
 			self.driver.find_element(by=By.NAME, value="subtitle").send_keys("Board for testing thread moving")
 			self.driver.find_element(by=By.NAME, value="description").send_keys("Board for testing thread moving")
 			self.driver.find_element(by=By.NAME, value="docreate").click()
@@ -85,7 +85,7 @@ class TestPosting(SeleniumTestCase):
 			self.driver.find_element(
 				by=By.CSS_SELECTOR,
 				value="h1#board-title").text,
-			"/test2/ - Testing board #2",
+			"/test2/ - Testing board 2",
 			"Verify that we properly moved the thread to /test2/")
 
 		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")

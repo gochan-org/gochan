@@ -42,7 +42,6 @@ func checkImageFingerprintBan(img image.Image, _ string) (*gcsql.FileBan, error)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("fingerprint: %x\n", ba)
 	const query = `SELECT id,board_id,staff_id,staff_note,issued_at,checksum,fingerprinter,
 	ban_ip,ban_ip_message
 	FROM DBPREFIXfile_ban WHERE fingerprinter = 'ahash' AND checksum = ? LIMIT 1`
