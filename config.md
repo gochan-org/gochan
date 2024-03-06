@@ -23,6 +23,35 @@ Valid `DBtype` values are "mysql" and "postgres" (sqlite3 is no longer supported
 * `SiteDomain` is used for links throughout the site.
 * `WebRoot` is used as the prefix for boards, files, and pretty much everything on the site. If it isn't set, "/" will be used.
 
+## GeoIP/Flag configuration
+* `EnableGeoIP` specifies whether or not GeoIP will be used. It can be set in the global configuration file or in a board configuration.
+* `GeoIPType` specifies the GeoIP handler. If it is blank or unset, GeoIP will not be used. Gochan has built-in support for MaxMind GeoIP2/GeoLite2 databases by setting the value to "mmdb", "geoip2", or "geolite2".
+* `GeoIPOptions` is an object with keys and values for configuring the specified GeoIP handler. Not all GeoIP receivers may need it. Example:
+```JSONC
+"GeoIPType": "mmdb",
+"GeoIPOptions": {
+	"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
+	"isoCode": "en" // optional
+}
+```
+* `CustomFlags` is an array with custom flags, selectable via dropdown. The `Flag` value is assumed to be in /static/flags/. Example:
+```JSON
+"CustomFlags": [
+	{"Flag":"california.png", "Name": "California"},
+	{"Flag":"cia.png", "Name": "CIA"},
+	{"Flag":"lgbtq.png", "Name": "LGBTQ"},
+	{"Flag":"ms-dos.png", "Name": "MS-DOS"},
+	{"Flag":"stallman.png", "Name": "Stallman"},
+	{"Flag":"templeos.png", "Name": "TempleOS"},
+	{"Flag":"tux.png", "Name": "Linux"},
+	{"Flag":"windows9x.png", "Name": "Windows 9x"}
+]
+```
+* `EnableNoFlag` is only relevant if another flag option is used, and allows the user to not have a flag shown on their post on a flag board.
+
+## Fingerprinting configuration
+By default, only images are fingerprinted, but if `FingerprintVideoThumbnails` is set to true, the thumbnails of videos will also be checked.
+
 ## Styles
 * `Styles` is an array, with each element representing a theme selectable by the user from the frontend settings screen. Each element should have `Name` string value and a `Filename` string value. Example:
 ```JSON

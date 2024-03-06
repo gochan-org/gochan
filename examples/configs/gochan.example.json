@@ -28,6 +28,7 @@
 	"SiteSlogan": "",
 	"SiteDomain": "127.0.0.1",
 	"WebRoot": "/",
+	"FingerprintVideoThumbnails": false,
 
 	"Styles": [
 		{ "Name": "Pipes", "Filename": "pipes.css" },
@@ -91,6 +92,7 @@
 	],
 	"BanMessage": "USER WAS BANNED FOR THIS POST",
 	"EnableEmbeds": true,
+	"EnableNoFlag": true,
 	"EmbedWidth": 200,
 	"EmbedHeight": 164,
 	"ImagesOpenNewTab": true,
@@ -106,8 +108,8 @@
 		"SiteKey": "your site key goes here (if you want a captcha, make sure to replace '_Captcha' with 'Captcha'",
 		"AccountSecret": "your account secret key goes here"
 	},
-	"_GeoIPType": "mmdb",
-	"_GeoIPOptions": {
+	"GeoIPType": "mmdb",
+	"GeoIPOptions": {
 		"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
 		"isoCode": "en"
 	},
