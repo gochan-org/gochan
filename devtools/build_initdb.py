@@ -47,7 +47,7 @@ def hasError(text):
 def dofile(filestart):
 	print("building " + filestart + " sql file")
 	masterfile = ""
-	with open(filestart + "master.sql", 'r') as masterfileIn: # skipcq: PTC-W6004
+	with open(filestart + "master.sql", 'r') as masterfileIn:  # skipcq: PTC-W6004
 		masterfile = masterfileIn.read()
 
 	postgresProcessed = compileOutIfs(masterfile, "POSTGRES")

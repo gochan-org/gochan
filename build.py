@@ -38,8 +38,8 @@ release_files = (
 	"README.md",
 )
 
-GOCHAN_VERSION = "3.9.0"
-DATABASE_VERSION = "3" # stored in DBNAME.DBPREFIXdatabase_version
+GOCHAN_VERSION = "3.10.0"
+DATABASE_VERSION = "3"  # stored in DBNAME.DBPREFIXdatabase_version
 
 PATH_NOTHING = -1
 PATH_UNKNOWN = 0
@@ -158,7 +158,7 @@ def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 				status = proc.poll()
 			except KeyboardInterrupt:
 				return (output, 0)
-	else: # wait until the command is finished to print the output
+	else:  # wait until the command is finished to print the output
 		output = proc.communicate()[0]
 		if output is not None:
 			output = output.decode("utf-8").strip()
@@ -262,19 +262,20 @@ def clean():
 
 def dependencies():
 	print("Installing dependencies for gochan")
-	run_cmd("go get", realtime=True, print_command=True)
+	run_cmd(("go", "get"), realtime=True, print_command=True)
 
 
 def docker(option="guestdb", attached=False):
-	cmd = "docker-compose -f {} up --build"
+	db_option = ""
 	if option == "guestdb":
-		cmd = cmd.format("docker/docker-compose-mariadb.yaml")
+		db_option = "docker/docker-compose-mariadb.yaml"
 	elif option == "hostdb":
-		cmd = cmd.format("docker/docker-compose.yml.default")
+		db_option = "docker/docker-compose.yml.default"
 	elif option == "macos":
-		cmd = cmd.format("docker/docker-compose-syncForMac.yaml")
+		db_option = "docker/docker-compose-syncForMac.yaml"
+	cmd = ["docker-compose", "-f", db_option, "up", "--build"]
 	if attached is False:
-		cmd += " --detach"
+		cmd += ["--detach"]
 	status = run_cmd(cmd, print_output=True, realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed starting a docker container, exited with status code", status)
@@ -391,12 +392,7 @@ def js(watch=False):
 	mkdir("html/js/")
 	delete("html/js/gochan.js")
 	delete("html/js/gochan.js.map")
-	npm_cmd = "npm --prefix frontend/ run"
-	if watch:
-		npm_cmd += " watch-ts"
-	else:
-		npm_cmd += " build-ts"
-
+	npm_cmd = ["npm", "--prefix", "frontend/", "run", "watch-ts" if watch else "build-ts"]
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
 		print("JS transpiling failed with status", status)
@@ -405,9 +401,9 @@ def js(watch=False):
 
 def eslint(fix=False):
 	print("Running eslint")
-	npm_cmd = "npm --prefix frontend/ run eslint"
+	npm_cmd = ["npm", "--prefix", "frontend/", "run", "eslint"]
 	if fix:
-		npm_cmd += " --fix"
+		npm_cmd += ["--fix"]
 
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
@@ -441,12 +437,7 @@ def release(goos):
 
 
 def sass(watch=False):
-	npm_cmd = "npm --prefix frontend/ run"
-	if watch:
-		npm_cmd += " watch-sass"
-	else:
-		npm_cmd += " build-sass"
-
+	npm_cmd = ["npm", "--prefix", "frontend/", "run", "watch-sass" if watch else "build-sass"]
 	status = run_cmd(npm_cmd, True, True, True)[1]
 	if status != 0:
 		print("Failed running sass with status", status)
@@ -455,12 +446,12 @@ def sass(watch=False):
 def test(verbose = False, coverage = False):
 	pkgs = os.listdir("pkg")
 	for pkg in pkgs:
-		cmd = "go test "
+		cmd = ["go", "test"]
 		if verbose:
-			cmd += "-v "
+			cmd += ["-v"]
 		if coverage:
-			cmd += "-cover "
-		cmd += path.join("./pkg", pkg)
+			cmd += ["-cover"]
+		cmd += [path.join("./pkg", pkg)]
 		run_cmd(cmd, realtime=True, print_command=True)
 
 
@@ -489,7 +480,7 @@ if __name__ == "__main__":
 			help="build gochan and gochan-migrate with debugging symbols",
 			action="store_true")
 		parser.add_argument("--plugin",
-		      help="if used, builds the gochan-compatible Go plugin at the specified directory")
+			help="if used, builds the gochan-compatible Go plugin at the specified directory")
 		args = parser.parse_args()
 		build(args.debug, args.plugin)
 	elif action == "clean":
@@ -528,23 +519,20 @@ if __name__ == "__main__":
 			help="install files in ./html/ to this directory to be requested by a browser")
 		parser.add_argument("--symlinks",
 			action="store_true",
-			help="create symbolic links instead of copying the files (may require admin/root privileges)"
-		)
+			help="create symbolic links instead of copying the files (may require admin/root privileges)")
 		args = parser.parse_args()
 		install(args.prefix, args.documentroot, args.symlinks, args.js, args.css, args.templates)
 	elif action == "js":
 		parser.add_argument("--watch", "-w",
 			action="store_true",
-			help="automatically rebuild when you change a file (keeps running)"
-		)
+			help="automatically rebuild when you change a file (keeps running)")
 		parser.add_argument(
 			"--eslint",
 			action="store_true",
 			help="Run eslint on the JavaScript code to check for possible problems")
 		parser.add_argument("--eslint-fix",
 			action="store_true",
-			help="Run eslint on the JS code to try to fix detected problems"
-		)
+			help="Run eslint on the JS code to try to fix detected problems")
 		args = parser.parse_args()
 		if args.eslint or args.eslint_fix:
 			eslint(args.eslint_fix)
@@ -579,16 +567,13 @@ if __name__ == "__main__":
 		except Exception:
 			traceback.print_exc()
 			close_tests()
-
 	elif action == "test":
 		parser.add_argument("--verbose","-v",
 			action="store_true",
-			help="Print log messages in the tests"
-		)
+			help="Print log messages in the tests")
 		parser.add_argument("--coverage",
 			action="store_true",
-			help="Print unit test coverage"
-		)
+			help="Print unit test coverage")
 		args = parser.parse_args()
 		test(args.verbose, args.coverage)
 

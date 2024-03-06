@@ -81,7 +81,7 @@ class TestingOptions:
 
 
 	def board_exists(self, board: str):
-		req = urlopen(urljoin(default_site, "boards.json")) # skipcq: BAN-B310
+		req = urlopen(urljoin(default_site, "boards.json"))  # skipcq: BAN-B310
 		boards = json.load(req)['boards']
 		for entry in boards:
 			if entry['board'] == board:
