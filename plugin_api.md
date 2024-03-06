@@ -45,6 +45,20 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 - **gctemplates.parse_template(template_name string, template_data string)**
 	- Calls [gctemplates.ParseTemplate](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/gctemplates#ParseTemplate) with the given template name and Go template data, and returns a [Template](https://pkg.go.dev/html/template#Template) and an error object (or nil if there were no errors).
 
+## geoip
+- **geoip.country_name(abbr string) (string, error)**
+	- Returns the country name, given its abbreviation, and an error if any occured
+
+- **geoip.register_handler(name string, handler table) error**
+	- Calls [posting.RegisterGeoIPHandler](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/posting/geoip#RegisterGeoIPHandler) with the given handler info and returns an error if any occured. The table is expected to have the following fields/values:
+
+Key | Type | Explanation
+---|---|---
+init | func(options map[string]any) error | The function to initialize the GeoIP handler with options. If it needs no initialization, the function can return null
+get_country | func(request http.Request, board string, errEv zerolog.Event) geoip.Country, error | The function to get the requesting IP's country, returning it and any errors that occured
+close | func() error | The function to close any network or file handles, if any were opened, returning an error if any occured
+
+
 ## manage
 - **manage.ban_ip(ip string, duration string, reason string, staff string|int, options table)**
   - Bans the given IP for the given duration and gets other optional ban data from the `options` table below

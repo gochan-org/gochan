@@ -109,8 +109,8 @@ func PreloadModule(l *lua.LState) int {
 				closeFunc:      closeFuncVal,
 			}
 
-			RegisterGeoIPHandler(name, handler)
-			return 0
+			l.Push(luar.New(l, RegisterGeoIPHandler(name, handler)))
+			return 1
 		},
 		"country_name": func(l *lua.LState) int {
 			abbr := l.CheckString(1)
