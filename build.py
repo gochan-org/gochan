@@ -140,12 +140,10 @@ def symlink(target, link):
 
 def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 	if print_command:
-		print(cmd)
-	proc = subprocess.Popen(
-		cmd,
+		print(" ".join(cmd))
+	proc = subprocess.Popen(cmd,
 		stdout=subprocess.PIPE,
-		stderr=subprocess.STDOUT,
-		shell=True)
+		stderr=subprocess.STDOUT)
 	output = ""
 	status = 0
 	if realtime:  # print the command's output in real time, ignores print_output
@@ -187,8 +185,8 @@ def set_vars(goos=""):
 	if goos != "":
 		os.environ["GOOS"] = goos
 
-	gcos, gcos_status = run_cmd("go env GOOS", print_output=False)
-	exe, exe_status = run_cmd("go env GOEXE", print_output=False)
+	gcos, gcos_status = run_cmd(("go", "env", "GOOS"), print_output=False)
+	exe, exe_status = run_cmd(("go", "env", "GOEXE"), print_output=False)
 	if gcos_status + exe_status != 0:
 		print("Invalid GOOS value, check your GOOS environment variable")
 		sys.exit(1)
@@ -205,10 +203,13 @@ def set_vars(goos=""):
 def build(debugging=False, plugin_path=""):
 	"""Build the gochan executable for the current GOOS"""
 	pwd = os.getcwd()
-	trimpath = "-trimpath=" + pwd
-	gcflags = " -gcflags=\"" + trimpath + "{}\""
-	ldflags = " -ldflags=\"-X main.versionStr=" + GOCHAN_VERSION + " -X main.dbVersionStr=" + DATABASE_VERSION + " {}\""
-	build_cmd = "go build -v -trimpath -asmflags=" + trimpath
+	trimpath = f"-trimpath={pwd}"
+
+	gcflags_debug = " -l -N" if debugging else ""
+	gcflags = f"-gcflags={trimpath}{gcflags_debug}"
+	ldflags_debug = "" if debugging else " -w -s"
+	ldflags = f"-ldflags=-X main.versionStr={GOCHAN_VERSION} -X main.dbVersionStr={DATABASE_VERSION} {ldflags_debug}"
+	build_cmd_base = ["go", "build", "-v", "-trimpath", gcflags, ldflags]
 
 	print("Building error pages from templates")
 	with open("templates/404.html", "r") as tmpl404:
@@ -223,36 +224,29 @@ def build(debugging=False, plugin_path=""):
 			page502.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 502: Bad gateway"))
 
 	if debugging:
-		print("Building for", gcos, "with debugging symbols")
-		gcflags = gcflags.format(" -l -N")
-		ldflags = ldflags.format("")
+		print(f"Building for {gcos} with debugging symbols")
 	else:
-		ldflags = ldflags.format(" -w -s")
-		gcflags = gcflags.format("")
-		print("Building for", gcos)
-	build_cmd += gcflags + ldflags
+		print(f"Building for {gcos}")
 
 	status = -1
 	if plugin_path != "" and plugin_path is not None:
-		status = run_cmd(build_cmd + " -buildmode=plugin " + plugin_path,
-			realtime=True, print_command=True)[1]
+		build_cmd_base += "-buildmode=plugin" + plugin_path
+		status = run_cmd(build_cmd_base, realtime=True, print_command=True)[1]
 		if status != 0:
-			print("Failed building plugin at {}, see output for details".format(plugin_path))
+			print(f"Failed building plugin at {plugin_path}, see output for details")
 			sys.exit(1)
 		print("Built plugin successfully")
 		return
 
-	status = run_cmd(
-		build_cmd + " -o " + gochan_exe + " ./cmd/gochan",
-		realtime=True, print_command=True)[1]
+	gochan_build_cmd = build_cmd_base + ["-o", gochan_exe, "./cmd/gochan"]
+	status = run_cmd(gochan_build_cmd, realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed building gochan, see command output for details")
 		sys.exit(1)
 	print("Built gochan successfully")
 
-	status = run_cmd(
-		build_cmd + " -o " + migration_exe + " ./cmd/gochan-migration",
-		realtime=True, print_command=True)[1]
+	gochan_migrate_build_cmd = build_cmd_base + ["-o", migration_exe, "./cmd/gochan-migration"]
+	status = run_cmd(gochan_migrate_build_cmd, realtime=True, print_command=True)[1]
 	if status != 0:
 		print("Failed building gochan-migration, see command output for details")
 		sys.exit(1)
