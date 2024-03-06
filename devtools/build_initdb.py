@@ -45,6 +45,7 @@ def hasError(text):
 
 
 def dofile(filestart):
+	# skipcq: PTC-W6004
 	print("building " + filestart + " sql file")
 	masterfile = ""
 	with open(filestart + "master.sql", 'r') as masterfileIn:
