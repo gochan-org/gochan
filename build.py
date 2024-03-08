@@ -38,7 +38,7 @@ release_files = (
 	"README.md",
 )
 
-GOCHAN_VERSION = "3.10.0"
+GOCHAN_VERSION = "3.10.1"
 DATABASE_VERSION = "3"  # stored in DBNAME.DBPREFIXdatabase_version
 
 PATH_NOTHING = -1
@@ -230,7 +230,7 @@ def build(debugging=False, plugin_path=""):
 
 	status = -1
 	if plugin_path != "" and plugin_path is not None:
-		build_cmd_base += "-buildmode=plugin" + plugin_path
+		build_cmd_base += ["-buildmode=plugin", plugin_path]
 		status = run_cmd(build_cmd_base, realtime=True, print_command=True)[1]
 		if status != 0:
 			print(f"Failed building plugin at {plugin_path}, see output for details")
