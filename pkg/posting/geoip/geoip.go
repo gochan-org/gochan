@@ -13,7 +13,7 @@ var (
 	geoipHandlers = make(map[string]GeoIPHandler)
 	activeHandler GeoIPHandler
 
-	ErrInvalidIP     = errors.New("invalid IP address")
+	ErrInvalidIP     = gcutil.ErrInvalidIP
 	ErrNotConfigured = errors.New("geoip is not configured")
 	ErrUnrecognized  = errors.New("unrecognized GeoIP handler ID")
 )
