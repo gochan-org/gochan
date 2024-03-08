@@ -71,7 +71,7 @@ div#topbar {
   border-bottom: 1px solid #FEC68F;
 }
 
-th.postblock {
+th.postblock, table.mgmt-table tr:first-of-type th {
   background: #EA8;
   border: 1px solid #800;
 }

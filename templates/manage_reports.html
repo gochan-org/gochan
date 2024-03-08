@@ -1,5 +1,5 @@
 {{if eq 0 (len .reports)}}<i>No reports</i>{{else -}}
-<table id="reportstable" border="1">
+<table id="reportstable" class="mgmt-table">
 <tr><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Staff assigned</th><th>Actions</th></tr>
 {{range $r,$report := .reports}}
 <tr><td><a href="{{$report.post_link}}">Link</a></td><td>{{$report.reason}}</td><td>{{$report.ip}}</td><td>
@@ -8,7 +8,7 @@
 	{{- else -}}
 		{{$report.staff_user}}
 	{{- end -}}
-</td><td>
+</td><td class="table-actions">
 	<a href="{{webPath "manage/reports?dismiss="}}{{$report.id}}">Dismiss</a>
 	{{if eq $.staff.Rank 3 -}}
 	|

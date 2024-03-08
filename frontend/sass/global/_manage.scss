@@ -22,9 +22,26 @@ h1, h2 {
 	padding-right: 4px;
 }
 
-table#board-options, table#board-options *,
-table#config, table#config td, table#config th {
-	border: solid 1px;
+table.mgmt-table {
+	td.table-actions {
+		text-align: center;
+	}
+	th {
+		padding: 4px;
+	}
+}
+
+.banlist, .wordfilters {
+	margin-top: 4px;
+	width: 100%;
+}
+
+table#recentposts {
+	width: 100%;
+	border-collapse: collapse;
+	td {
+		border: 1px solid;
+	}
 }
 
 input.config-text {

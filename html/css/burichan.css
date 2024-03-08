@@ -66,6 +66,10 @@ div.inlinepostprev {
   border-radius: 8px;
 }
 
+table.mgmt-table tr:first-of-type th {
+  background: #9988EE;
+}
+
 body {
   font: sans-serif 12pt;
   background: #EEF2FF;

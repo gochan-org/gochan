@@ -58,7 +58,8 @@ img.thumbnail {
   border: 1px solid #8C94AB;
 }
 
-.postblock {
+.postblock,
+table.mgmt-table tr:first-of-type th {
   background: #25272D;
   font-weight: 700;
 }

@@ -34,7 +34,7 @@ div#content {
 	}
 }
 
-th.postblock {
+th.postblock, table.mgmt-table tr:first-of-type th {
 	background: $blockcol;
 	border: 1px solid $blockborder;
 	border-radius: 5px;

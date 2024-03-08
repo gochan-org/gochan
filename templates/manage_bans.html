@@ -32,11 +32,11 @@ Filter board: <select name="filterboardid" id="filterboardid" onchange="window.l
 {{- end -}}
 </select> <input type="submit">
 </form>
-<table border="1">
+<table class="mgmt-table banlist">
 	<tr><th>Action</th><th>IP</th><th>Board</th><th>Reason</th><th>Staff</th><th>Staff note</th><th>Banned post text</th><th>Set</th><th>Expires</th><th>Appeal at</th></tr>
 {{range $_, $ban := $.banlist -}}
 	<tr>
-		<td> <a href="{{webPath "manage/bans?edit="}}{{$ban.ID}}">Edit</a> | <a href="{{webPath "manage/bans?delete="}}{{$ban.ID}}">Delete</a> </td>
+		<td class="table-actions"> <a href="{{webPath `manage/bans?edit=`}}{{$ban.ID}}">Edit</a> | <a href="{{webPath `manage/bans?delete=`}}{{$ban.ID}}">Delete</a> </td>
 		<td>{{banMask $ban}}</td>
 		<td>{{if not $ban.BoardID}}<i>all</i>{{else}}/{{getBoardDirFromID $ban.BoardID}}/{{end}}</td>
 		<td>{{$ban.Message}}</td>

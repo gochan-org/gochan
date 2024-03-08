@@ -1,11 +1,6 @@
 {{$isAdmin := (eq .currentStaff.Rank 3) -}}
 {{$showNewStaffForm := (and (eq .updateUsername "") $isAdmin) -}}
-<style>
-	table#stafftable, table#stafftable th, table#stafftable td {
-		border: 1px solid;
-	}
-</style>
-<table id="stafftable">
+<table class="mgmt-table stafflist">
 <tr><th>Username</th><th>Rank</th><th>Added on</th><th>Action</th></tr>
 {{range $s, $staff := $.allstaff -}}
 <tr>

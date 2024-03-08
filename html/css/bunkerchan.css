@@ -34,7 +34,8 @@ div#report-delbox input[type=file]::-webkit-file-upload-button {
 div.reply,
 th.postblock,
 div.postprev,
-div.inlinepostprev {
+div.inlinepostprev,
+table.mgmt-table tr:first-of-type th {
   background: #282A2E;
   border: 1px solid #117743;
   border-radius: 5px;

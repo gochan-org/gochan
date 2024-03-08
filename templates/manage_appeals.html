@@ -1,5 +1,9 @@
-<table border="1">
+<table class="mgmt-table">
 <tr><th>Action</th><th>Appeal Text</th><th>Banned IP</th></tr>
+{{if eq nil $.appeals}}
+</table>
+<i>No appeals</i>
+{{end}}
 {{range $_,$appeal := $.appeals}}
 <tr>
 	<td>

@@ -29,7 +29,7 @@ div#content textarea, div#content select {
   color: #CCC;
 }
 
-th.postblock {
+th.postblock, table.mgmt-table tr:first-of-type th {
   background: #282A2E;
   border: 1px solid #888;
   border-radius: 5px;

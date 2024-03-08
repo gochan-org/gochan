@@ -51,11 +51,11 @@ div.reply,
 div.section-block,
 th.postblock,
 div.postprev,
-div.inlinepostprev {
+div.inlinepostprev,
+table.mgmt-table tr:first-of-type th {
   background: #DDD;
   border: 1px solid #117743;
   border-radius: 5px;
-  text-align: left;
 }
 
 span.subject {

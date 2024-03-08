@@ -38,7 +38,6 @@ div#content {
 		color: #000;
 	}
 	input:active, select:active, textarea:active {
-		// box-shadow: 0px 0px 5px $replyborder;
 		@include shadow-filter(0px 0px 5px $replyborder);
 	}
 	input[type="button"],
@@ -53,16 +52,15 @@ div#content {
 }
 
 
-
 div.reply,
 div.section-block,
 th.postblock,
 div.postprev,
-div.inlinepostprev {
+div.inlinepostprev,
+table.mgmt-table tr:first-of-type th {
 	background: $inputcol;
 	border: 1px solid $replyborder;
 	border-radius: 5px;
-	text-align: left;
 }
 
 span.subject {

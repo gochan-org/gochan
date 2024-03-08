@@ -9,3 +9,9 @@
 	background: $bgcol;
 	border-radius: 8px;
 }
+
+table.mgmt-table {
+	tr:first-of-type th {
+		background: $postblock;
+	}
+}

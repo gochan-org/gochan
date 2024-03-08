@@ -26,7 +26,7 @@
 </form><hr/>
 <h2>Current filename bans</h2>
 {{- if eq 0 (len .filenameBans)}}<i>No filename bans</i>{{else -}}
-<table border="1">
+<table class="mgmt-table">
 	<tr><th>Filename</th><th>Regular expression</th><th>Board</th><th>Staff</th><th>Staff note</th><th>Action</th></tr>
 {{range $b,$ban := .filenameBans}}
 	<tr>
@@ -75,7 +75,7 @@
 </form><hr/>
 <h2>Current file checksum bans</h2>
 {{- if eq 0 (len .checksumBans)}}<i>No file checksum bans</i>{{else -}}
-<table border="1">
+<table class="mgmt-table">
 	<tr><th>Checksum</th><th>Board</th><th>Staff</th><th>Staff note</th><th>Fingerprinter</th><th>Ban IP</th><th>Ban IP message</th><th>Action</th></tr>
 {{range $b,$ban := .checksumBans}}
 	<tr>

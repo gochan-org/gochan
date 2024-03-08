@@ -17,7 +17,7 @@
 </form>
 <h2>Current banned names/tripcodes</h2>
 {{- if eq 0 (len .nameBans)}}<i>No name bans</i>{{else -}}
-<table border="1">
+<table class="mgmt-table namebans">
 	<tr><th>Name</th><th>Regular expression</th><th>Board</th><th>Staff</th><th>Staff note</th><th>Action</th></tr>
 {{range $_, $ban := .nameBans}}<tr>
 	<td>{{$ban.Username}}</td>

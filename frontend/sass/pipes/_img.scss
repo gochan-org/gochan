@@ -12,12 +12,13 @@ img.thumbnail {
 }
 
 .reply, .inlinepostprev, .postprev {
-	background: #25272D;
-	border: 1px solid #8C94AB;
+	background: $postblock;
+	border: 1px solid $postblockcol;
 }
 
-.postblock {
-	background: #25272D;
+.postblock,
+table.mgmt-table tr:first-of-type th {
+	background: $postblock;
 	font-weight: 700;
 }
 
@@ -44,8 +45,8 @@ div#content {
 	textarea,
 	select#changepage,
 	select.post-actions {
-		background: #25272D;
-		border: 1px solid #8C94AB;
+		background: $postblock;
+		border: 1px solid $postblockcol;
 		color: #FFF;
 	}
 }

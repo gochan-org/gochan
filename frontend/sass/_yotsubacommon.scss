@@ -80,7 +80,7 @@
 		background: $topbarbg;
 		border-bottom: 1px solid $topbarborder;
 	}
-	th.postblock {
+	th.postblock, table.mgmt-table tr:first-of-type th {
 		background: $postblockbg;
 		border: 1px solid $postblockborder;
 	}

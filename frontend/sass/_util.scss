@@ -1,8 +1,4 @@
 @mixin box-shadow($properties...) {
-	// -moz-box-shadow: $properties;
-	// -ms-box-shadow: $properties;
-	// -webkit-box-shadow: $properties;
-	// box-shadow: $properties;
 	filter: drop-shadow($properties);
 }
 
