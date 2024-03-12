@@ -50,12 +50,20 @@ func ParseIPRange(ipOrCIDR string) (string, string, error) {
 // IP addresses, and any errors that occured
 func GetIPRangeSubnet(start string, end string) (*net.IPNet, error) {
 	startIP := net.ParseIP(start)
-	endIP := net.ParseIP(end)
 	if startIP == nil {
 		return nil, fmt.Errorf("invalid IP address %s", start)
 	}
+	startIP4 := startIP.To4()
+	if startIP4 != nil {
+		startIP = startIP4
+	}
+	endIP := net.ParseIP(end)
 	if endIP == nil {
 		return nil, fmt.Errorf("invalid IP address %s", end)
+	}
+	endIP4 := endIP.To4()
+	if endIP4 != nil {
+		endIP = endIP4
 	}
 	if len(startIP) != len(endIP) {
 		return nil, errors.New("ip addresses must both be IPv4 or IPv6")

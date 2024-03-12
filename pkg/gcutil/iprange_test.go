@@ -1,6 +1,7 @@
 package gcutil
 
 import (
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,14 @@ func TestIPRangeErrOnInvalidIP(t *testing.T) {
 	_, _, err = ParseIPRange("")
 	assert.Error(t, err)
 	_, _, err = ParseIPRange("192.168.56.0/")
+	assert.Error(t, err)
+	_, _, err = ParseIPRange("192.168.56.0/24/1")
+	assert.Error(t, err)
+	_, err = GetIPRangeSubnet("not", "ip")
+	assert.Error(t, err)
+	_, err = GetIPRangeSubnet("::1", "ip")
+	assert.Error(t, err)
+	_, err = GetIPRangeSubnet("::1", "127.0.0.1")
 	assert.Error(t, err)
 }
 
@@ -28,11 +37,17 @@ func TestIPRangeIPv4Range(t *testing.T) {
 	ranges := []string{"192.168.56.0/24", "192.168.0.0/16", "192.0.0.0/8"}
 	starts := []string{"192.168.56.0", "192.168.0.0", "192.0.0.0"}
 	ends := []string{"192.168.56.255", "192.168.255.255", "192.255.255.255"}
+	var start, end string
+	var err error
+	var ipn *net.IPNet
 	for i := range ranges {
-		start, end, err := ParseIPRange(ranges[i])
+		start, end, err = ParseIPRange(ranges[i])
 		assert.NoError(t, err)
 		assert.Equal(t, starts[i], start)
 		assert.Equal(t, ends[i], end)
+		ipn, err = GetIPRangeSubnet(start, end)
+		assert.NoError(t, err)
+		assert.Equal(t, ranges[i], ipn.String())
 	}
 }
 
@@ -54,21 +69,21 @@ func TestIPRangeIPv6Range(t *testing.T) {
 		"2607:f8b0:400a:80a::/72",
 		"2607:f8b0:400a:80a::/68",
 		"2607:f8b0:400a:80a::/64",
-		"2607:f8b0:400a:80a::/60",
-		"2607:f8b0:400a:80a::/56",
-		"2607:f8b0:400a:80a::/52",
-		"2607:f8b0:400a:80a::/48",
-		"2607:f8b0:400a:80a::/44",
-		"2607:f8b0:400a:80a::/40",
-		"2607:f8b0:400a:80a::/36",
-		"2607:f8b0:400a:80a::/32",
-		"2607:f8b0:400a:80a::/28",
-		"2607:f8b0:400a:80a::/24",
-		"2607:f8b0:400a:80a::/20",
-		"2607:f8b0:400a:80a::/16",
-		"2607:f8b0:400a:80a::/12",
-		"2607:f8b0:400a:80a::/8",
-		"2607:f8b0:400a:80a::/4",
+		"2607:f8b0:400a:800::/60",
+		"2607:f8b0:400a:800::/56",
+		"2607:f8b0:400a::/52",
+		"2607:f8b0:400a::/48",
+		"2607:f8b0:4000::/44",
+		"2607:f8b0:4000::/40",
+		"2607:f8b0:4000::/36",
+		"2607:f8b0::/32",
+		"2607:f8b0::/28",
+		"2607:f800::/24",
+		"2607:f000::/20",
+		"2607::/16",
+		"2600::/12",
+		"2600::/8",
+		"2000::/4",
 	}
 	starts := []string{
 		"2607:f8b0:400a:80a::2010",
@@ -136,10 +151,16 @@ func TestIPRangeIPv6Range(t *testing.T) {
 		"26ff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
 		"2fff:ffff:ffff:ffff:ffff:ffff:ffff:ffff",
 	}
+	var start, end string
+	var err error
+	var ipn *net.IPNet
 	for i := range ranges {
-		start, end, err := ParseIPRange(ranges[i])
+		start, end, err = ParseIPRange(ranges[i])
 		assert.NoError(t, err)
 		assert.Equal(t, starts[i], start, "unequal values at index %d", i)
 		assert.Equal(t, ends[i], end, "unequal values at index %d", i)
+		ipn, err = GetIPRangeSubnet(start, end)
+		assert.NoError(t, err)
+		assert.Equal(t, ranges[i], ipn.String())
 	}
 }
