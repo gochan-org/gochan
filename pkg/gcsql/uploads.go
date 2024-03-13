@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"database/sql"
 	"errors"
 )
 
@@ -85,4 +86,22 @@ func (p *Post) AttachFile(upload *Upload) error {
 		return err
 	}
 	return tx.Commit()
+}
+
+// GetUploadFilenameAndBoard returns the filename (or an empty string) and
+// the board of the given post ID
+func GetUploadFilenameAndBoard(postID int) (string, string, error) {
+	const query = `SELECT filename, dir FROM DBPREFIXfiles
+		JOIN DBPREFIXposts ON post_id = DBPREFIXposts.id
+		JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id
+		JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id
+		WHERE DBPREFIXposts.id = ?`
+	var filename, dir string
+	err := QueryRowSQL(query, []any{postID}, []any{&filename, &dir})
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", "", nil
+	} else if err != nil {
+		return "", "", err
+	}
+	return filename, dir, nil
 }

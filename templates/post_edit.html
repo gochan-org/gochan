@@ -31,7 +31,7 @@
 			{{- with .upload -}}
 			<tr><th class="postblock">Filename</th><td>{{.Filename}}</td></tr>
 			<tr><th class="postblock">Thumbnail</th><td>
-				<img src="{{webPath $.board.Dir "thumb" (.ThumbnailPath "reply")}}" alt="{{webPath $.board.Dir "src" .Filename}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload" />
+				<img src="{{getThumbnailWebPath $.post.ID}}" alt="{{webPath $.board.Dir "src" .Filename}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload" />
 			</td></tr>
 			{{- end -}}
 			<tr><th>Spoiler</th><td><input type="checkbox" name="spoiler" id="spoiler" {{with .upload}}{{if .IsSpoilered}}checked{{end}}{{end}}></td></tr>

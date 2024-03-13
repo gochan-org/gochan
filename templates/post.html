@@ -15,13 +15,13 @@
 	{{- if ne .post.Email ""}}</a>{{end}}</span>
 	{{- if ne .post.Tripcode ""}}<span class="tripcode">!{{.post.Tripcode}}</span>{{end -}}
 	{{- if ne .post.Country.Flag ""}}{{template "post_flag" .post.Country}}{{end}} {{formatTimestamp .post.Timestamp -}}
-</label> <a href="{{.post.WebPath}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a>
+</label> <a href="{{.WebPath}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a>
 <span class="status-icons">
-	{{- if $.thread.Locked -}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
-	{{- if $.thread.Stickied -}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
+	{{- if $.thread.Locked}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
+	{{- if $.thread.Stickied}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
 </span>
 {{if $.is_board_page -}}
-[<a href="{{$.post.ThreadPath}}">View</a>]
+[<a href="{{.ThreadPath}}">View</a>]
 {{end}}<br />
 {{- end -}}
 {{- if $.post.IsTopPost -}}
@@ -37,7 +37,7 @@
 	<div class="file-deleted-box" style="text-align:center;">File removed</div>
 {{- else if ne $.post.Filename "" -}}
 	{{- template "uploadinfo" . -}}
-	<a class="upload-container" href="{{.post.UploadPath}}"><img src="{{.post.ThumbnailPath}}" alt="{{.post.UploadPath}}" width="{{.post.ThumbnailWidth}}" height="{{.post.ThumbnailHeight}}" class="upload" /></a>
+	<a class="upload-container" href="{{.post.UploadPath}}"><img src="{{getThumbnailWebPath .post.ID}}" alt="{{.post.UploadPath}}" width="{{.post.ThumbnailWidth}}" height="{{.post.ThumbnailHeight}}" class="upload" /></a>
 {{- end -}}
 {{- if $.post.IsTopPost}}{{template "nameline" .}}{{end -}}
 	<div class="post-text">{{.post.Message}}</div>

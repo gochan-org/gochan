@@ -5,15 +5,12 @@ import (
 	"fmt"
 	"html"
 	"html/template"
-	"path"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
 var (
@@ -147,111 +144,8 @@ var funcMap = template.FuncMap{
 	},
 
 	// Imageboard functions
-	"bannedForever": func(ban *gcsql.IPBan) bool {
-		return ban.IsActive && ban.Permanent && !ban.CanAppeal
-	},
-	"isBanned": func(ban *gcsql.IPBan, board string) bool {
-		return ban.IsActive && ban.BoardID != nil
-	},
-	"banMask": func(ban gcsql.IPBan) string {
-		if ban.ID < 1 {
-			if ban.RangeStart == ban.RangeEnd {
-				return ban.RangeStart
-			}
-			return ""
-		}
-		ipn, err := gcutil.GetIPRangeSubnet(ban.RangeStart, ban.RangeEnd)
-		if err != nil {
-			return "?"
-		}
-		return ipn.String()
-	},
 	"customFlagsEnabled": func(board string) bool {
 		return config.GetBoardConfig(board).CustomFlags != nil
-	},
-	"getBoardDirFromID": func(id int) string {
-		dir, _ := gcsql.GetBoardDir(id)
-		return dir
-	},
-	"intPtrToBoardDir": func(id *int, ifNil string, ifErr string) string {
-		if id == nil {
-			return ifNil
-		}
-		dir, err := gcsql.GetBoardDir(*id)
-		if err != nil {
-			return ifErr
-		}
-		return dir
-	},
-	"getStaffNameFromID": func(id int) string {
-		username, err := gcsql.GetStaffUsernameFromID(id)
-		if err != nil {
-			return "?"
-		}
-		return username
-	},
-	"getAppealBanIP": func(appealID int) string {
-		ban, err := gcsql.GetIPBanByID(appealID)
-		if err != nil || ban == nil {
-			return "?"
-		}
-		if ban.RangeStart == ban.RangeEnd {
-			return ban.RangeStart
-		}
-		ipn, err := gcutil.GetIPRangeSubnet(ban.RangeStart, ban.RangeEnd)
-		if err != nil {
-			return "?"
-		}
-		return ipn.String()
-	},
-	"getCatalogThumbnail": func(img string) string {
-		_, catalogThumb := uploads.GetThumbnailFilenames(img)
-		return catalogThumb
-	},
-	"getTopPostID": func(post *gcsql.Post) int {
-		id, _ := post.TopPostID()
-		return id
-	},
-	"getThreadThumbnail": func(img string) string {
-		thumb, _ := uploads.GetThumbnailFilenames(img)
-		return thumb
-	},
-	"getUploadType": func(name string) string {
-		return uploads.GetThumbnailExtension(path.Ext(name))
-	},
-	"numReplies": func(boardid, opID int) int {
-		num, err := gcsql.GetThreadReplyCountFromOP(opID)
-		if err != nil {
-			return 0
-		}
-		return num
-	},
-	"getBoardDir": func(id int) string {
-		dir, err := gcsql.GetBoardDir(id)
-		if err != nil {
-			return ""
-		}
-		return dir
-	},
-	"getBoardDefaultStyle": func(dir string) string {
-		boardCfg := config.GetBoardConfig(dir)
-		if !boardCfg.IsGlobal() {
-			// /<board>/board.json exists, overriding the default them and theme set in SQL
-			return boardCfg.DefaultStyle
-		}
-		var defaultStyle string
-		err := gcsql.QueryRowSQL(`SELECT default_style FROM DBPREFIXboards WHERE dir = ?`,
-			[]any{dir}, []any{&defaultStyle})
-		if err != nil || defaultStyle == "" {
-			gcutil.LogError(err).Caller().
-				Str("board", dir).
-				Msg("Unable to get default style attribute of board")
-			return boardCfg.DefaultStyle
-		}
-		return defaultStyle
-	},
-	"boardPagePath": func(board *gcsql.Board, page int) string {
-		return config.WebPath(board.Dir, strconv.Itoa(page)+".html")
 	},
 	"webPath": config.WebPath,
 	"webPathDir": func(part ...string) string {
@@ -260,15 +154,6 @@ var funcMap = template.FuncMap{
 			dir += "/"
 		}
 		return dir
-	},
-	"sectionBoards": func(sectionID int) []gcsql.Board {
-		var boards []gcsql.Board
-		for _, board := range gcsql.AllBoards {
-			if board.SectionID == sectionID && !board.IsHidden(false) {
-				boards = append(boards, board)
-			}
-		}
-		return boards
 	},
 	// Template convenience functions
 	"makeLoop": func(n int, offset int) []int {
@@ -284,4 +169,12 @@ var funcMap = template.FuncMap{
 	"version": func() string {
 		return config.GetVersion().String()
 	},
+}
+
+// AddTemplateFuncs adds the functions in the given FuncMap (map[string]any, with "any" expected to be a function)
+// to the map of functions available to templates
+func AddTemplateFuncs(funcs template.FuncMap) {
+	for key, tFunc := range funcs {
+		funcMap[key] = tFunc
+	}
 }

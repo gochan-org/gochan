@@ -61,16 +61,7 @@ func checkImageFingerprintBan(img image.Image, _ string) (*gcsql.FileBan, error)
 }
 
 func GetPostImageFingerprint(postID int) (string, error) {
-	const query = `SELECT filename, dir
-	FROM DBPREFIXfiles
-	JOIN DBPREFIXposts ON post_id = DBPREFIXposts.id
-	JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id
-	JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id
-	WHERE DBPREFIXposts.id = ?
-	LIMIT 1`
-	var filename, board string
-	err := gcsql.QueryRowSQL(query,
-		[]any{postID}, []any{&filename, &board})
+	filename, board, err := gcsql.GetUploadFilenameAndBoard(postID)
 	if err != nil {
 		return "", err
 	}
@@ -82,7 +73,6 @@ func GetPostImageFingerprint(postID int) (string, error) {
 			return "", ErrVideoThumbFingerprint
 		}
 		filename, _ = GetThumbnailFilenames(filename)
-		subDir = "thumb"
 	}
 	filePath := path.Join(config.GetSystemCriticalConfig().DocumentRoot,
 		board, subDir, filename)

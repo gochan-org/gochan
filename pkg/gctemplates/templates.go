@@ -8,7 +8,6 @@ import (
 	"sort"
 
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
 const (
@@ -228,12 +227,7 @@ func ParseTemplate(name, tmplStr string) (*template.Template, error) {
 
 // InitTemplates loads the given templates by name. If no parameters are given,
 // all templates are (re)loaded
-func InitTemplates(which ...string) error {
-	err := gcsql.ResetBoardSectionArrays()
-	if err != nil {
-		return err
-	}
-
+func InitTemplates(which ...string) (err error) {
 	if which == nil {
 		// no templates specified
 		for t := range templateMap {
