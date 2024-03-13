@@ -3,7 +3,6 @@ package gcutil
 import (
 	"errors"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -89,7 +88,7 @@ func TestGetRealIP(t *testing.T) {
 	req.Header.Set("HTTP_CF_CONNECTING_IP", cfIP)
 	assert.Equal(t, cfIP, GetRealIP(req))
 
-	os.Setenv("GC_TESTIP", testIP)
+	t.Setenv("GC_TESTIP", testIP)
 	assert.Equal(t, testIP, GetRealIP(req))
 }
 
