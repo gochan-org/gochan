@@ -1,7 +1,7 @@
 {{define "topbar" -}}
 <div id="topbar">
 	<div class="topbar-section"><a href="{{webPathDir "/"}}" class="topbar-item">home</a></div>
-	{{- range $s, $section := .sections -}}
+	{{- range $s, $section := $.sections -}}
 		<div class="topbar-section">
 		{{- with $sectionBoards := sectionBoards $section.ID -}}
 			{{range $b, $board := $sectionBoards -}}

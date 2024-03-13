@@ -22,6 +22,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -33,6 +34,51 @@ var (
 	ErrorPostTooLong = errors.New("post is too long")
 	ErrInvalidFlag   = errors.New("invalid selected flag")
 )
+
+func attachFlag(request *http.Request, post *gcsql.Post, board string, errEv *zerolog.Event) error {
+	boardConfig := config.GetBoardConfig(board)
+	flag := request.PostFormValue("post-flag")
+	if flag != "" {
+		errEv.Str("flag", flag)
+	}
+	var err error
+	switch flag {
+	case "geoip":
+		if boardConfig.EnableGeoIP {
+			geoipInfo, err := geoip.GetCountry(request, board, errEv)
+			if err != nil {
+				// GetCountry logs the error
+				return err
+			}
+			post.Country = geoipInfo.Name
+			post.Flag = strings.ToLower(geoipInfo.Flag)
+		} else {
+			err = ErrInvalidFlag
+			errEv.Err(err).Caller().
+				Msg("User selected 'geoip' on a non-geoip board")
+			return err
+		}
+	case "":
+		// "No flag"
+		if !boardConfig.EnableNoFlag {
+			err = ErrInvalidFlag
+			errEv.Err(err).Caller().
+				Msg("User submitted 'No flag' on a board without it enabled")
+			return err
+		}
+	default:
+		// custom flag
+		var validFlag bool
+		post.Country, validFlag = boardConfig.CheckCustomFlag(flag)
+		if !validFlag {
+			err = ErrInvalidFlag
+			errEv.Caller().Msg("User submitted invalid custom flag")
+			return err
+		}
+		post.Flag = flag
+	}
+	return nil
+}
 
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
@@ -257,47 +303,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	flag := request.PostFormValue("post-flag")
-	if flag != "" {
-		errEv.Str("flag", flag)
-	}
-	switch flag {
-	case "geoip":
-		if boardConfig.EnableGeoIP {
-			geoipInfo, err := geoip.GetCountry(request, postBoard.Dir, errEv)
-			if err != nil {
-				// GetCountry logs the error
-				break
-			}
-			post.Country = geoipInfo.Name
-			post.Flag = strings.ToLower(geoipInfo.Flag)
-		} else {
-			err = ErrInvalidFlag
-			errEv.Caller().
-				Msg("User selected 'geoip' on a non-geoip board")
+	if boardConfig.EnableGeoIP || len(boardConfig.CustomFlags) > 0 {
+		if err = attachFlag(request, post, postBoard.Dir, errEv); err != nil {
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
+			return
 		}
-	case "":
-		// "No flag"
-		if !boardConfig.EnableNoFlag {
-			err = ErrInvalidFlag
-			errEv.Caller().
-				Msg("User submitted 'No flag' on a board without it enabled")
-		}
-	default:
-		// custom flag
-		var validFlag bool
-		post.Country, validFlag = boardConfig.CheckCustomFlag(flag)
-		if !validFlag {
-			err = ErrInvalidFlag
-			errEv.Caller().Msg("User submitted invalid custom flag")
-		}
-		post.Flag = flag
-	}
-	if err != nil {
-		server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
-			"flag": flag,
-		})
-		return
 	}
 
 	if !captchaSuccess {
