@@ -15,7 +15,7 @@
 	</div><br />
 	<div class="section-block" style="margin: 0px 26px 0px 24px">
 		<div class="section-title-block">
-			<span class="section-title"><b>{{if bannedForever .ban}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</b></span>
+			<span class="section-title"><b>{{if .ban.BannedForever}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</b></span>
 		</div>
 		<div class="section-body" style="padding-top:8px">
 			<div id="ban-info" style="float:left">{{if .ban.IsGlobalBan}}
@@ -34,7 +34,7 @@
 						<textarea rows="4" cols="48" name="appealmsg" id="postmsg" placeholder="Appeal message"></textarea><br />
 						<input type="submit" name="doappeal" value="Submit" /><br />
 					</form>{{else}}You may <b>not</b> appeal this ban.<br />{{end}}
-				</div>{{if bannedForever .ban}}
+				</div>{{if .ban.BannedForever}}
 				<img id="banpage-image" src="{{webPath "permabanned.jpg"}}" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
 					<source src="{{webPath "static/hittheroad.ogg"}}" />

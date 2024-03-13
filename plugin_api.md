@@ -115,6 +115,9 @@ This is a list of events that gochan may trigger at some point and can be used i
 - **message-pre-format**
 	- Triggered when an incoming post or post edit is about to be formatted, event data includes the post object and the HTTP request
 
+- **reset-boards-sections**
+	- Triggered when the boards and sections array needs to be refreshed
+
 - **shutdown**
 	- Triggered when gochan is about to shut down, in `main()` as a deferred call
 

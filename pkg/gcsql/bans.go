@@ -147,6 +147,10 @@ func (ipb IPBan) IsGlobalBan() bool {
 	return ipb.BoardID == nil
 }
 
+func (ban IPBan) BannedForever() bool {
+	return ban.IsActive && ban.Permanent && !ban.CanAppeal
+}
+
 func (ipb *IPBan) Deactivate(_ int) error {
 	const deactivateQuery = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?`
 	const auditInsertQuery = `INSERT INTO DBPREFIXip_ban_audit

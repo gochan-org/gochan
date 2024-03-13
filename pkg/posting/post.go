@@ -77,6 +77,7 @@ func attachFlag(request *http.Request, post *gcsql.Post, board string, errEv *ze
 		}
 		post.Flag = flag
 	}
+	fmt.Println("Flag/Country:", post.Flag, post.Country)
 	return nil
 }
 

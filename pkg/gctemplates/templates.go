@@ -8,6 +8,7 @@ import (
 	"sort"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 )
 
 const (
@@ -228,6 +229,10 @@ func ParseTemplate(name, tmplStr string) (*template.Template, error) {
 // InitTemplates loads the given templates by name. If no parameters are given,
 // all templates are (re)loaded
 func InitTemplates(which ...string) (err error) {
+	if _, err, _ = events.TriggerEvent("reset-boards-sections"); err != nil {
+		return err
+	}
+
 	if which == nil {
 		// no templates specified
 		for t := range templateMap {

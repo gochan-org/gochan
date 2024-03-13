@@ -5,18 +5,17 @@ import (
 	"text/template"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 func init() {
+	events.RegisterEvent([]string{"reset-boards-sections"}, func(trigger string, i ...interface{}) error {
+		return ResetBoardSectionArrays()
+	})
+
 	gctemplates.AddTemplateFuncs(template.FuncMap{
-		"bannedForever": func(ban *IPBan) bool {
-			return ban.IsActive && ban.Permanent && !ban.CanAppeal
-		},
-		"isBanned": func(ban *IPBan, board string) bool {
-			return ban.IsActive && ban.BoardID != nil
-		},
 		"banMask": func(ban IPBan) string {
 			if ban.ID < 1 {
 				if ban.RangeStart == ban.RangeEnd {
