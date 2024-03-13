@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"reflect"
 	"strings"
 
 	"github.com/Eggbertx/durationutil"
@@ -32,26 +31,8 @@ type GochanConfig struct {
 	SystemCriticalConfig
 	SiteConfig
 	BoardConfig
-	jsonLocation string `json:"-"`
+	jsonLocation string
 	testing      bool
-}
-
-func (gcfg *GochanConfig) setField(field string, value interface{}) {
-	structValue := reflect.ValueOf(gcfg).Elem()
-	structFieldValue := structValue.FieldByName(field)
-	if !structFieldValue.IsValid() {
-		return
-	}
-	if !structFieldValue.CanSet() {
-		return
-	}
-	structFieldType := structFieldValue.Type()
-	val := reflect.ValueOf(value)
-	if structFieldType != val.Type() {
-		return
-	}
-
-	structFieldValue.Set(val)
 }
 
 // ValidateValues checks to make sure that the configuration options are usable

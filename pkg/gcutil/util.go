@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -91,20 +90,6 @@ func FindResource(paths ...string) string {
 	return ""
 }
 
-// GetFileParts returns the base filename, the filename sans-extension, and the extension
-// sans-filename
-func GetFileParts(filename string) (string, string, string) {
-	base := path.Base(filename)
-	var noExt string
-	var ext string
-	lastIndex := strings.LastIndex(base, ".")
-	if lastIndex > -1 {
-		noExt = base[:strings.LastIndex(base, ".")]
-		ext = path.Ext(base)[1:]
-	}
-	return base, noExt, ext
-}
-
 // GetFormattedFilesize returns a human readable filesize
 func GetFormattedFilesize(size float64) string {
 	if size < 1000 {
@@ -121,14 +106,15 @@ func GetFormattedFilesize(size float64) string {
 // and X-Forwarded-For HTTP headers to get a potentially obfuscated IP address, before
 // getting the request's reported remote address
 func GetRealIP(request *http.Request) string {
-	if ip, ok := os.LookupEnv("GC_TESTIP"); ok {
+	ip, ok := os.LookupEnv("GC_TESTIP")
+	if ok {
 		return ip
 	}
-	if request.Header.Get("HTTP_CF_CONNECTING_IP") != "" {
-		return request.Header.Get("HTTP_CF_CONNECTING_IP")
+	if ip = request.Header.Get("HTTP_CF_CONNECTING_IP"); ip != "" {
+		return ip
 	}
-	if request.Header.Get("X-Forwarded-For") != "" {
-		return request.Header.Get("X-Forwarded-For")
+	if ip = request.Header.Get("X-Forwarded-For"); ip != "" {
+		return ip
 	}
 	remoteHost, _, err := net.SplitHostPort(request.RemoteAddr)
 	if err != nil {

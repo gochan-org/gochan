@@ -21,10 +21,6 @@ const (
 )
 
 var (
-	criticalFields = []string{
-		"ListenIP", "Port", "Username", "UseFastCGI", "DocumentRoot", "TemplateDir", "LogDir",
-		"DBtype", "DBhost", "DBname", "DBusername", "DBpassword", "SiteDomain", "Styles",
-	}
 	uid int
 	gid int
 )
@@ -192,34 +188,7 @@ func InitConfig(versionStr string) {
 	cfg.Version.Normalize()
 }
 
-// TODO: use reflect to check if the field exists in SystemCriticalConfig
-func fieldIsCritical(field string) bool {
-	for _, cF := range criticalFields {
-		if field == cF {
-			return true
-		}
-	}
-	return false
-}
-
 // WebPath returns an absolute path, starting at the web root (which is "/" by default)
 func WebPath(part ...string) string {
 	return path.Join(cfg.WebRoot, path.Join(part...))
-}
-
-// UpdateFromMap updates the configuration with the given key->values for use in things like the
-// config editor page and possibly others
-func UpdateFromMap(m map[string]interface{}, validate bool) error {
-	for key, val := range m {
-		if fieldIsCritical(key) {
-			// don't mess with critical/read-only fields (ListenIP, DocumentRoot, etc)
-			// after the server has started
-			continue
-		}
-		cfg.setField(key, val)
-	}
-	if validate {
-		return cfg.ValidateValues()
-	}
-	return nil
 }
