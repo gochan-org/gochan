@@ -79,7 +79,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	action := getAction(actionID, staff.Rank)
 	if action == nil {
 		if wantsJSON {
-			serveError(writer, "notfound", actionID, "action not found", wantsJSON || (action.JSONoutput == AlwaysJSON))
+			serveError(writer, "notfound", actionID, "action not found", wantsJSON)
 		} else {
 			server.ServeNotFound(writer, request)
 		}
