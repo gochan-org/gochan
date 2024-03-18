@@ -1,13 +1,8 @@
 {{$pagePath := webPath "/manage/updateannouncements" -}}
 {{$editing := (gt $.announcement.ID 0)}}
-<style>
-	table#announcements, table#announcements th, table#announcements td {
-		border: 1px double;
-	}
-</style>
-<table id="announcements">
+<table class="mgmt-table" id="announcements">
 	<tr>
-		<th style="width: 7%;"></th>
+		<th style="width: 7%;">Actions</th>
 		<th style="width: 18%;">Subject</th>
 		<th style="width: 50%;">Message</th>
 		<th style="width: 12.5%;">Staff</th>
