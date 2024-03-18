@@ -141,13 +141,12 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		// approving an appeal
 		approveID, err := strconv.Atoi(approveStr)
 		if err != nil {
-			errEv.Err(err).
-				Str("approveStr", approveStr).Caller().Send()
+			errEv.Err(err).Caller().
+				Str("approveStr", approveStr).Send()
 		}
 		if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
-			errEv.Err(err).
-				Int("approveAppeal", approveID).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Int("approveAppeal", approveID).Send()
 			return "", err
 		}
 	}
@@ -182,9 +181,8 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	if boardidStr != "" {
 		boardid, err = strconv.Atoi(boardidStr)
 		if err != nil {
-			errEv.Err(err).
-				Str("boardid", boardidStr).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("boardid", boardidStr).Send()
 			return "", err
 		}
 	}
@@ -199,9 +197,8 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 			_, err = regexp.Compile(filename)
 			if err != nil {
 				// invalid regular expression
-				errEv.Err(err).
-					Str("regex", filename).
-					Caller().Send()
+				errEv.Err(err).Caller().
+					Str("regex", filename).Send()
 				return "", err
 			}
 		}
@@ -273,15 +270,13 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 		// user requested a checksum ban ID to delete
 		delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
 		if err != nil {
-			errEv.Err(err).
-				Str("deleteChecksumBanIDStr", delChecksumBanIDStr).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("deleteChecksumBanIDStr", delChecksumBanIDStr).Send()
 			return "", err
 		}
 		if err = (gcsql.FileBan{ID: delChecksumBanID}).Deactivate(staff.ID); err != nil {
-			errEv.Err(err).
-				Int("deleteChecksumBanID", delChecksumBanID).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Int("deleteChecksumBanID", delChecksumBanID).Send()
 			return "", err
 		}
 		infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
@@ -293,8 +288,8 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	var filterBoardID int
 	if filterBoardIDstr != "" {
 		if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
-			errEv.Err(err).
-				Str("filterboardid", filterBoardIDstr).Caller().Send()
+			errEv.Err(err).Caller().
+				Str("filterboardid", filterBoardIDstr).Send()
 			return "", err
 		}
 	}
@@ -337,15 +332,14 @@ func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	if deleteIDstr != "" {
 		deleteID, err := strconv.Atoi(deleteIDstr)
 		if err != nil {
-			errEv.Err(err).
-				Str("delStr", deleteIDstr).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("delStr", deleteIDstr).Send()
 			return "", err
 		}
 		if err = gcsql.DeleteNameBan(deleteID); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Int("deleteID", deleteID).
-				Caller().Msg("Unable to delete name ban")
+				Msg("Unable to delete name ban")
 			return "", errors.New("Unable to delete name ban: " + err.Error())
 		}
 	}
@@ -367,9 +361,9 @@ func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 		}
 		isRegex := request.FormValue("isregex") == "on"
 		if _, err = gcsql.NewNameBan(name, isRegex, boardID, staff.ID, request.FormValue("staffnote")); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("name", name).
-				Int("boardID", boardID)
+				Int("boardID", boardID).Send()
 			return "", err
 		}
 	}
@@ -439,9 +433,8 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		}
 		found, err := gcsql.ClearReport(dismissID, staff.ID, block != "" && staff.Rank == 3)
 		if err != nil {
-			errEv.Err(err).
-				Int("postID", dismissID).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Int("postID", dismissID).Send()
 			return nil, err
 		}
 		if !found {

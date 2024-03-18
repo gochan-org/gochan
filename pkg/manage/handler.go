@@ -60,9 +60,8 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 		staff = &gcsql.Staff{}
 		err = nil
 	} else if err != nil && err != sql.ErrNoRows {
-		errEv.Err(err).
-			Str("request", "getCurrentFullStaff").
-			Caller().Send()
+		errEv.Err(err).Caller().
+			Str("request", "getCurrentFullStaff").Send()
 		server.ServeError(writer, "Error getting staff info from request: "+err.Error(), wantsJSON, nil)
 		return
 	}

@@ -110,8 +110,8 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 	}
 	banID, err := strconv.Atoi(banIDstr)
 	if err != nil {
-		errEv.Err(err).
-			Str("banIDstr", banIDstr).Caller().Send()
+		errEv.Err(err).Caller().
+			Str("banIDstr", banIDstr).Send()
 		server.ServeErrorPage(writer, fmt.Sprintf("Invalid banid value %q", banIDstr))
 		return
 	}
@@ -158,9 +158,9 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 		server.ServeErrorPage(writer, "You are not able to appeal this ban until "+ban.AppealAt.Format(config.GetBoardConfig("").DateTimeFormat))
 	}
 	if err = ban.Appeal(appealMsg); err != nil {
-		errEv.Err(err).
+		errEv.Err(err).Caller().
 			Str("appealMsg", appealMsg).
-			Caller().Msg("Unable to submit appeal")
+			Msg("Unable to submit appeal")
 		server.ServeErrorPage(writer, "Unable to submit appeal")
 		return
 	}

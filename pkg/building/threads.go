@@ -61,22 +61,20 @@ func BuildThreadPages(op *gcsql.Post) error {
 
 	board, err := op.GetBoard()
 	if err != nil {
-		errEv.Err(err).
-			Caller().Msg("failed building thread")
-		return errors.New("failed building thread: " + err.Error())
+		errEv.Err(err).Caller().Msg("failed building thread")
+		return errors.New("failed building thread")
 	}
 	errEv.Str("boardDir", board.Dir)
 	thread, err := gcsql.GetThread(op.ThreadID)
 	if err != nil {
-		errEv.Err(err).
-			Caller().Msg("Unable to get thread info")
-		return errors.New("unable to get thread info: " + err.Error())
+		errEv.Err(err).Caller().Msg("Unable to get thread info")
+		return errors.New("unable to get thread info")
 	}
 
 	posts, err := getThreadPosts(thread)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("failed building thread: " + err.Error())
+		return errors.New("failed getting thread posts")
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, board.Dir, "res", strconv.Itoa(op.ID)+".html"))
@@ -122,26 +120,21 @@ func BuildThreadPages(op *gcsql.Post) error {
 		os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed opening /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
+		return fmt.Errorf("failed opening /%s/res/%d.json", board.Dir, posts[0].ID)
 	}
 
 	if err = config.TakeOwnershipOfFile(threadJSONFile); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed setting file permissions for /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
+		return fmt.Errorf("failed setting file permissions for /%s/res/%d.json", board.Dir, posts[0].ID)
 	}
 
 	threadMap := make(map[string][]Post)
 
 	threadMap["posts"] = posts
-	threadJSON, err := json.Marshal(threadMap)
-	if err != nil {
-		gcutil.LogError(err).Send()
-		return errors.New("failed to marshal to JSON: " + err.Error())
-	}
-	if _, err = threadJSONFile.Write(threadJSON); err != nil {
-		errEv.Err(err).
-			Caller().Send()
-		return fmt.Errorf("failed writing /%s/res/%d.json: %s", board.Dir, posts[0].ID, err.Error())
+	if err = json.NewEncoder(threadJSONFile).Encode(threadMap); err != nil {
+		errEv.Err(err).Caller().
+			Msg("Unable to write thread JSON file")
+		return fmt.Errorf("failed writing /%s/res/%d.json", board.Dir, posts[0].ID)
 	}
 	return threadJSONFile.Close()
 }

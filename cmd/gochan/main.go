@@ -150,11 +150,10 @@ func parseCommandLine() {
 		fmt.Printf("Creating new staff: %q, with password: %q and rank: %d from command line", arr[0], arr[1], rank)
 		if _, err = gcsql.NewStaff(arr[0], arr[1], rank); err != nil {
 			fmt.Printf("Failed creating new staff account for %q: %s\n", arr[0], err.Error())
-			gcutil.LogFatal().
+			gcutil.LogFatal().Err(err).Caller().
 				Str("staff", "add").
 				Str("source", "commandLine").
 				Str("username", arr[0]).
-				Err(err).
 				Msg("Failed creating new staff account")
 		}
 		gcutil.LogInfo().

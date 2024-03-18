@@ -178,9 +178,9 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 			return "", err
 		}
 		if board, err = gcsql.GetBoardFromID(boardID); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Int("boardID", boardID).
-				Caller().Msg("Unable to get board info")
+				Msg("Unable to get board info")
 			return "", err
 		}
 	case "modify":
@@ -330,25 +330,24 @@ func cleanupCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staf
 	if request.FormValue("run") == "Run Cleanup" {
 		outputStr += "Removing deleted posts from the database.<hr />"
 		if err = gcsql.PermanentlyRemoveDeletedPosts(); err != nil {
-			errEv.Err(err).
-				Str("cleanup", "removeDeletedPosts").
-				Caller().Send()
-			err = errors.New("Error removing deleted posts from database: " + err.Error())
+			errEv.Err(err).Caller().
+				Str("cleanup", "removeDeletedPosts").Send()
+			err = errors.New("unable to remove deleted posts from database")
 			return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 		}
 
 		outputStr += "Optimizing all tables in database.<hr />"
 		err = gcsql.OptimizeDatabase()
 		if err != nil {
-			errEv.Err(err).
-				Str("sql", "optimization").
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("sql", "optimization").Send()
 			err = errors.New("Error optimizing SQL tables: " + err.Error())
 			return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 		}
 		outputStr += "Cleanup finished"
 	} else {
-		outputStr += `<form action="` + config.GetSystemCriticalConfig().WebRoot + `manage/cleanup" method="post">` +
+
+		outputStr += `<form action="` + config.WebPath("manage/cleanup") + `" method="post">` +
 			`<input name="run" id="run" type="submit" value="Run Cleanup" />` +
 			`</form>`
 	}

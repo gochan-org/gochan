@@ -107,7 +107,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		}
 		post, err := gcsql.GetPostFromID(postid, true)
 		if err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Int("postid", postid).
 				Msg("Unable to find post")
 			server.ServeError(writer, "Unable to find post: "+err.Error(), wantsJSON, map[string]interface{}{

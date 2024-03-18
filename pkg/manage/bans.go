@@ -49,9 +49,9 @@ func ipBanFromRequest(ban *gcsql.IPBan, request *http.Request, infoEv *zerolog.E
 		durationStr := request.FormValue("duration")
 		duration, err := durationutil.ParseLongerDuration(durationStr)
 		if err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("duration", durationStr).
-				Caller().Msg("Invalid duration")
+				Msg("Invalid duration")
 			return err
 		}
 		ban.ExpiresAt = now.Add(duration)

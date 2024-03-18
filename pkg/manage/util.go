@@ -46,9 +46,9 @@ func createSession(key, username, password string, request *http.Request, writer
 	staff, err := gcsql.GetStaffByUsername(username, true)
 	if err != nil {
 		if err != sql.ErrNoRows {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("remoteAddr", request.RemoteAddr).
-				Caller().Msg("Unrecognized username")
+				Msg("Unrecognized username")
 		}
 		return ErrBadCredentials
 	}
@@ -56,8 +56,7 @@ func createSession(key, username, password string, request *http.Request, writer
 	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 	if err == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
-		errEv.Caller().
-			Msg("Invalid password")
+		errEv.Caller().Msg("Invalid password")
 		return ErrBadCredentials
 	}
 

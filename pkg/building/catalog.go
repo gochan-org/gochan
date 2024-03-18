@@ -86,8 +86,7 @@ func BuildCatalog(boardID int) error {
 
 	board, err := gcsql.GetBoardFromID(boardID)
 	if err != nil {
-		errEv.Err(err).
-			Caller().Msg("Unable to get board information")
+		errEv.Err(err).Caller().Msg("Unable to get board information")
 		return err
 	}
 	errEv.Str("boardDir", board.Dir)
@@ -101,13 +100,13 @@ func BuildCatalog(boardID int) error {
 
 	if err = config.TakeOwnershipOfFile(catalogFile); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed taking ownership of /%s/catalog.html: %s", board.Dir, err.Error())
+		return fmt.Errorf("failed taking ownership of /%s/catalog.html", board.Dir)
 	}
 
 	threadOPs, err := getBoardTopPosts(boardID)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed building catalog for /%s/: %s", board.Dir, err.Error())
+		return fmt.Errorf("failed building catalog for /%s/", board.Dir)
 	}
 	boardConfig := config.GetBoardConfig(board.Dir)
 
@@ -119,7 +118,7 @@ func BuildCatalog(boardID int) error {
 		"threads":     threadOPs,
 	}, catalogFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed building catalog for /%s/: %s", board.Dir, err.Error())
+		return fmt.Errorf("failed building catalog for /%s/", board.Dir)
 	}
 	return catalogFile.Close()
 }

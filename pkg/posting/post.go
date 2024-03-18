@@ -81,6 +81,22 @@ func attachFlag(request *http.Request, post *gcsql.Post, board string, errEv *ze
 	return nil
 }
 
+func handleRecover(writer http.ResponseWriter, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) {
+	if a := recover(); a != nil {
+		if writer != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			server.ServeError(writer, "Internal server error", wantsJSON, nil)
+		}
+		errEv.Caller().
+			Str("recover", fmt.Sprintf("%v", a)).
+			Bytes("stack", debug.Stack()).
+			Msg("Recovered from panic")
+		debug.PrintStack()
+	}
+	errEv.Discard()
+	infoEv.Discard()
+}
+
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
 	request.ParseMultipartForm(maxFormBytes)
@@ -91,19 +107,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		Str("IP", ip)
 	infoEv := gcutil.LogInfo().
 		Str("IP", ip)
-	defer func() {
-		if a := recover(); a != nil {
-			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Internal server error", wantsJSON, nil)
-			errEv.Caller().
-				Str("recover", fmt.Sprintf("%v", a)).
-				Bytes("stack", debug.Stack()).
-				Msg("Recovered from panic")
-			debug.PrintStack()
-		}
-		errEv.Discard()
-		infoEv.Discard()
-	}()
+	defer handleRecover(writer, wantsJSON, infoEv, errEv)
 
 	var formName string
 	var formEmail string
@@ -132,20 +136,19 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if threadidStr != "" {
 		// post is a reply
 		if opID, err = strconv.Atoi(threadidStr); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("opIDstr", threadidStr).
-				Caller().Msg("Invalid threadid value")
-			server.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]interface{}{
+				Msg("Invalid threadid value")
+			server.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]any{
 				"threadid": threadidStr,
 			})
 			return
 		}
 		if opID > 0 {
 			if post.ThreadID, err = gcsql.GetTopPostThreadID(opID); err != nil {
-				errEv.Err(err).
-					Int("opID", opID).
-					Caller().Send()
-				server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+				errEv.Err(err).Caller().
+					Int("opID", opID).Send()
+				server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 					"opID": opID,
 				})
 			}
@@ -156,7 +159,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
 		errEv.Str("boardid", boardidStr).Caller().Msg("Invalid boardid value")
-		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]any{
 			"boardid": boardidStr,
 		})
 		return
@@ -166,7 +169,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().
 			Int("boardid", boardID).
 			Msg("Unable to get board info")
-		server.ServeError(writer, "Unable to get board info", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Unable to get board info", wantsJSON, map[string]any{
 			"boardid": boardID,
 		})
 		return
@@ -202,7 +205,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.
 			Int("messageLength", len(post.MessageRaw)).
 			Int("maxMessageLength", postBoard.MaxMessageLength).Send()
-		server.ServeError(writer, "Message is too long", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Message is too long", wantsJSON, map[string]any{
 			"messageLength": len(post.MessageRaw),
 			"boardid":       boardID,
 		})
@@ -211,7 +214,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	if post.MessageRaw, err = ApplyWordFilters(post.MessageRaw, postBoard.Dir); err != nil {
 		errEv.Err(err).Caller().Msg("Error formatting post")
-		server.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]any{
 			"boardDir": postBoard.Dir,
 		})
 		return
@@ -278,7 +281,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 	if err != nil {
 		errEv.Err(err).Caller().Str("boardDir", postBoard.Dir).Msg("Unable to check post cooldown")
-		server.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]any{
 			"boardDir": postBoard.Dir,
 		})
 		return
@@ -298,8 +301,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	captchaSuccess, err := submitCaptchaResponse(request)
 	if err != nil {
-		errEv.Err(err).
-			Caller().Send()
+		errEv.Err(err).Caller().Send()
 		server.ServeError(writer, "Error submitting captcha response:"+err.Error(), wantsJSON, nil)
 		return
 	}
@@ -379,7 +381,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
 		post.Delete()
-		server.ServeError(writer, "Unable to attach upload", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Unable to attach upload", wantsJSON, map[string]any{
 			"filename": upload.OriginalFilename,
 		})
 		return
@@ -416,7 +418,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			topPost, _ = post.TopPostID()
 		}
 		writer.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(writer).Encode(map[string]interface{}{
+		json.NewEncoder(writer).Encode(map[string]any{
 			"time":   post.CreatedOn,
 			"id":     post.ID,
 			"thread": config.WebPath(postBoard.Dir, "/res/", strconv.Itoa(topPost)+".html"),

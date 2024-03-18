@@ -65,8 +65,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 	threads, err := board.GetThreads(true, true, true)
 	if err != nil {
-		errEv.Err(err).
-			Caller().Msg("Failed getting board threads")
+		errEv.Err(err).Caller().
+			Msg("Failed getting board threads")
 		return fmt.Errorf("error getting threads for /%s/: %s", board.Dir, err.Error())
 	}
 	topPosts, err := getBoardTopPosts(board.ID)
@@ -89,8 +89,8 @@ func BuildBoardPages(board *gcsql.Board) error {
 		}
 		errEv.Int("threadID", thread.ID)
 		if catalogThread.Images, err = thread.GetReplyFileCount(); err != nil {
-			errEv.Err(err).
-				Caller().Msg("Failed getting file count")
+			errEv.Err(err).Caller().
+				Msg("Failed getting file count")
 			return err
 		}
 
@@ -105,15 +105,13 @@ func BuildBoardPages(board *gcsql.Board) error {
 		}
 		catalogThread.Replies, err = thread.GetReplyCount()
 		if err != nil {
-			errEv.Err(err).
-				Caller().Msg("Failed getting reply count")
+			errEv.Err(err).Caller().Msg("Failed getting reply count")
 			return errors.New("Error getting reply count: " + err.Error())
 		}
 
 		catalogThread.Posts, err = getThreadPosts(&thread)
 		if err != nil {
-			errEv.Err(err).
-				Caller().Msg("Failed getting replies")
+			errEv.Err(err).Caller().Msg("Failed getting replies")
 			return errors.New("Failed getting replies: " + err.Error())
 		}
 		if len(catalogThread.Posts) == 0 {
@@ -127,8 +125,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		}
 		catalogThread.uploads, err = thread.GetUploads()
 		if err != nil {
-			errEv.Err(err).
-				Caller().Msg("Failed getting thread uploads")
+			errEv.Err(err).Caller().Msg("Failed getting thread uploads")
 			return errors.New("Failed getting thread uploads: " + err.Error())
 		}
 
@@ -186,9 +183,9 @@ func BuildBoardPages(board *gcsql.Board) error {
 			"useCaptcha":  captchaCfg.UseCaptcha(),
 			"captcha":     captchaCfg,
 		}, boardPageFile, "text/html"); err != nil {
-			errEv.Err(err).
+			errEv.Err(err).Caller().
 				Str("page", "board.html").
-				Caller().Msg("Failed building board")
+				Msg("Failed building board")
 			return fmt.Errorf("failed building /%s/: %s", board.Dir, err.Error())
 		}
 		return boardPageFile.Close()
@@ -272,16 +269,9 @@ func BuildBoardPages(board *gcsql.Board) error {
 		catalogPages.pages = append(catalogPages.pages, page)
 	}
 
-	var catalogJSON []byte
-	if catalogJSON, err = json.Marshal(catalog.pages); err != nil {
-		errEv.Err(err).
-			Caller().Send()
-		return errors.New("failed to marshal to JSON: " + err.Error())
-	}
-	if _, err = catalogJSONFile.Write(catalogJSON); err != nil {
-		errEv.Err(err).
-			Caller().Msg("Failed writing catalog.json")
-		return fmt.Errorf("failed writing /%s/catalog.json: %s", board.Dir, err.Error())
+	if err = json.NewEncoder(catalogJSONFile).Encode(catalog.pages); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to write catalog JSON to file")
+		return errors.New("failed to marshal to catalog JSON")
 	}
 	return catalogJSONFile.Close()
 }
@@ -415,21 +405,18 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	thumbInfo, _ := os.Stat(thumbPath)
 	if dirInfo != nil {
 		if !force {
-			errEv.Err(os.ErrExist).
-				Str("dirPath", dirPath).
-				Caller().Send()
+			errEv.Err(os.ErrExist).Caller().
+				Str("dirPath", dirPath).Send()
 			return fmt.Errorf(pathExistsStr, dirPath)
 		}
 		if !dirInfo.IsDir() {
-			errEv.Err(os.ErrExist).
-				Str("dirPath", dirPath).
-				Caller().Send()
+			errEv.Err(os.ErrExist).Caller().
+				Str("dirPath", dirPath).Send()
 			return fmt.Errorf(dirIsAFileStr, dirPath)
 		}
 	} else if err = os.Mkdir(dirPath, config.GC_DIR_MODE); err != nil {
-		errEv.Err(os.ErrExist).
-			Str("dirPath", dirPath).
-			Caller().Send()
+		errEv.Err(os.ErrExist).Caller().
+			Str("dirPath", dirPath).Send()
 		return fmt.Errorf(genericErrStr, dirPath, err.Error())
 	}
 	if err = config.TakeOwnership(dirPath); err != nil {
@@ -441,23 +428,20 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	if resInfo != nil {
 		if !force {
 			err = fmt.Errorf(pathExistsStr, resPath)
-			errEv.Err(err).
-				Str("resPath", resPath).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("resPath", resPath).Send()
 			return err
 		}
 		if !resInfo.IsDir() {
 			err = fmt.Errorf(dirIsAFileStr, resPath)
-			errEv.Err(err).
-				Str("resPath", resPath).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("resPath", resPath).Send()
 			return err
 		}
 	} else if err = os.Mkdir(resPath, config.GC_DIR_MODE); err != nil {
 		err = fmt.Errorf(genericErrStr, resPath, err.Error())
-		errEv.Err(err).
-			Str("resPath", resPath).
-			Caller().Send()
+		errEv.Err(err).Caller().
+			Str("resPath", resPath).Send()
 		return fmt.Errorf(genericErrStr, resPath, err.Error())
 	}
 	if err = config.TakeOwnership(resPath); err != nil {
@@ -469,23 +453,20 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	if srcInfo != nil {
 		if !force {
 			err = fmt.Errorf(pathExistsStr, srcPath)
-			errEv.Err(err).
-				Str("srcPath", srcPath).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("srcPath", srcPath).Send()
 			return err
 		}
 		if !srcInfo.IsDir() {
 			err = fmt.Errorf(dirIsAFileStr, srcPath)
-			errEv.Err(err).
-				Str("srcPath", srcPath).
-				Caller().Send()
+			errEv.Err(err).Caller().
+				Str("srcPath", srcPath).Send()
 			return err
 		}
 	} else if err = os.Mkdir(srcPath, config.GC_DIR_MODE); err != nil {
 		err = fmt.Errorf(genericErrStr, srcPath, err.Error())
-		errEv.Err(err).
-			Str("srcPath", srcPath).
-			Caller().Send()
+		errEv.Err(err).Caller().
+			Str("srcPath", srcPath).Send()
 		return err
 	}
 	if config.TakeOwnership(srcPath); err != nil {
