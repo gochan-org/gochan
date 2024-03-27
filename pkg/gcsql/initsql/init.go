@@ -12,11 +12,8 @@ import (
 )
 
 func banMaskTmplFunc(ban gcsql.IPBan) string {
-	if ban.ID < 1 {
-		if ban.RangeStart == ban.RangeEnd {
-			return ban.RangeStart
-		}
-		return ""
+	if ban.RangeStart == ban.RangeEnd {
+		return ban.RangeStart
 	}
 	ipn, err := gcutil.GetIPRangeSubnet(ban.RangeStart, ban.RangeEnd)
 	if err != nil {
@@ -69,7 +66,7 @@ func getTopPostIDTmplFunc(post *gcsql.Post) int {
 	return id
 }
 
-func numRepliesTmplFunc(boardid, opID int) int {
+func numRepliesTmplFunc(_, opID int) int {
 	num, err := gcsql.GetThreadReplyCountFromOP(opID)
 	if err != nil {
 		return 0
