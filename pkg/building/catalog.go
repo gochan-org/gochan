@@ -13,14 +13,14 @@ import (
 )
 
 type catalogThreadData struct {
-	Post
-	Replies       int    `json:"replies"`
-	Images        int    `json:"images"`
-	OmittedPosts  int    `json:"omitted_posts"`  // posts in the thread but not shown on the board page
-	OmittedImages int    `json:"omitted_images"` // uploads in the thread but not shown on the board page
-	Stickied      int    `json:"sticky"`
-	Locked        int    `json:"closed"`
-	Posts         []Post `json:"-"`
+	*Post
+	Replies       int     `json:"replies"`
+	Images        int     `json:"images"`
+	OmittedPosts  int     `json:"omitted_posts"`  // posts in the thread but not shown on the board page
+	OmittedImages int     `json:"omitted_images"` // uploads in the thread but not shown on the board page
+	Stickied      int     `json:"sticky"`
+	Locked        int     `json:"closed"`
+	Posts         []*Post `json:"-"`
 	uploads       []gcsql.Upload
 }
 
@@ -62,11 +62,11 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 	}
 }
 
-func getBoardTopPosts(boardID int) ([]Post, error) {
+func getBoardTopPosts(boardID int) ([]*Post, error) {
 	const query = postQueryBase + " AND is_top_post AND t.board_id = ? ORDER BY t.stickied DESC, last_bump DESC"
-	var posts []Post
+	var posts []*Post
 
-	err := QueryPosts(query, []any{boardID}, func(p Post) error {
+	err := QueryPosts(query, []any{boardID}, func(p *Post) error {
 		posts = append(posts, p)
 		return nil
 	})

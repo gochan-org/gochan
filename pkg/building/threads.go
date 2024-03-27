@@ -19,21 +19,21 @@ import (
 // if all is set to true, ignore which, otherwise, which = build only specified boardid
 // TODO: make it variadic
 func BuildThreads(all bool, boardid, threadid int) error {
-	var threads []gcsql.Post
+	var threads []*gcsql.Post
 	var err error
 	if all {
 		threads, err = gcsql.GetBoardTopPosts(boardid)
 	} else {
 		var post *gcsql.Post
 		post, err = gcsql.GetThreadTopPost(threadid)
-		threads = []gcsql.Post{*post}
+		threads = []*gcsql.Post{post}
 	}
 	if err != nil {
 		return err
 	}
 
 	for t := range threads {
-		op := &threads[t]
+		op := threads[t]
 		if err = BuildThreadPages(op); err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		return fmt.Errorf("failed setting file permissions for /%s/res/%d.json", board.Dir, posts[0].ID)
 	}
 
-	threadMap := make(map[string][]Post)
+	threadMap := make(map[string][]*Post)
 
 	threadMap["posts"] = posts
 	if err = json.NewEncoder(threadJSONFile).Encode(threadMap); err != nil {

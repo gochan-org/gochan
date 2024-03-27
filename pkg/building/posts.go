@@ -80,7 +80,7 @@ type Post struct {
 	thread           gcsql.Thread
 }
 
-func (p Post) TitleText() string {
+func (p *Post) TitleText() string {
 	title := "/" + p.BoardDir + "/ - "
 	if p.Subject != "" {
 		title += truncateString(p.Subject, 20, true)
@@ -112,7 +112,7 @@ func (p *Post) ThumbnailPath() string {
 	return config.WebPath(p.BoardDir, "thumb", thumbnail)
 }
 
-func (p Post) UploadPath() string {
+func (p *Post) UploadPath() string {
 	if p.Filename == "" {
 		return ""
 	}
@@ -127,7 +127,7 @@ func (p *Post) Stickied() bool {
 	return p.thread.Stickied
 }
 
-func QueryPosts(query string, params []any, cb func(Post) error) error {
+func QueryPosts(query string, params []any, cb func(*Post) error) error {
 	rows, err := gcsql.QuerySQL(query, params...)
 	if err != nil {
 		return err
@@ -165,7 +165,7 @@ func QueryPosts(query string, params []any, cb func(Post) error) error {
 		if post.Filename != "" {
 			post.Extension = path.Ext(post.Filename)
 		}
-		if err = cb(post); err != nil {
+		if err = cb(&post); err != nil {
 			return err
 		}
 	}
@@ -206,31 +206,31 @@ func GetBuildablePost(id int, _ int) (*Post, error) {
 	return &post, nil
 }
 
-func GetBuildablePostsByIP(ip string, limit int) ([]Post, error) {
+func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
 	query := postQueryBase + " AND DBPREFIXposts.ip = ? ORDER BY DBPREFIXposts.id DESC"
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
 
-	var posts []Post
-	err := QueryPosts(query, []any{ip}, func(p Post) error {
+	var posts []*Post
+	err := QueryPosts(query, []any{ip}, func(p *Post) error {
 		posts = append(posts, p)
 		return nil
 	})
 	return posts, err
 }
 
-func getThreadPosts(thread *gcsql.Thread) ([]Post, error) {
+func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
 	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ? ORDER BY DBPREFIXposts.id ASC"
-	var posts []Post
-	err := QueryPosts(query, []any{thread.ID}, func(p Post) error {
+	var posts []*Post
+	err := QueryPosts(query, []any{thread.ID}, func(p *Post) error {
 		posts = append(posts, p)
 		return nil
 	})
 	return posts, err
 }
 
-func GetRecentPosts(boardid int, limit int) ([]Post, error) {
+func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
 	query := postQueryBase
 	var args []any
 
@@ -241,8 +241,8 @@ func GetRecentPosts(boardid int, limit int) ([]Post, error) {
 
 	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(limit)
 
-	var posts []Post
-	err := QueryPosts(query, args, func(post Post) error {
+	var posts []*Post
+	err := QueryPosts(query, args, func(post *Post) error {
 		if boardid == 0 || post.BoardID == boardid {
 			post.Extension = path.Ext(post.Filename)
 			posts = append(posts, post)

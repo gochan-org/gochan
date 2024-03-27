@@ -74,7 +74,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		errEv.Err(err).Caller().Msg("Failed getting board threads")
 		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
 	}
-	opMap := make(map[int]Post)
+	opMap := make(map[int]*Post)
 	for _, post := range topPosts {
 		post.ParentID = 0
 		opMap[post.thread.ID] = post
@@ -120,7 +120,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		if len(catalogThread.Posts) > maxRepliesOnBoardPage {
 			op := catalogThread.Posts[0]
 			replies := catalogThread.Posts[len(catalogThread.Posts)-maxRepliesOnBoardPage:]
-			catalogThread.Posts = []Post{op}
+			catalogThread.Posts = []*Post{op}
 			catalogThread.Posts = append(catalogThread.Posts, replies...)
 		}
 		catalogThread.uploads, err = thread.GetUploads()

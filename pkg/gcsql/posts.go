@@ -135,7 +135,7 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 	return post, err
 }
 
-func GetBoardTopPosts(boardID int) ([]Post, error) {
+func GetBoardTopPosts(boardID int) ([]*Post, error) {
 	query := `SELECT DBPREFIXposts.id, thread_id, is_top_post, ip, created_on, name,
 		tripcode, is_role_signature, email, subject, message, message_raw,
 		password, deleted_at, is_deleted, banned_message
@@ -150,7 +150,7 @@ func GetBoardTopPosts(boardID int) ([]Post, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var posts []Post
+	var posts []*Post
 	for rows.Next() {
 		var post Post
 		// var tmp int // only needed for WHERE clause in query
@@ -167,7 +167,7 @@ func GetBoardTopPosts(boardID int) ([]Post, error) {
 		if bannedMessage != nil {
 			post.BannedMessage = *bannedMessage
 		}
-		posts = append(posts, post)
+		posts = append(posts, &post)
 	}
 	return posts, nil
 }

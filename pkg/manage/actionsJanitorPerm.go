@@ -81,7 +81,7 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		}
 	}
 	boardidStr := request.FormValue("boardid")
-	var recentposts []building.Post
+	var recentposts []*building.Post
 	var boardid int
 	if boardidStr != "" {
 		if boardid, err = strconv.Atoi(boardidStr); err != nil {
