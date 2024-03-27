@@ -374,7 +374,7 @@ func GetVersion() *GochanVersion {
 // SetVersion should (in most cases) only be used for tests, where a config file wouldn't be loaded
 func SetVersion(version string) {
 	if cfg == nil {
-		cfg = &GochanConfig{}
+		cfg = defaultGochanConfig
 		cfg.Version = ParseVersion(version)
 	}
 }

@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	versionStr         = "3.10.0"
 	bbcodeMsgPreRender = `[b]Bold[/b]
 [i]Italics[/i]
 [u]Underline[/u]
@@ -31,7 +32,7 @@ gochan.org with bad link: https://gochan.org/a">:)</a>`
 )
 
 func TestBBCode(t *testing.T) {
-	config.SetDefaults()
+	config.SetVersion(versionStr)
 	var testFmtr MessageFormatter
 	testFmtr.Init()
 	rendered := testFmtr.Compile(bbcodeMsgPreRender, "")
@@ -39,7 +40,7 @@ func TestBBCode(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	config.SetDefaults()
+	config.SetVersion(versionStr)
 	var testFmtr MessageFormatter
 	testFmtr.Init()
 	rendered := urlRE.ReplaceAllStringFunc(linkTestPreRender, wrapLinksInURL)
@@ -48,7 +49,7 @@ func TestLinks(t *testing.T) {
 }
 
 func TestNoDoubleTags(t *testing.T) {
-	config.SetDefaults()
+	config.SetVersion(versionStr)
 	msgfmtr = new(MessageFormatter)
 	msgfmtr.Init()
 	rendered := FormatMessage(doubleTagPreRender, "")

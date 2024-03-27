@@ -65,7 +65,3 @@ var (
 		},
 	}
 )
-
-func SetDefaults() {
-	cfg = defaultGochanConfig
-}
