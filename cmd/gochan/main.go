@@ -15,9 +15,11 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/gcplugin"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/posting"
 	"github.com/gochan-org/gochan/pkg/posting/geoip"
+	_ "github.com/gochan-org/gochan/pkg/posting/uploads/inituploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
