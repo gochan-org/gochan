@@ -3,23 +3,35 @@ package gctemplates
 import (
 	"bytes"
 	"html/template"
+	"regexp"
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	x_html "golang.org/x/net/html"
 )
 
-// TruncateHTML truncates a template.HTML string to a certain visible character limit and line limit
+var (
+	bodyElementRE = regexp.MustCompile("</?body>")
+)
+
+// truncateHTML truncates a template.HTML string to a certain visible character limit and line limit
 func truncateHTML(htmlText template.HTML, characterLimit, maxLines int) template.HTML {
+	if htmlText == "" {
+		return ""
+	}
 	dom, err := x_html.Parse(strings.NewReader(string(htmlText)))
 	if err != nil {
 		gcutil.LogError(err).Send()
 		return template.HTML("Server error truncating HTML, failed to parse html")
 	}
+	if dom.Type == x_html.DocumentNode {
+		dom = dom.FirstChild.LastChild
+	}
 	truncateHTMLNodes(dom, characterLimit, maxLines)
 	buf := new(bytes.Buffer)
 	x_html.Render(buf, dom)
-	return template.HTML(buf.String()) // skipcq: GSC-G203
+	innerBody := bodyElementRE.ReplaceAllString(buf.String(), "") // strip out <body> and </body>
+	return template.HTML(innerBody)                               // skipcq: GSC-G203
 }
 
 func removeNextSiblings(node *x_html.Node) {
@@ -43,7 +55,7 @@ func truncateHTMLNodes(node *x_html.Node, charactersLeft, linesLeft int) (charsL
 
 	switch node.Type {
 	case x_html.ElementNode:
-		//This is a tag node. If tag node is br, redude amount of lines by 1
+		//This is a tag node. If tag node is br, reduce amount of lines by 1
 		if strings.ToLower(node.Data) == "br" {
 			linesLeft--
 		}
@@ -65,7 +77,7 @@ func truncateHTMLNodes(node *x_html.Node, charactersLeft, linesLeft int) (charsL
 		return truncateHTMLNodes(node.NextSibling, charactersLeft, linesLeft)
 	case x_html.TextNode:
 		if len(node.Data) > charactersLeft {
-			node.Data = node.Data[0:charactersLeft-1] + "\n..."
+			node.Data = node.Data[0:charactersLeft-1] + "..."
 		}
 		charactersLeft -= len(node.Data)
 		return truncateHTMLNodes(node.NextSibling, charactersLeft, linesLeft)

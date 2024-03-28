@@ -28,19 +28,26 @@ var funcMap = template.FuncMap{
 		return a - b
 	},
 
-	"isNil": func(i interface{}) bool {
+	// Pointer checking/dereferencing functions
+	"isNil": func(i any) bool {
 		return i == nil
+	},
+	"dereference": func(a *int) int {
+		if a == nil {
+			return 0
+		}
+		return *a
 	},
 
 	// Array functions
-	"getSlice": func(arr []interface{}, start, length int) []interface{} {
+	"getSlice": func(arr []any, start, end int) []any {
 		if start < 0 {
 			start = 0
 		}
-		if length > len(arr) {
-			length = len(arr)
+		if end > len(arr) {
+			return arr[start:]
 		}
-		return arr[start:length]
+		return arr[start:end]
 	},
 
 	// String functions
@@ -84,11 +91,11 @@ var funcMap = template.FuncMap{
 	},
 	"truncateMessage": func(msg string, limit int, maxLines int) string {
 		var truncated bool
-		split := strings.Split(msg, "<br />")
+		split := strings.Split(msg, "\n")
 
 		if len(split) > maxLines {
 			split = split[:maxLines]
-			msg = strings.Join(split, "<br />")
+			msg = strings.Join(split, "\n")
 			truncated = true
 		}
 
@@ -98,10 +105,10 @@ var funcMap = template.FuncMap{
 			}
 			return msg
 		}
-		msg = msg[:limit]
-		truncated = true
+		truncated = len(msg) > limit
+		msg = strings.TrimSpace(msg[:limit])
 
-		if truncated {
+		if truncated && msg != "" {
 			msg = msg + "..."
 		}
 		return msg
@@ -119,8 +126,8 @@ var funcMap = template.FuncMap{
 		}
 		return msg
 	},
-	"map": func(values ...interface{}) (map[string]interface{}, error) {
-		dict := make(map[string]interface{})
+	"map": func(values ...any) (map[string]any, error) {
+		dict := make(map[string]any)
 		if len(values)%2 != 0 {
 			return nil, ErrInvalidMap
 		}
@@ -135,12 +142,6 @@ var funcMap = template.FuncMap{
 	},
 	"until": func(t time.Time) string {
 		return time.Until(t).String()
-	},
-	"dereference": func(a *int) int {
-		if a == nil {
-			return 0
-		}
-		return *a
 	},
 
 	// Imageboard functions
