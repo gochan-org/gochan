@@ -25,50 +25,94 @@ const (
 )
 
 func TestMarshalJSON(t *testing.T) {
-	_, err := MarshalJSON(func() {}, false)
-	assert.Error(t, err)
-	failedPostData := map[string]interface{}{
-		"action":  "post",
-		"success": false,
-		"message": errors.New("Post failed").Error(),
+	testCases := []struct {
+		desc              string
+		postData          any
+		expectedNonIndent string
+		expectedIndent    string
+		err               bool
+	}{
+		{
+			desc:     "unmarshallable returns error",
+			err:      true,
+			postData: func() {},
+		},
+		{
+			desc: "failed post data",
+			postData: map[string]any{
+				"action":  "post",
+				"success": false,
+				"message": errors.New("Post failed").Error(),
+			},
+			expectedNonIndent: failedPostMinifiedJSON,
+			expectedIndent:    failedPostIndentJSON,
+		},
+		{
+			desc: "successful post data",
+			postData: map[string]any{
+				"action":  "post",
+				"success": true,
+				"board":   "test",
+				"post":    "12345#12346", // JS converts this to /test/res/12345.html#123456
+			},
+			expectedNonIndent: madePostMinifiedJSON,
+			expectedIndent:    madePostIndentJSON,
+		},
 	}
-	failedPost, err := MarshalJSON(failedPostData, false)
-	assert.NoError(t, err)
-	assert.Equal(t, failedPostMinifiedJSON, failedPost)
-	failedPost, err = MarshalJSON(failedPostData, true)
-	assert.NoError(t, err)
-	assert.Equal(t, failedPostIndentJSON, failedPost)
-
-	madePostData := map[string]interface{}{
-		"action":  "post",
-		"success": true,
-		"board":   "test",
-		"post":    "12345#12346", // JS converts this to /test/res/12345.html#123456
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			out, err := MarshalJSON(tC.postData, false)
+			if tC.err {
+				assert.Error(t, err)
+				_, err = MarshalJSON(tC.postData, true)
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tC.expectedNonIndent, out)
+			out, err = MarshalJSON(tC.postData, true)
+			assert.NoError(t, err)
+			assert.Equal(t, tC.expectedIndent, out)
+		})
 	}
-	madePost, err := MarshalJSON(madePostData, false)
-	assert.NoError(t, err)
-	assert.Equal(t, madePostMinifiedJSON, madePost)
-	madePost, err = MarshalJSON(madePostData, true)
-	assert.NoError(t, err)
-	assert.Equal(t, madePostIndentJSON, madePost)
 }
 
 func TestNameParsing(t *testing.T) {
-	name, trip := ParseName("Name#Trip")
-	assert.Equal(t, "Name", name)
-	assert.Equal(t, "piec1MorXg", trip)
-	name, trip = ParseName("#Trip")
-	assert.Equal(t, "", name)
-	assert.Equal(t, "piec1MorXg", trip)
-	name, trip = ParseName("Name")
-	assert.Equal(t, "Name", name)
-	assert.Equal(t, "", trip)
-	name, trip = ParseName("Name#")
-	assert.Equal(t, "Name", name)
-	assert.Equal(t, "", trip)
-	name, trip = ParseName("#")
-	assert.Equal(t, "", name)
-	assert.Equal(t, "", trip)
+	testCases := []struct {
+		nameAndTrip      string
+		expectedName     string
+		expectedTripcode string
+	}{
+		{
+			nameAndTrip:      "Name#Trip",
+			expectedName:     "Name",
+			expectedTripcode: "piec1MorXg",
+		},
+		{
+			nameAndTrip:      "#Trip",
+			expectedName:     "",
+			expectedTripcode: "piec1MorXg",
+		},
+		{
+			nameAndTrip:  "Name",
+			expectedName: "Name",
+		},
+		{
+			nameAndTrip:  "Name#",
+			expectedName: "Name",
+		},
+		{
+			nameAndTrip:  "#",
+			expectedName: "",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.nameAndTrip, func(t *testing.T) {
+			name, trip := ParseName(tC.nameAndTrip)
+			assert.Equal(t, tC.expectedName, name)
+			assert.Equal(t, tC.expectedTripcode, trip)
+		})
+	}
 }
 
 func TestGetRealIP(t *testing.T) {
@@ -108,23 +152,38 @@ func TestRandomString(t *testing.T) {
 }
 
 func TestStripHTML(t *testing.T) {
-	htmlIn := `<a href="#">&gt;implying</a>`
-	stripped := StripHTML(htmlIn)
-	assert.Equal(t, "&gt;implying", stripped)
-
-	htmlIn = `<script>alert("Hello")</script>`
-	stripped = StripHTML(htmlIn)
-	assert.Equal(t, "alert(&#34;Hello&#34;)", stripped)
-
-	htmlIn = `<div>unclosed tag`
-	stripped = StripHTML(htmlIn)
-	assert.Equal(t, "unclosed tag", stripped)
-
-	htmlIn = "<div></div>"
-	stripped = StripHTML(htmlIn)
-	assert.Equal(t, "", stripped)
-
-	htmlIn = ""
-	stripped = StripHTML(htmlIn)
-	assert.Equal(t, "", stripped)
+	testCases := []struct {
+		desc     string
+		htmlIn   string
+		expected string
+	}{
+		{
+			desc:     "properly escape and strip HTML",
+			htmlIn:   `<a href="#">&gt;implying</a>`,
+			expected: "&gt;implying",
+		},
+		{
+			desc:     "prevent JavaScript injection",
+			htmlIn:   `<script>alert("Hello")</script>`,
+			expected: "alert(&#34;Hello&#34;)",
+		},
+		{
+			desc:     "don't error on unclosed tag",
+			htmlIn:   `<div>unclosed tag`,
+			expected: "unclosed tag",
+		},
+		{
+			desc:     "empty element in, empty string out",
+			htmlIn:   "<div></div>",
+			expected: "",
+		},
+		{
+			desc: "empty string in, empty string out",
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			assert.Equal(t, tC.expected, StripHTML(tC.htmlIn))
+		})
+	}
 }
