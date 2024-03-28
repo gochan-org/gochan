@@ -3,15 +3,10 @@ package gctemplates
 import (
 	"bytes"
 	"html/template"
-	"regexp"
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	x_html "golang.org/x/net/html"
-)
-
-var (
-	bodyElementRE = regexp.MustCompile("</?body>")
 )
 
 // truncateHTML truncates a template.HTML string to a certain visible character limit and line limit
@@ -19,19 +14,21 @@ func truncateHTML(htmlText template.HTML, characterLimit, maxLines int) template
 	if htmlText == "" {
 		return ""
 	}
-	dom, err := x_html.Parse(strings.NewReader(string(htmlText)))
+	node, err := x_html.Parse(strings.NewReader(string(htmlText)))
 	if err != nil {
 		gcutil.LogError(err).Send()
 		return template.HTML("Server error truncating HTML, failed to parse html")
 	}
-	if dom.Type == x_html.DocumentNode {
-		dom = dom.FirstChild.LastChild
-	}
-	truncateHTMLNodes(dom, characterLimit, maxLines)
 	buf := new(bytes.Buffer)
-	x_html.Render(buf, dom)
-	innerBody := bodyElementRE.ReplaceAllString(buf.String(), "") // strip out <body> and </body>
-	return template.HTML(innerBody)                               // skipcq: GSC-G203
+	if node.Type == x_html.DocumentNode {
+		node = node.FirstChild.LastChild // FirstChild is <html>, has <head> and <body> children
+	}
+	truncateHTMLNodes(node, characterLimit, maxLines)
+	for node = node.FirstChild; node != nil; node = node.NextSibling {
+		// render all nodes inside body node
+		x_html.Render(buf, node)
+	}
+	return template.HTML(buf.String()) // skipcq: GSC-G203
 }
 
 func removeNextSiblings(node *x_html.Node) {
