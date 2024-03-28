@@ -419,3 +419,56 @@ func TestTruncateStringTmplFunc(t *testing.T) {
 		})
 	}
 }
+
+type vertex struct {
+	X, Y int
+}
+
+func TestMapTmplFunc(t *testing.T) {
+	testCases := []struct {
+		desc     string
+		tmplStr  string
+		expected string
+		err      bool
+		baseData map[string]any
+	}{
+		{
+			desc: "nil map",
+		},
+		{
+			desc:    "map with odd-numbered arguments returns error",
+			tmplStr: "{{define `subTmpl`}}x: .x\ny: .y{{end}}{{template `subTmpl` map `x` 1 `y` 2 `z`}}",
+			err:     true,
+		},
+		{
+			desc:    "map only accepts string keys",
+			tmplStr: "{{define `subTmpl`}}x: .x\ny: .y{{end}}{{template `subTmpl` map `x` 1 `y` 2 1 1}}",
+			err:     true,
+		},
+		{
+			desc:     "map with data",
+			tmplStr:  "{{define `subTmpl`}}x: {{.pos.X}}\ny: {{.pos.Y}}\nrotation: {{.rot}}{{end}}{{template `subTmpl` map `pos` .vertex `rot` .rotation}}",
+			expected: "x: 32\ny: 34\nrotation: 127",
+			baseData: map[string]any{
+				"vertex":   vertex{32, 34},
+				"rotation": 127,
+			},
+		},
+	}
+	var tmpl *template.Template
+	buf := bytes.NewBuffer(nil)
+	var err error
+	for _, tC := range testCases {
+		buf.Reset()
+		t.Run(tC.desc, func(t *testing.T) {
+			tmpl = template.Must(template.New("name").Funcs(funcMap).Parse(tC.tmplStr))
+			err = tmpl.Execute(buf, tC.baseData)
+			if tC.err {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tC.expected, buf.String())
+		})
+	}
+}

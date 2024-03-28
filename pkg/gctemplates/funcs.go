@@ -127,10 +127,10 @@ var funcMap = template.FuncMap{
 		return msg
 	},
 	"map": func(values ...any) (map[string]any, error) {
-		dict := make(map[string]any)
 		if len(values)%2 != 0 {
 			return nil, ErrInvalidMap
 		}
+		dict := make(map[string]any)
 		for k := 0; k < len(values); k += 2 {
 			key, ok := values[k].(string)
 			if !ok {
