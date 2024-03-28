@@ -151,7 +151,9 @@ var funcMap = template.FuncMap{
 	"webPath": config.WebPath,
 	"webPathDir": func(part ...string) string {
 		dir := config.WebPath(part...)
-		if len(dir) > 0 && dir[len(dir)-1] != '/' {
+		if dir == "" {
+			dir = "/"
+		} else if !strings.HasSuffix(dir, "/") {
 			dir += "/"
 		}
 		return dir

@@ -472,3 +472,83 @@ func TestMapTmplFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestWebPathDirTmplFunc(t *testing.T) {
+	config.SetVersion("3.10.1")
+	testCases := []struct {
+		desc     string
+		tmplStr  string
+		expected string
+	}{
+		{
+			desc:     "no input returns slash",
+			tmplStr:  "{{webPathDir}}",
+			expected: "/",
+		},
+		{
+			desc:     "empty string returns slash",
+			tmplStr:  `{{webPathDir ""}}`,
+			expected: "/",
+		},
+		{
+			desc:     "single slash returns slash",
+			tmplStr:  `{{webPathDir "/"}}`,
+			expected: "/",
+		},
+		{
+			desc:     "multiple slashes returns single slash",
+			tmplStr:  `{{webPathDir "//"}}`,
+			expected: "/",
+		},
+		{
+			desc:     "multiple multi-slashes returns single slash",
+			tmplStr:  `{{webPathDir "//" "//"}}`,
+			expected: "/",
+		},
+		{
+			desc:     "general webpath usage",
+			tmplStr:  `{{webPathDir "test"}}`,
+			expected: "/test/",
+		},
+	}
+	var tmpl *template.Template
+	buf := bytes.NewBuffer(nil)
+	for _, tC := range testCases {
+		buf.Reset()
+		t.Run(tC.desc, func(t *testing.T) {
+			tmpl = template.Must(template.New("name").Funcs(funcMap).Parse(tC.tmplStr))
+			assert.NoError(t, tmpl.Execute(buf, nil))
+			assert.Equal(t, tC.expected, buf.String())
+		})
+	}
+}
+
+func TestMakeLoopTmplFunc(t *testing.T) {
+	config.SetVersion("3.10.1")
+	testCases := []struct {
+		desc     string
+		tmplStr  string
+		expected string
+	}{
+		{
+			desc:     "makeLoop range",
+			tmplStr:  "{{range $_,$i := makeLoop 4 1}}{{$i}}\n{{end}}",
+			expected: "1\n2\n3\n4\n",
+		},
+		{
+			desc:     "makeLoop with n = 0",
+			tmplStr:  "{{range $_,$i := makeLoop 0 1}}{{$i}}\n{{end}}",
+			expected: "",
+		},
+	}
+	var tmpl *template.Template
+	buf := bytes.NewBuffer(nil)
+	for _, tC := range testCases {
+		buf.Reset()
+		t.Run(tC.desc, func(t *testing.T) {
+			tmpl = template.Must(template.New("name").Funcs(funcMap).Parse(tC.tmplStr))
+			assert.NoError(t, tmpl.Execute(buf, nil))
+			assert.Equal(t, tC.expected, buf.String())
+		})
+	}
+}
