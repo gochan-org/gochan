@@ -281,6 +281,9 @@ func setupDBConn(host, dbDriver, dbName, username, password, prefix string) (db 
 
 func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
 	db, err = setupDBConn(host, dbDriver, dbName, username, password, prefix)
+	if err != nil {
+		return nil, err
+	}
 	db.db, err = sql.Open(db.driver, db.connStr)
 	if err != nil {
 		db.db.SetConnMaxLifetime(time.Minute * 3)
