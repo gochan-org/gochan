@@ -74,7 +74,7 @@ func setupGochanMockDB(t *testing.T, mock sqlmock.Sqlmock, dbName string, dbType
 	}
 
 	mock.ExpectCommit()
-	mock.ExpectPrepare(`SELECT COUNT\(\w+\) FROM staff`).
+	mock.ExpectPrepare(`SELECT COUNT\(id\) FROM staff`).
 		ExpectQuery().
 		WillReturnRows(sqlmock.NewRows([]string{}))
 
@@ -99,12 +99,15 @@ func setupGochanMockDB(t *testing.T, mock sqlmock.Sqlmock, dbName string, dbType
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 	mock.ExpectCommit()
 
-	mock.ExpectPrepare(`INSERT INTO boards \(section_id, uri, dir, navbar_position, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog\) VALUES\(\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`).
-		ExpectExec().
-		WithArgs(
-			1, "test", "test", 3, "Testing Board", "Board for testing stuff", "Board for testing stuff", 15000,
-			300, "pipes.css", false, "Anonymous", false, 500, -1, 1500, 0, false, false, false, true,
-		).WillReturnResult(driver.ResultNoRows)
+	mock.ExpectPrepare(`INSERT INTO boards\s*\(`+
+		`section_id,\s*uri,\s*dir,\s*navbar_position,\s*title,\s*subtitle,\s*description,\s*max_file_size,\s*`+
+		`max_threads,\s*default_style,\s*locked,\s*anonymous_name,\s*force_anonymous,\s*autosage_after,\s*no_images_after,\s*`+
+		`max_message_length,\s*min_message_length,\s*allow_embeds,\s*redirect_to_thread,\s*require_file,\s*enable_catalog\)\s+`+
+		`VALUES\(\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`,
+	).ExpectExec().WithArgs(
+		1, "test", "test", 3, "Testing Board", "Board for testing stuff", "Board for testing stuff", 15000,
+		300, "pipes.css", false, "Anonymous", false, 500, -1, 1500, 0, false, false, false, true,
+	).WillReturnResult(driver.ResultNoRows)
 
 	mock.ExpectPrepare("SELECT id FROM boards WHERE dir = ?").
 		ExpectQuery().WithArgs("test").
