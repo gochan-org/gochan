@@ -30,6 +30,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

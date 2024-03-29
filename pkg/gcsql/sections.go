@@ -1,6 +1,9 @@
 package gcsql
 
-import "database/sql"
+import (
+	"database/sql"
+	"errors"
+)
 
 var (
 	// AllSections provides a quick and simple way to access a list of all non-hidden sections without
@@ -41,7 +44,7 @@ func getOrCreateDefaultSectionID() (sectionID int, err error) {
 	const query = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
 	var id int
 	err = QueryRowSQL(query, interfaceSlice(), interfaceSlice(&id))
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		var section *Section
 		if section, err = NewSection("Main", "main", false, -1); err != nil {
 			return 0, err
@@ -96,7 +99,11 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 		// position not specified
 		stmt2, err := PrepareSQL(sqlPosition, tx)
 		if err != nil {
-			return nil, err
+			if errors.Is(err, sql.ErrNoRows) {
+				position = 1
+			} else {
+				return nil, err
+			}
 		}
 		if err = stmt2.QueryRow().Scan(&position); err != nil {
 			return nil, err

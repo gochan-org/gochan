@@ -378,3 +378,30 @@ func SetVersion(version string) {
 		cfg.Version = ParseVersion(version)
 	}
 }
+
+// SetTestDBConfig sets up the database configuration for a testing environment. If it is not run via `go test`,
+// it will silently return without changing anything
+func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername string, dbPassword string, dbPrefix string) {
+	if !strings.HasSuffix(os.Args[0], ".test") {
+		// only run in a testing environment
+		return
+	}
+	if cfg == nil {
+		cfg = defaultGochanConfig
+	}
+	cfg.DBtype = dbType
+	cfg.DBhost = dbHost
+	cfg.DBname = dbName
+	cfg.DBusername = dbUsername
+	cfg.DBpassword = dbPassword
+	cfg.DBprefix = dbPrefix
+}
+
+// SetRandomSeed is usd to set a deterministic seed to make testing easier
+func SetRandomSeed(seed string) {
+	if !strings.HasSuffix(os.Args[0], ".test") {
+		// only run in a testing environment
+		return
+	}
+	cfg.RandomSeed = seed
+}

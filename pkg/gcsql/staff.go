@@ -16,13 +16,16 @@ var (
 
 // createDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
 func createDefaultAdminIfNoStaff() error {
-	const sql = `SELECT COUNT(id) FROM DBPREFIXstaff`
+	const query = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
-	QueryRowSQL(sql, interfaceSlice(), interfaceSlice(&count))
+	err := QueryRowSQL(query, interfaceSlice(), interfaceSlice(&count))
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
 	if count > 0 {
 		return nil
 	}
-	_, err := NewStaff("admin", "password", 3)
+	_, err = NewStaff("admin", "password", 3)
 	return err
 }
 
@@ -32,7 +35,7 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 	VALUES(?,?,?)`
 	passwordChecksum := gcutil.BcryptSum(password)
 	_, err := ExecSQL(sqlINSERT, username, passwordChecksum, rank)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 	return &Staff{

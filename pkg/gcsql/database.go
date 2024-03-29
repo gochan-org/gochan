@@ -23,7 +23,39 @@ const (
 	sqlite3ConnStr           = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
 )
 
-var gcdb *GCDB
+var (
+	gcdb             *GCDB
+	mysqlReplacerArr = []string{
+		"RANGE_START_ATON", "INET6_ATON(range_start)",
+		"RANGE_START_NTOA", "INET6_NTOA(range_start)",
+		"RANGE_END_ATON", "INET6_ATON(range_end)",
+		"RANGE_END_NTOA", "INET6_NTOA(range_end)",
+		"IP_ATON", "INET6_ATON(ip)",
+		"IP_NTOA", "INET6_NTOA(ip)",
+		"PARAM_ATON", "INET6_ATON(?)",
+		"PARAM_NTOA", "INET6_NTOA(?)",
+	}
+	postgresReplacerArr = []string{
+		"RANGE_START_ATON", "range_start",
+		"RANGE_START_NTOA", "range_start",
+		"RANGE_END_ATON", "range_end",
+		"RANGE_END_NTOA", "range_end",
+		"IP_ATON", "ip",
+		"IP_NTOA", "ip",
+		"PARAM_ATON", "?",
+		"PARAM_NTOA", "?",
+	}
+	sqlite3ReplacerArr = []string{
+		"RANGE_START_ATON", "range_start",
+		"RANGE_START_NTOA", "range_start",
+		"RANGE_END_ATON", "range_end",
+		"RANGE_END_NTOA", "range_end",
+		"IP_ATON", "ip",
+		"IP_NTOA", "ip",
+		"PARAM_ATON", "?",
+		"PARAM_NTOA", "?",
+	}
+)
 
 type GCDB struct {
 	db       *sql.DB
@@ -217,7 +249,7 @@ func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Row
 	return stmt.Query(a...)
 }
 
-func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
+func setupDBConn(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
 	db = &GCDB{
 		driver: dbDriver,
 	}
@@ -229,48 +261,26 @@ func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, 
 	switch dbDriver {
 	case "mysql":
 		db.connStr = fmt.Sprintf(mysqlConnStr, username, password, host, dbName)
-		replacerArr = append(replacerArr,
-			"RANGE_START_ATON", "INET6_ATON(range_start)",
-			"RANGE_START_NTOA", "INET6_NTOA(range_start)",
-			"RANGE_END_ATON", "INET6_ATON(range_end)",
-			"RANGE_END_NTOA", "INET6_NTOA(range_end)",
-			"IP_ATON", "INET6_ATON(ip)",
-			"IP_NTOA", "INET6_NTOA(ip)",
-			"PARAM_ATON", "INET6_ATON(?)",
-			"PARAM_NTOA", "INET6_NTOA(?)",
-		)
+		replacerArr = append(replacerArr, mysqlReplacerArr...)
 	case "postgres":
 		db.connStr = fmt.Sprintf(postgresConnStr, username, password, host, dbName)
-		replacerArr = append(replacerArr,
-			"RANGE_START_ATON", "range_start",
-			"RANGE_START_NTOA", "range_start",
-			"RANGE_END_ATON", "range_end",
-			"RANGE_END_NTOA", "range_end",
-			"IP_ATON", "ip",
-			"IP_NTOA", "ip",
-			"PARAM_ATON", "?",
-			"PARAM_NTOA", "?",
-		)
+		replacerArr = append(replacerArr, postgresReplacerArr...)
 	case "sqlite3":
 		addrMatches := tcpHostIsolator.FindAllStringSubmatch(host, -1)
 		if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
 			host = addrMatches[0][2]
 		}
 		db.connStr = fmt.Sprintf(sqlite3ConnStr, host, username, password)
-		replacerArr = append(replacerArr,
-			"RANGE_START_ATON", "range_start",
-			"RANGE_START_NTOA", "range_start",
-			"RANGE_END_ATON", "range_end",
-			"RANGE_END_NTOA", "range_end",
-			"IP_ATON", "ip",
-			"IP_NTOA", "ip",
-			"PARAM_ATON", "?",
-			"PARAM_NTOA", "?",
-		)
+		replacerArr = append(replacerArr, sqlite3ReplacerArr...)
 	default:
 		return nil, ErrUnsupportedDB
 	}
 	db.replacer = strings.NewReplacer(replacerArr...)
+	return db, nil
+}
+
+func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
+	db, err = setupDBConn(host, dbDriver, dbName, username, password, prefix)
 	db.db, err = sql.Open(db.driver, db.connStr)
 	if err != nil {
 		db.db.SetConnMaxLifetime(time.Minute * 3)
