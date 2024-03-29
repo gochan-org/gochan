@@ -90,26 +90,16 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 	}
 	defer tx.Rollback()
 
-	stmt, err := PrepareSQL(sqlINSERT, tx)
-	if err != nil {
-		return nil, err
-	}
-
 	if position < 0 {
 		// position not specified
-		stmt2, err := PrepareSQL(sqlPosition, tx)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				position = 1
-			} else {
-				return nil, err
-			}
-		}
-		if err = stmt2.QueryRow().Scan(&position); err != nil {
+		err = QueryRowTxSQL(tx, sqlPosition, nil, []any{&position})
+		if errors.Is(err, sql.ErrNoRows) {
+			position = 1
+		} else if err != nil {
 			return nil, err
 		}
 	}
-	if _, err = stmt.Exec(name, abbreviation, hidden, position); err != nil {
+	if _, err = ExecTxSQL(tx, sqlINSERT, name, abbreviation, hidden, position); err != nil {
 		return nil, err
 	}
 	id, err := getLatestID("DBPREFIXsections", tx)

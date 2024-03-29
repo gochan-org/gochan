@@ -88,11 +88,27 @@ func setupGochanMockDB(t *testing.T, mock sqlmock.Sqlmock, dbName string, dbType
 
 	mock.ExpectBegin()
 
+	mock.ExpectPrepare(`SELECT COALESCE\(MAX\(position\) \+ 1, 1\) FROM sections`).
+		ExpectQuery().WithoutArgs().WillReturnError(sql.ErrNoRows)
+
 	mock.ExpectPrepare(`INSERT INTO sections \(name, abbreviation, hidden, position\) VALUES \(\?,\?,\?,\?\)`).
 		ExpectExec().WithArgs("Main", "main", false, 1).WillReturnResult(driver.ResultNoRows)
 
-	mock.ExpectPrepare(`SELECT COALESCE\(MAX\(position\) \+ 1, 1\) FROM sections`).
-		ExpectQuery().WillReturnRows(sqlmock.NewRows([]string{"1"}))
+	mock.ExpectPrepare(`SELECT MAX\(id\) FROM sections`).
+		ExpectQuery().WithoutArgs().
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+	mock.ExpectCommit()
+
+	mock.ExpectPrepare(`INSERT INTO boards \(section_id, uri, dir, navbar_position, title, subtitle, description, max_file_size, max_threads, default_style, locked, anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog\) VALUES\(\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`).
+		ExpectExec().
+		WithArgs(
+			1, "test", "test", 3, "Testing Board", "Board for testing stuff", "Board for testing stuff", 15000,
+			300, "pipes.css", false, "Anonymous", false, 500, -1, 1500, 0, false, false, false, true,
+		).WillReturnResult(driver.ResultNoRows)
+
+	mock.ExpectPrepare("SELECT id FROM boards WHERE dir = ?").
+		ExpectQuery().WithArgs("test").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
 	_, err := ExecSQL("CREATE DATABASE gochan")
 	if err != nil {
