@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"strconv"
 	"testing"
@@ -16,10 +17,6 @@ type argsGetAppeals struct {
 }
 
 func TestGetAppeals(t *testing.T) {
-	_, err := goToGochanRoot(t)
-	if !assert.NoError(t, err) {
-		return
-	}
 	config.SetVersion("3.10.1")
 	config.SetRandomSeed("test")
 
@@ -27,7 +24,6 @@ func TestGetAppeals(t *testing.T) {
 		name         string
 		args         argsGetAppeals
 		expectReturn []IPBanAppeal
-		wantErr      bool
 	}{
 		{
 			name:         "single appeal, no results",
@@ -53,6 +49,7 @@ func TestGetAppeals(t *testing.T) {
 		},
 	}
 	var mock sqlmock.Sqlmock
+	var err error
 	for _, tC := range testCases {
 		for _, driver := range testingDBDrivers {
 			t.Run(fmt.Sprintf("%s (%s)", tC.name, driver), func(t *testing.T) {
@@ -96,13 +93,8 @@ func TestGetAppeals(t *testing.T) {
 				expectQuery.WillReturnRows(expectedRows)
 
 				got, err := GetAppeals(tC.args.banID, tC.args.limit)
-				if tC.wantErr {
-					assert.Error(t, err)
+				if !assert.NoError(t, err) {
 					return
-				} else {
-					if !assert.NoError(t, err) {
-						return
-					}
 				}
 				assert.NoError(t, mock.ExpectationsWereMet())
 
@@ -112,6 +104,81 @@ func TestGetAppeals(t *testing.T) {
 					assert.Equal(t, tC.args.banID, tC.expectReturn[0].ID)
 				}
 				assert.NoError(t, mock.ExpectationsWereMet())
+				closeMock(t, mock)
+			})
+		}
+	}
+}
+
+type argsApproveAppeal struct {
+	appealID int
+	staffID  int
+}
+
+func TestApproveAppeal(t *testing.T) {
+	tests := []struct {
+		name                string
+		args                argsApproveAppeal
+		expectsAffectedRows bool
+	}{
+		{
+			name: "approve nonexistent appeal",
+			args: argsApproveAppeal{1, 1},
+		},
+	}
+	var mock sqlmock.Sqlmock
+	var err error
+	for _, tC := range tests {
+		for _, sqlDriver := range testingDBDrivers {
+			t.Run(fmt.Sprintf("%s (%s)", tC.name, sqlDriver), func(t *testing.T) {
+				gcdb, err = setupDBConn("localhost", sqlDriver, "gochan", "gochan", "gochan", "")
+				if !assert.NoError(t, err) {
+					return
+				}
+				gcdb.db, mock, err = sqlmock.New()
+				if !assert.NoError(t, err) {
+					return
+				}
+
+				deactivateQuery := `UPDATE ip_ban SET is_active = FALSE WHERE id = \(\s+` +
+					`SELECT ip_ban_id FROM ip_ban_appeals WHERE id = `
+				deactivateAppealQuery := `INSERT INTO ip_ban_audit\s*\(\s*ip_ban_id, timestamp, ` +
+					`staff_id, is_active, is_thread_ban, permanent, staff_note, message, can_appeal\)\s*VALUES\(\(` +
+					`SELECT ip_ban_id FROM ip_ban_appeals WHERE id = `
+				deleteAppealQuery := `DELETE FROM ip_ban_appeals WHERE id = `
+
+				switch sqlDriver {
+				case "mysql":
+					deactivateQuery += `\?\)`
+					deactivateAppealQuery += `\?\),\s*CURRENT_TIMESTAMP, \?, FALSE, FALSE, FALSE, '', '', TRUE\)`
+					deleteAppealQuery += `\?`
+				case "sqlite3":
+					fallthrough
+				case "postgres":
+					deactivateQuery += `\$1\)`
+					deactivateAppealQuery += `\$1\),\s+CURRENT_TIMESTAMP, \$2, FALSE, FALSE, FALSE, '', '', TRUE\)`
+					deleteAppealQuery += `\$1`
+				}
+				mock.ExpectBegin()
+				mock.ExpectPrepare(deactivateQuery).ExpectExec().
+					WithArgs(tC.args.appealID).WillReturnResult(driver.ResultNoRows)
+
+				mock.ExpectPrepare(deactivateAppealQuery).ExpectExec().
+					WithArgs(tC.args.appealID, tC.args.staffID).
+					WillReturnResult(driver.ResultNoRows)
+
+				mock.ExpectPrepare(deleteAppealQuery).ExpectExec().
+					WithArgs(tC.args.appealID).
+					WillReturnResult(driver.ResultNoRows)
+
+				mock.ExpectCommit()
+
+				if !assert.NoError(t, ApproveAppeal(tC.args.appealID, tC.args.staffID)) {
+					return
+				}
+				if !assert.NoError(t, mock.ExpectationsWereMet()) {
+					return
+				}
 				closeMock(t, mock)
 			})
 		}
