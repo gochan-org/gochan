@@ -31,11 +31,9 @@ func TriggerEvent(trigger string, data ...interface{}) (handled bool, err error,
 	errEv := gcutil.LogError(nil).Caller(1)
 	defer func() {
 		if a := recover(); a != nil {
-			if !testingMode {
-				errEv.Err(fmt.Errorf("%v", a)).
-					Str("event", trigger).
-					Msg("Recovered from panic while handling event")
-			}
+			errEv.Err(fmt.Errorf("%v", a)).
+				Str("event", trigger).
+				Msg("Recovered from panic while handling event")
 			handled = true
 			recovered = true
 		}
