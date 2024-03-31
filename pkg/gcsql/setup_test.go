@@ -1,3 +1,5 @@
+// this source file contains helper functions for gcsql
+
 package gcsql
 
 import (
@@ -9,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -111,8 +114,21 @@ func goToGochanRoot(t *testing.T) (string, error) {
 	return dir, errors.New("test running from unexpected dir, should be in gochan root or the current testing dir")
 }
 
-func setupGochanMockDB(t *testing.T, mock sqlmock.Sqlmock, dbName string, dbType string) error {
+func setupMockDB(t *testing.T, dbType string, dbName string) (mock sqlmock.Sqlmock, err error) {
+	gcdb, err = setupDBConn("localhost", dbType, dbName, "gochan", "gochan", "")
+	if !assert.NoError(t, err) {
+		return
+	}
+	gcdb.db, mock, err = sqlmock.New()
+	assert.NoError(t, err)
+	return
+}
+
+func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, dbName string) error {
 	t.Helper()
+	if gcdb == nil || gcdb.db == nil {
+		return ErrNotConnected
+	}
 
 	mock.ExpectPrepare("CREATE DATABASE " + dbName).
 		ExpectExec().WillReturnResult(driver.ResultNoRows)

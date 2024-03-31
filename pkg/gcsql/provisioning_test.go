@@ -3,7 +3,6 @@ package gcsql
 import (
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,13 +28,12 @@ func TestProvision(t *testing.T) {
 				return
 			}
 
-			var mock sqlmock.Sqlmock
-			gcdb.db, mock, err = sqlmock.New()
+			mock, err := setupMockDB(t, driver, "gochan")
 			if !assert.NoError(t, err) {
 				return
 			}
 
-			if !assert.NoError(t, setupGochanMockDB(t, mock, "gochan", driver)) {
+			if !assert.NoError(t, setupAndProvisionMockDB(t, mock, driver, "gochan")) {
 				return
 			}
 			closeMock(t, mock)
