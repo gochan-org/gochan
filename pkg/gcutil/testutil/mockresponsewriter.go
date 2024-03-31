@@ -5,14 +5,15 @@ import (
 	"net/http"
 )
 
-// MockResponseWriter can be used in place of a http.ResponseWriter interface for tests
+// MockResponseWriter can be used in place of a http.ResponseWriter interface for tests.
+// It will panic if any of its methods are run in a non-test environment
 type MockResponseWriter struct {
 	StatusCode int
 	Buffer     *bytes.Buffer
 	header     http.Header
 }
 
-func (m MockResponseWriter) Header() http.Header {
+func (m *MockResponseWriter) Header() http.Header {
 	PanicIfNotTest()
 	if m.header == nil {
 		m.header = make(http.Header)
@@ -21,7 +22,7 @@ func (m MockResponseWriter) Header() http.Header {
 
 }
 
-func (m MockResponseWriter) Write(ba []byte) (int, error) {
+func (m *MockResponseWriter) Write(ba []byte) (int, error) {
 	PanicIfNotTest()
 	if m.Buffer == nil {
 		m.Buffer = new(bytes.Buffer)
@@ -29,7 +30,7 @@ func (m MockResponseWriter) Write(ba []byte) (int, error) {
 	return m.Buffer.Write(ba)
 }
 
-func (m MockResponseWriter) WriteHeader(statusCode int) {
+func (m *MockResponseWriter) WriteHeader(statusCode int) {
 	PanicIfNotTest()
 	m.StatusCode = statusCode
 }
