@@ -5,9 +5,6 @@ package gcsql
 import (
 	"database/sql"
 	"database/sql/driver"
-	"errors"
-	"os"
-	"path"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -91,28 +88,6 @@ var (
 		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 3\)`,
 	}
 )
-
-// TODO: move this to a dedicated gochan-specific testing utility package
-func goToGochanRoot(t *testing.T) (string, error) {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for d := 0; d < 6; d++ {
-		if path.Base(dir) == "gochan" {
-			return dir, nil
-		}
-		if err = os.Chdir(".."); err != nil {
-			return dir, err
-		}
-		if dir, err = os.Getwd(); err != nil {
-			return dir, err
-		}
-	}
-	return dir, errors.New("test running from unexpected dir, should be in gochan root or the current testing dir")
-}
 
 func setupMockDB(t *testing.T, dbType string, dbName string) (mock sqlmock.Sqlmock, err error) {
 	gcdb, err = setupDBConn("localhost", dbType, dbName, "gochan", "gochan", "")

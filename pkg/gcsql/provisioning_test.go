@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +13,7 @@ var (
 )
 
 func TestProvision(t *testing.T) {
-	_, err := goToGochanRoot(t)
+	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		return
 	}
