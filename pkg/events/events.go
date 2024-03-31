@@ -3,15 +3,12 @@ package events
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 var (
-	registeredEvents        map[string][]EventHandler
-	testingMode             bool
+	registeredEvents        = map[string][]EventHandler{}
 	ErrRecovered            = errors.New("recovered from a panic in event handler")
 	InvalidArgumentErrorStr = "invalid argument(s) passed to event %q"
 )
@@ -47,9 +44,4 @@ func TriggerEvent(trigger string, data ...interface{}) (handled bool, err error,
 		handled = true
 	}
 	return
-}
-
-func init() {
-	registeredEvents = map[string][]EventHandler{}
-	testingMode = strings.HasSuffix(os.Args[0], ".test")
 }
