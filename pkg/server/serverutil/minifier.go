@@ -46,7 +46,7 @@ func canMinify(mediaType string) bool {
 }
 
 // MinifyTemplate minifies the given template ref (string or template.Template pointer) and data, and returns any errors
-func MinifyTemplate[T templateRef](tmplRef T, data interface{}, writer io.Writer, mediaType string) (err error) {
+func MinifyTemplate[T templateRef](tmplRef T, data any, writer io.Writer, mediaType string) (err error) {
 	var tmpl *template.Template
 	switch ref := any(tmplRef).(type) {
 	case string:
@@ -63,8 +63,11 @@ func MinifyTemplate[T templateRef](tmplRef T, data interface{}, writer io.Writer
 	}
 
 	minWriter := minifier.Writer(mediaType, writer)
-	defer minWriter.Close()
-	return tmpl.Execute(minWriter, data)
+	if err = tmpl.Execute(minWriter, data); err != nil {
+		_ = minWriter.Close()
+		return err
+	}
+	return minWriter.Close()
 }
 
 // MinifyWriter minifies the given writer/data (if enabled) and returns the number of bytes written and any errors

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/gochan-org/gochan/pkg/posting/geoip"
 )
 
@@ -375,17 +376,22 @@ func GetVersion() *GochanVersion {
 func SetVersion(version string) {
 	if cfg == nil {
 		cfg = defaultGochanConfig
-		cfg.Version = ParseVersion(version)
 	}
+	cfg.Version = ParseVersion(version)
 }
 
-// SetTestDBConfig sets up the database configuration for a testing environment. If it is not run via `go test`,
-// it will silently return without changing anything
-func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername string, dbPassword string, dbPrefix string) {
-	if !strings.HasSuffix(os.Args[0], ".test") {
-		// only run in a testing environment
-		return
+// SetTestTemplateDir sets the directory for templates, used only in testing. If it is not run via `go test`, it will panic.
+func SetTestTemplateDir(dir string) {
+	testutil.PanicIfNotTest()
+	if cfg == nil {
+		cfg = defaultGochanConfig
 	}
+	cfg.TemplateDir = dir
+}
+
+// SetTestDBConfig sets up the database configuration for a testing environment. If it is not run via `go test`, it will panic
+func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername string, dbPassword string, dbPrefix string) {
+	testutil.PanicIfNotTest()
 	if cfg == nil {
 		cfg = defaultGochanConfig
 	}
@@ -397,11 +403,8 @@ func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername str
 	cfg.DBprefix = dbPrefix
 }
 
-// SetRandomSeed is usd to set a deterministic seed to make testing easier
+// SetRandomSeed is usd to set a deterministic seed to make testing easier. If it is not run via `go test`, it will panic
 func SetRandomSeed(seed string) {
-	if !strings.HasSuffix(os.Args[0], ".test") {
-		// only run in a testing environment
-		return
-	}
+	testutil.PanicIfNotTest()
 	cfg.RandomSeed = seed
 }
