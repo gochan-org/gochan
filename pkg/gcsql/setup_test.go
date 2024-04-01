@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -89,15 +88,15 @@ var (
 	}
 )
 
-func setupMockDB(t *testing.T, dbType string, dbName string) (mock sqlmock.Sqlmock, err error) {
-	gcdb, err = setupDBConn("localhost", dbType, dbName, "gochan", "gochan", "")
-	if !assert.NoError(t, err) {
-		return
-	}
-	gcdb.db, mock, err = sqlmock.New()
-	assert.NoError(t, err)
-	return
-}
+// func setupMockDB(t *testing.T, dbType string, dbName string) (mock sqlmock.Sqlmock, err error) {
+// 	gcdb, err = setupDBConn("localhost", dbType, dbName, "gochan", "gochan", "")
+// 	if !assert.NoError(t, err) {
+// 		return
+// 	}
+// 	gcdb.db, mock, err = sqlmock.New()
+// 	assert.NoError(t, err)
+// 	return
+// }
 
 func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, dbName string) error {
 	t.Helper()

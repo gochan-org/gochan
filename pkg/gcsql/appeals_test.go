@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,8 +67,11 @@ type argsApproveAppeal struct {
 
 func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 	t.Helper()
-	mock, err := setupMockDB(t, driver, "gochan")
+	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NoError(t, SetTestingDB(driver, "gochan", "", db)) {
 		return
 	}
 
@@ -121,6 +125,7 @@ func TestGetAppeals(t *testing.T) {
 	for _, tC := range testCasesGetAppeals {
 		for _, driver := range testingDBDrivers {
 			t.Run(fmt.Sprintf("%s (%s)", tC.name, driver), func(t *testing.T) {
+				config.SetTestDBConfig(driver, "localhost", "gochan", "gochan", "gochan", "")
 				testRunnerGetAppeals(t, &tC, driver)
 			})
 		}
@@ -129,8 +134,11 @@ func TestGetAppeals(t *testing.T) {
 
 func testRunnerApproveAppeal(t *testing.T, tC *testCaseApproveAppeals, sqlDriver string) {
 	t.Helper()
-	mock, err := setupMockDB(t, sqlDriver, "gochan")
+	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
+		return
+	}
+	if !assert.NoError(t, SetTestingDB(sqlDriver, "gochan", "", db)) {
 		return
 	}
 
@@ -176,6 +184,7 @@ func TestApproveAppeal(t *testing.T) {
 	for _, tC := range testCasesApproveAppeals {
 		for _, sqlDriver := range testingDBDrivers {
 			t.Run(fmt.Sprintf("%s (%s)", tC.name, sqlDriver), func(t *testing.T) {
+				config.SetTestDBConfig(sqlDriver, "localhost", "gochan", "gochan", "gochan", "")
 				testRunnerApproveAppeal(t, &tC, sqlDriver)
 			})
 		}

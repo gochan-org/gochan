@@ -1,9 +1,13 @@
 package gcsql
 
 import (
+	"database/sql"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 )
 
 var (
@@ -15,6 +19,23 @@ func ConnectToDB(host, driver, dbName, username, password, prefix string) error 
 	var err error
 	gcdb, err = Open(host, driver, dbName, username, password, prefix)
 	return err
+}
+
+func SetTestingDB(dbDriver string, dbName string, dbPrefix string, db *sql.DB) (err error) {
+	testutil.PanicIfNotTest()
+	systemCriticalCfg := config.GetSystemCriticalConfig()
+	if systemCriticalCfg.DBname == "" {
+		return ErrNotConnected
+	}
+
+	gcdb, err = setupDBConn(systemCriticalCfg.DBhost, dbDriver, systemCriticalCfg.DBname,
+		systemCriticalCfg.DBusername, systemCriticalCfg.DBpassword,
+		systemCriticalCfg.DBprefix)
+	if err != nil {
+		return
+	}
+	gcdb.db = db
+	return
 }
 
 // RunSQLFile cuts a given sql file into individual statements and runs it.
