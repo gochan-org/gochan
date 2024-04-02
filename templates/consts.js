@@ -10,4 +10,4 @@ var styles = [
 ];
 var defaultStyle = "{{js .defaultStyle}}";
 var webroot = "{{js .webroot}}";
-var serverTZ = {{.timezone}};
+var serverTZ = {{js .timezone}};

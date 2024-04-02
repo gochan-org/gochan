@@ -38,6 +38,15 @@ var (
 			},
 			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;`,
 		},
+		{
+			desc: "escaped string",
+			data: map[string]any{
+				"defaultStyle": `"a\a"`,
+				"webroot":      "",
+				"timezone":     0,
+			},
+			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;`,
+		},
 	}
 	banPageCases = []templateTestCase{
 		{
