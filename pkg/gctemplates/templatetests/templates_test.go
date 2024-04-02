@@ -1,6 +1,7 @@
 package gctemplates_test
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	_ "github.com/gochan-org/gochan/pkg/posting/uploads/inituploads"
+	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,7 +28,14 @@ const (
 		`ORDER BY\s+position ASC,\s*name ASC`
 )
 
-func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock) bool {
+type templateTestCase struct {
+	desc           string
+	data           any
+	expectsError   bool
+	expectedOutput string
+}
+
+func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) bool {
 	t.Helper()
 	rows := sqlmock.NewRows([]string{"boards.id", "section_id", "uri", "dir", "navbar_position", "title",
 		"subtitle", "description", "max_file_size", "max_threads", "default_style", "locked", "created_at",
@@ -46,11 +55,48 @@ func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock) bool {
 
 	config.SetTestTemplateDir("templates")
 
-	err := gctemplates.InitTemplates()
+	err := gctemplates.InitTemplates(which...)
 	if !assert.NoError(t, err) {
 		return false
 	}
 	return assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestJsConstsTemplate(t *testing.T) {
+	_, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		return
+	}
+	db, mock, err := sqlmock.New()
+	if !assert.NoError(t, err) {
+		return
+	}
+	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "gochan", "")
+	if !assert.NoError(t, gcsql.SetTestingDB("mysql", "gochan", "", db)) {
+		return
+	}
+
+	if !initTemplatesMock(t, mock) {
+		return
+	}
+
+	serverutil.InitMinifier()
+	buf := new(bytes.Buffer)
+
+	for _, tC := range jsConstsCases {
+		buf.Reset()
+		t.Run(tC.desc, func(t *testing.T) {
+			err := serverutil.MinifyTemplate(gctemplates.JsConsts, tC.data, buf, "text/javascript")
+			if tC.expectsError {
+				assert.Error(t, err)
+			} else {
+				if !assert.NoError(t, err) {
+					return
+				}
+			}
+			assert.Equal(t, tC.expectedOutput, buf.String())
+		})
+	}
 }
 
 func TestTemplateBase(t *testing.T) {
