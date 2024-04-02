@@ -2,11 +2,11 @@
 <html>
 <head>
 	<title>Banned</title>
-	<link rel="shortcut icon" href="{{.systemCritical.WebRoot}}favicon.png">
-	<link rel="stylesheet" href="{{.systemCritical.WebRoot}}css/global.css" />
-	<link id="theme" rel="stylesheet" href="{{.systemCritical.WebRoot}}css/{{.boardConfig.DefaultStyle}}" />
-	<script type="text/javascript" src="{{.systemCritical.WebRoot}}js/consts.js"></script>
-	<script type="text/javascript" src="{{.systemCritical.WebRoot}}js/gochan.js"></script>
+	<link rel="shortcut icon" href="{{webPath `favicon.png`}}">
+	<link rel="stylesheet" href="{{webPath `css/global.css`}}" />
+	<link id="theme" rel="stylesheet" href="{{webPath `css` .boardConfig.DefaultStyle}}" />
+	<script type="text/javascript" src="{{webPath `js/consts.js`}}"></script>
+	<script type="text/javascript" src="{{webPath `js/gochan.js`}}"></script>
 </head>
 <body>
 	<div id="top-pane">
@@ -15,7 +15,7 @@
 	</div><br />
 	<div class="section-block" style="margin: 0px 26px 0px 24px">
 		<div class="section-title-block">
-			<span class="section-title"><b>{{if .ban.BannedForever}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</b></span>
+			<span class="section-title"><b>{{if .ban.BannedForever}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED&nbsp;:({{end}}</b></span>
 		</div>
 		<div class="section-body" style="padding-top:8px">
 			<div id="ban-info" style="float:left">{{if .ban.IsGlobalBan}}
@@ -24,22 +24,21 @@
 				<br /><br />
 				<b>{{.ban.Message}}</b>
 				<br /><br />{{$expiresTimestamp := formatTimestamp .ban.ExpiresAt}}{{$appealTimestamp := formatTimestamp .ban.AppealAt}}
-				Your ban was placed on {{formatTimestamp .ban.IssuedAt}} and will 
-				{{if .ban.Permanent}}<b>not expire</b>{{else}}expire on <b>{{$expiresTimestamp}}</b>{{end}}.<br />
+				Your ban was placed on {{formatTimestamp .ban.IssuedAt}} and will {{if .ban.Permanent}}<b>not expire</b>{{else}}expire on&nbsp;<b>{{$expiresTimestamp}}</b>{{end}}.<br />
 				Your IP address is <b>{{.ip}}</b>.<br /><br />
 				{{if .ban.CanAppeal}}You may appeal this ban:<br />
-					<form id="appeal-form" action="{{webPath "/post"}}" method="POST">
+					<form id="appeal-form" action="{{webPath `/post`}}" method="POST">
 						<input type="hidden" name="board" value="{{.board.Dir}}">
 						<input type="hidden" name="banid" value="{{.ban.ID}}">
 						<textarea rows="4" cols="48" name="appealmsg" id="postmsg" placeholder="Appeal message"></textarea><br />
 						<input type="submit" name="doappeal" value="Submit" /><br />
-					</form>{{else}}You may <b>not</b> appeal this ban.<br />{{end}}
+					</form>{{else}}You may&nbsp;<b>not</b> appeal this ban.<br />{{end}}
 				</div>{{if .ban.BannedForever}}
 				<img id="banpage-image" src="{{webPath "permabanned.jpg"}}" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
-					<source src="{{webPath "static/hittheroad.ogg"}}" />
-					<source src="{{webPath "static/hittheroad.wav"}}" />
-					<source src="{{webPath "static/hittheroad.mp3"}}" />
+					<source src="{{webPath `static/hittheroad.ogg`}}" />
+					<source src="{{webPath `static/hittheroad.wav`}}" />
+					<source src="{{webPath `static/hittheroad.mp3`}}" />
 				</audio>
 				<script type="text/javascript">
 					document.getElementById("jack").play();

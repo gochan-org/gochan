@@ -1,7 +1,6 @@
 package gctemplates_test
 
 import (
-	"bytes"
 	"testing"
 	"time"
 
@@ -28,15 +27,13 @@ const (
 		`ORDER BY\s+position ASC,\s*name ASC`
 )
 
-type templateTestCase struct {
-	desc           string
-	data           any
-	expectsError   bool
-	expectedOutput string
-}
-
 func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) bool {
 	t.Helper()
+	_, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		return false
+	}
+
 	rows := sqlmock.NewRows([]string{"boards.id", "section_id", "uri", "dir", "navbar_position", "title",
 		"subtitle", "description", "max_file_size", "max_threads", "default_style", "locked", "created_at",
 		"anonymous_name", "force_anonymous", "autosage_after", "no_images_after", "max_message_length",
@@ -55,22 +52,19 @@ func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) bool
 
 	config.SetTestTemplateDir("templates")
 
-	err := gctemplates.InitTemplates(which...)
-	if !assert.NoError(t, err) {
+	if !assert.NoError(t, gctemplates.InitTemplates(which...)) {
 		return false
 	}
 	return assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestJsConstsTemplate(t *testing.T) {
-	_, err := testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, err) {
-		return
-	}
+func runTemplateTestCases(t *testing.T, templateName string, testCases []templateTestCase) {
+	t.Helper()
 	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
 		return
 	}
+	config.SetVersion("3.10.1")
 	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "gochan", "")
 	if !assert.NoError(t, gcsql.SetTestingDB("mysql", "gochan", "", db)) {
 		return
@@ -81,29 +75,22 @@ func TestJsConstsTemplate(t *testing.T) {
 	}
 
 	serverutil.InitMinifier()
-	buf := new(bytes.Buffer)
-
-	for _, tC := range jsConstsCases {
-		buf.Reset()
+	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			err := serverutil.MinifyTemplate(gctemplates.JsConsts, tC.data, buf, "text/javascript")
-			if tC.expectsError {
-				assert.Error(t, err)
-			} else {
-				if !assert.NoError(t, err) {
-					return
-				}
-			}
-			assert.Equal(t, tC.expectedOutput, buf.String())
+			tC.Run(t, templateName)
 		})
 	}
 }
 
+func TestBanPageTemplate(t *testing.T) {
+	runTemplateTestCases(t, gctemplates.BanPage, banPageCases)
+}
+
+func TestJsConstsTemplate(t *testing.T) {
+	runTemplateTestCases(t, gctemplates.JsConsts, jsConstsCases)
+}
+
 func TestTemplateBase(t *testing.T) {
-	_, err := testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, err) {
-		return
-	}
 	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
 		return

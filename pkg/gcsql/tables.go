@@ -133,8 +133,8 @@ type Upload struct {
 	Height           int    // sql: `height`
 }
 
-// used to composition IPBan and IPBanAudit
-type ipBanBase struct {
+// IPBanBase used to composition IPBan and IPBanAudit. It does not represent a SQL table by itself
+type IPBanBase struct {
 	IsActive    bool
 	IsThreadBan bool
 	ExpiresAt   time.Time
@@ -156,7 +156,7 @@ type IPBan struct {
 	RangeStart      string
 	RangeEnd        string
 	IssuedAt        time.Time
-	ipBanBase
+	IPBanBase
 }
 
 // IP was previously a field in the IPBan struct before range bans were
@@ -190,7 +190,7 @@ func (ipb *IPBan) IsBanned(ipStr string) (bool, error) {
 type IPBanAudit struct {
 	IPBanID   int       // sql: `ip_ban_id`
 	Timestamp time.Time // sql: `timestamp`
-	ipBanBase
+	IPBanBase
 }
 
 // used to composition IPBanAppeal and IPBanAppealAudit
