@@ -15,39 +15,32 @@ var (
 		SiteName:   "Gochan",
 		SiteSlogan: "Gochan test",
 	}
-	jsConstsCases = []templateTestCase{
-		{
-			desc: "base test",
-			data: map[string]any{
-				"styles": []config.Style{
-					{Name: "Pipes", Filename: "pipes.css"},
-					{Name: "Yotsuba A", Filename: "yotsuba.css"},
-				},
-				"defaultStyle": "pipes.css",
-				"webroot":      "/",
-				"timezone":     -1,
-			},
-			expectedOutput: `var styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];var defaultStyle="pipes.css";var webroot="/";var serverTZ=-1;`,
+	simpleBoardConfig = config.BoardConfig{
+		DefaultStyle: "pipes.css",
+		Styles: []config.Style{
+			{Name: "Pipes", Filename: "pipes.css"},
+			{Name: "Yotsuba A", Filename: "yotsuba.css"},
+			{Name: "Yotsuba B", Filename: "yotsubab.css"},
 		},
-		{
-			desc: "empty values",
-			data: map[string]any{
-				"defaultStyle": "",
-				"webroot":      "",
-				"timezone":     0,
-			},
-			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;`,
-		},
-		{
-			desc: "escaped string",
-			data: map[string]any{
-				"defaultStyle": `"a\a"`,
-				"webroot":      "",
-				"timezone":     0,
-			},
-			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;`,
+		Banners: []config.PageBanner{
+			{Filename: "banner1.png", Width: 300, Height: 100},
+			{Filename: "banner2.png", Width: 300, Height: 100},
+			{Filename: "banner3.png", Width: 300, Height: 100},
 		},
 	}
+
+	simpleBoard1 = &gcsql.Board{
+		ID:            1,
+		SectionID:     1,
+		URI:           "test",
+		Dir:           "test",
+		Title:         "Testing board",
+		Subtitle:      "Board for testing",
+		Description:   "Board for testing",
+		DefaultStyle:  "pipes.css",
+		AnonymousName: "Anonymous Coward",
+	}
+
 	banPageCases = []templateTestCase{
 		{
 			desc: "appealable permaban",
@@ -206,6 +199,93 @@ var (
 				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
 		},
 	}
+
+	boardPageTestCases = []templateTestCase{
+		{
+			desc: "base case, no threads",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard1,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: boardPageHeaderBase +
+				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+		},
+		{
+			desc: "base case, multi threads and pages",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard1,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: boardPageHeaderBase +
+				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+		},
+	}
+
+	jsConstsCases = []templateTestCase{
+		{
+			desc: "base test",
+			data: map[string]any{
+				"styles": []config.Style{
+					{Name: "Pipes", Filename: "pipes.css"},
+					{Name: "Yotsuba A", Filename: "yotsuba.css"},
+				},
+				"defaultStyle": "pipes.css",
+				"webroot":      "/",
+				"timezone":     -1,
+			},
+			expectedOutput: `var styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];var defaultStyle="pipes.css";var webroot="/";var serverTZ=-1;`,
+		},
+		{
+			desc: "empty values",
+			data: map[string]any{
+				"defaultStyle": "",
+				"webroot":      "",
+				"timezone":     0,
+			},
+			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;`,
+		},
+		{
+			desc: "escaped string",
+			data: map[string]any{
+				"defaultStyle": `"a\a"`,
+				"webroot":      "",
+				"timezone":     0,
+			},
+			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;`,
+		},
+	}
+)
+
+const (
+	boardPageHeaderBase = `<!DOCTYPE html><html><head>` +
+		`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+		`<title>/test/-Testing board</title>` +
+		`<link rel="stylesheet"href="/css/global.css"/><link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
+		`<link rel="shortcut icon"href="/favicon.png">` +
+		`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"></script></head>` +
+		`<body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div>` +
+		`<div class="topbar-section"><a href="/test/"class="topbar-item"title="Testing board">/test/</a><a href="/test2/" class="topbar-item" title="Testing board#2">/test2/</a></div></div>` +
+		`<div id="content"><header><h1 id="board-title">/test/-Testing board</h1><div id="board-subtitle">Board for testing<br/><a href="/test/catalog.html">Catalog</a> | <a href="#footer">Bottom</a></div></header><hr />` +
+		`<div id="postbox-area"><form id="postform"name="postform"action="/post"method="POST"enctype="multipart/form-data">` +
+		`<input type="hidden"name="threadid"value="0"/><input type="hidden"name="boardid"value="1"/>` +
+		`<table id="postbox-static"><tr><th class="postblock">Name</th><td><input type="text" name="postname" maxlength="100" size="25" /></td></tr>` +
+		`<tr><th class="postblock">Email</th><td><input type="text" name="postemail" maxlength="100" size="25" /></td></tr>` +
+		`<tr><th class="postblock">Subject</th><td><input type="text"name="postsubject"size="25"maxlength="100"><input type="text"name="username"style="display:none"/><input type="submit"value="Post"/></td></tr>` +
+		`<tr><th class="postblock">Message</th><td><textarea rows="5" cols="35" name="postmsg" id="postmsg"></textarea></td></tr>` +
+		`<tr><th class="postblock">File</th><td><input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4">` +
+		`<input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>` +
+		`<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14"/>(for post/file deletion)</td></tr></table>` +
+		`<input type="password" name="dummy2" style="display:none"/></form></div><hr />`
 )
 
 type templateTestCase struct {

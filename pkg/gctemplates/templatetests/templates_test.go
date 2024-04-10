@@ -39,6 +39,8 @@ func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) bool
 		"anonymous_name", "force_anonymous", "autosage_after", "no_images_after", "max_message_length",
 		"min_message_length", "allow_embeds", "redirect_to_thread", "require_file", "enable_catalog"}).
 		AddRow(1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing", 500, 500,
+			"pipes.css", false, time.Now(), "Anonymous", false, 200, 500, 1500, 0, false, false, false, true).
+		AddRow(2, 1, "test2", "test2", 2, "Testing board #2", "Board for testing", "Board for testing", 500, 500,
 			"pipes.css", false, time.Now(), "Anonymous", false, 200, 500, 1500, 0, false, false, false, true)
 
 	mock.ExpectPrepare(selectBoardsQueryExpectation).
@@ -84,6 +86,10 @@ func runTemplateTestCases(t *testing.T, templateName string, testCases []templat
 
 func TestBanPageTemplate(t *testing.T) {
 	runTemplateTestCases(t, gctemplates.BanPage, banPageCases)
+}
+
+func TestBoardPageTemplate(t *testing.T) {
+	runTemplateTestCases(t, gctemplates.BoardPage, boardPageTestCases)
 }
 
 func TestJsConstsTemplate(t *testing.T) {
