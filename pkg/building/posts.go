@@ -207,7 +207,7 @@ func GetBuildablePost(id int, _ int) (*Post, error) {
 }
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
-	query := postQueryBase + " AND DBPREFIXposts.ip = ? ORDER BY DBPREFIXposts.id DESC"
+	query := postQueryBase + " AND DBPREFIXposts.ip = PARAM_ATON ORDER BY DBPREFIXposts.id DESC"
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
