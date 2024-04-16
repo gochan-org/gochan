@@ -1,4 +1,4 @@
-package gctemplates_test
+package templatetests_test
 
 import (
 	"testing"
