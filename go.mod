@@ -23,7 +23,7 @@ require (
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/crypto v0.21.0
 	golang.org/x/image v0.15.0
-	golang.org/x/net v0.22.0
+	golang.org/x/net v0.23.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	layeh.com/gopher-luar v1.0.11
 )
