@@ -142,14 +142,38 @@ func LogWarning() *zerolog.Event {
 	return logger.Warn()
 }
 
+// LogAccess starts an info level zerolog event in the access log, with the requesters's
+// path, IP, HTTP method, and user agent string
 func LogAccess(request *http.Request) *zerolog.Event {
 	ev := accessLogger.Info()
 	if request != nil {
-		return ev.
-			Str("access", request.URL.Path).
-			Str("IP", GetRealIP(request))
+		ev.
+			Str("path", request.URL.Path).
+			Str("IP", GetRealIP(request)).
+			Str("method", request.Method)
+		ua := request.UserAgent()
+		if ua != "" {
+			ev.Str("userAgent", request.UserAgent())
+		}
 	}
 	return ev
+}
+
+// LogRequest returns info and error level zerolog events with the requester's
+// IP, the user-agent string, and the requested path and HTTP method
+func LogRequest(request *http.Request) (*zerolog.Event, *zerolog.Event) {
+	infoEv := logger.Info()
+	errEv := logger.Err(nil)
+	if request != nil {
+		LogStr("IP", GetRealIP(request), infoEv, errEv)
+		LogStr("path", request.URL.Path, infoEv, errEv)
+		LogStr("method", request.Method, infoEv, errEv)
+		ua := request.UserAgent()
+		if ua != "" {
+			LogStr("userAgent", ua)
+		}
+	}
+	return infoEv, errEv
 }
 
 func LogError(err error) *zerolog.Event {
@@ -168,7 +192,6 @@ func LogDebug() *zerolog.Event {
 }
 
 func CloseLog() error {
-
 	if logFile == nil {
 		return nil
 	}

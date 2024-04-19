@@ -26,14 +26,11 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		passwordMD5 = gcutil.Md5Sum(password)
 	}
 	wantsJSON := serverutil.IsRequestingJSON(request)
-	errEv := gcutil.LogError(nil)
-	infoEv := gcutil.LogInfo()
+	infoEv, errEv := gcutil.LogRequest(request)
 	defer func() {
 		errEv.Discard()
 		infoEv.Discard()
 	}()
-	gcutil.LogStr("IP", gcutil.GetRealIP(request), errEv, infoEv)
-
 	rank := manage.GetStaffRank(request)
 
 	if password == "" && rank == 0 {

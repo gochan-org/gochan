@@ -75,13 +75,9 @@ func init() {
 // It returns the upload (if there was one) and whether or not any errors were served (meaning
 // that it should stop processing the post
 func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board) (*gcsql.Upload, error) {
-	errEv := gcutil.LogError(nil).
-		Str("IP", post.IP)
-	infoEv := gcutil.LogInfo().
-		Str("IP", post.IP)
+	infoEv, errEv := gcutil.LogRequest(request)
 	defer func() {
-		infoEv.Discard()
-		errEv.Discard()
+		gcutil.LogDiscard(infoEv, errEv)
 	}()
 	file, handler, err := request.FormFile("imagefile")
 	if errors.Is(err, http.ErrMissingFile) {

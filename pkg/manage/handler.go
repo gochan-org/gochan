@@ -39,12 +39,10 @@ func serveError(writer http.ResponseWriter, field string, action string, message
 func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	var err error
 	wantsJSON := serverutil.IsRequestingJSON(request)
-	errEv := gcutil.LogError(nil)
 	accessEv := gcutil.LogAccess(request)
-	infoEv := gcutil.LogInfo()
+	infoEv, errEv := gcutil.LogRequest(request)
 	defer gcutil.LogDiscard(infoEv, accessEv, errEv)
 
-	errEv.Str("IP", gcutil.GetRealIP(request))
 	if err = request.ParseForm(); err != nil {
 		errEv.Err(err).Caller().Msg("Error parsing form data")
 		server.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, nil)
@@ -55,7 +53,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 	gcutil.LogStr("action", actionID, infoEv, accessEv, errEv)
 
 	var staff *gcsql.Staff
-	staff, err = getCurrentFullStaff(request)
+	staff, err = GetStaffFromRequest(request)
 	if err == http.ErrNoCookie {
 		staff = &gcsql.Staff{}
 		err = nil

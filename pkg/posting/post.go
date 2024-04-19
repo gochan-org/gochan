@@ -99,13 +99,9 @@ func handleRecover(writer http.ResponseWriter, wantsJSON bool, infoEv *zerolog.E
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
 	request.ParseMultipartForm(maxFormBytes)
-	ip := gcutil.GetRealIP(request)
 	wantsJSON := serverutil.IsRequestingJSON(request)
 
-	errEv := gcutil.LogError(nil).
-		Str("IP", ip)
-	infoEv := gcutil.LogInfo().
-		Str("IP", ip)
+	infoEv, errEv := gcutil.LogRequest(request)
 	defer handleRecover(writer, wantsJSON, infoEv, errEv)
 
 	var formName string
@@ -124,9 +120,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	post := &gcsql.Post{
-		IP: gcutil.GetRealIP(request),
-	}
+	post := &gcsql.Post{IP: gcutil.GetRealIP(request)}
 	var err error
 	threadidStr := request.FormValue("threadid")
 	// to avoid potential hiccups, we'll just treat the "threadid" form field as the OP ID and convert it internally
