@@ -29,20 +29,33 @@ type upload struct {
 
 func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.Request) {
 	// Delete a post or thread
-	errEv := gcutil.LogError(nil).
-		Str("IP", gcutil.GetRealIP(request))
-
-	defer errEv.Discard()
+	infoEv, errEv := gcutil.LogRequest(request)
+	defer func() {
+		gcutil.LogDiscard(infoEv, errEv)
+	}()
 	password := request.FormValue("password")
 	passwordMD5 := gcutil.Md5Sum(password)
-	rank := manage.GetStaffRank(request)
-	fileOnly := request.FormValue("fileonly") == "on"
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if wantsJSON {
 		writer.Header().Set("Content-Type", "application/json")
 	} else {
 		writer.Header().Set("Content-Type", "text/plain")
 	}
+	gcutil.LogBool("wantsJSON", wantsJSON, infoEv, errEv)
+
+	staff, err := manage.GetStaffFromRequest(request)
+	if err != nil {
+		errEv.Err(err).Caller().
+			Msg("unable to get staff info")
+		writer.WriteHeader(http.StatusBadRequest)
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+	}
+	if staff.Rank > 0 {
+		gcutil.LogStr("staff", staff.Username, infoEv, errEv)
+	}
+
+	fileOnly := request.FormValue("fileonly") == "on"
+
 	boardid, err := strconv.Atoi(request.FormValue("boardid"))
 	if err != nil {
 		errEv.Err(err).Caller().
@@ -55,7 +68,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	errEv.Int("boardid", boardid)
 	board, err := gcsql.GetBoardFromID(boardid)
 	if err != nil {
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]any{
 			"boardid": boardid,
 		})
 		errEv.Err(err).Caller().
@@ -63,15 +76,17 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	if password == "" && rank == 0 {
+	if password == "" && staff.Rank == 0 {
 		server.ServeError(writer, "Password required for post deletion", wantsJSON, nil)
 		return
 	}
 
+	// delFilesQuery := `DELETE FROM DBPREFIXposts WHERE `
+
 	for _, checkedPostID := range checkedPosts {
 		post, err := gcsql.GetPostFromID(checkedPostID, true)
 		if err == sql.ErrNoRows {
-			server.ServeError(writer, "Post does not exist", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Post does not exist", wantsJSON, map[string]any{
 				"postid":  post.ID,
 				"boardid": board.ID,
 			})
@@ -80,15 +95,15 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 			errEv.Err(err).Caller().
 				Int("postid", checkedPostID).
 				Msg("Error deleting post")
-			server.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]any{
 				"postid":  checkedPostID,
 				"boardid": board.ID,
 			})
 			return
 		}
 
-		if passwordMD5 != post.Password && rank == 0 {
-			server.ServeError(writer, fmt.Sprintf("Incorrect password for #%d", post.ID), wantsJSON, map[string]interface{}{
+		if passwordMD5 != post.Password && staff.Rank == 0 {
+			server.ServeError(writer, fmt.Sprintf("Incorrect password for #%d", post.ID), wantsJSON, map[string]any{
 				"postid":  post.ID,
 				"boardid": board.ID,
 			})
@@ -101,7 +116,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 			}
 			if err = building.BuildBoardPages(board); err != nil {
 				errEv.Err(err).Caller().Send()
-				server.ServeError(writer, "Unable to build board pages for /"+board.Dir+"/: "+err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, "Unable to build board pages for /"+board.Dir+"/: "+err.Error(), wantsJSON, map[string]any{
 					"boardDir": board.Dir,
 				})
 				return
@@ -115,7 +130,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 					errEv.Err(err).Caller().
 						Int("postid", post.ID).
 						Msg("Unable to get thread information from post")
-					server.ServeError(writer, "Unable to get thread info from post: "+err.Error(), wantsJSON, map[string]interface{}{
+					server.ServeError(writer, "Unable to get thread info from post: "+err.Error(), wantsJSON, map[string]any{
 						"postid": post.ID,
 					})
 					return
@@ -125,7 +140,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 				errEv.Err(err).Caller().
 					Int("postid", post.ID).
 					Msg("Unable to build thread pages")
-				server.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]any{
 					"postid": post.ID,
 				})
 				return
@@ -146,7 +161,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 						Int("postid", post.ID).
 						Int("threadID", post.ThreadID).
 						Msg("Unable to get list of filenames in thread")
-					server.ServeError(writer, "Unable to get list of filenames in thread", wantsJSON, map[string]interface{}{
+					server.ServeError(writer, "Unable to get list of filenames in thread", wantsJSON, map[string]any{
 						"postid": post.ID,
 					})
 					return
@@ -161,7 +176,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 							Int("postid", post.ID).
 							Int("threadID", post.ThreadID).
 							Msg("Unable to get list of filenames in thread")
-						server.ServeError(writer, "Unable to get list of filenames in thread", wantsJSON, map[string]interface{}{
+						server.ServeError(writer, "Unable to get list of filenames in thread", wantsJSON, map[string]any{
 							"postid": post.ID,
 						})
 						return
@@ -184,7 +199,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 					Str("requestType", "deletePost").
 					Int("postid", post.ID).
 					Msg("Error deleting post")
-				server.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]interface{}{
+				server.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]any{
 					"postid": post.ID,
 				})
 				return
@@ -202,10 +217,9 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 			Str("requestType", "deletePost").
 			Int("boardid", boardid).
 			Int("postid", post.ID).
-			Bool("fileOnly", fileOnly).
 			Msg("Post deleted")
 		if wantsJSON {
-			server.ServeJSON(writer, map[string]interface{}{
+			server.ServeJSON(writer, map[string]any{
 				"success":  "post deleted",
 				"postid":   post.ID,
 				"boardid":  boardid,
@@ -258,7 +272,7 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 			Int("postid", post.ID).
 			Msg("Unable to get file upload info")
 		server.ServeError(writer, "Error getting file uplaod info: "+err.Error(),
-			wantsJSON, map[string]interface{}{"postid": post.ID})
+			wantsJSON, map[string]any{"postid": post.ID})
 		return true
 	}
 	if upload != nil && upload.Filename != "deleted" {
@@ -269,7 +283,7 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 				Str("filename", upload.Filename).
 				Msg("Unable to delete file")
 			server.ServeError(writer, "Unable to delete file: "+err.Error(),
-				wantsJSON, map[string]interface{}{"postid": post.ID})
+				wantsJSON, map[string]any{"postid": post.ID})
 			return true
 		}
 		// delete the file's thumbnail
@@ -280,7 +294,7 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 				Str("thumbnail", thumbPath).
 				Msg("Unable to delete thumbnail")
 			server.ServeError(writer, "Unable to delete thumbnail: "+err.Error(),
-				wantsJSON, map[string]interface{}{"postid": post.ID})
+				wantsJSON, map[string]any{"postid": post.ID})
 			return true
 		}
 		// delete the catalog thumbnail
@@ -291,7 +305,7 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 					Str("catalogThumb", catalogThumbPath).
 					Msg("Unable to delete catalog thumbnail")
 				server.ServeError(writer, "Unable to delete catalog thumbnail: "+err.Error(),
-					wantsJSON, map[string]interface{}{"postid": post.ID})
+					wantsJSON, map[string]any{"postid": post.ID})
 				return true
 			}
 		}
@@ -302,7 +316,7 @@ func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.Response
 				Int("postid", post.ID).
 				Msg("Error unlinking post uploads")
 			server.ServeError(writer, "Unable to unlink post uploads"+err.Error(),
-				wantsJSON, map[string]interface{}{"postid": post.ID})
+				wantsJSON, map[string]any{"postid": post.ID})
 			return true
 		}
 	}

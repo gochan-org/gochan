@@ -24,6 +24,7 @@ var (
 	ErrSpambot               = errors.New("request looks like a spambot")
 	ErrBadCredentials        = errors.New("invalid username or password")
 	ErrUnableToCreateSession = errors.New("unable to create login session")
+	ErrInvalidSession        = errors.New("invalid staff session")
 )
 
 func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) error {
@@ -98,17 +99,24 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 	return staff.Username, nil
 }
 
-func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
+// GetStaffFromRequest returns the staff making the request. If the request does not have
+// a staff cookie, it will return a staff object with rank 0. If it does have a staff
+// cookie but it is unrecognized, it will return ErrInvalidSession
+func GetStaffFromRequest(request *http.Request) (*gcsql.Staff, error) {
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
-		return nil, err
+		return &gcsql.Staff{Rank: 0}, nil
 	}
-	return gcsql.GetStaffBySession(sessionCookie.Value)
+	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalidSession
+	}
+	return staff, err
 }
 
 // GetStaffRank returns the rank number of the staff referenced in the request
 func GetStaffRank(request *http.Request) int {
-	staff, err := getCurrentFullStaff(request)
+	staff, err := GetStaffFromRequest(request)
 	if err != nil {
 		return NoPerms
 	}
