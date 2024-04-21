@@ -87,18 +87,16 @@ func createSession(key, username, password string, request *http.Request, writer
 }
 
 func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
-	sessionCookie, err := request.Cookie("sessiondata")
-	if err != nil {
-		return "", err
-	}
-	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
+	staff, err := GetStaffFromRequest(request)
 	if err != nil {
 		return "", err
 	}
 	return staff.Username, nil
 }
 
-func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
+// GetStaffFromRequest returns a gcsql.Staff representing the staff who made the request, as well as an error if one
+// occured
+func GetStaffFromRequest(request *http.Request) (*gcsql.Staff, error) {
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
 		return nil, err
@@ -108,7 +106,7 @@ func getCurrentFullStaff(request *http.Request) (*gcsql.Staff, error) {
 
 // GetStaffRank returns the rank number of the staff referenced in the request
 func GetStaffRank(request *http.Request) int {
-	staff, err := getCurrentFullStaff(request)
+	staff, err := GetStaffFromRequest(request)
 	if err != nil {
 		return NoPerms
 	}
