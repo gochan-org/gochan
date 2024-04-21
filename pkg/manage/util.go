@@ -88,11 +88,7 @@ func createSession(key, username, password string, request *http.Request, writer
 }
 
 func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
-	sessionCookie, err := request.Cookie("sessiondata")
-	if err != nil {
-		return "", err
-	}
-	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
+	staff, err := GetStaffFromRequest(request)
 	if err != nil {
 		return "", err
 	}
