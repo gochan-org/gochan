@@ -1,16 +1,13 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
-	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
+	"sync"
 
-	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -22,9 +19,19 @@ import (
 )
 
 type upload struct {
-	postID   int
+	// postID   int
 	filename string
 	boardDir string
+}
+
+func (u *upload) filePath() string {
+	return path.Join(config.GetSystemCriticalConfig().DocumentRoot, u.boardDir, "src", u.filename)
+}
+
+func (u *upload) thumbnailPaths() (string, string) {
+	return uploads.GetThumbnailFilenames(path.Join(
+		config.GetSystemCriticalConfig().DocumentRoot,
+		u.boardDir, "thumb", u.filename))
 }
 
 func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.Request) {
@@ -33,6 +40,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	defer func() {
 		gcutil.LogDiscard(infoEv, errEv)
 	}()
+
 	password := request.FormValue("password")
 	passwordMD5 := gcutil.Md5Sum(password)
 	wantsJSON := serverutil.IsRequestingJSON(request)
@@ -43,6 +51,13 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	}
 	gcutil.LogBool("wantsJSON", wantsJSON, infoEv, errEv)
 
+	if len(checkedPosts) < 1 {
+		errEv.Err(errors.New("no posts selected")).Caller().Send()
+		writer.WriteHeader(http.StatusBadRequest)
+		server.ServeError(writer, "No posts selected", wantsJSON, nil)
+		return
+	}
+
 	staff, err := manage.GetStaffFromRequest(request)
 	if err != nil {
 		errEv.Err(err).Caller().
@@ -52,6 +67,24 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 	}
 	if staff.Rank > 0 {
 		gcutil.LogStr("staff", staff.Username, infoEv, errEv)
+	} else {
+		sumsMatch, err := validatePostPasswords(checkedPosts, passwordMD5)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Msg("Unable to validate post password checksums")
+			writer.WriteHeader(http.StatusInternalServerError)
+			server.ServeError(writer,
+				"Unable to validate post password checksums (DB error)",
+				wantsJSON, nil)
+			return
+		}
+		if !sumsMatch {
+			errEv.Caller().
+				Msg("One or more post password checksums do not match")
+			writer.WriteHeader(http.StatusUnauthorized)
+			server.ServeError(writer, "One or more post passwords do not match", wantsJSON, nil)
+			return
+		}
 	}
 
 	fileOnly := request.FormValue("fileonly") == "on"
@@ -66,259 +99,197 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		return
 	}
 	errEv.Int("boardid", boardid)
-	board, err := gcsql.GetBoardFromID(boardid)
+	board, err := gcsql.GetBoardDir(boardid)
 	if err != nil {
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]any{
+		server.ServeError(writer, "Unable to get board from boardid", wantsJSON, map[string]any{
 			"boardid": boardid,
 		})
-		errEv.Err(err).Caller().
-			Msg("Invalid form data (error populating data")
+		errEv.Err(err).Caller().Send()
 		return
 	}
 
-	if password == "" && staff.Rank == 0 {
-		server.ServeError(writer, "Password required for post deletion", wantsJSON, nil)
+	// delete files, leaving the filename in the db as 'deleted' if the post should remain
+	if !deletePostFiles(checkedPosts, !fileOnly, request, writer, errEv) {
+		return
+	}
+	if !fileOnly && !markPostsAsDeleted(checkedPosts, request, writer, errEv) {
 		return
 	}
 
-	// delFilesQuery := `DELETE FROM DBPREFIXposts WHERE `
-
-	for _, checkedPostID := range checkedPosts {
-		post, err := gcsql.GetPostFromID(checkedPostID, true)
-		if err == sql.ErrNoRows {
-			server.ServeError(writer, "Post does not exist", wantsJSON, map[string]any{
-				"postid":  post.ID,
-				"boardid": board.ID,
-			})
-			return
-		} else if err != nil {
-			errEv.Err(err).Caller().
-				Int("postid", checkedPostID).
-				Msg("Error deleting post")
-			server.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]any{
-				"postid":  checkedPostID,
-				"boardid": board.ID,
-			})
-			return
-		}
-
-		if passwordMD5 != post.Password && staff.Rank == 0 {
-			server.ServeError(writer, fmt.Sprintf("Incorrect password for #%d", post.ID), wantsJSON, map[string]any{
-				"postid":  post.ID,
-				"boardid": board.ID,
-			})
-			return
-		}
-
-		if fileOnly {
-			if deletePostUpload(post, board, writer, request, errEv) {
-				return
-			}
-			if err = building.BuildBoardPages(board); err != nil {
-				errEv.Err(err).Caller().Send()
-				server.ServeError(writer, "Unable to build board pages for /"+board.Dir+"/: "+err.Error(), wantsJSON, map[string]any{
-					"boardDir": board.Dir,
-				})
-				return
-			}
-
-			var opPost *gcsql.Post
-			if post.IsTopPost {
-				opPost = post
-			} else {
-				if opPost, err = post.GetTopPost(); err != nil {
-					errEv.Err(err).Caller().
-						Int("postid", post.ID).
-						Msg("Unable to get thread information from post")
-					server.ServeError(writer, "Unable to get thread info from post: "+err.Error(), wantsJSON, map[string]any{
-						"postid": post.ID,
-					})
-					return
-				}
-			}
-			if building.BuildThreadPages(opPost); err != nil {
-				errEv.Err(err).Caller().
-					Int("postid", post.ID).
-					Msg("Unable to build thread pages")
-				server.ServeError(writer, "Unable to get board info from post: "+err.Error(), wantsJSON, map[string]any{
-					"postid": post.ID,
-				})
-				return
-			}
-		} else {
-			if post.IsTopPost {
-				rows, err := gcsql.QuerySQL(
-					`SELECT filename FROM DBPREFIXfiles
-					LEFT JOIN (
-						SELECT id FROM DBPREFIXposts WHERE thread_id = ?
-					) p
-					ON p.id = post_id
-					WHERE post_id = p.id AND filename != 'deleted'`,
-					post.ThreadID)
-				if err != nil {
-					errEv.Err(err).Caller().
-						Str("requestType", "deleteThread").
-						Int("postid", post.ID).
-						Int("threadID", post.ThreadID).
-						Msg("Unable to get list of filenames in thread")
-					server.ServeError(writer, "Unable to get list of filenames in thread", wantsJSON, map[string]any{
-						"postid": post.ID,
-					})
-					return
-				}
-				defer rows.Close()
-				var postUploads []upload
-				for rows.Next() {
-					var filename string
-					if err = rows.Scan(&filename); err != nil {
-						errEv.Err(err).Caller().
-							Str("requestType", "deleteThread").
-							Int("postid", post.ID).
-							Int("threadID", post.ThreadID).
-							Msg("Unable to get list of filenames in thread")
-						server.ServeError(writer, "Unable to get list of filenames in thread", wantsJSON, map[string]any{
-							"postid": post.ID,
-						})
-						return
-					}
-					postUploads = append(postUploads, upload{
-						filename: filename,
-						boardDir: board.Dir,
-					})
-				}
-				// done as a goroutine to avoid delays if the thread has a lot of files
-				// the downside is of course that if something goes wrong, deletion errors
-				// won't be seen in the browser
-				go deleteUploads(postUploads)
-			} else if deletePostUpload(post, board, writer, request, errEv) {
-				return
-			}
-			// delete the post
-			if err = post.Delete(); err != nil {
-				errEv.Err(err).Caller().
-					Str("requestType", "deletePost").
-					Int("postid", post.ID).
-					Msg("Error deleting post")
-				server.ServeError(writer, "Error deleting post: "+err.Error(), wantsJSON, map[string]any{
-					"postid": post.ID,
-				})
-				return
-			}
-			if post.IsTopPost {
-				threadIndexPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.WebPath(strconv.Itoa(post.ID), "threadPage"))
-				os.Remove(threadIndexPath + ".html")
-				os.Remove(threadIndexPath + ".json")
-			} else {
-				building.BuildBoardPages(board)
-			}
-			building.BuildBoards(false, boardid)
-		}
-		gcutil.LogAccess(request).
-			Str("requestType", "deletePost").
-			Int("boardid", boardid).
-			Int("postid", post.ID).
-			Msg("Post deleted")
-		if wantsJSON {
-			server.ServeJSON(writer, map[string]any{
-				"success":  "post deleted",
-				"postid":   post.ID,
-				"boardid":  boardid,
-				"fileOnly": fileOnly,
-			})
-		} else {
-			if post.IsTopPost {
-				// deleted thread
-				http.Redirect(writer, request, board.WebPath("/", "boardPage"), http.StatusFound)
-			} else {
-				// deleted a post in the thread
-				http.Redirect(writer, request, post.WebPath(), http.StatusFound)
-			}
-		}
-	}
+	// deletion completed, redirect to board
+	http.Redirect(writer, request, config.WebPath(board), http.StatusFound)
 }
 
-func deleteUploads(postUploads []upload) {
-	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	var filePath string
-	var err error
-	for _, upload := range postUploads {
-		filePath = path.Join(documentRoot, upload.boardDir, "src", upload.filename)
-		if err = os.Remove(filePath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			gcutil.LogError(err).Caller().
-				Str("filePath", filePath).
-				Int("postid", upload.postID).Send()
-		}
-		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
-			path.Join(documentRoot, upload.boardDir, "thumb", upload.filename))
-		if err = os.Remove(thumbPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			gcutil.LogError(err).Caller().
-				Str("thumbPath", thumbPath).
-				Int("postid", upload.postID).Send()
-		}
-		if err = os.Remove(catalogThumbPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-			gcutil.LogError(err).Caller().
-				Str("catalogThumbPath", catalogThumbPath).
-				Int("postid", upload.postID).Send()
-		}
-	}
+// should return true if all posts have the same password checksum
+func validatePostPasswords(posts []int, passwordMD5 string) (bool, error) {
+	var count int
+	err := gcsql.QueryRowSQL(`SELECT COUNT(*) FROM DBPREFIXposts WHERE password = ?`,
+		[]any{passwordMD5}, []any{&count})
+	return count == len(posts), err
 }
 
-func deletePostUpload(post *gcsql.Post, board *gcsql.Board, writer http.ResponseWriter, request *http.Request, errEv *zerolog.Event) bool {
-	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	upload, err := post.GetUpload()
+func markPostsAsDeleted(posts []int, request *http.Request, writer http.ResponseWriter, errEv *zerolog.Event) bool {
+	deletePostsSQL := `UPDATE DBPREFIXposts SET is_deleted = TRUE WHERE id IN (`
+	deleteThreadSQL := `UPDATE DBPREFIXthreads SET is_deleted = TRUE WHERE id in (
+		SELECT thread_id FROM DBPREFIXposts WHERE is_top_post AND id in (`
+	var postsInterfaceArr []any
+	postsLen := len(posts)
+	for p := range posts {
+		if p < postsLen-1 {
+			deletePostsSQL += "?,"
+			deleteThreadSQL += "?,"
+		} else {
+			deletePostsSQL += "?)"
+			deleteThreadSQL += "?))"
+		}
+		postsInterfaceArr = append(postsInterfaceArr, posts[p])
+	}
+	tx, err := gcsql.BeginTx()
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err != nil {
-		errEv.Err(err).Caller().
-			Int("postid", post.ID).
-			Msg("Unable to get file upload info")
-		server.ServeError(writer, "Error getting file uplaod info: "+err.Error(),
-			wantsJSON, map[string]any{"postid": post.ID})
-		return true
+		errEv.Err(err).Caller().Send()
+		server.ServeError(writer, "Unable to delete posts (DB error)", wantsJSON, nil)
+		return false
 	}
-	if upload != nil && upload.Filename != "deleted" {
-		filePath := path.Join(documentRoot, board.Dir, "src", upload.Filename)
-		if err = os.Remove(filePath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			errEv.Err(err).Caller().
-				Int("postid", post.ID).
-				Str("filename", upload.Filename).
-				Msg("Unable to delete file")
-			server.ServeError(writer, "Unable to delete file: "+err.Error(),
-				wantsJSON, map[string]any{"postid": post.ID})
-			return true
-		}
-		// delete the file's thumbnail
-		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
-		if err = os.Remove(thumbPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			errEv.Err(err).Caller().
-				Int("postid", post.ID).
-				Str("thumbnail", thumbPath).
-				Msg("Unable to delete thumbnail")
-			server.ServeError(writer, "Unable to delete thumbnail: "+err.Error(),
-				wantsJSON, map[string]any{"postid": post.ID})
-			return true
-		}
-		// delete the catalog thumbnail
-		if post.IsTopPost {
-			if err = os.Remove(catalogThumbPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-				errEv.Err(err).Caller().
-					Int("postid", post.ID).
-					Str("catalogThumb", catalogThumbPath).
-					Msg("Unable to delete catalog thumbnail")
-				server.ServeError(writer, "Unable to delete catalog thumbnail: "+err.Error(),
-					wantsJSON, map[string]any{"postid": post.ID})
-				return true
+	defer tx.Rollback()
+
+	if _, err = gcsql.ExecTxSQL(tx, deletePostsSQL, postsInterfaceArr...); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to mark posts as deleted")
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Unable to mark posts as deleted (DB error)", wantsJSON, nil)
+		return false
+	}
+
+	if _, err = gcsql.ExecTxSQL(tx, deleteThreadSQL, postsInterfaceArr...); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to mark threads as deleted")
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Unable to mark threads as deleted (DB error)", wantsJSON, nil)
+		return false
+	}
+
+	if err = tx.Commit(); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to commit deletion transaction")
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Unable to finalize deletion", wantsJSON, nil)
+		return false
+	}
+	return true
+}
+
+func deleteFile(file *upload, wg *sync.WaitGroup, errArr *zerolog.Array, errEv *zerolog.Event) error {
+	wg.Add(3)
+	var err error
+	var errTmp error
+	go func() {
+		filePath := file.filePath()
+		if errTmp = os.Remove(filePath); errTmp != nil {
+			errEv.Caller()
+			errArr.Err(errTmp)
+			if err == nil {
+				err = errTmp
 			}
 		}
-		// remove the upload from the database
-		if err = post.UnlinkUploads(true); err != nil {
-			errEv.Err(err).Caller().
-				Str("requestType", "deleteFile").
-				Int("postid", post.ID).
-				Msg("Error unlinking post uploads")
-			server.ServeError(writer, "Unable to unlink post uploads"+err.Error(),
-				wantsJSON, map[string]any{"postid": post.ID})
-			return true
+		wg.Done()
+	}()
+	thumbPath, catalogThumbPath := file.thumbnailPaths()
+	go func() {
+		if errTmp = os.Remove(thumbPath); errTmp != nil {
+			errEv.Caller()
+			errArr.Err(errTmp)
+			if err == nil {
+				err = errTmp
+			}
+		}
+		wg.Done()
+	}()
+	go func() {
+		if errTmp = os.Remove(catalogThumbPath); errTmp != nil {
+			errEv.Caller()
+			errArr.Err(errTmp)
+			if err == nil {
+				err = errTmp
+			}
+		}
+		wg.Done()
+	}()
+	return err
+}
+
+func deletePostFiles(posts []int, permDelete bool, request *http.Request, writer http.ResponseWriter, errEv *zerolog.Event) bool {
+	queryFilenamesSQL := `SELECT post_id,filename,dir,password
+	FROM DBPREFIXboards b
+	LEFT JOIN DBPREFIXthreads t ON b.id = t.board_id
+	LEFT JOIN DBPREFIXposts p ON t.id = p.thread_id
+	LEFT JOIN DBPREFIXfiles f ON p.id = f.post_id
+	AND p.is_deleted = false
+	AND t.is_deleted = false
+	AND p.id in (`
+
+	deleteFilesSQL := `UPDATE DBPREFIXfiles SET filename = 'deleted', original_filename = 'deleted' WHERE post_id in (`
+	if permDelete {
+		deleteFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id IN (`
+	}
+
+	numChecked := len(posts)
+	for i := range posts {
+		if i < numChecked-1 {
+			deleteFilesSQL += "?,"
+			queryFilenamesSQL += "?,"
+		} else {
+			deleteFilesSQL += "?)"
+			queryFilenamesSQL += "?)"
 		}
 	}
-	return false
+	wantsJSON := serverutil.IsRequestingJSON(request)
+
+	rows, err := gcsql.QuerySQL(queryFilenamesSQL, posts)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("unable to get files to be deleted")
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Unable to get files to be deleted from database", wantsJSON, map[string]any{
+			"numPosts": len(posts),
+		})
+		return false
+	}
+
+	errArr := zerolog.Arr()
+	var wg sync.WaitGroup
+	var toDelete []upload
+	var deleteIDs []any
+	for rows.Next() {
+		var postID int
+		var file upload
+		var postPasswordMD5 string
+		if err = rows.Scan(&postID, &file.filename, &file.boardDir, &postPasswordMD5); err != nil {
+			errEv.Err(err).Caller().Send()
+			writer.WriteHeader(http.StatusInternalServerError)
+			server.ServeError(writer, "Unable to scan results from database row", wantsJSON, nil)
+			return false
+		}
+		toDelete = append(toDelete, file)
+		deleteIDs = append(deleteIDs, postID)
+	}
+
+	var errTmp error
+	for f := range toDelete {
+		errTmp = deleteFile(&toDelete[f], &wg, errArr, errEv)
+		if err == nil {
+			err = errTmp
+		}
+	}
+	wg.Wait()
+	if err != nil {
+		errEv.Array("errors", errArr).Msg("Received 1 or more errors while trying to delete files")
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Received 1 or more errors while trying to delete post files", wantsJSON, nil)
+		return false
+	}
+	_, err = gcsql.ExecSQL(deleteFilesSQL, deleteIDs...)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		writer.WriteHeader(http.StatusInternalServerError)
+		server.ServeError(writer, "Unable to delete file entries from database", wantsJSON, nil)
+		return false
+	}
+	return true
 }
