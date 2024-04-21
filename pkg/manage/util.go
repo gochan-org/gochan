@@ -103,11 +103,7 @@ func GetStaffFromRequest(request *http.Request) (*gcsql.Staff, error) {
 	if err != nil {
 		return &gcsql.Staff{Rank: 0}, nil
 	}
-	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalidSession
-	}
-	return staff, err
+	return gcsql.GetStaffBySession(sessionCookie.Value)
 }
 
 // GetStaffRank returns the rank number of the staff referenced in the request
