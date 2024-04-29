@@ -31,14 +31,14 @@ type delPost struct {
 }
 
 func (u *delPost) filePath() string {
-	if u.filename == "" {
+	if u.filename == "" || u.filename == "deleted" {
 		return ""
 	}
 	return path.Join(config.GetSystemCriticalConfig().DocumentRoot, u.boardDir, "src", u.filename)
 }
 
 func (u *delPost) thumbnailPaths() (string, string) {
-	if u.filename == "" {
+	if u.filename == "" || u.filename == "deleted" {
 		return "", ""
 	}
 	return uploads.GetThumbnailFilenames(path.Join(
@@ -46,7 +46,7 @@ func (u *delPost) thumbnailPaths() (string, string) {
 		u.boardDir, "thumb", u.filename))
 }
 
-func firstNonNilError(errs ...error) error {
+func coalesceErrors(errs ...error) error {
 	for _, err := range errs {
 		if err != nil {
 			return err
@@ -58,39 +58,47 @@ func firstNonNilError(errs ...error) error {
 // deleteFile asynchronously deletes the post's file and thumb (if it has one, it returns nil if not) and
 // thread HTML file if it is an OP and "File only" is unchecked, returning an error if one occcured for any file
 func (u *delPost) deleteFile(delThread bool) error {
-	if u.filename == "" || u.filename == "deleted" {
-		return nil
-	}
-	var errCatalog, errThumb, errFile, errThread error
+	var errCatalog, errThumb, errFile, errThread, errJSON error
 	var wg sync.WaitGroup
 	wg.Add(2)
+	file := u.filePath()
 	thumb, catalogThumb := u.thumbnailPaths()
 	if u.isOP {
 		wg.Add(1)
 		go func() {
-			errCatalog = os.Remove(catalogThumb)
+			if catalogThumb != "" {
+				errCatalog = os.Remove(catalogThumb)
+			}
 			wg.Done()
 		}()
-		if delThread {
-			wg.Add(1)
+		if delThread && u.isOP {
+			wg.Add(2)
+			threadBase := path.Join(config.GetSystemCriticalConfig().DocumentRoot,
+				u.boardDir, "res", strconv.Itoa(u.postID))
 			go func() {
-				threadPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot,
-					u.boardDir, "res", fmt.Sprintf("%d.html", u.postID))
-				errThread = os.Remove(threadPath)
+				errThread = os.Remove(threadBase + ".html")
+				wg.Done()
+			}()
+			go func() {
+				errJSON = os.Remove(threadBase + ".json")
 				wg.Done()
 			}()
 		}
 	}
 	go func() {
-		errThumb = os.Remove(thumb)
+		if thumb != "" {
+			errThumb = os.Remove(thumb)
+		}
 		wg.Done()
 	}()
 	go func() {
-		errFile = os.Remove(u.filePath())
+		if file != "" {
+			errFile = os.Remove(file)
+		}
 		wg.Done()
 	}()
 	wg.Wait()
-	return firstNonNilError(errThread, errCatalog, errThumb, errFile)
+	return coalesceErrors(errThread, errJSON, errCatalog, errThumb, errFile)
 }
 
 // getAllPostsToDelete returns all of the posts and their respective filenames that would be affected by deleting
@@ -113,12 +121,17 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 	LEFT JOIN DBPREFIXthreads t ON t.board_id = b.id
 	LEFT JOIN DBPREFIXposts p ON p.thread_id = t.id
 	LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id
-	WHERE p.id IN ` + setPart + ` OR p.thread_id IN (
-		SELECT thread_id from DBPREFIXposts op WHERE op.id IN ` + setPart + ` AND is_top_post)`
+	WHERE p.id IN ` + setPart
+	params := postIDs
 	if fileOnly {
+		// only deleting this post's file, not subfiles if it's an OP
 		query += " AND filename IS NOT NULL"
+	} else {
+		// deleting everything, including subfiles
+		params = append(params, postIDs...)
+		query += ` OR p.thread_id IN (
+			SELECT thread_id from DBPREFIXposts op WHERE op.id IN ` + setPart + ` AND is_top_post)`
 	}
-	params := append(postIDs, postIDs...)
 	rows, err := gcsql.QuerySQL(query, params...)
 	if err != nil {
 		return nil, nil, err
@@ -369,7 +382,7 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 			params += "?)"
 		}
 	}
-	deleteFilesSQL := `UPDATE DBPREFIXfiles SET filename = 'deleted', original_filename = 'deleted' WHERE post_id in (`
+	deleteFilesSQL := `UPDATE DBPREFIXfiles SET filename = 'deleted', original_filename = 'deleted' WHERE post_id in `
 	if permDelete {
 		deleteFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id IN `
 	}
