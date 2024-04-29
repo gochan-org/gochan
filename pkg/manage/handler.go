@@ -3,6 +3,7 @@ package manage
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -54,10 +55,7 @@ func CallManageFunction(writer http.ResponseWriter, request *http.Request) {
 
 	var staff *gcsql.Staff
 	staff, err = GetStaffFromRequest(request)
-	if err == http.ErrNoCookie {
-		staff = &gcsql.Staff{}
-		err = nil
-	} else if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		errEv.Err(err).Caller().
 			Str("request", "getCurrentFullStaff").Send()
 		server.ServeError(writer, "Error getting staff info from request: "+err.Error(), wantsJSON, nil)

@@ -96,14 +96,17 @@ func getCurrentStaff(request *http.Request) (string, error) { //TODO after refac
 }
 
 // GetStaffFromRequest returns the staff making the request. If the request does not have
-// a staff cookie, it will return a staff object with rank 0. If it does have a staff
-// cookie but it is unrecognized, it will return ErrInvalidSession
+// a staff cookie, it will return a staff object with rank 0.
 func GetStaffFromRequest(request *http.Request) (*gcsql.Staff, error) {
 	sessionCookie, err := request.Cookie("sessiondata")
 	if err != nil {
 		return &gcsql.Staff{Rank: 0}, nil
 	}
-	return gcsql.GetStaffBySession(sessionCookie.Value)
+	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
+	if err != nil {
+		staff = &gcsql.Staff{Rank: 0}
+	}
+	return staff, err
 }
 
 // GetStaffRank returns the rank number of the staff referenced in the request
