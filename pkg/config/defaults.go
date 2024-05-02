@@ -4,6 +4,12 @@ var (
 	defaultGochanConfig = &GochanConfig{
 		SystemCriticalConfig: SystemCriticalConfig{
 			WebRoot: "/",
+			SQLConfig: SQLConfig{
+				DBTimeoutSeconds:     DefaultSQLTimeout,
+				DBMaxOpenConnections: DefaultSQLMaxConns,
+				DBMaxIdleConnections: DefaultSQLMaxConns,
+				DBConnMaxLifetimeMin: DefaultSQLConnMaxLifetimeMin,
+			},
 		},
 		SiteConfig: SiteConfig{
 			FirstPage:       []string{"index.html", "firstrun.html", "1.html"},

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net"
@@ -18,14 +19,17 @@ import (
 const (
 	randomStringSize = 16
 	cookieMaxAgeEx   = ` (example: "1 year 2 months 3 days 4 hours", or "1y2mo3d4h"`
+
+	DefaultSQLTimeout            = 15
+	DefaultSQLMaxConns           = 10
+	DefaultSQLConnMaxLifetimeMin = 3
 )
 
 var (
 	cfg     *GochanConfig
 	cfgPath string
 
-	boardConfigs    = map[string]BoardConfig{}
-	acceptedDrivers = []string{"mysql", "postgres", "sqlite3"}
+	boardConfigs = map[string]BoardConfig{}
 )
 
 type GochanConfig struct {
@@ -55,7 +59,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		gcfg.DBtype = "postgres"
 	}
 	found := false
-	for _, driver := range acceptedDrivers {
+	for _, driver := range sql.Drivers() {
 		if gcfg.DBtype == driver {
 			found = true
 			break
@@ -65,7 +69,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		return &InvalidValueError{
 			Field:   "DBtype",
 			Value:   gcfg.DBtype,
-			Details: "currently supported values: " + strings.Join(acceptedDrivers, ",")}
+			Details: "currently supported values: " + strings.Join(sql.Drivers(), ",")}
 	}
 
 	if gcfg.RandomSeed == "" {
@@ -113,6 +117,20 @@ func (gcfg *GochanConfig) Write() error {
 	return os.WriteFile(gcfg.jsonLocation, str, GC_FILE_MODE)
 }
 
+type SQLConfig struct {
+	DBtype     string
+	DBhost     string
+	DBname     string
+	DBusername string
+	DBpassword string
+	DBprefix   string
+
+	DBTimeoutSeconds     int
+	DBMaxOpenConnections int
+	DBMaxIdleConnections int
+	DBConnMaxLifetimeMin int
+}
+
 /*
 SystemCriticalConfig contains configuration options that are extremely important, and fucking with them while
 the server is running could have site breaking consequences. It should only be changed by modifying the configuration
@@ -132,12 +150,7 @@ type SystemCriticalConfig struct {
 	WebRoot       string
 	SiteDomain    string
 
-	DBtype     string
-	DBhost     string
-	DBname     string
-	DBusername string
-	DBpassword string
-	DBprefix   string
+	SQLConfig
 
 	Verbose    bool `json:"DebugMode"`
 	RandomSeed string
@@ -312,10 +325,14 @@ func WriteConfig() error {
 	return cfg.Write()
 }
 
+// GetSQLConfig returns SQL configuration info. It returns a value instead of a a pointer to it
+// because it is not safe to edit while Gochan is running
+func GetSQLConfig() SQLConfig {
+	return cfg.SQLConfig
+}
+
 // GetSystemCriticalConfig returns system-critical configuration options like listening IP
-// Unlike the other functions returning the sub-configs (GetSiteConfig, GetBoardConfig, etc),
-// GetSystemCriticalConfig returns the value instead of a pointer to it, because it is not usually
-// safe to edit while Gochan is running.
+// It returns a value instead of a pointer, because it is not usually safe to edit while Gochan is running.
 func GetSystemCriticalConfig() SystemCriticalConfig {
 	return cfg.SystemCriticalConfig
 }
