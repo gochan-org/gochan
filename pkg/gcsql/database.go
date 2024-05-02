@@ -58,10 +58,11 @@ var (
 )
 
 type GCDB struct {
-	db       *sql.DB
-	connStr  string
-	driver   string
-	replacer *strings.Replacer
+	db             *sql.DB
+	connStr        string
+	driver         string
+	defaultTimeout time.Duration
+	replacer       *strings.Replacer
 }
 
 func (db *GCDB) ConnectionString() string {
@@ -84,16 +85,29 @@ func (db *GCDB) Close() error {
 }
 
 func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
+	return db.PrepareContextSQL(context.Background(), query, tx)
+}
+
+func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx) (*sql.Stmt, error) {
 	var prepared string
 	var err error
 	if prepared, err = SetupSQLString(db.replacer.Replace(query), db); err != nil {
 		return nil, err
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_, hasDeadline := ctx.Deadline()
+	if !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), db.defaultTimeout)
+		defer cancel()
+	}
 	var stmt *sql.Stmt
 	if tx != nil {
-		stmt, err = tx.Prepare(prepared)
+		stmt, err = tx.PrepareContext(ctx, prepared)
 	} else {
-		stmt, err = db.db.Prepare(prepared)
+		stmt, err = db.db.PrepareContext(ctx, prepared)
 	}
 	if err != nil {
 		return stmt, err
@@ -249,28 +263,28 @@ func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Row
 	return stmt.Query(a...)
 }
 
-func setupDBConn(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
+func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	db = &GCDB{
-		driver: dbDriver,
+		driver: cfg.DBtype,
 	}
 	replacerArr := []string{
-		"DBNAME", dbName,
-		"DBPREFIX", prefix,
+		"DBNAME", cfg.DBname,
+		"DBPREFIX", cfg.DBprefix,
 		"\n", " ",
 	}
-	switch dbDriver {
+	switch cfg.DBtype {
 	case "mysql":
-		db.connStr = fmt.Sprintf(mysqlConnStr, username, password, host, dbName)
+		db.connStr = fmt.Sprintf(mysqlConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, mysqlReplacerArr...)
 	case "postgres":
-		db.connStr = fmt.Sprintf(postgresConnStr, username, password, host, dbName)
+		db.connStr = fmt.Sprintf(postgresConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, postgresReplacerArr...)
 	case "sqlite3":
-		addrMatches := tcpHostIsolator.FindAllStringSubmatch(host, -1)
+		addrMatches := tcpHostIsolator.FindAllStringSubmatch(cfg.DBhost, -1)
 		if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
-			host = addrMatches[0][2]
+			cfg.DBhost = addrMatches[0][2]
 		}
-		db.connStr = fmt.Sprintf(sqlite3ConnStr, host, username, password)
+		db.connStr = fmt.Sprintf(sqlite3ConnStr, cfg.DBhost, cfg.DBusername, cfg.DBpassword)
 		replacerArr = append(replacerArr, sqlite3ReplacerArr...)
 	default:
 		return nil, ErrUnsupportedDB
@@ -279,16 +293,18 @@ func setupDBConn(host, dbDriver, dbName, username, password, prefix string) (db 
 	return db, nil
 }
 
-func Open(host, dbDriver, dbName, username, password, prefix string) (db *GCDB, err error) {
-	db, err = setupDBConn(host, dbDriver, dbName, username, password, prefix)
+// Open opens and returns a new gochan database connection with the provided host, driver, DB name,
+// username, password, and table prefix
+func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
+	db, err = setupDBConn(cfg)
 	if err != nil {
 		return nil, err
 	}
 	db.db, err = sql.Open(db.driver, db.connStr)
 	if err != nil {
-		db.db.SetConnMaxLifetime(time.Minute * 3)
-		db.db.SetMaxOpenConns(10)
-		db.db.SetMaxIdleConns(10)
+		db.db.SetConnMaxLifetime(time.Minute * time.Duration(cfg.DBConnMaxLifetimeMin))
+		db.db.SetMaxOpenConns(cfg.DBMaxOpenConnections)
+		db.db.SetMaxIdleConns(cfg.DBMaxIdleConnections)
 	}
 	return db, err
 }

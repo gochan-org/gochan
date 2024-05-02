@@ -23,12 +23,9 @@ type GCDatabaseUpdater struct {
 
 func (dbu *GCDatabaseUpdater) Init(options *common.MigrationOptions) error {
 	dbu.options = options
-	criticalCfg := config.GetSystemCriticalConfig()
+	sqlCfg := config.GetSQLConfig()
 	var err error
-	dbu.db, err = gcsql.Open(
-		criticalCfg.DBhost, criticalCfg.DBtype, criticalCfg.DBname, criticalCfg.DBusername, criticalCfg.DBpassword,
-		criticalCfg.DBprefix,
-	)
+	dbu.db, err = gcsql.Open(&sqlCfg)
 	return err
 }
 

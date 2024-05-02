@@ -6,16 +6,18 @@ import (
 	"os"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
 type Pre2021Config struct {
-	DBtype       string
-	DBhost       string
-	DBname       string
-	DBusername   string
-	DBpassword   string
-	DBprefix     string
+	config.SQLConfig
+	// DBtype       string
+	// DBhost       string
+	// DBname       string
+	// DBusername   string
+	// DBpassword   string
+	// DBprefix     string
 	DocumentRoot string
 }
 
@@ -43,9 +45,12 @@ func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 	if err = m.readConfig(); err != nil {
 		return err
 	}
-	m.db, err = gcsql.Open(
-		m.config.DBhost, m.config.DBtype, m.config.DBname, m.config.DBusername,
-		m.config.DBpassword, m.config.DBprefix)
+	m.config.DBTimeoutSeconds = config.DefaultSQLTimeout
+	m.config.DBMaxOpenConnections = config.DefaultSQLMaxConns
+	m.config.DBMaxIdleConnections = config.DefaultSQLMaxConns
+	m.config.DBConnMaxLifetimeMin = config.DefaultSQLConnMaxLifetimeMin
+
+	m.db, err = gcsql.Open(&m.config.SQLConfig)
 	return err
 }
 

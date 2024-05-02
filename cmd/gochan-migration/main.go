@@ -103,14 +103,12 @@ func main() {
 	config.InitConfig(versionStr)
 	var err error
 	if !updateDB {
-		systemCritical := config.GetSystemCriticalConfig()
-		err = gcsql.ConnectToDB(
-			systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
-			systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix)
+		sqlCfg := config.GetSQLConfig()
+		err = gcsql.ConnectToDB(&sqlCfg)
 		if err != nil {
 			log.Fatalf("Failed to connect to the database: %s", err.Error())
 		}
-		if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
+		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype); err != nil {
 			log.Fatalf("Failed to initialize the database: %s", err.Error())
 		}
 	}

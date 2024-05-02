@@ -15,9 +15,9 @@ var (
 )
 
 // ConnectToDB initializes the database connection and exits if there are any errors
-func ConnectToDB(host, driver, dbName, username, password, prefix string) error {
+func ConnectToDB(cfg *config.SQLConfig) error {
 	var err error
-	gcdb, err = Open(host, driver, dbName, username, password, prefix)
+	gcdb, err = Open(cfg)
 	return err
 }
 
@@ -28,9 +28,18 @@ func SetTestingDB(dbDriver string, dbName string, dbPrefix string, db *sql.DB) (
 		return ErrNotConnected
 	}
 
-	gcdb, err = setupDBConn(systemCriticalCfg.DBhost, dbDriver, systemCriticalCfg.DBname,
-		systemCriticalCfg.DBusername, systemCriticalCfg.DBpassword,
-		systemCriticalCfg.DBprefix)
+	gcdb, err = setupDBConn(&config.SQLConfig{
+		DBtype:               dbDriver,
+		DBhost:               "localhost",
+		DBname:               dbName,
+		DBusername:           "gochan",
+		DBpassword:           "gochan",
+		DBprefix:             dbPrefix,
+		DBTimeoutSeconds:     config.DefaultSQLTimeout,
+		DBMaxOpenConnections: config.DefaultSQLMaxConns,
+		DBMaxIdleConnections: config.DefaultSQLMaxConns,
+		DBConnMaxLifetimeMin: config.DefaultSQLConnMaxLifetimeMin,
+	})
 	if err != nil {
 		return
 	}

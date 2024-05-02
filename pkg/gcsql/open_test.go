@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,12 +19,27 @@ func closeMock(t *testing.T, mock sqlmock.Sqlmock) {
 	assert.NoError(t, err)
 }
 
+func setupSQLConfig(dbDriver string, dbName string, dbPrefix string) *config.SQLConfig {
+	return &config.SQLConfig{
+		DBtype:               dbDriver,
+		DBhost:               "localhost",
+		DBname:               dbName,
+		DBusername:           "gochan",
+		DBpassword:           "gochan",
+		DBprefix:             dbPrefix,
+		DBTimeoutSeconds:     config.DefaultSQLTimeout,
+		DBMaxOpenConnections: config.DefaultSQLMaxConns,
+		DBMaxIdleConnections: config.DefaultSQLMaxConns,
+		DBConnMaxLifetimeMin: config.DefaultSQLConnMaxLifetimeMin,
+	}
+}
+
 func initMock(t *testing.T, dbDriver string) (sqlmock.Sqlmock, error) {
 	t.Helper()
 	err := Close()
 	assert.NoError(t, err)
 
-	gcdb, err = setupDBConn("localhost", dbDriver, "gochan", "gochan", "gochan", "")
+	gcdb, err = setupDBConn(setupSQLConfig(dbDriver, "gochan", ""))
 	if !assert.NoError(t, err) {
 		return nil, err
 	}
@@ -35,7 +51,7 @@ func initMock(t *testing.T, dbDriver string) (sqlmock.Sqlmock, error) {
 
 func TestOpenMySQL(t *testing.T) {
 	var err error
-	gcdb, err = setupDBConn("localhost", "mysql", "gochan", "gochan", "gochan", "")
+	gcdb, err = setupDBConn(setupSQLConfig("mysql", "gochan", ""))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -48,7 +64,7 @@ func TestOpenMySQL(t *testing.T) {
 
 func TestOpenPostgres(t *testing.T) {
 	var err error
-	gcdb, err = setupDBConn("localhost", "postgres", "gochan", "gochan", "gochan", "")
+	gcdb, err = setupDBConn(setupSQLConfig("postgres", "gochan", ""))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -61,7 +77,7 @@ func TestOpenPostgres(t *testing.T) {
 
 func TestOpenSQLite3(t *testing.T) {
 	var err error
-	gcdb, err = setupDBConn("localhost", "sqlite3", "gochan", "gochan", "gochan", "")
+	gcdb, err = setupDBConn(setupSQLConfig("sqlite3", "gochan", ""))
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -74,6 +90,6 @@ func TestOpenSQLite3(t *testing.T) {
 
 func TestOpenUnrecognizedDriver(t *testing.T) {
 	assert.NoError(t, Close())
-	_, err := setupDBConn("localhost", "wat", "gochan", "gochan", "gochan", "")
+	_, err := setupDBConn(setupSQLConfig("wat", "gochan", ""))
 	assert.Error(t, err)
 }

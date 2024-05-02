@@ -60,10 +60,7 @@ func main() {
 
 	events.TriggerEvent("startup")
 
-	if err = gcsql.ConnectToDB(
-		systemCritical.DBhost, systemCritical.DBtype, systemCritical.DBname,
-		systemCritical.DBusername, systemCritical.DBpassword, systemCritical.DBprefix,
-	); err != nil {
+	if err = gcsql.ConnectToDB(&systemCritical.SQLConfig); err != nil {
 		fmt.Println("Failed to connect to the database:", err.Error())
 		cleanup()
 		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
