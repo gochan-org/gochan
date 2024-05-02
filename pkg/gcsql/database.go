@@ -265,7 +265,8 @@ func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Row
 
 func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	db = &GCDB{
-		driver: cfg.DBtype,
+		driver:         cfg.DBtype,
+		defaultTimeout: time.Duration(cfg.DBTimeoutSeconds) * time.Second,
 	}
 	replacerArr := []string{
 		"DBNAME", cfg.DBname,
