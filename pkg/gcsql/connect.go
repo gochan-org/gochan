@@ -23,8 +23,8 @@ func ConnectToDB(cfg *config.SQLConfig) error {
 
 func SetTestingDB(dbDriver string, dbName string, dbPrefix string, db *sql.DB) (err error) {
 	testutil.PanicIfNotTest()
-	systemCriticalCfg := config.GetSystemCriticalConfig()
-	if systemCriticalCfg.DBname == "" {
+	sqlConfig := config.GetSQLConfig()
+	if sqlConfig.DBname == "" {
 		return ErrNotConnected
 	}
 

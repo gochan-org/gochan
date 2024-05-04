@@ -8,7 +8,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCriticalConfig) error {
+func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
 	query := `ALTER TABLE DBPREFIXwordfilters
 	DROP CONSTRAINT IF EXISTS board_id_fk`
 	_, err := db.ExecSQL(query)
@@ -21,7 +21,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 		return err
 	}
 
-	dataType, err := common.ColumnType(db, tx, "ip", "DBPREFIXposts", criticalCfg)
+	dataType, err := common.ColumnType(db, tx, "ip", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 		}
 	}
 
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 	}
 
 	// add flag column to DBPREFIXposts
-	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 	}
 
 	// add country column to DBPREFIXposts
-	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 	}
 
 	// add fingerprinter column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 	}
 
 	// add ban_ip column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func updatePostgresDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCrit
 	}
 
 	// add ban_ip_message column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}

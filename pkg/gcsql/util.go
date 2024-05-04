@@ -245,7 +245,7 @@ func getLatestID(tableName string, tx *sql.Tx) (id int, err error) {
 func doesTableExist(tableName string) (bool, error) {
 	var existQuery string
 
-	switch config.GetSystemCriticalConfig().DBtype {
+	switch config.GetSQLConfig().DBtype {
 	case "mysql":
 		fallthrough
 	case "postgres":
@@ -278,12 +278,12 @@ func getDatabaseVersion(componentKey string) (int, error) {
 // doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
 // Returns false if the prefix is an empty string
 func doesGochanPrefixTableExist() (bool, error) {
-	systemCritical := config.GetSystemCriticalConfig()
-	if systemCritical.DBprefix == "" {
+	sqlConfig := config.GetSQLConfig()
+	if sqlConfig.DBprefix == "" {
 		return false, nil
 	}
 	var prefixTableExist string
-	switch systemCritical.DBtype {
+	switch sqlConfig.DBtype {
 	case "mysql":
 		fallthrough
 	case "postgresql":

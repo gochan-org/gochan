@@ -9,10 +9,10 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCriticalConfig) error {
+func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
 	var numConstraints int
 	var err error
-	dbName := criticalCfg.DBname
+	dbName := sqlConfig.DBname
 	query := `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
 	WHERE CONSTRAINT_NAME = 'wordfilters_board_id_fk'
 	AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
@@ -25,7 +25,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	} else {
 		query = ""
 	}
-	dataType, err := common.ColumnType(db, tx, "board_dirs", "DBPREFIXwordfilters", criticalCfg)
+	dataType, err := common.ColumnType(db, tx, "board_dirs", "DBPREFIXwordfilters", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	if err = rows.Close(); err != nil {
 		return err
 	}
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// Convert DBPREFIXposts.ip to from varchar to varbinary
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// Convert DBPREFIXreports.ip to from varchar to varbinary
-	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXreports", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ip", "DBPREFIXreports", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// add flag column to DBPREFIXposts
-	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// add country column to DBPREFIXposts
-	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// add fingerprinter column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// add ban_ip column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func updateMysqlDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritica
 	}
 
 	// add ban_ip_message column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}

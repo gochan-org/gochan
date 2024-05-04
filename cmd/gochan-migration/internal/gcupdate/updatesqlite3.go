@@ -8,13 +8,13 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCriticalConfig) error {
+func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
 	var query string
 	_, err := db.ExecSQL(`PRAGMA foreign_keys = ON`)
 	if err != nil {
 		return err
 	}
-	dataType, err := common.ColumnType(db, tx, "DBPREFIXwordfilters", "board_dirs", criticalCfg)
+	dataType, err := common.ColumnType(db, tx, "DBPREFIXwordfilters", "board_dirs", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// Add range_start column to DBPREFIXIp_ban if it doesn't exist
-	dataType, err = common.ColumnType(db, tx, "DBPREFIXip_ban", "range_start", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "DBPREFIXip_ban", "range_start", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// Add range_start column if it doesn't exist
-	dataType, err = common.ColumnType(db, tx, "DBPREFIXip_ban", "range_end", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "DBPREFIXip_ban", "range_end", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// add flag column to DBPREFIXposts
-	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "flag", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -62,7 +62,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// add country column to DBPREFIXposts
-	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "country", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// add fingerprinter column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// add ban_ip column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func updateSqliteDB(db *gcsql.GCDB, tx *sql.Tx, criticalCfg *config.SystemCritic
 	}
 
 	// add ban_ip_message column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", criticalCfg)
+	dataType, err = common.ColumnType(db, tx, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
