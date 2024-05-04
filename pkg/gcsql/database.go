@@ -116,24 +116,54 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 }
 
 /*
-ExecSQL automatically escapes the given values and caches the statement
+ExecSQL executes the given SQL statement with the given parameters
 Example:
 
 	var intVal int
 	var stringVal string
 	result, err := db.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
 */
-func (db *GCDB) ExecSQL(query string, values ...interface{}) (sql.Result, error) {
+func (db *GCDB) ExecSQL(query string, values ...any) (sql.Result, error) {
 	stmt, err := db.PrepareSQL(query, nil)
 	if err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
-	return stmt.Exec(values...)
+	result, err := stmt.Exec(values...)
+	if err != nil {
+		stmt.Close()
+		return nil, err
+	}
+	return result, stmt.Close()
 }
 
 /*
-ExecTxSQL automatically escapes the given values and caches the statement
+ExecContextSQL executes the given SQL statement with the given context, optionally with the given transaction (if non-nil)
+
+Example:
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
+	defer cancel()
+	var intVal int
+	var stringVal string
+	result, err := db.ExecContextSQL(ctx, nil, "INSERT INTO tablename (intval,stringval) VALUES(?,?)",
+		intVal, stringVal)
+*/
+func (db *GCDB) ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
+	stmt, err := db.PrepareContextSQL(ctx, sqlStr, tx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := stmt.ExecContext(ctx, values...)
+	if err != nil {
+		stmt.Close()
+		return nil, err
+	}
+	return result, stmt.Close()
+}
+
+/*
+ExecTxSQL executes the given SQL statemtnt, optionally with the given transaction (if non-nil)
+
 Example:
 
 	tx, err := BeginTx()
@@ -144,7 +174,7 @@ Example:
 	result, err := db.ExecTxSQL(tx, "INSERT INTO tablename (intval,stringval) VALUES(?,?)",
 		intVal, stringVal)
 */
-func (db *GCDB) ExecTxSQL(tx *sql.Tx, query string, values ...interface{}) (sql.Result, error) {
+func (db *GCDB) ExecTxSQL(tx *sql.Tx, query string, values ...any) (sql.Result, error) {
 	stmt, err := db.PrepareSQL(query, tx)
 	if err != nil {
 		return nil, err
@@ -179,10 +209,10 @@ Example:
 	var intVal int
 	var stringVal string
 	err := db.QueryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
-		[]interface{}{id},
-		[]interface{}{&intVal, &stringVal})
+		[]any{id},
+		[]any{&intVal, &stringVal})
 */
-func (db *GCDB) QueryRowSQL(query string, values, out []interface{}) error {
+func (db *GCDB) QueryRowSQL(query string, values, out []any) error {
 	stmt, err := db.PrepareSQL(query, nil)
 	if err != nil {
 		return err
@@ -192,8 +222,34 @@ func (db *GCDB) QueryRowSQL(query string, values, out []interface{}) error {
 }
 
 /*
+QueryRowContextSQL gets a row from the database with the values in values[] and fills the respective pointers in out[]
+using the given context as a deadline, and the given transaction (if non-nil)
+
+Example:
+
+	id := 32
+	var name string
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
+	defer cancel()
+	err := db.QueryRowContextSQL(ctx, nil, "SELECT name FROM DBPREFIXposts WHERE id = ? LIMIT 1",
+		[]any{id}, []any{&name})
+*/
+func (db *GCDB) QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, out []any) error {
+	stmt, err := db.PrepareContextSQL(ctx, query, tx)
+	if err != nil {
+		return err
+	}
+	if err = stmt.QueryRowContext(ctx, values...).Scan(out...); err != nil {
+		stmt.Close()
+		return err
+	}
+	return stmt.Close()
+}
+
+/*
 QueryRowTxSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
+
 Example:
 
 	id := 32
@@ -203,15 +259,19 @@ Example:
 	// do error handling stuff
 	defer tx.Rollback()
 	err = QueryRowTxSQL(tx, "SELECT intval,stringval FROM table WHERE id = ?",
-		[]interface{}{id},
-		[]interface{}{&intVal, &stringVal})
+		[]any{id},
+		[]any{&intVal, &stringVal})
 */
-func (db *GCDB) QueryRowTxSQL(tx *sql.Tx, query string, values, out []interface{}) error {
+func (db *GCDB) QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error {
 	stmt, err := db.PrepareSQL(query, tx)
 	if err != nil {
 		return err
 	}
-	return stmt.QueryRow(values...).Scan(out...)
+	if err = stmt.QueryRow(values...).Scan(out...); err != nil {
+		stmt.Close()
+		return err
+	}
+	return stmt.Close()
 }
 
 /*
@@ -229,13 +289,31 @@ Example:
 		}
 	}
 */
-func (db *GCDB) QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
+func (db *GCDB) QuerySQL(query string, a ...any) (*sql.Rows, error) {
 	stmt, err := db.PrepareSQL(query, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	return stmt.Query(a...)
+}
+
+/*
+QueryContextSQL queries the database with a prepared statement and the given parameters, using the given context
+for a deadline
+
+Example:
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
+	defer cancel()
+	rows, err := db.QueryContextSQL(ctx, nil, "SELECT name from posts where NOT is_deleted")
+*/
+func (db *GCDB) QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
+	stmt, err := db.PrepareContextSQL(ctx, query, tx)
+	if err != nil {
+		return nil, err
+	}
+	return stmt.QueryContext(ctx, a...)
 }
 
 /*
@@ -254,7 +332,7 @@ Example:
 		}
 	}
 */
-func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Rows, error) {
+func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
 	stmt, err := db.PrepareSQL(query, tx)
 	if err != nil {
 		return nil, err

@@ -44,6 +44,13 @@ func PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	return gcdb.PrepareSQL(query, tx)
 }
 
+func PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx) (*sql.Stmt, error) {
+	if gcdb == nil {
+		return nil, ErrNotConnected
+	}
+	return gcdb.PrepareContextSQL(ctx, query, tx)
+}
+
 // SetupSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
 // type (MySQL, Postgres, etc) to be passed to PrepareSQL
 func SetupSQLString(query string, dbConn *GCDB) (string, error) {
@@ -66,12 +73,6 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 			arr[i] += fmt.Sprintf("$%d", i+1)
 		}
 		prepared = strings.Join(arr, "")
-	case "sqlmock":
-		if config.VerboseMode() {
-			prepared = query
-			break
-		}
-		fallthrough
 	default:
 		return "", ErrUnsupportedDB
 	}
@@ -88,7 +89,7 @@ func Close() error {
 }
 
 /*
-ExecSQL automatically escapes the given values and caches the statement
+ExecSQL executes the given SQL statement with the given parameters
 Example:
 
 	var intVal int
@@ -96,11 +97,30 @@ Example:
 	result, err := gcsql.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)",
 		intVal, stringVal)
 */
-func ExecSQL(query string, values ...interface{}) (sql.Result, error) {
+func ExecSQL(query string, values ...any) (sql.Result, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
 	return gcdb.ExecSQL(query, values...)
+}
+
+/*
+ExecContextSQL executes the given SQL statement with the given context, optionally with the given transaction (if non-nil)
+
+Example:
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
+	defer cancel()
+	var intVal int
+	var stringVal string
+	result, err := gcsql.ExecContextSQL(ctx, nil, "INSERT INTO tablename (intval,stringval) VALUES(?,?)",
+		intVal, stringVal)
+*/
+func ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
+	if gcdb == nil {
+		return nil, ErrNotConnected
+	}
+	return gcdb.ExecContextSQL(ctx, tx, sqlStr, values...)
 }
 
 /*
@@ -115,11 +135,11 @@ Example:
 	result, err := gcsql.ExecTxSQL(tx, "INSERT INTO tablename (intval,stringval) VALUES(?,?)",
 		intVal, stringVal)
 */
-func ExecTxSQL(tx *sql.Tx, query string, values ...interface{}) (sql.Result, error) {
+func ExecTxSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
-	stmt, err := PrepareSQL(query, tx)
+	stmt, err := PrepareSQL(sqlStr, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -129,16 +149,17 @@ func ExecTxSQL(tx *sql.Tx, query string, values ...interface{}) (sql.Result, err
 /*
 QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
+
 Example:
 
 	id := 32
 	var intVal int
 	var stringVal string
-	err := QueryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
-		[]interface{}{id},
-		[]interface{}{&intVal, &stringVal})
+	err := gcsql.QueryRowSQL("SELECT intval,stringval FROM table WHERE id = ?",
+		[]any{id},
+		[]any{&intVal, &stringVal})
 */
-func QueryRowSQL(query string, values, out []interface{}) error {
+func QueryRowSQL(query string, values, out []any) error {
 	if gcdb == nil {
 		return ErrNotConnected
 	}
@@ -146,8 +167,29 @@ func QueryRowSQL(query string, values, out []interface{}) error {
 }
 
 /*
+QueryRowContextSQL gets a row from the database with the values in values[] and fills the respective pointers in out[]
+using the given context as a deadline, and the given transaction (if non-nil)
+
+Example:
+
+	id := 32
+	var name string
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
+	defer cancel()
+	err := gcsql..QueryRowContextSQL(ctx, nil, "SELECT name FROM DBPREFIXposts WHERE id = ? LIMIT 1",
+		[]any{id}, []any{&name})
+*/
+func QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, out []any) error {
+	if gcdb == nil {
+		return ErrNotConnected
+	}
+	return gcdb.QueryRowContextSQL(ctx, tx, query, values, out)
+}
+
+/*
 QueryRowTxSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
+
 Example:
 
 	id := 32
@@ -156,11 +198,10 @@ Example:
 	tx, err := BeginTx()
 	// do error handling stuff
 	defer tx.Rollback()
-	err = QueryRowTxSQL(tx, "SELECT intval,stringval FROM table WHERE id = ?",
-		[]interface{}{id},
-		[]interface{}{&intVal, &stringVal})
+	err = gcsql.QueryRowTxSQL(tx, "SELECT intval,stringval FROM table WHERE id = ?",
+		[]any{id}, []any{&intVal, &stringVal})
 */
-func QueryRowTxSQL(tx *sql.Tx, query string, values, out []interface{}) error {
+func QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error {
 	if gcdb == nil {
 		return ErrNotConnected
 	}
@@ -170,9 +211,10 @@ func QueryRowTxSQL(tx *sql.Tx, query string, values, out []interface{}) error {
 /*
 QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
+
 Example:
 
-	rows, err := sqlutil.QuerySQL("SELECT * FROM table")
+	rows, err := gcsql.QuerySQL("SELECT * FROM table")
 	if err == nil {
 		for rows.Next() {
 			var intVal int
@@ -182,11 +224,28 @@ Example:
 		}
 	}
 */
-func QuerySQL(query string, a ...interface{}) (*sql.Rows, error) {
+func QuerySQL(query string, a ...any) (*sql.Rows, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
 	return gcdb.QuerySQL(query, a...)
+}
+
+/*
+QueryContextSQL queries the database with a prepared statement and the given parameters, using the given context
+for a deadline
+
+Example:
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
+	defer cancel()
+	rows, err := gcsql.QueryContextSQL(ctx, nil, "SELECT name from posts where NOT is_deleted")
+*/
+func QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
+	if gcdb == nil {
+		return nil, ErrNotConnected
+	}
+	return gcdb.QueryContextSQL(ctx, tx, query, a...)
 }
 
 /*
@@ -197,7 +256,7 @@ Example:
 	tx, err := BeginTx()
 	// do error handling stuff
 	defer tx.Rollback()
-	rows, err := sqlutil.QueryTxSQL(tx, "SELECT * FROM table")
+	rows, err := gcsql.QueryTxSQL(tx, "SELECT * FROM table")
 	if err == nil {
 		for rows.Next() {
 			var intVal int
@@ -207,7 +266,7 @@ Example:
 		}
 	}
 */
-func QueryTxSQL(tx *sql.Tx, query string, a ...interface{}) (*sql.Rows, error) {
+func QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
 	stmt, err := PrepareSQL(query, tx)
 	if err != nil {
 		return nil, err
@@ -257,7 +316,7 @@ func doesTableExist(tableName string) (bool, error) {
 	}
 
 	var count int
-	err := QueryRowSQL(existQuery, []interface{}{config.GetSystemCriticalConfig().DBprefix + tableName}, []interface{}{&count})
+	err := QueryRowSQL(existQuery, []any{config.GetSystemCriticalConfig().DBprefix + tableName}, []any{&count})
 	if err != nil {
 		return false, err
 	}
@@ -268,7 +327,7 @@ func doesTableExist(tableName string) (bool, error) {
 func getDatabaseVersion(componentKey string) (int, error) {
 	const sql = `SELECT version FROM DBPREFIXdatabase_version WHERE component = ?`
 	var version int
-	err := QueryRowSQL(sql, []interface{}{componentKey}, []interface{}{&version})
+	err := QueryRowSQL(sql, []any{componentKey}, []any{&version})
 	if err != nil {
 		return 0, err
 	}
@@ -293,7 +352,7 @@ func doesGochanPrefixTableExist() (bool, error) {
 	}
 
 	var count int
-	err := QueryRowSQL(prefixTableExist, []interface{}{}, []interface{}{&count})
+	err := QueryRowSQL(prefixTableExist, []any{}, []any{&count})
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}
@@ -301,7 +360,7 @@ func doesGochanPrefixTableExist() (bool, error) {
 }
 
 // interfaceSlice creates a new interface slice from an arbitrary collection of values
-func interfaceSlice(args ...interface{}) []interface{} {
+func interfaceSlice(args ...any) []any {
 	return args
 }
 
@@ -324,7 +383,7 @@ func interfaceSlice(args ...interface{}) []interface{} {
 } */
 
 // createArrayPlaceholder creates a string of ?s based on the size of arr
-func createArrayPlaceholder(arr []interface{}) string {
+func createArrayPlaceholder(arr []any) string {
 	params := make([]string, len(arr))
 	for p := range params {
 		params[p] = "?"
