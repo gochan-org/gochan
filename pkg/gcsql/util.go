@@ -20,12 +20,16 @@ var (
 	ErrNotConnected  = errors.New("error connecting to database")
 )
 
-// BeginTx begins a new transaction for the gochan database
+// BeginTx begins a new transaction for the gochan database. It uses a background context
 func BeginTx() (*sql.Tx, error) {
+	return BeginContextTx(context.Background())
+}
+
+// BeginContextTx begins a new transaction for the gochan database, using the specified context
+func BeginContextTx(ctx context.Context) (*sql.Tx, error) {
 	if gcdb == nil {
 		return nil, ErrNotConnected
 	}
-	ctx := context.Background()
 	return gcdb.BeginTx(ctx, &sql.TxOptions{
 		Isolation: 0,
 		ReadOnly:  false,

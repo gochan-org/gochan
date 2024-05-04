@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"path"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -282,7 +284,12 @@ func markPostsAsDeleted(posts []any, request *http.Request, writer http.Response
 			deleteThreadSQL += "?))"
 		}
 	}
-	tx, err := gcsql.BeginTx()
+	sqlCfg := config.GetSQLConfig()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds)*time.Second)
+	defer cancel()
+
+	tx, err := gcsql.BeginContextTx(ctx)
+
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err != nil {
 		serveError(writer, "Unable to delete posts", http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
