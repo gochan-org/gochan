@@ -17,5 +17,5 @@ func TestBadTypes(t *testing.T) {
 func TestValidJSON(t *testing.T) {
 	var c GochanConfig
 	err := json.NewDecoder(strings.NewReader(validCfgJSON)).Decode(&c)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }

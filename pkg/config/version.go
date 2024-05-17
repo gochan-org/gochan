@@ -39,9 +39,9 @@ func (v *GochanVersion) Normalize() bool {
 	}
 	if v.Revision < 0 {
 		v.Revision = 0
+		valid = false
 	}
-	if v.Revision > 0 && v.Minor == 0 && v.Major == 0 {
-		v.Minor = 1
+	if v.Revision+v.Minor+v.Major == 0 {
 		valid = false
 	}
 	return valid
