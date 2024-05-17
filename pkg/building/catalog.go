@@ -92,7 +92,7 @@ func BuildCatalog(boardID int) error {
 	errEv.Str("boardDir", board.Dir)
 	criticalCfg := config.GetSystemCriticalConfig()
 	catalogPath := path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.html")
-	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
+	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed opening /%s/catalog.html: %s", board.Dir, err.Error())

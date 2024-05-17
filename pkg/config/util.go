@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/fs"
 	"os"
@@ -10,14 +9,15 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
-	GC_DIR_MODE  fs.FileMode = 0775
-	GC_FILE_MODE fs.FileMode = 0664
+	DirFileMode    fs.FileMode = 0775
+	NormalFileMode fs.FileMode = 0664
 )
 
 var (
@@ -74,7 +74,7 @@ func TakeOwnershipOfFile(f *os.File) error {
 // InitConfig loads and parses gochan.json on startup and verifies its contents
 func InitConfig(versionStr string) {
 	cfg = defaultGochanConfig
-	if flag.Lookup("test.v") != nil {
+	if strings.HasSuffix(os.Args[0], ".test") {
 		// create a dummy config for testing if we're using go test
 		cfg = defaultGochanConfig
 		cfg.ListenIP = "127.0.0.1"
@@ -155,7 +155,10 @@ func InitConfig(versionStr string) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(cfg.LogDir); err != nil {
+	if _, err = os.Stat(cfg.LogDir); os.IsNotExist(err) {
+		err = os.MkdirAll(cfg.LogDir, DirFileMode)
+	}
+	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}

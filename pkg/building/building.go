@@ -92,7 +92,7 @@ func BuildFrontPage() error {
 	criticalCfg := config.GetSystemCriticalConfig()
 	os.Remove(path.Join(criticalCfg.DocumentRoot, "index.html"))
 
-	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
+	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed opening front page for writing: " + err.Error())
@@ -160,7 +160,7 @@ func BuildJS() error {
 	boardCfg := config.GetBoardConfig("")
 	criticalCfg := config.GetSystemCriticalConfig()
 	constsJSPath := path.Join(criticalCfg.DocumentRoot, "js", "consts.js")
-	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, config.GC_FILE_MODE)
+	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("error opening consts.js for writing: %s", err.Error())

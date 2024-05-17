@@ -156,7 +156,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		}
 	}
 
-	if err = os.WriteFile(filePath, data, config.GC_FILE_MODE); err != nil {
+	if err = os.WriteFile(filePath, data, config.NormalFileMode); err != nil {
 		errEv.Err(err).Caller().Send()
 		writer.WriteHeader(http.StatusInternalServerError)
 		return nil, fmt.Errorf("couldn't write file %q", upload.OriginalFilename)

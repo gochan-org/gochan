@@ -438,7 +438,7 @@ func templatesCallback(writer http.ResponseWriter, request *http.Request, _ *gcs
 
 		if _, err = os.Stat(overrideDir); os.IsNotExist(err) {
 			// override dir doesn't exist, create it
-			if err = os.Mkdir(overrideDir, config.GC_DIR_MODE); err != nil {
+			if err = os.Mkdir(overrideDir, config.DirFileMode); err != nil {
 				errEv.Err(err).Caller().
 					Int("status", http.StatusInternalServerError).
 					Msg("Unable to create override directory")
@@ -477,7 +477,7 @@ func templatesCallback(writer http.ResponseWriter, request *http.Request, _ *gcs
 		// back up template to override/<overriding>-<timestamp>.bkp
 		backupPath := path.Join(overrideDir, overriding) + time.Now().Format("-2006-01-02_15-04-05.bkp")
 		gcutil.LogStr("backupPath", backupPath, infoEv, errEv)
-		if err = os.WriteFile(backupPath, ba, config.GC_FILE_MODE); err != nil {
+		if err = os.WriteFile(backupPath, ba, config.NormalFileMode); err != nil {
 			errEv.Err(err).Caller().
 				Int("status", http.StatusInternalServerError).
 				Msg("Unable to back up template file")
@@ -486,7 +486,7 @@ func templatesCallback(writer http.ResponseWriter, request *http.Request, _ *gcs
 		}
 
 		// write changes to disk
-		if err = os.WriteFile(overridePath, []byte(templateStr), config.GC_FILE_MODE); err != nil {
+		if err = os.WriteFile(overridePath, []byte(templateStr), config.NormalFileMode); err != nil {
 			errEv.Err(err).Caller().
 				Int("status", http.StatusInternalServerError).
 				Msg("Unable to save changes")

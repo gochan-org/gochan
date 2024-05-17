@@ -156,7 +156,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 
 		// Open 1.html for writing to the first page.
 		boardPageFile, err = os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "1.html"),
-			os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
+			os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 		if err != nil {
 			errEv.Err(err).Caller().
 				Str("page", "board.html").
@@ -198,7 +198,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 	var catalogPages boardCatalog
 
 	// catalog JSON file is built with the pages because pages are recorded in the JSON file
-	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
+	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().
 			Msg("Failed opening catalog.json")
@@ -215,7 +215,7 @@ func BuildBoardPages(board *gcsql.Board) error {
 		var currentPageFilepath string
 		pageFilename := strconv.Itoa(catalog.currentPage) + ".html"
 		currentPageFilepath = path.Join(criticalCfg.DocumentRoot, board.Dir, pageFilename)
-		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
+		currentPageFile, err = os.OpenFile(currentPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 		if err != nil {
 			errEv.Err(err).Caller().
 				Str("page", pageFilename).
@@ -414,7 +414,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 				Str("dirPath", dirPath).Send()
 			return fmt.Errorf(dirIsAFileStr, dirPath)
 		}
-	} else if err = os.Mkdir(dirPath, config.GC_DIR_MODE); err != nil {
+	} else if err = os.Mkdir(dirPath, config.DirFileMode); err != nil {
 		errEv.Err(os.ErrExist).Caller().
 			Str("dirPath", dirPath).Send()
 		return fmt.Errorf(genericErrStr, dirPath, err.Error())
@@ -438,7 +438,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 				Str("resPath", resPath).Send()
 			return err
 		}
-	} else if err = os.Mkdir(resPath, config.GC_DIR_MODE); err != nil {
+	} else if err = os.Mkdir(resPath, config.DirFileMode); err != nil {
 		err = fmt.Errorf(genericErrStr, resPath, err.Error())
 		errEv.Err(err).Caller().
 			Str("resPath", resPath).Send()
@@ -463,7 +463,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 				Str("srcPath", srcPath).Send()
 			return err
 		}
-	} else if err = os.Mkdir(srcPath, config.GC_DIR_MODE); err != nil {
+	} else if err = os.Mkdir(srcPath, config.DirFileMode); err != nil {
 		err = fmt.Errorf(genericErrStr, srcPath, err.Error())
 		errEv.Err(err).Caller().
 			Str("srcPath", srcPath).Send()
@@ -482,7 +482,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		if !thumbInfo.IsDir() {
 			return fmt.Errorf(dirIsAFileStr, thumbPath)
 		}
-	} else if err = os.Mkdir(thumbPath, config.GC_DIR_MODE); err != nil {
+	} else if err = os.Mkdir(thumbPath, config.DirFileMode); err != nil {
 		errEv.Err(err).Caller().
 			Str("thumbPath", thumbPath).Send()
 		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
@@ -525,7 +525,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 // BuildBoardListJSON generates a JSON file with info about the boards
 func BuildBoardListJSON() error {
 	boardsJsonPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, "boards.json")
-	boardListFile, err := os.OpenFile(boardsJsonPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.GC_FILE_MODE)
+	boardListFile, err := os.OpenFile(boardsJsonPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	errEv := gcutil.LogError(nil).Str("building", "boards.json")
 	defer errEv.Discard()
 	if err != nil {
