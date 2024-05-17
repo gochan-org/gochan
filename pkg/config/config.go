@@ -59,7 +59,8 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		gcfg.DBtype = "postgres"
 	}
 	found := false
-	for _, driver := range sql.Drivers() {
+	drivers := sql.Drivers()
+	for _, driver := range drivers {
 		if gcfg.DBtype == driver {
 			found = true
 			break
@@ -69,7 +70,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		return &InvalidValueError{
 			Field:   "DBtype",
 			Value:   gcfg.DBtype,
-			Details: "currently supported values: " + strings.Join(sql.Drivers(), ",")}
+			Details: "currently supported values: " + strings.Join(drivers, ",")}
 	}
 
 	if gcfg.RandomSeed == "" {
@@ -81,13 +82,17 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		if gcfg.ExiftoolPath == "" {
 			if gcfg.ExiftoolPath, err = exec.LookPath("exiftool"); err != nil {
 				return &InvalidValueError{
-					Field: "ExiftoolPath", Value: "", Details: "unable to find exiftool in the system path",
+					Field:   "ExiftoolPath",
+					Value:   "",
+					Details: "unable to find exiftool in the system path",
 				}
 			}
 		} else {
 			if _, err = exec.LookPath(gcfg.ExiftoolPath); err != nil {
 				return &InvalidValueError{
-					Field: "ExiftoolPath", Value: gcfg.ExiftoolPath, Details: "unable to find exiftool at the given location",
+					Field:   "ExiftoolPath",
+					Value:   gcfg.ExiftoolPath,
+					Details: "unable to find exiftool at the given location",
 				}
 			}
 		}

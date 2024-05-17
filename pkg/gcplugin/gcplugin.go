@@ -123,16 +123,12 @@ func registerEventFunction(name string, fn *lua.LFunction) {
 
 func LoadPlugins(paths []string) error {
 	var err error
-	var luaInitialized bool
+	initLua()
 	for _, pluginPath := range paths {
 		ext := path.Ext(pluginPath)
 		gcutil.LogInfo().Str("pluginPath", pluginPath).Msg("Loading plugin")
 		switch ext {
 		case ".lua":
-			if !luaInitialized {
-				initLua()
-				luaInitialized = true
-			}
 			if err = lState.DoFile(pluginPath); err != nil {
 				return err
 			}
