@@ -39,7 +39,7 @@ export function setPostVisibility(id: number|string, visibility: boolean, onComp
 		$backlink.text(id);
 		const newHidden = [];
 		for(const sID of hiddenStorage) {
-			if(sID !== id && newHidden.indexOf(sID) === -1) newHidden.push(sID);
+			if(sID !== String(id) && newHidden.indexOf(sID) === -1) newHidden.push(sID);
 		}
 		setStorageVal("hiddenposts", newHidden.join(","));
 	} else {
