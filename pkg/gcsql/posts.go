@@ -38,12 +38,12 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 		query += " AND is_deleted = FALSE"
 	}
 	post := new(Post)
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+	err := QueryRowSQL(query, []any{id}, []any{
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
 		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
 		&post.BannedMessage, &post.Flag, &post.Country,
-	))
+	})
 	if err == sql.ErrNoRows {
 		return nil, ErrPostDoesNotExist
 
@@ -93,7 +93,7 @@ func GetTopPostInThread(postID int) (int, error) {
 		SELECT thread_id FROM DBPREFIXposts WHERE id = ?
 	) AND is_top_post = TRUE ORDER BY id ASC LIMIT 1`
 	var id int
-	err := QueryRowSQL(query, interfaceSlice(postID), interfaceSlice(&id))
+	err := QueryRowSQL(query, []any{postID}, []any{&id})
 	return id, err
 }
 
@@ -126,12 +126,12 @@ func GetTopPostIDsInThreadIDs(threads ...interface{}) (map[interface{}]int, erro
 func GetThreadTopPost(threadID int) (*Post, error) {
 	const query = selectPostsBaseSQL + "WHERE thread_id = ? AND is_top_post = TRUE LIMIT 1"
 	post := new(Post)
-	err := QueryRowSQL(query, interfaceSlice(threadID), interfaceSlice(
+	err := QueryRowSQL(query, []any{threadID}, []any{
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
 		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
 		&post.BannedMessage, &post.Flag, &post.Country,
-	))
+	})
 	return post, err
 }
 
@@ -176,7 +176,7 @@ func GetBoardTopPosts(boardID int) ([]*Post, error) {
 func GetPostPassword(id int) (string, error) {
 	const query = `SELECT password FROM DBPREFIXposts WHERE id = ?`
 	var passwordChecksum string
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&passwordChecksum))
+	err := QueryRowSQL(query, []any{id}, []any{&passwordChecksum})
 	return passwordChecksum, err
 }
 
@@ -197,7 +197,7 @@ func PermanentlyRemoveDeletedPosts() error {
 func SinceLastPost(postIP string) (int, error) {
 	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ?`
 	var whenStr string
-	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&whenStr))
+	err := QueryRowSQL(query, []any{postIP}, []any{&whenStr})
 	if err != nil {
 		return -1, err
 	}
@@ -215,7 +215,7 @@ func SinceLastThread(postIP string) (int, error) {
 	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
 	var whenStr string
 
-	err := QueryRowSQL(query, interfaceSlice(postIP), interfaceSlice(&whenStr))
+	err := QueryRowSQL(query, []any{postIP}, []any{&whenStr})
 	if err != nil {
 		return -1, err
 	}
@@ -243,7 +243,7 @@ func (p *Post) UpdateContents(email string, subject string, message template.HTM
 func (p *Post) GetBoardID() (int, error) {
 	const query = `SELECT board_id FROM DBPREFIXthreads where id = ?`
 	var boardID int
-	err := QueryRowSQL(query, interfaceSlice(p.ThreadID), interfaceSlice(&boardID))
+	err := QueryRowSQL(query, []any{p.ThreadID}, []any{&boardID})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrBoardDoesNotExist
 	}
@@ -253,20 +253,20 @@ func (p *Post) GetBoardID() (int, error) {
 func (p *Post) GetBoardDir() (string, error) {
 	const query = "SELECT dir FROM DBPREFIXboards" + boardFromPostIdSuffixSQL
 	var dir string
-	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&dir))
+	err := QueryRowSQL(query, []any{p.ID}, []any{&dir})
 	return dir, err
 }
 
 func (p *Post) GetBoard() (*Board, error) {
 	const query = selectBoardsBaseSQL + boardFromPostIdSuffixSQL
 	board := new(Board)
-	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(
+	err := QueryRowSQL(query, []any{p.ID}, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
 		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
 		&board.EnableCatalog,
-	))
+	})
 	return board, err
 }
 
@@ -286,7 +286,7 @@ func (p *Post) TopPostID() (int, error) {
 	}
 	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = ? and is_top_post = TRUE ORDER BY id ASC LIMIT 1`
 	var topPostID int
-	err := QueryRowSQL(query, interfaceSlice(p.ThreadID), interfaceSlice(&topPostID))
+	err := QueryRowSQL(query, []any{p.ThreadID}, []any{&topPostID})
 	return topPostID, err
 }
 
@@ -308,10 +308,10 @@ func (p *Post) GetUpload() (*Upload, error) {
 	file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height
 	FROM DBPREFIXfiles WHERE post_id = ?`
 	upload := new(Upload)
-	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(
+	err := QueryRowSQL(query, []any{p.ID}, []any{
 		&upload.ID, &upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum,
 		&upload.FileSize, &upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
-	))
+	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -372,7 +372,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	} else {
 		var threadIsLocked bool
 		if err = QueryRowTxSQL(tx, "SELECT locked FROM DBPREFIXthreads WHERE id = ?",
-			interfaceSlice(p.ThreadID), interfaceSlice(&threadIsLocked)); err != nil {
+			[]any{p.ThreadID}, []any{&threadIsLocked}); err != nil {
 			return err
 		}
 		if threadIsLocked {
@@ -420,7 +420,7 @@ func (p *Post) WebPath() string {
 		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
 	) op on op.thread_id = DBPREFIXposts.thread_id
 	WHERE DBPREFIXposts.id = ?`
-	err := QueryRowSQL(query, interfaceSlice(p.ID), interfaceSlice(&opID, &boardDir))
+	err := QueryRowSQL(query, []any{p.ID}, []any{&opID, &boardDir})
 	if err != nil {
 		return webRoot
 	}

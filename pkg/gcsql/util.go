@@ -296,7 +296,7 @@ func getLatestID(tableName string, tx *sql.Tx) (id int, err error) {
 		}
 		err = stmt.QueryRow().Scan(&id)
 	} else {
-		err = QueryRowSQL(query, nil, interfaceSlice(&id))
+		err = QueryRowSQL(query, nil, []any{&id})
 	}
 	return
 }
@@ -357,11 +357,6 @@ func doesGochanPrefixTableExist() (bool, error) {
 		return false, err
 	}
 	return count > 0, nil
-}
-
-// interfaceSlice creates a new interface slice from an arbitrary collection of values
-func interfaceSlice(args ...any) []any {
-	return args
 }
 
 /* func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {

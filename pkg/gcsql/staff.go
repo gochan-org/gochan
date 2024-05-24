@@ -18,7 +18,7 @@ var (
 func createDefaultAdminIfNoStaff() error {
 	const query = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
-	err := QueryRowSQL(query, interfaceSlice(), interfaceSlice(&count))
+	err := QueryRowSQL(query, nil, []any{&count})
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -67,7 +67,7 @@ func (s *Staff) ClearSessions() error {
 	var err error
 	if s.ID == 0 {
 		// ID field not set, get it from the DB
-		if err = QueryRowSQL(query, interfaceSlice(s.Username), interfaceSlice(&s.ID)); err != nil {
+		if err = QueryRowSQL(query, []any{s.Username}, []any{&s.ID}); err != nil {
 			return err
 		}
 	}
@@ -128,7 +128,7 @@ func DeactivateStaff(username string) error {
 func GetStaffUsernameFromID(id int) (string, error) {
 	const query = `SELECT username FROM DBPREFIXstaff WHERE id = ?`
 	var username string
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&username))
+	err := QueryRowSQL(query, []any{id}, []any{&username})
 	return username, err
 }
 
@@ -153,8 +153,8 @@ func GetStaffBySession(session string) (*Staff, error) {
 	ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
 	staff := new(Staff)
-	err := QueryRowSQL(query, interfaceSlice(session), interfaceSlice(
-		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin))
+	err := QueryRowSQL(query, []any{session}, []any{
+		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin})
 	return staff, err
 }
 
@@ -166,10 +166,10 @@ func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 		query += ` AND is_active = TRUE`
 	}
 	staff := new(Staff)
-	err := QueryRowSQL(query, interfaceSlice(username), interfaceSlice(
+	err := QueryRowSQL(query, []any{username}, []any{
 		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn,
 		&staff.LastLogin, &staff.IsActive,
-	))
+	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUnrecognizedUsername
 	}

@@ -23,7 +23,7 @@ func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored 
 	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
 	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	var boardIsLocked bool
-	if err = QueryRowTxSQL(tx, lockedQuery, interfaceSlice(boardID), interfaceSlice(&boardIsLocked)); err != nil {
+	if err = QueryRowTxSQL(tx, lockedQuery, []any{boardID}, []any{&boardIsLocked}); err != nil {
 		return 0, err
 	}
 	if boardIsLocked {
@@ -32,7 +32,7 @@ func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored 
 	if _, err = ExecTxSQL(tx, insertQuery, boardID, locked, stickied, anchored, cyclical); err != nil {
 		return 0, err
 	}
-	QueryRowTxSQL(tx, "SELECT MAX(id) FROM DBPREFIXthreads", nil, interfaceSlice(&threadID))
+	QueryRowTxSQL(tx, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID})
 	return threadID, err
 }
 
@@ -40,10 +40,10 @@ func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored 
 func GetThread(threadID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = ?`
 	thread := new(Thread)
-	err := QueryRowSQL(query, interfaceSlice(threadID), interfaceSlice(
+	err := QueryRowSQL(query, []any{threadID}, []any{
 		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
-	))
+	})
 	return thread, err
 }
 
@@ -51,10 +51,10 @@ func GetThread(threadID int) (*Thread, error) {
 func GetPostThread(opID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = (SELECT thread_id FROM DBPREFIXposts WHERE id = ? LIMIT 1)`
 	thread := new(Thread)
-	err := QueryRowSQL(query, interfaceSlice(opID), interfaceSlice(
+	err := QueryRowSQL(query, []any{opID}, []any{
 		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
-	))
+	})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrThreadDoesNotExist
 	}
@@ -65,7 +65,7 @@ func GetPostThread(opID int) (*Thread, error) {
 func GetTopPostThreadID(opID int) (int, error) {
 	const query = `SELECT thread_id FROM DBPREFIXposts WHERE id = ? and is_top_post`
 	var threadID int
-	err := QueryRowSQL(query, interfaceSlice(opID), interfaceSlice(&threadID))
+	err := QueryRowSQL(query, []any{opID}, []any{&threadID})
 	if err == sql.ErrNoRows {
 		err = ErrThreadDoesNotExist
 	}
@@ -103,7 +103,7 @@ func GetThreadReplyCountFromOP(opID int) (int, error) {
 	const query = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = (
 		SELECT thread_id FROM DBPREFIXposts WHERE id = ?) AND is_deleted = FALSE AND is_top_post = FALSE`
 	var num int
-	err := QueryRowSQL(query, interfaceSlice(opID), interfaceSlice(&num))
+	err := QueryRowSQL(query, []any{opID}, []any{&num})
 	return num, err
 }
 
@@ -134,7 +134,7 @@ func (t *Thread) GetReplyFileCount() (int, error) {
 	const query = `SELECT COUNT(filename) FROM DBPREFIXfiles WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = ? AND is_deleted = FALSE)`
 	var fileCount int
-	err := QueryRowSQL(query, interfaceSlice(t.ID), interfaceSlice(&fileCount))
+	err := QueryRowSQL(query, []any{t.ID}, []any{&fileCount})
 	return fileCount, err
 }
 
@@ -142,7 +142,7 @@ func (t *Thread) GetReplyFileCount() (int, error) {
 func (t *Thread) GetReplyCount() (int, error) {
 	const query = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ? AND is_top_post = FALSE AND is_deleted = FALSE`
 	var numReplies int
-	err := QueryRowSQL(query, interfaceSlice(t.ID), interfaceSlice(&numReplies))
+	err := QueryRowSQL(query, []any{t.ID}, []any{&numReplies})
 	return numReplies, err
 }
 

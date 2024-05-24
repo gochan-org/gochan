@@ -34,21 +34,6 @@ func setupSQLConfig(dbDriver string, dbName string, dbPrefix string) *config.SQL
 	}
 }
 
-func initMock(t *testing.T, dbDriver string) (sqlmock.Sqlmock, error) {
-	t.Helper()
-	err := Close()
-	assert.NoError(t, err)
-
-	gcdb, err = setupDBConn(setupSQLConfig(dbDriver, "gochan", ""))
-	if !assert.NoError(t, err) {
-		return nil, err
-	}
-
-	var mock sqlmock.Sqlmock
-	gcdb.db, mock, err = sqlmock.New()
-	return mock, err
-}
-
 func TestOpenMySQL(t *testing.T) {
 	var err error
 	gcdb, err = setupDBConn(setupSQLConfig("mysql", "gochan", ""))

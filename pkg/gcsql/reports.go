@@ -59,7 +59,7 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 		WHERE post_id = ? AND (reason = ? OR is_cleared = 2)`
 	var num int
 	var isCleared interface{}
-	err := QueryRowSQL(sql, interfaceSlice(postID, reason), interfaceSlice(&num, &isCleared))
+	err := QueryRowSQL(sql, []any{postID, reason}, []any{&num, &isCleared})
 	isClearedInt, _ := isCleared.(int64)
 	return num > 0, isClearedInt == 2, err
 }

@@ -43,7 +43,7 @@ func GetAllSections(onlyNonHidden bool) ([]Section, error) {
 func getOrCreateDefaultSectionID() (sectionID int, err error) {
 	const query = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
 	var id int
-	err = QueryRowSQL(query, interfaceSlice(), interfaceSlice(&id))
+	err = QueryRowSQL(query, nil, []any{&id})
 	if errors.Is(err, sql.ErrNoRows) {
 		var section *Section
 		if section, err = NewSection("Main", "main", false, -1); err != nil {
@@ -60,9 +60,9 @@ func getOrCreateDefaultSectionID() (sectionID int, err error) {
 func GetSectionFromID(id int) (*Section, error) {
 	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE id = ?`
 	var section Section
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+	err := QueryRowSQL(query, []any{id}, []any{
 		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
-	))
+	})
 	if err != nil {
 		return nil, err
 	}

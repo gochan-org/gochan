@@ -74,11 +74,11 @@ func CheckIPBan(ip string, boardID int) (*IPBan, error) {
 		(expires_at > CURRENT_TIMESTAMP OR permanent)
 	ORDER BY id DESC LIMIT 1`
 	var ban IPBan
-	err := QueryRowSQL(query, interfaceSlice(ip, ip, boardID), interfaceSlice(
+	err := QueryRowSQL(query, []any{ip, ip, boardID}, []any{
 		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,
 		&ban.IsThreadBan, &ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt,
 		&ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message,
-		&ban.CanAppeal))
+		&ban.CanAppeal})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	} else if err != nil {
@@ -90,11 +90,11 @@ func CheckIPBan(ip string, boardID int) (*IPBan, error) {
 func GetIPBanByID(id int) (*IPBan, error) {
 	const query = ipBanQueryBase + " WHERE id = ?"
 	var ban IPBan
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(
+	err := QueryRowSQL(query, []any{id}, []any{
 		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,
 		&ban.IsThreadBan, &ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt,
 		&ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message,
-		&ban.CanAppeal))
+		&ban.CanAppeal})
 	if err != nil {
 		return nil, err
 	}
@@ -428,9 +428,9 @@ func CheckFileChecksumBan(checksum string, boardID int) (*FileBan, error) {
 	FROM DBPREFIXfile_ban
 	WHERE checksum = ? AND (board_id IS NULL OR board_id = ?) ORDER BY id DESC LIMIT 1`
 	var ban FileBan
-	err := QueryRowSQL(query, interfaceSlice(checksum, boardID), interfaceSlice(
+	err := QueryRowSQL(query, []any{checksum, boardID}, []any{
 		&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
-	))
+	})
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

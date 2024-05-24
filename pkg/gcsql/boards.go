@@ -39,7 +39,7 @@ var (
 func DoesBoardExistByID(ID int) bool {
 	const query = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
 	var count int
-	QueryRowSQL(query, interfaceSlice(ID), interfaceSlice(&count))
+	QueryRowSQL(query, []any{ID}, []any{&count})
 	return count > 0
 }
 
@@ -47,7 +47,7 @@ func DoesBoardExistByID(ID int) bool {
 func DoesBoardExistByDir(dir string) bool {
 	const query = `SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?`
 	var count int
-	QueryRowSQL(query, interfaceSlice(dir), interfaceSlice(&count))
+	QueryRowSQL(query, []any{dir}, []any{&count})
 	return count > 0
 }
 
@@ -86,7 +86,7 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 func GetBoardDir(id int) (string, error) {
 	const query = `SELECT dir FROM DBPREFIXboards WHERE id = ?`
 	var dir string
-	err := QueryRowSQL(query, interfaceSlice(id), interfaceSlice(&dir))
+	err := QueryRowSQL(query, []any{id}, []any{&dir})
 	return dir, err
 }
 
@@ -99,7 +99,7 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 		WHERE posts.id = ?
 	) as threads ON threads.board_id = board.id`
 	var boardURI string
-	err := QueryRowSQL(query, interfaceSlice(postID), interfaceSlice(&boardURI))
+	err := QueryRowSQL(query, []any{postID}, []any{&boardURI})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrBoardDoesNotExist
 	}
@@ -109,13 +109,12 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
 	query := selectBoardsBaseSQL + where
 	board := new(Board)
-	err := QueryRowSQL(query, whereParameters, interfaceSlice(
+	err := QueryRowSQL(query, whereParameters, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
 		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
-		&board.EnableCatalog,
-	))
+		&board.EnableCatalog})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrBoardDoesNotExist
 	}
@@ -124,18 +123,18 @@ func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
 
 // GetBoardFromID returns the board corresponding to a given id
 func GetBoardFromID(id int) (*Board, error) {
-	return getBoardBase("WHERE DBPREFIXboards.id = ?", interfaceSlice(id))
+	return getBoardBase("WHERE DBPREFIXboards.id = ?", []any{id})
 }
 
 // GetBoardFromDir returns the board corresponding to a given dir
 func GetBoardFromDir(dir string) (*Board, error) {
-	return getBoardBase("WHERE DBPREFIXboards.dir = ?", interfaceSlice(dir))
+	return getBoardBase("WHERE DBPREFIXboards.dir = ?", []any{dir})
 }
 
 // GetIDFromDir returns the id of the board with the given dir value
 func GetBoardIDFromDir(dir string) (id int, err error) {
 	const query = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
-	err = QueryRowSQL(query, interfaceSlice(dir), interfaceSlice(&id))
+	err = QueryRowSQL(query, []any{dir}, []any{&id})
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrBoardDoesNotExist
 	}
@@ -259,10 +258,7 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 	if err != nil {
 		return err
 	}
-	if err = QueryRowSQL(
-		`SELECT id FROM DBPREFIXboards WHERE dir = ?`,
-		interfaceSlice(board.Dir), interfaceSlice(&board.ID),
-	); err != nil {
+	if err = QueryRowSQL(`SELECT id FROM DBPREFIXboards WHERE dir = ?`, []any{board.Dir}, []any{&board.ID}); err != nil {
 		return err
 	}
 	board.CreatedAt = time.Now()
@@ -276,7 +272,7 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 func createDefaultBoardIfNoneExist() error {
 	const query = `SELECT COUNT(id) FROM DBPREFIXboards`
 	var count int
-	QueryRowSQL(query, interfaceSlice(), interfaceSlice(&count))
+	QueryRowSQL(query, nil, []any{&count})
 	if count > 0 {
 		return nil
 	}
@@ -289,7 +285,7 @@ func createDefaultBoardIfNoneExist() error {
 func getBoardIDFromURI(uri string) (int, error) {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE uri = ?`
 	var id int
-	err := QueryRowSQL(sql, interfaceSlice(uri), interfaceSlice(&id))
+	err := QueryRowSQL(sql, []any{uri}, []any{&id})
 	return id, err
 }
 
