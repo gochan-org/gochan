@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"sync"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -303,15 +304,23 @@ func BuildBoards(verbose bool, which ...int) error {
 		return nil
 	}
 
-	for _, board := range boards {
-		if err = buildBoard(&board, true); err != nil {
-			return err
-		}
-		if verbose {
-			fmt.Printf("Built /%s/ successfully\n", board.Dir)
-		}
+	var wg sync.WaitGroup
+	wg.Add(len(boards))
+
+	for b := range boards {
+		go func(board *gcsql.Board) {
+			tmpErr := buildBoard(board, true)
+			if tmpErr == nil && verbose {
+				gcutil.LogInfo().Str("board", board.Dir).
+					Msg("Built board successfully")
+			} else if err == nil {
+				err = tmpErr
+			}
+			wg.Done()
+		}(&boards[b])
 	}
-	return nil
+	wg.Wait()
+	return err
 }
 
 // Build builds the board and its thread files

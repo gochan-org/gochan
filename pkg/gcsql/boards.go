@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -57,11 +58,13 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 		query += " WHERE s.hidden = FALSE"
 	}
 	query += " ORDER BY navbar_position ASC, DBPREFIXboards.id ASC"
-	rows, err := QuerySQL(query)
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	rows, err := QueryContextSQL(ctx, nil, query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 	var boards []Board
 	for rows.Next() {
 		var board Board
@@ -72,11 +75,12 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 			&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
 			&board.EnableCatalog,
 		); err != nil {
+			rows.Close()
 			return nil, err
 		}
 		boards = append(boards, board)
 	}
-	return boards, nil
+	return boards, rows.Close()
 }
 
 func GetBoardDir(id int) (string, error) {
