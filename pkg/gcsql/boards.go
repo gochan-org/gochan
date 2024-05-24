@@ -312,12 +312,15 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	}
 	defer tx.Rollback()
 
-	rows, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND is_deleted = FALSE AND stickied = FALSE ORDER BY last_bump DESC`,
+	rows, stmt, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND is_deleted = FALSE AND stickied = FALSE ORDER BY last_bump DESC`,
 		board.ID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		stmt.Close()
+	}()
 
 	var threadIDs []interface{}
 	var id int
@@ -343,11 +346,14 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 		return nil, err
 	}
 
-	if rows, err = QueryTxSQL(tx, `SELECT id FROM DBPREFIXposts WHERE thread_id in `+idSetStr,
+	if rows, stmt, err = QueryTxSQL(tx, `SELECT id FROM DBPREFIXposts WHERE thread_id in `+idSetStr,
 		threadIDs...); err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		stmt.Close()
+		rows.Close()
+	}()
 
 	var postIDs []int
 	for rows.Next() {
