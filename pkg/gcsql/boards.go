@@ -65,6 +65,8 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	var boards []Board
 	for rows.Next() {
 		var board Board
@@ -75,7 +77,6 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 			&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
 			&board.EnableCatalog,
 		); err != nil {
-			rows.Close()
 			return nil, err
 		}
 		boards = append(boards, board)

@@ -1,6 +1,7 @@
 package building
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net"
@@ -128,18 +129,21 @@ func (p *Post) Stickied() bool {
 }
 
 func QueryPosts(query string, params []any, cb func(*Post) error) error {
-	rows, err := gcsql.QuerySQL(query, params...)
+	sqlCfg := config.GetSQLConfig()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds)*time.Second)
+	defer cancel()
+
+	rows, err := gcsql.QueryContextSQL(ctx, nil, query, params...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
-	dbType := config.GetSystemCriticalConfig().DBtype
 
 	for rows.Next() {
 		var post Post
 		dest := []any{&post.ID, &post.thread.ID}
 		var ip string
-		if dbType == "mysql" {
+		if sqlCfg.DBtype == "mysql" {
 			dest = append(dest, &post.IP)
 		} else {
 			dest = append(dest, &ip)
@@ -155,7 +159,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 		if err = rows.Scan(dest...); err != nil {
 			return err
 		}
-		if dbType != "mysql" {
+		if sqlCfg.DBtype != "mysql" {
 			post.IP = net.ParseIP(ip)
 			if post.IP == nil {
 				return fmt.Errorf("invalid IP address %q", ip)

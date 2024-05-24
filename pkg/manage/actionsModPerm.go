@@ -425,10 +425,9 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		dismissID := gcutil.HackyStringToInt(dismissIDstr)
 		block := request.FormValue("block")
 		if block != "" && staff.Rank != 3 {
-			errEv.
+			errEv.Caller().
 				Int("postID", dismissID).
-				Str("rejected", "not an admin").
-				Caller().Send()
+				Str("rejected", "not an admin").Send()
 			return "", errors.New("only the administrator can block reports")
 		}
 		found, err := gcsql.ClearReport(dismissID, staff.ID, block != "" && staff.Rank == 3)

@@ -384,6 +384,8 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	if _, err = stmt.Exec(
 		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
 		p.Message, p.MessageRaw, p.Password, p.Flag, p.Country,
@@ -398,11 +400,19 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		if err != nil {
 			return err
 		}
+		defer stmt2.Close()
+
 		if _, err = stmt2.Exec(p.ThreadID); err != nil {
 			return err
 		}
+		if err = stmt2.Close(); err != nil {
+			return err
+		}
 	}
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	return stmt.Close()
 }
 
 func (p *Post) WebPath() string {

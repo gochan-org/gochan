@@ -143,7 +143,12 @@ func ExecTxSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return stmt.Exec(values...)
+	defer stmt.Close()
+	res, err := stmt.Exec(values...)
+	if err != nil {
+		return res, err
+	}
+	return res, stmt.Close()
 }
 
 /*
@@ -271,7 +276,13 @@ func QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
 	if err != nil {
 		return nil, err
 	}
-	return stmt.Query(a...)
+	defer stmt.Close()
+
+	rows, err := stmt.Query(a...)
+	if err != nil {
+		return rows, err
+	}
+	return rows, stmt.Close()
 }
 
 func ParseSQLTimeString(str string) (time.Time, error) {
@@ -294,7 +305,11 @@ func getLatestID(tableName string, tx *sql.Tx) (id int, err error) {
 		if err != nil {
 			return 0, err
 		}
-		err = stmt.QueryRow().Scan(&id)
+		defer stmt.Close()
+		if err = stmt.QueryRow().Scan(&id); err != nil {
+			return
+		}
+		err = stmt.Close()
 	} else {
 		err = QueryRowSQL(query, nil, []any{&id})
 	}

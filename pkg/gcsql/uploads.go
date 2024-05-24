@@ -68,6 +68,7 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
 	if upload.FileOrder < 1 {
 		upload.FileOrder, err = p.nextFileOrder()
@@ -85,7 +86,10 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload.ID, err = getLatestID("DBPREFIXfiles", tx); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	return stmt.Close()
 }
 
 // GetUploadFilenameAndBoard returns the filename (or an empty string) and

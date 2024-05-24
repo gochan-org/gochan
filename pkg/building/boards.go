@@ -282,19 +282,22 @@ func BuildBoardPages(board *gcsql.Board) error {
 func BuildBoards(verbose bool, which ...int) error {
 	var boards []gcsql.Board
 	var err error
+	errEv := gcutil.LogError(nil)
+	defer errEv.Discard()
 
 	if which == nil {
 		boards, err = gcsql.GetAllBoards(false)
 		if err != nil {
+			errEv.Err(err).Caller().Send()
 			return err
 		}
 	} else {
 		for _, boardID := range which {
 			board, err := gcsql.GetBoardFromID(boardID)
 			if err != nil {
-				gcutil.LogError(err).
+				errEv.Err(err).Caller().
 					Int("boardid", boardID).
-					Caller().Msg("Unable to get board information")
+					Msg("Unable to get board information")
 				return fmt.Errorf("unable to get board information (ID: %d): %s", boardID, err.Error())
 			}
 			boards = append(boards, *board)
@@ -314,6 +317,7 @@ func BuildBoards(verbose bool, which ...int) error {
 				gcutil.LogInfo().Str("board", board.Dir).
 					Msg("Built board successfully")
 			} else if err == nil {
+				gcutil.LogError(err).Caller().Str("board", board.Dir).Msg("Unable to build board")
 				err = tmpErr
 			}
 			wg.Done()

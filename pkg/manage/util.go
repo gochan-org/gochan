@@ -77,10 +77,10 @@ func createSession(key, username, password string, request *http.Request, writer
 	})
 
 	if err = staff.CreateLoginSession(key); err != nil {
-		gcutil.LogError(err).
+		errEv.Err(err).Caller().
 			Str("staff", username).
 			Str("sessionKey", key).
-			Caller().Msg("Error creating new staff session")
+			Msg("Error creating new staff session")
 		return ErrUnableToCreateSession
 	}
 

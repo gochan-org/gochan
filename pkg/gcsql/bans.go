@@ -238,6 +238,7 @@ func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote s
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, name, isRegex); err != nil {
 		return nil, err
 	}
@@ -252,7 +253,7 @@ func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote s
 	ban.StaffNote = staffNote
 	ban.Username = name
 	ban.IsRegex = isRegex
-	return &ban, nil
+	return &ban, stmt.Close()
 }
 
 func GetNameBans(boardID int, limit int) ([]UsernameBan, error) {
@@ -373,6 +374,7 @@ func NewFilenameBan(filename string, isRegex bool, boardID int, staffID int, sta
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, filename, isRegex); err != nil {
 		return nil, err
 	}
@@ -387,7 +389,7 @@ func NewFilenameBan(filename string, isRegex bool, boardID int, staffID int, sta
 	ban.StaffNote = staffNote
 	ban.Filename = filename
 	ban.IsRegex = isRegex
-	return &ban, nil
+	return &ban, stmt.Close()
 }
 
 func (ub filenameOrUsernameBanBase) IsGlobalBan() bool {
@@ -498,6 +500,7 @@ func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staf
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	if _, err = stmt.Exec(
 		ban.BoardID, staffID, staffNote, checksum, fingerprinter, banIP, banReason,
 	); err != nil {
@@ -512,7 +515,7 @@ func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staf
 	ban.StaffID = staffID
 	ban.StaffNote = staffNote
 	ban.Checksum = checksum
-	return &ban, nil
+	return &ban, stmt.Close()
 }
 
 func (fb *FileBan) IsGlobalBan() bool {

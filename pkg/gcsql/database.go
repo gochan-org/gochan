@@ -129,9 +129,9 @@ func (db *GCDB) ExecSQL(query string, values ...any) (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	result, err := stmt.Exec(values...)
 	if err != nil {
-		stmt.Close()
 		return nil, err
 	}
 	return result, stmt.Close()
@@ -154,9 +154,10 @@ func (db *GCDB) ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, v
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
+
 	result, err := stmt.ExecContext(ctx, values...)
 	if err != nil {
-		stmt.Close()
 		return nil, err
 	}
 	return result, stmt.Close()
@@ -180,7 +181,12 @@ func (db *GCDB) ExecTxSQL(tx *sql.Tx, query string, values ...any) (sql.Result, 
 	if err != nil {
 		return nil, err
 	}
-	return stmt.Exec(values...)
+	defer stmt.Close()
+	res, err := stmt.Exec(values...)
+	if err != nil {
+		return res, err
+	}
+	return res, stmt.Close()
 }
 
 /*
@@ -240,8 +246,9 @@ func (db *GCDB) QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	if err = stmt.QueryRowContext(ctx, values...).Scan(out...); err != nil {
-		stmt.Close()
 		return err
 	}
 	return stmt.Close()
@@ -268,8 +275,9 @@ func (db *GCDB) QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
+
 	if err = stmt.QueryRow(values...).Scan(out...); err != nil {
-		stmt.Close()
 		return err
 	}
 	return stmt.Close()
@@ -314,7 +322,13 @@ func (db *GCDB) QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a
 	if err != nil {
 		return nil, err
 	}
-	return stmt.QueryContext(ctx, a...)
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(ctx, a...)
+	if err != nil {
+		return rows, err
+	}
+	return rows, stmt.Close()
 }
 
 /*

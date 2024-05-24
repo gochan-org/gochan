@@ -75,10 +75,15 @@ func tcPrepareContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *testCase[prepar
 }
 
 func TestPrepareContextSQL(t *testing.T) {
-	_, err := PrepareContextSQL(context.Background(), "", nil)
+	stmt, err := PrepareContextSQL(context.Background(), "", nil)
 	if !assert.Error(t, err) {
 		return
 	}
+	defer func() {
+		if stmt != nil {
+			assert.NoError(t, stmt.Close())
+		}
+	}()
 
 	mock := setupMockDB(t)
 	testCases := []testCase[prepareFunc]{

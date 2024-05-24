@@ -26,6 +26,7 @@ func getAllAnnouncements() ([]announcementWithName, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var announcements []announcementWithName
 	for rows.Next() {
 		var announcement announcementWithName
