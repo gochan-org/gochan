@@ -24,6 +24,7 @@ jobs:
         days-before-issue-closed: 15
         days-before-pr-stale: -1
         days-before-pr-close: -1
+        exempt-issue-labels: ongoing,bug
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         stale-issue-message: 'This issue is stale because it has been open for 150 days with no activity.'
         close-issue-message: "This issue was closed because it has been inactive for 15 days since being marked as stale."
