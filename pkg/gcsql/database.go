@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -388,21 +389,70 @@ func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
 	return db, err
 }
 
-// OptimizeDatabase peforms a database optimisation
-func OptimizeDatabase() error {
-	tableRows, tablesErr := QuerySQL("SHOW TABLES")
-	if tablesErr != nil {
-		return tablesErr
+func optimizeMySQL() error {
+	timeout := config.GetSQLConfig().DBTimeoutSeconds
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	defer cancel()
+	var wg sync.WaitGroup
+	rows, err := QueryContextSQL(ctx, nil, "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()")
+	if err != nil {
+		return err
 	}
-	defer tableRows.Close()
-	for tableRows.Next() {
+
+	for rows.Next() {
+		wg.Add(1)
 		var table string
-		tableRows.Scan(&table)
-		if _, err := ExecSQL("OPTIMIZE TABLE " + table); err != nil {
+		if err = rows.Scan(&table); err != nil {
+			rows.Close()
 			return err
 		}
+		go func(table string) {
+			if _, err = ExecContextSQL(ctx, nil, "OPTIMIZE TABLE "+table); err != nil {
+				rows.Close()
+				return
+			}
+			wg.Done()
+		}(table)
 	}
-	return nil
+	wg.Wait()
+	if err != nil {
+		return err
+	}
+	return rows.Close()
+}
+
+func optimizePostgres() error {
+	cfg := config.GetSQLConfig()
+	ctx, cancel := context.WithTimeout(context.Background(),
+		time.Second*time.Duration(cfg.DBTimeoutSeconds))
+	defer cancel()
+
+	_, err := ExecContextSQL(ctx, nil, "REINDEX DATABASE "+cfg.DBname)
+	return err
+}
+
+func optimizeSqlite3() error {
+	timeout := time.Duration(config.GetSQLConfig().DBTimeoutSeconds)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*timeout)
+	defer cancel()
+
+	_, err := ExecContextSQL(ctx, nil, "VACUUM")
+	return err
+}
+
+// OptimizeDatabase peforms a database optimisation
+func OptimizeDatabase() error {
+	switch config.GetSQLConfig().DBtype {
+	case "mysql":
+		return optimizeMySQL()
+	case "postgresql":
+		return optimizePostgres()
+	case "sqlite3":
+		return optimizeSqlite3()
+	default:
+		// this shouldn't happen under normal circumstances since this is assumed to have already been checked
+		return ErrUnsupportedDB
+	}
 }
 
 func sqlVersionError(err error, dbDriver string, query *string) error {
