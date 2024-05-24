@@ -390,8 +390,7 @@ func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
 }
 
 func optimizeMySQL() error {
-	timeout := config.GetSQLConfig().DBTimeoutSeconds
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
 	defer cancel()
 	var wg sync.WaitGroup
 	rows, err := QueryContextSQL(ctx, nil, "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()")
@@ -422,18 +421,15 @@ func optimizeMySQL() error {
 }
 
 func optimizePostgres() error {
-	cfg := config.GetSQLConfig()
-	ctx, cancel := context.WithTimeout(context.Background(),
-		time.Second*time.Duration(cfg.DBTimeoutSeconds))
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
 	defer cancel()
 
-	_, err := ExecContextSQL(ctx, nil, "REINDEX DATABASE "+cfg.DBname)
+	_, err := ExecContextSQL(ctx, nil, "REINDEX DATABASE "+config.GetSQLConfig().DBname)
 	return err
 }
 
 func optimizeSqlite3() error {
-	timeout := time.Duration(config.GetSQLConfig().DBTimeoutSeconds)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, "VACUUM")
