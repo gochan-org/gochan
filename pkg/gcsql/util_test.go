@@ -153,7 +153,7 @@ func tcExecContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *testCase[execFunc]
 }
 
 func TestExecContextSQL(t *testing.T) {
-	_, err := ExecContextSQL(nil, nil, "")
+	_, err := ExecContextSQL(context.Background(), nil, "")
 	if !assert.Error(t, err) {
 		return
 	}
@@ -231,7 +231,7 @@ func tcQueryRowContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *testCase[funcQ
 }
 
 func TestQueryRowContextSQL(t *testing.T) {
-	err := QueryRowContextSQL(nil, nil, "", nil, nil)
+	err := QueryRowContextSQL(context.Background(), nil, "", nil, nil)
 	if !assert.Error(t, err) {
 		return
 	}
