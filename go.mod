@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d
 	github.com/Eggbertx/durationutil v1.0.0
+	github.com/Eggbertx/geoip-legacy v1.1.0
 	github.com/aquilax/tripcode v1.0.1
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
 	github.com/devedge/imagehash v0.0.0-20180324030135-7061aa3b4066
@@ -15,15 +16,15 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/oschwald/maxminddb-golang v1.12.0
-	github.com/rs/zerolog v1.32.0
+	github.com/rs/zerolog v1.33.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tdewolff/minify v2.3.6+incompatible
 	github.com/uptrace/bunrouter v1.0.21
 	github.com/vadv/gopher-lua-libs v0.5.0
 	github.com/yuin/gopher-lua v1.1.1
-	golang.org/x/crypto v0.21.0
-	golang.org/x/image v0.15.0
-	golang.org/x/net v0.23.0
+	golang.org/x/crypto v0.23.0
+	golang.org/x/image v0.16.0
+	golang.org/x/net v0.25.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	layeh.com/gopher-luar v1.0.11
 )
@@ -40,8 +41,8 @@ require (
 	github.com/tdewolff/parse v2.3.4+incompatible // indirect
 	github.com/tdewolff/test v1.0.10 // indirect
 	gitlab.com/nyarla/go-crypt v0.0.0-20160106005555-d9a5dc2b789b // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/text v0.15.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
