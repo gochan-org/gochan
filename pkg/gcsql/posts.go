@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -354,7 +355,10 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
-	tx, err := BeginTx()
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
 	if err != nil {
 		return err
 	}

@@ -308,15 +308,16 @@ func BuildBoards(verbose bool, which ...int) error {
 	}
 
 	var wg sync.WaitGroup
+	var tmpErr error
 	wg.Add(len(boards))
-
 	for b := range boards {
 		go func(board *gcsql.Board) {
-			tmpErr := buildBoard(board, true)
+			tmpErr = buildBoard(board, true)
 			if tmpErr == nil && verbose {
 				gcutil.LogInfo().Str("board", board.Dir).
 					Msg("Built board successfully")
-			} else if err == nil {
+			}
+			if err == nil && tmpErr != nil {
 				gcutil.LogError(err).Caller().Str("board", board.Dir).Msg("Unable to build board")
 				err = tmpErr
 			}
