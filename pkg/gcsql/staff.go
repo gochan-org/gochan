@@ -21,7 +21,11 @@ var (
 func createDefaultAdminIfNoStaff() error {
 	const query = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
-	err := QueryRowSQL(query, nil, []any{&count})
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	err := QueryRowContextSQL(ctx, nil, query, nil, []any{&count})
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -37,7 +41,11 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 	(username, password_checksum, global_rank)
 	VALUES(?,?,?)`
 	passwordChecksum := gcutil.BcryptSum(password)
-	_, err := ExecSQL(sqlINSERT, username, passwordChecksum, rank)
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	_, err := ExecContextSQL(ctx, nil, sqlINSERT, username, passwordChecksum, rank)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -53,7 +61,11 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 // SetActive changes the active status of the staff member. If `active` is false, the login sessions are cleared
 func (s *Staff) SetActive(active bool) error {
 	const updateActive = `UPDATE DBPREFIXstaff SET is_active = FALSE WHERE username = ?`
-	_, err := ExecSQL(updateActive, s.Username)
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	_, err := ExecContextSQL(ctx, nil, updateActive, s.Username)
 	if err != nil {
 		return err
 	}
@@ -68,13 +80,17 @@ func (s *Staff) ClearSessions() error {
 	const query = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
 	const deleteSessions = `DELETE FROM DBPREFIXsessions WHERE staff_id = ?`
 	var err error
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
 	if s.ID == 0 {
 		// ID field not set, get it from the DB
-		if err = QueryRowSQL(query, []any{s.Username}, []any{&s.ID}); err != nil {
+		if err = QueryRowContextSQL(ctx, nil, query, []any{s.Username}, []any{&s.ID}); err != nil {
 			return err
 		}
 	}
-	_, err = ExecSQL(deleteSessions, s.ID)
+	_, err = ExecContextSQL(ctx, nil, deleteSessions, s.ID)
 	return err
 }
 
@@ -92,7 +108,11 @@ func (s *Staff) RankTitle() string {
 func UpdatePassword(username string, newPassword string) error {
 	const sqlUPDATE = `UPDATE DBPREFIXstaff SET password_checksum = ? WHERE username = ?`
 	checksum := gcutil.BcryptSum(newPassword)
-	_, err := ExecSQL(sqlUPDATE, checksum, username)
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	_, err := ExecContextSQL(ctx, nil, sqlUPDATE, checksum, username)
 	return err
 }
 
@@ -109,15 +129,18 @@ func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
 	session.MaxAge = -1
 	http.SetCookie(writer, session)
 
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
 	staffID := 0
-	if err = QueryRowSQL(`SELECT staff_id FROM DBPREFIXsessions WHERE data = ?`,
-		[]interface{}{session.Value}, []interface{}{&staffID}); err != nil && err != sql.ErrNoRows {
+	if err = QueryRowContextSQL(ctx, nil, `SELECT staff_id FROM DBPREFIXsessions WHERE data = ?`,
+		[]any{session.Value}, []any{&staffID}); err != nil && err != sql.ErrNoRows {
 		// something went wrong with the query and it's not caused by no rows being returned
 		return errors.New("failed getting staff ID: " + err.Error())
 	}
 
-	_, err = ExecSQL(`DELETE FROM DBPREFIXsessions WHERE data = ?`, sessionVal)
-	if err != nil && err != sql.ErrNoRows {
+	_, err = ExecContextSQL(ctx, nil, `DELETE FROM DBPREFIXsessions WHERE data = ?`, sessionVal)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("failed clearing session for staff with id %d", staffID)
 	}
 	return nil
@@ -131,14 +154,22 @@ func DeactivateStaff(username string) error {
 func GetStaffUsernameFromID(id int) (string, error) {
 	const query = `SELECT username FROM DBPREFIXstaff WHERE id = ?`
 	var username string
-	err := QueryRowSQL(query, []any{id}, []any{&username})
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	err := QueryRowContextSQL(ctx, nil, query, []any{id}, []any{&username})
 	return username, err
 }
 
 func GetStaffID(username string) (int, error) {
 	const query = `SELECT id  FROM DBPREFIXstaff WHERE username = ?`
 	var id int
-	err := QueryRowSQL(query, []any{username}, []any{&id})
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	err := QueryRowContextSQL(ctx, nil, query, []any{username}, []any{&id})
 	return id, err
 }
 
@@ -155,8 +186,12 @@ func GetStaffBySession(session string) (*Staff, error) {
 	JOIN DBPREFIXsessions as sessions
 	ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
 	staff := new(Staff)
-	err := QueryRowSQL(query, []any{session}, []any{
+	err := QueryRowContextSQL(ctx, nil, query, []any{session}, []any{
 		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin})
 	return staff, err
 }
@@ -168,8 +203,11 @@ func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 	if onlyActive {
 		query += ` AND is_active = TRUE`
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
 	staff := new(Staff)
-	err := QueryRowSQL(query, []any{username}, []any{
+	err := QueryRowContextSQL(ctx, nil, query, []any{username}, []any{
 		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn,
 		&staff.LastLogin, &staff.IsActive,
 	})

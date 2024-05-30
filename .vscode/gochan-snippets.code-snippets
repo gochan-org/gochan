@@ -39,7 +39,7 @@
 	},
 	"Context with timeout": {
 		"scope": "go",
-		"prefix": "context-timeout",
+		"prefix": ["context-timeout", "ctx-timeout"],
 		"body": [
 			"ctx, cancel := context.WithTimeout(context.Background(), ${1:gcdb.defaultTimeout})",
 			"defer cancel()"
