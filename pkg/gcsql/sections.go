@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 )
@@ -21,11 +22,14 @@ func GetAllSections(onlyNonHidden bool) ([]Section, error) {
 	}
 	query += " ORDER BY position ASC, name ASC"
 
-	rows, err := QuerySQL(query)
+	rows, cancel, err := QueryTimeoutSQL(nil, query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		cancel()
+		rows.Close()
+	}()
 	var sections []Section
 	for rows.Next() {
 		var section Section
@@ -35,7 +39,7 @@ func GetAllSections(onlyNonHidden bool) ([]Section, error) {
 		}
 		sections = append(sections, section)
 	}
-	return sections, nil
+	return sections, rows.Close()
 }
 
 // getOrCreateDefaultSectionID creates the default section if no sections have been created yet,
@@ -43,7 +47,8 @@ func GetAllSections(onlyNonHidden bool) ([]Section, error) {
 func getOrCreateDefaultSectionID() (sectionID int, err error) {
 	const query = `SELECT id FROM DBPREFIXsections WHERE name = 'Main'`
 	var id int
-	err = QueryRowSQL(query, nil, []any{&id})
+
+	err = QueryRowTimeoutSQL(nil, query, nil, []any{&id})
 	if errors.Is(err, sql.ErrNoRows) {
 		var section *Section
 		if section, err = NewSection("Main", "main", false, -1); err != nil {
@@ -60,7 +65,7 @@ func getOrCreateDefaultSectionID() (sectionID int, err error) {
 func GetSectionFromID(id int) (*Section, error) {
 	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE id = ?`
 	var section Section
-	err := QueryRowSQL(query, []any{id}, []any{
+	err := QueryRowTimeoutSQL(nil, query, []any{id}, []any{
 		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
 	})
 	if err != nil {
@@ -88,18 +93,22 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer func() {
+		cancel()
+		tx.Rollback()
+	}()
 
 	if position < 0 {
 		// position not specified
-		err = QueryRowTxSQL(tx, sqlPosition, nil, []any{&position})
+		err = QueryRowContextSQL(ctx, tx, sqlPosition, nil, []any{&position})
 		if errors.Is(err, sql.ErrNoRows) {
 			position = 1
 		} else if err != nil {
 			return nil, err
 		}
 	}
-	if _, err = ExecTxSQL(tx, sqlINSERT, name, abbreviation, hidden, position); err != nil {
+	if _, err = ExecContextSQL(ctx, tx, sqlINSERT, name, abbreviation, hidden, position); err != nil {
 		return nil, err
 	}
 	id, err := getLatestID("DBPREFIXsections", tx)
@@ -120,6 +129,6 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 
 func (s *Section) UpdateValues() error {
 	const query = `UPDATE DBPREFIXsections set name = ?, abbreviation = ?, position = ?, hidden = ? WHERE id = ?`
-	_, err := ExecSQL(query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
+	_, err := ExecTimeoutSQL(nil, query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
 	return err
 }

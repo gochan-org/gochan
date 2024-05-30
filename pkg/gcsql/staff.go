@@ -22,10 +22,7 @@ func createDefaultAdminIfNoStaff() error {
 	const query = `SELECT COUNT(id) FROM DBPREFIXstaff`
 	var count int
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	err := QueryRowContextSQL(ctx, nil, query, nil, []any{&count})
+	err := QueryRowTimeoutSQL(nil, query, nil, []any{&count})
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
@@ -42,10 +39,7 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 	VALUES(?,?,?)`
 	passwordChecksum := gcutil.BcryptSum(password)
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	_, err := ExecContextSQL(ctx, nil, sqlINSERT, username, passwordChecksum, rank)
+	_, err := ExecTimeoutSQL(nil, sqlINSERT, username, passwordChecksum, rank)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -62,10 +56,7 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 func (s *Staff) SetActive(active bool) error {
 	const updateActive = `UPDATE DBPREFIXstaff SET is_active = FALSE WHERE username = ?`
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	_, err := ExecContextSQL(ctx, nil, updateActive, s.Username)
+	_, err := ExecTimeoutSQL(nil, updateActive, s.Username)
 	if err != nil {
 		return err
 	}
@@ -109,10 +100,7 @@ func UpdatePassword(username string, newPassword string) error {
 	const sqlUPDATE = `UPDATE DBPREFIXstaff SET password_checksum = ? WHERE username = ?`
 	checksum := gcutil.BcryptSum(newPassword)
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	_, err := ExecContextSQL(ctx, nil, sqlUPDATE, checksum, username)
+	_, err := ExecTimeoutSQL(nil, sqlUPDATE, checksum, username)
 	return err
 }
 
@@ -155,10 +143,7 @@ func GetStaffUsernameFromID(id int) (string, error) {
 	const query = `SELECT username FROM DBPREFIXstaff WHERE id = ?`
 	var username string
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	err := QueryRowContextSQL(ctx, nil, query, []any{id}, []any{&username})
+	err := QueryRowTimeoutSQL(nil, query, []any{id}, []any{&username})
 	return username, err
 }
 
@@ -166,32 +151,20 @@ func GetStaffID(username string) (int, error) {
 	const query = `SELECT id  FROM DBPREFIXstaff WHERE username = ?`
 	var id int
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	err := QueryRowContextSQL(ctx, nil, query, []any{username}, []any{&id})
+	err := QueryRowTimeoutSQL(nil, query, []any{username}, []any{&id})
 	return id, err
 }
 
 // GetStaffBySession gets the staff that is logged in in the given session
 func GetStaffBySession(session string) (*Staff, error) {
 	const query = `SELECT 
-		staff.id, 
-		staff.username, 
-		staff.password_checksum, 
-		staff.global_rank,
-		staff.added_on,
-		staff.last_login 
+		staff.id, staff.username, staff.password_checksum, staff.global_rank, staff.added_on, staff.last_login
 	FROM DBPREFIXstaff as staff
-	JOIN DBPREFIXsessions as sessions
-	ON sessions.staff_id = staff.id
+	JOIN DBPREFIXsessions as sessions ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
 	staff := new(Staff)
-	err := QueryRowContextSQL(ctx, nil, query, []any{session}, []any{
+	err := QueryRowTimeoutSQL(nil, query, []any{session}, []any{
 		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin})
 	return staff, err
 }
@@ -203,11 +176,8 @@ func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 	if onlyActive {
 		query += ` AND is_active = TRUE`
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
 	staff := new(Staff)
-	err := QueryRowContextSQL(ctx, nil, query, []any{username}, []any{
+	err := QueryRowTimeoutSQL(nil, query, []any{username}, []any{
 		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn,
 		&staff.LastLogin, &staff.IsActive,
 	})

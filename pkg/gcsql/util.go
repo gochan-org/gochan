@@ -123,6 +123,13 @@ func ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...an
 	return gcdb.ExecContextSQL(ctx, tx, sqlStr, values...)
 }
 
+func ExecTimeoutSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	return ExecContextSQL(ctx, tx, sqlStr, values...)
+}
+
 /*
 ExecTxSQL automatically escapes the given values and caches the statement
 Example:
@@ -191,6 +198,15 @@ func QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, o
 	return gcdb.QueryRowContextSQL(ctx, tx, query, values, out)
 }
 
+// QueryRowTimeoutSQL is a helper function for querying a single row with the configured default timeout.
+// It creates a context with the default timeout to only be used for this query and then disposed.
+// It should only be used by a function that does a single SQL query, otherwise use QueryRowContextSQL
+func QueryRowTimeoutSQL(tx *sql.Tx, query string, values, out []any) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	return QueryRowContextSQL(ctx, tx, query, values, out)
+}
+
 /*
 QueryRowTxSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
 Automatically escapes the given values and caches the query
@@ -251,6 +267,21 @@ func QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a ...any) (*
 		return nil, ErrNotConnected
 	}
 	return gcdb.QueryContextSQL(ctx, tx, query, a...)
+}
+
+// QueryTimeoutSQL creates a new context with the configured default timeout and passes it and
+// the given transaction, query, and parameters to QueryContextSQL. If it returns an error,
+// the context is cancelled, and the error is returned. Otherwise, it returns the rows,
+// cancel function (for the calling function to call later), and nil error. It should only be used
+// if the calling function is only doing one SQL query, otherwise use QueryContextSQL.
+func QueryTimeoutSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	rows, err := QueryContextSQL(ctx, tx, query, a...)
+	if err != nil {
+		cancel()
+		return nil, cancel, err
+	}
+	return rows, cancel, nil
 }
 
 /*
