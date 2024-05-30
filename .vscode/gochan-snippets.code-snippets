@@ -36,5 +36,13 @@
 			"}",
 			"return ${2:itemname}s, nil"],
 		"description": "A function template that queries and scans the rows into a slice"
+	},
+	"Context with timeout": {
+		"scope": "go",
+		"prefix": "context-timeout",
+		"body": [
+			"ctx, cancel := context.WithTimeout(context.Background(), ${1:gcdb.defaultTimeout})",
+			"defer cancel()"
+		]
 	}
 }
