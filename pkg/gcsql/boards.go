@@ -1,7 +1,6 @@
 package gcsql
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -58,14 +57,15 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 		query += " WHERE s.hidden = FALSE"
 	}
 	query += " ORDER BY navbar_position ASC, DBPREFIXboards.id ASC"
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
 
-	rows, err := QueryContextSQL(ctx, nil, query)
+	rows, cancel, err := QueryTimeoutSQL(nil, query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 
 	var boards []Board
 	for rows.Next() {
@@ -87,7 +87,7 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 func GetBoardDir(id int) (string, error) {
 	const query = `SELECT dir FROM DBPREFIXboards WHERE id = ?`
 	var dir string
-	err := QueryRowSQL(query, []any{id}, []any{&dir})
+	err := QueryRowTimeoutSQL(nil, query, []any{id}, []any{&dir})
 	return dir, err
 }
 
@@ -100,7 +100,7 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 		WHERE posts.id = ?
 	) as threads ON threads.board_id = board.id`
 	var boardURI string
-	err := QueryRowSQL(query, []any{postID}, []any{&boardURI})
+	err := QueryRowTimeoutSQL(nil, query, []any{postID}, []any{&boardURI})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrBoardDoesNotExist
 	}
@@ -110,7 +110,7 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
 	query := selectBoardsBaseSQL + where
 	board := new(Board)
-	err := QueryRowSQL(query, whereParameters, []any{
+	err := QueryRowTimeoutSQL(nil, query, whereParameters, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
@@ -135,7 +135,7 @@ func GetBoardFromDir(dir string) (*Board, error) {
 // GetIDFromDir returns the id of the board with the given dir value
 func GetBoardIDFromDir(dir string) (id int, err error) {
 	const query = `SELECT id FROM DBPREFIXboards WHERE dir = ?`
-	err = QueryRowSQL(query, []any{dir}, []any{&id})
+	err = QueryRowTimeoutSQL(nil, query, []any{dir}, []any{&id})
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrBoardDoesNotExist
 	}
@@ -145,11 +145,14 @@ func GetBoardIDFromDir(dir string) (id int, err error) {
 // GetBoardURIs gets a list of all existing board URIs
 func GetBoardURIs() (URIS []string, err error) {
 	const sql = `SELECT uri FROM DBPREFIXboards`
-	rows, err := QuerySQL(sql)
+	rows, cancel, err := QueryTimeoutSQL(nil, sql)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 	var uris []string
 	for rows.Next() {
 		var uri string
@@ -158,7 +161,7 @@ func GetBoardURIs() (URIS []string, err error) {
 		}
 		uris = append(uris, uri)
 	}
-	return uris, nil
+	return uris, rows.Close()
 }
 
 // ResetBoardSectionArrays is run when the board list needs to be changed
@@ -273,7 +276,7 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 func createDefaultBoardIfNoneExist() error {
 	const query = `SELECT COUNT(id) FROM DBPREFIXboards`
 	var count int
-	QueryRowSQL(query, nil, []any{&count})
+	QueryRowTimeoutSQL(nil, query, nil, []any{&count})
 	if count > 0 {
 		return nil
 	}
@@ -286,13 +289,13 @@ func createDefaultBoardIfNoneExist() error {
 func getBoardIDFromURI(uri string) (int, error) {
 	const sql = `SELECT id FROM DBPREFIXboards WHERE uri = ?`
 	var id int
-	err := QueryRowSQL(sql, []any{uri}, []any{&id})
+	err := QueryRowTimeoutSQL(nil, sql, []any{uri}, []any{&id})
 	return id, err
 }
 
 func (board *Board) Delete() error {
 	const query = `DELETE FROM DBPREFIXboards WHERE id = ?`
-	_, err := ExecSQL(query, board.ID)
+	_, err := ExecTimeoutSQL(nil, query, board.ID)
 	if err != nil {
 		return err
 	}
@@ -312,7 +315,10 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	}
 	defer tx.Rollback()
 
-	rows, stmt, err := QueryTxSQL(tx, `SELECT id FROM DBPREFIXthreads WHERE board_id = ? AND is_deleted = FALSE AND stickied = FALSE ORDER BY last_bump DESC`,
+	rows, stmt, err := QueryTxSQL(tx,
+		`SELECT id FROM DBPREFIXthreads
+		WHERE board_id = ? AND is_deleted = FALSE AND stickied = FALSE
+		ORDER BY last_bump DESC`,
 		board.ID)
 	if err != nil {
 		return nil, err
