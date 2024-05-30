@@ -1,13 +1,26 @@
 package gcsql
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // CreateReport inserts a new report into the database and returns a Report pointer and any
 // errors encountered
 func CreateReport(postID int, ip string, reason string) (*Report, error) {
+	insertSQL := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, PARAM_ATON, ?, FALSE)`
 	currentTime := time.Now()
-	sql := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, PARAM_ATON, ?, FALSE)`
-	result, err := ExecSQL(sql, postID, ip, reason)
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	result, err := ExecContextSQL(ctx, tx, insertSQL, postID, ip, reason)
 	if err != nil {
 		return nil, err
 	}
@@ -16,8 +29,11 @@ func CreateReport(postID int, ip string, reason string) (*Report, error) {
 		return nil, err
 	}
 
-	sql = `INSERT INTO DBPREFIXreports_audit (report_id, timestamp, is_cleared) VALUES(?, ?, FALSE)`
-	if _, err = ExecSQL(sql, reportID, currentTime); err != nil {
+	insertSQL = `INSERT INTO DBPREFIXreports_audit (report_id, timestamp, is_cleared) VALUES(?, ?, FALSE)`
+	if _, err = ExecContextSQL(ctx, tx, insertSQL, reportID, currentTime); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 	return &Report{
@@ -39,7 +55,15 @@ func ClearReport(id int, staffID int, block bool) (bool, error) {
 	if block {
 		isCleared = 2
 	}
-	result, err := ExecSQL(sql, isCleared, staffID, id)
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	result, err := ExecContextSQL(ctx, tx, sql, isCleared, staffID, id)
 	if err != nil {
 		return false, err
 	}
@@ -48,8 +72,12 @@ func ClearReport(id int, staffID int, block bool) (bool, error) {
 		return affected > 0, err
 	}
 	sql = `UPDATE DBPREFIXreports_audit SET is_cleared = ?, handled_by_staff_id = ? WHERE report_id = ?`
-	_, err = ExecSQL(sql, isCleared, staffID, id)
-	return affected > 0, err
+	_, err = ExecContextSQL(ctx, tx, sql, isCleared, staffID, id)
+	if err != nil {
+		return affected > 0, err
+	}
+
+	return affected > 0, tx.Commit()
 }
 
 // CheckPostReports checks to see if the given post ID has already been reported, and if a report of the post has been
@@ -59,7 +87,7 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 		WHERE post_id = ? AND (reason = ? OR is_cleared = 2)`
 	var num int
 	var isCleared interface{}
-	err := QueryRowSQL(sql, []any{postID, reason}, []any{&num, &isCleared})
+	err := QueryRowTimeoutSQL(nil, sql, []any{postID, reason}, []any{&num, &isCleared})
 	isClearedInt, _ := isCleared.(int64)
 	return num > 0, isClearedInt == 2, err
 }
@@ -71,11 +99,15 @@ func GetReports(includeCleared bool) ([]Report, error) {
 	if !includeCleared {
 		sql += ` WHERE is_cleared = FALSE`
 	}
-	rows, err := QuerySQL(sql)
+
+	rows, cancel, err := QueryTimeoutSQL(nil, sql)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		cancel()
+		rows.Close()
+	}()
 	var reports []Report
 	for rows.Next() {
 		var report Report
@@ -89,5 +121,5 @@ func GetReports(includeCleared bool) ([]Report, error) {
 		report.HandledByStaffID = int(staffID64)
 		reports = append(reports, report)
 	}
-	return reports, nil
+	return reports, rows.Close()
 }

@@ -384,13 +384,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		}
 	}
 
-	stmt, err := PrepareSQL(insertSQL, tx)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	if _, err = stmt.Exec(
+	if _, err = ExecContextSQL(ctx, tx, insertSQL,
 		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
 		p.Message, p.MessageRaw, p.Password, p.Flag, p.Country,
 	); err != nil {
@@ -400,23 +394,11 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		return err
 	}
 	if bumpThread {
-		stmt2, err := PrepareSQL(bumpSQL, tx)
-		if err != nil {
-			return err
-		}
-		defer stmt2.Close()
-
-		if _, err = stmt2.Exec(p.ThreadID); err != nil {
-			return err
-		}
-		if err = stmt2.Close(); err != nil {
+		if _, err = ExecContextSQL(ctx, tx, bumpSQL, p.ThreadID); err != nil {
 			return err
 		}
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	return stmt.Close()
+	return tx.Commit()
 }
 
 func (p *Post) WebPath() string {
