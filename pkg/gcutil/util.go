@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aquilax/tripcode"
 	"golang.org/x/crypto/bcrypt"
@@ -23,7 +24,7 @@ import (
 
 const (
 	// DefaultMaxAge is used for cookies that have an invalid or unset max age (default is 1 month)
-	DefaultMaxAge = 60 * 60 * 24 * 31
+	DefaultMaxAge = time.Hour * 24 * 30
 )
 
 var (

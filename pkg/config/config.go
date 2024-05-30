@@ -55,6 +55,13 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		return err
 	}
 
+	_, err = durationutil.ParseLongerDuration(gcfg.StaffSessionDuration)
+	if errors.Is(err, durationutil.ErrInvalidDurationString) {
+		return &InvalidValueError{Field: "StaffSessionDuration", Value: gcfg.StaffSessionDuration, Details: err.Error() + cookieMaxAgeEx}
+	} else if err != nil {
+		return err
+	}
+
 	if gcfg.DBtype == "postgresql" {
 		gcfg.DBtype = "postgres"
 	}
@@ -166,11 +173,12 @@ type SystemCriticalConfig struct {
 // SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),
 // the first page to look for if a directory is requested, etc
 type SiteConfig struct {
-	FirstPage       []string
-	Username        string
-	CookieMaxAge    string
-	Lockdown        bool
-	LockdownMessage string
+	FirstPage            []string
+	Username             string
+	CookieMaxAge         string
+	StaffSessionDuration string
+	Lockdown             bool
+	LockdownMessage      string
 
 	SiteName   string
 	SiteSlogan string

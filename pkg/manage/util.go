@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -64,16 +65,17 @@ func createSession(key, username, password string, request *http.Request, writer
 	// successful login, add cookie that expires in one month
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
-	maxAge, err := durationutil.ParseLongerDuration(siteConfig.CookieMaxAge)
+	expirationDur, err := durationutil.ParseLongerDuration(siteConfig.StaffSessionDuration)
 	if err != nil {
-		maxAge = gcutil.DefaultMaxAge
+		expirationDur = gcutil.DefaultMaxAge
 	}
 	http.SetCookie(writer, &http.Cookie{
-		Name:   "sessiondata",
-		Value:  key,
-		Path:   systemCritical.WebRoot,
-		Domain: domain,
-		MaxAge: int(maxAge),
+		Name:     "sessiondata",
+		Value:    key,
+		Path:     systemCritical.WebRoot,
+		Domain:   domain,
+		Expires:  time.Now().Add(expirationDur),
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	if err = staff.CreateLoginSession(key); err != nil {

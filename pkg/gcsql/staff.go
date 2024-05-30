@@ -1,12 +1,15 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/Eggbertx/durationutil"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -180,10 +183,28 @@ func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 func (staff *Staff) CreateLoginSession(key string) error {
 	const insertSQL = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
 	const updateSQL = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := ExecSQL(insertSQL, staff.ID, key, time.Now().Add(time.Duration(time.Hour*730))) //TODO move amount of time to config file
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = ExecSQL(updateSQL, staff.ID)
-	return err
+	defer tx.Rollback()
+
+	dur, err := durationutil.ParseLongerDuration(config.GetSiteConfig().StaffSessionDuration)
+	if err != nil {
+		return err
+	}
+
+	_, err = ExecContextSQL(ctx, tx, insertSQL, staff.ID, key, time.Now().Add(dur))
+	if err != nil {
+		return err
+	}
+	_, err = ExecContextSQL(ctx, tx, updateSQL, staff.ID)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
