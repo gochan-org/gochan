@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"regexp"
 	"strings"
 	"time"
@@ -16,13 +17,15 @@ func CreateWordFilter(from string, to string, isRegex bool, boards string, staff
 			return nil, err
 		}
 	}
-
-	_, err = ExecSQL(`INSERT INTO DBPREFIXwordfilters
-		(board_dirs,staff_id,staff_note,search,is_regex,change_to)
-		VALUES(?,?,?,?,?,?)`, boards, staffID, staffNote, from, isRegex, to)
-	if err != nil {
+	const query = `INSERT INTO DBPREFIXwordfilters
+	(board_dirs,staff_id,staff_note,search,is_regex,change_to)
+	VALUES(?,?,?,?,?,?)`
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	if _, err = ExecContextSQL(ctx, nil, query, boards, staffID, staffNote, from, isRegex, to); err != nil {
 		return nil, err
 	}
+
 	boardsPtr := new(string)
 	*boardsPtr = boards
 	return &Wordfilter{
@@ -40,8 +43,11 @@ func CreateWordFilter(from string, to string, isRegex bool, boards string, staff
 // encountered
 func GetWordfilters() ([]Wordfilter, error) {
 	var wfs []Wordfilter
-	query := `SELECT id,board_dirs,staff_id,staff_note,issued_at,search,is_regex,change_to FROM DBPREFIXwordfilters`
-	rows, err := QuerySQL(query)
+	const query = `SELECT id,board_dirs,staff_id,staff_note,issued_at,search,is_regex,change_to FROM DBPREFIXwordfilters`
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	rows, err := QueryContextSQL(ctx, nil, query)
 	if err != nil {
 		return wfs, err
 	}
@@ -49,15 +55,8 @@ func GetWordfilters() ([]Wordfilter, error) {
 	for rows.Next() {
 		var wf Wordfilter
 		if err = rows.Scan(
-			&wf.ID,
-			&wf.BoardDirs,
-			&wf.StaffID,
-			&wf.StaffNote,
-			&wf.IssuedAt,
-			&wf.Search,
-			&wf.IsRegex,
-			&wf.ChangeTo,
-		); err != nil {
+			&wf.ID, &wf.BoardDirs, &wf.StaffID, &wf.StaffNote,
+			&wf.IssuedAt, &wf.Search, &wf.IsRegex, &wf.ChangeTo); err != nil {
 			return wfs, err
 		}
 		wfs = append(wfs, wf)

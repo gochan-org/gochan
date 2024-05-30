@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"strconv"
 )
@@ -14,12 +15,15 @@ func GetAppeals(banID int, limit int) ([]IPBanAppeal, error) {
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
 	var rows *sql.Rows
 	var err error
 	if banID > 0 {
-		rows, err = QuerySQL(query, banID)
+		rows, err = QueryContextSQL(ctx, nil, query, banID)
 	} else {
-		rows, err = QuerySQL(query)
+		rows, err = QueryContextSQL(ctx, nil, query)
 	}
 	if err != nil {
 		return nil, err
@@ -59,13 +63,15 @@ func ApproveAppeal(appealID int, staffID int) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = ExecTxSQL(tx, deactivateQuery, appealID); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	if _, err = ExecContextSQL(ctx, tx, deactivateQuery, appealID); err != nil {
 		return err
 	}
-	if _, err = ExecTxSQL(tx, deactivateAppealQuery, appealID, staffID); err != nil {
+	if _, err = ExecContextSQL(ctx, tx, deactivateAppealQuery, appealID, staffID); err != nil {
 		return err
 	}
-	if _, err = ExecTxSQL(tx, deleteAppealQuery, appealID); err != nil {
+	if _, err = ExecContextSQL(ctx, tx, deleteAppealQuery, appealID); err != nil {
 		return err
 	}
 	return tx.Commit()
