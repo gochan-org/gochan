@@ -350,7 +350,11 @@ func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error
 		return nil, err
 	}
 	defer stmt.Close()
-	return stmt.Query(a...)
+	rows, err := stmt.Query(a...)
+	if err != nil {
+		return nil, err
+	}
+	return rows, stmt.Close()
 }
 
 func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {

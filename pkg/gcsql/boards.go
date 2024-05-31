@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -254,7 +255,11 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 	if board.Title == "" {
 		return errors.New("board title string must not be empty")
 	}
-	_, err := ExecSQL(sqlINSERT,
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	_, err := ExecContextSQL(ctx, nil, sqlINSERT,
 		&board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
@@ -262,7 +267,9 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 	if err != nil {
 		return err
 	}
-	if err = QueryRowSQL(`SELECT id FROM DBPREFIXboards WHERE dir = ?`, []any{board.Dir}, []any{&board.ID}); err != nil {
+	if err = QueryRowContextSQL(ctx, nil,
+		`SELECT id FROM DBPREFIXboards WHERE dir = ?`,
+		[]any{board.Dir}, []any{&board.ID}); err != nil {
 		return err
 	}
 	board.CreatedAt = time.Now()
@@ -309,13 +316,16 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	if board.MaxThreads < 1 {
 		return nil, nil
 	}
-	tx, err := BeginTx()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	rows, stmt, err := QueryTxSQL(tx,
+	rows, err := QueryContextSQL(ctx, nil,
 		`SELECT id FROM DBPREFIXthreads
 		WHERE board_id = ? AND is_deleted = FALSE AND stickied = FALSE
 		ORDER BY last_bump DESC`,
@@ -325,7 +335,6 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	}
 	defer func() {
 		rows.Close()
-		stmt.Close()
 	}()
 
 	var threadIDs []interface{}
@@ -347,17 +356,16 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	}
 	idSetStr := createArrayPlaceholder(threadIDs)
 
-	if _, err = ExecTxSQL(tx, `UPDATE DBPREFIXthreads SET is_deleted = TRUE WHERE id in `+idSetStr,
+	if _, err = ExecContextSQL(ctx, tx, `UPDATE DBPREFIXthreads SET is_deleted = TRUE WHERE id in `+idSetStr,
 		threadIDs...); err != nil {
 		return nil, err
 	}
 
-	if rows, stmt, err = QueryTxSQL(tx, `SELECT id FROM DBPREFIXposts WHERE thread_id in `+idSetStr,
+	if rows, err = QueryContextSQL(ctx, tx, `SELECT id FROM DBPREFIXposts WHERE thread_id in `+idSetStr,
 		threadIDs...); err != nil {
 		return nil, err
 	}
 	defer func() {
-		stmt.Close()
 		rows.Close()
 	}()
 
@@ -369,7 +377,7 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 		postIDs = append(postIDs, id)
 	}
 
-	if _, err = ExecTxSQL(tx, `UPDATE DBPREFIXposts SET is_deleted = TRUE WHERE thread_id in `+idSetStr,
+	if _, err = ExecContextSQL(ctx, tx, `UPDATE DBPREFIXposts SET is_deleted = TRUE WHERE thread_id in `+idSetStr,
 		threadIDs...); err != nil {
 		return nil, err
 	}
@@ -394,11 +402,14 @@ func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool, sticki
 	if orderLastByBump {
 		query += " last_bump DESC"
 	}
-	rows, err := QuerySQL(query, board.ID)
+	rows, cancel, err := QueryTimeoutSQL(nil, query, board.ID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 	var threads []Thread
 	for rows.Next() {
 		var thread Thread
@@ -411,7 +422,7 @@ func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool, sticki
 		}
 		threads = append(threads, thread)
 	}
-	return threads, nil
+	return threads, rows.Close()
 }
 
 // IsHidden returns true if the board is in a section that is hidden, otherwise false. If it is in a section

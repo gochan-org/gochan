@@ -302,14 +302,18 @@ Example:
 		}
 	}
 */
-func QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, *sql.Stmt, error) {
+func QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
 	stmt, err := PrepareSQL(query, tx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+	defer stmt.Close()
 
 	rows, err := stmt.Query(a...)
-	return rows, stmt, err
+	if err != nil {
+		return nil, err
+	}
+	return rows, stmt.Close()
 }
 
 func ParseSQLTimeString(str string) (time.Time, error) {

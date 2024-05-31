@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"regexp"
@@ -451,16 +452,20 @@ func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
 	}
 	query += " LIMIT " + strconv.Itoa(limit)
 	var rows *sql.Rows
+	var cancel context.CancelFunc
 	var err error
 	if boardID > 0 {
-		rows, err = QuerySQL(query, boardID)
+		rows, cancel, err = QueryTimeoutSQL(nil, query, boardID)
 	} else {
-		rows, err = QuerySQL(query)
+		rows, cancel, err = QueryTimeoutSQL(nil, query)
 	}
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 	var bans []FileBan
 	for rows.Next() {
 		var ban FileBan
@@ -471,7 +476,7 @@ func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
 		}
 		bans = append(bans, ban)
 	}
-	return bans, nil
+	return bans, rows.Close()
 }
 
 func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staffID int, staffNote string, banIP bool, banReason string) (*FileBan, error) {
@@ -491,17 +496,15 @@ func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staf
 		*ban.BanIPMessage = banReason
 	}
 
-	tx, err := BeginTx()
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
-	stmt, err := PrepareSQL(query, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	if _, err = stmt.Exec(
+	if _, err = ExecContextSQL(ctx, tx, query,
 		ban.BoardID, staffID, staffNote, checksum, fingerprinter, banIP, banReason,
 	); err != nil {
 		return nil, err
@@ -515,7 +518,7 @@ func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staf
 	ban.StaffID = staffID
 	ban.StaffNote = staffNote
 	ban.Checksum = checksum
-	return &ban, stmt.Close()
+	return &ban, nil
 }
 
 func (fb *FileBan) IsGlobalBan() bool {
@@ -524,12 +527,12 @@ func (fb *FileBan) IsGlobalBan() bool {
 
 func (fb FileBan) Deactivate(_ int) error {
 	const deleteQuery = `DELETE FROM DBPREFIXfile_ban WHERE id = ?`
-	_, err := ExecSQL(deleteQuery, fb.ID)
+	_, err := ExecTimeoutSQL(nil, deleteQuery, fb.ID)
 	return err
 }
 
 // DeleteFileBanByID deletes the ban, given the id column value
 func DeleteFileBanByID(id int) error {
-	_, err := ExecSQL("DELETE FROM DBPREFIXfile_ban WHERE id = ?", id)
+	_, err := ExecTimeoutSQL(nil, "DELETE FROM DBPREFIXfile_ban WHERE id = ?", id)
 	return err
 }
