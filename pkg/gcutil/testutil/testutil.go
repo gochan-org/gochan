@@ -14,7 +14,7 @@ const (
 
 // PanicIfNotTest panics if the function was called directly or indirectly by a test function via go test
 func PanicIfNotTest() {
-	if !strings.HasSuffix(os.Args[0], ".test") {
+	if !strings.HasSuffix(os.Args[0], ".test") && os.Args[1] != "-test.run" {
 		panic("the testutil package should only be used in tests")
 	}
 }
