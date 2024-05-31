@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -386,6 +387,33 @@ func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	}
 	db.replacer = strings.NewReplacer(replacerArr...)
 	return db, nil
+}
+
+func setupSqlTestConfig(dbDriver string, dbName string, dbPrefix string) *config.SQLConfig {
+	return &config.SQLConfig{
+		DBtype:               dbDriver,
+		DBhost:               "localhost",
+		DBname:               dbName,
+		DBusername:           "gochan",
+		DBpassword:           "gochan",
+		DBprefix:             dbPrefix,
+		DBTimeoutSeconds:     config.DefaultSQLTimeout,
+		DBMaxOpenConnections: config.DefaultSQLMaxConns,
+		DBMaxIdleConnections: config.DefaultSQLMaxConns,
+		DBConnMaxLifetimeMin: config.DefaultSQLConnMaxLifetimeMin,
+	}
+}
+
+func SetupMockDB(driver string) (sqlmock.Sqlmock, error) {
+	var err error
+	gcdb, err = setupDBConn(setupSqlTestConfig(driver, "gochan", ""))
+	if err != nil {
+		return nil, err
+	}
+	var mock sqlmock.Sqlmock
+	gcdb.db, mock, err = sqlmock.New()
+
+	return mock, err
 }
 
 // Open opens and returns a new gochan database connection with the provided host, driver, DB name,

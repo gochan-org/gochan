@@ -25,7 +25,7 @@ func TestProvision(t *testing.T) {
 		t.Run(driver, func(t *testing.T) {
 			config.SetTestDBConfig(driver, "localhost", "gochan", "gochan", "gochan", "")
 
-			gcdb, err = setupDBConn(setupSQLConfig(driver, "gochan", ""))
+			gcdb, err = setupDBConn(setupSqlTestConfig(driver, "gochan", ""))
 			if !assert.NoError(t, err) {
 				return
 			}
