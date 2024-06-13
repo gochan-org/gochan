@@ -16,7 +16,7 @@ testingSite = "http://192.168.56.3"
 testingBoard = "test"
 options:TestingOptions = None
 
-def start_tests(browser:str, headless=False, keep_open=False, site="", board="", upload="", single_test = ""):
+def start_tests(browser:str, headless=False, keep_open=False, site="", board="", upload="", single_test=""):
 	global options
 	options = TestingOptions(browser, headless, keep_open)
 
@@ -60,9 +60,11 @@ def start_tests(browser:str, headless=False, keep_open=False, site="", board="",
 		unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
 	options.close()
 
+
 def close_tests():
 	if options is not None:
 		options.close()
+
 
 def parseArgs(argParser:argparse.ArgumentParser):
 	testable_browsers = ("firefox","chrome","chromium", "edge")
@@ -79,6 +81,7 @@ def parseArgs(argParser:argparse.ArgumentParser):
 	argParser.add_argument("--singletest", default="",
 		help="If specified, only the test method with this name will be run")
 	return argParser.parse_args()
+
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Browser testing via Selenium")

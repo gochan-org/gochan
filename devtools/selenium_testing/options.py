@@ -34,7 +34,7 @@ class TestingOptions:
 	password: str
 	staff_username: str
 	staff_password: str
-	def __init__(self, browser: str, headless = False, keep_open = False):
+	def __init__(self, browser: str, headless=False, keep_open=False):
 		self.browser = browser
 		self.headless = headless
 		self.keep_open = keep_open

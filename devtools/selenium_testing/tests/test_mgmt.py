@@ -62,7 +62,7 @@ class TestManageActions(SeleniumTestCase):
 		self.assertIsNotNone(post_link, "Found recent post in recent posts list")
 		post_link.click()
 		WebDriverWait(self.driver, 10).until(
-			EC.url_contains(link_href)) # link_href should be something like "/seleniumtesting/ref/<threadOP>.html#<postID>"
+			EC.url_contains(link_href))  # link_href should be something like "/seleniumtesting/ref/<threadOP>.html#<postID>"
 
 		fragment = urllib.parse.urldefrag(self.driver.current_url).fragment
 		delete_post(self.options, fragment, self.options.password)

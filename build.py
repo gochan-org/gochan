@@ -89,7 +89,7 @@ def delete(delpath):
 	return PATH_UNKNOWN
 
 
-def mkdir(dirpath, force = False):
+def mkdir(dirpath, force=False):
 	if path.exists(dirpath):
 		if force:
 			delete(dirpath)
@@ -443,7 +443,7 @@ def sass(watch=False):
 		print("Failed running sass with status", status)
 		sys.exit(status)
 
-def test(verbose = False, coverage = False):
+def test(verbose=False, coverage=False):
 	pkgs = os.listdir("pkg")
 	for pkg in pkgs:
 		cmd = ["go", "test"]
