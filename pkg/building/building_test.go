@@ -68,7 +68,7 @@ func TestBuildJS(t *testing.T) {
 	if ba, err = io.ReadAll(jsFile); !assert.NoError(t, err) {
 		return
 	}
-	// t.Log(string(ba))
+	assert.NoError(t, jsFile.Close())
 	assert.Equal(t, expectedUnminifiedJS, string(ba))
 }
 
@@ -90,7 +90,9 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 				[]driver.Value{2, "message_raw", "test", "filename", 1},
 			))
 	err := BuildFrontPage()
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	assert.NoError(t, mock.ExpectationsWereMet())
 
 	frontFile, err := os.Open(path.Join(config.GetSystemCriticalConfig().DocumentRoot, "index.html"))
@@ -103,6 +105,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 		return
 	}
 	assert.Equal(t, expectOut, string(ba))
+	assert.NoError(t, frontFile.Close())
 }
 
 func TestBuildFrontPage(t *testing.T) {
@@ -112,7 +115,7 @@ func TestBuildFrontPage(t *testing.T) {
 	}
 
 	for _, driver := range sql.Drivers() {
-		if driver == "sqlmock" {
+		if driver == "sqlmock" || t.Failed() {
 			continue
 		}
 		t.Run(driver, func(t *testing.T) {

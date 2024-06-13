@@ -46,7 +46,8 @@ func getRecentPosts() ([]recentPost, error) {
 	}
 	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 
-	rows, err := gcsql.QuerySQL(query)
+	rows, cancel, err := gcsql.QueryTimeoutSQL(nil, query)
+	defer cancel()
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func getRecentPosts() ([]recentPost, error) {
 
 		recentPosts = append(recentPosts, post)
 	}
-	return recentPosts, nil
+	return recentPosts, rows.Close()
 }
 
 // BuildFrontPage builds the front page using templates/front.html
@@ -90,8 +91,6 @@ func BuildFrontPage() error {
 		return errors.New("Error loading front page template: " + err.Error())
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
-	os.Remove(path.Join(criticalCfg.DocumentRoot, "index.html"))
-
 	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
