@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -74,13 +75,47 @@ func TestBuildJS(t *testing.T) {
 
 func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 	serverutil.InitMinifier()
+
+	mock.ExpectPrepare(`SELECT\s*` +
+		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
+		`max_file_size, max_threads, default_style, locked, created_at, anonymous_name, force_anonymous,\s*` +
+		`autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,\s*` +
+		`require_file, enable_catalog\s*` +
+		`FROM boards\s*` +
+		`INNER JOIN \(\s*` +
+		`SELECT id, hidden FROM sections\s*` +
+		`\) s ON boards.section_id = s.id\s*` +
+		`WHERE s\.hidden = FALSE\s*` +
+		`ORDER BY navbar_position ASC, boards.id ASC`).ExpectQuery().WillReturnRows(
+		sqlmock.NewRows([]string{
+			"boards.id", "section_id", "uri", "dir", "navbar_position", "title", "subtitle", "description",
+			"max_file_size", "max_threads", "default_style", "locked", "created_at", "anonymous_name", "force_anonymous",
+			"autosage_after", "no_images_after", "max_message_length", "min_message_length", "allow_embeds", "redirect_to_thread",
+			"require_file", "enable_catalog",
+		}).AddRows([]driver.Value{
+			1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing description",
+			15000, 100, "pipes.css", false, time.Now(), "Anonymous", false,
+			1500, 2000, 1500, 0, true, false, false, true,
+		}).AddRows([]driver.Value{
+			1, 1, "test2", "test2", 1, "Testing board 2", "Board for testing 2", "Board for testing description 2",
+			15000, 100, "pipes.css", false, time.Now(), "Anonymous", false,
+			1500, 2000, 1500, 0, true, false, false, true,
+		}),
+	)
+
+	mock.ExpectPrepare(
+		`SELECT id, name, abbreviation, position, hidden FROM sections WHERE hidden = FALSE ORDER BY position ASC, name ASC`,
+	).ExpectQuery().
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
+			AddRows([]driver.Value{1, "Main", "main", 1, false}))
+
 	mock.ExpectPrepare(`SELECT\s*posts.id,\s*posts.message_raw,\s*` +
 		`\(SELECT dir FROM boards WHERE id = t.board_id\),\s*` +
 		`COALESCE\(f.filename, ''\), op.id\s*` +
 		`FROM posts\s*` +
-		`LEFT JOIN \(SELECT id, board_id FROM threads\) t ON t.id = posts.thread_id\s+` +
-		`LEFT JOIN \(SELECT post_id, filename FROM files\) f on f.post_id = posts.id\s+` +
-		`INNER JOIN \(SELECT id, thread_id FROM posts WHERE is_top_post\) op ON op.thread_id = posts.thread_id\s+` +
+		`LEFT JOIN\s*\(SELECT id, board_id FROM threads\) t ON t.id = posts.thread_id\s+` +
+		`LEFT JOIN\s*\(SELECT post_id, filename FROM files\) f on f.post_id = posts.id\s+` +
+		`INNER JOIN\s*\(SELECT id, thread_id FROM posts WHERE is_top_post\) op ON op.thread_id = posts.thread_id\s+` +
 		`WHERE posts.is_deleted = FALSE\s+` +
 		`AND f.filename IS NOT NULL AND f.filename != '' AND f.filename != 'deleted'\s+` +
 		`ORDER BY posts.id DESC LIMIT \d+`).ExpectQuery().WillReturnRows(
@@ -89,6 +124,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 				[]driver.Value{1, "message_raw", "test", "filename", 1},
 				[]driver.Value{2, "message_raw", "test", "filename", 1},
 			))
+
 	err := BuildFrontPage()
 	if !assert.NoError(t, err) {
 		return
