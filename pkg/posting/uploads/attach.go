@@ -178,6 +178,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		Str("referer", request.Referer())
 
 	upload.IsSpoilered = request.FormValue("spoiler") == "on"
+	gcutil.LogBool("isSpoiler", upload.IsSpoilered, infoEv, accessEv, errEv)
 
 	uploadHandler, ok := uploadHandlers[ext]
 	if !ok {
@@ -187,6 +188,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	}
 
 	if err = uploadHandler(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv); err != nil {
+		// uploadHandler is assumed to handle logging
 		return nil, errors.New("error processing upload: " + err.Error())
 	}
 

@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"syscall"
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -67,6 +66,7 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 			Str("filePath", filePath).Send()
 		return err
 	}
+	accessEv.Str("handler", "image")
 
 	// Get image width and height, as well as thumbnail width and height
 	upload.Width = img.Bounds().Max.X
@@ -77,19 +77,12 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 	}
 	upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(upload.Width, upload.Height, board, thumbType)
 
-	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	if upload.IsSpoilered {
-		// If spoiler is enabled, symlink thumbnail to spoiler image
-		if _, err := os.Stat(path.Join(documentRoot, "spoiler.png")); err != nil {
-			errEv.Err(err).Caller().Send()
-			return err
+		if err = createSpoilerThumbnail(upload, board, post.IsTopPost, thumbPath); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to create spoiler thumbnail")
+			return ErrUnableToCreateSpoiler
 		}
-		if err = syscall.Symlink(path.Join(documentRoot, "spoiler.png"), thumbPath); err != nil {
-			errEv.Err(err).Caller().
-				Str("thumbPath", thumbPath).
-				Msg("Error creating symbolic link to thumbnail path")
-			return err
-		}
+		return nil
 	}
 
 	shouldThumb := ShouldCreateThumbnail(filePath,
@@ -121,7 +114,7 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 		// If image fits in thumbnail size, symlink thumbnail to original
 		upload.ThumbnailWidth = img.Bounds().Max.X
 		upload.ThumbnailHeight = img.Bounds().Max.Y
-		if err := syscall.Symlink(filePath, thumbPath); err != nil {
+		if err := os.Symlink(filePath, thumbPath); err != nil {
 			errEv.Err(err).Caller().
 				Str("thumbPath", thumbPath).
 				Msg("Couldn't generate catalog thumbnail")
@@ -138,6 +131,5 @@ func processImage(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 			}
 		}
 	}
-	accessEv.Str("handler", "image")
 	return nil
 }

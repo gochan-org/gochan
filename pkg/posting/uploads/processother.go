@@ -17,10 +17,13 @@ var (
 func processOther(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {
 	boardConfig := config.GetBoardConfig(board)
 	ext := path.Ext(filePath)
-	cfgThumb, ok := boardConfig.AllowOtherExtensions[ext]
+	thumbnailFilename, ok := boardConfig.AllowOtherExtensions[ext]
 	if !ok {
 		errEv.Err(ErrUnsupportedFileExt).Str("ext", ext).Caller().Send()
 		return ErrUnsupportedFileExt
+	}
+	if upload.IsSpoilered {
+		thumbnailFilename = "spoiler.png"
 	}
 	infoEv.Str("post", "withOther")
 
@@ -33,8 +36,8 @@ func processOther(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 		upload.ThumbnailWidth = boardConfig.ThumbWidthReply
 		upload.ThumbnailHeight = boardConfig.ThumbHeightReply
 	}
-	staticThumbPath := path.Join("static/", cfgThumb)
-	originalThumbPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, staticThumbPath)
+	originalThumbPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, "static", thumbnailFilename)
+
 	_, err := os.Stat(originalThumbPath)
 	if err != nil {
 		errEv.Err(err).Str("originalThumbPath", originalThumbPath).Send()

@@ -3,6 +3,7 @@ package uploads
 import (
 	"errors"
 	"image"
+	"os"
 	"os/exec"
 	"path"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
@@ -32,6 +34,7 @@ var (
 		".jfif": ".jpg",
 		".jpeg": ".jpg",
 	}
+	ErrUnableToCreateSpoiler = errors.New("unable to create spoiler thumbnail")
 )
 
 func GetThumbnailExtension(fileExt string) string {
@@ -81,6 +84,22 @@ func createVideoThumbnail(video, thumb string, size int) error {
 		}
 	}
 	return err
+}
+
+func createSpoilerThumbnail(upload *gcsql.Upload, board string, isOP bool, thumbnailPath string) error {
+	boardCfg := config.GetBoardConfig(board)
+	spoilerPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, "static/spoiler.png")
+	if _, err := os.Stat(spoilerPath); err != nil {
+		return err
+	}
+	if isOP {
+		upload.ThumbnailWidth = boardCfg.ThumbWidth
+		upload.ThumbnailHeight = boardCfg.ThumbHeight
+	} else {
+		upload.ThumbnailWidth = boardCfg.ThumbWidthReply
+		upload.ThumbnailHeight = boardCfg.ThumbHeightReply
+	}
+	return os.Symlink(spoilerPath, thumbnailPath)
 }
 
 func getBoardThumbnailSize(boardDir string, thumbType ThumbnailCategory) (int, int) {

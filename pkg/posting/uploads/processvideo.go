@@ -14,7 +14,15 @@ import (
 func processVideo(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error {
 	boardConfig := config.GetBoardConfig(board)
 	infoEv.Str("post", "withVideo")
+	accessEv.Str("handler", "video")
 	var err error
+	if upload.IsSpoilered {
+		if err = createSpoilerThumbnail(upload, board, post.IsTopPost, thumbPath); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to create spoiler thumbnail")
+			return ErrUnableToCreateSpoiler
+		}
+		return nil
+	}
 	if post.ThreadID == 0 {
 		if err = createVideoThumbnail(filePath, thumbPath, boardConfig.ThumbWidth); err != nil {
 			errEv.Err(err).Caller().
@@ -67,6 +75,5 @@ func processVideo(upload *gcsql.Upload, post *gcsql.Post, board string, filePath
 		upload.ThumbnailWidth, upload.ThumbnailHeight = getThumbnailSize(
 			upload.Width, upload.Height, board, thumbType)
 	}
-	accessEv.Str("handler", "video")
 	return nil
 }
