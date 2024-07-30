@@ -37,7 +37,7 @@
 	<div class="file-deleted-box" style="text-align:center;">File removed</div>
 {{- else if ne $.post.Filename "" -}}
 	{{- template "uploadinfo" . -}}
-	<a class="upload-container" href="{{.post.UploadPath}}"><img src="{{getThumbnailWebPath .post.ID}}" alt="{{.post.UploadPath}}" width="{{.post.ThumbnailWidth}}" height="{{.post.ThumbnailHeight}}" class="upload" /></a>
+	<a class="upload-container" href="{{.post.UploadPath}}"><img src="{{getThumbnailWebPath .post.ID}}" alt="{{.post.UploadPath}}" width="{{.post.ThumbnailWidth}}" height="{{.post.ThumbnailHeight}}" class="upload thumb" /></a>
 {{- end -}}
 {{- if $.post.IsTopPost}}{{template "nameline" .}}{{end -}}
 	<div class="post-text">{{.post.Message}}</div>

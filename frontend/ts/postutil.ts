@@ -168,7 +168,19 @@ export function prepareThumbnails($parent: JQuery<HTMLElement> = null) {
 		const $thumb = $a.find("img.upload");
 		const thumbURL = $thumb.attr("src");
 		const uploadURL = $thumb.attr("alt");
-		$thumb.removeAttr("width").removeAttr("height");
+		if($thumb.hasClass("thumb")) {
+			$thumb.attr({
+				"data-width": $thumb.attr("width"),
+				"data-height": $thumb.attr("height")
+			});
+			$thumb.removeAttr("width").removeAttr("height").removeClass("thumb");
+		} else {
+			$thumb.attr({
+				"width": $thumb.attr("data-width"),
+				"height": $thumb.attr("data-height")
+			});
+			$thumb.removeAttr("data-width").removeAttr("data-height").addClass("thumb");
+		}
 
 		const $fileInfo = $a.prevAll(".file-info:first");
 
@@ -189,10 +201,13 @@ export function prepareThumbnails($parent: JQuery<HTMLElement> = null) {
 					$video.remove();
 					$thumb.show();
 					this.remove();
-					$thumb.prop({
+					$thumb.attr({
 						src: thumbURL,
-						alt: uploadURL
+						alt: uploadURL,
+						width: $thumb.attr("data-width"),
+						height: $thumb.attr("data-height")
 					});
+					$thumb.removeAttr("data-width").removeAttr("data-height").addClass("thumb");
 				}).css({
 					"padding-left": "8px"
 				}).html("[Close]<br />"));
