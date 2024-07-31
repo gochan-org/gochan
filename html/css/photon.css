@@ -1,8 +1,7 @@
 div.reply,
 div.postprev,
 div.inlinepostprev,
-th.postblock,
-table tr:first-of-type th {
+th.postblock {
   background: #ddd;
   border: 1px solid #ccc;
   -moz-border-radius: 5px;

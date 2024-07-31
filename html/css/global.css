@@ -74,6 +74,20 @@ table#pages td {
   float: right;
 }
 
+div#new-upload-box {
+  background: #505050;
+  color: #b0b0b0;
+}
+div#new-upload-box a {
+  text-align: center;
+  padding: 20px 40px;
+  display: block;
+}
+div#new-upload-box .upload-preview {
+  max-width: 50px;
+  max-height: 50px;
+}
+
 .reply {
   margin-bottom: 4px;
   padding: 4px 8px 4px 8px;
@@ -193,7 +207,7 @@ div.postprev {
 div.inlinepostprev {
   overflow: hidden;
   margin: 8px;
-  padding: 4px 8px 4px 8px;
+  padding: 4px 8px;
 }
 
 div.section-block {

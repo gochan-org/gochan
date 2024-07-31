@@ -1,15 +1,15 @@
 #boardmenu-bottom {
-	margin-top:16px;
+	margin-top: 16px;
 }
 
 #content {
-	margin-left:0px;
-	padding-left:0px;
+	margin-left: 0px;
+	padding-left: 0px;
 }
 
 #left-bottom-content {
-	float:left;
-	left:0px;
+	float: left;
+	left: 0px;
 }
 
 a.anchor {
@@ -20,11 +20,11 @@ a.anchor {
 }
 
 div.catalog-thread {
-	width:200px;
+	width: 200px;
 	max-height: 250px;
-	display:inline-block;
-	position:relative;
-	vertical-align:top;
+	display: inline-block;
+	position: relative;
+	vertical-align: top;
 	overflow: hidden;
 	text-align: center;
 	padding: 6px;
@@ -35,8 +35,8 @@ div.catalog-thread a {
 }
 
 table#pages {
-	margin-bottom:8px;
-	margin-top:4px;
+	margin-bottom: 8px;
+	margin-top: 4px;
 	border: 1px solid;
 }
 
@@ -45,51 +45,64 @@ table#pages td {
 }
 
 #postbox-area {
-	left:0px;
-	width:100%;
+	left: 0px;
+	width: 100%;
 }
 
 #report-delbox {
-	clear:both;
-	float:right;
-	line-height:32px;
-	margin-top:8px;
-	text-align:right;
+	clear: both;
+	float: right;
+	line-height: 32px;
+	margin-top: 8px;
+	text-align: right;
 }
 
 #right-bottom-content {
-	float:right;
-	right:0px;
+	float: right;
+	right: 0px;
 }
 
 #side-pane {
-	margin-right:16px;
-	position:absolute;
-	top:106px;
-	width:15%;
+	margin-right: 16px;
+	position: absolute;
+	top: 106px;
+	width: 15%;
 }
 
 #threadlinks-bottom {
-	clear:both;
-	float:right;
+	clear: both;
+	float: right;
 }
 
+div#new-upload-box {
+	background: #505050;
+	color: #b0b0b0;
+	a {
+		text-align: center;
+		padding: 20px 40px;
+		display: block;
+	}
+	.upload-preview {
+		max-width: 50px;
+		max-height: 50px;
+	}
+}
 
 .reply {
 	margin-bottom: 4px;
-	padding:4px 8px 4px 8px;
-	display:inline-block;
+	padding: 4px 8px 4px 8px;
+	display: inline-block;
 	max-width: 100%;
 }
 
 .reply-container {
-	width:100%;
+	width: 100%;
 }
 
 .postblock {
-	margin-left:8px;
-	margin-right:8px;
-	width:100px;
+	margin-left: 8px;
+	margin-right: 8px;
+	width: 100px;
 }
 
 .post-text {
@@ -97,43 +110,43 @@ table#pages td {
 }
 
 .setting-name {
-	width:50%;
+	width: 50%;
 }
 
 .setting-value {
-	text-align:right;
-	width:50%;
+	text-align: right;
+	width: 50%;
 }
 
 .spoiler {
-	background:#000;
-	color:#000;
+	background: #000;
+	color: #000;
 }
 
 .spoiler:hover {
-	color:#FFF;
+	color: #FFF;
 }
 
 .subject {
-	font-weight:700;
+	font-weight: 700;
 }
 
 .thread {
-	vertical-align:top;
+	vertical-align: top;
 	overflow: hidden;
 	width: 100%;
 }
 
 .op-post {
-	width:100%;
+	width: 100%;
 }
 
 a.permalink,#right-sidelinks {
-	float:right;
+	float: right;
 }
 
 hr {
-	clear:both;
+	clear: both;
 }
 
 a.upload-container {
@@ -147,7 +160,7 @@ div.file-deleted-box {
 	margin: auto;
 }
 .upload, div.file-deleted-box {
-	float:left;
+	float: left;
 	max-width: 100%;
 }
 
@@ -192,5 +205,5 @@ div.postprev {
 div.inlinepostprev {
 	overflow: hidden;
 	margin:8px;
-	padding: 4px 8px 4px 8px;
+	padding: 4px 8px;
 }
