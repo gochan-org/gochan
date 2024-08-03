@@ -74,18 +74,35 @@ table#pages td {
   float: right;
 }
 
-div#new-upload-box {
+div#upload-box {
   background: #505050;
   color: #b0b0b0;
 }
-div#new-upload-box a {
+div#upload-box a.browse-text {
   text-align: center;
   padding: 20px 40px;
   display: block;
 }
-div#new-upload-box .upload-preview {
+div#upload-box .upload-x, div#upload-box .upload-filename {
+  position: relative;
+  bottom: 12px;
+  display: inline-block;
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+.upload-preview {
   max-width: 50px;
   max-height: 50px;
+}
+
+.placeholder-thumb {
+  width: 50px;
+  height: 50px;
+  background: #333;
+  border: 1px black solid;
+  margin: 4px;
+  display: inline-block;
 }
 
 .reply {
