@@ -32,7 +32,7 @@ test("Tests BBCode events", () => {
 
 	text = doBBCode(82, "strike" + text, 0, 6);
 	expect(text).toEqual("[s]strike[/s][b]bold[/b][i]italics[/i]");
-	
+
 	text = doBBCode(83, text, 0, 13);
 	expect(text).toEqual("[?][s]strike[/s][/?][b]bold[/b][i]italics[/i]");
 

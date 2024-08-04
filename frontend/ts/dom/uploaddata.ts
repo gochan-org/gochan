@@ -27,8 +27,10 @@ function dragAndDrop(e:JQuery.DragEnterEvent|JQuery.DragOverEvent|JQuery.DropEve
 	if(e.type === "dragenter" || e.type === "dragover") {
 		e.stopPropagation();
 	} else {
-		$browseBtn[0].files = e.originalEvent.dataTransfer.files;
-		addFileUpload($browseBtn[0].files[0]);
+		$browseBtn.each((_, el) => {
+			el.files = e.originalEvent.dataTransfer.files;
+			addFileUpload(el.files[0]);
+		});
 	}
 }
 
@@ -71,9 +73,9 @@ function addFileUpload(file:File) {
 	uploadReader.readAsDataURL(file);
 }
 
-$(() => {
+export function replaceBrowseButton() {
 	const $browseBtn = $<HTMLInputElement>("input[name=imagefile]").hide();
-	if($browseBtn.length !== 1) return;
+	if($browseBtn.length < 1) return;
 	$browseBtn.on("change", e => addFileUpload(e.target.files[0]));
 
 	$("<div/>").attr("id", "upload-box").append(
@@ -83,7 +85,7 @@ $(() => {
 			.on("click", () => $browseBtn.trigger("click"))
 	).on("dragenter dragover drop", dragAndDrop).insertBefore($browseBtn);
 
-	$("div#postbox-area form").on("paste", e => {
+	$("form#postform, form#qrpostform").on("paste", e => {
 		const clipboardData = (e.originalEvent as ClipboardEvent).clipboardData;
 		if(clipboardData.items.length < 1 || clipboardData.items[0].kind !== "file") {
 			console.log("No files in clipboard");
@@ -91,6 +93,8 @@ $(() => {
 		}
 		const clipboardFile = clipboardData.items[0].getAsFile();
 		addFileUpload(clipboardFile);
-		$browseBtn[0].files = clipboardData.files;
+		$browseBtn.each((_i,el) => {
+			el.files = clipboardData.files;
+		});
 	});
-});
+}
