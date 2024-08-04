@@ -1,8 +1,5 @@
 import $ from "jquery";
 
-const noop = () => {
-	return;
-};
 export function removeLightbox(...customs: any) {
 	$(".lightbox, .lightbox-bg").remove();
 	for(const custom of customs) {
@@ -46,7 +43,7 @@ function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: an
 	return $box;
 }
 
-export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<HTMLElement>, val: any) => any = noop, title = "") {
+export function promptLightbox(defVal = "", isMasked = false, onOk?: ($el:JQuery<HTMLElement>, val: any) => any, title = "") {
 	const $ok = $("<button/>").prop({
 		"id": "okbutton"
 	}).text("OK");
@@ -73,7 +70,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<
 	const $lb = simpleLightbox({}, {}, [$form]);
 	$promptInput.trigger("focus");
 	$ok.on("click", function() {
-		if(onOk($lb, $promptInput.val()) === false)
+		if(onOk && onOk($lb, $promptInput.val()) === false)
 			return;
 		removeLightbox(this, $lb);
 	});
@@ -83,7 +80,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk: ($el:JQuery<
 	return $lb;
 }
 
-export function alertLightbox(msg = "", title = location.hostname, onOk: ($el: JQuery<HTMLElement>) => any = noop) {
+export function alertLightbox(msg = "", title = location.hostname, onOk?: ($el: JQuery<HTMLElement>) => any) {
 	const $ok = $("<button/>").prop({
 		"id": "okbutton"
 	}).text("OK");
@@ -96,7 +93,8 @@ export function alertLightbox(msg = "", title = location.hostname, onOk: ($el: J
 	]);
 	$ok.trigger("focus");
 	$ok.on("click", function() {
-		onOk($lb);
+		if(onOk)
+			onOk($lb);
 		removeLightbox(this, $lb);
 	});
 	return $lb;

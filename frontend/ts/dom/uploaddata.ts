@@ -3,12 +3,13 @@ import $ from "jquery";
 import { alertLightbox } from "./lightbox";
 
 
-export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad = () => {}) {
+export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad?:()=>any) {
 	if($elem.length === 0) return;
 	$elem[0].onchange = function() {
 		const img = new Image();
 		img.src = URL.createObjectURL((this as HTMLInputElement).files[0]);
-		img.onload = onLoad;
+		if(onLoad)
+			img.onload = onLoad;
 	};
 }
 
@@ -49,11 +50,13 @@ function onReaderLoad(name:string, e:ProgressEvent<FileReader>) {
 	$container.empty().append(
 		$("<a/>").attr({
 			"class": "upload-x",
-			"href": "javascript:;"
+			"href": "#"
 		}).text("X").on("click", (e:JQuery.ClickEvent) => {
 			const $target = $(e.target);
 			const $browseBtn = $target.parents<HTMLInputElement>("#upload-box").siblings("input[name=imagefile]");
-			$browseBtn.each((_, el) => el.value = null);
+			$browseBtn.each((_, el) => {
+				el.value = null;
+			});
 			$target.parents(".upload-preview-container").remove();
 		}),
 
@@ -80,7 +83,7 @@ export function replaceBrowseButton() {
 
 	$("<div/>").attr("id", "upload-box").append(
 		$("<a/>").addClass("browse-text")
-			.attr("href", "javascript:;")
+			.attr("href", "#")
 			.text("Select/drop/paste upload here")
 			.on("click", () => $browseBtn.trigger("click"))
 	).on("dragenter dragover drop", dragAndDrop).insertBefore($browseBtn);

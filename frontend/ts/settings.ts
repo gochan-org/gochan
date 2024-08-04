@@ -14,10 +14,6 @@ const settings: Map<string, Setting<boolean|number|string,HTMLElement>> = new Ma
 
 type ElementValue = string|number|string[];
 
-const noop = () => {
-	return;
-};
-
 class Setting<T = any, E extends HTMLElement = HTMLElement> {
 	key: string;
 	title: string;
@@ -30,11 +26,12 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 	 * @param defaultVal the setting's default value
 	 * @param onSave function that gets called when you save the settings
 	 */
-	constructor(key: string, title: string, defaultVal:T, onSave = noop) {
+	constructor(key: string, title: string, defaultVal:T, onSave?:()=>any) {
 		this.key = key;
 		this.title = title;
 		this.defaultVal = defaultVal;
-		this.onSave = onSave;
+		if(onSave)
+			this.onSave = onSave;
 		this.element = null;
 	}
 	getElementValue(): T {
@@ -60,7 +57,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 }
 
 class TextSetting extends Setting<string, HTMLTextAreaElement> {
-	constructor(key: string, title: string, defaultVal = "", onSave = noop) {
+	constructor(key: string, title: string, defaultVal = "", onSave?:()=>any) {
 		super(key, title, defaultVal, onSave);
 		this.element = this.createElement("<textarea/>");
 		this.element.text(defaultVal);
@@ -75,7 +72,7 @@ class TextSetting extends Setting<string, HTMLTextAreaElement> {
 }
 
 class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
-	constructor(key: string, title: string, options:any[] = [], defaultVal: ElementValue, onSave = noop) {
+	constructor(key: string, title: string, options:any[] = [], defaultVal: ElementValue, onSave?:()=>any) {
 		super(key, title, defaultVal, onSave);
 		this.element = this.createElement("<select/>");
 		for(const option of options) {
@@ -86,7 +83,7 @@ class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
 }
 
 class BooleanSetting extends Setting<boolean, HTMLInputElement> {
-	constructor(key: string, title: string, defaultVal = false, onSave = noop) {
+	constructor(key: string, title: string, defaultVal = false, onSave?:()=>any) {
 		super(key, title, defaultVal, onSave);
 		this.element = this.createElement("<input/>", {
 			type: "checkbox",
@@ -110,7 +107,7 @@ interface MinMax {
 	max?: number;
 }
 class NumberSetting extends Setting<number, HTMLInputElement> {
-	constructor(key: string, title: string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave = noop) {
+	constructor(key: string, title: string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave?:()=>any) {
 		super(key, title, defaultVal, onSave);
 		const props: MinMax = {
 			type: "number"
