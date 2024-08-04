@@ -242,8 +242,11 @@ var (
 				"defaultStyle": "pipes.css",
 				"webroot":      "/",
 				"timezone":     -1,
+				"fileTypes": map[string]string{
+					".ext": "thumb.png",
+				},
 			},
-			expectedOutput: `var styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];var defaultStyle="pipes.css";var webroot="/";var serverTZ=-1;`,
+			expectedOutput: `var styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];var defaultStyle="pipes.css";var webroot="/";var serverTZ=-1;var fileTypes=[".ext",];`,
 		},
 		{
 			desc: "empty values",
@@ -252,7 +255,7 @@ var (
 				"webroot":      "",
 				"timezone":     0,
 			},
-			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;`,
+			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;var fileTypes=[];`,
 		},
 		{
 			desc: "escaped string",
@@ -261,7 +264,7 @@ var (
 				"webroot":      "",
 				"timezone":     0,
 			},
-			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;`,
+			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;var fileTypes=[];`,
 		},
 	}
 )

@@ -1,7 +1,3 @@
-{{/*
-	This will be used for storing configuration-dependent JS variables,
-	instead of loading them on every HTML page.
-*/ -}}
 var styles = [
 	{{- range $ii, $style := .styles -}}
 		{{if gt $ii 0}},{{end -}}
@@ -11,3 +7,8 @@ var styles = [
 var defaultStyle = "{{js .defaultStyle}}";
 var webroot = "{{js .webroot}}";
 var serverTZ = {{js .timezone}};
+var fileTypes = [
+	{{- range $ext, $_ := .fileTypes -}}
+		"{{js $ext}}",
+	{{- end -}}
+];

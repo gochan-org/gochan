@@ -175,6 +175,7 @@ func BuildJS() error {
 		"defaultStyle": boardCfg.DefaultStyle,
 		"webroot":      criticalCfg.WebRoot,
 		"timezone":     criticalCfg.TimeZone,
+		"fileTypes":    boardCfg.AllowOtherExtensions,
 	}, constsJSFile, "text/javascript"); err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("error building consts.js: %s", err.Error())
