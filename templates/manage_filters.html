@@ -1,6 +1,7 @@
 <h2>{{with $.edit}}Edit filter{{else}}New filter{{end}}</h2>
 <form id="filterform" action="{{webPath `/manage/filters`}}{{with $.edit}}?edit={{.ID}}{{end}}" method="POST">
 	Filter conditions are checked against a post before the message body is formatted and after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
+	Tripcode searches do not include the prefix "!".
 	<table>
 		<tr>
 			<th>Conditions</th>
@@ -65,6 +66,33 @@
 </form>
 <hr/>
 <h2>Filter list</h2>
-<table>
-	TODO
+<table class="mgmt-table filterlist">
+	<colgroup>
+		<col class="row-actions">
+		<col class="filter-action">
+		<col class="filter-conditions">
+		<col class="row-date">
+	</colgroup>
+	<tr>
+		<th>Actions</th><th>Filter action</th><th>Conditions</th><th>Staff</th><th>Last modified</th>
+	</tr>
+	<tr>
+		<td>
+			<a href="{{webPath `/manage/filters?edit=1`}}">Edit</a> | <a href="{{webPath `/manage/filters?delete=1`}}">Delete</a>
+		</td>
+		<td>Ban IP</td>
+		<td>User agent, Name, Tripcode, First time poster</td>
+		<td>admin</td>
+		<td>2024-07-01 12:00:00</td>
+	</tr>
+	<tr>
+		<td>
+			<a href="{{webPath `/manage/filters?edit=2`}}">Edit</a> |
+			<a href="{{webPath `/manage/filters?delete=2`}}">Delete</a>
+		</td>
+		<td>Reject post</td>
+		<td>Name, Tripcode, Email, Subject, Message body, First time poster, Not a first time poster, Is OP, Is reply, Has file, No file, Filename, File checksum, Image fingerprint, User agent</td>
+		<td>admin</td>
+		<td>2024-07-01 12:00:00</td>
+	</tr>
 </table>

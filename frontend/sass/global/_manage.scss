@@ -23,6 +23,8 @@ h1, h2 {
 }
 
 table.mgmt-table {
+	margin-top: 4px;
+	width: 100%;
 	td.table-actions {
 		text-align: center;
 	}
@@ -31,13 +33,7 @@ table.mgmt-table {
 	}
 }
 
-.banlist, .wordfilters {
-	margin-top: 4px;
-	width: 100%;
-}
-
 table#recentposts {
-	width: 100%;
 	border-collapse: collapse;
 	td {
 		border: 1px solid;

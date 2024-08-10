@@ -10,6 +10,7 @@ function onAddCondition(e:JQuery.ClickEvent) {
 			el.name = matches[1] + newFieldsetNum;
 		}
 	});
+	$newFieldset.find("select").trigger("change", "name");
 	$newFieldset.appendTo("td#conditions");
 }
 

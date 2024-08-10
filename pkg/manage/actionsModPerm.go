@@ -22,6 +22,26 @@ import (
 
 // manage actions that require moderator-level permission go here
 
+var (
+	filterFields = []filterField{
+		{Value: "name", Text: "Name"},
+		{Value: "trip", Text: `Tripcode`},
+		{Value: "email", Text: "Email"},
+		{Value: "subject", Text: "Subject"},
+		{Value: "body", Text: "Message body"},
+		{Value: "firsttime", Text: "First time poster"},
+		{Value: "notfirsttime", Text: "Not a first time poster"},
+		{Value: "isop", Text: "Is OP"},
+		{Value: "notop", Text: "Is reply"},
+		{Value: "hasfile", Text: "Has file"},
+		{Value: "nofile", Text: "No file"},
+		{Value: "filename", Text: "Filename"},
+		{Value: "filechecksum", Text: "File checksum"},
+		{Value: "imgfingerprint", Text: "Image fingerprint"},
+		{Value: "useragent", Text: "User agent"},
+	}
+)
+
 func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	var outputStr string
 	var ban gcsql.IPBan
@@ -325,7 +345,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return outputStr, nil
 } */
 
-type searchField struct {
+type filterField struct {
 	Value string
 	Text  string
 }
@@ -336,24 +356,10 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	// editFilter := request.FormValue("editfilter")
 	// delFilter := request.FormValue("delfilter")
 
-	searchFields := []searchField{
-		{Value: "name", Text: "Name"},
-		{Value: "trip", Text: `Tripcode (excluding prefix "!")`},
-		{Value: "email", Text: "Email"},
-		{Value: "subject", Text: "Subject"},
-		{Value: "body", Text: "Message body"},
-		{Value: "firsttime", Text: "First time poster"},
-		{Value: "isop", Text: "OP"},
-		{Value: "hasfile", Text: "Has file"},
-		{Value: "filename", Text: "Filename"},
-		{Value: "filechecksum", Text: "File checksum"},
-		{Value: "imgfingerprint", Text: "Image fingerprint"},
-		{Value: "useragent", Text: "User agent"},
-	}
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, map[string]any{
 		"allBoards": gcsql.AllBoards,
-		"fields":    searchFields,
+		"fields":    filterFields,
 	}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
 		return "", errors.New("Unable to execute filter management template: " + err.Error())

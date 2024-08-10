@@ -320,6 +320,10 @@ h1, h2 {
   padding-right: 4px;
 }
 
+table.mgmt-table {
+  margin-top: 4px;
+  width: 100%;
+}
 table.mgmt-table td.table-actions {
   text-align: center;
 }
@@ -327,13 +331,7 @@ table.mgmt-table th {
   padding: 4px;
 }
 
-.banlist, .wordfilters {
-  margin-top: 4px;
-  width: 100%;
-}
-
 table#recentposts {
-  width: 100%;
   border-collapse: collapse;
 }
 table#recentposts td {
