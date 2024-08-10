@@ -10,7 +10,6 @@ function onAddCondition(e:JQuery.ClickEvent) {
 			el.name = matches[1] + newFieldsetNum;
 		}
 	});
-	// applyConditionEvents($newFieldset);
 	$newFieldset.appendTo("td#conditions");
 }
 
@@ -44,9 +43,11 @@ function applyConditionEvents($fieldset:JQuery<HTMLElement>) {
 	$fieldset.find("button.add-cndtn").on("click", onAddCondition);
 	$fieldset.find("button.rem-cndtn").on("click", onRemoveCondition);
 	$fieldset.find("select.sel-field").on("change", onFieldChange);
-	$fieldset.find("input#allboards").on("change", () => {
+	$("input#allboards").on("change", () => {
 		$<HTMLInputElement>("td#boardslist input[type=checkbox]").each((_i, el) => {
-			if(el.id !== "allboards") el.disabled = $<HTMLInputElement>("input#allboards")[0].checked;
+			if(el.id !== "allboards") {
+				el.disabled = $<HTMLInputElement>("input#allboards")[0].checked;
+			}
 		});
 	});
 }
