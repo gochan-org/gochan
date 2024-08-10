@@ -3,8 +3,7 @@ import $ from "jquery";
 function onAddCondition(e:JQuery.ClickEvent) {
 	e.preventDefault();
 	const newFieldsetNum = $("fieldset").length + 1;
-	const $newFieldset = $(e.target).parents("fieldset").clone(true, true);
-	$newFieldset.find("legend").text(`Condition ${newFieldsetNum}`);
+	const $newFieldset = $(e.target).parents("fieldset").first().clone(true, true);
 	$newFieldset.find<HTMLInputElement>("input,select").each((_i,el) => {
 		const matches = /^([^0-9]+)\d+$/.exec(el.name);
 		if(matches !== null) {
@@ -24,12 +23,15 @@ function onRemoveCondition(e:JQuery.ClickEvent) {
 
 function onFieldChange(e:JQuery.ChangeEvent) {
 	const $fieldset = $(e.target).parents("fieldset");
-	const isCheckbox = e.target.value === "firsttime" || e.target.value === "hasfile" || e.target.value === "isop";
-	const noRegex = isCheckbox || e.target.value === "filechecksum" || e.target.value === "imgfingerprint";
-	const $searchInput = $("tr.search-cndtn input");
+	const isBoolean = e.target.value === "firsttime" || e.target.value === "hasfile" || e.target.value === "isop";
+	const noRegex = isBoolean || e.target.value === "filechecksum" || e.target.value === "imgfingerprint";
+	const $searchInput = $fieldset.find("tr.search-cndtn");
 
-	$searchInput.attr("type", isCheckbox?"checkbox":"text");
-	$fieldset.find("tr.search-cndtn th").text(isCheckbox?"":"Search");
+	if(isBoolean) {
+		$searchInput.hide();
+	} else {
+		$searchInput.show();
+	}
 
 	if(noRegex) {
 		$fieldset.find(".regex-cndtn").hide();

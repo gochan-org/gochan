@@ -6,10 +6,9 @@
 			<th>Conditions</th>
 			<td id="conditions">
 				<fieldset class="fld-cndtns">
-					<legend>Condition 1</legend>
 					<table>
 						<tr class="field-cndtn">
-							<th>Field:</th>
+							<th>Field/Condition:</th>
 							<td>
 								<select name="field1" class="sel-field">
 									{{- range $_,$field := .fields}}<option value="{{$field.Value}}">{{$field.Text}}</option>{{end -}}
