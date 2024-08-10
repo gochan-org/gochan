@@ -366,6 +366,10 @@ td#boardslist label, td#conditions label {
   display: block;
 }
 
+fieldset.fld-cndtns {
+  margin-bottom: 8px;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;

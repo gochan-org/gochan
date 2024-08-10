@@ -3,7 +3,7 @@ import $ from "jquery";
 function onAddCondition(e:JQuery.ClickEvent) {
 	e.preventDefault();
 	const newFieldsetNum = $("fieldset").length + 1;
-	const $newFieldset = $(e.target).parents("fieldset").first().clone(true, true);
+	const $newFieldset = $("fieldset.fld-cndtns").first().clone(true, true);
 	$newFieldset.find<HTMLInputElement>("input,select").each((_i,el) => {
 		const matches = /^([^0-9]+)\d+$/.exec(el.name);
 		if(matches !== null) {
@@ -40,8 +40,8 @@ function onFieldChange(e:JQuery.ChangeEvent) {
 }
 
 function applyConditionEvents($fieldset:JQuery<HTMLElement>) {
-	$fieldset.find("button.add-cndtn").on("click", onAddCondition);
-	$fieldset.find("button.rem-cndtn").on("click", onRemoveCondition);
+	$("#add-cndtn").on("click", onAddCondition);
+	$fieldset.find(".rem-cndtn").on("click", onRemoveCondition);
 	$fieldset.find("select.sel-field").on("change", onFieldChange);
 	$("input#allboards").on("change", () => {
 		$<HTMLInputElement>("td#boardslist input[type=checkbox]").each((_i, el) => {
@@ -54,6 +54,7 @@ function applyConditionEvents($fieldset:JQuery<HTMLElement>) {
 
 $(() => {
 	applyConditionEvents($("form#filterform fieldset.fld-cndtns"));
+
 	$<HTMLSelectElement>("select#action").on("change", e => {
 		switch(e.target.value) {
 		case "reject":

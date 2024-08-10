@@ -1,6 +1,6 @@
 <h2>{{with $.edit}}Edit filter{{else}}New filter{{end}}</h2>
-
-<form id="filterform" action="{{webPath "/manage/filters"}}{{with $.edit}}?edit={{.ID}}{{end}}" method="POST">
+<form id="filterform" action="{{webPath `/manage/filters`}}{{with $.edit}}?edit={{.ID}}{{end}}" method="POST">
+	Filter conditions are checked against a post before the message body is formatted and after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
 	<table>
 		<tr>
 			<th>Conditions</th>
@@ -26,13 +26,16 @@
 						<tr class="btns-cndtn">
 							<td></td>
 							<td>
-								<button class="add-cndtn">Add condition</button>
-								<button class="rem-cndtn">Remove condition</button>
+								<a href="#" class="rem-cndtn">Remove condition</a>
 							</td>
 						</tr>
 					</table>
 				</fieldset>
 			</td>
+			<tr>
+				<td></td>
+				<td><a href="#" id="add-cndtn">Add condition</a></td>
+			</tr>
 		</tr>
 		<tr>
 			<th>Action</th>
@@ -53,14 +56,14 @@
 			<td id="boardslist">
 				<label for="allboards">All boards <input type="checkbox" name="allboards" id="allboards"></label>
 				{{- range $_,$board := .allBoards -}}
-					<label for="board{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"></label>
+					<label for="applyboard{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"></label>
 				{{- end -}}
 			</td>
 		</tr>
 	</table>
 	<input type="submit" name="dofilter" value="Submit Filter">
 </form>
-
+<hr/>
 <h2>Filter list</h2>
 <table>
 	TODO
