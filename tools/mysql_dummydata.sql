@@ -1,6 +1,6 @@
 -- This should be run only after gochan has been started for the first time 
 -- Also this should only be used in a development environment
--- mysql -u gochan -D gochan -pgochan < /vagrant/devtools/mysql_dummydata.sql
+-- mysql -u gochan -D gochan -pgochan < /vagrant/tools/mysql_dummydata.sql
 
 INSERT INTO gc_threads (board_id) values(1);
 INSERT INTO `gc_posts` (
