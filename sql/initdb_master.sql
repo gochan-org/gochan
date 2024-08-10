@@ -244,34 +244,6 @@ CREATE TABLE DBPREFIXreports_audit(
 		FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id) ON DELETE CASCADE
 );
 
-CREATE TABLE DBPREFIXfilename_ban(
-	id {serial pk},
-	board_id {fk to serial},
-	staff_id {fk to serial} NOT NULL,
-	staff_note VARCHAR(255) NOT NULL,
-	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	filename VARCHAR(255) NOT NULL,
-	is_regex BOOL NOT NULL,
-	CONSTRAINT filename_ban_board_id_fk
-		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
-	CONSTRAINT filename_ban_staff_id_fk
-		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
-);
-
-CREATE TABLE DBPREFIXusername_ban(
-	id {serial pk},
-	board_id {fk to serial},
-	staff_id {fk to serial} NOT NULL,
-	staff_note VARCHAR(255) NOT NULL,
-	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	username VARCHAR(255) NOT NULL,
-	is_regex BOOL NOT NULL,
-	CONSTRAINT username_ban_board_id_fk
-		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
-	CONSTRAINT username_ban_staff_id_fk
-		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
-);
-
 CREATE TABLE DBPREFIXfile_ban(
 	id {serial pk},
 	board_id {fk to serial},
@@ -288,9 +260,54 @@ CREATE TABLE DBPREFIXfile_ban(
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
-CREATE TABLE DBPREFIXwordfilters(
+CREATE TABLE DBPREFIXfilters(
 	id {serial pk},
 	board_dirs VARCHAR(255) DEFAULT '*',
+	staff_id {fk to serial},
+	staff_note VARCHAR(255) NOT NULL,
+	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	match_action VARCHAR(45) NOT NULL DEFAULT 'replace',
+	match_detail TEXT NOT NULL,
+	CONSTRAINT filters_staff_id_fk
+		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+		ON DELETE SET NULL
+);
+
+CREATE TABLE DBPREFIXfilter_boards(
+	id {serial pk},
+	filter_id {fk to serial} NOT NULL,
+	board_id {fk to serial} NOT NULL,
+	CONSTRAINT filter_boards_filter_id_fk
+		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
+		ON DELETE CASCADE
+	CONSTRAINT filter_boards_board_id_fk
+		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
+		ON DELETE CASCADE
+);
+
+CREATE TABLE DBPREFIXfilter_conditions(
+	id {serial pk},
+	filter_id {fk to serial} NOT NULL,
+	is_regex SMALLINT NOT NULL,
+	search VARCHAR(75) NOT NULL,
+	field VARCHAR(75) NOT NULL,
+	CONSTRAINT filter_conditions_filter_id_fk
+		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
+		ON DELETE CASCADE,
+	CONSTRAINT wordfilter_conditions_search_check CHECK (search <> '')
+);
+
+CREATE TABLE DBPREFIXfilter_hits(
+	id {serial pk},
+	condition_id {fk to serial} NOT NULL,
+	post_data TEXT,
+	CONSTRAINT filter_hits_condition_id_fk
+		FOREIGN KEY(condition_id) REFERENCES DBPREFIXfilter_conditions(id)
+		ON DELETE CASCADE
+);
+
+CREATE TABLE DBPREFIXwordfilters(
+	id {serial pk},
 	staff_id {fk to serial} NOT NULL,
 	staff_note VARCHAR(255) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -300,6 +317,18 @@ CREATE TABLE DBPREFIXwordfilters(
 	CONSTRAINT wordfilters_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT wordfilters_search_check CHECK (search <> '')
+);
+
+CREATE TABLE DBPREFIXwordfilter_boards(
+	id {serial pk},
+	filter_id {fk to serial} NOT NULL,
+	board_id {fk to serial} NOT NULL,
+	CONSTRAINT wordfilter_boards_filter_id_fk
+		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
+		ON DELETE CASCADE
+	CONSTRAINT wordfilter_boards_board_id_fk
+		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
+		ON DELETE CASCADE
 );
 
 INSERT INTO DBPREFIXdatabase_version(component, version)

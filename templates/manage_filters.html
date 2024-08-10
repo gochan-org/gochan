@@ -1,0 +1,68 @@
+<h2>{{with $.edit}}Edit filter{{else}}New filter{{end}}</h2>
+
+<form id="filterform" action="{{webPath "/manage/filters"}}{{with $.edit}}?edit={{.ID}}{{end}}" method="POST">
+	<table>
+		<tr>
+			<th>Conditions</th>
+			<td id="conditions">
+				<fieldset class="fld-cndtns">
+					<legend>Condition 1</legend>
+					<table>
+						<tr class="field-cndtn">
+							<th>Field:</th>
+							<td>
+								<select name="field1" class="sel-field">
+									{{- range $_,$field := .fields}}<option value="{{$field.Value}}">{{$field.Text}}</option>{{end -}}
+								</select>
+							</td>
+						</tr>
+						<tr class="search-cndtn">
+							<th>Search:</th>
+							<td><input type="text" name="search1"></td>
+						</tr>
+						<tr class="regex-cndtn">
+							<th></th>
+							<td><label>Is regex <input type="checkbox" name="isregex1"/></label></td>
+						</tr>
+						<tr class="btns-cndtn">
+							<td></td>
+							<td>
+								<button class="add-cndtn">Add condition</button>
+								<button class="rem-cndtn">Remove condition</button>
+							</td>
+						</tr>
+					</table>
+				</fieldset>
+			</td>
+		</tr>
+		<tr>
+			<th>Action</th>
+			<td>
+				<select name="action" id="action">
+					<option value="reject">Reject</option>
+					<option value="ban">Ban IP</option>
+					<option value="audit">Audit</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
+			<th id="reason">Reason</th>
+			<td><textarea name="reason" rows="5" cols="35"></textarea></td>
+		</tr>
+		<tr>
+			<th>Board(s):</th>
+			<td id="boardslist">
+				<label for="allboards">All boards <input type="checkbox" name="allboards" id="allboards"></label>
+				{{- range $_,$board := .allBoards -}}
+					<label for="board{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"></label>
+				{{- end -}}
+			</td>
+		</tr>
+	</table>
+	<input type="submit" name="dofilter" value="Submit Filter">
+</form>
+
+<h2>Filter list</h2>
+<table>
+	TODO
+</table>

@@ -2,7 +2,6 @@ package manage
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -665,98 +664,6 @@ func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff,
 	return outputStr, nil
 }
 
-func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-	managePageBuffer := bytes.NewBufferString("")
-	editIDstr := request.FormValue("edit")
-	deleteIDstr := request.FormValue("delete")
-	if deleteIDstr != "" {
-		var result sql.Result
-		if result, err = gcsql.ExecSQL(`DELETE FROM DBPREFIXwordfilters WHERE id = ?`, deleteIDstr); err != nil {
-			return err, err
-		}
-		if numRows, _ := result.RowsAffected(); numRows < 1 {
-			err = invalidWordfilterID(deleteIDstr)
-			errEv.Err(err).Caller().Send()
-			return err, err
-		}
-		infoEv.Str("deletedWordfilterID", deleteIDstr)
-	}
-
-	submitBtn := request.FormValue("dowordfilter")
-	switch submitBtn {
-	case "Edit wordfilter":
-		regexCheckStr := request.FormValue("isregex")
-		if regexCheckStr == "on" {
-			regexCheckStr = "1"
-		} else {
-			regexCheckStr = "0"
-		}
-		_, err = gcsql.ExecSQL(`UPDATE DBPREFIXwordfilters
-				SET board_dirs = ?,
-				staff_note = ?,
-				search = ?,
-				is_regex = ?,
-				change_to = ?
-				WHERE id = ?`,
-			request.FormValue("boarddirs"),
-			request.FormValue("staffnote"),
-			request.FormValue("find"),
-			regexCheckStr,
-			request.FormValue("replace"),
-			editIDstr)
-		infoEv.Str("do", "update")
-	case "Create new wordfilter":
-		_, err = gcsql.CreateWordFilter(
-			request.FormValue("find"),
-			request.FormValue("replace"),
-			request.FormValue("isregex") == "on",
-			request.FormValue("boarddirs"),
-			staff.ID,
-			request.FormValue("staffnote"))
-		infoEv.Str("do", "create")
-	case "":
-		infoEv.Discard()
-	}
-	if err == nil {
-		infoEv.
-			Str("find", request.FormValue("find")).
-			Str("replace", request.FormValue("replace")).
-			Str("staffnote", request.FormValue("staffnote")).
-			Str("boarddirs", request.FormValue("boarddirs"))
-	} else {
-		return err, err
-	}
-
-	wordfilters, err := gcsql.GetWordfilters()
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Unable to get wordfilters")
-		return wordfilters, err
-	}
-	var editFilter *gcsql.Wordfilter
-	if editIDstr != "" {
-		editID := gcutil.HackyStringToInt(editIDstr)
-		for w, filter := range wordfilters {
-			if filter.ID == editID {
-				editFilter = &wordfilters[w]
-				break
-			}
-		}
-	}
-	filterMap := map[string]interface{}{
-		"wordfilters": wordfilters,
-		"edit":        editFilter,
-	}
-
-	err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters,
-		filterMap, managePageBuffer, "text/html")
-	if err != nil {
-		errEv.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
-
-	}
-	infoEv.Send()
-	return managePageBuffer.String(), err
-}
-
 func viewLogCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event,
 	errEv *zerolog.Event) (output interface{}, err error) {
 	logPath := path.Join(config.GetSystemCriticalConfig().LogDir, "gochan.log")
@@ -839,12 +746,6 @@ func registerAdminPages() {
 			Title:       "Reparse HTML",
 			Permissions: AdminPerms,
 			Callback:    reparseHTMLCallback,
-		},
-		Action{
-			ID:          "wordfilters",
-			Title:       "Wordfilters",
-			Permissions: AdminPerms,
-			Callback:    wordfiltersCallback,
 		},
 		Action{
 			ID:          "viewlog",

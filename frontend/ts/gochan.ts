@@ -14,6 +14,7 @@ import { initFlags } from "./dom/flags";
 import { initQR } from "./dom/qr";
 import { getBooleanStorageVal } from "./storage";
 import { replaceBrowseButton } from "./dom/uploaddata";
+import "./management/filters";
 
 export function toTop() {
 	window.scrollTo(0,0);

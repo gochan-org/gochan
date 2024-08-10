@@ -362,6 +362,10 @@ textarea.viewlog, textarea.template-text {
   margin-right: auto;
 }
 
+td#boardslist label, td#conditions label {
+  display: block;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;

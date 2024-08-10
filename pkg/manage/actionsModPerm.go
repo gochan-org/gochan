@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -172,7 +171,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return manageAppealsBuffer.String(), err
 }
 
-func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+/* func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 	delFilenameBanIDStr := request.FormValue("delfnb") // filename ban deletion
 	delChecksumBanIDStr := request.FormValue("delcsb") // checksum ban deletion
 
@@ -324,9 +323,45 @@ func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	}
 	outputStr := manageBansBuffer.String()
 	return outputStr, nil
+} */
+
+type searchField struct {
+	Value string
+	Text  string
 }
 
-func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
+func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+	// doFilterAdd = request.PostFormValue("dofilteradd")
+	// filterID := request.FormValue("filterid")
+	// editFilter := request.FormValue("editfilter")
+	// delFilter := request.FormValue("delfilter")
+
+	searchFields := []searchField{
+		{Value: "name", Text: "Name"},
+		{Value: "trip", Text: `Tripcode (excluding prefix "!")`},
+		{Value: "email", Text: "Email"},
+		{Value: "subject", Text: "Subject"},
+		{Value: "body", Text: "Message body"},
+		{Value: "firsttime", Text: "First time poster"},
+		{Value: "isop", Text: "OP"},
+		{Value: "hasfile", Text: "Has file"},
+		{Value: "filename", Text: "Filename"},
+		{Value: "filechecksum", Text: "File checksum"},
+		{Value: "imgfingerprint", Text: "Image fingerprint"},
+		{Value: "useragent", Text: "User agent"},
+	}
+	var buf bytes.Buffer
+	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, map[string]any{
+		"allBoards": gcsql.AllBoards,
+		"fields":    searchFields,
+	}, &buf, "text/html"); err != nil {
+		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
+		return "", errors.New("Unable to execute filter management template: " + err.Error())
+	}
+	return buf.String(), nil
+}
+
+/* func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
 	doNameBan := request.FormValue("donameban")
 	deleteIDstr := request.FormValue("del")
 	if deleteIDstr != "" {
@@ -376,7 +411,7 @@ func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 		return "", errors.New("Error executing name ban management page template: " + err.Error())
 	}
 	return buf.String(), nil
-}
+} */
 
 func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	ipQuery := request.FormValue("ip")
@@ -705,6 +740,98 @@ func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	}, nil
 }
 
+func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+	managePageBuffer := bytes.NewBufferString("")
+	editIDstr := request.FormValue("edit")
+	deleteIDstr := request.FormValue("delete")
+	if deleteIDstr != "" {
+		var result sql.Result
+		if result, err = gcsql.ExecSQL(`DELETE FROM DBPREFIXwordfilters WHERE id = ?`, deleteIDstr); err != nil {
+			return err, err
+		}
+		if numRows, _ := result.RowsAffected(); numRows < 1 {
+			err = invalidWordfilterID(deleteIDstr)
+			errEv.Err(err).Caller().Send()
+			return err, err
+		}
+		infoEv.Str("deletedWordfilterID", deleteIDstr)
+	}
+
+	submitBtn := request.FormValue("dowordfilter")
+	switch submitBtn {
+	case "Edit wordfilter":
+		regexCheckStr := request.FormValue("isregex")
+		if regexCheckStr == "on" {
+			regexCheckStr = "1"
+		} else {
+			regexCheckStr = "0"
+		}
+		_, err = gcsql.ExecSQL(`UPDATE DBPREFIXwordfilters
+				SET board_dirs = ?,
+				staff_note = ?,
+				search = ?,
+				is_regex = ?,
+				change_to = ?
+				WHERE id = ?`,
+			request.FormValue("boarddirs"),
+			request.FormValue("staffnote"),
+			request.FormValue("find"),
+			regexCheckStr,
+			request.FormValue("replace"),
+			editIDstr)
+		infoEv.Str("do", "update")
+	case "Create new wordfilter":
+		_, err = gcsql.CreateWordFilter(
+			request.FormValue("find"),
+			request.FormValue("replace"),
+			request.FormValue("isregex") == "on",
+			request.FormValue("boarddirs"),
+			staff.ID,
+			request.FormValue("staffnote"))
+		infoEv.Str("do", "create")
+	case "":
+		infoEv.Discard()
+	}
+	if err == nil {
+		infoEv.
+			Str("find", request.FormValue("find")).
+			Str("replace", request.FormValue("replace")).
+			Str("staffnote", request.FormValue("staffnote")).
+			Str("boarddirs", request.FormValue("boarddirs"))
+	} else {
+		return err, err
+	}
+
+	wordfilters, err := gcsql.GetWordfilters()
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to get wordfilters")
+		return wordfilters, err
+	}
+	var editFilter *gcsql.Wordfilter
+	if editIDstr != "" {
+		editID := gcutil.HackyStringToInt(editIDstr)
+		for w, filter := range wordfilters {
+			if filter.ID == editID {
+				editFilter = &wordfilters[w]
+				break
+			}
+		}
+	}
+	filterMap := map[string]interface{}{
+		"wordfilters": wordfilters,
+		"edit":        editFilter,
+	}
+
+	err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters,
+		filterMap, managePageBuffer, "text/html")
+	if err != nil {
+		errEv.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
+
+	}
+	infoEv.Send()
+	return managePageBuffer.String(), err
+}
+
 func registerModeratorPages() {
 	actions = append(actions,
 		Action{
@@ -721,18 +848,25 @@ func registerModeratorPages() {
 			Callback:    appealsCallback,
 		},
 		Action{
-			ID:          "filebans",
-			Title:       "Filename and checksum bans",
+			ID:          "filters",
+			Title:       "Post filters",
 			Permissions: ModPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    fileBansCallback,
+			JSONoutput:  NoJSON,
+			Callback:    filtersCallback,
 		},
-		Action{
-			ID:          "namebans",
-			Title:       "Name bans",
-			Permissions: ModPerms,
-			Callback:    nameBansCallback,
-		},
+		// Action{
+		// 	ID:          "filebans",
+		// 	Title:       "Filename and checksum bans",
+		// 	Permissions: ModPerms,
+		// 	JSONoutput:  OptionalJSON,
+		// 	Callback:    fileBansCallback,
+		// },
+		// Action{
+		// 	ID:          "namebans",
+		// 	Title:       "Name bans",
+		// 	Permissions: ModPerms,
+		// 	Callback:    nameBansCallback,
+		// },
 		Action{
 			ID:          "ipsearch",
 			Title:       "IP Search",
@@ -767,6 +901,12 @@ func registerModeratorPages() {
 			Permissions: ModPerms,
 			JSONoutput:  AlwaysJSON,
 			Callback:    fingerprintCallback,
+		},
+		Action{
+			ID:          "wordfilters",
+			Title:       "Wordfilters",
+			Permissions: ModPerms,
+			Callback:    wordfiltersCallback,
 		},
 	)
 }

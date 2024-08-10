@@ -65,3 +65,9 @@ textarea.viewlog, textarea.template-text {
 	margin-left: auto;
 	margin-right: auto;
 }
+
+td#boardslist, td#conditions {
+	label {
+		display:block;
+	}
+}
