@@ -58,13 +58,11 @@ $(() => {
 		switch(e.target.value) {
 		case "reject":
 			$("th#reason").parent().show();
-			$("th#reason").text("Reason");
 			break;
 		case "ban":
 			$("th#reason").parent().show();
-			$("th#reason").text("Ban message");
 			break;
-		case "audit":
+		case "log":
 			$("th#reason").parent().hide();
 			break;
 		default:
