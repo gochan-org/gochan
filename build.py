@@ -558,7 +558,7 @@ if __name__ == "__main__":
 		args = parser.parse_args()
 		sass(args.watch)
 	elif action == "selenium":
-		from devtools.selenium_testing.runtests import parseArgs, start_tests, close_tests
+		from tools.selenium_testing.runtests import parseArgs, start_tests, close_tests
 		args = parseArgs(parser)
 		try:
 			start_tests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/static/notbanned.png", args.singletest)

@@ -52,7 +52,7 @@ def start_tests(browser:str, headless=False, keep_open=False, site="", board="",
 
 		spec = importlib.util.spec_from_file_location(test_class, test_location)
 		module = importlib.util.module_from_spec(spec)
-		module.__package__ = "devtools.selenium_testing.tests"
+		module.__package__ = "tools.selenium_testing.tests"
 		spec.loader.exec_module(module)
 
 		suite = unittest.suite.TestSuite()

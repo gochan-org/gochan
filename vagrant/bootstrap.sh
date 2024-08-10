@@ -124,12 +124,12 @@ elif [ "$DBTYPE" = "sqlite3" ]; then
 fi
 
 # a convenient script for connecting to the db, whichever type we're using
-ln -s {/vagrant/devtools,/home/vagrant}/dbconnect.sh
+ln -s {/vagrant/tools,/home/vagrant}/dbconnect.sh
 chmod +x /home/vagrant/dbconnect.sh
 
 # used for testing migration from the pre-2021 db schema
-ln -s {/vagrant/devtools,/home/vagrant}/get_pre2021.sh
-ln -s {/vagrant/devtools,/home/vagrant}/get_previous_version.sh
+ln -s {/vagrant/tools,/home/vagrant}/get_pre2021.sh
+ln -s {/vagrant/tools,/home/vagrant}/get_previous_version.sh
 chmod +x get_{pre2021,previous_version}.sh
 
 cat <<EOF >>/home/vagrant/.bashrc
@@ -141,7 +141,7 @@ su - vagrant <<EOF
 echo 'alias bbig="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan"' >> /home/vagrant/.bash_aliases
 mkdir -p /home/vagrant/go
 source /home/vagrant/.bashrc
-cd /vagrant/devtools
+cd /vagrant/tools
 ./build_initdb.py
 cd ..
 mkdir -p $GOPATH/src/github.com/gochan-org/gochan
