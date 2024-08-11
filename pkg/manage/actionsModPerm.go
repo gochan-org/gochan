@@ -830,7 +830,7 @@ func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 }
 
 func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-	managePageBuffer := bytes.NewBufferString("")
+	do := request.PostFormValue("dowordfilter")
 	editIDstr := request.FormValue("edit")
 	disableIDstr := request.FormValue("disable")
 	if disableIDstr != "" {
@@ -846,7 +846,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		infoEv.Int("disableID", disableID)
 	}
 
-	var editFilter *gcsql.Wordfilter
+	var filter *gcsql.Wordfilter
 	if editIDstr != "" {
 		editID, err := strconv.Atoi(editIDstr)
 		if err != nil {
@@ -855,51 +855,62 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		}
 		gcutil.LogInt("editID", editID, infoEv, errEv)
 
-		editFilter, err = gcsql.GetWordfilterByID(editID)
+		filter, err = gcsql.GetWordfilterByID(editID)
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get wordfilter")
 			return nil, fmt.Errorf("Unable to get wordfilter with id #%d", editID)
 		}
 	}
+	searchFor := request.PostFormValue("searchfor")
+	replaceWith := request.PostFormValue("replace")
+	isRegex := request.PostFormValue("isregex") == "on"
+	staffNote := request.PostFormValue("staffnote")
 
-	switch request.FormValue("dowordfilter") {
-	case "Edit wordfilter":
-		if err = editFilter.UpdateDetails(request.FormValue("staffnote"), "replace", request.FormValue("replace")); err != nil {
-			errEv.Err(err).Caller()
-			return nil, err
+	var boards []string
+	boardsLog := zerolog.Arr()
+	for k, v := range request.PostForm {
+		if strings.HasPrefix(k, "board-") && v[0] == "on" {
+			boards = append(boards, k[6:])
+			boardsLog.Str(k[6:])
 		}
-		if err = editFilter.SetConditions(gcsql.FilterCondition{
-			FilterID: editFilter.ID,
-			IsRegex:  request.FormValue("isregex") == "on",
-			Search:   request.FormValue("find"),
+	}
+	if do != "" {
+		infoEv.Array("boards", boardsLog)
+		errEv.Array("boards", boardsLog)
+		gcutil.LogStr("searchFor", searchFor, infoEv, errEv)
+		gcutil.LogStr("replaceWith", replaceWith, infoEv, errEv)
+		gcutil.LogStr("staffnote", staffNote, infoEv, errEv)
+		gcutil.LogBool("isRegex", isRegex, infoEv, errEv)
+	}
+
+	switch do {
+	case "Edit wordfilter":
+		if err = filter.UpdateDetails(staffNote, "replace", replaceWith); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to update wordfilter details")
+			return nil, errors.New("unable to update wordfilter details")
+		}
+		if err = filter.SetConditions(gcsql.FilterCondition{
+			FilterID: filter.ID,
+			IsRegex:  isRegex,
+			Search:   searchFor,
 			Field:    "body",
 		}); err != nil {
-			return nil, err
+			errEv.Err(err).Caller().Msg("Unable to set filter condition")
+			return nil, errors.New("unable to set filter conditions")
 		}
-		if err = editFilter.SetBoardDirs(strings.Split(request.FormValue("boarddirs"), ",")...); err != nil {
-			return nil, err
+		if err = filter.SetBoardDirs(boards...); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to set board directories")
+			return nil, errors.New("unable to set board directories")
 		}
 		infoEv.Str("do", "update")
-	case "Create new wordfilter":
-		_, err = gcsql.CreateWordFilter(
-			request.FormValue("find"),
-			request.FormValue("replace"),
-			request.FormValue("isregex") == "on",
-			strings.Split(request.FormValue("boarddirs"), ","),
-			staff.ID,
-			request.FormValue("staffnote"))
+	case "Create wordfilter":
+		if _, err = gcsql.CreateWordFilter(searchFor, replaceWith, isRegex, boards, staff.ID, staffNote); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to create wordfilter")
+			return nil, errors.New("unable to create wordfilter")
+		}
 		infoEv.Str("do", "create")
 	case "":
 		infoEv.Discard()
-	}
-	if err == nil {
-		infoEv.
-			Str("find", request.FormValue("find")).
-			Str("replace", request.FormValue("replace")).
-			Str("staffnote", request.FormValue("staffnote")).
-			Str("boarddirs", request.FormValue("boarddirs"))
-	} else {
-		return nil, err
 	}
 
 	wordfilters, err := gcsql.GetWordfilters(gcsql.AllFilters)
@@ -908,7 +919,6 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		return nil, err
 	}
 	var searchFields []string
-	var isRegex []bool
 	for _, wordfilter := range wordfilters {
 		conditions, err := wordfilter.Conditions()
 		if err != nil {
@@ -918,20 +928,20 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 			return nil, err
 		}
 		searchFields = append(searchFields, conditions[0].Search)
-		isRegex = append(isRegex, conditions[0].IsRegex)
 	}
 
+	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters, map[string]interface{}{
 		"wordfilters":  wordfilters,
-		"edit":         editFilter,
+		"filter":       filter,
 		"searchFields": searchFields,
-		"isRegex":      isRegex,
-	}, managePageBuffer, "text/html"); err != nil {
+		"allBoards":    gcsql.AllBoards,
+	}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
 		return nil, err
 	}
 	infoEv.Send()
-	return managePageBuffer.String(), nil
+	return buf.String(), nil
 }
 
 func registerModeratorPages() {

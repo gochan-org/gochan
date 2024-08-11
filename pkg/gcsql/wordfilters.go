@@ -76,7 +76,7 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 		return nil, err
 	}
 
-	return filter, err
+	return filter, tx.Commit()
 }
 
 // GetWordfilters gets a list of wordfilters from the database and returns an array of them and any errors
