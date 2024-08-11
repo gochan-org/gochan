@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -41,6 +42,7 @@ func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *confi
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	var fBanBoardID *int
 	var fBanStaffID int
@@ -98,7 +100,7 @@ func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *confi
 			return err
 		}
 	}
-	return nil
+	return rows.Close()
 }
 
 func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *config.SQLConfig) error {
@@ -106,6 +108,7 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	var fnBanBoardID *int
 	var fnBanStaffID int
@@ -142,7 +145,7 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 			return err
 		}
 	}
-	return nil
+	return rows.Close()
 }
 
 func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *config.SQLConfig) error {
@@ -150,6 +153,7 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	var unBanBoardID *int
 	var unBanStaffID int
@@ -188,5 +192,70 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 		}
 	}
 
-	return nil
+	return rows.Close()
+}
+
+func MigrateWordfilters(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
+	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var boardDirsPtr *string
+	var boardDirs []string
+	var boardID int
+	var staffID int
+	var staffNote string
+	var issuedAt time.Time
+	var search string
+	var isRegex bool
+	var changeTo string
+	var filterID int
+	for rows.Next() {
+		if err = rows.Scan(&boardDirsPtr, &staffID, &staffNote, &issuedAt, &search, &isRegex, &changeTo); err != nil {
+			return err
+		}
+		if _, err = db.ExecContextSQL(ctx, tx,
+			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail, is_active) VALUES(?,?,?,'replace',?,TRUE)`,
+			staffID, staffNote, issuedAt, changeTo,
+		); err != nil {
+			return err
+		}
+
+		if err = db.QueryRowContextSQL(ctx, tx, `SELECT MAX(id) FROM DBPREFIXfilters`, nil, []any{&filterID}); err != nil {
+			return err
+		}
+
+		if boardDirsPtr != nil {
+			boardDirs = strings.Split(*boardDirsPtr, ",")
+			for _, dir := range boardDirs {
+				if dir == "" || dir == "*" {
+					// treated as "all boards", but handle this in the loop just in case there's something like "a,*,b"
+					// if the only value in the string is *, there will be no single board associated with the filter
+					continue
+				}
+				err = db.QueryRowContextSQL(ctx, tx, `SELECT id FROM DBPREFIXboards WHERE dir = ?`, []any{dir}, []any{&boardID})
+				if errors.Is(err, sql.ErrNoRows) {
+					// board may have been deleted, skip it and don't return an error
+					continue
+				} else if err != nil {
+					return err
+				}
+
+				if _, err = db.ExecContextSQL(ctx, tx,
+					`INSERT INTO DBPREFIXfilter_boards(filter_id,board_id) VALUES(?,?)`, filterID, boardID,
+				); err != nil {
+					return err
+				}
+			}
+		}
+
+		if _, err = db.ExecContextSQL(ctx, tx,
+			`INSERT INTO DBPREFIXfilter_conditions(filter_id, is_regex, search, field) VALUES(?,?,?,'body')`, filterID, isRegex, search,
+		); err != nil {
+			return err
+		}
+	}
+	return rows.Close()
 }

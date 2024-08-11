@@ -79,6 +79,7 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	}
 
 	if !filterTableExists {
+		// DBPREFIXfilters not found, create it and migrate data from DBPREFIXfile_bans, DBPREFIXfilename_bans, and DBPREFIXusername_bans,
 		if err = common.AddFilterTables(dbu.db, ctx, tx, &sqlConfig); err != nil {
 			return false, err
 		}
@@ -89,6 +90,9 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 			return false, err
 		}
 		if err = common.MigrateUsernameBans(dbu.db, ctx, tx, &sqlConfig); err != nil {
+			return false, err
+		}
+		if err = common.MigrateWordfilters(dbu.db, ctx, tx, &sqlConfig); err != nil {
 			return false, err
 		}
 	}

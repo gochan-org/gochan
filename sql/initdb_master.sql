@@ -294,7 +294,7 @@ CREATE TABLE DBPREFIXfilter_conditions(
 	CONSTRAINT filter_conditions_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE,
-	CONSTRAINT wordfilter_conditions_search_check CHECK (search <> '')
+	CONSTRAINT filter_conditions_search_check CHECK (search <> '')
 );
 
 CREATE TABLE DBPREFIXfilter_hits(
@@ -306,30 +306,6 @@ CREATE TABLE DBPREFIXfilter_hits(
 		ON DELETE CASCADE
 );
 
-CREATE TABLE DBPREFIXwordfilters(
-	id {serial pk},
-	staff_id {fk to serial} NOT NULL,
-	staff_note VARCHAR(255) NOT NULL,
-	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	search VARCHAR(75) NOT NULL,
-	is_regex BOOL NOT NULL,
-	change_to VARCHAR(75) NOT NULL,
-	CONSTRAINT wordfilters_staff_id_fk
-		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT wordfilters_search_check CHECK (search <> '')
-);
-
-CREATE TABLE DBPREFIXwordfilter_boards(
-	id {serial pk},
-	filter_id {fk to serial} NOT NULL,
-	board_id {fk to serial} NOT NULL,
-	CONSTRAINT wordfilter_boards_filter_id_fk
-		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
-		ON DELETE CASCADE,
-	CONSTRAINT wordfilter_boards_board_id_fk
-		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
-		ON DELETE CASCADE
-);
 
 INSERT INTO DBPREFIXdatabase_version(component, version)
 	VALUES('gochan', 3);
