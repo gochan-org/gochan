@@ -52,6 +52,7 @@ type Board struct {
 }
 
 // FileBan contains the information associated with a specific file ban.
+// Deprecated, use PostFilter instead
 // table: DBPREFIXfile_ban
 type FileBan struct {
 	ID            int       // sql: `id`
@@ -98,6 +99,7 @@ func (fb *FileBan) ApplyIPBan(postIP string) error {
 	return NewIPBan(ipBan)
 }
 
+// Deprecated, use PostFilter instead
 type filenameOrUsernameBanBase struct {
 	ID        int       // sql: id
 	BoardID   *int      // sql: board_id
@@ -109,11 +111,41 @@ type filenameOrUsernameBanBase struct {
 }
 
 // FilenameBan represents a ban on a specific filename or filename regular expression.
+// Deprecated, use PostFilter instead
 // table: DBPREFIXfilename_ban
 type FilenameBan struct {
 	filenameOrUsernameBanBase
 	Filename string // sql: `filename`
 	IsRegex  bool   // sql: `is_regex`
+}
+
+// Filter represents an entry in gochan's new filter system which merges username bans, file bans, and filename bans,
+// and will allow moderators to block posts based on the user's name, email, subject, message content, and other fields.
+// table: DBPREFIXfilters
+type Filter struct {
+	ID          int       // sql: id
+	StaffID     *int      // sql: staff_id
+	StaffNote   string    // sql: staff_note
+	IssuedAt    time.Time // sql: issued_at
+	MatchAction string    // sql: match_action
+	MatchDetail string    // sql: match_detail
+	conditions  []FilterCondition
+}
+
+// table: DBPREFIXfilter_boards
+type FilterBoard struct {
+	ID       int // sql: id
+	FilterID int // sql: filter_id
+	BoardID  int // sql: board_id
+}
+
+// table: DBPREFIXfilter_conditions
+type FilterCondition struct {
+	ID       int    // sql: id
+	FilterID int    // sql: filter_id
+	IsRegex  bool   // sql: is_regex
+	Search   string // sql: search
+	Field    string // sql: field
 }
 
 // Upload represents a file attached to a post.
@@ -296,6 +328,7 @@ type Thread struct {
 	IsDeleted bool      // sql: `is_deleted`
 }
 
+// Deprecated, use PostFilter instead
 // table: DBPREFIXusername_ban
 type UsernameBan struct {
 	filenameOrUsernameBanBase
