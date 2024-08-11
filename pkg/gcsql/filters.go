@@ -213,8 +213,8 @@ func (f *Filter) SetConditions(conditions ...FilterCondition) error {
 
 func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail string) error {
 	_, err := ExecTimeoutSQL(nil,
-		`UPDATE DBPREFIXfilters SET staff_note = ?, issued_at = ?, match_action = ?, match_detail = ?`,
-		staffNote, time.Now(), matchAction, matchDetail,
+		`UPDATE DBPREFIXfilters SET staff_note = ?, issued_at = ?, match_action = ?, match_detail = ? WHERE id = ?`,
+		staffNote, time.Now(), matchAction, matchDetail, f.ID,
 	)
 	return err
 }

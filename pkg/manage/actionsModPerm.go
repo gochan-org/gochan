@@ -833,6 +833,8 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 	do := request.PostFormValue("dowordfilter")
 	editIDstr := request.FormValue("edit")
 	disableIDstr := request.FormValue("disable")
+	enableIDstr := request.FormValue("enable")
+
 	if disableIDstr != "" {
 		disableID, err := strconv.Atoi(disableIDstr)
 		if err != nil {
@@ -841,9 +843,20 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		}
 		if err = gcsql.SetFilterActive(disableID, false); err != nil {
 			errEv.Err(err).Caller().Int("disableID", disableID).Msg("Unable to disable filter")
-			return nil, err
+			return nil, errors.New("unable to disable wordfilter")
 		}
 		infoEv.Int("disableID", disableID)
+	} else if enableIDstr != "" {
+		enableID, err := strconv.Atoi(enableIDstr)
+		if err != nil {
+			errEv.Err(err).Caller().Str("enableID", enableIDstr).Send()
+			return nil, err
+		}
+		if err = gcsql.SetFilterActive(enableID, true); err != nil {
+			errEv.Err(err).Caller().Int("enableID", enableID).Msg("Unable to enable filter")
+			return nil, errors.New("unable to enable wordfilter")
+		}
+		infoEv.Int("enableID", enableID)
 	}
 
 	var filter *gcsql.Wordfilter
@@ -909,8 +922,6 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 			return nil, errors.New("unable to create wordfilter")
 		}
 		infoEv.Str("do", "create")
-	case "":
-		infoEv.Discard()
 	}
 
 	wordfilters, err := gcsql.GetWordfilters(gcsql.AllFilters)
@@ -931,7 +942,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 	}
 
 	var buf bytes.Buffer
-	if err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ManageWordfilters, map[string]any{
 		"wordfilters":  wordfilters,
 		"filter":       filter,
 		"searchFields": searchFields,
@@ -940,7 +951,9 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		errEv.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
 		return nil, err
 	}
-	infoEv.Send()
+	if do != "" || enableIDstr != "" || disableIDstr != "" {
+		infoEv.Send()
+	}
 	return buf.String(), nil
 }
 

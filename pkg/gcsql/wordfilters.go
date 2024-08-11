@@ -83,7 +83,7 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 // encountered
 func GetWordfilters(active ActiveFilter) ([]Wordfilter, error) {
 	var filters []Wordfilter
-	query := `SELECT id, staff_id, staff_note, issued_at, match_detail FROM DBPREFIXfilters
+	query := `SELECT id, staff_id, staff_note, issued_at, match_detail, is_active FROM DBPREFIXfilters
 		WHERE match_action = 'replace'` + active.whereClause(true)
 
 	rows, cancel, err := QueryTimeoutSQL(nil, query)
@@ -97,7 +97,7 @@ func GetWordfilters(active ActiveFilter) ([]Wordfilter, error) {
 	for rows.Next() {
 		var filter Wordfilter
 		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchDetail); err != nil {
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchDetail, &filter.IsActive); err != nil {
 			return filters, err
 		}
 		filters = append(filters, filter)
@@ -147,10 +147,15 @@ func GetBoardWordfilters(board string) ([]Wordfilter, error) {
 	return wordFilters, nil
 }
 
-func (wf *Wordfilter) OnBoard(dir string) (bool, error) {
+// OnBoard returns true if the filter is associated with the given board directory,
+// or if specific is false and it is associated with all boards
+func (wf *Wordfilter) OnBoard(dir string, specific bool) (bool, error) {
 	dirs, err := wf.BoardDirs()
 	if err != nil {
 		return false, err
+	}
+	if len(dirs) == 0 && !specific {
+		return true, nil
 	}
 	for _, d := range dirs {
 		if dir == d {
@@ -241,4 +246,14 @@ func (wf *Wordfilter) BoardsString() string {
 		return "*"
 	}
 	return strings.Join(dirs, ",")
+}
+
+// Deprecated, use the first element of wf.BoardDirs() instead. This is kept here for templates
+// Search returns the search field of the wordfilter condition
+func (wf *Wordfilter) Search() string {
+	conditions, err := wf.Conditions()
+	if err != nil {
+		return "?"
+	}
+	return conditions[0].Search
 }
