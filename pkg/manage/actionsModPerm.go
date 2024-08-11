@@ -377,7 +377,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 
 	showStr := request.FormValue("show")
-	var show gcsql.ShowFilters
+	var show gcsql.ActiveFilter
 	switch showStr {
 	case "active":
 		show = gcsql.OnlyActiveFilters
