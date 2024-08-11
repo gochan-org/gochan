@@ -11,14 +11,12 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
-const (
-	// if the database version is less than this, it is assumed to be out of date, and the schema needs to be adjusted
-	latestDatabaseVersion = 3
-)
-
 type GCDatabaseUpdater struct {
 	options *common.MigrationOptions
 	db      *gcsql.GCDB
+	// if the database version is less than TargetDBVer, it is assumed to be out of date, and the schema needs to be adjusted.
+	// It is expected to be set by the build script
+	TargetDBVer int
 }
 
 func (dbu *GCDatabaseUpdater) Init(options *common.MigrationOptions) error {
@@ -36,12 +34,12 @@ func (dbu *GCDatabaseUpdater) IsMigrated() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if currentDatabaseVersion == latestDatabaseVersion {
+	if currentDatabaseVersion == dbu.TargetDBVer {
 		return true, nil
 	}
-	if currentDatabaseVersion > latestDatabaseVersion {
+	if currentDatabaseVersion > dbu.TargetDBVer {
 		return false, fmt.Errorf("database layout is ahead of current version (%d), target version: %d",
-			currentDatabaseVersion, latestDatabaseVersion)
+			currentDatabaseVersion, dbu.TargetDBVer)
 	}
 	return false, nil
 }
@@ -75,8 +73,37 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		return false, err
 	}
 
+	filterTableExists, err := common.TableExists(dbu.db, nil, "DBPREFIXfilters", &sqlConfig)
+	if err != nil {
+		return false, err
+	}
+
+	if !filterTableExists {
+		if err = common.AddFilterTables(dbu.db, ctx, tx, &sqlConfig); err != nil {
+			return false, err
+		}
+		if err = common.MigrateFileBans(dbu.db, ctx, tx, &sqlConfig); err != nil {
+			return false, err
+		}
+		if err = common.MigrateFilenameBans(dbu.db, ctx, tx, &sqlConfig); err != nil {
+			return false, err
+		}
+		if err = common.MigrateUsernameBans(dbu.db, ctx, tx, &sqlConfig); err != nil {
+			return false, err
+		}
+		if _, err = dbu.db.ExecContextSQL(ctx, tx, `DROP TABLE DBPREFIXfile_ban`); err != nil {
+			return false, err
+		}
+		if _, err = dbu.db.ExecContextSQL(ctx, tx, `DROP TABLE DBPREFIXfilename_ban`); err != nil {
+			return false, err
+		}
+		if _, err = dbu.db.ExecContextSQL(ctx, tx, `DROP TABLE DBPREFIXfile_ban`); err != nil {
+			return false, err
+		}
+	}
+
 	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
-	_, err = dbu.db.ExecTxSQL(tx, query, latestDatabaseVersion)
+	_, err = dbu.db.ExecTxSQL(tx, query, dbu.TargetDBVer)
 	if err != nil {
 		return false, err
 	}

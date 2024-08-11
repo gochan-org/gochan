@@ -24,7 +24,8 @@ import (
 )
 
 var (
-	versionStr string
+	versionStr   string
+	dbVersionStr string
 )
 
 func cleanup() {
@@ -70,7 +71,7 @@ func main() {
 		Str("dbType", systemCritical.DBtype).
 		Msg("Connected to database")
 
-	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
+	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, dbVersionStr); err != nil {
 		cleanup()
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}

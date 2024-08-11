@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 
@@ -49,6 +50,30 @@ func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string,
 	return dataType, err
 }
 
+// TableExists returns true if the given table exists in the given database, and an error if one occured
+func TableExists(db *gcsql.GCDB, tx *sql.Tx, tableName string, sqlConfig *config.SQLConfig) (bool, error) {
+	tableName = strings.ReplaceAll(tableName, "DBPREFIX", sqlConfig.DBprefix)
+	dbName := sqlConfig.DBname
+	var query string
+	var params []any
+	switch sqlConfig.DBtype {
+	case "mysql":
+		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`
+		params = []any{dbName, tableName}
+	case "postgresql":
+		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = ? AND table_name = ?`
+		params = []any{dbName, tableName}
+	case "sqlite3":
+		query = `SELECT COUNT(*) FROM sqlite_master WHERE name = ? AND type = 'table'`
+		params = []any{tableName}
+	default:
+		return false, gcsql.ErrUnsupportedDB
+	}
+	var count int
+	err := db.QueryRowTxSQL(tx, query, params, []any{&count})
+	return count == 1, err
+}
+
 // IsStringType returns true if the given column data type is TEXT or VARCHAR
 func IsStringType(dataType string) bool {
 	lower := strings.ToLower(dataType)
@@ -75,13 +100,21 @@ func RunSQLFile(path string, db *gcsql.GCDB) error {
 	return nil
 }
 
-func InitDB(initFile string, db *gcsql.GCDB) error {
+func getInitFilePath(initFile string) (string, error) {
 	filePath := gcutil.FindResource(initFile,
-		"/usr/local/share/gochan/"+initFile,
-		"/usr/share/gochan/"+initFile)
+		path.Join("./sql", initFile),
+		path.Join("/usr/local/share/gochan", initFile),
+		path.Join("/usr/share/gochan", initFile))
 	if filePath == "" {
-		return fmt.Errorf(
-			"SQL database initialization file (%s) missing. Please reinstall gochan-migration", initFile)
+		return "", fmt.Errorf("missing SQL database initialization file (%s), please reinstall gochan", initFile)
+	}
+	return filePath, nil
+}
+
+func InitDB(initFile string, db *gcsql.GCDB) error {
+	filePath, err := getInitFilePath(initFile)
+	if err != nil {
+		return err
 	}
 
 	return RunSQLFile(filePath, db)

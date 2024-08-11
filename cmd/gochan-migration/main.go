@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/gcupdate"
@@ -15,10 +16,7 @@ import (
 
 const (
 	banner = `Welcome to the gochan database migration tool for gochan %s!
-This migration tool is currently unstable, and will likely go through
-several changes before it can be considered "stable", so make sure you check
-the README and/or the -h command line flag before you use it.
-
+Make sure you check the README and/or the -h command line flag, and back up your current database before you use it.
 `
 	migrateCompleteTxt = `Database migration successful!
 To migrate the uploads for each board, move or copy the uploads to /path/to/gochan/document/root/<boardname>/src/
@@ -30,8 +28,9 @@ for the threads and board pages`
 )
 
 var (
-	versionStr string
-	migrator   common.DBMigrator
+	versionStr   string
+	migrator     common.DBMigrator
+	dbVersionStr string
 )
 
 func cleanup() int {
@@ -87,7 +86,13 @@ func main() {
 	log.Printf(banner, versionStr)
 	switch options.ChanType {
 	case "gcupdate":
-		migrator = &gcupdate.GCDatabaseUpdater{}
+		targetDBVer, err := strconv.Atoi(dbVersionStr)
+		if err != nil {
+			log.Fatalf("Invalid database version string %q, unable to parse to int", dbVersionStr)
+		}
+		migrator = &gcupdate.GCDatabaseUpdater{
+			TargetDBVer: targetDBVer,
+		}
 	case "pre2021":
 		migrator = &pre2021.Pre2021Migrator{}
 	case "kusabax":
@@ -108,7 +113,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to connect to the database: %s", err.Error())
 		}
-		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype); err != nil {
+		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype, dbVersionStr); err != nil {
 			log.Fatalf("Failed to initialize the database: %s", err.Error())
 		}
 	}
