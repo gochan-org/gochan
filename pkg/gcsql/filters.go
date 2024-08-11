@@ -50,7 +50,9 @@ func GetFilterByID(id int) (*Filter, error) {
 // GetAllFilters returns an array of all post filters, and an error if one occured. It can optionally return only the active or
 // only the inactive filters (or return all)
 func GetAllFilters(show ActiveFilter) ([]Filter, error) {
-	query := `SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active FROM DBPREFIXfilters` + show.whereClause(false)
+	query := `SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
+		FROM DBPREFIXfilters
+		WHERE match_action <> 'replace'` + show.whereClause(true)
 	rows, cancel, err := QueryTimeoutSQL(nil, query)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -81,12 +83,13 @@ func GetFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter) 
 	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters
 		LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
+		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id
+		WHERE match_action <> 'replace'`
 
 	if dir == "" {
-		query += show.whereClause(false)
+		query += show.whereClause(true)
 	} else {
-		query += ` WHERE dir = ?`
+		query += ` AND dir = ?`
 		if includeAllBoards {
 			query += " OR board_id IS NULL"
 		}
@@ -122,7 +125,7 @@ func GetFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter) 
 func GetFiltersByBoardID(boardID int, includeAllBoards bool, show ActiveFilter) ([]Filter, error) {
 	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		WHERE board_id = ?`
+		WHERE match_action <> 'replace' AND board_id = ?`
 	if includeAllBoards {
 		query += " OR board_id IS NULL"
 	}

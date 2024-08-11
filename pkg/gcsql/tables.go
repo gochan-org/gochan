@@ -51,9 +51,9 @@ type Board struct {
 	EnableCatalog    bool      // sql: `enable_catalog`
 }
 
+// Deprecated, use PostFilter instead, with a condition field = "checksum" if Fingerprinter is nil
+// or "ahash" otherwise.
 // FileBan contains the information associated with a specific file ban.
-// Deprecated, use PostFilter instead
-// table: DBPREFIXfile_ban
 type FileBan struct {
 	ID            int       // sql: `id`
 	BoardID       *int      // sql: `board_id`
@@ -110,9 +110,8 @@ type filenameOrUsernameBanBase struct {
 	IsRegex   bool      // sql: is_regex
 }
 
+// Deprecated, use PostFilter instead, with a condition field = "filename"
 // FilenameBan represents a ban on a specific filename or filename regular expression.
-// Deprecated, use PostFilter instead
-// table: DBPREFIXfilename_ban
 type FilenameBan struct {
 	filenameOrUsernameBanBase
 	Filename string // sql: `filename`
@@ -185,10 +184,9 @@ type IPBan struct {
 	IPBanBase
 }
 
+// Deprecated: Use the RangeStart and RangeEnd fields or gcutil.GetIPRangeSubnet.
 // IP was previously a field in the IPBan struct before range bans were
 // implemented. This is here as a fallback for templates
-//
-// Deprecated: Use the RangeStart and RangeEnd fields or gcutil.GetIPRangeSubnet
 func (ipb *IPBan) IP() string {
 	if ipb.RangeStart == ipb.RangeEnd {
 		return ipb.RangeStart
@@ -298,7 +296,7 @@ type LoginSession struct {
 	Data    string    // sql: `data`
 }
 
-// DBPREFIXstaff
+// table: DBPREFIXstaff
 type Staff struct {
 	ID               int       // sql: `id`
 	Username         string    // sql: `username`
@@ -322,14 +320,13 @@ type Thread struct {
 	IsDeleted bool      // sql: `is_deleted`
 }
 
-// Deprecated, use PostFilter instead
-// table: DBPREFIXusername_ban
+// Deprecated, use PostFilter instead, and a FilterCondition with Field = "name"
 type UsernameBan struct {
 	filenameOrUsernameBanBase
 	Username string // sql: `username`
 }
 
-// table DBPREFIXwordfilters
+// Deprecated, use PostFilter instead, with MatchAction = "replace" and a single FilterCondition with Field = "body"
 type Wordfilter struct {
 	ID        int       `json:"id"`         // sql: `id`
 	BoardDirs *string   `json:"boards"`     // sql: `board_dirs`
