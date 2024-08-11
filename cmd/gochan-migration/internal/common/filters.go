@@ -126,9 +126,15 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 		); err != nil {
 			return err
 		}
-		if err = db.QueryRowContextSQL(ctx, tx, `SELECT MAX(id) FROM DBPREFIXfilters`, nil, []any{&filterID}); err != nil {
-			return err
+
+		if fnBanBoardID != nil {
+			if _, err = db.ExecContextSQL(ctx, tx,
+				`INSERT INTO DBPREFIXfilter_boards(filter_id, board_id) VALUES(?,?)`, filterID, *fnBanBoardID,
+			); err != nil {
+				return err
+			}
 		}
+
 		if _, err = db.ExecContextSQL(ctx, tx,
 			`INSERT INTO DBPREFIXfilter_conditions(filter_id,is_regex,search,field) VALUES(?,?,?,?)`,
 			filterID, fnBanIsRegex, fnBanFilename, "filename",
@@ -165,9 +171,15 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 		); err != nil {
 			return err
 		}
-		if err = db.QueryRowContextSQL(ctx, tx, `SELECT MAX(id) FROM DBPREFIXfilters`, nil, []any{&filterID}); err != nil {
-			return err
+
+		if unBanBoardID != nil {
+			if _, err = db.ExecContextSQL(ctx, tx,
+				`INSERT INTO DBPREFIXfilter_boards(filter_id, board_id) VALUES(?,?)`, filterID, *unBanBoardID,
+			); err != nil {
+				return err
+			}
 		}
+
 		if _, err = db.ExecContextSQL(ctx, tx,
 			`INSERT INTO DBPREFIXfilter_conditions(filter_id,is_regex,search,field) VALUES(?,?,?,?)`,
 			filterID, unBanIsRegex, unBanUsername, "name",
