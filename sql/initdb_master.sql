@@ -279,7 +279,7 @@ CREATE TABLE DBPREFIXfilter_boards(
 	board_id {fk to serial} NOT NULL,
 	CONSTRAINT filter_boards_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
-		ON DELETE CASCADE
+		ON DELETE CASCADE,
 	CONSTRAINT filter_boards_board_id_fk
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
 		ON DELETE CASCADE
@@ -325,7 +325,7 @@ CREATE TABLE DBPREFIXwordfilter_boards(
 	board_id {fk to serial} NOT NULL,
 	CONSTRAINT wordfilter_boards_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
-		ON DELETE CASCADE
+		ON DELETE CASCADE,
 	CONSTRAINT wordfilter_boards_board_id_fk
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
 		ON DELETE CASCADE
