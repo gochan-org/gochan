@@ -1,6 +1,8 @@
 package gcsql
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"html/template"
 	"net"
@@ -11,59 +13,59 @@ import (
 
 // table: DBPREFIXannouncements
 type Announcement struct {
-	ID        uint      // sql: `id`
-	StaffID   uint      // sql: `staff_id`
-	Subject   string    // sql: `subject`
-	Message   string    // sql: `message`
-	Timestamp time.Time // sql: `timestamp`
+	ID        uint      // sql: id
+	StaffID   uint      // sql: staff_id
+	Subject   string    // sql: subject
+	Message   string    // sql: message
+	Timestamp time.Time // sql: timestamp
 }
 
 // table: DBPREFIXboard_staff
 type BoardStaff struct {
-	BoardID uint // sql: `board_id`
-	StaffID uint // sql: `staff_id`
+	BoardID uint // sql: board_id
+	StaffID uint // sql: staff_id
 }
 
 // table: DBPREFIXboards
 type Board struct {
-	ID               int       // sql: `id`
-	SectionID        int       // sql: `section_id`
-	URI              string    // sql: `uri`
-	Dir              string    // sql: `dir`
-	NavbarPosition   int       // sql: `navbar_position`
-	Title            string    // sql: `title`
-	Subtitle         string    // sql: `suttitle`
-	Description      string    // sql: `description`
-	MaxFilesize      int       // sql: `max_file_size`
-	MaxThreads       int       // sql: `max_threads`
-	DefaultStyle     string    // sql: `default_style`
-	Locked           bool      // sql: `locked`
-	CreatedAt        time.Time // sql: `created_at`
-	AnonymousName    string    // sql: `anonymous_name`
-	ForceAnonymous   bool      // sql: `force_anonymous`
-	AutosageAfter    int       // sql: `autosage_after`
-	NoImagesAfter    int       // sql: `no_images_after`
-	MaxMessageLength int       // sql: `max_message_length`
-	MinMessageLength int       // sql: `min_message_length`
-	AllowEmbeds      bool      // sql: `allow_embeds`
-	RedirectToThread bool      // sql: `redirect_to_thread`
-	RequireFile      bool      // sql: `require_file`
-	EnableCatalog    bool      // sql: `enable_catalog`
+	ID               int       // sql: id
+	SectionID        int       // sql: section_id
+	URI              string    // sql: uri
+	Dir              string    // sql: dir
+	NavbarPosition   int       // sql: navbar_position
+	Title            string    // sql: title
+	Subtitle         string    // sql: suttitle
+	Description      string    // sql: description
+	MaxFilesize      int       // sql: max_file_size
+	MaxThreads       int       // sql: max_threads
+	DefaultStyle     string    // sql: default_style
+	Locked           bool      // sql: locked
+	CreatedAt        time.Time // sql: created_at
+	AnonymousName    string    // sql: anonymous_name
+	ForceAnonymous   bool      // sql: force_anonymous
+	AutosageAfter    int       // sql: autosage_after
+	NoImagesAfter    int       // sql: no_images_after
+	MaxMessageLength int       // sql: max_message_length
+	MinMessageLength int       // sql: min_message_length
+	AllowEmbeds      bool      // sql: allow_embeds
+	RedirectToThread bool      // sql: redirect_to_thread
+	RequireFile      bool      // sql: require_file
+	EnableCatalog    bool      // sql: enable_catalog
 }
 
 // Deprecated, use PostFilter instead, with a condition field = "checksum" if Fingerprinter is nil
 // or "ahash" otherwise.
 // FileBan contains the information associated with a specific file ban.
 type FileBan struct {
-	ID            int       // sql: `id`
-	BoardID       *int      // sql: `board_id`
-	StaffID       int       // sql: `staff_id`
-	StaffNote     string    // sql: `staff_note`
-	IssuedAt      time.Time // sql: `issued_at`
-	Checksum      string    // sql: `checksum`
-	Fingerprinter *string   // sql: `fingerprinter`
-	BanIP         bool      // sql: `ban_ip`
-	BanIPMessage  *string   // sql: `ban_ip_message`
+	ID            int       // sql: id
+	BoardID       *int      // sql: board_id
+	StaffID       int       // sql: staff_id
+	StaffNote     string    // sql: staff_note
+	IssuedAt      time.Time // sql: issued_at
+	Checksum      string    // sql: checksum
+	Fingerprinter *string   // sql: fingerprinter
+	BanIP         bool      // sql: ban_ip
+	BanIPMessage  *string   // sql: ban_ip_message
 }
 
 // ApplyIPBan bans the given IP if it posted a banned image
@@ -122,16 +124,17 @@ type FilenameBan struct {
 // and will allow moderators to block posts based on the user's name, email, subject, message content, and other fields.
 // table: DBPREFIXfilters
 type Filter struct {
-	ID          int       // sql: id
-	StaffID     *int      // sql: staff_id
-	StaffNote   string    // sql: staff_note
-	IssuedAt    time.Time // sql: issued_at
+	ID          int       `json:"id"`         // sql: id
+	StaffID     *int      `json:"staff_id"`   // sql: staff_id
+	StaffNote   string    `json:"staff_note"` // sql: staff_note
+	IssuedAt    time.Time `json:"issued_at"`  // sql: issued_at
 	MatchAction string    // sql: match_action
 	MatchDetail string    // sql: match_detail
 	IsActive    bool      // sql: is_active
 	conditions  []FilterCondition
 }
 
+// FilterCondition represents a condition to be checked against when a post is submitted
 // table: DBPREFIXfilter_conditions
 type FilterCondition struct {
 	ID       int    // sql: id
@@ -141,21 +144,29 @@ type FilterCondition struct {
 	Field    string // sql: field
 }
 
+func (fc *FilterCondition) insert(ctx context.Context, tx *sql.Tx) error {
+	_, err := ExecContextSQL(ctx, tx,
+		`INSERT INTO DBPREFIXfilter_conditions(filter_id, is_regex, search, field) VALUES(?,?,?,?)`,
+		fc.FilterID, fc.IsRegex, fc.Search, fc.Field,
+	)
+	return err
+}
+
 // Upload represents a file attached to a post.
 // table: DBPREFIXfiles
 type Upload struct {
-	ID               int    // sql: `id`
-	PostID           int    // sql: `post_id`
-	FileOrder        int    // sql: `file_order`
-	OriginalFilename string // sql: `original_filename`
-	Filename         string // sql: `filename`
-	Checksum         string // sql: `checksum`
-	FileSize         int    // sql: `file_size`
-	IsSpoilered      bool   // sql: `is_spoilered`
-	ThumbnailWidth   int    // sql: `thumbnail_width`
-	ThumbnailHeight  int    // sql: `thumbnail_height`
-	Width            int    // sql: `width`
-	Height           int    // sql: `height`
+	ID               int    // sql: id
+	PostID           int    // sql: post_id
+	FileOrder        int    // sql: file_order
+	OriginalFilename string // sql: original_filename
+	Filename         string // sql: filename
+	Checksum         string // sql: checksum
+	FileSize         int    // sql: file_size
+	IsSpoilered      bool   // sql: is_spoilered
+	ThumbnailWidth   int    // sql: thumbnail_width
+	ThumbnailHeight  int    // sql: thumbnail_height
+	Width            int    // sql: width
+	Height           int    // sql: height
 }
 
 // IPBanBase used to composition IPBan and IPBanAudit. It does not represent a SQL table by itself
@@ -326,14 +337,7 @@ type UsernameBan struct {
 	Username string // sql: `username`
 }
 
-// Deprecated, use PostFilter instead, with MatchAction = "replace" and a single FilterCondition with Field = "body"
+// Wordfilter is used for filters that are expected to have a single FilterCondition and a "replace" MatchAction
 type Wordfilter struct {
-	ID        int       `json:"id"`         // sql: `id`
-	BoardDirs *string   `json:"boards"`     // sql: `board_dirs`
-	StaffID   int       `json:"staff_id"`   // sql: `staff_id`
-	StaffNote string    `json:"staff_note"` // sql: `staff_note`
-	IssuedAt  time.Time `json:"issued_at"`  // sql: `issued_at`
-	Search    string    `json:"search"`     // sql: `search`
-	IsRegex   bool      `json:"is_regex"`   // sql: `is_regex`
-	ChangeTo  string    `json:"change_to"`  // sql: `change_to`
+	Filter
 }

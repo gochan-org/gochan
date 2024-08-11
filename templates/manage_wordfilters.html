@@ -24,10 +24,16 @@
 {{- range $f,$filter := .wordfilters}}
 	<tr>
 		<td><a href="{{webPath "manage/wordfilters"}}?edit={{$filter.ID}}">Edit</a> | <a href="{{webPath "manage/wordfilters"}}?delete={{$filter.ID}}" onclick="return confirm('Are you sure you want to delete this wordfilter?')">Delete</a> </td>
-		<td>{{$filter.Search}}</td>
-		<td>{{$filter.ChangeTo}}</td>
+		<td>{{index $.searchFields $f}}</td>
+		<td>{{$filter.MatchDetail}}</td>
 		<td>{{if $filter.IsRegex}}yes{{else}}no{{end}}</td>
-		<td>{{$filter.BoardsString}}</td>
+		<td>{{$dirs := $filter.BoardsString -}}
+			{{if eq $dirs "*" -}}
+				<i>all boards</i>
+			{{- else -}}
+				{{$dirs}}
+			{{- end -}}
+		</td>
 		<td>{{$filter.StaffName}}</td>
 		<td>{{$filter.StaffNote}}</td>
 	</tr>

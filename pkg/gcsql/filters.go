@@ -1,8 +1,10 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 const (
@@ -15,10 +17,12 @@ var (
 	ErrInvalidConditionField = errors.New("unrecognized conditional field")
 	ErrInvalidMatchAction    = errors.New("unrecognized filter action")
 	ErrInvalidFilter         = errors.New("unrecognized filter id")
+	ErrNoConditions          = errors.New("error has no match conditions")
 )
 
 type ActiveFilter int
 
+// whereClause returns part of the where clause of a SQL string. If and is true, it starts with AND, otherwise it starts with WHERE
 func (af ActiveFilter) whereClause(and bool) string {
 	out := " WHERE "
 	if and {
@@ -177,6 +181,44 @@ func (f *Filter) Conditions() ([]FilterCondition, error) {
 	return f.conditions, rows.Close()
 }
 
+// SetConditions replaces all current conditions associated with the filter and applies the given conditions.
+// It returns an error if no conditions are provided
+func (f *Filter) SetConditions(conditions ...FilterCondition) error {
+	if len(conditions) < 1 {
+		return ErrNoConditions
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID); err != nil {
+		return err
+	}
+	for _, condition := range conditions {
+		if err = condition.insert(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	f.conditions = conditions
+	return nil
+}
+
+func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail string) error {
+	_, err := ExecTimeoutSQL(nil,
+		`UPDATE DBPREFIXfilters SET staff_note = ?, issued_at = ?, match_action = ?, match_detail = ?`,
+		staffNote, time.Now(), matchAction, matchDetail,
+	)
+	return err
+}
+
 // BoardDirs returns an array of board directories associated with this filter
 func (f *Filter) BoardDirs() ([]string, error) {
 	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT dir FROM DBPREFIXfilter_boards
@@ -205,6 +247,35 @@ func (f *Filter) BoardDirs() ([]string, error) {
 	return dirs, rows.Close()
 }
 
+// SetBoardDirs sets the board directories to be associated with the filter. If no boards are used,
+// the filter will be applied to all boards
+func (f *Filter) SetBoardDirs(dirs ...string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID); err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		boardID, err := GetBoardIDFromDir(dir)
+		if err != nil {
+			return err
+		}
+		if _, err = ExecContextSQL(ctx, tx,
+			`INSERT INTO DBPREFIXfilter_boards(filter_id, board_id) VALUES (?,?)`,
+			f.ID, boardID,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 func (f *Filter) BoardIDs() ([]int, error) {
 	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT board_id FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -225,6 +296,31 @@ func (f *Filter) BoardIDs() ([]int, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+// SetBoardIDs sets the board IDs to be associated with the filter. If no boards are used,
+// the filter will be applied to all boards
+func (f *Filter) SetBoardIDs(ids ...int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID); err != nil {
+		return err
+	}
+	for _, boardID := range ids {
+		if _, err = ExecContextSQL(ctx, tx,
+			`INSERT INTO DBPREFIXfilter_boards(filter_id, board_id) VALUES (?,?)`,
+			f.ID, boardID,
+		); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 // SetFilterActive updates the filter with the given id, setting its active status and returning an error if one occured

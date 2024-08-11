@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -283,8 +282,4 @@ func getBoardDataFromForm(board *gcsql.Board, request *http.Request) error {
 	board.EnableCatalog = request.FormValue("enablecatalog") == "on"
 
 	return nil
-}
-
-func invalidWordfilterID(id interface{}) error {
-	return fmt.Errorf("wordfilter with id %q does not exist", id)
 }
