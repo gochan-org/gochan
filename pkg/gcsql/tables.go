@@ -132,13 +132,6 @@ type Filter struct {
 	conditions  []FilterCondition
 }
 
-// table: DBPREFIXfilter_boards
-type FilterBoard struct {
-	ID       int // sql: id
-	FilterID int // sql: filter_id
-	BoardID  int // sql: board_id
-}
-
 // table: DBPREFIXfilter_conditions
 type FilterCondition struct {
 	ID       int    // sql: id
