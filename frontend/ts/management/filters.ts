@@ -24,7 +24,7 @@ function onRemoveCondition(e:JQuery.ClickEvent) {
 function onFieldChange(e:JQuery.ChangeEvent) {
 	const $fieldset = $(e.target).parents("fieldset");
 	const isBoolean = e.target.value === "firsttime" || e.target.value === "hasfile" || e.target.value === "isop";
-	const noRegex = isBoolean || e.target.value === "filechecksum" || e.target.value === "imgfingerprint";
+	const noRegex = isBoolean || e.target.value === "checksum" || e.target.value === "ahash";
 	const $searchInput = $fieldset.find("tr.search-cndtn");
 
 	if(isBoolean) {
