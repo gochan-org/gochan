@@ -67,6 +67,7 @@
 <hr/>
 <h2>Filter list</h2>
 <form action="{{webPath `/manage/filters`}}" method="GET">
+	<label for="boardsearch"><input type="text" name="boardsearch" id="boardsearch" placeholder="Search filters by board" value="{{$.boardSearch}}"></label>
 	<select name="show" id="">
 		<option value="all" {{if or (eq $.show `all`) (eq $.show ``)}}selected{{end}}>All filters</option>
 		<option value="active" {{if eq $.show `active`}}selected{{end}}>Only active</option>

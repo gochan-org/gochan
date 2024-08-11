@@ -386,8 +386,14 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	default:
 		show = gcsql.AllFilters
 	}
+	var filters []gcsql.Filter
+	boardSearch := request.FormValue("boardsearch")
+	if boardSearch == "" {
+		filters, err = gcsql.GetAllFilters(show)
+	} else {
+		filters, err = gcsql.GetFiltersByBoardDir(boardSearch, false, show)
+	}
 
-	filters, err := gcsql.GetAllFilters(show)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get filter list")
 		return nil, err
@@ -429,13 +435,14 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, map[string]any{
-		"allBoards":  gcsql.AllBoards,
-		"fields":     filterFields,
-		"filters":    filters,
-		"conditions": conditionsText,
-		"actions":    filterActionsMap,
-		"staff":      staffUsernames,
-		"show":       showStr,
+		"allBoards":   gcsql.AllBoards,
+		"fields":      filterFields,
+		"filters":     filters,
+		"conditions":  conditionsText,
+		"actions":     filterActionsMap,
+		"staff":       staffUsernames,
+		"show":        showStr,
+		"boardSearch": boardSearch,
 	}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
 		return "", errors.New("Unable to execute filter management template: " + err.Error())
