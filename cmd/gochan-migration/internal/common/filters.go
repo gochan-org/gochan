@@ -72,8 +72,8 @@ func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *confi
 			detail = *fBanBanIPMessage
 		}
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail) VALUES(?,?,?,?,?)`,
-			fBanStaffID, fBanStaffNote, fBanIssuedAt, matchAction, detail); err != nil {
+			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail, is_active) VALUES(?,?,?,?,?)`,
+			fBanStaffID, fBanStaffNote, fBanIssuedAt, matchAction, detail, true); err != nil {
 			return err
 		}
 		if err = db.QueryRowContextSQL(ctx, tx, `SELECT MAX(id) FROM DBPREFIXfilters`, nil, []any{&filterID}); err != nil {
@@ -121,8 +121,8 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 			return err
 		}
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail) VALUES(?,?,?,?,?)`,
-			fnBanStaffID, fnBanStaffNote, fnBanIssuedAt, "reject", "",
+			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail, is_active) VALUES(?,?,?,?,?)`,
+			fnBanStaffID, fnBanStaffNote, fnBanIssuedAt, "reject", "", true,
 		); err != nil {
 			return err
 		}
@@ -166,8 +166,8 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 		}
 
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail) VALUES(?,?,?,?,?)`,
-			unBanStaffID, unBanStaffNote, unBanIssuedAt, "reject", "",
+			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail, is_active) VALUES(?,?,?,?,?)`,
+			unBanStaffID, unBanStaffNote, unBanIssuedAt, "reject", "", true,
 		); err != nil {
 			return err
 		}

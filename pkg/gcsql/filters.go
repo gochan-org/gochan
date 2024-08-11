@@ -5,22 +5,30 @@ import (
 	"errors"
 )
 
-// GetAllFilters returns an array of all post filters, and an error if one occured
-func GetAllFilters() ([]Filter, error) {
-	return GetFiltersByBoardID(0, true)
+var (
+	ErrInvalidConditionField = errors.New("unrecognized conditional field")
+	ErrInvalidMatchAction    = errors.New("unrecognized filter action")
+)
+
+func GetFilterByID(id int) (*Filter, error) {
+	var filter Filter
+	err := QueryRowTimeoutSQL(nil,
+		`SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active FROM DBPREFIXfilters WHERE id = ?`,
+		[]any{id}, []any{&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &filter, nil
 }
 
-// GetFiltersByBoardID returns an array of post filters associated to the given board ID, including
-// filters set to "All boards" if includeAllBoards is true
-func GetFiltersByBoardID(boardID int, includeAllBoards bool) ([]Filter, error) {
-	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail
-		FROM DBPREFIXfilters LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		WHERE board_id = ?`
-	if includeAllBoards {
-		query += " OR board_id IS NULL"
-	}
-	rows, cancel, err := QueryTimeoutSQL(nil, query, boardID)
-	if err != nil {
+// GetAllFilters returns an array of all post filters, and an error if one occured
+func GetAllFilters() ([]Filter, error) {
+	query := `SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active FROM DBPREFIXfilters`
+	rows, cancel, err := QueryTimeoutSQL(nil, query)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	defer func() {
@@ -31,10 +39,43 @@ func GetFiltersByBoardID(boardID int, includeAllBoards bool) ([]Filter, error) {
 	for rows.Next() {
 		var filter Filter
 		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail,
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive,
 		); err != nil {
 			return nil, err
 		}
+		filters = append(filters, filter)
+	}
+	return filters, rows.Close()
+}
+
+// GetFiltersByBoardID returns an array of post filters associated to the given board ID, including
+// filters set to "All boards" if includeAllBoards is true
+func GetFiltersByBoardID(boardID int, includeAllBoards bool) ([]Filter, error) {
+	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
+		FROM DBPREFIXfilters LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
+		WHERE board_id = ?`
+	if includeAllBoards {
+		query += " OR board_id IS NULL"
+	}
+	rows, cancel, err := QueryTimeoutSQL(nil, query, boardID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	defer func() {
+		cancel()
+		rows.Close()
+	}()
+	var filters []Filter
+	for rows.Next() {
+		var filter Filter
+		if err = rows.Scan(
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		filters = append(filters, filter)
 	}
 	return filters, rows.Close()
 }
@@ -44,8 +85,7 @@ func (f *Filter) Conditions() ([]FilterCondition, error) {
 	if len(f.conditions) > 0 {
 		return f.conditions, nil
 	}
-
-	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT id, filter_id, is_regex, search, field WHERE filter_id = ?`, f.ID)
+	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT id, filter_id, is_regex, search, field FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID)
 	if err != nil {
 		return nil, err
 	}

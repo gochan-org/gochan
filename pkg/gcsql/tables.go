@@ -129,6 +129,7 @@ type Filter struct {
 	IssuedAt    time.Time // sql: issued_at
 	MatchAction string    // sql: match_action
 	MatchDetail string    // sql: match_detail
+	IsActive    bool      // sql: is_active
 	conditions  []FilterCondition
 }
 

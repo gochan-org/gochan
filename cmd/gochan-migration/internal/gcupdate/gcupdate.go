@@ -91,15 +91,6 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 		if err = common.MigrateUsernameBans(dbu.db, ctx, tx, &sqlConfig); err != nil {
 			return false, err
 		}
-		// if _, err = dbu.db.ExecContextSQL(ctx, tx, `DROP TABLE DBPREFIXfile_ban`); err != nil {
-		// 	return false, err
-		// }
-		// if _, err = dbu.db.ExecContextSQL(ctx, tx, `DROP TABLE DBPREFIXfilename_ban`); err != nil {
-		// 	return false, err
-		// }
-		// if _, err = dbu.db.ExecContextSQL(ctx, tx, `DROP TABLE DBPREFIXfile_ban`); err != nil {
-		// 	return false, err
-		// }
 	}
 
 	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
