@@ -5,10 +5,19 @@ import (
 	"errors"
 )
 
+const (
+	AllFilters ShowFilters = iota
+	OnlyActiveFilters
+	OnlyInactiveFilters
+)
+
 var (
 	ErrInvalidConditionField = errors.New("unrecognized conditional field")
 	ErrInvalidMatchAction    = errors.New("unrecognized filter action")
+	ErrInvalidFilter         = errors.New("unrecognized filter id")
 )
+
+type ShowFilters int
 
 func GetFilterByID(id int) (*Filter, error) {
 	var filter Filter
@@ -16,15 +25,23 @@ func GetFilterByID(id int) (*Filter, error) {
 		`SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active FROM DBPREFIXfilters WHERE id = ?`,
 		[]any{id}, []any{&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive},
 	)
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrInvalidFilter
+	} else if err != nil {
 		return nil, err
 	}
 	return &filter, nil
 }
 
-// GetAllFilters returns an array of all post filters, and an error if one occured
-func GetAllFilters() ([]Filter, error) {
+// GetAllFilters returns an array of all post filters, and an error if one occured. It can optionally return only the active or
+// only the inactive filters (or return all)
+func GetAllFilters(show ShowFilters) ([]Filter, error) {
 	query := `SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active FROM DBPREFIXfilters`
+	if show == OnlyActiveFilters {
+		query += " WHERE is_active = TRUE"
+	} else if show == OnlyInactiveFilters {
+		query += " WHERE is_active = FALSE"
+	}
 	rows, cancel, err := QueryTimeoutSQL(nil, query)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -133,7 +150,9 @@ func (f *Filter) BoardDirs() ([]string, error) {
 
 func (f *Filter) BoardIDs() ([]int, error) {
 	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT board_id FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID)
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	defer func() {
@@ -149,4 +168,15 @@ func (f *Filter) BoardIDs() ([]int, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+// SetFilterActive updates the filter with the given id, setting its active status and returning an error if one occured
+func SetFilterActive(id int, active bool) error {
+	_, err := ExecTimeoutSQL(nil, `UPDATE DBPREFIXfilters SET is_active = ? WHERE id = ?`, active, id)
+	return err
+}
+
+func DeleteFilter(id int) error {
+	_, err := ExecTimeoutSQL(nil, `DELETE FROM DBPREFIXfilters WHERE id = ?`, id)
+	return err
 }

@@ -324,8 +324,12 @@ table.mgmt-table {
   margin-top: 4px;
   width: 100%;
 }
-table.mgmt-table td.table-actions {
+table.mgmt-table td.table-actions, table.mgmt-table col.row-actions, table.mgmt-table col.row-staff {
   text-align: center;
+  width: 7%;
+}
+table.mgmt-table col.row-date {
+  width: 20%;
 }
 table.mgmt-table th {
   padding: 4px;

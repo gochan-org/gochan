@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -36,9 +37,14 @@ var (
 		{Value: "hasfile", Text: "Has file"},
 		{Value: "nofile", Text: "No file"},
 		{Value: "filename", Text: "Filename"},
-		{Value: "filechecksum", Text: "File checksum"},
-		{Value: "imgfingerprint", Text: "Image fingerprint"},
+		{Value: "checksum", Text: "File checksum"},
+		{Value: "ahash", Text: "Image fingerprint"},
 		{Value: "useragent", Text: "User agent"},
+	}
+	filterActionsMap = map[string]string{
+		"reject": "Reject post",
+		"ban":    "Ban IP",
+		"log":    "Log match",
 	}
 )
 
@@ -354,12 +360,82 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	// doFilterAdd = request.PostFormValue("dofilteradd")
 	// filterID := request.FormValue("filterid")
 	// editFilter := request.FormValue("editfilter")
-	// delFilter := request.FormValue("delfilter")
+	disableFilterIDStr := request.FormValue("disable")
+	enableFilterIDStr := request.FormValue("enable")
+	if disableFilterIDStr != "" {
+		disableFilterID, err := strconv.Atoi(disableFilterIDStr)
+		if err != nil {
+			return nil, err
+		}
+		gcsql.SetFilterActive(disableFilterID, false)
+	} else if enableFilterIDStr != "" {
+		enableFilterID, err := strconv.Atoi(enableFilterIDStr)
+		if err != nil {
+			return nil, err
+		}
+		gcsql.SetFilterActive(enableFilterID, true)
+	}
+
+	showStr := request.FormValue("show")
+	var show gcsql.ShowFilters
+	switch showStr {
+	case "active":
+		show = gcsql.OnlyActiveFilters
+	case "inactive":
+		show = gcsql.OnlyInactiveFilters
+	default:
+		show = gcsql.AllFilters
+	}
+
+	filters, err := gcsql.GetAllFilters(show)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to get filter list")
+		return nil, err
+	}
+	fieldsMap := make(map[string]string)
+	for _, ff := range filterFields {
+		fieldsMap[ff.Value] = ff.Text
+	}
+	var staffUsernames []string
+
+	var conditionsText []string
+	for _, filter := range filters {
+		if _, ok := filterActionsMap[filter.MatchAction]; !ok {
+			return nil, gcsql.ErrInvalidMatchAction
+		}
+		conditions, err := filter.Conditions()
+		if err != nil {
+			errEv.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get filter conditions")
+			return nil, err
+		}
+
+		var filterConditionsText string
+		for _, condition := range conditions {
+			text, ok := fieldsMap[condition.Field]
+			if !ok {
+				return nil, gcsql.ErrInvalidConditionField
+			}
+			filterConditionsText += text + ","
+		}
+		filterConditionsText = strings.TrimRight(filterConditionsText, ",")
+		conditionsText = append(conditionsText, filterConditionsText)
+
+		username, err := gcsql.GetStaffUsernameFromID(*filter.StaffID)
+		if err != nil {
+			return nil, err
+		}
+		staffUsernames = append(staffUsernames, username)
+	}
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, map[string]any{
-		"allBoards": gcsql.AllBoards,
-		"fields":    filterFields,
+		"allBoards":  gcsql.AllBoards,
+		"fields":     filterFields,
+		"filters":    filters,
+		"conditions": conditionsText,
+		"actions":    filterActionsMap,
+		"staff":      staffUsernames,
+		"show":       showStr,
 	}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
 		return "", errors.New("Unable to execute filter management template: " + err.Error())

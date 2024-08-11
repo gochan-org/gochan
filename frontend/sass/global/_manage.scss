@@ -25,8 +25,12 @@ h1, h2 {
 table.mgmt-table {
 	margin-top: 4px;
 	width: 100%;
-	td.table-actions {
+	td.table-actions,col.row-actions,col.row-staff {
 		text-align: center;
+		width: 7%;
+	}
+	col.row-date {
+		width: 20%;
 	}
 	th {
 		padding: 4px;
