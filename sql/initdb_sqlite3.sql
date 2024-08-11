@@ -267,6 +267,7 @@ CREATE TABLE DBPREFIXfilters(
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	match_action VARCHAR(45) NOT NULL DEFAULT 'replace',
 	match_detail TEXT NOT NULL,
+	is_active BOOL NOT NULL,
 	CONSTRAINT filters_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 		ON DELETE SET NULL
