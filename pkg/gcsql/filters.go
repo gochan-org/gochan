@@ -1,5 +1,15 @@
 package gcsql
 
+import (
+	"database/sql"
+	"errors"
+)
+
+// GetAllFilters returns an array of all post filters, and an error if one occured
+func GetAllFilters() ([]Filter, error) {
+	return GetFiltersByBoardID(0, true)
+}
+
 // GetFiltersByBoardID returns an array of post filters associated to the given board ID, including
 // filters set to "All boards" if includeAllBoards is true
 func GetFiltersByBoardID(boardID int, includeAllBoards bool) ([]Filter, error) {
@@ -55,11 +65,12 @@ func (f *Filter) Conditions() ([]FilterCondition, error) {
 
 // BoardDirs returns an array of board directories associated with this filter
 func (f *Filter) BoardDirs() ([]string, error) {
-	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT dir FROM DBPREFIXfilters
-		LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = DBPREFIXfilter_boards.board_id
-		WHERE DBPREFIXfilters.id = ?`, f.ID)
-	if err != nil {
+	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT dir FROM DBPREFIXfilter_boards
+		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id WHERE filter_id = ?`, f.ID)
+	if errors.Is(err, sql.ErrNoRows) {
+		cancel()
+		return nil, nil
+	} else if err != nil {
 		cancel()
 		return nil, err
 	}
@@ -78,4 +89,24 @@ func (f *Filter) BoardDirs() ([]string, error) {
 		}
 	}
 	return dirs, rows.Close()
+}
+
+func (f *Filter) BoardIDs() ([]int, error) {
+	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT board_id FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		cancel()
+		rows.Close()
+	}()
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err = rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
