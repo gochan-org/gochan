@@ -294,42 +294,19 @@ CREATE TABLE DBPREFIXfilter_conditions(
 	CONSTRAINT filter_conditions_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE,
-	CONSTRAINT wordfilter_conditions_search_check CHECK (search <> '')
+	CONSTRAINT filter_conditions_search_check CHECK (search <> '')
 );
 
 CREATE TABLE DBPREFIXfilter_hits(
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-	condition_id BIGINT NOT NULL,
-	post_data TEXT,
-	CONSTRAINT filter_hits_condition_id_fk
-		FOREIGN KEY(condition_id) REFERENCES DBPREFIXfilter_conditions(id)
-		ON DELETE CASCADE
-);
-
-CREATE TABLE DBPREFIXwordfilters(
-	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-	staff_id BIGINT NOT NULL,
-	staff_note VARCHAR(255) NOT NULL,
-	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	search VARCHAR(75) NOT NULL,
-	is_regex BOOL NOT NULL,
-	change_to VARCHAR(75) NOT NULL,
-	CONSTRAINT wordfilters_staff_id_fk
-		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT wordfilters_search_check CHECK (search <> '')
-);
-
-CREATE TABLE DBPREFIXwordfilter_boards(
-	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	filter_id BIGINT NOT NULL,
-	board_id BIGINT NOT NULL,
-	CONSTRAINT wordfilter_boards_filter_id_fk
+	post_data TEXT,
+	match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT filter_hits_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
-		ON DELETE CASCADE,
-	CONSTRAINT wordfilter_boards_board_id_fk
-		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
 		ON DELETE CASCADE
 );
+
 
 INSERT INTO DBPREFIXdatabase_version(component, version)
 	VALUES('gochan', 3);

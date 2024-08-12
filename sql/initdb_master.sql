@@ -299,10 +299,11 @@ CREATE TABLE DBPREFIXfilter_conditions(
 
 CREATE TABLE DBPREFIXfilter_hits(
 	id {serial pk},
-	condition_id {fk to serial} NOT NULL,
-	post_data TEXT,
-	CONSTRAINT filter_hits_condition_id_fk
-		FOREIGN KEY(condition_id) REFERENCES DBPREFIXfilter_conditions(id)
+	filter_id {fk to serial} NOT NULL,
+	post_data TEXT NOT NULL,
+	match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT filter_hits_filter_id_fk
+		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE
 );
 

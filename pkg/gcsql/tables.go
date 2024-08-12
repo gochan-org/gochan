@@ -152,6 +152,15 @@ func (fc *FilterCondition) insert(ctx context.Context, tx *sql.Tx) error {
 	return err
 }
 
+// FilterHit represents a match from a post filter to an attempted post
+// table: DBPREFIXfilter_hits
+type FilterHit struct {
+	ID        int       // sql: id
+	FilterID  int       // sql: filter_id
+	PostData  string    // sql: post_data
+	MatchTime time.Time // sql: match_time
+}
+
 // Upload represents a file attached to a post.
 // table: DBPREFIXfiles
 type Upload struct {
