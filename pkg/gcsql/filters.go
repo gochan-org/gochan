@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -11,6 +12,10 @@ const (
 	AllFilters ActiveFilter = iota
 	OnlyActiveFilters
 	OnlyInactiveFilters
+)
+const (
+	onlyWordfilters wordFilterFilter = iota
+	onlyNonWordfilters
 )
 
 var (
@@ -21,6 +26,7 @@ var (
 )
 
 type ActiveFilter int
+type wordFilterFilter int
 
 // whereClause returns part of the where clause of a SQL string. If and is true, it starts with AND, otherwise it starts with WHERE
 func (af ActiveFilter) whereClause(and bool) string {
@@ -80,27 +86,32 @@ func GetAllFilters(show ActiveFilter) ([]Filter, error) {
 	return filters, rows.Close()
 }
 
-// GetFiltersByBoardDir returns the filters associated with the given board dir, optionally including filters
-// not associated with a specific board. It can optionally return only the active or only the inactive filters
-// (or return all)
-func GetFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter) ([]Filter, error) {
+func getFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter, filterWordFilters wordFilterFilter) ([]Filter, error) {
 	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters
 		LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id
-		WHERE match_action <> 'replace'`
+		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
 
+	switch filterWordFilters {
+	case onlyWordfilters:
+		query += ` WHERE match_action = 'replace'`
+	case onlyNonWordfilters:
+		query += ` WHERE match_action <> 'replace'`
+	}
+
+	var params []any
 	if dir == "" {
 		query += show.whereClause(true)
+		params = []any{}
 	} else {
 		query += ` AND dir = ?`
 		if includeAllBoards {
 			query += " OR board_id IS NULL"
 		}
 		query += show.whereClause(true)
+		params = []any{dir}
 	}
-
-	rows, cancel, err := QueryTimeoutSQL(nil, query, dir)
+	rows, cancel, err := QueryTimeoutSQL(nil, query, params...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	} else if err != nil {
@@ -118,9 +129,17 @@ func GetFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter) 
 		); err != nil {
 			return nil, err
 		}
+		fmt.Println(filter.ID, filter.MatchDetail, filter.StaffNote)
 		filters = append(filters, filter)
 	}
 	return filters, rows.Close()
+}
+
+// GetFiltersByBoardDir returns the filters associated with the given board dir, optionally including filters
+// not associated with a specific board. It can optionally return only the active or only the inactive filters
+// (or return all)
+func GetFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter) ([]Filter, error) {
+	return getFiltersByBoardDir(dir, includeAllBoards, show, onlyNonWordfilters)
 }
 
 // GetFiltersByBoardID returns an array of post filters associated to the given board ID, including

@@ -82,35 +82,15 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 // GetWordfilters gets a list of wordfilters from the database and returns an array of them and any errors
 // encountered
 func GetWordfilters(active ActiveFilter) ([]Wordfilter, error) {
-	var filters []Wordfilter
-	query := `SELECT id, staff_id, staff_note, issued_at, match_detail, is_active FROM DBPREFIXfilters
-		WHERE match_action = 'replace'` + active.whereClause(true)
-
-	rows, cancel, err := QueryTimeoutSQL(nil, query)
+	filters, err := getFiltersByBoardDir("", true, active, onlyWordfilters)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		cancel()
-		rows.Close()
-	}()
-	for rows.Next() {
-		var filter Wordfilter
-		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchDetail, &filter.IsActive); err != nil {
-			return filters, err
-		}
-		filters = append(filters, filter)
-
-		// check the conditions to make sure there is exactly 1
-		if _, err = filter.Conditions(); err != nil {
-			return nil, err
-		}
-		if err = filter.VerifySingleCondition(filter.conditions); err != nil {
-			return nil, err
-		}
+	wordfilters := make([]Wordfilter, len(filters))
+	for f, filter := range filters {
+		wordfilters[f] = Wordfilter{Filter: filter}
 	}
-	return filters, err
+	return wordfilters, nil
 }
 
 // GetWordfilterByID returns the wordfilter with the given ID, and an error if one occured or if the
@@ -134,17 +114,15 @@ func GetWordfilterByID(id int) (*Wordfilter, error) {
 
 // GetBoardWordfilters gets an array of wordfilters associated with the given board directory
 func GetBoardWordfilters(board string) ([]Wordfilter, error) {
-	filters, err := GetFiltersByBoardDir(board, true, OnlyActiveFilters)
+	filters, err := getFiltersByBoardDir(board, true, OnlyActiveFilters, onlyWordfilters)
 	if err != nil {
 		return nil, err
 	}
-	var wordFilters []Wordfilter
-	for _, filter := range filters {
-		if filter.MatchAction == "replace" {
-			wordFilters = append(wordFilters, Wordfilter{Filter: filter})
-		}
+	wordfilters := make([]Wordfilter, len(filters))
+	for f, filter := range filters {
+		wordfilters[f] = Wordfilter{Filter: filter}
 	}
-	return wordFilters, nil
+	return wordfilters, nil
 }
 
 // OnBoard returns true if the filter is associated with the given board directory,
