@@ -74,11 +74,7 @@ func init() {
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
 // It returns the upload (if there was one) and whether or not any errors were served (meaning
 // that it should stop processing the post
-func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board) (*gcsql.Upload, error) {
-	infoEv, errEv := gcutil.LogRequest(request)
-	defer func() {
-		gcutil.LogDiscard(infoEv, errEv)
-	}()
+func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board, infoEv *zerolog.Event, errEv *zerolog.Event) (*gcsql.Upload, error) {
 	file, handler, err := request.FormFile("imagefile")
 	if errors.Is(err, http.ErrMissingFile) {
 		// no file was submitted with the form

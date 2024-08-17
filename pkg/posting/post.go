@@ -285,12 +285,33 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// filters, err := gcsql.GetFiltersByBoardID(post.ID, true, gcsql.OnlyActiveFilters)
+	// if err != nil {
+	// 	errEv.Err(err).Caller().Msg("Unable to get filter list")
+	// 	server.ServeError(writer, "Unable to get post filter list", wantsJSON, nil)
+	// 	return
+	// }
+
+	// var match bool
+	// for _, filter := range filters {
+	// 	if match, err = filter.CheckIfMatch(post, request); err != nil {
+	// 		errEv.Err(err).Caller().
+	// 			Int("filterID", filter.ID).
+	// 			Msg("Unable to check filter for a match")
+	// 		server.ServeError(writer, "Unable to check post filters", wantsJSON, nil)
+	// 		return
+	// 	}
+	// 	if match {
+
+	// 	}
+	// }
+
 	if checkIpBan(post, postBoard, writer, request) {
 		return
 	}
-	if checkUsernameBan(post, postBoard, writer, request) {
-		return
-	}
+	// if checkUsernameBan(post, postBoard, writer, request) {
+	// 	return
+	// }
 
 	captchaSuccess, err := submitCaptchaResponse(request)
 	if err != nil {
@@ -324,7 +345,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard)
+	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard, infoEv, errEv)
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	var filePath, thumbPath, catalogThumbPath string
 	if upload != nil {
@@ -350,6 +371,29 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().Send()
 		// got an error receiving the upload or the upload was rejected
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
+	}
+
+	filter, err := gcsql.DoPostFiltering(post, upload, boardID, request, errEv)
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
+	}
+	if filter != nil {
+		infoEv.Int("filterID", filter.ID).Msg("Found a matching filter")
+		os.Remove(filePath)
+		os.Remove(thumbPath)
+		os.Remove(catalogThumbPath)
+		switch filter.MatchAction {
+		case "reject":
+			rejectReason := filter.MatchDetail
+			if rejectReason == "" {
+				rejectReason = "Post rejected"
+			}
+			server.ServeError(writer, rejectReason, wantsJSON, nil)
+		case "ban":
+			checkIpBan(post, postBoard, writer, request)
+		}
 		return
 	}
 

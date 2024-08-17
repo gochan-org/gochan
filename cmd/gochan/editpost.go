@@ -23,9 +23,8 @@ import (
 func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.ResponseWriter, request *http.Request) {
 	password := request.FormValue("password")
 	wantsJSON := serverutil.IsRequestingJSON(request)
-	errEv := gcutil.LogError(nil).
-		Str("IP", gcutil.GetRealIP(request))
-	defer errEv.Discard()
+	infoEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, errEv)
 
 	if editBtn == "Edit post" {
 		var err error
@@ -84,9 +83,8 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		if upload != nil {
 			data["upload"] = upload
 		}
-		buf := bytes.NewBufferString("")
-		err = serverutil.MinifyTemplate(gctemplates.PostEdit, data, buf, "text/html")
-		if err != nil {
+		var buf bytes.Buffer
+		if err = serverutil.MinifyTemplate(gctemplates.PostEdit, data, &buf, "text/html"); err != nil {
 			errEv.Err(err).Caller().
 				Msg("Error executing edit post template")
 			server.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
@@ -95,33 +93,36 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		writer.Write(buf.Bytes())
 	}
 	if doEdit == "post" || doEdit == "upload" {
-		postid, err := strconv.Atoi(request.FormValue("postid"))
+		postIDstr := request.FormValue("postid")
+		postid, err := strconv.Atoi(postIDstr)
 		if err != nil {
 			errEv.Err(err).Caller().
-				Str("postid", request.FormValue("postid")).
+				Str("postid", postIDstr).
 				Msg("Invalid form data")
 			server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
 				"postid": postid,
 			})
 			return
 		}
+		gcutil.LogInt("postID", postid, infoEv, errEv)
 		post, err := gcsql.GetPostFromID(postid, true)
 		if err != nil {
-			errEv.Err(err).Caller().
-				Int("postid", postid).
-				Msg("Unable to find post")
-			server.ServeError(writer, "Unable to find post: "+err.Error(), wantsJSON, map[string]interface{}{
+			errEv.Err(err).Caller().Msg("Unable to find post")
+			server.ServeError(writer, "Unable to find post", wantsJSON, map[string]interface{}{
 				"postid": postid,
 			})
 			return
 		}
-		boardid, err := strconv.Atoi(request.FormValue("boardid"))
+		boardIDstr := request.FormValue("boardid")
+		boardid, err := strconv.Atoi(boardIDstr)
 		if err != nil {
 			errEv.Err(err).Caller().
+				Str("boardID", boardIDstr).
 				Msg("Invalid form data")
 			server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, nil)
 			return
 		}
+		gcutil.LogInt("boardID", boardid, infoEv, errEv)
 
 		rank := manage.GetStaffRank(request)
 		password := request.PostFormValue("password")
@@ -148,7 +149,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				return
 			}
 
-			upload, err := uploads.AttachUploadFromRequest(request, writer, post, board)
+			upload, err := uploads.AttachUploadFromRequest(request, writer, post, board, gcutil.LogInfo(), errEv)
 			if err != nil {
 				server.ServeError(writer, err.Error(), wantsJSON, nil)
 				return
@@ -220,7 +221,6 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				request.FormValue("editmsg"),
 			); err != nil {
 				errEv.Err(err).Caller().
-					Int("postid", post.ID).
 					Msg("Unable to edit post")
 				server.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
 					"postid": post.ID,
@@ -236,6 +236,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			server.ServeErrorPage(writer, "Error rebuilding front page: "+err.Error())
 		}
 		http.Redirect(writer, request, post.WebPath(), http.StatusFound)
+		infoEv.Msg("Post edited")
 		return
 	}
 }

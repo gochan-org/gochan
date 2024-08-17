@@ -1,6 +1,8 @@
 package initsql
 
 import (
+	"net/http"
+	"path"
 	"strconv"
 	"text/template"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
 func banMaskTmplFunc(ban gcsql.IPBan) string {
@@ -130,5 +133,23 @@ func init() {
 		"boardPagePath":        boardPagePathTmplFunc,
 		"getBoardDefaultStyle": getBoardDefaultStyleTmplFunc,
 		"sectionBoards":        sectionBoardsTmplFunc,
+	})
+	gcsql.RegisterStringConditionHandler("ahash", func(r *http.Request, p *gcsql.Post, u *gcsql.Upload, fc *gcsql.FilterCondition) (bool, error) {
+		if u == nil {
+			return false, nil
+		}
+		boardID, err := strconv.Atoi(r.PostFormValue("boardid"))
+		if err != nil {
+			// boardid is assumed to have already been checked, but just in case...
+			return false, err
+		}
+		dir, err := gcsql.GetBoardDir(boardID)
+		if err != nil {
+			return false, err
+		}
+		fingerprint, err := uploads.GetFileFingerprint(path.Join(
+			config.GetSystemCriticalConfig().DocumentRoot,
+			dir, "src", u.Filename))
+		return fingerprint == fc.Search, err
 	})
 }

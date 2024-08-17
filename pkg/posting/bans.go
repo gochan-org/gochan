@@ -43,7 +43,7 @@ func showBanpage(ban *gcsql.IPBan, post *gcsql.Post, postBoard *gcsql.Board, wri
 		Msg("Rejected post from banned IP")
 }
 
-// checks the post for spam. It returns true if a ban page or an error page was served (causing MakePost() to return)
+// checks the post IP against the IP range ban list. It returns true if a ban page or an error page was served (causing MakePost() to return)
 func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
 	ipBan, err := gcsql.CheckIPBan(post.IP, postBoard.ID)
 	if err != nil {
@@ -62,7 +62,7 @@ func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWr
 	return true
 }
 
-func checkUsernameBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+/* func checkUsernameBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
 	nameTrip := post.Name
 	if post.Tripcode != "" {
 		nameTrip += "!" + post.Tripcode
@@ -93,7 +93,7 @@ func checkUsernameBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.Resp
 		Bool("banIsRegex", nameBan.IsRegex).
 		Msg("Rejected post with banned name/tripcode")
 	return true
-}
+} */
 
 func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zerolog.Event, errEv *zerolog.Event) {
 	banIDstr := request.FormValue("banid")

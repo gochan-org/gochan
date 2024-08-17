@@ -20,6 +20,23 @@ var (
 	ErrNotConnected  = errors.New("error connecting to database")
 )
 
+// ActiveFilter is used for optionally limiting the results of tables with an is_active column to
+type ActiveFilter int
+
+// whereClause returns part of the where clause of a SQL string. If and is true, it starts with AND, otherwise it starts with WHERE
+func (af ActiveFilter) whereClause(and bool) string {
+	out := " WHERE "
+	if and {
+		out = " AND "
+	}
+	if af == OnlyActiveFilters {
+		return out + "is_active = TRUE"
+	} else if af == OnlyInactiveFilters {
+		return out + "is_active = FALSE"
+	}
+	return ""
+}
+
 // BeginTx begins a new transaction for the gochan database. It uses a background context
 func BeginTx() (*sql.Tx, error) {
 	return BeginContextTx(context.Background())

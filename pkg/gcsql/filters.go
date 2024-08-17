@@ -3,9 +3,13 @@ package gcsql
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -19,28 +23,13 @@ const (
 )
 
 var (
-	ErrInvalidConditionField = errors.New("unrecognized conditional field")
-	ErrInvalidMatchAction    = errors.New("unrecognized filter action")
+	ErrInvalidConditionField = errors.New("unrecognized filter condition field")
+	ErrInvalidMatchAction    = errors.New("unrecognized filter match action")
 	ErrInvalidFilter         = errors.New("unrecognized filter id")
 	ErrNoConditions          = errors.New("error has no match conditions")
 )
 
-type ActiveFilter int
 type wordFilterFilter int
-
-// whereClause returns part of the where clause of a SQL string. If and is true, it starts with AND, otherwise it starts with WHERE
-func (af ActiveFilter) whereClause(and bool) string {
-	out := " WHERE "
-	if and {
-		out = " AND "
-	}
-	if af == OnlyActiveFilters {
-		return out + "is_active = TRUE"
-	} else if af == OnlyInactiveFilters {
-		return out + "is_active = FALSE"
-	}
-	return ""
-}
 
 // GetFilterByID returns the filter with the given ID, and an error if one occured
 func GetFilterByID(id int) (*Filter, error) {
@@ -129,7 +118,6 @@ func getFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter, 
 		); err != nil {
 			return nil, err
 		}
-		fmt.Println(filter.ID, filter.MatchDetail, filter.StaffNote)
 		filters = append(filters, filter)
 	}
 	return filters, rows.Close()
@@ -340,6 +328,123 @@ func (f *Filter) SetBoardIDs(ids ...int) error {
 		}
 	}
 	return tx.Commit()
+}
+
+type matchHitJSON struct {
+	Post            *Post
+	Upload          *Upload
+	MatchConditions []string
+	UserAgent       string
+}
+
+// handleMatch takes the set action after the filter has been found to match the given post. It returns any errors that occured
+func (f *Filter) handleMatch(post *Post, request *http.Request) error {
+	var conditionFields []string
+	for _, condition := range f.conditions {
+		// it's assumed that f.Condition() was already called and returned no errors so we don't need to check it again
+		conditionFields = append(conditionFields, condition.Field)
+	}
+	upload, err := post.GetUpload()
+	if err != nil {
+		return err
+	}
+	ba, err := json.Marshal(matchHitJSON{Post: post, Upload: upload, MatchConditions: conditionFields, UserAgent: request.UserAgent()})
+	if err != nil {
+		return err
+	}
+	if _, err = ExecTimeoutSQL(nil, `INSERT INTO DBPREFIXfilter_hits(filter_id,post_data) VALUES(?,?)`, f.ID, string(ba)); err != nil {
+		return err
+	}
+
+	switch f.MatchAction {
+	case "reject":
+		return nil
+	case "ban":
+		return NewIPBan(&IPBan{
+			IPBanBase: IPBanBase{
+				IsActive:  true,
+				StaffID:   *f.StaffID,
+				Permanent: true,
+				CanAppeal: true,
+				AppealAt:  time.Now(),
+				StaffNote: fmt.Sprintf("banned by filter #%d", f.ID),
+				Message:   f.MatchDetail,
+			},
+			RangeStart: post.IP,
+			RangeEnd:   post.IP,
+			IssuedAt:   time.Now(),
+		})
+	case "log":
+		// already logged
+		return nil
+	}
+	return ErrInvalidMatchAction
+}
+
+// checkIfMatch checks the filter's conditions to see if it matches the post and handles it according to the MatchAction
+// value, returning true if it matched and false otherwise
+func (f *Filter) checkIfMatch(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
+	conditions, err := f.Conditions()
+	if err != nil {
+		return false, err
+	}
+
+	match := true
+	for _, condition := range conditions {
+		if !match {
+			break
+		}
+		if match, err = condition.testCondition(post, upload, request, errEv); err != nil {
+			return false, err
+		}
+	}
+	if match {
+
+	}
+
+	return match, nil
+}
+
+func (fc *FilterCondition) testCondition(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
+	handler, ok := filterFieldHandlers[fc.Field]
+	if !ok {
+		return false, ErrInvalidConditionField
+	}
+	match, err := handler.CheckMatch(request, post, upload, fc)
+
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("field", fc.Field).
+			Int("filterID", fc.FilterID).
+			Int("filterConditionID", fc.ID).Send()
+		err = errors.New("unable to check filter condition")
+	}
+	return match, err
+}
+
+// DoPostFiltering checks the filters against the given post. If a match is found, its respective action is taken and the filter
+// is returned. It logs any errors it receives and returns a sanitized error (if one occured) that can be shown to the end user
+func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, error) {
+	filters, err := GetFiltersByBoardID(post.ID, true, OnlyActiveFilters)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to get filter list")
+		return nil, errors.New("unable to get post filter list")
+	}
+
+	var match bool
+	for f, filter := range filters {
+		if match, err = filter.checkIfMatch(post, upload, request, errEv); err != nil {
+			errEv.Err(err).Caller().
+				Int("filterID", filter.ID).
+				Msg("Unable to check filter for a match")
+			return nil, errors.New("unable to check filter for a match")
+		}
+		if match {
+			filter.handleMatch(post, request)
+			return &filters[f], nil
+		}
+	}
+	return nil, nil
 }
 
 // SetFilterActive updates the filter with the given id, setting its active status and returning an error if one occured
