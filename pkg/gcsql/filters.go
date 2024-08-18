@@ -330,25 +330,88 @@ func (f *Filter) SetBoardIDs(ids ...int) error {
 	return tx.Commit()
 }
 
+type matchFieldsJSON struct {
+	Name             string `json:"name,omitempty"`
+	Trip             string `json:"trip,omitempty"`
+	Email            string `json:"email,omitempty"`
+	Subject          string `json:"subject,omitempty"`
+	Body             string `json:"body,omitempty"`
+	FirstTimeOnBoard *bool  `json:"firsttimeboard,omitempty"`
+	FirstTimeOnSite  *bool  `json:"firsttimeonsite,omitempty"`
+	IsOP             *bool  `json:"isop,omitempty"`
+	HasFile          *bool  `json:"hasfile,omitempty"`
+	Filename         string `json:"filename,omitempty"`
+	Checksum         string `json:"checksum,omitempty"`
+	Fingerprint      string `json:"ahash,omitempty"`
+}
+
 type matchHitJSON struct {
-	Post            *Post
-	Upload          *Upload
-	MatchConditions []string
-	UserAgent       string
+	Post            *matchFieldsJSON `json:"post"`
+	MatchConditions []string         `json:"matchedConditions"`
+	UserAgent       string           `json:"useragent"`
 }
 
 // handleMatch takes the set action after the filter has been found to match the given post. It returns any errors that occured
-func (f *Filter) handleMatch(post *Post, request *http.Request) error {
+func (f *Filter) handleMatch(post *Post, upload *Upload, request *http.Request) error {
 	var conditionFields []string
+
+	matchedFields := &matchFieldsJSON{
+		Name:    post.Name,
+		Trip:    post.Tripcode,
+		Email:   post.Email,
+		Subject: post.Subject,
+		Body:    post.MessageRaw,
+	}
+
 	for _, condition := range f.conditions {
 		// it's assumed that f.Condition() was already called and returned no errors so we don't need to check it again
 		conditionFields = append(conditionFields, condition.Field)
+		switch condition.Field {
+		case "firsttimeboard":
+			if matchedFields.FirstTimeOnBoard == nil {
+				matchedFields.FirstTimeOnBoard = new(bool)
+				*matchedFields.FirstTimeOnBoard = true
+			}
+		case "notfirsttimeboard":
+			if matchedFields.FirstTimeOnBoard == nil {
+				matchedFields.FirstTimeOnBoard = new(bool)
+				*matchedFields.FirstTimeOnBoard = false
+			}
+		case "firsttimesite":
+			if matchedFields.FirstTimeOnSite == nil {
+				matchedFields.FirstTimeOnSite = new(bool)
+				*matchedFields.FirstTimeOnSite = true
+			}
+		case "notfirsttimesite":
+			if matchedFields.FirstTimeOnSite == nil {
+				matchedFields.FirstTimeOnSite = new(bool)
+				*matchedFields.FirstTimeOnSite = false
+			}
+		case "hasfile":
+			if matchedFields.HasFile == nil {
+				matchedFields.HasFile = new(bool)
+				*matchedFields.HasFile = true
+			}
+		case "nofile":
+			if matchedFields.HasFile == nil {
+				matchedFields.HasFile = new(bool)
+				*matchedFields.HasFile = false
+			}
+		case "ahash":
+			if matchedFields.Fingerprint == "" {
+				matchedFields.Fingerprint = condition.Search
+			}
+		}
 	}
-	upload, err := post.GetUpload()
-	if err != nil {
-		return err
+	if upload != nil {
+		matchedFields.Filename = upload.Filename
+		matchedFields.Checksum = upload.Checksum
 	}
-	ba, err := json.Marshal(matchHitJSON{Post: post, Upload: upload, MatchConditions: conditionFields, UserAgent: request.UserAgent()})
+	ba, err := json.Marshal(matchHitJSON{
+		Post:            matchedFields,
+		MatchConditions: conditionFields,
+		UserAgent:       request.UserAgent()},
+	)
 	if err != nil {
 		return err
 	}
@@ -440,7 +503,7 @@ func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Requ
 			return nil, errors.New("unable to check filter for a match")
 		}
 		if match {
-			filter.handleMatch(post, request)
+			filter.handleMatch(post, upload, request)
 			return &filters[f], nil
 		}
 	}
