@@ -380,6 +380,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	var boardsText []string
 	for _, filter := range filters {
 		if _, ok := filterActionsMap[filter.MatchAction]; !ok {
+			errEv.Err(err).Caller().Str("filterAction", filter.MatchAction).Send()
 			return nil, gcsql.ErrInvalidMatchAction
 		}
 		conditions, err := filter.Conditions()
@@ -392,6 +393,8 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		for _, condition := range conditions {
 			text, ok := fieldsMap[condition.Field]
 			if !ok {
+				errEv.Err(gcsql.ErrInvalidConditionField).Caller().
+					Str("conditionField", condition.Field).Send()
 				return nil, gcsql.ErrInvalidConditionField
 			}
 			filterConditionsText += text + ","
@@ -401,15 +404,20 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 		boards, err := filter.BoardDirs()
 		if err != nil {
+			errEv.Err(err).Caller().Int("filterID", filter.ID)
 			return nil, err
 		}
 		boardsText = append(boardsText, strings.Join(boards, ","))
-
-		username, err := gcsql.GetStaffUsernameFromID(*filter.StaffID)
-		if err != nil {
-			return nil, err
+		if filter.StaffID == nil {
+			staffUsernames = append(staffUsernames, "?")
+		} else {
+			username, err := gcsql.GetStaffUsernameFromID(*filter.StaffID)
+			if err != nil {
+				errEv.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get staff from filter")
+				return nil, err
+			}
+			staffUsernames = append(staffUsernames, username)
 		}
-		staffUsernames = append(staffUsernames, username)
 	}
 
 	data["filters"] = filters
