@@ -23,14 +23,15 @@ function onRemoveCondition(e:JQuery.ClickEvent) {
 
 function onFieldChange(e:JQuery.ChangeEvent) {
 	const $fieldset = $(e.target).parents("fieldset");
-	const isBoolean = e.target.value === "firsttime" || e.target.value === "hasfile" || e.target.value === "isop";
+	const isBoolean = e.target.value === "firsttimeboard" || e.target.value === "notfirsttimeboard" ||
+		e.target.value === "firsttimesite" || e.target.value === "notfirsttimesite" || e.target.value === "isop" ||
+		e.target.value === "notop" || e.target.value === "hasfile" || e.target.value === "nofile";
 	const noRegex = isBoolean || e.target.value === "checksum" || e.target.value === "ahash";
-	const $searchInput = $fieldset.find("tr.search-cndtn");
-
+	const $searchContainer = $fieldset.find("tr.search-cndtn");
 	if(isBoolean) {
-		$searchInput.hide();
+		$searchContainer.hide();
 	} else {
-		$searchInput.show();
+		$searchContainer.show();
 	}
 
 	if(noRegex) {
@@ -44,13 +45,6 @@ function applyConditionEvents($fieldset:JQuery<HTMLElement>) {
 	$("#add-cndtn").on("click", onAddCondition);
 	$fieldset.find(".rem-cndtn").on("click", onRemoveCondition);
 	$fieldset.find("select.sel-field").on("change", onFieldChange);
-	$("input#allboards").on("change", () => {
-		$<HTMLInputElement>("td#boardslist input[type=checkbox]").each((_i, el) => {
-			if(el.id !== "allboards") {
-				el.disabled = $<HTMLInputElement>("input#allboards")[0].checked;
-			}
-		});
-	});
 }
 
 $(() => {
@@ -59,13 +53,13 @@ $(() => {
 	$<HTMLSelectElement>("select#action").on("change", e => {
 		switch(e.target.value) {
 		case "reject":
-			$("th#reason").parent().show();
+			$("th#detail").parent().show();
 			break;
 		case "ban":
-			$("th#reason").parent().show();
+			$("th#detail").parent().show();
 			break;
 		case "log":
-			$("th#reason").parent().hide();
+			$("th#detail").parent().hide();
 			break;
 		default:
 			console.log(e.target.value);

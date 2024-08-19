@@ -207,11 +207,6 @@ func init() {
 				return u.Checksum == fc.Search, nil
 			},
 		},
-		// TODO: register file-related checks in the uploads package so they can be handled before the file is saved and to avoid potential
-		// cyclical dependencies
-		// "ahash": &conditionHandler{
-		// 	fieldType: StringField,
-		// }
 		"useragent": &conditionHandler{
 			fieldType: StringField,
 			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {

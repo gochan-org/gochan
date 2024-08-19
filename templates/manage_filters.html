@@ -1,37 +1,48 @@
-<h2>{{with $.edit}}Edit filter{{else}}New filter{{end}}</h2>
-<form id="filterform" action="{{webPath `/manage/filters`}}{{with $.edit}}?edit={{.ID}}{{end}}" method="POST">
-	Filter conditions are checked against a post before the message body is formatted and after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
-	Tripcode searches do not include the prefix "!".
+{{define "condition"}}
+<fieldset class="fld-cndtns">
+	<table>
+		<tr class="field-cndtn">
+			<th>Field/Condition:</th>
+			<td>
+				<select name="field{{.conditionNo}}" class="sel-field">
+					{{- range $_,$field := .fields}}<option value="{{$field.Value}}" {{if eq $field.Value $.condition.Field}}selected{{end}}>{{$field.Text}}</option>{{end -}}
+				</select>
+			</td>
+		</tr>
+		<tr class="search-cndtn">
+			<th>Search:</th>
+			<td><input type="text" name="search{{.conditionNo}}" value="{{.condition.Search}}"></td>
+		</tr>
+		<tr class="regex-cndtn">
+			<th></th>
+			<td><label>Is regex <input type="checkbox" name="isregex{{.conditionNo}}" {{if .condition.IsRegex}}checked{{end}}/></label></td>
+		</tr>
+		<tr class="btns-cndtn">
+			<td></td>
+			<td>
+				<a href="#" class="rem-cndtn">Remove condition</a>
+			</td>
+		</tr>
+	</table>
+</fieldset>
+{{end -}}
+
+<h2>{{if gt $.filter.ID 0}}Edit filter{{else}}New filter{{end}}</h2>
+<form id="filterform" action="{{webPath `/manage/filters`}}{{if gt $.filter.ID 0}}?edit={{.ID}}{{end}}" method="POST">
+	{{- if gt $.filter.ID 0}}<input type="hidden" name="filterid" value="{{.ID}}">{{end -}}
+	Filter conditions are checked against a post after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
+	The filter action will be executed only if all conditions are met. Tripcode searches do not include the prefix "!".
 	<table>
 		<tr>
 			<th>Conditions</th>
 			<td id="conditions">
-				<fieldset class="fld-cndtns">
-					<table>
-						<tr class="field-cndtn">
-							<th>Field/Condition:</th>
-							<td>
-								<select name="field1" class="sel-field">
-									{{- range $_,$field := .fields}}<option value="{{$field.Value}}">{{$field.Text}}</option>{{end -}}
-								</select>
-							</td>
-						</tr>
-						<tr class="search-cndtn">
-							<th>Search:</th>
-							<td><input type="text" name="search1"></td>
-						</tr>
-						<tr class="regex-cndtn">
-							<th></th>
-							<td><label>Is regex <input type="checkbox" name="isregex1"/></label></td>
-						</tr>
-						<tr class="btns-cndtn">
-							<td></td>
-							<td>
-								<a href="#" class="rem-cndtn">Remove condition</a>
-							</td>
-						</tr>
-					</table>
-				</fieldset>
+				{{- with $.filterConditions -}}
+					{{range $t,$condition := $.filterConditions -}}
+						{{template "condition" map "conditionNo" (add $t 1) "condition" $condition "fields" $.fields "filter" $.filter}}
+					{{end}}
+				{{- else -}}
+					{{template "condition" map "conditionNo" 1 "fields" $.fields}}
+				{{- end -}}
 			</td>
 			<tr>
 				<td></td>
@@ -49,20 +60,24 @@
 			</td>
 		</tr>
 		<tr>
-			<th id="reason">Reason</th>
-			<td><textarea name="reason" rows="5" cols="35"></textarea></td>
+			<th id="detail">Reason</th>
+			<td><textarea name="detail" rows="5" cols="35">{{if gt $.filter.ID 0}}{{.MatchDetail}}{{end}}</textarea></td>
+		</tr>
+		<tr>
+			<th id="note">Staff Note</th>
+			<td><textarea name="note" rows="5" cols="35">{{if gt $.filter.ID 0}}{{.StaffNote}}{{end}}</textarea></td>
 		</tr>
 		<tr>
 			<th>Board(s):</th>
 			<td id="boardslist">
-				<label for="allboards">All boards <input type="checkbox" name="allboards" id="allboards"></label>
+				If no boards are selected, the filter will be applied to all boards
 				{{- range $_,$board := .allBoards -}}
 					<label for="applyboard{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"></label>
 				{{- end -}}
 			</td>
 		</tr>
 	</table>
-	<input type="submit" name="dofilter" value="Submit Filter">
+	<input type="submit" name="dofilter{{if gt $.filter.ID 0}}edit{{else}}add{{end}}" value="Submit Filter">
 </form>
 <hr/>
 <h2>Filter list</h2>

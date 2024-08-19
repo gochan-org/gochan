@@ -25,11 +25,11 @@ import (
 
 var (
 	filterFields = []filterField{
-		{Value: "name", Text: "Name"},
-		{Value: "trip", Text: `Tripcode`},
-		{Value: "email", Text: "Email"},
-		{Value: "subject", Text: "Subject"},
-		{Value: "body", Text: "Message body"},
+		{Value: "name", Text: "Name", hasRegex: true, hasSearchbox: true},
+		{Value: "trip", Text: `Tripcode`, hasRegex: true, hasSearchbox: true},
+		{Value: "email", Text: "Email", hasRegex: true, hasSearchbox: true},
+		{Value: "subject", Text: "Subject", hasRegex: true, hasSearchbox: true},
+		{Value: "body", Text: "Message body", hasRegex: true, hasSearchbox: true},
 		{Value: "firsttimeboard", Text: "First time poster (board)"},
 		{Value: "notfirsttimeboard", Text: "Not a first time poster (board)"},
 		{Value: "firsttimesite", Text: "First time poster (site-wide)"},
@@ -38,10 +38,10 @@ var (
 		{Value: "notop", Text: "Is reply"},
 		{Value: "hasfile", Text: "Has file"},
 		{Value: "nofile", Text: "No file"},
-		{Value: "filename", Text: "Filename"},
-		{Value: "checksum", Text: "File checksum"},
-		{Value: "ahash", Text: "Image fingerprint"},
-		{Value: "useragent", Text: "User agent"},
+		{Value: "filename", Text: "Filename", hasRegex: true, hasSearchbox: true},
+		{Value: "checksum", Text: "File checksum", hasSearchbox: true},
+		{Value: "ahash", Text: "Image fingerprint", hasSearchbox: true},
+		{Value: "useragent", Text: "User agent", hasRegex: true, hasSearchbox: true},
 	}
 	filterActionsMap = map[string]string{
 		"reject": "Reject post",
@@ -199,183 +199,153 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return manageAppealsBuffer.String(), err
 }
 
-/* func fileBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
-	delFilenameBanIDStr := request.FormValue("delfnb") // filename ban deletion
-	delChecksumBanIDStr := request.FormValue("delcsb") // checksum ban deletion
-
-	boardidStr := request.FormValue("boardid")
-	boardid := 0
-	if boardidStr != "" {
-		boardid, err = strconv.Atoi(boardidStr)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("boardid", boardidStr).Send()
-			return "", err
-		}
-	}
-	gcutil.LogInt("boardid", boardid, infoEv, errEv)
-	staffnote := request.FormValue("staffnote")
-
-	if request.FormValue("dofilenameban") != "" {
-		// creating a new filename ban
-		filename := request.FormValue("filename")
-		isRegex := request.FormValue("isregex") == "on"
-		if isRegex {
-			_, err = regexp.Compile(filename)
-			if err != nil {
-				// invalid regular expression
-				errEv.Err(err).Caller().
-					Str("regex", filename).Send()
-				return "", err
-			}
-		}
-		if _, err = gcsql.NewFilenameBan(filename, isRegex, boardid, staff.ID, staffnote); err != nil {
-			errEv.Err(err).Caller().
-				Str("filename", filename).
-				Bool("isregex", isRegex).Send()
-			return "", err
-		}
-		infoEv.
-			Str("filename", filename).
-			Bool("isregex", isRegex).
-			Msg("Created new filename ban")
-		if wantsJSON {
-			return "success", nil
-		}
-	} else if delFilenameBanIDStr != "" {
-		delFilenameBanID, err := strconv.Atoi(delFilenameBanIDStr)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("delfnb", delFilenameBanIDStr).
-				Send()
-			return "", err
-		}
-		var fnb gcsql.FilenameBan
-		fnb.ID = delFilenameBanID
-		if err = fnb.Deactivate(staff.ID); err != nil {
-			errEv.Err(err).Caller().
-				Int("deleteFilenameBanID", delFilenameBanID).Send()
-			return "", err
-		}
-		infoEv.
-			Int("deleteFilenameBanID", delFilenameBanID).
-			Msg("Filename ban deleted")
-		if wantsJSON {
-			return "success", nil
-		}
-	} else if request.PostFormValue("dochecksumban") != "" {
-		// creating a new file checksum ban
-		checksum := request.PostFormValue("checksum")
-		ipBan := request.PostFormValue("ban") == "on"
-		var reason string
-		if ipBan {
-			reason = request.PostFormValue("banmsg")
-			if reason == "" {
-				return "", errors.New("ban reason required if IP ban is set")
-			}
-		}
-		gcutil.LogBool("ipBan", ipBan, infoEv, errEv)
-		fingerprinter := request.PostFormValue("fingerprinter")
-		if fingerprinter == "checksum" {
-			fingerprinter = ""
-		}
-		gcutil.LogStr("fingerprinter", fingerprinter, infoEv, errEv)
-		if _, err = gcsql.NewFileChecksumBan(
-			checksum, fingerprinter, boardid, staff.ID, staffnote, ipBan, reason,
-		); err != nil {
-			errEv.Err(err).Caller().
-				Str("checksum", checksum).Send()
-			return "", err
-		}
-		infoEv.
-			Str("checksum", checksum).
-			Msg("Created new file checksum ban")
-		if wantsJSON {
-			return "success", nil
-		}
-	} else if delChecksumBanIDStr != "" {
-		// user requested a checksum ban ID to delete
-		delChecksumBanID, err := strconv.Atoi(delChecksumBanIDStr)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("deleteChecksumBanIDStr", delChecksumBanIDStr).Send()
-			return "", err
-		}
-		if err = (gcsql.FileBan{ID: delChecksumBanID}).Deactivate(staff.ID); err != nil {
-			errEv.Err(err).Caller().
-				Int("deleteChecksumBanID", delChecksumBanID).Send()
-			return "", err
-		}
-		infoEv.Int("deleteChecksumBanID", delChecksumBanID).Msg("File checksum ban deleted")
-		if wantsJSON {
-			return "success", nil
-		}
-	}
-	filterBoardIDstr := request.FormValue("filterboardid")
-	var filterBoardID int
-	if filterBoardIDstr != "" {
-		if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
-			errEv.Err(err).Caller().
-				Str("filterboardid", filterBoardIDstr).Send()
-			return "", err
-		}
-	}
-	limitStr := request.FormValue("limit")
-	limit := 200
-	if limitStr != "" {
-		if limit, err = strconv.Atoi(limitStr); err != nil {
-			errEv.Err(err).Caller().
-				Str("limit", limitStr).Send()
-			return "", err
-		}
-	}
-	checksumBans, err := gcsql.GetFileBans(filterBoardID, limit)
-	if err != nil {
-		return "", err
-	}
-	filenameBans, err := gcsql.GetFilenameBans(filterBoardID, limit)
-	if err != nil {
-		return "", err
-	}
-	manageBansBuffer := bytes.NewBufferString("")
-
-	if err = serverutil.MinifyTemplate(gctemplates.ManageFileBans, map[string]interface{}{
-		"allBoards":     gcsql.AllBoards,
-		"checksumBans":  checksumBans,
-		"filenameBans":  filenameBans,
-		"filterboardid": filterBoardID,
-		"currentStaff":  staff.Username,
-	}, manageBansBuffer, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_filebans.html").Caller().Send()
-		return "", errors.New("Error executing ban management page template: " + err.Error())
-	}
-	outputStr := manageBansBuffer.String()
-	return outputStr, nil
-} */
-
 type filterField struct {
-	Value string
-	Text  string
+	Value        string
+	Text         string
+	hasRegex     bool
+	hasSearchbox bool
 }
 
 func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
-	// doFilterAdd = request.PostFormValue("dofilteradd")
-	// filterID := request.FormValue("filterid")
-	// editFilter := request.FormValue("editfilter")
-	disableFilterIDStr := request.FormValue("disable")
-	enableFilterIDStr := request.FormValue("enable")
-	if disableFilterIDStr != "" {
+	var boards []int
+	data := map[string]any{
+		"allBoards": gcsql.AllBoards,
+		"fields":    filterFields,
+		"actions":   filterActionsMap,
+	}
+	boardIDLogArr := zerolog.Arr()
+	conditionsLogArr := zerolog.Arr()
+
+	doFilterAdd := request.PostFormValue("dofilteradd") != ""
+	doFilterEdit := request.PostFormValue("dofilteredit") != ""
+
+	if disableFilterIDStr := request.FormValue("disable"); disableFilterIDStr != "" {
 		disableFilterID, err := strconv.Atoi(disableFilterIDStr)
 		if err != nil {
 			return nil, err
 		}
 		gcsql.SetFilterActive(disableFilterID, false)
-	} else if enableFilterIDStr != "" {
+	} else if enableFilterIDStr := request.FormValue("enable"); enableFilterIDStr != "" {
 		enableFilterID, err := strconv.Atoi(enableFilterIDStr)
 		if err != nil {
 			return nil, err
 		}
 		gcsql.SetFilterActive(enableFilterID, true)
+	} else if doFilterAdd || doFilterEdit {
+		var conditions []gcsql.FilterCondition
+		var filter *gcsql.Filter
+		if doFilterAdd {
+			// new post submitted
+			filter = &gcsql.Filter{
+				StaffID:  &staff.ID,
+				IsActive: true,
+			}
+		} else if doFilterEdit {
+			// post edit submitted
+			filterIDstr := request.PostFormValue("filterid")
+			filterID, err := strconv.Atoi(filterIDstr)
+			if err != nil {
+				errEv.Err(err).Caller().Str("filterID", filterIDstr).Msg("Unable to parse filter ID")
+				return nil, err
+			}
+			if filter, err = gcsql.GetFilterByID(filterID); err != nil {
+				errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter from ID")
+				return nil, err
+			}
+			if conditions, err = filter.Conditions(); err != nil {
+				errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter conditions list")
+			}
+		}
+
+		for k, v := range request.PostForm {
+			// set filter boards
+			if strings.HasPrefix(k, "applyboard") && v[0] == "on" {
+				boardID, err := strconv.Atoi(k[10:])
+				if err != nil {
+					errEv.Err(err).Caller().
+						Str("boardIDField", k).
+						Str("boardIDStr", k[10:]).
+						Msg("Unable to parse board ID")
+					return nil, errors.New("unable to parse board ID: " + err.Error())
+				}
+				boardIDLogArr.Int(boardID)
+				boards = append(boards, boardID)
+			}
+			infoEv.Array("boardIDs", boardIDLogArr)
+
+			// set filter conditions
+			if strings.HasPrefix(k, "field") {
+				fieldIDstr := k[5:]
+				if _, err = strconv.Atoi(fieldIDstr); err != nil {
+					errEv.Err(err).Caller().Str("fieldID", fieldIDstr).Send()
+					return nil, errors.New("failed to get field data: " + err.Error())
+				}
+				fc := gcsql.FilterCondition{
+					Field:   v[0],
+					IsRegex: request.PostFormValue("isregex"+fieldIDstr) == "on",
+				}
+				var validField bool
+				for _, field := range filterFields {
+					if fc.Field == field.Value && !validField {
+						fc.Search = request.PostFormValue("search" + fieldIDstr)
+						if !field.hasSearchbox {
+							fc.Search = "1"
+						}
+						validField = true
+						break
+					}
+				}
+				if !validField {
+					errEv.Err(gcsql.ErrInvalidConditionField).Caller().
+						Str("field", fc.Field).Send()
+					return nil, gcsql.ErrInvalidConditionField
+				}
+				conditionsLogArr.Interface(fc)
+				conditions = append(conditions, fc)
+			}
+			infoEv.Array("conditions", conditionsLogArr)
+		}
+
+		filter.MatchAction = request.PostFormValue("action")
+		filter.MatchDetail = request.PostFormValue("detail")
+		filter.StaffNote = request.PostFormValue("note")
+		if filter.ID > 0 {
+			errEv.Int("filterID", filter.ID)
+		}
+		if err = gcsql.ApplyFilter(filter, conditions, boards); err != nil {
+			errEv.Err(err).Caller().
+				Array("boards", boardIDLogArr).
+				Array("conditions", conditionsLogArr).
+				Msg("Unable to submit filter")
+			return nil, err
+		}
+	}
+
+	if editFilter := request.FormValue("edit"); editFilter != "" {
+		// user clicked on Edit link in filter row
+		filterID, err := strconv.Atoi(editFilter)
+		if err != nil {
+			errEv.Err(err).Caller().Str("filterID", editFilter).Send()
+			return nil, err
+		}
+		filter, err := gcsql.GetFilterByID(filterID)
+		if err != nil {
+			errEv.Err(err).Caller().Int("filterID", filterID).Send()
+			return nil, errors.New("unable to get filter")
+		}
+		data["filter"] = filter
+		if data["filterConditions"], err = filter.Conditions(); err != nil {
+			errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter conditions")
+			return nil, errors.New("unable to get filter conditions")
+		}
+	} else {
+		// user loaded /manage/filters, populate single "default" condition
+		data["filter"] = &gcsql.Filter{
+			MatchAction: "reject",
+		}
+		data["filterConditions"] = []gcsql.FilterCondition{
+			{Field: "name"},
+		}
 	}
 
 	showStr := request.FormValue("show")
@@ -435,74 +405,19 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		staffUsernames = append(staffUsernames, username)
 	}
 
+	data["filters"] = filters
+	data["conditions"] = conditionsText
+	data["staff"] = staffUsernames
+	data["show"] = showStr
+	data["boardSearch"] = boardSearch
+
 	var buf bytes.Buffer
-	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, map[string]any{
-		"allBoards":   gcsql.AllBoards,
-		"fields":      filterFields,
-		"filters":     filters,
-		"conditions":  conditionsText,
-		"actions":     filterActionsMap,
-		"staff":       staffUsernames,
-		"show":        showStr,
-		"boardSearch": boardSearch,
-	}, &buf, "text/html"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, data, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
 		return "", errors.New("Unable to execute filter management template: " + err.Error())
 	}
 	return buf.String(), nil
 }
-
-/* func nameBansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
-	doNameBan := request.FormValue("donameban")
-	deleteIDstr := request.FormValue("del")
-	if deleteIDstr != "" {
-		deleteID, err := strconv.Atoi(deleteIDstr)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("delStr", deleteIDstr).Send()
-			return "", err
-		}
-		if err = gcsql.DeleteNameBan(deleteID); err != nil {
-			errEv.Err(err).Caller().
-				Int("deleteID", deleteID).
-				Msg("Unable to delete name ban")
-			return "", errors.New("Unable to delete name ban: " + err.Error())
-		}
-	}
-	data := map[string]interface{}{
-		"currentStaff": staff.Username,
-		"allBoards":    gcsql.AllBoards,
-	}
-	if doNameBan == "Create" {
-		var name string
-		if name, err = getStringField("name", staff.Username, request); err != nil {
-			return "", err
-		}
-		if name == "" {
-			return "", errors.New("name field must not be empty in name ban submission")
-		}
-		var boardID int
-		if boardID, err = getIntField("boardid", staff.Username, request); err != nil {
-			return "", err
-		}
-		isRegex := request.FormValue("isregex") == "on"
-		if _, err = gcsql.NewNameBan(name, isRegex, boardID, staff.ID, request.FormValue("staffnote")); err != nil {
-			errEv.Err(err).Caller().
-				Str("name", name).
-				Int("boardID", boardID).Send()
-			return "", err
-		}
-	}
-	if data["nameBans"], err = gcsql.GetNameBans(0, 0); err != nil {
-		return "", err
-	}
-	buf := bytes.NewBufferString("")
-	if err = serverutil.MinifyTemplate(gctemplates.ManageNameBans, data, buf, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_namebans.html").Caller().Send()
-		return "", errors.New("Error executing name ban management page template: " + err.Error())
-	}
-	return buf.String(), nil
-} */
 
 func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	ipQuery := request.FormValue("ip")
@@ -981,19 +896,6 @@ func registerModeratorPages() {
 			JSONoutput:  NoJSON,
 			Callback:    filtersCallback,
 		},
-		// Action{
-		// 	ID:          "filebans",
-		// 	Title:       "Filename and checksum bans",
-		// 	Permissions: ModPerms,
-		// 	JSONoutput:  OptionalJSON,
-		// 	Callback:    fileBansCallback,
-		// },
-		// Action{
-		// 	ID:          "namebans",
-		// 	Title:       "Name bans",
-		// 	Permissions: ModPerms,
-		// 	Callback:    nameBansCallback,
-		// },
 		Action{
 			ID:          "ipsearch",
 			Title:       "IP Search",

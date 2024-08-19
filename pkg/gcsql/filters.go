@@ -206,7 +206,9 @@ func (f *Filter) SetConditions(conditions ...FilterCondition) error {
 	if _, err = ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID); err != nil {
 		return err
 	}
-	for _, condition := range conditions {
+	for c, condition := range conditions {
+		conditions[c].FilterID = f.ID
+		condition.FilterID = f.ID
 		if err = condition.insert(ctx, tx); err != nil {
 			return err
 		}
@@ -520,4 +522,45 @@ func SetFilterActive(id int, active bool) error {
 func DeleteFilter(id int) error {
 	_, err := ExecTimeoutSQL(nil, `DELETE FROM DBPREFIXfilters WHERE id = ?`, id)
 	return err
+}
+
+// ApplyFilter inserts the given filter into the database if filter.ID == 0. Otherwise it updates the details, boards, and
+// filter conditions for the filter in the database with the given ID
+func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) error {
+	if filter == nil {
+		return errors.New("filter must not be null")
+	}
+	if len(conditions) == 0 {
+		return ErrNoConditions
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if filter.ID == 0 {
+		// new filter
+		if _, err = ExecContextSQL(ctx, tx,
+			`INSERT INTO DBPREFIXfilters (staff_id, staff_note, match_action, match_detail, is_active) VALUES (?, ?, ?, ?, TRUE)`,
+			filter.StaffID, filter.StaffNote, filter.MatchAction, filter.MatchDetail,
+		); err != nil {
+			return err
+		}
+
+		if err = QueryRowContextSQL(ctx, tx, `SELECT MAX(id) FROM DBPREFIXfilters`, nil, []any{&filter.ID}); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	if err = filter.SetConditions(conditions...); err != nil {
+		return err
+	}
+	return filter.SetBoardIDs(boards...)
 }
