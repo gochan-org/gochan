@@ -91,12 +91,11 @@ For wordfilters go <a href="{{webPath `/manage/wordfilters`}}">here</a>.
 		{{- end -}}
 	</select>
 	<select name="show" id="">
-		<option value="all" {{if or (eq $.show `all`) (eq $.show ``)}}selected{{end}}>All filters</option>
-		<option value="active" {{if eq $.show `active`}}selected{{end}}>Only active</option>
+		<option value="active" {{if or (eq $.show `active`) (eq $.show ``)}}selected{{end}}>Only active</option>
 		<option value="inactive" {{if eq $.show `inactive`}}selected{{end}}>Only inactive</option>
+		<option value="all" {{if eq $.show `all`}}selected{{end}}>All filters</option>
 	</select>
 	<input type="submit" value="Show">
-</form>
 </form>
 <table class="mgmt-table filterlist">
 	<colgroup>

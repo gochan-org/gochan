@@ -351,12 +351,12 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	showStr := request.FormValue("show")
 	var show gcsql.ActiveFilter
 	switch showStr {
-	case "active":
-		show = gcsql.OnlyActiveFilters
 	case "inactive":
 		show = gcsql.OnlyInactiveFilters
-	default:
+	case "all":
 		show = gcsql.AllFilters
+	default:
+		show = gcsql.OnlyActiveFilters
 	}
 	var filters []gcsql.Filter
 	boardSearch := request.FormValue("boardsearch")
