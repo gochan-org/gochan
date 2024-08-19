@@ -188,24 +188,19 @@ func (f *Filter) Conditions() ([]FilterCondition, error) {
 	return f.conditions, rows.Close()
 }
 
-// SetConditions replaces all current conditions associated with the filter and applies the given conditions.
-// It returns an error if no conditions are provided
-func (f *Filter) SetConditions(conditions ...FilterCondition) error {
-	if len(conditions) < 1 {
+func (f *Filter) setConditionsContext(ctx context.Context, tx *sql.Tx, conditions ...FilterCondition) error {
+	if f.ID == 0 {
+		return ErrInvalidFilter
+	}
+	if len(conditions) == 0 {
 		return ErrNoConditions
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
 
-	tx, err := BeginContextTx(ctx)
+	_, err := ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
 
-	if _, err = ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID); err != nil {
-		return err
-	}
 	for c, condition := range conditions {
 		conditions[c].FilterID = f.ID
 		condition.FilterID = f.ID
@@ -213,19 +208,58 @@ func (f *Filter) SetConditions(conditions ...FilterCondition) error {
 			return err
 		}
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
 	f.conditions = conditions
 	return nil
 }
 
-func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail string) error {
-	_, err := ExecTimeoutSQL(nil,
+// SetConditions replaces all current conditions associated with the filter and applies the given conditions.
+// It returns an error if no conditions are provided
+func (f *Filter) SetConditions(conditions ...FilterCondition) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = f.setConditionsContext(ctx, tx, conditions...); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (f *Filter) updateDetailsContext(ctx context.Context, tx *sql.Tx, staffNote string, matchAction string, matchDetail string) error {
+	_, err := ExecContextSQL(ctx, tx,
 		`UPDATE DBPREFIXfilters SET staff_note = ?, issued_at = ?, match_action = ?, match_detail = ? WHERE id = ?`,
 		staffNote, time.Now(), matchAction, matchDetail, f.ID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	f.StaffNote = staffNote
+	f.MatchAction = matchAction
+	f.MatchDetail = matchDetail
+	return nil
+}
+
+// UpdateDetails updates the filter's staff note, match action, and match detail (ban message, reject reason, etc)
+func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail string) error {
+	if f.ID == 0 {
+		return ErrInvalidFilter
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = f.updateDetailsContext(ctx, tx, staffNote, matchAction, matchDetail); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // BoardDirs returns an array of board directories associated with this filter
@@ -307,6 +341,21 @@ func (f *Filter) BoardIDs() ([]int, error) {
 	return ids, nil
 }
 
+func (f *Filter) setBoardIDsContext(ctx context.Context, tx *sql.Tx, ids ...int) error {
+	_, err := ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID)
+	if err != nil {
+		return err
+	}
+	for _, boardID := range ids {
+		if _, err = ExecContextSQL(ctx, tx,
+			`INSERT INTO DBPREFIXfilter_boards(filter_id, board_id) VALUES (?,?)`, f.ID, boardID,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // SetBoardIDs sets the board IDs to be associated with the filter. If no boards are used,
 // the filter will be applied to all boards
 func (f *Filter) SetBoardIDs(ids ...int) error {
@@ -318,16 +367,8 @@ func (f *Filter) SetBoardIDs(ids ...int) error {
 	}
 	defer tx.Rollback()
 
-	if _, err = ExecContextSQL(ctx, tx, `DELETE FROM DBPREFIXfilter_boards WHERE filter_id = ?`, f.ID); err != nil {
+	if err = f.setBoardIDsContext(ctx, tx, ids...); err != nil {
 		return err
-	}
-	for _, boardID := range ids {
-		if _, err = ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilter_boards(filter_id, board_id) VALUES (?,?)`,
-			f.ID, boardID,
-		); err != nil {
-			return err
-		}
 	}
 	return tx.Commit()
 }
@@ -487,6 +528,20 @@ func (fc *FilterCondition) testCondition(post *Post, upload *Upload, request *ht
 	return match, err
 }
 
+// CanDoRegex is a convenience function for templates. It returns true if the filter condition should show a regular expression
+// checkbox
+func (fc FilterCondition) CanDoRegex() bool {
+	return fc.HasSearchField() && (fc.Field == "name" || fc.Field == "trip" || fc.Field == "email" || fc.Field == "subject" ||
+		fc.Field == "body" || fc.Field == "filename" || fc.Field == "useragent")
+}
+
+// HasSearchField is a convenience function for templates. It returns true if the filter condition should show a search box
+func (fc FilterCondition) HasSearchField() bool {
+	return fc.Field != "firsttimeboard" && fc.Field != "notfirsttimeboard" && fc.Field != "firsttimesite" &&
+		fc.Field != "notfirsttimesite" && fc.Field != "isop" && fc.Field != "notop" && fc.Field != "hasfile" &&
+		fc.Field != "nofile"
+}
+
 // DoPostFiltering checks the filters against the given post. If a match is found, its respective action is taken and the filter
 // is returned. It logs any errors it receives and returns a sanitized error (if one occured) that can be shown to the end user
 func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, error) {
@@ -555,12 +610,15 @@ func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) err
 		if err = QueryRowContextSQL(ctx, tx, `SELECT MAX(id) FROM DBPREFIXfilters`, nil, []any{&filter.ID}); err != nil {
 			return err
 		}
+	} else {
+		filter.updateDetailsContext(ctx, tx, filter.StaffNote, filter.MatchAction, filter.MatchDetail)
 	}
-	if err = tx.Commit(); err != nil {
+
+	if err = filter.setConditionsContext(ctx, tx, conditions...); err != nil {
 		return err
 	}
-	if err = filter.SetConditions(conditions...); err != nil {
+	if err = filter.setBoardIDsContext(ctx, tx, boards...); err != nil {
 		return err
 	}
-	return filter.SetBoardIDs(boards...)
+	return tx.Commit()
 }

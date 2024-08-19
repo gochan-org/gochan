@@ -5,23 +5,23 @@
 			<th>Field/Condition:</th>
 			<td>
 				<select name="field{{.conditionNo}}" class="sel-field">
-					{{- range $_,$field := .fields}}<option value="{{$field.Value}}" {{if eq $field.Value $.condition.Field}}selected{{end}}>{{$field.Text}}</option>{{end -}}
+					{{- range $_,$field := .fields -}}
+						<option value="{{$field.Value}}" {{if eq $field.Value $.condition.Field}}selected{{end}}>{{$field.Text}}</option>
+					{{- end -}}
 				</select>
 			</td>
 		</tr>
-		<tr class="search-cndtn">
+		<tr class="search-cndtn" {{if not .condition.HasSearchField}}style="display:none"{{end}}>
 			<th>Search:</th>
 			<td><input type="text" name="search{{.conditionNo}}" value="{{.condition.Search}}"></td>
 		</tr>
-		<tr class="regex-cndtn">
+		<tr class="regex-cndtn" {{if not .condition.CanDoRegex}}style="display: none"{{end}}>
 			<th></th>
 			<td><label>Is regex <input type="checkbox" name="isregex{{.conditionNo}}" {{if .condition.IsRegex}}checked{{end}}/></label></td>
 		</tr>
 		<tr class="btns-cndtn">
 			<td></td>
-			<td>
-				<a href="#" class="rem-cndtn">Remove condition</a>
-			</td>
+			<td><a href="#" class="rem-cndtn">Remove condition</a></td>
 		</tr>
 	</table>
 </fieldset>
@@ -29,7 +29,7 @@
 
 <h2>{{if gt $.filter.ID 0}}Edit filter{{else}}New filter{{end}}</h2>
 <form id="filterform" action="{{webPath `/manage/filters`}}{{if gt $.filter.ID 0}}?edit={{.ID}}{{end}}" method="POST">
-	{{- if gt $.filter.ID 0}}<input type="hidden" name="filterid" value="{{.ID}}">{{end -}}
+	{{- if gt $.filter.ID 0}}<input type="hidden" name="filterid" value="{{$.filter.ID}}">{{end -}}
 	Filter conditions are checked against a post after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
 	The filter action will be executed only if all conditions are met. Tripcode searches do not include the prefix "!".
 	<table>
@@ -53,31 +53,37 @@
 			<th>Action</th>
 			<td>
 				<select name="action" id="action">
-					<option value="reject">Reject post</option>
-					<option value="ban">Ban IP</option>
-					<option value="log">Log match</option>
+					<option value="reject" {{if eq $.filter.MatchAction `reject`}}selected{{end}}>Reject post</option>
+					<option value="ban" {{if eq $.filter.MatchAction `ban`}}selected{{end}}>Ban IP</option>
+					<option value="log" {{if eq $.filter.MatchAction `log`}}selected{{end}}>Log match</option>
 				</select>
 			</td>
 		</tr>
 		<tr>
 			<th id="detail">Reason</th>
-			<td><textarea name="detail" rows="5" cols="35">{{if gt $.filter.ID 0}}{{.MatchDetail}}{{end}}</textarea></td>
+			<td><textarea name="detail" rows="5" cols="35">{{$.filter.MatchDetail}}</textarea></td>
 		</tr>
 		<tr>
 			<th id="note">Staff Note</th>
-			<td><textarea name="note" rows="5" cols="35">{{if gt $.filter.ID 0}}{{.StaffNote}}{{end}}</textarea></td>
+			<td><textarea name="note" rows="5" cols="35">{{$.filter.StaffNote}}</textarea></td>
 		</tr>
 		<tr>
 			<th>Board(s):</th>
 			<td id="boardslist">
 				If no boards are selected, the filter will be applied to all boards
 				{{- range $_,$board := .allBoards -}}
-					<label for="applyboard{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"></label>
+					<label for="applyboard{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"
+					{{- range $_,$boardID := $.filterBoards -}}
+						{{if eq $boardID $board.ID}}checked{{end}}
+					{{- end}}></label>
 				{{- end -}}
 			</td>
 		</tr>
 	</table>
 	<input type="submit" name="dofilter{{if gt $.filter.ID 0}}edit{{else}}add{{end}}" value="Submit Filter">
+	{{- if gt $.filter.ID 0 -}}
+		<input type="button" onclick="window.location='{{webPath `manage/filters`}}'" value="Cancel"/>
+	{{- end -}}
 </form>
 <hr/>
 <h2>Filter list</h2>

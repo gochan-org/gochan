@@ -252,9 +252,6 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 				errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter from ID")
 				return nil, err
 			}
-			if conditions, err = filter.Conditions(); err != nil {
-				errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter conditions list")
-			}
 		}
 
 		for k, v := range request.PostForm {
@@ -271,7 +268,6 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 				boardIDLogArr.Int(boardID)
 				boards = append(boards, boardID)
 			}
-			infoEv.Array("boardIDs", boardIDLogArr)
 
 			// set filter conditions
 			if strings.HasPrefix(k, "field") {
@@ -319,8 +315,10 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 				Msg("Unable to submit filter")
 			return nil, err
 		}
+		infoEv.Msg("Filter submitted")
 	}
 
+	data["filterBoards"] = make([]int, 0)
 	if editFilter := request.FormValue("edit"); editFilter != "" {
 		// user clicked on Edit link in filter row
 		filterID, err := strconv.Atoi(editFilter)
@@ -337,6 +335,10 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		if data["filterConditions"], err = filter.Conditions(); err != nil {
 			errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter conditions")
 			return nil, errors.New("unable to get filter conditions")
+		}
+		if data["filterBoards"], err = filter.BoardIDs(); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to get filter board IDs")
+			return nil, errors.New("unable to get filter board IDs")
 		}
 	} else {
 		// user loaded /manage/filters, populate single "default" condition
