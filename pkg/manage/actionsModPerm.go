@@ -377,6 +377,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	var staffUsernames []string
 
 	var conditionsText []string
+	var boardsText []string
 	for _, filter := range filters {
 		if _, ok := filterActionsMap[filter.MatchAction]; !ok {
 			return nil, gcsql.ErrInvalidMatchAction
@@ -398,6 +399,12 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		filterConditionsText = strings.TrimRight(filterConditionsText, ",")
 		conditionsText = append(conditionsText, filterConditionsText)
 
+		boards, err := filter.BoardDirs()
+		if err != nil {
+			return nil, err
+		}
+		boardsText = append(boardsText, strings.Join(boards, ","))
+
 		username, err := gcsql.GetStaffUsernameFromID(*filter.StaffID)
 		if err != nil {
 			return nil, err
@@ -407,6 +414,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 	data["filters"] = filters
 	data["conditions"] = conditionsText
+	data["filterTableBoards"] = boardsText
 	data["staff"] = staffUsernames
 	data["show"] = showStr
 	data["boardSearch"] = boardSearch

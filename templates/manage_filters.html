@@ -102,19 +102,22 @@ For wordfilters go <a href="{{webPath `/manage/wordfilters`}}">here</a>.
 		<col class="row-actions">
 		<col class="filter-action">
 		<col class="filter-conditions">
+		<col class="staff-boards">
 		<col class="staff-note">
 		<col class="row-staff">
 		<col class="is-active">
 		<col class="row-date">
 	</colgroup>
 	<tr>
-		<th>Actions</th><th>Filter action</th><th>Conditions</th><th>Staff note</th><th>Staff</th><th>Is active</th><th>Last modified</th>
+		<th>Actions</th><th>Filter action</th><th>Conditions</th><th>Boards</th><th>Staff note</th><th>Staff</th><th>Is active</th><th>Last modified</th>
 	</tr>
 	{{- range $f, $filter := $.filters -}}
+	{{$boardsCell := index $.filterTableBoards $f}}
 	<tr>
 		<td><a href="{{webPath `/manage/filters`}}?edit={{$filter.ID}}">Edit</a> | <a href="{{webPath `/manage/filters`}}?{{if $filter.IsActive}}disable{{else}}enable{{end}}={{$filter.ID}}">{{if $filter.IsActive}}Disable{{else}}Enable{{end}}</a></td>
 		<td>{{index $.actions $filter.MatchAction}}</td>
 		<td>{{index $.conditions $f}}</td>
+		<td>{{if eq $boardsCell ""}}<i>all boards</i>{{else}}{{$boardsCell}}{{end}}</td>
 		<td>{{$filter.StaffNote}}</td>
 		<td>{{index $.staff $f}}</td>
 		<td>{{$filter.IsActive}}</td>
