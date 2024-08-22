@@ -244,22 +244,6 @@ CREATE TABLE DBPREFIXreports_audit(
 		FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id) ON DELETE CASCADE
 );
 
-CREATE TABLE DBPREFIXfile_ban(
-	id BIGSERIAL PRIMARY KEY,
-	board_id BIGINT,
-	staff_id BIGINT NOT NULL,
-	staff_note VARCHAR(255) NOT NULL,
-	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	checksum TEXT NOT NULL,
-	fingerprinter VARCHAR(64),
-	ban_ip BOOL NOT NULL,
-	ban_ip_message TEXT,
-	CONSTRAINT file_ban_board_id_fk
-		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
-	CONSTRAINT file_ban_staff_id_fk
-		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
-);
-
 CREATE TABLE DBPREFIXfilters(
 	id BIGSERIAL PRIMARY KEY,
 	staff_id BIGINT,
@@ -300,7 +284,7 @@ CREATE TABLE DBPREFIXfilter_conditions(
 CREATE TABLE DBPREFIXfilter_hits(
 	id BIGSERIAL PRIMARY KEY,
 	filter_id BIGINT NOT NULL,
-	post_data TEXT,
+	post_data TEXT NOT NULL,
 	match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT filter_hits_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)

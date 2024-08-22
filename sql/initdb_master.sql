@@ -244,22 +244,6 @@ CREATE TABLE DBPREFIXreports_audit(
 		FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id) ON DELETE CASCADE
 );
 
-CREATE TABLE DBPREFIXfile_ban(
-	id {serial pk},
-	board_id {fk to serial},
-	staff_id {fk to serial} NOT NULL,
-	staff_note VARCHAR(255) NOT NULL,
-	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	checksum TEXT NOT NULL,
-	fingerprinter VARCHAR(64),
-	ban_ip BOOL NOT NULL,
-	ban_ip_message TEXT,
-	CONSTRAINT file_ban_board_id_fk
-		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
-	CONSTRAINT file_ban_staff_id_fk
-		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
-);
-
 CREATE TABLE DBPREFIXfilters(
 	id {serial pk},
 	staff_id {fk to serial},
