@@ -95,13 +95,15 @@ func getFiltersByBoardDir(dir string, includeAllBoards bool, activeFilter Boolea
 		query += activeFilter.whereClause("is_active", true)
 		params = []any{}
 	} else {
-		query += ` AND dir = ?`
 		if includeAllBoards {
-			query += " OR board_id IS NULL"
+			query += " AND (dir = ? OR board_id IS NULL)"
+		} else {
+			query += ` AND dir = ?`
 		}
 		query += activeFilter.whereClause("is_active", true)
 		params = []any{dir}
 	}
+
 	rows, cancel, err := QueryTimeoutSQL(nil, query, params...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
