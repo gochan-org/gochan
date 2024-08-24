@@ -545,7 +545,7 @@ func (fc FilterCondition) HasSearchField() bool {
 // DoPostFiltering checks the filters against the given post. If a match is found, its respective action is taken and the filter
 // is returned. It logs any errors it receives and returns a sanitized error (if one occured) that can be shown to the end user
 func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, error) {
-	filters, err := GetFiltersByBoardID(post.ID, true, OnlyActiveFilters)
+	filters, err := GetFiltersByBoardID(boardID, true, OnlyActiveFilters)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get filter list")
 		return nil, errors.New("unable to get post filter list")

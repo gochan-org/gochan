@@ -380,7 +380,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if filter != nil {
-		infoEv.Int("filterID", filter.ID).Msg("Found a matching filter")
+		if filter.MatchAction != "ban" {
+			// if the filter bans the user, it will be logged
+			gcutil.LogWarning().Int("filterID", filter.ID).Msg("Post filtered")
+		}
 		os.Remove(filePath)
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
