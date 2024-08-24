@@ -53,72 +53,53 @@ type Board struct {
 	EnableCatalog    bool      // sql: enable_catalog
 }
 
-// Deprecated, use PostFilter instead, with a condition field = "checksum" if Fingerprinter is nil
-// or "ahash" otherwise.
-// FileBan contains the information associated with a specific file ban.
-type FileBan struct {
-	ID            int       // sql: id
-	BoardID       *int      // sql: board_id
-	StaffID       int       // sql: staff_id
-	StaffNote     string    // sql: staff_note
-	IssuedAt      time.Time // sql: issued_at
-	Checksum      string    // sql: checksum
-	Fingerprinter *string   // sql: fingerprinter
-	BanIP         bool      // sql: ban_ip
-	BanIPMessage  *string   // sql: ban_ip_message
-}
+// // Deprecated, use PostFilter instead, with a condition field = "checksum" if Fingerprinter is nil
+// // or "ahash" otherwise.
+// // FileBan contains the information associated with a specific file ban.
+// type FileBan struct {
+// 	ID            int       // sql: id
+// 	BoardID       *int      // sql: board_id
+// 	StaffID       int       // sql: staff_id
+// 	StaffNote     string    // sql: staff_note
+// 	IssuedAt      time.Time // sql: issued_at
+// 	Checksum      string    // sql: checksum
+// 	Fingerprinter *string   // sql: fingerprinter
+// 	BanIP         bool      // sql: ban_ip
+// 	BanIPMessage  *string   // sql: ban_ip_message
+// }
 
-// ApplyIPBan bans the given IP if it posted a banned image
-// If BanIP is false, it returns with no error
-func (fb *FileBan) ApplyIPBan(postIP string) error {
-	if !fb.BanIP {
-		return nil
-	}
-	now := time.Now()
-	ipBan := &IPBan{
-		RangeStart: postIP,
-		RangeEnd:   postIP,
-		IssuedAt:   now,
-	}
-	ipBan.IsActive = true
-	ipBan.CanAppeal = true
-	ipBan.AppealAt = now
-	ipBan.StaffID = fb.StaffID
-	ipBan.Permanent = true
-	if fb.BoardID != nil {
-		ipBan.BoardID = new(int)
-		*ipBan.BoardID = *fb.BoardID
-	}
-	if fb.BanIPMessage == nil {
-		ipBan.Message = "posting disallowed image, resulting in ban"
-	} else {
-		ipBan.Message = *fb.BanIPMessage
-	}
-	if fb.StaffNote == "" {
-		ipBan.StaffNote = "fingerprint"
-	}
+// // ApplyIPBan bans the given IP if it posted a banned image
+// // If BanIP is false, it returns with no error
+// func (fb *FileBan) ApplyIPBan(postIP string) error {
+// 	if !fb.BanIP {
+// 		return nil
+// 	}
+// 	now := time.Now()
+// 	ipBan := &IPBan{
+// 		RangeStart: postIP,
+// 		RangeEnd:   postIP,
+// 		IssuedAt:   now,
+// 	}
+// 	ipBan.IsActive = true
+// 	ipBan.CanAppeal = true
+// 	ipBan.AppealAt = now
+// 	ipBan.StaffID = fb.StaffID
+// 	ipBan.Permanent = true
+// 	if fb.BoardID != nil {
+// 		ipBan.BoardID = new(int)
+// 		*ipBan.BoardID = *fb.BoardID
+// 	}
+// 	if fb.BanIPMessage == nil {
+// 		ipBan.Message = "posting disallowed image, resulting in ban"
+// 	} else {
+// 		ipBan.Message = *fb.BanIPMessage
+// 	}
+// 	if fb.StaffNote == "" {
+// 		ipBan.StaffNote = "fingerprint"
+// 	}
 
-	return NewIPBan(ipBan)
-}
-
-// Deprecated, use PostFilter instead
-type filenameOrUsernameBanBase struct {
-	ID        int       // sql: id
-	BoardID   *int      // sql: board_id
-	StaffID   int       // sql: staff_id
-	StaffNote string    // sql: staff_note
-	IssuedAt  time.Time // sql: issued_at
-	check     string    // replaced with username or filename
-	IsRegex   bool      // sql: is_regex
-}
-
-// Deprecated, use PostFilter instead, with a condition field = "filename"
-// FilenameBan represents a ban on a specific filename or filename regular expression.
-type FilenameBan struct {
-	filenameOrUsernameBanBase
-	Filename string // sql: `filename`
-	IsRegex  bool   // sql: `is_regex`
-}
+// 	return NewIPBan(ipBan)
+// }
 
 // Filter represents an entry in gochan's new filter system which merges username bans, file bans, and filename bans,
 // and will allow moderators to block posts based on the user's name, email, subject, message content, and other fields.
@@ -137,17 +118,17 @@ type Filter struct {
 // FilterCondition represents a condition to be checked against when a post is submitted
 // table: DBPREFIXfilter_conditions
 type FilterCondition struct {
-	ID       int    // sql: id
-	FilterID int    // sql: filter_id
-	IsRegex  bool   // sql: is_regex
-	Search   string // sql: search
-	Field    string // sql: field
+	ID        int             // sql: id
+	FilterID  int             // sql: filter_id
+	MatchMode StringMatchMode // sql: match_mode
+	Search    string          // sql: search
+	Field     string          // sql: field
 }
 
 func (fc *FilterCondition) insert(ctx context.Context, tx *sql.Tx) error {
 	_, err := ExecContextSQL(ctx, tx,
-		`INSERT INTO DBPREFIXfilter_conditions(filter_id, is_regex, search, field) VALUES(?,?,?,?)`,
-		fc.FilterID, fc.IsRegex, fc.Search, fc.Field,
+		`INSERT INTO DBPREFIXfilter_conditions(filter_id, match_mode, search, field) VALUES(?,?,?,?)`,
+		fc.FilterID, fc.MatchMode, fc.Search, fc.Field,
 	)
 	return err
 }
@@ -338,12 +319,6 @@ type Thread struct {
 	LastBump  time.Time // sql: `last_bump`
 	DeletedAt time.Time // sql: `deleted_at`
 	IsDeleted bool      // sql: `is_deleted`
-}
-
-// Deprecated, use PostFilter instead, and a FilterCondition with Field = "name"
-type UsernameBan struct {
-	filenameOrUsernameBanBase
-	Username string // sql: `username`
 }
 
 // Wordfilter is used for filters that are expected to have a single FilterCondition and a "replace" MatchAction

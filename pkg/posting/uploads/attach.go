@@ -1,7 +1,6 @@
 package uploads
 
 import (
-	"bytes"
 	"crypto/md5"
 	"errors"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/disintegration/imaging"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -96,11 +94,11 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		return nil, ErrUnsupportedFileExt
 	}
 
-	if err = CheckFilenameBan(upload, post, postBoard); err != nil {
-		// If checkFilenameBan returns true, an error occured or the file was
-		// rejected for having a banned filename, and the incident was logged either way
-		return nil, err
-	}
+	// if err = CheckFilenameBan(upload, post, postBoard); err != nil {
+	// 	// If checkFilenameBan returns true, an error occured or the file was
+	// 	// rejected for having a banned filename, and the incident was logged either way
+	// 	return nil, err
+	// }
 
 	data, err := io.ReadAll(file)
 	if err != nil {
@@ -111,11 +109,11 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	// Calculate image checksum
 	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data)) // skipcq: GSC-G401
-	if err = CheckFileChecksumBan(upload, post, postBoard); err != nil {
-		// If CheckFileChecksumBan returns a non-nil error, an error occured or the file was
-		// rejected for having a banned checksum, and the incident was logged either way
-		return nil, err
-	}
+	// if err = CheckFileChecksumBan(upload, post, postBoard); err != nil {
+	// 	// If CheckFileChecksumBan returns a non-nil error, an error occured or the file was
+	// 	// rejected for having a banned checksum, and the incident was logged either way
+	// 	return nil, err
+	// }
 
 	ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
 	upload.Filename = getNewFilename() + ext
@@ -132,25 +130,25 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		errEv.Str("catalogThumbPath", catalogThumbPath)
 	}
 
-	if IsImage(filePath) {
-		img, err := imaging.Decode(bytes.NewReader(data))
-		if err != nil {
-			errEv.Err(err).Caller().Msg("unable to decode file")
-			return nil, errors.New("unable to decode image")
-		}
-		fileBan, err := checkImageFingerprintBan(img, postBoard.Dir)
-		if err != nil {
-			errEv.Err(err).Caller().Msg("unable to fingerprint image")
-			return nil, err
-		}
-		if fileBan != nil {
-			// image is fingerprint-banned
-			if err = fileBan.ApplyIPBan(post.IP); err != nil {
-				errEv.Err(err).Caller().Msg("unable to apply IP ban")
-			}
-			return nil, ErrFileNotAllowed
-		}
-	}
+	// if IsImage(filePath) {
+	// 	img, err := imaging.Decode(bytes.NewReader(data))
+	// 	if err != nil {
+	// 		errEv.Err(err).Caller().Msg("unable to decode file")
+	// 		return nil, errors.New("unable to decode image")
+	// 	}
+	// 	fileBan, err := checkImageFingerprintBan(img, postBoard.Dir)
+	// 	if err != nil {
+	// 		errEv.Err(err).Caller().Msg("unable to fingerprint image")
+	// 		return nil, err
+	// 	}
+	// 	if fileBan != nil {
+	// 		// image is fingerprint-banned
+	// 		if err = fileBan.ApplyIPBan(post.IP); err != nil {
+	// 			errEv.Err(err).Caller().Msg("unable to apply IP ban")
+	// 		}
+	// 		return nil, ErrFileNotAllowed
+	// 	}
+	// }
 
 	if err = os.WriteFile(filePath, data, config.NormalFileMode); err != nil {
 		errEv.Err(err).Caller().Send()
@@ -188,20 +186,20 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		return nil, errors.New("error processing upload: " + err.Error())
 	}
 
-	if IsVideo(filePath) && config.GetSiteConfig().FingerprintVideoThumbnails {
-		fileBan, err := checkFileFingerprintBan(thumbPath, postBoard.Dir)
-		if err != nil {
-			errEv.Err(err).Caller().Msg("unable to check video thumbnail ban")
-			return nil, err
-		}
-		if fileBan != nil {
-			// video thumbnail is fingerprint-banned
-			if err = fileBan.ApplyIPBan(post.IP); err != nil {
-				errEv.Err(err).Caller().Msg("unable to apply IP ban")
-			}
-			return nil, ErrFileNotAllowed
-		}
-	}
+	// if IsVideo(filePath) && config.GetSiteConfig().FingerprintVideoThumbnails {
+	// 	fileBan, err := checkFileFingerprintBan(thumbPath, postBoard.Dir)
+	// 	if err != nil {
+	// 		errEv.Err(err).Caller().Msg("unable to check video thumbnail ban")
+	// 		return nil, err
+	// 	}
+	// 	if fileBan != nil {
+	// 		// video thumbnail is fingerprint-banned
+	// 		if err = fileBan.ApplyIPBan(post.IP); err != nil {
+	// 			errEv.Err(err).Caller().Msg("unable to apply IP ban")
+	// 		}
+	// 		return nil, ErrFileNotAllowed
+	// 	}
+	// }
 
 	accessEv.Send()
 	return upload, nil

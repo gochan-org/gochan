@@ -97,14 +97,21 @@ func firstPost(post *Post, global bool) (bool, error) {
 }
 
 func matchString(fc *FilterCondition, checkStr string) (bool, error) {
-	if fc.IsRegex {
+	switch fc.MatchMode {
+	case SubstrMatch:
+		return strings.Contains(checkStr, fc.Search), nil
+	case SubstrMatchCaseInsensitive:
+		return strings.Contains(strings.ToLower(checkStr), strings.ToLower(fc.Search)), nil
+	case RegexMatch:
 		re, err := regexp.Compile(fc.Search)
 		if err != nil {
 			return false, err
 		}
 		return re.MatchString(checkStr), nil
+	case ExactMatch:
+		return checkStr == fc.Search, nil
 	}
-	return strings.Contains(checkStr, fc.Search), nil
+	return false, ErrInvalidStringMatchMode
 }
 
 func init() {
@@ -118,7 +125,7 @@ func init() {
 		"trip": &conditionHandler{
 			fieldType: StringField,
 			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
-				return matchString(fc, p.Name)
+				return matchString(fc, p.Tripcode)
 			},
 		},
 		"email": &conditionHandler{

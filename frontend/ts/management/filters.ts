@@ -26,7 +26,7 @@ function onFieldChange(e:JQuery.ChangeEvent) {
 	const isBoolean = e.target.value === "firsttimeboard" || e.target.value === "notfirsttimeboard" ||
 		e.target.value === "firsttimesite" || e.target.value === "notfirsttimesite" || e.target.value === "isop" ||
 		e.target.value === "notop" || e.target.value === "hasfile" || e.target.value === "nofile";
-	const noRegex = isBoolean || e.target.value === "checksum" || e.target.value === "ahash";
+	const noMatchMode = isBoolean || e.target.value === "checksum" || e.target.value === "ahash";
 	const $searchContainer = $fieldset.find("tr.search-cndtn");
 	if(isBoolean) {
 		$searchContainer.hide();
@@ -34,10 +34,10 @@ function onFieldChange(e:JQuery.ChangeEvent) {
 		$searchContainer.show();
 	}
 
-	if(noRegex) {
-		$fieldset.find(".regex-cndtn").hide();
+	if(noMatchMode) {
+		$fieldset.find(".strmatch-cndtn").hide();
 	} else {
-		$fieldset.find(".regex-cndtn").show();
+		$fieldset.find(".strmatch-cndtn").show();
 	}
 }
 

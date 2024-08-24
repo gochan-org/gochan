@@ -272,7 +272,7 @@ CREATE TABLE DBPREFIXfilter_boards(
 CREATE TABLE DBPREFIXfilter_conditions(
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	filter_id BIGINT NOT NULL,
-	is_regex SMALLINT NOT NULL,
+	match_mode SMALLINT NOT NULL,
 	search VARCHAR(75) NOT NULL,
 	field VARCHAR(75) NOT NULL,
 	CONSTRAINT filter_conditions_filter_id_fk

@@ -13,23 +13,26 @@ import (
 )
 
 const (
-	AllFilters ActiveFilter = iota
-	OnlyActiveFilters
-	OnlyInactiveFilters
-)
-const (
-	onlyWordfilters wordFilterFilter = iota
-	onlyNonWordfilters
+	// SubstrMatch represents a condition that checks if the field condtains a string, case sensitive
+	SubstrMatch StringMatchMode = iota
+	// SubstrMatchCaseInsensitive represents a condition that checks if the field condtains a string, not case sensitive
+	SubstrMatchCaseInsensitive
+	// RegexMatch represents a condition that checks if the field matches a regular expression
+	RegexMatch
+	// ExactMatch represents a condition that checks if the field exactly matches string
+	ExactMatch
 )
 
 var (
-	ErrInvalidConditionField = errors.New("unrecognized filter condition field")
-	ErrInvalidMatchAction    = errors.New("unrecognized filter match action")
-	ErrInvalidFilter         = errors.New("unrecognized filter id")
-	ErrNoConditions          = errors.New("error has no match conditions")
+	ErrInvalidStringMatchMode = errors.New("invalid string match mode")
+	ErrInvalidConditionField  = errors.New("unrecognized filter condition field")
+	ErrInvalidMatchAction     = errors.New("unrecognized filter match action")
+	ErrInvalidFilter          = errors.New("unrecognized filter id")
+	ErrNoConditions           = errors.New("error has no match conditions")
 )
 
-type wordFilterFilter int
+// StringMatchMode is used when matching a string, determining how it should be checked (substring, regex, or exact match)
+type StringMatchMode int
 
 // GetFilterByID returns the filter with the given ID, and an error if one occured
 func GetFilterByID(id int) (*Filter, error) {
@@ -48,10 +51,10 @@ func GetFilterByID(id int) (*Filter, error) {
 
 // GetAllFilters returns an array of all post filters, and an error if one occured. It can optionally return only the active or
 // only the inactive filters (or return all)
-func GetAllFilters(show ActiveFilter) ([]Filter, error) {
+func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
 	query := `SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters
-		WHERE match_action <> 'replace'` + show.whereClause(true)
+		WHERE match_action <> 'replace'` + activeFilter.whereClause("is_active", true)
 	rows, cancel, err := QueryTimeoutSQL(nil, query)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -75,29 +78,28 @@ func GetAllFilters(show ActiveFilter) ([]Filter, error) {
 	return filters, rows.Close()
 }
 
-func getFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter, filterWordFilters wordFilterFilter) ([]Filter, error) {
+func getFiltersByBoardDir(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
 	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters
 		LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
 		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
 
-	switch filterWordFilters {
-	case onlyWordfilters:
+	if useWordFilters {
 		query += ` WHERE match_action = 'replace'`
-	case onlyNonWordfilters:
+	} else {
 		query += ` WHERE match_action <> 'replace'`
 	}
 
 	var params []any
 	if dir == "" {
-		query += show.whereClause(true)
+		query += activeFilter.whereClause("is_active", true)
 		params = []any{}
 	} else {
 		query += ` AND dir = ?`
 		if includeAllBoards {
 			query += " OR board_id IS NULL"
 		}
-		query += show.whereClause(true)
+		query += activeFilter.whereClause("is_active", true)
 		params = []any{dir}
 	}
 	rows, cancel, err := QueryTimeoutSQL(nil, query, params...)
@@ -126,21 +128,23 @@ func getFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter, 
 // GetFiltersByBoardDir returns the filters associated with the given board dir, optionally including filters
 // not associated with a specific board. It can optionally return only the active or only the inactive filters
 // (or return all)
-func GetFiltersByBoardDir(dir string, includeAllBoards bool, show ActiveFilter) ([]Filter, error) {
-	return getFiltersByBoardDir(dir, includeAllBoards, show, onlyNonWordfilters)
+func GetFiltersByBoardDir(dir string, includeAllBoards bool, show BooleanFilter) ([]Filter, error) {
+	return getFiltersByBoardDir(dir, includeAllBoards, show, false)
 }
 
 // GetFiltersByBoardID returns an array of post filters associated to the given board ID, including
 // filters set to "All boards" if includeAllBoards is true. It can optionally return only the active or
 // only the inactive filters (or return all)
-func GetFiltersByBoardID(boardID int, includeAllBoards bool, show ActiveFilter) ([]Filter, error) {
+func GetFiltersByBoardID(boardID int, includeAllBoards bool, activeFilter BooleanFilter) ([]Filter, error) {
 	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		WHERE match_action <> 'replace' AND board_id = ?`
+		WHERE match_action <> 'replace' AND`
 	if includeAllBoards {
-		query += " OR board_id IS NULL"
+		query += " (board_id = ? OR board_id IS NULL) "
+	} else {
+		query += " board_id = ? "
 	}
-	query += show.whereClause(true)
+	query += activeFilter.whereClause("is_active", true)
 
 	rows, cancel, err := QueryTimeoutSQL(nil, query, boardID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -170,7 +174,7 @@ func (f *Filter) Conditions() ([]FilterCondition, error) {
 	if len(f.conditions) > 0 {
 		return f.conditions, nil
 	}
-	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT id, filter_id, is_regex, search, field FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID)
+	rows, cancel, err := QueryTimeoutSQL(nil, `SELECT id, filter_id, match_mode, search, field FROM DBPREFIXfilter_conditions WHERE filter_id = ?`, f.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +184,7 @@ func (f *Filter) Conditions() ([]FilterCondition, error) {
 	}()
 	for rows.Next() {
 		var condition FilterCondition
-		if err = rows.Scan(&condition.ID, &condition.FilterID, &condition.IsRegex, &condition.Search, &condition.Field); err != nil {
+		if err = rows.Scan(&condition.ID, &condition.FilterID, &condition.MatchMode, &condition.Search, &condition.Field); err != nil {
 			return nil, err
 		}
 		f.conditions = append(f.conditions, condition)
@@ -528,11 +532,9 @@ func (fc *FilterCondition) testCondition(post *Post, upload *Upload, request *ht
 	return match, err
 }
 
-// CanDoRegex is a convenience function for templates. It returns true if the filter condition should show a regular expression
-// checkbox
-func (fc FilterCondition) CanDoRegex() bool {
-	return fc.HasSearchField() && (fc.Field == "name" || fc.Field == "trip" || fc.Field == "email" || fc.Field == "subject" ||
-		fc.Field == "body" || fc.Field == "filename" || fc.Field == "useragent")
+// ShowStringMatchOptions is a convenience function for templates.
+func (fc FilterCondition) ShowStringMatchOptions() bool {
+	return fc.HasSearchField() && fc.Field != "checksum" && fc.Field != "ahash"
 }
 
 // HasSearchField is a convenience function for templates. It returns true if the filter condition should show a search box
@@ -545,7 +547,7 @@ func (fc FilterCondition) HasSearchField() bool {
 // DoPostFiltering checks the filters against the given post. If a match is found, its respective action is taken and the filter
 // is returned. It logs any errors it receives and returns a sanitized error (if one occured) that can be shown to the end user
 func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, error) {
-	filters, err := GetFiltersByBoardID(boardID, true, OnlyActiveFilters)
+	filters, err := GetFiltersByBoardID(boardID, true, OnlyTrue)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get filter list")
 		return nil, errors.New("unable to get post filter list")

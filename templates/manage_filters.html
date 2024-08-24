@@ -15,9 +15,14 @@
 			<th>Search:</th>
 			<td><input type="text" name="search{{.conditionNo}}" value="{{.condition.Search}}"></td>
 		</tr>
-		<tr class="regex-cndtn" {{if not .condition.CanDoRegex}}style="display: none"{{end}}>
-			<th></th>
-			<td><label>Is regex <input type="checkbox" name="isregex{{.conditionNo}}" {{if .condition.IsRegex}}checked{{end}}/></label></td>
+		<tr class="strmatch-cndtn" {{if not .condition.ShowStringMatchOptions}}style="display: none"{{end}}>
+			<th>Match mode</th>
+			<td><select name="matchmode{{.conditionNo}}">
+				<option value="substr" {{if eq .condition.MatchMode 0}}selected{{end}}>Substring (case sensitive)</option>
+				<option value="substrci" {{if eq .condition.MatchMode 1}}selected{{end}}>Substring (not case sensitive)</option>
+				<option value="regex" {{if eq .condition.MatchMode 2}}selected{{end}}>Regular expression</option>
+				<option value="exact" {{if eq .condition.MatchMode 3}}selected{{end}}>Exact match</option>
+			</select></td>
 		</tr>
 		<tr class="btns-cndtn">
 			<td></td>

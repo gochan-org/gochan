@@ -95,7 +95,7 @@ func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *confi
 			field = "checksum"
 		}
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilter_conditions(filter_id,is_regex,search,field) VALUES(?,?,?,?)`, filterID, false, fBanChecksum, field,
+			`INSERT INTO DBPREFIXfilter_conditions(filter_id,match_mode,search,field) VALUES(?,?,?,?)`, filterID, gcsql.ExactMatch, fBanChecksum, field,
 		); err != nil {
 			return err
 		}
@@ -104,7 +104,7 @@ func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *confi
 }
 
 func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *config.SQLConfig) error {
-	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,filename,is_regex FROM DBPREFIXfilename_ban`)
+	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,filename,match_mode FROM DBPREFIXfilename_ban`)
 	if err != nil {
 		return err
 	}
@@ -117,6 +117,7 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 	var fnBanFilename string
 	var fnBanIsRegex bool
 	var filterID int
+	var matchMode gcsql.StringMatchMode
 	for rows.Next() {
 		if err = rows.Scan(
 			&fnBanBoardID, &fnBanStaffID, &fnBanStaffNote, &fnBanIssuedAt, &fnBanFilename, &fnBanIsRegex,
@@ -138,9 +139,14 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 			}
 		}
 
+		if fnBanIsRegex {
+			matchMode = gcsql.RegexMatch
+		} else {
+			matchMode = gcsql.SubstrMatch
+		}
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilter_conditions(filter_id,is_regex,search,field) VALUES(?,?,?,?)`,
-			filterID, fnBanIsRegex, fnBanFilename, "filename",
+			`INSERT INTO DBPREFIXfilter_conditions(filter_id,match_mode,search,field) VALUES(?,?,?,?)`,
+			filterID, matchMode, fnBanFilename, "filename",
 		); err != nil {
 			return err
 		}
@@ -162,6 +168,7 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 	var unBanUsername string
 	var unBanIsRegex bool
 	var filterID int
+	var matchMode gcsql.StringMatchMode
 	for rows.Next() {
 		if err = rows.Scan(
 			&unBanBoardID, &unBanStaffID, &unBanStaffNote, &unBanIssuedAt, &unBanUsername, &unBanIsRegex,
@@ -183,10 +190,14 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 				return err
 			}
 		}
-
+		if unBanIsRegex {
+			matchMode = gcsql.RegexMatch
+		} else {
+			matchMode = gcsql.SubstrMatch
+		}
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilter_conditions(filter_id,is_regex,search,field) VALUES(?,?,?,?)`,
-			filterID, unBanIsRegex, unBanUsername, "name",
+			`INSERT INTO DBPREFIXfilter_conditions(filter_id,match_mode,search,field) VALUES(?,?,?,?)`,
+			filterID, matchMode, unBanUsername, "name",
 		); err != nil {
 			return err
 		}
@@ -196,7 +207,7 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 }
 
 func MigrateWordfilters(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
-	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters`)
+	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_dirs, staff_id, staff_note, issued_at, search, match_mode, change_to FROM DBPREFIXwordfilters`)
 	if err != nil {
 		return err
 	}
@@ -212,6 +223,7 @@ func MigrateWordfilters(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConf
 	var isRegex bool
 	var changeTo string
 	var filterID int
+	var matchMode gcsql.StringMatchMode
 	for rows.Next() {
 		if err = rows.Scan(&boardDirsPtr, &staffID, &staffNote, &issuedAt, &search, &isRegex, &changeTo); err != nil {
 			return err
@@ -250,9 +262,14 @@ func MigrateWordfilters(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConf
 				}
 			}
 		}
+		if isRegex {
+			matchMode = gcsql.RegexMatch
+		} else {
+			matchMode = gcsql.SubstrMatch
+		}
 
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilter_conditions(filter_id, is_regex, search, field) VALUES(?,?,?,'body')`, filterID, isRegex, search,
+			`INSERT INTO DBPREFIXfilter_conditions(filter_id, match_mode, search, field) VALUES(?,?,?,'body')`, filterID, matchMode, search,
 		); err != nil {
 			return err
 		}

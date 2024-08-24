@@ -11,6 +11,14 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 )
 
+const (
+	TrueOrFalse BooleanFilter = iota
+	OnlyTrue
+	OnlyFalse
+)
+
+const ()
+
 var (
 	dateTimeFormats = []string{
 		"2006-01-02 15:04:05",
@@ -20,19 +28,19 @@ var (
 	ErrNotConnected  = errors.New("error connecting to database")
 )
 
-// ActiveFilter is used for optionally limiting the results of tables with an is_active column to
-type ActiveFilter int
+// BooleanFilter is used for optionally limiting results to true, false, or both
+type BooleanFilter int
 
 // whereClause returns part of the where clause of a SQL string. If and is true, it starts with AND, otherwise it starts with WHERE
-func (af ActiveFilter) whereClause(and bool) string {
+func (af BooleanFilter) whereClause(columnName string, and bool) string {
 	out := " WHERE "
 	if and {
 		out = " AND "
 	}
-	if af == OnlyActiveFilters {
-		return out + "is_active = TRUE"
-	} else if af == OnlyInactiveFilters {
-		return out + "is_active = FALSE"
+	if af == OnlyTrue {
+		return out + columnName + " = TRUE"
+	} else if af == OnlyFalse {
+		return out + columnName + " = FALSE"
 	}
 	return ""
 }

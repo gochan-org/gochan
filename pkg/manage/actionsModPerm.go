@@ -277,8 +277,19 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 					return nil, errors.New("failed to get field data: " + err.Error())
 				}
 				fc := gcsql.FilterCondition{
-					Field:   v[0],
-					IsRegex: request.PostFormValue("isregex"+fieldIDstr) == "on",
+					Field: v[0],
+				}
+				switch request.PostFormValue("matchmode" + fieldIDstr) {
+				case "substr":
+					fc.MatchMode = gcsql.SubstrMatch
+				case "substrci":
+					fc.MatchMode = gcsql.SubstrMatchCaseInsensitive
+				case "regex":
+					fc.MatchMode = gcsql.RegexMatch
+				case "exact":
+					fc.MatchMode = gcsql.ExactMatch
+				default:
+					return nil, gcsql.ErrInvalidStringMatchMode
 				}
 				var validField bool
 				for _, field := range filterFields {
@@ -351,14 +362,14 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 
 	showStr := request.FormValue("show")
-	var show gcsql.ActiveFilter
+	var show gcsql.BooleanFilter
 	switch showStr {
 	case "inactive":
-		show = gcsql.OnlyInactiveFilters
+		show = gcsql.OnlyFalse
 	case "all":
-		show = gcsql.AllFilters
+		show = gcsql.TrueOrFalse
 	default:
-		show = gcsql.OnlyActiveFilters
+		show = gcsql.OnlyTrue
 	}
 	var filters []gcsql.Filter
 	boardSearch := request.FormValue("boardsearch")
@@ -812,6 +823,11 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 	searchFor := request.PostFormValue("searchfor")
 	replaceWith := request.PostFormValue("replace")
 	isRegex := request.PostFormValue("isregex") == "on"
+	matchMode := gcsql.SubstrMatch
+	if isRegex {
+		matchMode = gcsql.RegexMatch
+	}
+
 	staffNote := request.PostFormValue("staffnote")
 
 	var boards []string
@@ -838,10 +854,10 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 			return nil, errors.New("unable to update wordfilter details")
 		}
 		if err = filter.SetConditions(gcsql.FilterCondition{
-			FilterID: filter.ID,
-			IsRegex:  isRegex,
-			Search:   searchFor,
-			Field:    "body",
+			FilterID:  filter.ID,
+			MatchMode: matchMode,
+			Search:    searchFor,
+			Field:     "body",
 		}); err != nil {
 			errEv.Err(err).Caller().Msg("Unable to set filter condition")
 			return nil, errors.New("unable to set filter conditions")
@@ -859,7 +875,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		infoEv.Str("do", "create")
 	}
 
-	wordfilters, err := gcsql.GetWordfilters(gcsql.AllFilters)
+	wordfilters, err := gcsql.GetWordfilters(gcsql.TrueOrFalse)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get wordfilters")
 		return nil, err

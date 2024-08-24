@@ -52,7 +52,7 @@ func (*MessageFormatter) ApplyWordFilters(message string, boardDir string) (stri
 	var filters []gcsql.Wordfilter
 	var err error
 	if boardDir == "" {
-		filters, err = gcsql.GetWordfilters(gcsql.OnlyActiveFilters)
+		filters, err = gcsql.GetWordfilters(gcsql.OnlyTrue)
 	} else {
 		filters, err = gcsql.GetBoardWordfilters(boardDir)
 	}

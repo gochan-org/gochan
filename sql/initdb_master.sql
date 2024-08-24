@@ -272,13 +272,13 @@ CREATE TABLE DBPREFIXfilter_boards(
 CREATE TABLE DBPREFIXfilter_conditions(
 	id {serial pk},
 	filter_id {fk to serial} NOT NULL,
-	is_regex SMALLINT NOT NULL,
+	match_mode SMALLINT NOT NULL,
 	search VARCHAR(75) NOT NULL,
 	field VARCHAR(75) NOT NULL,
 	CONSTRAINT filter_conditions_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE,
-	CONSTRAINT filter_conditions_search_check CHECK (search <> '')
+	CONSTRAINT filter_conditions_search_check CHECK (search <> '' OR match_mode = 3)
 );
 
 CREATE TABLE DBPREFIXfilter_hits(

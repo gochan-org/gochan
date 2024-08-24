@@ -18,11 +18,15 @@ var (
 // boards should be a comma separated list of board strings, or "*" for all boards
 func CreateWordFilter(from string, to string, isRegex bool, boards []string, staffID int, staffNote string) (*Wordfilter, error) {
 	var err error
+	var matchMode StringMatchMode
 	if isRegex {
 		_, err = regexp.Compile(from)
 		if err != nil {
 			return nil, err
 		}
+		matchMode = RegexMatch
+	} else {
+		matchMode = SubstrMatch
 	}
 	const query = `INSERT INTO DBPREFIXfilters
 	(staff_id, staff_note, issued_at, match_action, match_detail, is_active)
@@ -70,8 +74,8 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 
 	// set filter condition
 	if _, err = ExecContextSQL(ctx, tx,
-		`INSERT INTO DBPREFIXfilter_conditions(filter_id, is_regex, search, field) VALUES(?,?,?,'body')`,
-		filter.ID, isRegex, from,
+		`INSERT INTO DBPREFIXfilter_conditions(filter_id, match_mode, search, field) VALUES(?,?,?,'body')`,
+		filter.ID, matchMode, from,
 	); err != nil {
 		return nil, err
 	}
@@ -81,8 +85,8 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 
 // GetWordfilters gets a list of wordfilters from the database and returns an array of them and any errors
 // encountered
-func GetWordfilters(active ActiveFilter) ([]Wordfilter, error) {
-	filters, err := getFiltersByBoardDir("", true, active, onlyWordfilters)
+func GetWordfilters(active BooleanFilter) ([]Wordfilter, error) {
+	filters, err := getFiltersByBoardDir("", true, active, true)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +118,7 @@ func GetWordfilterByID(id int) (*Wordfilter, error) {
 
 // GetBoardWordfilters gets an array of wordfilters associated with the given board directory
 func GetBoardWordfilters(board string) ([]Wordfilter, error) {
-	filters, err := getFiltersByBoardDir(board, true, OnlyActiveFilters, onlyWordfilters)
+	filters, err := getFiltersByBoardDir(board, true, OnlyTrue, true)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +172,7 @@ func (wf *Wordfilter) Apply(message string) (string, error) {
 	}
 	condition := conditions[0]
 
-	if condition.IsRegex {
+	if condition.MatchMode == RegexMatch {
 		re, err := regexp.Compile(condition.Search)
 		if err != nil {
 			return message, err
@@ -210,7 +214,7 @@ func (wf *Wordfilter) IsRegex() bool {
 	if err != nil || len(conditions) != 1 {
 		return false
 	}
-	return conditions[0].IsRegex
+	return conditions[0].MatchMode == RegexMatch
 }
 
 // Deprecated, use the first element in wf.BoardDirs() instead. This is kept here for templates.

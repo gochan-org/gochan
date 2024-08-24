@@ -1,10 +1,8 @@
 package gcsql
 
 import (
-	"context"
 	"database/sql"
 	"errors"
-	"regexp"
 	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -173,366 +171,96 @@ func (ipb *IPBan) Deactivate(_ int) error {
 	return tx.Commit()
 }
 
-func checkUsernameOrFilename(usernameFilename string, check string, boardID int) (*filenameOrUsernameBanBase, error) {
-	query := `SELECT
-	id, board_id, staff_id, staff_note, issued_at, ` + usernameFilename + `, is_regex
-	FROM DBPREFIX` + usernameFilename + `_ban WHERE (` + usernameFilename + ` = ? OR is_regex) AND (board_id IS NULL OR board_id = ?)`
-	rows, err := QuerySQL(query, check, boardID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var ban filenameOrUsernameBanBase
-		err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.check, &ban.IsRegex)
-		if err == sql.ErrNoRows {
-			return nil, nil
-		} else if err != nil {
-			return nil, err
-		}
-		if ban.IsRegex {
-			match, err := regexp.MatchString(ban.check, check)
-			if err != nil {
-				return nil, err
-			}
-			if match {
-				return &ban, nil
-			}
-		} else if ban.check == check {
-			return &ban, nil
-		}
-	}
-	return nil, nil
-}
+// NewNameBan is a wrapper around ApplyFilter for creating a name and/or tripcode ban.
+// func NewNameBan(name string, nameIsRegex bool, tripcode string, tripcodeIsRegex bool, boardID int, staffID int, staffNote string) (*Filter, error) {
+// 	const query = `INSERT INTO DBPREFIXusername_ban
+// 	(board_id, staff_id, staff_note, username, is_regex)
+// 	VALUES(?,?,?,?,?)`
+// 	var ban UsernameBan
+// 	if boardID > 0 {
+// 		ban.BoardID = new(int)
+// 		*ban.BoardID = boardID
+// 	}
 
-func CheckNameBan(name string, boardID int) (*UsernameBan, error) {
-	banBase, err := checkUsernameOrFilename("username", name, boardID)
-	if err != nil {
-		return nil, err
-	}
-	if banBase == nil {
-		return nil, nil
-	}
-	return &UsernameBan{
-		Username:                  banBase.check,
-		filenameOrUsernameBanBase: *banBase,
-	}, nil
-}
+// 	tx, err := BeginTx()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer tx.Rollback()
 
-func NewNameBan(name string, isRegex bool, boardID int, staffID int, staffNote string) (*UsernameBan, error) {
-	const query = `INSERT INTO DBPREFIXusername_ban
-	(board_id, staff_id, staff_note, username, is_regex)
-	VALUES(?,?,?,?,?)`
-	var ban UsernameBan
-	if boardID > 0 {
-		ban.BoardID = new(int)
-		*ban.BoardID = boardID
-	}
+// 	stmt, err := PrepareSQL(query, tx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer stmt.Close()
+// 	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, name, isRegex); err != nil {
+// 		return nil, err
+// 	}
+// 	if ban.ID, err = getLatestID("DBPREFIXusername_ban", tx); err != nil {
+// 		return nil, err
+// 	}
+// 	if err = tx.Commit(); err != nil {
+// 		return nil, err
+// 	}
 
-	tx, err := BeginTx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
+// 	ban.StaffID = staffID
+// 	ban.StaffNote = staffNote
+// 	ban.Username = name
+// 	ban.IsRegex = isRegex
+// 	return &ban, stmt.Close()
+// }
 
-	stmt, err := PrepareSQL(query, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, name, isRegex); err != nil {
-		return nil, err
-	}
-	if ban.ID, err = getLatestID("DBPREFIXusername_ban", tx); err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
+// func NewFilenameBan(filename string, isRegex bool, boardID int, staffID int, staffNote string) (*FilenameBan, error) {
+// 	const query = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES(?,?,?,?,?)`
+// 	var ban FilenameBan
+// 	if boardID > 0 {
+// 		ban.BoardID = new(int)
+// 		*ban.BoardID = boardID
+// 	}
 
-	ban.StaffID = staffID
-	ban.StaffNote = staffNote
-	ban.Username = name
-	ban.IsRegex = isRegex
-	return &ban, stmt.Close()
-}
+// 	tx, err := BeginTx()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer tx.Rollback()
+// 	stmt, err := PrepareSQL(query, tx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer stmt.Close()
+// 	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, filename, isRegex); err != nil {
+// 		return nil, err
+// 	}
+// 	if ban.ID, err = getLatestID("DBPREFIXfilename_ban", tx); err != nil {
+// 		return nil, err
+// 	}
+// 	if err = tx.Commit(); err != nil {
+// 		return nil, err
+// 	}
 
-func GetNameBans(boardID int, limit int) ([]UsernameBan, error) {
-	query := `SELECT
-	id, board_id, staff_id, staff_note, issued_at, username, is_regex
-	FROM DBPREFIXusername_ban`
-	limitStr := ""
-	if limit > 0 {
-		limitStr = " LIMIT " + strconv.Itoa(limit)
-	}
-	var rows *sql.Rows
-	var err error
-	if boardID > 0 {
-		query += " WHERE board_id = ?"
-		rows, err = QuerySQL(query+limitStr, boardID)
-	} else {
-		rows, err = QuerySQL(query + limitStr)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var bans []UsernameBan
-	for rows.Next() {
-		var ban UsernameBan
-		if err = rows.Scan(
-			&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username,
-			&ban.IsRegex,
-		); err != nil {
-			return nil, err
-		}
-		bans = append(bans, ban)
-	}
-	return bans, nil
-}
+// 	ban.StaffID = staffID
+// 	ban.StaffNote = staffNote
+// 	ban.Filename = filename
+// 	ban.IsRegex = isRegex
+// 	return &ban, stmt.Close()
+// }
 
-func DeleteNameBan(id int) error {
-	const query = `DELETE FROM DBPREFIXusername_ban WHERE id = ?`
-	_, err := ExecSQL(query, id)
-	return err
-}
-
-func GetFileBans(boardID int, limit int) ([]FileBan, error) {
-	query := `SELECT id, board_id, staff_id, staff_note, issued_at, checksum, fingerprinter, ban_ip, ban_ip_message FROM DBPREFIXfile_ban`
-	limitStr := ""
-	if limit > 0 {
-		limitStr = " LIMIT " + strconv.Itoa(limit)
-	}
-	var rows *sql.Rows
-	var err error
-	if boardID > 0 {
-		query += " WHERE board_id = ?"
-		rows, err = QuerySQL(query+limitStr, boardID)
-	} else {
-		rows, err = QuerySQL(query + limitStr)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var bans []FileBan
-	for rows.Next() {
-		var ban FileBan
-		if err = rows.Scan(
-			&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt,
-			&ban.Checksum, &ban.Fingerprinter, &ban.BanIP, &ban.BanIPMessage,
-		); err != nil {
-			return nil, err
-		}
-		bans = append(bans, ban)
-	}
-	return bans, nil
-}
-
-func GetFilenameBans(boardID int, limit int) ([]FilenameBan, error) {
-	query := `SELECT id, board_id, staff_id, staff_note, issued_at, filename, is_regex FROM DBPREFIXfilename_ban`
-	limitStr := ""
-	if limit > 0 {
-		limitStr = " LIMIT " + strconv.Itoa(limit)
-	}
-	var rows *sql.Rows
-	var err error
-	if boardID > 0 {
-		query += " WHERE board_id = ?"
-		rows, err = QuerySQL(query+limitStr, boardID)
-	} else {
-		rows, err = QuerySQL(query + limitStr)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var bans []FilenameBan
-	for rows.Next() {
-		var ban FilenameBan
-		if err = rows.Scan(&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex); err != nil {
-			return nil, err
-		}
-		bans = append(bans, ban)
-	}
-	return bans, nil
-}
-
-func NewFilenameBan(filename string, isRegex bool, boardID int, staffID int, staffNote string) (*FilenameBan, error) {
-	const query = `INSERT INTO DBPREFIXfilename_ban (board_id, staff_id, staff_note, filename, is_regex) VALUES(?,?,?,?,?)`
-	var ban FilenameBan
-	if boardID > 0 {
-		ban.BoardID = new(int)
-		*ban.BoardID = boardID
-	}
-
-	tx, err := BeginTx()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	stmt, err := PrepareSQL(query, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	if _, err = stmt.Exec(ban.BoardID, staffID, staffNote, filename, isRegex); err != nil {
-		return nil, err
-	}
-	if ban.ID, err = getLatestID("DBPREFIXfilename_ban", tx); err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	ban.StaffID = staffID
-	ban.StaffNote = staffNote
-	ban.Filename = filename
-	ban.IsRegex = isRegex
-	return &ban, stmt.Close()
-}
-
-func (ub filenameOrUsernameBanBase) IsGlobalBan() bool {
-	return ub.BoardID == nil
-}
-
-func (fnb *FilenameBan) Deactivate(_ int) error {
-	const deleteQuery = `DELETE FROM DBPREFIXfilename_ban WHERE id = ?`
-	_, err := ExecSQL(deleteQuery, fnb.ID)
-	return err
-}
-
-func (fnb *UsernameBan) Deactivate(_ int) error {
-	const deleteQuery = `DELETE FROM DBPREFIXusername_ban WHERE id = ?`
-	_, err := ExecSQL(deleteQuery, fnb.ID)
-	return err
-}
-
-func CheckFilenameBan(filename string, boardID int) (*FilenameBan, error) {
-	banBase, err := checkUsernameOrFilename("filename", filename, boardID)
-	if err != nil {
-		return nil, err
-	}
-	if banBase == nil {
-		return nil, nil
-	}
-	return &FilenameBan{
-		Filename:                  banBase.check,
-		filenameOrUsernameBanBase: *banBase,
-	}, nil
-}
-
-// CheckFileChecksumBan checks to see if the given checksum is banned on the given boardID, or on all boards.
-// It returns the ban info (or nil if it is not banned) and any errors
-func CheckFileChecksumBan(checksum string, boardID int) (*FileBan, error) {
-	const query = `SELECT
-	id, board_id, staff_id, staff_note, issued_at, checksum
-	FROM DBPREFIXfile_ban
-	WHERE checksum = ? AND (board_id IS NULL OR board_id = ?) ORDER BY id DESC LIMIT 1`
-	var ban FileBan
-	err := QueryRowSQL(query, []any{checksum, boardID}, []any{
-		&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
-	})
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &ban, err
-}
-
-func GetChecksumBans(boardID int, limit int) ([]FileBan, error) {
-	query := `SELECT
-	id, board_id, staff_id, staff_note, issued_at, checksum
-	FROM DBPREFIXfile_ban`
-	if boardID > 0 {
-		query += " WHERE board_id = ?"
-	}
-	query += " LIMIT " + strconv.Itoa(limit)
-	var rows *sql.Rows
-	var cancel context.CancelFunc
-	var err error
-	if boardID > 0 {
-		rows, cancel, err = QueryTimeoutSQL(nil, query, boardID)
-	} else {
-		rows, cancel, err = QueryTimeoutSQL(nil, query)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		rows.Close()
-		cancel()
-	}()
-	var bans []FileBan
-	for rows.Next() {
-		var ban FileBan
-		if err = rows.Scan(
-			&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
-		); err != nil {
-			return nil, err
-		}
-		bans = append(bans, ban)
-	}
-	return bans, rows.Close()
-}
-
-func NewFileChecksumBan(checksum string, fingerprinter string, boardID int, staffID int, staffNote string, banIP bool, banReason string) (*FileBan, error) {
-	const query = `INSERT INTO DBPREFIXfile_ban
-	(board_id, staff_id, staff_note, checksum, fingerprinter, ban_ip, ban_ip_message)
-	VALUES(?,?,?,?,?,?,?)`
-	var ban FileBan
-	var err error
-
-	if boardID > 0 {
-		ban.BoardID = new(int)
-		*ban.BoardID = boardID
-	}
-	if banIP {
-		ban.BanIP = banIP
-		ban.BanIPMessage = new(string)
-		*ban.BanIPMessage = banReason
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	tx, err := BeginContextTx(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	if _, err = ExecContextSQL(ctx, tx, query,
-		ban.BoardID, staffID, staffNote, checksum, fingerprinter, banIP, banReason,
-	); err != nil {
-		return nil, err
-	}
-	if ban.ID, err = getLatestID("DBPREFIXfile_ban", tx); err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-	ban.StaffID = staffID
-	ban.StaffNote = staffNote
-	ban.Checksum = checksum
-	return &ban, nil
-}
-
-func (fb *FileBan) IsGlobalBan() bool {
-	return fb.BoardID == nil
-}
-
-func (fb FileBan) Deactivate(_ int) error {
-	const deleteQuery = `DELETE FROM DBPREFIXfile_ban WHERE id = ?`
-	_, err := ExecTimeoutSQL(nil, deleteQuery, fb.ID)
-	return err
-}
-
-// DeleteFileBanByID deletes the ban, given the id column value
-func DeleteFileBanByID(id int) error {
-	_, err := ExecTimeoutSQL(nil, "DELETE FROM DBPREFIXfile_ban WHERE id = ?", id)
-	return err
-}
+// // CheckFileChecksumBan checks to see if the given checksum is banned on the given boardID, or on all boards.
+// // It returns the ban info (or nil if it is not banned) and any errors
+// func CheckFileChecksumBan(checksum string, boardID int) (*FileBan, error) {
+// 	const query = `SELECT
+// 	id, board_id, staff_id, staff_note, issued_at, checksum
+// 	FROM DBPREFIXfile_ban
+// 	WHERE checksum = ? AND (board_id IS NULL OR board_id = ?) ORDER BY id DESC LIMIT 1`
+// 	var ban FileBan
+// 	err := QueryRowSQL(query, []any{checksum, boardID}, []any{
+// 		&ban.ID, &ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
+// 	})
+// 	if err == sql.ErrNoRows {
+// 		return nil, nil
+// 	}
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return &ban, err
+// }
