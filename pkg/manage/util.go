@@ -14,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 	"golang.org/x/crypto/bcrypt"
@@ -25,6 +26,12 @@ var (
 	ErrBadCredentials        = errors.New("invalid username or password")
 	ErrUnableToCreateSession = errors.New("unable to create login session")
 	ErrInvalidSession        = errors.New("invalid staff session")
+	dashboardAction          = Action{
+		ID:          "dashboard",
+		Title:       "Dashboard",
+		Permissions: JanitorPerms,
+		Callback:    dashboardCallback,
+	}
 )
 
 func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) error {
@@ -88,7 +95,7 @@ func createSession(key, username, password string, request *http.Request, writer
 	return nil
 }
 
-func getCurrentStaff(request *http.Request) (string, error) { //TODO after refactor, check if still used
+func getCurrentStaff(request *http.Request) (string, error) {
 	staff, err := GetStaffFromRequest(request)
 	if err != nil {
 		return "", err
@@ -104,10 +111,12 @@ func GetStaffFromRequest(request *http.Request) (*gcsql.Staff, error) {
 		return &gcsql.Staff{Rank: 0}, nil
 	}
 	staff, err := gcsql.GetStaffBySession(sessionCookie.Value)
-	if err != nil {
-		staff = &gcsql.Staff{Rank: 0}
+	if errors.Is(err, sql.ErrNoRows) {
+		return &gcsql.Staff{Rank: 0}, nil
+	} else if err != nil {
+		return nil, err
 	}
-	return staff, err
+	return staff, nil
 }
 
 // GetStaffRank returns the rank number of the staff referenced in the request
@@ -119,9 +128,10 @@ func GetStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
-func init() {
+func InitManagePages() {
 	RegisterManagePage("actions", "Staff actions", JanitorPerms, AlwaysJSON, getStaffActions)
-	RegisterManagePage("dashboard", "Dashboard", JanitorPerms, NoJSON, dashboardCallback)
+	RegisterManagePage(dashboardAction.ID, dashboardAction.Title, dashboardAction.Permissions, dashboardAction.JSONoutput, dashboardAction.Callback)
+	server.GetRouter().GET(config.WebPath("/manage"), setupManageFunction(&dashboardAction))
 	registerNoPermPages()
 	registerJanitorPages()
 	registerModeratorPages()

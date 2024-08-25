@@ -3,6 +3,7 @@ package manage
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -17,8 +18,10 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
+	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
+	"github.com/uptrace/bunrouter"
 )
 
 // manage actions that require moderator-level permission go here
@@ -199,6 +202,46 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return manageAppealsBuffer.String(), err
 }
 
+func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _, errEv *zerolog.Event) (output any, err error) {
+	params, _ := request.Context().Value("actionParams").(bunrouter.Params)
+	filterIDStr := params.ByName("filterID")
+	filterID, err := strconv.Atoi(filterIDStr)
+	if err != nil {
+		errEv.Err(err).Caller().Str("filterID", filterIDStr).Msg("Filter ID is not a valid integer")
+		return nil, err
+	}
+	errEv.Int("filterID", filterID)
+
+	hits, err := gcsql.GetFilterHits(filterID)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to get filter hits")
+		return nil, errors.New("unable to get list of filter hits")
+	}
+	m := make(map[string]any)
+	var ba []byte
+	for h := range hits {
+		// un-minify the JSON data to make it more readable
+		if err = json.Unmarshal([]byte(hits[h].PostData), &m); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to unmarshal post data for filter hit")
+			return nil, err
+		}
+		if ba, err = json.MarshalIndent(m, "", "    "); err != nil {
+			errEv.Err(err).Caller().RawJSON("postData", []byte(hits[h].PostData)).Msg("Unable to marshal un-minified post data")
+			return nil, err
+		}
+		hits[h].PostData = string(ba)
+	}
+	var buf bytes.Buffer
+	if err = serverutil.MinifyTemplate(gctemplates.ManageFilterHits, map[string]any{
+		"hits": hits,
+	}, &buf, "text/html"); err != nil {
+		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilterHits).Msg("Unable to render template")
+		return nil, errors.New("unable to render filter hits page")
+	}
+
+	return buf.String(), nil
+}
+
 type filterField struct {
 	Value        string
 	Text         string
@@ -206,7 +249,7 @@ type filterField struct {
 	hasSearchbox bool
 }
 
-func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+func filtersCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	var boards []int
 	data := map[string]any{
 		"allBoards": gcsql.AllBoards,
@@ -909,67 +952,18 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 }
 
 func registerModeratorPages() {
-	actions = append(actions,
-		Action{
-			ID:          "bans",
-			Title:       "Bans",
-			Permissions: ModPerms,
-			Callback:    bansCallback,
-		},
-		Action{
-			ID:          "appeals",
-			Title:       "Ban appeals",
-			Permissions: ModPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    appealsCallback,
-		},
-		Action{
-			ID:          "filters",
-			Title:       "Post filters",
-			Permissions: ModPerms,
-			JSONoutput:  NoJSON,
-			Callback:    filtersCallback,
-		},
-		Action{
-			ID:          "ipsearch",
-			Title:       "IP Search",
-			Permissions: ModPerms,
-			JSONoutput:  NoJSON,
-			Callback:    ipSearchCallback,
-		},
-		Action{
-			ID:          "reports",
-			Title:       "Reports",
-			Permissions: ModPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    reportsCallback,
-		},
-		Action{
-			ID:          "threadattrs",
-			Title:       "View/Update Thread Attributes",
-			Permissions: ModPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    threadAttrsCallback,
-		},
-		Action{
-			ID:          "postinfo",
-			Title:       "Post info",
-			Permissions: ModPerms,
-			JSONoutput:  AlwaysJSON,
-			Callback:    postInfoCallback,
-		},
-		Action{
-			ID:          "fingerprint",
-			Title:       "Get image/thumbnail fingerprint",
-			Permissions: ModPerms,
-			JSONoutput:  AlwaysJSON,
-			Callback:    fingerprintCallback,
-		},
-		Action{
-			ID:          "wordfilters",
-			Title:       "Wordfilters",
-			Permissions: ModPerms,
-			Callback:    wordfiltersCallback,
-		},
-	)
+	RegisterManagePage("bans", "Bans", ModPerms, NoJSON, bansCallback)
+	RegisterManagePage("appeals", "Ban appeals", ModPerms, OptionalJSON, appealsCallback)
+	RegisterManagePage("filters", "Post filters", ModPerms, NoJSON, filtersCallback)
+	server.GetRouter().GET(config.WebPath("/manage/filters/hits/:filterID"), setupManageFunction(&Action{
+		ID:       "filters/hits",
+		Title:    "Filter hits",
+		Callback: filterHitsCallback,
+	}))
+	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)
+	RegisterManagePage("reports", "Reports", ModPerms, OptionalJSON, reportsCallback)
+	RegisterManagePage("threadattrs", "View/Update Thread Attributes", ModPerms, OptionalJSON, threadAttrsCallback)
+	RegisterManagePage("postinfo", "Post info", ModPerms, AlwaysJSON, postInfoCallback)
+	RegisterManagePage("fingerprint", "Get image/thumbnail fingerprint", ModPerms, AlwaysJSON, fingerprintCallback)
+	RegisterManagePage("wordfilters", "Wordfilters", ModPerms, NoJSON, wordfiltersCallback)
 }

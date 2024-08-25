@@ -2,9 +2,13 @@ package manage
 
 import (
 	"net/http"
+	"path"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/rs/zerolog"
+	"github.com/uptrace/bunrouter"
 )
 
 const (
@@ -76,12 +80,18 @@ func getAction(id string, rank int) *Action {
 }
 
 func RegisterManagePage(id string, title string, permissions int, jsonOutput int, callback CallbackFunction) {
-	actions = append(actions, Action{
+	action := Action{
 		ID:          id,
 		Title:       title,
 		Permissions: permissions,
 		JSONoutput:  jsonOutput,
 		Callback:    callback,
+	}
+	actions = append(actions, action)
+	server.GetRouter().WithGroup(config.WebPath("/manage"), func(g *bunrouter.Group) {
+		groupPath := path.Join("/", id, "/*actionArgs")
+		g.GET(groupPath, setupManageFunction(&action))
+		g.POST(groupPath, setupManageFunction(&action))
 	})
 }
 

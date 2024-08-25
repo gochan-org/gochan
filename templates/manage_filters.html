@@ -110,7 +110,7 @@ For wordfilters go <a href="{{webPath `/manage/wordfilters`}}">here</a>.
 </form>
 <table class="mgmt-table filterlist">
 	<colgroup>
-		<col class="row-actions">
+		<col class="filter-actions">
 		<col class="filter-action">
 		<col class="filter-conditions">
 		<col class="staff-boards">
@@ -125,7 +125,11 @@ For wordfilters go <a href="{{webPath `/manage/wordfilters`}}">here</a>.
 	{{- range $f, $filter := $.filters -}}
 	{{$boardsCell := index $.filterTableBoards $f}}
 	<tr>
-		<td><a href="{{webPath `/manage/filters`}}?edit={{$filter.ID}}">Edit</a> | <a href="{{webPath `/manage/filters`}}?{{if $filter.IsActive}}disable{{else}}enable{{end}}={{$filter.ID}}">{{if $filter.IsActive}}Disable{{else}}Enable{{end}}</a></td>
+		<td class="filter-actions">
+			<a href="{{webPath `/manage/filters`}}?edit={{$filter.ID}}">Edit</a> | 
+			<a href="{{webPath `/manage/filters`}}?{{if $filter.IsActive}}disable{{else}}enable{{end}}={{$filter.ID}}">{{if $filter.IsActive}}Disable{{else}}Enable{{end}}</a> | 
+			<a href="{{webPathDir `/manage/filters/hits/`}}{{$filter.ID}}">Hits</a>
+		</td>
 		<td>{{index $.actions $filter.MatchAction}}</td>
 		<td>{{index $.conditions $f}}</td>
 		<td>{{if eq $boardsCell ""}}<i>all boards</i>{{else}}{{$boardsCell}}{{end}}</td>

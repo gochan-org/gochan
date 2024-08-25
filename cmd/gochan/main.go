@@ -10,6 +10,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
+	"github.com/gochan-org/gochan/pkg/manage"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 
@@ -110,6 +111,7 @@ func main() {
 		os.Exit(1) // skipcq: CRT-D0011
 	}
 	defer events.TriggerEvent("shutdown")
+	manage.InitManagePages()
 	go initServer()
 	<-sc
 }

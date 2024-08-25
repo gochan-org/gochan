@@ -25,26 +25,25 @@ const (
 	ManageBans          = "manage_bans.html"
 	ManageBoards        = "manage_boards.html"
 	ManageDashboard     = "manage_dashboard.html"
-	// ManageFileBans      = "manage_filebans.html"
 	ManageFilters       = "manage_filters.html"
+	ManageFilterHits    = "manage_filter_hits.html"
 	ManageFixThumbnails = "manage_fixthumbnails.html"
 	ManageIPSearch      = "manage_ipsearch.html"
 	ManageLogin         = "manage_login.html"
-	// ManageNameBans      = "manage_namebans.html"
-	ManageRecentPosts = "manage_recentposts.html"
-	ManageReports     = "manage_reports.html"
-	ManageSections    = "manage_sections.html"
-	ManageStaff       = "manage_staff.html"
-	ManageTemplates   = "manage_templateoverride.html"
-	ManageThreadAttrs = "manage_threadattrs.html"
-	ManageViewLog     = "manage_viewlog.html"
-	ManageWordfilters = "manage_wordfilters.html"
-	MoveThreadPage    = "movethreadpage.html"
-	PageFooter        = "page_footer.html"
-	PageHeader        = "page_header.html"
-	PostEdit          = "post_edit.html"
-	PostFlag          = "flag.html"
-	ThreadPage        = "threadpage.html"
+	ManageRecentPosts   = "manage_recentposts.html"
+	ManageReports       = "manage_reports.html"
+	ManageSections      = "manage_sections.html"
+	ManageStaff         = "manage_staff.html"
+	ManageTemplates     = "manage_templateoverride.html"
+	ManageThreadAttrs   = "manage_threadattrs.html"
+	ManageViewLog       = "manage_viewlog.html"
+	ManageWordfilters   = "manage_wordfilters.html"
+	MoveThreadPage      = "movethreadpage.html"
+	PageFooter          = "page_footer.html"
+	PageHeader          = "page_header.html"
+	PostEdit            = "post_edit.html"
+	PostFlag            = "flag.html"
+	ThreadPage          = "threadpage.html"
 )
 
 var (
@@ -90,11 +89,11 @@ var (
 		ManageDashboard: {
 			files: []string{"manage_dashboard.html"},
 		},
-		// ManageFileBans: {
-		// 	files: []string{"manage_filebans.html"},
-		// },
 		ManageFilters: {
 			files: []string{"manage_filters.html"},
+		},
+		ManageFilterHits: {
+			files: []string{"manage_filter_hits.html"},
 		},
 		ManageFixThumbnails: {
 			files: []string{"manage_fixthumbnails.html"},
@@ -105,9 +104,6 @@ var (
 		ManageLogin: {
 			files: []string{"manage_login.html"},
 		},
-		// ManageNameBans: {
-		// 	files: []string{"manage_namebans.html"},
-		// },
 		ManageRecentPosts: {
 			files: []string{"manage_recentposts.html"},
 		},
@@ -226,6 +222,7 @@ func GetTemplateList() []string {
 	return templateList
 }
 
+// ParseTemplate initializes a new template with the given name and parses it
 func ParseTemplate(name, tmplStr string) (*template.Template, error) {
 	return template.New(name).Funcs(funcMap).Parse(tmplStr)
 }

@@ -163,10 +163,10 @@ func GetStaffBySession(session string) (*Staff, error) {
 	JOIN DBPREFIXsessions as sessions ON sessions.staff_id = staff.id
 	WHERE sessions.data = ?`
 
-	staff := new(Staff)
+	var staff Staff
 	err := QueryRowTimeoutSQL(nil, query, []any{session}, []any{
 		&staff.ID, &staff.Username, &staff.PasswordChecksum, &staff.Rank, &staff.AddedOn, &staff.LastLogin})
-	return staff, err
+	return &staff, err
 }
 
 func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {

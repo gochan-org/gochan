@@ -626,3 +626,26 @@ func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) err
 	}
 	return tx.Commit()
 }
+
+// GetFilterHits returns an array of incidents where an attempted post matched a filter (excluding wordfilters)
+func GetFilterHits(filterID int) ([]FilterHit, error) {
+	const querySQL = `SELECT id, match_time, post_data FROM DBPREFIXfilter_hits WHERE filter_id = ?`
+	rows, cancel, err := QueryTimeoutSQL(nil, querySQL, filterID)
+	defer cancel()
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hits []FilterHit
+	for rows.Next() {
+		hit := FilterHit{FilterID: filterID}
+		if err = rows.Scan(&hit.ID, &hit.MatchTime, &hit.PostData); err != nil {
+			return nil, err
+		}
+		hits = append(hits, hit)
+	}
+	return hits, rows.Close()
+}

@@ -680,78 +680,15 @@ func viewLogCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ b
 }
 
 func registerAdminPages() {
-	actions = append(actions,
-		Action{
-			ID:          "updateannouncements",
-			Title:       "Update staff announcements",
-			Permissions: AdminPerms,
-			JSONoutput:  NoJSON,
-			Callback:    updateAnnouncementsCallback,
-		},
-		Action{
-			ID:          "boards",
-			Title:       "Boards",
-			Permissions: AdminPerms,
-			JSONoutput:  NoJSON,
-			Callback:    boardsCallback,
-		},
-		Action{
-			ID:          "boardsections",
-			Title:       "Board sections",
-			Permissions: AdminPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    boardSectionsCallback,
-		},
-		Action{
-			ID:          "cleanup",
-			Title:       "Cleanup",
-			Permissions: AdminPerms,
-			Callback:    cleanupCallback,
-		},
-		Action{
-			ID:          "fixthumbnails",
-			Title:       "Regenerate thumbnails",
-			Permissions: AdminPerms,
-			Callback:    fixThumbnailsCallback,
-		},
-		Action{
-			ID:          "templates",
-			Title:       "Override templates",
-			Permissions: AdminPerms,
-			Callback:    templatesCallback,
-		},
-		Action{
-			ID:          "rebuildfront",
-			Title:       "Rebuild front page",
-			Permissions: AdminPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    rebuildFrontCallback,
-		},
-		Action{
-			ID:          "rebuildall",
-			Title:       "Rebuild everything",
-			Permissions: AdminPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    rebuildAllCallback,
-		},
-		Action{
-			ID:          "rebuildboards",
-			Title:       "Rebuild boards",
-			Permissions: AdminPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    rebuildBoardsCallback,
-		},
-		Action{
-			ID:          "reparsehtml",
-			Title:       "Reparse HTML",
-			Permissions: AdminPerms,
-			Callback:    reparseHTMLCallback,
-		},
-		Action{
-			ID:          "viewlog",
-			Title:       "View log",
-			Permissions: AdminPerms,
-			Callback:    viewLogCallback,
-		},
-	)
+	RegisterManagePage("updateannouncements", "Update staff announcements", AdminPerms, NoJSON, updateAnnouncementsCallback)
+	RegisterManagePage("boards", "Boards", AdminPerms, NoJSON, boardsCallback)
+	RegisterManagePage("boardsections", "Board sections", AdminPerms, OptionalJSON, boardSectionsCallback)
+	RegisterManagePage("cleanup", "Cleanup", AdminPerms, NoJSON, cleanupCallback)
+	RegisterManagePage("fixthumbnails", "Regenerate thumbnails", AdminPerms, NoJSON, fixThumbnailsCallback)
+	RegisterManagePage("templates", "Override templates", AdminPerms, NoJSON, templatesCallback)
+	RegisterManagePage("rebuildfront", "Rebuild front page", AdminPerms, OptionalJSON, rebuildFrontCallback)
+	RegisterManagePage("rebuildboards", "Rebuild boards", AdminPerms, OptionalJSON, rebuildBoardsCallback)
+	RegisterManagePage("rebuildall", "Rebuild everything", AdminPerms, OptionalJSON, rebuildAllCallback)
+	RegisterManagePage("reparsehtml", "Reparse HTML", AdminPerms, NoJSON, reparseHTMLCallback)
+	RegisterManagePage("viewlog", "View log", AdminPerms, NoJSON, viewLogCallback)
 }

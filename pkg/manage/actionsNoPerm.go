@@ -95,12 +95,5 @@ func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staf
 }
 
 func registerNoPermPages() {
-	actions = append(actions, loginAction,
-		Action{
-			ID:          "staffinfo",
-			Permissions: NoPerms,
-			JSONoutput:  AlwaysJSON,
-			Callback:    staffInfoCallback,
-		},
-	)
+	RegisterManagePage("staffinfo", "", NoPerms, AlwaysJSON, staffInfoCallback)
 }

@@ -328,6 +328,10 @@ table.mgmt-table td.table-actions, table.mgmt-table col.row-actions, table.mgmt-
   text-align: center;
   width: 7%;
 }
+table.mgmt-table col.filter-actions, table.mgmt-table td.filter-actions {
+  text-align: center;
+  width: 10%;
+}
 table.mgmt-table col.row-date {
   width: 20%;
 }

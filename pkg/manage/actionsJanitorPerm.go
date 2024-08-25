@@ -217,40 +217,9 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 }
 
 func registerJanitorPages() {
-	actions = append(actions,
-		Action{
-			ID:          "logout",
-			Title:       "Logout",
-			Permissions: JanitorPerms,
-			Callback:    logoutCallback,
-		},
-		Action{
-			ID:          "clearmysessions",
-			Title:       "Log me out everywhere",
-			Permissions: JanitorPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    clearMySessionsCallback,
-		},
-		Action{
-			ID:          "recentposts",
-			Title:       "Recent posts",
-			Permissions: JanitorPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    recentPostsCallback,
-		},
-		Action{
-			ID:          "announcements",
-			Title:       "Announcements",
-			Permissions: JanitorPerms,
-			JSONoutput:  AlwaysJSON,
-			Callback:    announcementsCallback,
-		},
-		Action{
-			ID:          "staff",
-			Title:       "Staff",
-			Permissions: JanitorPerms,
-			JSONoutput:  OptionalJSON,
-			Callback:    staffCallback,
-		},
-	)
+	RegisterManagePage("logout", "Logout", JanitorPerms, NoJSON, logoutCallback)
+	RegisterManagePage("clearmysessions", "Log me out everywhere", JanitorPerms, OptionalJSON, clearMySessionsCallback)
+	RegisterManagePage("recentposts", "Recent posts", JanitorPerms, OptionalJSON, recentPostsCallback)
+	RegisterManagePage("announcements", "Announcements", JanitorPerms, AlwaysJSON, announcementsCallback)
+	RegisterManagePage("staff", "Staff", JanitorPerms, OptionalJSON, staffCallback)
 }
