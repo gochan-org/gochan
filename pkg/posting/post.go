@@ -379,10 +379,14 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	if filter != nil {
+	if filter != nil && filter.MatchAction != "log" {
 		if filter.MatchAction != "ban" {
 			// if the filter bans the user, it will be logged
-			gcutil.LogWarning().Int("filterID", filter.ID).Msg("Post filtered")
+			gcutil.LogWarning().
+				Str("ip", post.IP).
+				Str("userAgent", request.UserAgent()).
+				Int("filterID", filter.ID).
+				Msg("Post filtered")
 		}
 		os.Remove(filePath)
 		os.Remove(thumbPath)

@@ -89,7 +89,7 @@ func RegisterManagePage(id string, title string, permissions int, jsonOutput int
 	}
 	actions = append(actions, action)
 	server.GetRouter().WithGroup(config.WebPath("/manage"), func(g *bunrouter.Group) {
-		groupPath := path.Join("/", id, "/*actionArgs")
+		groupPath := bunrouter.CleanPath(path.Join("/", id))
 		g.GET(groupPath, setupManageFunction(&action))
 		g.POST(groupPath, setupManageFunction(&action))
 	})

@@ -72,6 +72,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 				Str("ip", gcutil.GetRealIP(request)).
 				Str("userAgent", request.UserAgent()).
 				Int("rank", staff.Rank).
+				Str("action", action.ID).
 				Int("requiredRank", action.Permissions).
 				Msg("Staff requested page with insufficient permissions")
 			serveError(writer, "permission", action.ID, "You do not have permission to access this page", wantsJSON || (action.JSONoutput == AlwaysJSON))
