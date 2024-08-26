@@ -36,7 +36,8 @@
 <form id="filterform" action="{{webPath `/manage/filters`}}{{if gt $.filter.ID 0}}?edit={{.ID}}{{end}}" method="POST">
 	{{- if gt $.filter.ID 0}}<input type="hidden" name="filterid" value="{{$.filter.ID}}">{{end -}}
 	Filter conditions are checked against a post after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
-	The filter action will be executed only if all conditions are met. Tripcode searches do not include the prefix "!".
+	The filter action will be executed only if all conditions are met. Tripcode searches do not include the prefix "!". <br/>
+	For information on the expected regular expression syntax, see <a href="https://pkg.go.dev/regexp/syntax">here</a> (mostly the same as most regular expression implementations with a few changes, e.g. no lookahead/lookbehind).
 	<table>
 		<tr>
 			<th>Conditions</th>
