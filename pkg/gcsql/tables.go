@@ -53,54 +53,6 @@ type Board struct {
 	EnableCatalog    bool      // sql: enable_catalog
 }
 
-// // Deprecated, use PostFilter instead, with a condition field = "checksum" if Fingerprinter is nil
-// // or "ahash" otherwise.
-// // FileBan contains the information associated with a specific file ban.
-// type FileBan struct {
-// 	ID            int       // sql: id
-// 	BoardID       *int      // sql: board_id
-// 	StaffID       int       // sql: staff_id
-// 	StaffNote     string    // sql: staff_note
-// 	IssuedAt      time.Time // sql: issued_at
-// 	Checksum      string    // sql: checksum
-// 	Fingerprinter *string   // sql: fingerprinter
-// 	BanIP         bool      // sql: ban_ip
-// 	BanIPMessage  *string   // sql: ban_ip_message
-// }
-
-// // ApplyIPBan bans the given IP if it posted a banned image
-// // If BanIP is false, it returns with no error
-// func (fb *FileBan) ApplyIPBan(postIP string) error {
-// 	if !fb.BanIP {
-// 		return nil
-// 	}
-// 	now := time.Now()
-// 	ipBan := &IPBan{
-// 		RangeStart: postIP,
-// 		RangeEnd:   postIP,
-// 		IssuedAt:   now,
-// 	}
-// 	ipBan.IsActive = true
-// 	ipBan.CanAppeal = true
-// 	ipBan.AppealAt = now
-// 	ipBan.StaffID = fb.StaffID
-// 	ipBan.Permanent = true
-// 	if fb.BoardID != nil {
-// 		ipBan.BoardID = new(int)
-// 		*ipBan.BoardID = *fb.BoardID
-// 	}
-// 	if fb.BanIPMessage == nil {
-// 		ipBan.Message = "posting disallowed image, resulting in ban"
-// 	} else {
-// 		ipBan.Message = *fb.BanIPMessage
-// 	}
-// 	if fb.StaffNote == "" {
-// 		ipBan.StaffNote = "fingerprint"
-// 	}
-
-// 	return NewIPBan(ipBan)
-// }
-
 // Filter represents an entry in gochan's new filter system which merges username bans, file bans, and filename bans,
 // and will allow moderators to block posts based on the user's name, email, subject, message content, and other fields.
 // table: DBPREFIXfilters

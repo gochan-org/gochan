@@ -285,33 +285,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// filters, err := gcsql.GetFiltersByBoardID(post.ID, true, gcsql.OnlyActiveFilters)
-	// if err != nil {
-	// 	errEv.Err(err).Caller().Msg("Unable to get filter list")
-	// 	server.ServeError(writer, "Unable to get post filter list", wantsJSON, nil)
-	// 	return
-	// }
-
-	// var match bool
-	// for _, filter := range filters {
-	// 	if match, err = filter.CheckIfMatch(post, request); err != nil {
-	// 		errEv.Err(err).Caller().
-	// 			Int("filterID", filter.ID).
-	// 			Msg("Unable to check filter for a match")
-	// 		server.ServeError(writer, "Unable to check post filters", wantsJSON, nil)
-	// 		return
-	// 	}
-	// 	if match {
-
-	// 	}
-	// }
-
 	if checkIpBan(post, postBoard, writer, request) {
 		return
 	}
-	// if checkUsernameBan(post, postBoard, writer, request) {
-	// 	return
-	// }
 
 	captchaSuccess, err := submitCaptchaResponse(request)
 	if err != nil {
@@ -380,25 +356,23 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	if filter != nil && filter.MatchAction != "log" {
-		if filter.MatchAction != "ban" {
-			// if the filter bans the user, it will be logged
-			gcutil.LogWarning().
-				Str("ip", post.IP).
-				Str("userAgent", request.UserAgent()).
-				Int("filterID", filter.ID).
-				Msg("Post filtered")
-		}
 		os.Remove(filePath)
 		os.Remove(thumbPath)
 		os.Remove(catalogThumbPath)
 		switch filter.MatchAction {
 		case "reject":
+			gcutil.LogWarning().
+				Str("ip", post.IP).
+				Str("userAgent", request.UserAgent()).
+				Int("filterID", filter.ID).
+				Msg("Post rejected by filter")
 			rejectReason := filter.MatchDetail
 			if rejectReason == "" {
 				rejectReason = "Post rejected"
 			}
 			server.ServeError(writer, rejectReason, wantsJSON, nil)
 		case "ban":
+			// if the filter bans the user, it will be logged
 			checkIpBan(post, postBoard, writer, request)
 		}
 		return
