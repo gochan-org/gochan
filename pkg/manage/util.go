@@ -128,6 +128,7 @@ func GetStaffRank(request *http.Request) int {
 	return staff.Rank
 }
 
+// InitManagePages sets up the built-in manage pages
 func InitManagePages() {
 	RegisterManagePage("actions", "Staff actions", JanitorPerms, AlwaysJSON, getStaffActions)
 	RegisterManagePage(dashboardAction.ID, dashboardAction.Title, dashboardAction.Permissions, dashboardAction.JSONoutput, dashboardAction.Callback)

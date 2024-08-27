@@ -250,158 +250,15 @@ type filterField struct {
 }
 
 func filtersCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
-	var boards []int
-	data := map[string]any{
-		"allBoards": gcsql.AllBoards,
-		"fields":    filterFields,
-		"actions":   filterActionsMap,
-	}
-	boardIDLogArr := zerolog.Arr()
-	conditionsLogArr := zerolog.Arr()
-
-	doFilterAdd := request.PostFormValue("dofilteradd") != ""
-	doFilterEdit := request.PostFormValue("dofilteredit") != ""
-
-	if disableFilterIDStr := request.FormValue("disable"); disableFilterIDStr != "" {
-		disableFilterID, err := strconv.Atoi(disableFilterIDStr)
-		if err != nil {
-			return nil, err
-		}
-		gcsql.SetFilterActive(disableFilterID, false)
-	} else if enableFilterIDStr := request.FormValue("enable"); enableFilterIDStr != "" {
-		enableFilterID, err := strconv.Atoi(enableFilterIDStr)
-		if err != nil {
-			return nil, err
-		}
-		gcsql.SetFilterActive(enableFilterID, true)
-	} else if doFilterAdd || doFilterEdit {
-		var conditions []gcsql.FilterCondition
-		var filter *gcsql.Filter
-		if doFilterAdd {
-			// new post submitted
-			filter = &gcsql.Filter{
-				StaffID:  &staff.ID,
-				IsActive: true,
-			}
-		} else if doFilterEdit {
-			// post edit submitted
-			filterIDstr := request.PostFormValue("filterid")
-			filterID, err := strconv.Atoi(filterIDstr)
-			if err != nil {
-				errEv.Err(err).Caller().Str("filterID", filterIDstr).Msg("Unable to parse filter ID")
-				return nil, err
-			}
-			if filter, err = gcsql.GetFilterByID(filterID); err != nil {
-				errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter from ID")
-				return nil, err
-			}
-		}
-
-		for k, v := range request.PostForm {
-			// set filter boards
-			if strings.HasPrefix(k, "applyboard") && v[0] == "on" {
-				boardID, err := strconv.Atoi(k[10:])
-				if err != nil {
-					errEv.Err(err).Caller().
-						Str("boardIDField", k).
-						Str("boardIDStr", k[10:]).
-						Msg("Unable to parse board ID")
-					return nil, errors.New("unable to parse board ID: " + err.Error())
-				}
-				boardIDLogArr.Int(boardID)
-				boards = append(boards, boardID)
-			}
-
-			// set filter conditions
-			if strings.HasPrefix(k, "field") {
-				fieldIDstr := k[5:]
-				if _, err = strconv.Atoi(fieldIDstr); err != nil {
-					errEv.Err(err).Caller().Str("fieldID", fieldIDstr).Send()
-					return nil, errors.New("failed to get field data: " + err.Error())
-				}
-				fc := gcsql.FilterCondition{
-					Field: v[0],
-				}
-				switch request.PostFormValue("matchmode" + fieldIDstr) {
-				case "substr":
-					fc.MatchMode = gcsql.SubstrMatch
-				case "substrci":
-					fc.MatchMode = gcsql.SubstrMatchCaseInsensitive
-				case "regex":
-					fc.MatchMode = gcsql.RegexMatch
-				case "exact":
-					fc.MatchMode = gcsql.ExactMatch
-				default:
-					return nil, gcsql.ErrInvalidStringMatchMode
-				}
-				var validField bool
-				for _, field := range filterFields {
-					if fc.Field == field.Value && !validField {
-						fc.Search = request.PostFormValue("search" + fieldIDstr)
-						if !field.hasSearchbox {
-							fc.Search = "1"
-						}
-						validField = true
-						break
-					}
-				}
-				if !validField {
-					errEv.Err(gcsql.ErrInvalidConditionField).Caller().
-						Str("field", fc.Field).Send()
-					return nil, gcsql.ErrInvalidConditionField
-				}
-				conditionsLogArr.Interface(fc)
-				conditions = append(conditions, fc)
-			}
-			infoEv.Array("conditions", conditionsLogArr)
-		}
-
-		filter.MatchAction = request.PostFormValue("action")
-		filter.MatchDetail = request.PostFormValue("detail")
-		filter.StaffNote = request.PostFormValue("note")
-		if filter.ID > 0 {
-			errEv.Int("filterID", filter.ID)
-		}
-		if err = gcsql.ApplyFilter(filter, conditions, boards); err != nil {
-			errEv.Err(err).Caller().
-				Array("boards", boardIDLogArr).
-				Array("conditions", conditionsLogArr).
-				Msg("Unable to submit filter")
-			return nil, err
-		}
-		infoEv.Msg("Filter submitted")
+	if err = submitFilterFormData(request, staff, infoEv, errEv); err != nil {
+		// submitFilterFormData logs any errors
+		return nil, err
 	}
 
-	data["filterBoards"] = make([]int, 0)
-	if editFilter := request.FormValue("edit"); editFilter != "" {
-		// user clicked on Edit link in filter row
-		filterID, err := strconv.Atoi(editFilter)
-		if err != nil {
-			errEv.Err(err).Caller().Str("filterID", editFilter).Send()
-			return nil, err
-		}
-		filter, err := gcsql.GetFilterByID(filterID)
-		if err != nil {
-			errEv.Err(err).Caller().Int("filterID", filterID).Send()
-			return nil, errors.New("unable to get filter")
-		}
-		data["filter"] = filter
-		if data["filterConditions"], err = filter.Conditions(); err != nil {
-			errEv.Err(err).Caller().Int("filterID", filterID).Msg("Unable to get filter conditions")
-			return nil, errors.New("unable to get filter conditions")
-		}
-		if data["filterBoards"], err = filter.BoardIDs(); err != nil {
-			errEv.Err(err).Caller().Msg("Unable to get filter board IDs")
-			return nil, errors.New("unable to get filter board IDs")
-		}
-	} else {
-		// user loaded /manage/filters, populate single "default" condition
-		data["filter"] = &gcsql.Filter{
-			MatchAction: "reject",
-		}
-		data["filterConditions"] = []gcsql.FilterCondition{
-			{Field: "name"},
-		}
+	data, err := buildFilterFormData(request, errEv)
+	if err != nil {
+		// buildFilterPageData logs any errors
+		return nil, err
 	}
 
 	showStr := request.FormValue("show")
@@ -526,7 +383,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	if err = serverutil.MinifyTemplate(gctemplates.ManageIPSearch, data, manageIpBuffer, "text/html"); err != nil {
 		errEv.Err(err).Caller().
 			Str("template", "manage_ipsearch.html").Send()
-		return "", errors.New("Error executing IP search page template:" + err.Error())
+		return "", errors.New("Unable to render IP search page template")
 	}
 	return manageIpBuffer.String(), nil
 }

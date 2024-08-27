@@ -32,7 +32,11 @@
 </fieldset>
 {{end -}}
 
-<h2>{{if gt $.filter.ID 0}}Edit filter{{else}}New filter{{end}}</h2>
+<h2>{{with .sourcePostID -}}
+	New filter from post <a href="{{webPathDir $.sourcePostBoard `res`}}{{$.sourcePostThread}}.html#{{$.sourcePostID}}">/{{$.sourcePostBoard}}/{{$.sourcePostID}}</a>
+{{- else -}}
+	{{- if gt $.filter.ID 0}}Edit filter{{else}}New filter{{end -}}
+{{- end}}</h2>
 <form id="filterform" action="{{webPath `/manage/filters`}}{{if gt $.filter.ID 0}}?edit={{.ID}}{{end}}" method="POST">
 	{{- if gt $.filter.ID 0}}<input type="hidden" name="filterid" value="{{$.filter.ID}}">{{end -}}
 	Filter conditions are checked against a post after the IP is checked against the <a href="{{webPath `/manage/bans`}}">ban list</a>.
