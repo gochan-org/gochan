@@ -55,7 +55,7 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 func GetPostIP(postID int) (string, error) {
 	sql := "SELECT IP_NTOA FROM DBPREFIXposts WHERE id = ?"
 	var ip string
-	err := QueryRowSQL(sql, []interface{}{postID}, []interface{}{&ip})
+	err := QueryRowSQL(sql, []any{postID}, []any{&ip})
 	return ip, err
 }
 
@@ -89,18 +89,25 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	return posts, nil
 }
 
-func GetTopPostInThread(postID int) (int, error) {
-	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = (
-		SELECT thread_id FROM DBPREFIXposts WHERE id = ?
-	) AND is_top_post = TRUE ORDER BY id ASC LIMIT 1`
-	var id int
-	err := QueryRowSQL(query, []any{postID}, []any{&id})
-	return id, err
+// GetTopPostAndBoardDirFromPostID returns the ID of the top post and the board dir in postID's thread
+func GetTopPostAndBoardDirFromPostID(postID int) (int, string, error) {
+	const query = `SELECT op.id AS op_id, b.dir FROM DBPREFIXposts p
+		INNER JOIN DBPREFIXthreads t ON p.thread_id = t.id
+		INNER JOIN DBPREFIXboards b ON t.board_id = b.id
+		INNER JOIN DBPREFIXposts op ON op.thread_id = t.id AND op.is_top_post = TRUE
+		WHERE p.id = ?`
+	var opID int
+	var dir string
+	err := QueryRowTimeoutSQL(nil, query, []any{postID}, []any{&opID, &dir})
+	if errors.Is(err, sql.ErrNoRows) {
+		err = nil
+	}
+	return opID, dir, err
 }
 
 // GetTopPostIDsInThreadIDs takes a variable number of threads and returns a map[threadID]topPostID
-func GetTopPostIDsInThreadIDs(threads ...interface{}) (map[interface{}]int, error) {
-	ids := make(map[interface{}]int)
+func GetTopPostIDsInThreadIDs(threads ...any) (map[any]int, error) {
+	ids := make(map[any]int)
 	if threads == nil {
 		return ids, nil
 	}

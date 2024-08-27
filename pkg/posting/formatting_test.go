@@ -52,6 +52,7 @@ func TestNoDoubleTags(t *testing.T) {
 	config.SetVersion(versionStr)
 	msgfmtr = new(MessageFormatter)
 	msgfmtr.Init()
-	rendered := FormatMessage(doubleTagPreRender, "")
+	rendered, err := FormatMessage(doubleTagPreRender, "")
+	assert.NoError(t, err)
 	assert.EqualValues(t, doubleTagExpected, rendered)
 }

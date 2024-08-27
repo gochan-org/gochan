@@ -214,10 +214,15 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				})
 				return
 			}
+			formatted, err := posting.FormatMessage(request.FormValue("editmsg"), board.Dir)
+			if err != nil {
+				errEv.Err(err).Caller().Send()
+				server.ServeError(writer, err.Error(), wantsJSON, nil)
+			}
 			if err = post.UpdateContents(
 				request.FormValue("editemail"),
 				request.FormValue("editsubject"),
-				posting.FormatMessage(request.FormValue("editmsg"), board.Dir),
+				formatted,
 				request.FormValue("editmsg"),
 			); err != nil {
 				errEv.Err(err).Caller().

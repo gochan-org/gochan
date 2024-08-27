@@ -82,7 +82,7 @@ func wrapLinksInURL(urlStr string) string {
 	return "[url]" + urlStr + "[/url]"
 }
 
-func FormatMessage(message string, boardDir string) template.HTML {
+func FormatMessage(message string, boardDir string) (template.HTML, error) {
 	if config.GetBoardConfig(boardDir).RenderURLsAsLinks {
 		message = urlRE.ReplaceAllStringFunc(message, wrapLinksInURL)
 		message = msgfmtr.linkFixer.Replace(message)
@@ -102,23 +102,15 @@ func FormatMessage(message string, boardDir string) template.HTML {
 					// the link is in fact, a valid int
 					var boardDir string
 					var linkParent int
-					var p gcsql.Post
-					p.GetTopPost()
-					if boardDir, err = gcsql.GetBoardDirFromPostID(postID); err != nil {
-						gcutil.LogError(err).
-							Int("postid", postID).
-							Msg("Error getting board dir for backlink")
+					if linkParent, boardDir, err = gcsql.GetTopPostAndBoardDirFromPostID(postID); err != nil {
+						gcutil.LogError(err).Caller().Int("childPostID", postID).Msg("Unable to get top post and board")
+						return "", fmt.Errorf("unable to get top post and board for post #%d", postID)
 					}
-					if err == gcsql.ErrBoardDoesNotExist {
+
+					if linkParent == 0 {
+						// board or op not found
 						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
 						continue
-					}
-					linkParent, err := gcsql.GetTopPostInThread(postID)
-					if err != nil {
-						gcutil.LogError(err).
-							Int("postid", postID).
-							Msg("Error getting post parent for backlink")
-						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
 					} else {
 						lineWords[w] = fmt.Sprintf(`<a href="%s%s/res/%d.html#%s" class="postref">%s</a>`, WebRoot, boardDir, linkParent, word[8:], word)
 					}
@@ -135,5 +127,5 @@ func FormatMessage(message string, boardDir string) template.HTML {
 		}
 		postLines[i] = line
 	}
-	return template.HTML(strings.Join(postLines, "<br />")) // skipcq: GSC-G203
+	return template.HTML(strings.Join(postLines, "<br />")), nil // skipcq: GSC-G203
 }

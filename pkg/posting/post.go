@@ -227,7 +227,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	post.Message = FormatMessage(post.MessageRaw, postBoard.Dir)
+	if post.Message, err = FormatMessage(post.MessageRaw, postBoard.Dir); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to format message")
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+	}
 	password := request.FormValue("postpassword")
 	if password == "" {
 		password = gcutil.RandomString(8)

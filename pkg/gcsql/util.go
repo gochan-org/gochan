@@ -449,7 +449,7 @@ func doesGochanPrefixTableExist() (bool, error) {
 } */
 
 // createArrayPlaceholder creates a string of ?s based on the size of arr
-func createArrayPlaceholder(arr []any) string {
+func createArrayPlaceholder[T any](arr []T) string {
 	params := make([]string, len(arr))
 	for p := range params {
 		params[p] = "?"

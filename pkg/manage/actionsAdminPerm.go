@@ -642,8 +642,12 @@ func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff,
 			errEv.Err(err).Caller().Msg("Unable to scan SQL row")
 			return "", err
 		}
-		formatted := posting.FormatMessage(messageRaw, boardDir)
-		gcsql.ExecSQL(updateQuery, formatted, postID)
+		if formatted, err := posting.FormatMessage(messageRaw, boardDir); err != nil {
+			errEv.Err(err).Caller().Msg("Unable to format message")
+			return "", err
+		} else {
+			gcsql.ExecSQL(updateQuery, formatted, postID)
+		}
 	}
 	outputStr += "Done reparsing HTML<hr />"
 
