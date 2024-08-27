@@ -5,7 +5,7 @@ import { isPostVisible, setPostVisibility, setThreadVisibility } from "./posthid
 import { currentBoard } from "../postinfo";
 import { getCookie } from "../cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
-import { banFile, banFileFingerprint, getPostInfo } from "../management/manage";
+import { getPostInfo } from "../management/manage";
 import { updateThreadLock } from "../api/management";
 
 const idRe = /^((reply)|(op))(\d+)/;
@@ -174,52 +174,8 @@ function handleActions(action: string, postIDStr: string) {
 	case "Ban IP address":
 		window.open(`${webroot}manage/bans?dir=${board}&postid=${postID}`);
 		break;
-	case "Ban filename":
-	case "Ban file checksum": {
-		const banType = (action === "Ban filename")?"filename":"checksum";
-		getPostInfo(postID).then((info) => banFile(
-			banType, info.originalFilename, info.checksum,
-			`Added from post dropdown for post /${board}/${postID} (filename: ${info.originalFilename})`
-		)).then((result: any) => {
-			if(result.error !== undefined && result.error !== "") {
-				if(result.message !== undefined)
-					alertLightbox(`Failed applying ${banType} ban: ${result.message}`, "Error");
-				else
-					alertLightbox(`Failed applying ${banType} ban: ${result.error}`, "Error");
-			} else {
-				alertLightbox(`Successfully applied ${banType} ban`, "Success");
-			}
-		}).catch((reason: any) => {
-			let messageDetail = "";
-			try {
-				const responseJSON = JSON.parse(reason.responseText);
-				if((typeof responseJSON.message) === "string" && responseJSON.message !== "") {
-					messageDetail = responseJSON.message;
-				} else {
-					messageDetail = reason.statusText;
-				}
-			} catch(e) {
-				messageDetail = reason.statusText;
-			}
-			alertLightbox(`Failed banning file: ${messageDetail}`, "Error");
-		});
-		break;
-	}
-	case "Ban fingerprint":
-		getPostInfo(postID).then((info) => banFileFingerprint(
-			info.fingerprint, false).then(() => alertLightbox(
-			"Successfully applied fingerprint ban", "Success"
-		)));
-		break;
-	case "Ban fingerprint (IP ban)":
-		getPostInfo(postID).then((info) => {
-			promptLightbox("", false, (_, val) => banFileFingerprint(
-				info.fingerprint, true, val,
-				`Added from post /${board}/${postID} (filename: ${info.originalFilename})`
-			).then(() => alertLightbox(
-				"Successfully applied fingerprint ban", "Success"
-			)));
-		});
+	case "Filter similar posts":
+		window.open(`${webroot}manage/filters?srcpost=${postID}`);
 		break;
 	}
 }

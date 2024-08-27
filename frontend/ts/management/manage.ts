@@ -1,5 +1,4 @@
 import $ from "jquery";
-import path from "path-browserify";
 
 import { alertLightbox } from "../dom/lightbox";
 import { $topbar, TopBarButton } from "../dom/topbar";
@@ -33,7 +32,6 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 	const $el = $(el);
 	const $post = $(el.parentElement);
 	const isLocked = isThreadLocked($post);
-	const $thumb = $post.find("img.upload");
 
 	if(!dropdownHasItem(el, "Staff Actions")) {
 		$el.append('<option disabled="disabled">Staff Actions</option>');
@@ -54,26 +52,8 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 			$el.append("<option>Ban IP address</option>");
 		}
 	}
-
-	if($thumb.length > 0) {
-		const fpOpts = staffInfo.fingerprinting;
-		const uploadExt = path.extname($thumb.attr("alt")).toLowerCase();
-		const isImage = fpOpts.imageExtensions.indexOf(uploadExt) > -1;
-		const isVideo = fpOpts.videoExtensions.indexOf(uploadExt) > -1;
-		if(!dropdownHasItem(el, "Ban filename")) {
-			$el.append(
-				"<option>Ban filename</option>",
-				"<option>Ban file checksum</option>"
-			);
-		}
-		if(isImage || (isVideo && fpOpts.fingerprintVideoThumbs)) {
-			if(!dropdownHasItem(el, "Ban fingerprint")) {
-				$el.append("<option>Ban fingerprint</option>");
-			}
-			if(!dropdownHasItem(el, "Ban fingerprint (IP ban)")) {
-				$el.append("<option>Ban fingerprint (IP ban)</option>");
-			}
-		}
+	if(!dropdownHasItem(el, "Filter similar posts")) {
+		$el.append("<option>Filter similar posts</option>");
 	}
 }
 
