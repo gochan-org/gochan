@@ -91,9 +91,7 @@
 		</tr>
 	</table>
 	<input type="submit" name="dofilter{{if gt $.filter.ID 0}}edit{{else}}add{{end}}" value="Submit Filter">
-	{{- if gt $.filter.ID 0 -}}
-		<input type="button" onclick="window.location='{{webPath `manage/filters`}}'" value="Cancel"/>
-	{{- end -}}
+	{{with $.cancelURL}}<input type="button" onclick="window.location='{{.}}'" value="Cancel"/>{{end}}
 </form>
 <hr/>
 <h2>Filter list</h2>

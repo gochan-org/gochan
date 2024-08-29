@@ -397,7 +397,7 @@ type matchFieldsJSON struct {
 type matchHitJSON struct {
 	Post            *matchFieldsJSON `json:"post"`
 	MatchConditions []string         `json:"matchedConditions"`
-	UserAgent       string           `json:"useragent"`
+	UserAgent       string           `json:"userAgent"`
 }
 
 // handleMatch takes the set action after the filter has been found to match the given post. It returns any errors that occured

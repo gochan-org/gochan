@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
@@ -225,6 +226,7 @@ func buildFilterFormData(request *http.Request, errEv *zerolog.Event) (data map[
 			errEv.Err(err).Caller().Int("postID", postID).Send()
 			return nil, err
 		}
+		data["cancelURL"] = config.WebPath(opBoard, "res", strconv.Itoa(opID)+".html#"+strconv.Itoa(postID))
 		data["sourcePostID"] = postID
 		data["sourcePostBoard"] = opBoard
 		data["sourcePostThread"] = opID
@@ -250,6 +252,7 @@ func buildFilterFormData(request *http.Request, errEv *zerolog.Event) (data map[
 			errEv.Err(err).Caller().Msg("Unable to get filter board IDs")
 			return nil, errors.New("unable to get filter board IDs")
 		}
+		data["cancelURL"] = config.WebPath("/manage/filters")
 	} else {
 		// user loaded /manage/filters, populate single "default" condition
 		filter = &gcsql.Filter{

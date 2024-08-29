@@ -1,12 +1,17 @@
 <a href="{{webPath `/manage/filters/`}}">Back to filter list</a><br/>
 {{with .hits}}
 <table class="mgmt-table filterlist">
+	<colgroup>
+		<col class="filter-id">
+		<col class="row-date">
+		<col class="match-data">
+	</colgroup>
 	<tr><th>Filter ID</th><th>Match time</th><th>Post data</th></tr>
-	{{range $_, $hit := .}}
+	{{range $h, $hit := .}}
 		<tr>
 			<td><a href="{{webPath `/manage/filters`}}?edit={{$hit.FilterID}}">{{$hit.FilterID}}</a></td>
 			<td>{{formatTimestamp $hit.MatchTime}}</td>
-			<td><textarea rows="12" cols="80">{{$hit.PostData}}</textarea></td>
+			<td>{{index $.hitsJSON $h}}</td>
 		</tr>
 	{{end}}
 </table>

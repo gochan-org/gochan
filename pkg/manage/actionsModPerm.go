@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"net/url"
@@ -218,22 +219,28 @@ func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff
 		return nil, errors.New("unable to get list of filter hits")
 	}
 	m := make(map[string]any)
-	var ba []byte
-	for h := range hits {
+	var jsonBuf bytes.Buffer
+	encoder := json.NewEncoder(&jsonBuf)
+	encoder.SetEscapeHTML(true)
+	encoder.SetIndent("", "&ensp;&ensp;&ensp;")
+	var hitsJSON []template.HTML
+	for _, hit := range hits {
+		jsonBuf.Reset()
 		// un-minify the JSON data to make it more readable
-		if err = json.Unmarshal([]byte(hits[h].PostData), &m); err != nil {
+		if err = json.Unmarshal([]byte(hit.PostData), &m); err != nil {
 			errEv.Err(err).Caller().Msg("Unable to unmarshal post data for filter hit")
 			return nil, err
 		}
-		if ba, err = json.MarshalIndent(m, "", "    "); err != nil {
-			errEv.Err(err).Caller().RawJSON("postData", []byte(hits[h].PostData)).Msg("Unable to marshal un-minified post data")
+		if err = encoder.Encode(m); err != nil {
+			errEv.Err(err).Caller().RawJSON("postData", []byte(hit.PostData)).Msg("Unable to marshal un-minified post data")
 			return nil, err
 		}
-		hits[h].PostData = string(ba)
+		hitsJSON = append(hitsJSON, template.HTML(strings.ReplaceAll(jsonBuf.String(), "\n", "<br>")))
 	}
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilterHits, map[string]any{
-		"hits": hits,
+		"hits":     hits,
+		"hitsJSON": hitsJSON,
 	}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilterHits).Msg("Unable to render template")
 		return nil, errors.New("unable to render filter hits page")
