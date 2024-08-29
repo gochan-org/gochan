@@ -27,33 +27,6 @@ import (
 
 // manage actions that require moderator-level permission go here
 
-var (
-	filterFields = []filterField{
-		{Value: "name", Text: "Name", hasRegex: true, hasSearchbox: true},
-		{Value: "trip", Text: `Tripcode`, hasRegex: true, hasSearchbox: true},
-		{Value: "email", Text: "Email", hasRegex: true, hasSearchbox: true},
-		{Value: "subject", Text: "Subject", hasRegex: true, hasSearchbox: true},
-		{Value: "body", Text: "Message body", hasRegex: true, hasSearchbox: true},
-		{Value: "firsttimeboard", Text: "First time poster (board)"},
-		{Value: "notfirsttimeboard", Text: "Not a first time poster (board)"},
-		{Value: "firsttimesite", Text: "First time poster (site-wide)"},
-		{Value: "notfirsttimesite", Text: "Not a first time poster (site-wide)"},
-		{Value: "isop", Text: "Is OP"},
-		{Value: "notop", Text: "Is reply"},
-		{Value: "hasfile", Text: "Has file"},
-		{Value: "nofile", Text: "No file"},
-		{Value: "filename", Text: "Filename", hasRegex: true, hasSearchbox: true},
-		{Value: "checksum", Text: "File checksum", hasSearchbox: true},
-		{Value: "ahash", Text: "Image fingerprint", hasSearchbox: true},
-		{Value: "useragent", Text: "User agent", hasRegex: true, hasSearchbox: true},
-	}
-	filterActionsMap = map[string]string{
-		"reject": "Reject post",
-		"ban":    "Ban IP",
-		"log":    "Log match",
-	}
-)
-
 func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	var outputStr string
 	var ban gcsql.IPBan
