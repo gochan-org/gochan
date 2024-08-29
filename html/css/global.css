@@ -339,10 +339,10 @@ table.mgmt-table th {
   padding: 4px;
 }
 
-table#recentposts, table.filterlist {
+table#recentposts, table.filterhitslist {
   border-collapse: collapse;
 }
-table#recentposts td, table.filterlist td {
+table#recentposts td, table.filterhitslist td {
   border: 1px solid;
 }
 
