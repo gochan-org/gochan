@@ -205,6 +205,10 @@ func buildFilterFormData(request *http.Request, errEv *zerolog.Event) (data map[
 			return nil, err
 		}
 		post, err := gcsql.GetPostFromID(postID, true)
+		if err != nil {
+			errEv.Err(err).Caller().Int("postID", postID).Msg("Unable to get post from ID")
+			return nil, errors.New("unable to get post data from ID")
+		}
 		conditions = []gcsql.FilterCondition{}
 		if post.Name != "" {
 			conditions = append(conditions, gcsql.FilterCondition{Field: "name", MatchMode: gcsql.SubstrMatch, Search: post.Name})

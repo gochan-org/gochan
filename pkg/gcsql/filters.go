@@ -78,7 +78,7 @@ func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
 	return filters, rows.Close()
 }
 
-func getFiltersByBoardDir(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
+func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
 	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
 		FROM DBPREFIXfilters
 		LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
@@ -131,7 +131,7 @@ func getFiltersByBoardDir(dir string, includeAllBoards bool, activeFilter Boolea
 // not associated with a specific board. It can optionally return only the active or only the inactive filters
 // (or return all)
 func GetFiltersByBoardDir(dir string, includeAllBoards bool, show BooleanFilter) ([]Filter, error) {
-	return getFiltersByBoardDir(dir, includeAllBoards, show, false)
+	return getFiltersByBoardDirHelper(dir, includeAllBoards, show, false)
 }
 
 // GetFiltersByBoardID returns an array of post filters associated to the given board ID, including
@@ -510,20 +510,15 @@ func (f *Filter) checkIfMatch(post *Post, upload *Upload, request *http.Request,
 			return false, err
 		}
 	}
-	if match {
-
-	}
-
 	return match, nil
 }
 
-func (fc *FilterCondition) testCondition(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
+func (fc FilterCondition) testCondition(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
 	handler, ok := filterFieldHandlers[fc.Field]
 	if !ok {
 		return false, ErrInvalidConditionField
 	}
-	match, err := handler.CheckMatch(request, post, upload, fc)
-
+	match, err := handler.CheckMatch(request, post, upload, &fc)
 	if err != nil {
 		errEv.Err(err).Caller().
 			Str("field", fc.Field).

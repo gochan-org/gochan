@@ -26,6 +26,8 @@ func (esa *ErrStaffAction) Error() string {
 	return esa.Message
 }
 
+type requestContextKey struct{}
+
 func serveError(writer http.ResponseWriter, field string, action string, message string, isJSON bool) {
 	server.ServeError(writer, message, isJSON, map[string]any{
 		"error":   field,
@@ -103,7 +105,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 				err = fmt.Errorf("action %q exists but has no defined callback", action.ID)
 			} else {
 				output, err = actionCB(writer,
-					request.WithContext(context.WithValue(request.Context(), "actionParams", req.Params())),
+					request.WithContext(context.WithValue(request.Context(), requestContextKey{}, req.Params())),
 					staff, wantsJSON, infoEv, errEv)
 			}
 		}

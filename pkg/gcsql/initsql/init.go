@@ -118,7 +118,7 @@ func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
 }
 
 func init() {
-	events.RegisterEvent([]string{"reset-boards-sections"}, func(trigger string, i ...interface{}) error {
+	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...interface{}) error {
 		return gcsql.ResetBoardSectionArrays()
 	})
 	gctemplates.AddTemplateFuncs(template.FuncMap{
@@ -134,7 +134,7 @@ func init() {
 		"getBoardDefaultStyle": getBoardDefaultStyleTmplFunc,
 		"sectionBoards":        sectionBoardsTmplFunc,
 	})
-	gcsql.RegisterStringConditionHandler("ahash", func(r *http.Request, p *gcsql.Post, u *gcsql.Upload, fc *gcsql.FilterCondition) (bool, error) {
+	gcsql.RegisterStringConditionHandler("ahash", func(r *http.Request, _ *gcsql.Post, u *gcsql.Upload, fc *gcsql.FilterCondition) (bool, error) {
 		if u == nil {
 			return false, nil
 		}

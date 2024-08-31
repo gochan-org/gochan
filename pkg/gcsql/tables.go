@@ -77,7 +77,7 @@ type FilterCondition struct {
 	Field     string          // sql: field
 }
 
-func (fc *FilterCondition) insert(ctx context.Context, tx *sql.Tx) error {
+func (fc FilterCondition) insert(ctx context.Context, tx *sql.Tx) error {
 	_, err := ExecContextSQL(ctx, tx,
 		`INSERT INTO DBPREFIXfilter_conditions(filter_id, match_mode, search, field) VALUES(?,?,?,?)`,
 		fc.FilterID, fc.MatchMode, fc.Search, fc.Field,

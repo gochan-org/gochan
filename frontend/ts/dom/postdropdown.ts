@@ -177,6 +177,10 @@ function handleActions(action: string, postIDStr: string) {
 	case "Filter similar posts":
 		window.open(`${webroot}manage/filters?srcpost=${postID}`);
 		break;
+	default:
+		// this shouldn't happen under normal circumstances
+		alertLightbox("Unrecognized post dropdown option");
+		break;
 	}
 }
 

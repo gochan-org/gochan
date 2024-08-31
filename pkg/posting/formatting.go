@@ -110,7 +110,6 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 					if linkParent == 0 {
 						// board or op not found
 						lineWords[w] = `<a href="javascript:;"><strike>` + word + `</strike></a>`
-						continue
 					} else {
 						lineWords[w] = fmt.Sprintf(`<a href="%s%s/res/%d.html#%s" class="postref">%s</a>`, WebRoot, boardDir, linkParent, word[8:], word)
 					}

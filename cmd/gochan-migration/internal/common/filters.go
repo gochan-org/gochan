@@ -12,8 +12,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-// Used for db version 4 upgrade to create the filter tables from the respective SQL init file
-func AddFilterTables(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
+// AddFilterTables is used for the db version 4 upgrade to create the filter tables from the respective SQL init file
+func AddFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
 	filePath, err := getInitFilePath("initdb_" + sqlConfig.DBtype + ".sql")
 	if err != nil {
 		return err
@@ -37,7 +37,8 @@ func AddFilterTables(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConfig 
 	return nil
 }
 
-func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *config.SQLConfig) error {
+// MigrateFileBans migrates file checksum and image fingerprint bans to the filter table
+func MigrateFileBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *config.SQLConfig) error {
 	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,checksum,fingerprinter,ban_ip,ban_ip_message FROM DBPREFIXfile_ban`)
 	if err != nil {
 		return err
@@ -103,7 +104,8 @@ func MigrateFileBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *confi
 	return rows.Close()
 }
 
-func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *config.SQLConfig) error {
+// MigrateFilenameBans migrates filename bans to the filter table
+func MigrateFilenameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *config.SQLConfig) error {
 	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,filename,match_mode FROM DBPREFIXfilename_ban`)
 	if err != nil {
 		return err
@@ -154,7 +156,8 @@ func MigrateFilenameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 	return rows.Close()
 }
 
-func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *config.SQLConfig) error {
+// MigrateUsernameBans migrates poster name bans to the filter table
+func MigrateUsernameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *config.SQLConfig) error {
 	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,username,is_regex FROM DBPREFIXusername_ban`)
 	if err != nil {
 		return err
@@ -206,7 +209,8 @@ func MigrateUsernameBans(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, cfg *c
 	return rows.Close()
 }
 
-func MigrateWordfilters(db *gcsql.GCDB, ctx context.Context, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
+// MigrateWordfilters migrates pre-filter wordfilters to the filter table
+func MigrateWordfilters(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
 	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_dirs, staff_id, staff_note, issued_at, search, match_mode, change_to FROM DBPREFIXwordfilters`)
 	if err != nil {
 		return err

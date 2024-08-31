@@ -36,6 +36,10 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 	defer cancel()
 
 	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
 	if _, err = ExecContextSQL(ctx, tx, query, staffID, staffNote, time.Now(), to); err != nil {
 		return nil, err
@@ -86,7 +90,7 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 // GetWordfilters gets a list of wordfilters from the database and returns an array of them and any errors
 // encountered
 func GetWordfilters(active BooleanFilter) ([]Wordfilter, error) {
-	filters, err := getFiltersByBoardDir("", true, active, true)
+	filters, err := getFiltersByBoardDirHelper("", true, active, true)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +122,7 @@ func GetWordfilterByID(id int) (*Wordfilter, error) {
 
 // GetBoardWordfilters gets an array of wordfilters associated with the given board directory
 func GetBoardWordfilters(board string) ([]Wordfilter, error) {
-	filters, err := getFiltersByBoardDir(board, true, OnlyTrue, true)
+	filters, err := getFiltersByBoardDirHelper(board, true, OnlyTrue, true)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +151,8 @@ func (wf *Wordfilter) OnBoard(dir string, specific bool) (bool, error) {
 	return false, nil
 }
 
+// StaffName returns the username of the staff member who submitted the filter, or "?" if any errors occured or the
+// staff member dose not exist
 func (wf *Wordfilter) StaffName() string {
 	if wf.StaffID == nil {
 		return ""
@@ -207,8 +213,8 @@ func (wf *Wordfilter) VerifySingleCondition(conditions ...[]FilterCondition) (er
 	return nil
 }
 
-// Deprecated, use the first element in wf.Conditions() instead. This is kept here for templates.
 // IsRegex returns true if the wordfilter should use a regular expression.
+// Deprecated: use the first element in wf.Conditions() instead. This is kept here for templates.
 func (wf *Wordfilter) IsRegex() bool {
 	conditions, err := wf.Conditions()
 	if err != nil || len(conditions) != 1 {
@@ -217,8 +223,8 @@ func (wf *Wordfilter) IsRegex() bool {
 	return conditions[0].MatchMode == RegexMatch
 }
 
-// Deprecated, use the first element in wf.BoardDirs() instead. This is kept here for templates.
 // BoardsString returns the board directories associated with this wordfilter, joined into a string
+// Deprecated: use the first element in wf.BoardDirs() instead. This is kept here for templates.
 func (wf *Wordfilter) BoardsString() string {
 	dirs, err := wf.BoardDirs()
 	if err != nil {
@@ -230,8 +236,8 @@ func (wf *Wordfilter) BoardsString() string {
 	return strings.Join(dirs, ",")
 }
 
-// Deprecated, use the first element of wf.BoardDirs() instead. This is kept here for templates
 // Search returns the search field of the wordfilter condition
+// Deprecated: use the first element of wf.BoardDirs() instead. This is kept here for templates
 func (wf *Wordfilter) Search() string {
 	conditions, err := wf.Conditions()
 	if err != nil {

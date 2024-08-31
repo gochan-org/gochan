@@ -176,8 +176,8 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return manageAppealsBuffer.String(), err
 }
 
-func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _, errEv *zerolog.Event) (output any, err error) {
-	params, _ := request.Context().Value("actionParams").(bunrouter.Params)
+func filterHitsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output any, err error) {
+	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	filterIDStr := params.ByName("filterID")
 	filterID, err := strconv.Atoi(filterIDStr)
 	if err != nil {
@@ -229,7 +229,7 @@ type filterField struct {
 	hasSearchbox bool
 }
 
-func filtersCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	if err = submitFilterFormData(request, staff, infoEv, errEv); err != nil {
 		// submitFilterFormData logs any errors
 		return nil, err
