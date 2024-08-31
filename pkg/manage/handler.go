@@ -65,8 +65,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		if staff.Username == "" && action.Permissions > NoPerms {
 			// action with permissions requested and user is not logged in, have them go to login page
 			actionCB = loginCallback
-		}
-		if staff.Rank < action.Permissions {
+		} else if staff.Rank < action.Permissions {
 			writer.WriteHeader(http.StatusForbidden)
 			gcutil.LogWarning().
 				Str("ip", gcutil.GetRealIP(request)).

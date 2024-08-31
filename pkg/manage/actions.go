@@ -61,24 +61,6 @@ type Action struct {
 
 var actions []Action
 
-// returns the action by its ID, or nil if it doesn't exist
-func getAction(id string, rank int) *Action {
-	var action *Action
-	for a := range actions {
-		if actions[a].ID == id {
-			action = &actions[a]
-			break
-		}
-	}
-	if action == nil {
-		return nil
-	}
-	if rank == NoPerms && action.Permissions > NoPerms {
-		return &loginAction
-	}
-	return action
-}
-
 func RegisterManagePage(id string, title string, permissions int, jsonOutput int, callback CallbackFunction) {
 	action := Action{
 		ID:          id,

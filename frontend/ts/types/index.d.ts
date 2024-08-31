@@ -140,26 +140,6 @@ declare global {
 	}
 
 	/**
-	 * An object representing the settings for fingerprinting images and if enabled,
-	 * video thumbnails
-	 */
-	interface FingerprintingOptions {
-		/**
-		 * If true, allow fingerprinting of video thumbnails
-		 */
-		fingerprintVideoThumbs: boolean;
-		/**
-		 * A list of file extensions for images that gochan is presumed to be able to
-		 * thumbnail
-		 */
-		imageExtensions: string[];
-		/**
-		 * A list of file extensions for videos
-		 */
-		videoExtensions: string[];
-	}
-
-	/**
 	 * An object representing a staff member retreived by requesting /manage/staffinfo
 	 */
 	interface StaffInfo {
@@ -175,10 +155,10 @@ declare global {
 		 * 3 = administrator.
 		 */
 		rank: number;
-
+		/**
+		 * A list of pages that the logged in user has access to
+		 */
 		actions?: StaffAction[]
-
-		fingerprinting?: FingerprintingOptions;
 	}
 
 	/**
