@@ -70,6 +70,13 @@
 			</td>
 		</tr>
 		<tr>
+			<th></th>
+			<td>
+				<label for="handle_on_any" title="If checked, the filter action will activate if any of the above conditions match an incoming post. Otherwise, all conditions must match">
+					<input type="checkbox" name="handleonany" id="handle_on_any"> Activate if any condition matches</label><br />
+			</td>
+		</tr>
+		<tr>
 			<th id="detail">Reason</th>
 			<td><textarea name="detail" rows="5" cols="35">{{$.filter.MatchDetail}}</textarea></td>
 		</tr>

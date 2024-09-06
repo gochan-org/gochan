@@ -57,12 +57,13 @@ type Board struct {
 // and will allow moderators to block posts based on the user's name, email, subject, message content, and other fields.
 // table: DBPREFIXfilters
 type Filter struct {
-	ID          int       `json:"id"`         // sql: id
-	StaffID     *int      `json:"staff_id"`   // sql: staff_id
-	StaffNote   string    `json:"staff_note"` // sql: staff_note
-	IssuedAt    time.Time `json:"issued_at"`  // sql: issued_at
+	ID          int       // sql: id
+	StaffID     *int      // sql: staff_id
+	StaffNote   string    // sql: staff_note
+	IssuedAt    time.Time // sql: issued_at
 	MatchAction string    // sql: match_action
 	MatchDetail string    // sql: match_detail
+	HandleIfAny bool      // sql: handle_if_any
 	IsActive    bool      // sql: is_active
 	conditions  []FilterCondition
 }

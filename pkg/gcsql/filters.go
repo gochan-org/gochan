@@ -498,19 +498,28 @@ func (f *Filter) handleMatch(post *Post, upload *Upload, request *http.Request) 
 func (f *Filter) checkIfMatch(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
 	conditions, err := f.Conditions()
 	if err != nil {
+		errEv.Err(err).Caller().
+			Int("filterID", f.ID).
+			Msg("unable to get filter conditions")
 		return false, err
 	}
 
-	match := true
+	var match bool
 	for _, condition := range conditions {
-		if !match {
-			break
-		}
 		if match, err = condition.testCondition(post, upload, request, errEv); err != nil {
+			// testCondition handles logging errors
 			return false, err
 		}
+		if f.HandleIfAny && match {
+			// found a matching condition, filter is set to consider any matching condition a match
+			return true, nil
+		}
+		if !f.HandleIfAny && !match {
+			// found a non-matching condition, filter is set to consider any non-matching condition a non-match
+			return false, nil
+		}
 	}
-	return match, nil
+	return !f.HandleIfAny, nil
 }
 
 func (fc FilterCondition) testCondition(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {

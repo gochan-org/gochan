@@ -251,6 +251,7 @@ CREATE TABLE DBPREFIXfilters(
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	match_action VARCHAR(45) NOT NULL DEFAULT 'replace',
 	match_detail TEXT NOT NULL,
+	handle_if_any BOOL NOT NULL DEFAULT FALSE,
 	is_active BOOL NOT NULL,
 	CONSTRAINT filters_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
@@ -278,7 +279,7 @@ CREATE TABLE DBPREFIXfilter_conditions(
 	CONSTRAINT filter_conditions_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE,
-	CONSTRAINT filter_conditions_search_check CHECK (search <> '')
+	CONSTRAINT filter_conditions_search_check CHECK (search <> '' OR match_mode = 3)
 );
 
 CREATE TABLE DBPREFIXfilter_hits(
