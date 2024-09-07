@@ -3,6 +3,8 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+
+	"github.com/gochan-org/gochan/pkg/events"
 )
 
 const (
@@ -51,7 +53,16 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload == nil {
 		return nil // no upload to attach, so no error
 	}
-	const query = `INSERT INTO DBPREFIXfiles (
+
+	_, err, recovered := events.TriggerEvent("incoming-upload", upload)
+	if recovered {
+		return errors.New("recovered from a panic in an event handler (incoming-upload)")
+	}
+	if err != nil {
+		return errors.New("unable to attach upload to post: " + err.Error())
+	}
+
+	const insertSQL = `INSERT INTO DBPREFIXfiles (
 		post_id, file_order, original_filename, filename, checksum, file_size,
 		is_spoilered, thumbnail_width, thumbnail_height, width, height)
 	VALUES(?,?,?,?,?,?,?,?,?,?,?)`
@@ -64,7 +75,7 @@ func (p *Post) AttachFile(upload *Upload) error {
 	}
 	defer tx.Rollback()
 
-	stmt, err := PrepareSQL(query, tx)
+	stmt, err := PrepareSQL(insertSQL, tx)
 	if err != nil {
 		return err
 	}

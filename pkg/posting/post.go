@@ -325,33 +325,16 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard, infoEv, errEv)
-	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	var filePath, thumbPath, catalogThumbPath string
-	if upload != nil {
-		filePath = path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
-		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
-			path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
-		if recovered {
-			os.Remove(filePath)
-			os.Remove(thumbPath)
-			os.Remove(catalogThumbPath)
-			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Recovered from a panic in an event handler (incoming-upload)", wantsJSON, nil)
-			return
-		}
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("event", "incoming-upload").
-				Send()
-			server.ServeError(writer, "Unable to attach upload to post: "+err.Error(), wantsJSON, nil)
-			return
-		}
-	} else if err != nil {
+	if err != nil {
 		errEv.Err(err).Caller().Send()
 		// got an error receiving the upload or the upload was rejected
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+	filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+	thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
+		path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
 
 	filter, err := gcsql.DoPostFiltering(post, upload, boardID, request, errEv)
 	if err != nil {
