@@ -1,20 +1,19 @@
-<a href="{{webPath `/manage/filters/`}}">Back to filter list</a><br/>
-{{with .hits}}
+<a href="{{webPath `/manage/filters/`}}">Back to filter list</a> | 
+<a href="{{webPath `/manage/filters/`}}?edit={{$.filterID}}">Edit filter</a><br/>
+{{- with .hits -}}
+{{if eq $.staff.Rank 3 -}}
+	<form action="{{webPath `/manage/filters/hits`}}/{{$.filterID}}" method="POST">
+		<input type="submit" name="clearhits" value="Clear hits" onclick="return confirm('Are you sure you want to clear this filter\'s hits?')" />
+	</form>
+{{- end}}
 <table class="mgmt-table filterhitslist">
 	<colgroup>
-		<col class="filter-id">
 		<col class="row-date">
 		<col class="match-data">
 	</colgroup>
-	<tr><th>Filter ID</th><th>Match time</th><th>Post data</th></tr>
-	{{range $h, $hit := .}}
-		<tr>
-			<td><a href="{{webPath `/manage/filters`}}?edit={{$hit.FilterID}}">{{$hit.FilterID}}</a></td>
-			<td>{{formatTimestamp $hit.MatchTime}}</td>
-			<td>{{index $.hitsJSON $h}}</td>
-		</tr>
-	{{end}}
+	<tr><th>Match time</th><th>Post data</th></tr>
+	{{- range $h, $hit := . -}}
+		<tr><td>{{formatTimestamp $hit.MatchTime}}</td><td>{{index $.hitsJSON $h}}</td></tr>
+	{{- end -}}
 </table>
-{{else}}
-<i>No hits</i>
-{{end}}
+{{- else}}<i>No hits</i>{{end}}

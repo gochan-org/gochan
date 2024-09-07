@@ -176,7 +176,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return manageAppealsBuffer.String(), err
 }
 
-func filterHitsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output any, err error) {
+func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	filterIDStr := params.ByName("filterID")
 	filterID, err := strconv.Atoi(filterIDStr)
@@ -185,6 +185,18 @@ func filterHitsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.S
 		return nil, err
 	}
 	errEv.Int("filterID", filterID)
+	fmt.Println("filterID:", filterID)
+	if request.Method == http.MethodPost && request.PostFormValue("clearhits") == "Clear hits" {
+		if staff.Rank < 3 {
+			writer.WriteHeader(http.StatusForbidden)
+			return nil, ErrInsufficientPermission
+		}
+		if err = gcsql.ClearFilterHits(filterID); err != nil {
+			errEv.Err(err).Caller().Send()
+			return nil, errors.New("unable to clear filter hits")
+		}
+		infoEv.Int("filterID", filterID)
+	}
 
 	hits, err := gcsql.GetFilterHits(filterID)
 	if err != nil {
@@ -212,6 +224,8 @@ func filterHitsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.S
 	}
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilterHits, map[string]any{
+		"staff":    staff,
+		"filterID": filterID,
 		"hits":     hits,
 		"hitsJSON": hitsJSON,
 	}, &buf, "text/html"); err != nil {
@@ -792,11 +806,10 @@ func registerModeratorPages() {
 	RegisterManagePage("bans", "Bans", ModPerms, NoJSON, bansCallback)
 	RegisterManagePage("appeals", "Ban appeals", ModPerms, OptionalJSON, appealsCallback)
 	RegisterManagePage("filters", "Post filters", ModPerms, NoJSON, filtersCallback)
-	server.GetRouter().GET(config.WebPath("/manage/filters/hits/:filterID"), setupManageFunction(&Action{
-		ID:       "filters/hits",
-		Title:    "Filter hits",
-		Callback: filterHitsCallback,
-	}))
+
+	hitsFunc := setupManageFunction(&Action{ID: "filters/hits", Title: "Filter hits", Callback: filterHitsCallback})
+	server.GetRouter().GET(config.WebPath("/manage/filters/hits/:filterID"), hitsFunc)
+	server.GetRouter().POST(config.WebPath("/manage/filters/hits/:filterID"), hitsFunc)
 	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)
 	RegisterManagePage("reports", "Reports", ModPerms, OptionalJSON, reportsCallback)
 	RegisterManagePage("threadattrs", "View/Update Thread Attributes", ModPerms, OptionalJSON, threadAttrsCallback)

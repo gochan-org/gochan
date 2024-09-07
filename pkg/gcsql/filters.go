@@ -650,3 +650,10 @@ func GetFilterHits(filterID int) ([]FilterHit, error) {
 	}
 	return hits, rows.Close()
 }
+
+// ClearFilterHits deletes the recorded match events for the given filter ID
+func ClearFilterHits(filterID int) error {
+	const clearSQL = `DELETE FROM DBPREFIXfilter_hits WHERE filter_id = ?`
+	_, err := ExecTimeoutSQL(nil, clearSQL, filterID)
+	return err
+}
