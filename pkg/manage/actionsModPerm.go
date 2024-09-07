@@ -729,7 +729,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 
 	switch do {
 	case "Edit wordfilter":
-		if err = filter.UpdateDetails(staffNote, "replace", replaceWith); err != nil {
+		if err = filter.UpdateDetails(staffNote, "replace", replaceWith, false); err != nil {
 			errEv.Err(err).Caller().Msg("Unable to update wordfilter details")
 			return nil, errors.New("unable to update wordfilter details")
 		}

@@ -21,6 +21,7 @@ const (
 	RegexMatch
 	// ExactMatch represents a condition that checks if the field exactly matches string
 	ExactMatch
+	filtersQueryBase = `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, handle_if_any, is_active FROM DBPREFIXfilters `
 )
 
 var (
@@ -37,10 +38,9 @@ type StringMatchMode int
 // GetFilterByID returns the filter with the given ID, and an error if one occured
 func GetFilterByID(id int) (*Filter, error) {
 	var filter Filter
-	err := QueryRowTimeoutSQL(nil,
-		`SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active FROM DBPREFIXfilters WHERE id = ?`,
-		[]any{id}, []any{&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive},
-	)
+	err := QueryRowTimeoutSQL(nil, filtersQueryBase+"WHERE id = ?", []any{id}, []any{
+		&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail,
+		&filter.HandleIfAny, &filter.IsActive})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalidFilter
 	} else if err != nil {
@@ -52,9 +52,7 @@ func GetFilterByID(id int) (*Filter, error) {
 // GetAllFilters returns an array of all post filters, and an error if one occured. It can optionally return only the active or
 // only the inactive filters (or return all)
 func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
-	query := `SELECT id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
-		FROM DBPREFIXfilters
-		WHERE match_action <> 'replace'` + activeFilter.whereClause("is_active", true)
+	query := filtersQueryBase + `WHERE match_action <> 'replace'` + activeFilter.whereClause("is_active", true)
 	rows, cancel, err := QueryTimeoutSQL(nil, query)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -69,7 +67,8 @@ func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
 	for rows.Next() {
 		var filter Filter
 		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive,
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction,
+			&filter.MatchDetail, &filter.HandleIfAny, &filter.IsActive,
 		); err != nil {
 			return nil, err
 		}
@@ -79,9 +78,7 @@ func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
 }
 
 func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
-	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
-		FROM DBPREFIXfilters
-		LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
+	query := filtersQueryBase + `LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
 		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
 
 	if useWordFilters {
@@ -118,7 +115,8 @@ func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter 
 	for rows.Next() {
 		var filter Filter
 		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive,
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail,
+			&filter.HandleIfAny, &filter.IsActive,
 		); err != nil {
 			return nil, err
 		}
@@ -138,9 +136,7 @@ func GetFiltersByBoardDir(dir string, includeAllBoards bool, show BooleanFilter)
 // filters set to "All boards" if includeAllBoards is true. It can optionally return only the active or
 // only the inactive filters (or return all)
 func GetFiltersByBoardID(boardID int, includeAllBoards bool, activeFilter BooleanFilter) ([]Filter, error) {
-	query := `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, is_active
-		FROM DBPREFIXfilters LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
-		WHERE match_action <> 'replace' AND`
+	query := filtersQueryBase + `LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id WHERE match_action <> 'replace' AND`
 	if includeAllBoards {
 		query += " (board_id = ? OR board_id IS NULL) "
 	} else {
@@ -162,7 +158,8 @@ func GetFiltersByBoardID(boardID int, includeAllBoards bool, activeFilter Boolea
 	for rows.Next() {
 		var filter Filter
 		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail, &filter.IsActive,
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction,
+			&filter.MatchDetail, &filter.HandleIfAny, &filter.IsActive,
 		); err != nil {
 			return nil, err
 		}
@@ -235,22 +232,22 @@ func (f *Filter) SetConditions(conditions ...FilterCondition) error {
 	return tx.Commit()
 }
 
-func (f *Filter) updateDetailsContext(ctx context.Context, tx *sql.Tx, staffNote string, matchAction string, matchDetail string) error {
+func (f *Filter) updateDetailsContext(ctx context.Context, tx *sql.Tx, staffNote string, matchAction string, matchDetail string, handleIfAny bool) error {
 	_, err := ExecContextSQL(ctx, tx,
-		`UPDATE DBPREFIXfilters SET staff_note = ?, issued_at = ?, match_action = ?, match_detail = ? WHERE id = ?`,
-		staffNote, time.Now(), matchAction, matchDetail, f.ID,
+		`UPDATE DBPREFIXfilters SET staff_note = ?, issued_at = ?, match_action = ?, match_detail = ?, handle_if_any = ? WHERE id = ?`,
+		staffNote, time.Now(), matchAction, matchDetail, handleIfAny, f.ID,
 	)
-	if err != nil {
-		return err
+	if err == nil {
+		f.StaffNote = staffNote
+		f.MatchAction = matchAction
+		f.MatchDetail = matchDetail
+		f.HandleIfAny = handleIfAny
 	}
-	f.StaffNote = staffNote
-	f.MatchAction = matchAction
-	f.MatchDetail = matchDetail
-	return nil
+	return err
 }
 
 // UpdateDetails updates the filter's staff note, match action, and match detail (ban message, reject reason, etc)
-func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail string) error {
+func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail string, handleIfAny bool) error {
 	if f.ID == 0 {
 		return ErrInvalidFilter
 	}
@@ -262,7 +259,7 @@ func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail
 	}
 	defer tx.Rollback()
 
-	if err = f.updateDetailsContext(ctx, tx, staffNote, matchAction, matchDetail); err != nil {
+	if err = f.updateDetailsContext(ctx, tx, staffNote, matchAction, matchDetail, handleIfAny); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -619,7 +616,7 @@ func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) err
 			return err
 		}
 	} else {
-		filter.updateDetailsContext(ctx, tx, filter.StaffNote, filter.MatchAction, filter.MatchDetail)
+		filter.updateDetailsContext(ctx, tx, filter.StaffNote, filter.MatchAction, filter.MatchDetail, filter.HandleIfAny)
 	}
 
 	if err = filter.setConditionsContext(ctx, tx, conditions...); err != nil {

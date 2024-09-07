@@ -430,24 +430,6 @@ func doesGochanPrefixTableExist() (bool, error) {
 	return count > 0, nil
 }
 
-/* func errFilterDuplicatePrimaryKey(err error) (isPKerror bool, nonPKerror error) {
-	if err == nil {
-		return false, nil
-	}
-
-	switch gcdb.driver {
-	case "mysql":
-		if !strings.Contains(err.Error(), "Duplicate entry") {
-			return false, err
-		}
-	case "postgres":
-		if !strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return false, err
-		}
-	}
-	return true, nil
-} */
-
 // createArrayPlaceholder creates a string of ?s based on the size of arr
 func createArrayPlaceholder[T any](arr []T) string {
 	params := make([]string, len(arr))

@@ -331,11 +331,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	filePath := path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
-	thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
-		path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
-
+	var filePath, thumbPath, catalogThumbPath string
+	if upload != nil {
+		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+		filePath = path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+		thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
+			path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
+	}
 	filter, err := gcsql.DoPostFiltering(post, upload, boardID, request, errEv)
 	if err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)

@@ -72,8 +72,8 @@
 		<tr>
 			<th></th>
 			<td>
-				<label for="handle_on_any" title="If checked, the filter action will activate if any of the above conditions match an incoming post. Otherwise, all conditions must match">
-					<input type="checkbox" name="handleonany" id="handle_on_any"> Activate if any condition matches</label><br />
+				<label for="handleifany" title="If checked, the filter action will activate if any of the above conditions match an incoming post. Otherwise, all conditions must match">
+					<input type="checkbox" name="handleifany" id="handleifany" {{if $.filter.HandleIfAny}}checked{{end}}> Activate if any condition matches</label><br />
 			</td>
 		</tr>
 		<tr>

@@ -172,6 +172,8 @@ func submitFilterFormData(request *http.Request, staff *gcsql.Staff, infoEv, err
 	filter.MatchAction = request.PostFormValue("action")
 	filter.MatchDetail = request.PostFormValue("detail")
 	filter.StaffNote = request.PostFormValue("note")
+	filter.HandleIfAny = request.PostFormValue("handleifany") == "on"
+
 	if filter.ID > 0 {
 		errEv.Int("filterID", filter.ID)
 	}
