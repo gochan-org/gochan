@@ -490,6 +490,14 @@ func (f *Filter) handleMatch(post *Post, upload *Upload, request *http.Request) 
 	return ErrInvalidMatchAction
 }
 
+// NumHits returns the number of hits for this function
+func (f *Filter) NumHits() (int, error) {
+	const querySQL = `SELECT COUNT(*) FROM DBPREFIXfilter_hits WHERE filter_id = ?`
+	var numHits int
+	err := QueryRowTimeoutSQL(nil, querySQL, []any{f.ID}, []any{&numHits})
+	return numHits, err
+}
+
 // checkIfMatch checks the filter's conditions to see if it matches the post and handles it according to the MatchAction
 // value, returning true if it matched and false otherwise
 func (f *Filter) checkIfMatch(post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {

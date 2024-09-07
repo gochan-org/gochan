@@ -138,7 +138,7 @@ For wordfilters go <a href="{{webPath `/manage/wordfilters`}}">here</a>.
 		<td class="filter-actions">
 			<a href="{{webPath `/manage/filters`}}?edit={{$filter.ID}}">Edit</a> | 
 			<a href="{{webPath `/manage/filters`}}?{{if $filter.IsActive}}disable{{else}}enable{{end}}={{$filter.ID}}">{{if $filter.IsActive}}Disable{{else}}Enable{{end}}</a> | 
-			<a href="{{webPathDir `/manage/filters/hits/`}}{{$filter.ID}}">Hits</a>
+			<a href="{{webPathDir `/manage/filters/hits/`}}{{$filter.ID}}">Hits ({{index $.filterHits $f}})</a>
 		</td>
 		<td>{{index $.actions $filter.MatchAction}}</td>
 		<td>{{index $.conditions $f}}</td>

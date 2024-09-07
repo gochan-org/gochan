@@ -185,7 +185,6 @@ func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff
 		return nil, err
 	}
 	errEv.Int("filterID", filterID)
-	fmt.Println("filterID:", filterID)
 	if request.Method == http.MethodPost && request.PostFormValue("clearhits") == "Clear hits" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusForbidden)
@@ -281,11 +280,12 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	for _, ff := range filterFields {
 		fieldsMap[ff.Value] = ff.Text
 	}
-	var staffUsernames []string
+	staffUsernames := make([]string, len(filters))
+	conditionsText := make([]string, len(filters))
+	boardsText := make([]string, len(filters))
+	filterHits := make([]int, len(filters))
 
-	var conditionsText []string
-	var boardsText []string
-	for _, filter := range filters {
+	for f, filter := range filters {
 		if _, ok := filterActionsMap[filter.MatchAction]; !ok {
 			errEv.Err(err).Caller().Str("filterAction", filter.MatchAction).Send()
 			return nil, gcsql.ErrInvalidMatchAction
@@ -296,7 +296,6 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 			return nil, err
 		}
 
-		var filterConditionsText string
 		for _, condition := range conditions {
 			text, ok := fieldsMap[condition.Field]
 			if !ok {
@@ -304,10 +303,9 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 					Str("conditionField", condition.Field).Send()
 				return nil, gcsql.ErrInvalidConditionField
 			}
-			filterConditionsText += text + ","
+			conditionsText[f] += text + ","
 		}
-		filterConditionsText = strings.TrimRight(filterConditionsText, ",")
-		conditionsText = append(conditionsText, filterConditionsText)
+		conditionsText[f] = strings.TrimRight(conditionsText[f], ",")
 
 		boards, err := filter.BoardDirs()
 		if err != nil {
@@ -316,18 +314,25 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		}
 		boardsText = append(boardsText, strings.Join(boards, ","))
 		if filter.StaffID == nil {
-			staffUsernames = append(staffUsernames, "?")
+			staffUsernames[f] = "?"
 		} else {
 			username, err := gcsql.GetStaffUsernameFromID(*filter.StaffID)
 			if err != nil {
 				errEv.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get staff from filter")
 				return nil, err
 			}
-			staffUsernames = append(staffUsernames, username)
+			staffUsernames[f] = username
 		}
+		hits, err := filter.NumHits()
+		if err != nil {
+			errEv.Err(err).Caller().Int("filterID", filter.ID).Send()
+			return nil, fmt.Errorf("unable to get list of hits for filter %d", filter.ID)
+		}
+		filterHits[f] = hits
 	}
 
 	data["filters"] = filters
+	data["filterHits"] = filterHits
 	data["conditions"] = conditionsText
 	data["filterTableBoards"] = boardsText
 	data["staff"] = staffUsernames
