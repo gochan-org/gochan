@@ -376,6 +376,10 @@ fieldset.fld-cndtns {
   margin-bottom: 8px;
 }
 
+tr#threadoptions > td > label {
+  display: block;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;

@@ -6,7 +6,7 @@ import "./notifications";
 import { setPageBanner } from "./dom/banners";
 import { setCustomCSS, setCustomJS, setTheme } from "./settings";
 import { handleKeydown } from "./boardevents";
-import { initStaff, createStaffMenu } from "./management/manage";
+import { initStaff, createStaffMenu, addStaffThreadOptions } from "./management/manage";
 import { getPageThread } from "./postinfo";
 import { prepareThumbnails, initPostPreviews } from "./postutil";
 import { addPostDropdown } from "./dom/postdropdown";
@@ -31,8 +31,13 @@ $(() => {
 
 	const pageThread = getPageThread();
 	initStaff()
-		.then(createStaffMenu)
-		.catch(() => {
+		.then((staff) => {
+			if(staff?.rank < 1)
+				return;
+			createStaffMenu(staff);
+			if(staff.rank >= 2)
+				addStaffThreadOptions();
+		}).catch(() => {
 			// not logged in
 		});
 

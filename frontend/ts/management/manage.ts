@@ -145,7 +145,7 @@ export async function initStaff() {
 			} else if(typeof result === "object") {
 				staffInfo = result;
 			}
-			staffActions = staffInfo.actions;
+			staffActions = staffInfo?.actions ?? [];
 			return staffInfo;
 		},
 		error: (e: JQuery.jqXHR) => {
@@ -172,7 +172,7 @@ export async function getPostInfo(id: number):Promise<PostInfo> {
 }
 
 export async function isLoggedIn() {
-	return initStaff().then(info => {
+	return await initStaff().then(info => {
 		return info.rank > 0;
 	});
 }
@@ -263,6 +263,26 @@ export function createStaffMenu(staff = staffInfo) {
 		}
 	}
 	createStaffButton();
+}
+
+export function addStaffThreadOptions() {
+	const $threadOptionsRow = $("tr#threadoptions");
+	if($threadOptionsRow.length < 1) return;
+	$threadOptionsRow.show().find("td").append(
+		$("<label/>").append(
+			$("<input/>").attr({
+				type: "checkbox",
+				name: "modstickied"
+			}), " Sticky thread"
+		),
+		$("<label/>").append(
+			$("<input/>").attr({
+				type: "checkbox",
+				name: "modlocked"
+			}), " Locked thread"
+		),
+	);
+
 }
 
 function createStaffButton() {
