@@ -16,7 +16,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/manage"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
@@ -179,7 +178,7 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	staff, err := manage.GetStaffFromRequest(request)
+	staff, err := gcsql.GetStaffFromRequest(request)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		serveError(writer, "Unable to get staff info", http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
 		return

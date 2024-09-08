@@ -322,6 +322,7 @@ type PostConfig struct {
 	RepliesOnBoardPage       int
 	StickyRepliesOnBoardPage int
 	NewThreadsRequireUpload  bool
+	CyclicalThreadNumPosts   int
 
 	BanColors        []string
 	BanMessage       string

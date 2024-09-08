@@ -55,7 +55,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		}
 
 		var staff *gcsql.Staff
-		staff, err = GetStaffFromRequest(request)
+		staff, err = gcsql.GetStaffFromRequest(request)
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get staff from request")
 			server.ServeError(writer, "Error getting staff info from request", wantsJSON, nil)

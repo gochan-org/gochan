@@ -169,6 +169,22 @@ func GetStaffBySession(session string) (*Staff, error) {
 	return &staff, err
 }
 
+// GetStaffFromRequest returns the staff making the request. If the request does not have
+// a staff cookie, it will return a staff object with rank 0.
+func GetStaffFromRequest(request *http.Request) (*Staff, error) {
+	sessionCookie, err := request.Cookie("sessiondata")
+	if err != nil {
+		return &Staff{Rank: 0}, nil
+	}
+	staff, err := GetStaffBySession(sessionCookie.Value)
+	if errors.Is(err, sql.ErrNoRows) {
+		return &Staff{Rank: 0}, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return staff, nil
+}
+
 func GetStaffByUsername(username string, onlyActive bool) (*Staff, error) {
 	query := `SELECT 
 	id, username, password_checksum, global_rank, added_on, last_login, is_active

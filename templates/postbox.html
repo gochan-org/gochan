@@ -1,11 +1,7 @@
 {{define "postbox.html"}}
 <div id="postbox-area">
-	<form id="postform" name="postform" action="{{webPath "/post"}}" method="POST" enctype="multipart/form-data">
-	{{- with .op}}
-		<input type="hidden" name="threadid" value="{{$.op.ID}}" />
-	{{- else -}}
-		<input type="hidden" name="threadid" value="0" />
-	{{- end}}
+	<form id="postform" name="postform" action="{{webPath `/post`}}" method="POST" enctype="multipart/form-data">
+		<input type="hidden" name="threadid" value="{{with .op}}{{.ID}}{{else}}0{{end}}" />
 		<input type="hidden" name="boardid" value="{{$.board.ID}}" />
 		<table id="postbox-static">
 			<tr><th class="postblock">Name</th><td><input type="text" name="postname" maxlength="100" size="25" /></td></tr>
@@ -34,6 +30,15 @@
 				</td>
 			</tr>
 			{{- end -}}
+			{{with $.op}}{{else -}}
+			<tr id="threadoptions" {{if eq $.boardConfig.CyclicalThreadNumPosts 0}}style="display: none;"{{end}}>
+				<th class="postblock">Options</th>
+				<td>
+					{{if gt $.boardConfig.CyclicalThreadNumPosts 0}}
+					<label for="cyclical"><input type="checkbox" name="cyclical" id="cyclical"> Cyclical thread</label>
+					{{end}}
+				</td>
+			</tr>{{end}}
 			<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>
 			{{if .useCaptcha -}}
 				<tr><th class="postblock">CAPTCHA</th><td>

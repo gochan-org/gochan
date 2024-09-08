@@ -250,6 +250,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	infoEv, errEv := gcutil.LogRequest(request)
 
 	if !serverutil.ValidReferer(request) {
+		// post has no referrer, or has a referrer from a different domain, probably a spambot
 		gcutil.LogWarning().
 			Str("spam", "badReferer").
 			Str("IP", gcutil.GetRealIP(request)).
@@ -309,10 +310,34 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	setCookies(writer, request)
 
 	post.CreatedOn = time.Now()
-	// isSticky := request.PostFormValue("modstickied") == "on"
-	// isLocked := request.PostFormValue("modlocked") == "on"
+	isSticky := request.PostFormValue("modstickied") == "on"
+	isLocked := request.PostFormValue("modlocked") == "on"
 
-	//post has no referrer, or has a referrer from a different domain, probably a spambot
+	if isSticky || isLocked {
+		// check that the user has permission to create sticky/locked threads
+
+		staff, err := gcsql.GetStaffFromRequest(request)
+		if err != nil {
+			errEv.Err(err).Caller().Msg("Unable to get staff info")
+			server.ServeError(writer, "Unable to get staff info", wantsJSON, nil)
+			return
+		}
+		if staff.Rank < 2 {
+			// must be at least a moderator in order to make a sticky or locked thread
+			writer.WriteHeader(http.StatusForbidden)
+			server.ServeError(writer, "You do not have permission to lock or sticky threads", wantsJSON, map[string]any{
+				"username": staff.Username,
+				"rank":     staff.Rank,
+			})
+			return
+		}
+	}
+
+	isCyclical := request.PostFormValue("cyclical") == "on"
+	if isCyclical && boardConfig.CyclicalThreadNumPosts == 0 {
+		server.ServeError(writer, "Board does not support cyclical threads", wantsJSON, nil)
+		return
+	}
 
 	var delay int
 	var tooSoon bool
@@ -405,7 +430,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	_, emailCommand := getEmailAndCommand(request)
-	if err = post.Insert(emailCommand != "sage", board.ID, false, false, false, false); err != nil {
+	if err = post.Insert(emailCommand != "sage", board.ID, isLocked, isSticky, false, isCyclical); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
