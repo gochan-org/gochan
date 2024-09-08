@@ -573,7 +573,7 @@ func DoNonUploadFiltering(post *Post, boardID int, request *http.Request, errEv 
 // its respective action is taken and the filter is returned. It logs any errors it receives and returns a sanitized
 // error (if one occured) that can be shown to the end user
 func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event, excludeFilterIDs ...int) (*Filter, error) {
-	query := "LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL)"
+	query := "LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL) AND match_action <> 'replace'"
 	params := []any{boardID}
 	if len(excludeFilterIDs) > 0 {
 		query += " AND f.id NOT IN " + createArrayPlaceholder(excludeFilterIDs)
@@ -582,7 +582,6 @@ func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Requ
 		}
 	}
 
-	fmt.Println(filtersQueryBase, query)
 	filters, err := queryFilters(query, params...)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get filter list")

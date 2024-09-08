@@ -96,9 +96,9 @@ func handleRecover(writer http.ResponseWriter, wantsJSON bool, infoEv *zerolog.E
 	infoEv.Discard()
 }
 
-// handleFilterAction handles a filter's match action if the filter is not nil, and returns true if post processing should stop (an error page or ban page
+// HandleFilterAction handles a filter's match action if the filter is not nil, and returns true if post processing should stop (an error page or ban page
 // was shown)
-func handleFilterAction(filter *gcsql.Filter, post *gcsql.Post, upload *gcsql.Upload, board *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+func HandleFilterAction(filter *gcsql.Filter, post *gcsql.Post, upload *gcsql.Upload, board *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
 	if filter == nil || filter.MatchAction == "log" {
 		return false
 	}
@@ -364,7 +364,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	if handleFilterAction(filter, post, nil, postBoard, writer, request) {
+	if HandleFilterAction(filter, post, nil, postBoard, writer, request) {
 		return
 	}
 
@@ -386,7 +386,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	if handleFilterAction(filter, post, upload, postBoard, writer, request) {
+	if HandleFilterAction(filter, post, upload, postBoard, writer, request) {
 		return
 	}
 
