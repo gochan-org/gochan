@@ -13,7 +13,7 @@ import { addPostDropdown } from "./dom/postdropdown";
 import { initFlags } from "./dom/flags";
 import { initQR } from "./dom/qr";
 import { getBooleanStorageVal } from "./storage";
-import { replaceBrowseButton } from "./dom/uploaddata";
+import { updateBrowseButton } from "./dom/uploaddata";
 import "./management/filters";
 
 export function toTop() {
@@ -45,7 +45,7 @@ $(() => {
 		if(getBooleanStorageVal("useqr", true))
 			initQR();
 		initPostPreviews();
-		replaceBrowseButton();
+		updateBrowseButton();
 	}
 	$("div.post, div.reply").each((i, elem) => {
 		addPostDropdown($(elem));

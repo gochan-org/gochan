@@ -7,6 +7,7 @@ import { getBooleanStorageVal, getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
 import { closeQR, initQR } from "./dom/qr";
 import { initWatcher } from "./watcher/watcher";
+import { updateBrowseButton } from "./dom/uploaddata";
 
 let $settingsButton: TopBarButton = null;
 
@@ -30,8 +31,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 		this.key = key;
 		this.title = title;
 		this.defaultVal = defaultVal;
-		if(onSave)
-			this.onSave = onSave;
+		this.onSave = onSave ?? (()=>true);
 		this.element = null;
 	}
 	getElementValue(): T {
@@ -47,6 +47,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 	}
 	setStorageValue(newVal: T) {
 		setStorageVal(this.key, newVal);
+		this.onSave();
 	}
 	createElement(selector = "<input/>", props = {}) {
 		return $<E>(selector).prop(props).prop({
@@ -176,6 +177,9 @@ function createLightbox() {
 		const elType = $el.attr("type");
 		const val: string|boolean = (elType === "checkbox")?$el.prop("checked"):$el.val();
 		setStorageVal($el.attr("id"), val);
+		settings.get($el.attr("id"))?.onSave();
+
+
 		if(ev.target.id === "style") {
 			setTheme();
 		}
@@ -255,12 +259,11 @@ $(() => {
 		min: 2
 	}, initWatcher));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
+	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", true, updateBrowseButton));
 
 	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", ""));
 	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));
 
 	if($settingsButton === null)
-		$settingsButton = new TopBarButton("Settings", createLightbox, {
-			before: "a#watcher"
-		});
+		$settingsButton = new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
 });

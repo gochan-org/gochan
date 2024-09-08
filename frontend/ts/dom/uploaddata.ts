@@ -1,6 +1,7 @@
 import $ from "jquery";
 
 import { alertLightbox } from "./lightbox";
+import { getBooleanStorageVal } from "../storage";
 
 
 export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad?:()=>any) {
@@ -76,9 +77,9 @@ function addFileUpload(file:File) {
 	uploadReader.readAsDataURL(file);
 }
 
-export function replaceBrowseButton() {
+function replaceBrowseButton() {
 	const $browseBtn = $<HTMLInputElement>("input[name=imagefile]").hide();
-	if($browseBtn.length < 1) return;
+	if($browseBtn.length < 1 || $("div#upload-box").length > 0) return;
 	$browseBtn.on("change", e => addFileUpload(e.target.files[0]));
 
 	$("<div/>").attr("id", "upload-box").append(
@@ -100,4 +101,14 @@ export function replaceBrowseButton() {
 			el.files = clipboardData.files;
 		});
 	});
+}
+
+export function updateBrowseButton() {
+	const useNewUploader = getBooleanStorageVal("newuploader", true);
+	if(useNewUploader) {
+		replaceBrowseButton();
+	} else {
+		$("div#upload-box").remove();
+		$("input[name=imagefile]").show();
+	}
 }
