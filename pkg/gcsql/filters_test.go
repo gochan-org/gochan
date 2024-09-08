@@ -76,10 +76,8 @@ func TestFilterCheckIfMatch(t *testing.T) {
 			gotMatch, err := tc.filter.checkIfMatch(tc.args.post, tc.args.upload, tc.args.request, errEv)
 			if tc.wantErr {
 				assert.Error(t, err)
-			} else {
-				if !assert.NoError(t, err) {
-					errEv.Send()
-				}
+			} else if !assert.NoError(t, err) {
+				errEv.Send()
 			}
 			assert.Equal(t, tc.wantMatch, gotMatch)
 		})

@@ -1,7 +1,6 @@
 package posting
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -131,59 +130,155 @@ func HandleFilterAction(filter *gcsql.Filter, post *gcsql.Post, upload *gcsql.Up
 	return true
 }
 
+func setCookies(writer http.ResponseWriter, request *http.Request) {
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "email",
+		Value:  url.QueryEscape(request.PostFormValue("postemail")),
+		MaxAge: yearInSeconds,
+	})
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "name",
+		Value:  url.QueryEscape(request.PostFormValue("postname")),
+		MaxAge: yearInSeconds,
+	})
+	http.SetCookie(writer, &http.Cookie{
+		Name:   "password",
+		Value:  url.QueryEscape(request.PostFormValue("postpassword")),
+		MaxAge: yearInSeconds,
+	})
+}
+
+func getEmailAndCommand(request *http.Request) (string, string) {
+	formEmail := request.PostFormValue("postemail")
+	if formEmail == "" || formEmail == "noko" || formEmail == "sage" {
+		return "", formEmail
+	}
+	sepIndex := strings.LastIndex(formEmail, "#")
+	if sepIndex == -1 {
+		return formEmail, ""
+	}
+	return formEmail[:sepIndex], formEmail[sepIndex+1:]
+}
+
+func getPostFromRequest(request *http.Request, infoEv, errEv *zerolog.Event) (post *gcsql.Post, err error) {
+	post = &gcsql.Post{
+		IP:         gcutil.GetRealIP(request),
+		Subject:    request.PostFormValue("postsubject"),
+		MessageRaw: strings.TrimSpace(request.PostFormValue("postmsg")),
+	}
+
+	opIDstr := request.PostFormValue("threadid")
+	// to avoid potential hiccups, we'll just treat the "threadid" form field as the OP ID and convert it internally
+	// to the real thread ID
+	var opID int
+	if opIDstr != "" {
+		// post is a reply
+		if opID, err = strconv.Atoi(opIDstr); err != nil {
+			errEv.Err(err).Caller().
+				Str("opID", opIDstr).
+				Msg("Invalid threadid value")
+			return
+		}
+		if opID > 0 {
+			gcutil.LogInt("opID", opID, infoEv, errEv)
+			if post.ThreadID, err = gcsql.GetTopPostThreadID(opID); err != nil {
+				errEv.Err(err).Caller().Send()
+				return nil, errors.New("unable to get top post in thread")
+			}
+		}
+	}
+	post.Name, post.Tripcode = gcutil.ParseName(request.PostFormValue("postname"))
+	post.Email, _ = getEmailAndCommand(request)
+
+	password := request.PostFormValue("postpassword")
+	if password == "" {
+		password = gcutil.RandomString(12)
+	}
+	post.Password = gcutil.Md5Sum(password)
+	return
+}
+
+func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, errEv *zerolog.Event) (err error) {
+	if len(post.MessageRaw) > board.MaxMessageLength {
+		errEv.Caller().
+			Int("messageLength", len(post.MessageRaw)).
+			Int("maxMessageLength", board.MaxMessageLength).Send()
+		return errors.New("message is too long")
+	}
+
+	if post.MessageRaw, err = ApplyWordFilters(post.MessageRaw, board.Dir); err != nil {
+		errEv.Err(err).Caller().Msg("Error formatting post")
+		return errors.New("unable to apply wordfilters")
+	}
+
+	_, err, recovered := events.TriggerEvent("message-pre-format", post, request)
+	if recovered {
+		errEv.Str("event", "message-pre-format").Msg("Recovered from a panic in an event handler")
+		return errors.New("recovered from a panic in an event handler (message-pre-format)")
+	}
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("event", "message-pre-format").Send()
+		return err
+	}
+
+	if post.Message, err = FormatMessage(post.MessageRaw, board.Dir); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to format message")
+		return errors.New("unable to format message")
+	}
+	return nil
+}
+
+func getRedirectURL(post *gcsql.Post, board *gcsql.Board, request *http.Request) string {
+	topPost, _ := post.TopPostID()
+	_, emailCommand := getEmailAndCommand(request)
+
+	if emailCommand == "noko" {
+		if post.IsTopPost {
+			return config.WebPath("/", board.Dir, "res", strconv.Itoa(post.ID)+".html")
+		}
+		return config.WebPath("/", board.Dir, "res", strconv.Itoa(topPost)+".html#"+strconv.Itoa(post.ID))
+	}
+	return config.WebPath(board.Dir)
+}
+
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
 	request.ParseMultipartForm(maxFormBytes)
 	wantsJSON := serverutil.IsRequestingJSON(request)
 
 	infoEv, errEv := gcutil.LogRequest(request)
-	defer handleRecover(writer, wantsJSON, infoEv, errEv)
 
-	var formName string
-	var formEmail string
-
-	systemCritical := config.GetSystemCriticalConfig()
-
-	if request.Method == "GET" {
-		infoEv.Msg("Invalid request (expected POST, not GET)")
-		http.Redirect(writer, request, systemCritical.WebRoot, http.StatusFound)
+	if !serverutil.ValidReferer(request) {
+		gcutil.LogWarning().
+			Str("spam", "badReferer").
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("threadID", request.PostFormValue("threadid")).
+			Msg("Rejected post from possible spambot")
+		server.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
 		return
 	}
 
-	if request.FormValue("doappeal") != "" {
+	defer handleRecover(writer, wantsJSON, infoEv, errEv)
+
+	if request.Method == "GET" {
+		infoEv.Msg("Invalid request (expected POST, not GET)")
+		http.Redirect(writer, request, config.WebPath("/"), http.StatusFound)
+		return
+	}
+
+	if request.PostFormValue("doappeal") != "" {
 		handleAppeal(writer, request, infoEv, errEv)
 		return
 	}
 
-	post := &gcsql.Post{IP: gcutil.GetRealIP(request)}
-	var err error
-	threadidStr := request.FormValue("threadid")
-	// to avoid potential hiccups, we'll just treat the "threadid" form field as the OP ID and convert it internally
-	// to the real thread ID
-	var opID int
-	if threadidStr != "" {
-		// post is a reply
-		if opID, err = strconv.Atoi(threadidStr); err != nil {
-			errEv.Err(err).Caller().
-				Str("opIDstr", threadidStr).
-				Msg("Invalid threadid value")
-			server.ServeError(writer, "Invalid form data (invalid threadid)", wantsJSON, map[string]any{
-				"threadid": threadidStr,
-			})
-			return
-		}
-		if opID > 0 {
-			if post.ThreadID, err = gcsql.GetTopPostThreadID(opID); err != nil {
-				errEv.Err(err).Caller().
-					Int("opID", opID).Send()
-				server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
-					"opID": opID,
-				})
-			}
-		}
+	post, err := getPostFromRequest(request, infoEv, errEv)
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
 	}
 
-	boardidStr := request.FormValue("boardid")
+	boardidStr := request.PostFormValue("boardid")
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
 		errEv.Str("boardid", boardidStr).Caller().Msg("Invalid boardid value")
@@ -192,7 +287,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		})
 		return
 	}
-	postBoard, err := gcsql.GetBoardFromID(boardID)
+	board, err := gcsql.GetBoardFromID(boardID)
 	if err != nil {
 		errEv.Err(err).Caller().
 			Int("boardid", boardID).
@@ -202,106 +297,26 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		})
 		return
 	}
-	boardConfig := config.GetBoardConfig(postBoard.Dir)
+	boardConfig := config.GetBoardConfig(board.Dir)
 
-	var emailCommand string
-	formName = request.FormValue("postname")
-	post.Name, post.Tripcode = gcutil.ParseName(formName)
-
-	formEmail = request.FormValue("postemail")
-
-	http.SetCookie(writer, &http.Cookie{
-		Name:   "email",
-		Value:  url.QueryEscape(formEmail),
-		MaxAge: yearInSeconds,
-	})
-
-	if !strings.Contains(formEmail, "noko") && !strings.Contains(formEmail, "sage") {
-		post.Email = formEmail
-	} else if strings.Index(formEmail, "#") > 1 {
-		formEmailArr := strings.SplitN(formEmail, "#", 2)
-		post.Email = formEmailArr[0]
-		emailCommand = formEmailArr[1]
-	} else if formEmail == "noko" || formEmail == "sage" {
-		emailCommand = formEmail
-		post.Email = ""
-	}
-
-	post.Subject = request.FormValue("postsubject")
-	post.MessageRaw = strings.TrimSpace(request.FormValue("postmsg"))
-	if len(post.MessageRaw) > postBoard.MaxMessageLength {
-		errEv.
-			Int("messageLength", len(post.MessageRaw)).
-			Int("maxMessageLength", postBoard.MaxMessageLength).Send()
-		server.ServeError(writer, "Message is too long", wantsJSON, map[string]any{
-			"messageLength": len(post.MessageRaw),
-			"boardid":       boardID,
-		})
-		return
-	}
-
-	if post.MessageRaw, err = ApplyWordFilters(post.MessageRaw, postBoard.Dir); err != nil {
-		errEv.Err(err).Caller().Msg("Error formatting post")
-		server.ServeError(writer, "Error formatting post: "+err.Error(), wantsJSON, map[string]any{
-			"boardDir": postBoard.Dir,
-		})
-		return
-	}
-
-	_, err, recovered := events.TriggerEvent("message-pre-format", post, request)
-	if recovered {
-		writer.WriteHeader(http.StatusInternalServerError)
-		server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, nil)
-		return
-	}
-	if err != nil {
-		errEv.Err(err).Caller().
-			Str("event", "message-pre-format").
-			Send()
+	// do length-check, formatting, and wordfilters
+	if err = doFormatting(post, board, request, errEv); err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
 
-	if post.Message, err = FormatMessage(post.MessageRaw, postBoard.Dir); err != nil {
-		errEv.Err(err).Caller().Msg("Unable to format message")
-		server.ServeError(writer, err.Error(), wantsJSON, nil)
-	}
-	password := request.FormValue("postpassword")
-	if password == "" {
-		password = gcutil.RandomString(8)
-	}
-	post.Password = gcutil.Md5Sum(password)
-
-	// add name and email cookies that will expire in a year (31536000 seconds)
-	http.SetCookie(writer, &http.Cookie{
-		Name:   "name",
-		Value:  url.QueryEscape(formName),
-		MaxAge: yearInSeconds,
-	})
-	http.SetCookie(writer, &http.Cookie{
-		Name:   "password",
-		Value:  url.QueryEscape(password),
-		MaxAge: yearInSeconds,
-	})
+	// add name, email, and password cookies that will expire in a year (31536000 seconds)
+	setCookies(writer, request)
 
 	post.CreatedOn = time.Now()
-	// isSticky := request.FormValue("modstickied") == "on"
-	// isLocked := request.FormValue("modlocked") == "on"
+	// isSticky := request.PostFormValue("modstickied") == "on"
+	// isLocked := request.PostFormValue("modlocked") == "on"
 
 	//post has no referrer, or has a referrer from a different domain, probably a spambot
-	if !serverutil.ValidReferer(request) {
-		gcutil.LogWarning().
-			Str("spam", "badReferer").
-			Str("IP", post.IP).
-			Int("threadID", post.ThreadID).
-			Msg("Rejected post from possible spambot")
-		server.ServeError(writer, "Your post looks like spam", wantsJSON, nil)
-		return
-	}
 
 	var delay int
 	var tooSoon bool
-	if threadidStr == "" || threadidStr == "0" || threadidStr == "-1" {
+	if post.ThreadID == 0 {
 		// creating a new thread
 		delay, err = gcsql.SinceLastThread(post.IP)
 		tooSoon = delay < boardConfig.Cooldowns.NewThread
@@ -311,9 +326,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		tooSoon = delay < boardConfig.Cooldowns.Reply
 	}
 	if err != nil {
-		errEv.Err(err).Caller().Str("boardDir", postBoard.Dir).Msg("Unable to check post cooldown")
+		errEv.Err(err).Caller().Str("boardDir", board.Dir).Msg("Unable to check post cooldown")
 		server.ServeError(writer, "Error checking post cooldown: "+err.Error(), wantsJSON, map[string]any{
-			"boardDir": postBoard.Dir,
+			"boardDir": board.Dir,
 		})
 		return
 	}
@@ -323,7 +338,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if checkIpBan(post, postBoard, writer, request) {
+	if checkIpBan(post, board, writer, request) {
 		return
 	}
 
@@ -333,21 +348,21 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, "Error submitting captcha response:"+err.Error(), wantsJSON, nil)
 		return
 	}
-
-	if boardConfig.EnableGeoIP || len(boardConfig.CustomFlags) > 0 {
-		if err = attachFlag(request, post, postBoard.Dir, errEv); err != nil {
-			server.ServeError(writer, err.Error(), wantsJSON, nil)
-			return
-		}
-	}
-
 	if !captchaSuccess {
 		server.ServeError(writer, "Missing or invalid captcha response", wantsJSON, nil)
 		errEv.Msg("Missing or invalid captcha response")
 		return
 	}
+
+	if boardConfig.EnableGeoIP || len(boardConfig.CustomFlags) > 0 {
+		if err = attachFlag(request, post, board.Dir, errEv); err != nil {
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
+			return
+		}
+	}
+
 	_, _, err = request.FormFile("imagefile")
-	noFile := err == http.ErrMissingFile
+	noFile := errors.Is(err, http.ErrMissingFile)
 	if noFile && post.ThreadID == 0 && boardConfig.NewThreadsRequireUpload {
 		errEv.Caller().Msg("New thread rejected (NewThreadsRequireUpload set in config)")
 		server.ServeError(writer, "Upload required for new threads", wantsJSON, nil)
@@ -364,11 +379,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	if HandleFilterAction(filter, post, nil, postBoard, writer, request) {
+	if HandleFilterAction(filter, post, nil, board, writer, request) {
 		return
 	}
 
-	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard, infoEv, errEv)
+	upload, err := uploads.AttachUploadFromRequest(request, writer, post, board, infoEv, errEv)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		// got an error receiving the upload or the upload was rejected
@@ -378,19 +393,19 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	var filePath, thumbPath, catalogThumbPath string
 	if upload != nil {
 		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-		filePath = path.Join(documentRoot, postBoard.Dir, "src", upload.Filename)
+		filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
 		thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
-			path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
+			path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
 	}
 	if filter, err = gcsql.DoPostFiltering(post, upload, boardID, request, errEv, excludedFilterIDs...); err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	if HandleFilterAction(filter, post, upload, postBoard, writer, request) {
+	if HandleFilterAction(filter, post, upload, board, writer, request) {
 		return
 	}
-
-	if err = post.Insert(emailCommand != "sage", postBoard.ID, false, false, false, false); err != nil {
+	_, emailCommand := getEmailAndCommand(request)
+	if err = post.Insert(emailCommand != "sage", board.ID, false, false, false, false); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
@@ -432,7 +447,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// rebuild the board page
-	if err = building.BuildBoards(false, postBoard.ID); err != nil {
+	if err = building.BuildBoards(false, board.ID); err != nil {
 		server.ServeError(writer, "Unable to build boards", wantsJSON, nil)
 		return
 	}
@@ -443,24 +458,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if wantsJSON {
-		topPost := post.ID
-		if !post.IsTopPost {
-			topPost, _ = post.TopPostID()
-		}
-		writer.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(writer).Encode(map[string]any{
+		topPost, _ := post.TopPostID()
+		server.ServeJSON(writer, map[string]any{
 			"time":   post.CreatedOn,
 			"id":     post.ID,
-			"thread": config.WebPath(postBoard.Dir, "/res/", strconv.Itoa(topPost)+".html"),
+			"thread": config.WebPath(board.Dir, "/res/", strconv.Itoa(topPost)+".html"),
 		})
-	} else if emailCommand == "noko" {
-		if post.IsTopPost {
-			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(post.ID)+".html", http.StatusFound)
-		} else {
-			topPost, _ := post.TopPostID()
-			http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/res/"+strconv.Itoa(topPost)+".html#"+strconv.Itoa(post.ID), http.StatusFound)
-		}
-	} else {
-		http.Redirect(writer, request, systemCritical.WebRoot+postBoard.Dir+"/", http.StatusFound)
+		return
 	}
+	http.Redirect(writer, request, getRedirectURL(post, board, request), http.StatusFound)
 }
