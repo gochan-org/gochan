@@ -35,6 +35,29 @@ var (
 // StringMatchMode is used when matching a string, determining how it should be checked (substring, regex, or exact match)
 type StringMatchMode int
 
+func queryFilters(queryAdd string, params ...any) ([]Filter, error) {
+	rows, cancel, err := QueryTimeoutSQL(nil, filtersQueryBase+queryAdd, params...)
+	defer cancel()
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var filters []Filter
+	for rows.Next() {
+		var filter Filter
+		if err = rows.Scan(
+			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction,
+			&filter.MatchDetail, &filter.HandleIfAny, &filter.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		filters = append(filters, filter)
+	}
+	return filters, rows.Close()
+}
+
 // GetFilterByID returns the filter with the given ID, and an error if one occured
 func GetFilterByID(id int) (*Filter, error) {
 	var filter Filter
@@ -52,33 +75,11 @@ func GetFilterByID(id int) (*Filter, error) {
 // GetAllFilters returns an array of all post filters, and an error if one occured. It can optionally return only the active or
 // only the inactive filters (or return all)
 func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
-	query := filtersQueryBase + `WHERE match_action <> 'replace'` + activeFilter.whereClause("is_active", true)
-	rows, cancel, err := QueryTimeoutSQL(nil, query)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	defer func() {
-		cancel()
-		rows.Close()
-	}()
-	var filters []Filter
-	for rows.Next() {
-		var filter Filter
-		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction,
-			&filter.MatchDetail, &filter.HandleIfAny, &filter.IsActive,
-		); err != nil {
-			return nil, err
-		}
-		filters = append(filters, filter)
-	}
-	return filters, rows.Close()
+	return queryFilters(` WHERE match_action <> 'replace'` + activeFilter.whereClause("is_active", true))
 }
 
 func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
-	query := filtersQueryBase + `LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
+	query := `LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
 		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
 
 	if useWordFilters {
@@ -100,29 +101,7 @@ func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter 
 		query += activeFilter.whereClause("is_active", true)
 		params = []any{dir}
 	}
-
-	rows, cancel, err := QueryTimeoutSQL(nil, query, params...)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	defer func() {
-		cancel()
-		rows.Close()
-	}()
-	var filters []Filter
-	for rows.Next() {
-		var filter Filter
-		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction, &filter.MatchDetail,
-			&filter.HandleIfAny, &filter.IsActive,
-		); err != nil {
-			return nil, err
-		}
-		filters = append(filters, filter)
-	}
-	return filters, rows.Close()
+	return queryFilters(query, params...)
 }
 
 // GetFiltersByBoardDir returns the filters associated with the given board dir, optionally including filters
@@ -144,28 +123,7 @@ func GetFiltersByBoardID(boardID int, includeAllBoards bool, activeFilter Boolea
 	}
 	query += activeFilter.whereClause("is_active", true)
 
-	rows, cancel, err := QueryTimeoutSQL(nil, query, boardID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-	defer func() {
-		cancel()
-		rows.Close()
-	}()
-	var filters []Filter
-	for rows.Next() {
-		var filter Filter
-		if err = rows.Scan(
-			&filter.ID, &filter.StaffID, &filter.StaffNote, &filter.IssuedAt, &filter.MatchAction,
-			&filter.MatchDetail, &filter.HandleIfAny, &filter.IsActive,
-		); err != nil {
-			return nil, err
-		}
-		filters = append(filters, filter)
-	}
-	return filters, rows.Close()
+	return queryFilters(query, boardID)
 }
 
 // Conditions returns an array of filter conditions associated with the filter
@@ -555,29 +513,89 @@ func (fc FilterCondition) HasSearchField() bool {
 		fc.Field != "nofile"
 }
 
-// DoPostFiltering checks the filters against the given post. If a match is found, its respective action is taken and the filter
-// is returned. It logs any errors it receives and returns a sanitized error (if one occured) that can be shown to the end user
-func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, error) {
-	filters, err := GetFiltersByBoardID(boardID, true, OnlyTrue)
+func checkFilter(filter *Filter, post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
+	match, err := filter.checkIfMatch(post, upload, request, errEv)
+	if err != nil {
+		errEv.Err(err).Caller().
+			Int("filterID", filter.ID).
+			Msg("Unable to check filter for a match")
+		return false, errors.New("unable to check filter for a match")
+	}
+	if !match {
+		return false, nil
+	}
+	return true, filter.handleMatch(post, upload, request)
+}
+
+func checkFilters(filters []Filter, post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (*Filter, error) {
+	var match bool
+	var err error
+	for f, filter := range filters {
+		if match, err = checkFilter(&filter, post, upload, request, errEv); err != nil {
+			return nil, err
+		}
+		if match {
+			return &filters[f], nil
+		}
+	}
+	return nil, nil
+}
+
+func uploadFilterHelper(withUploads bool, post *Post, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, []int, error) {
+	query := "f LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL) AND "
+	if !withUploads {
+		query += "NOT "
+	}
+	query += `EXISTS (SELECT id FROM DBPREFIXfilter_conditions WHERE filter_id = f.id
+		AND field IN ('hasfile','nofile','filename','checksum','ahash'))`
+
+	filters, err := queryFilters(query, boardID)
+	if err != nil {
+		errEv.Err(err).Caller().Int("boardID", boardID).Msg("Unable to get filter list")
+		return nil, nil, errors.New("unable to get filter list")
+	}
+	filterIDs := make([]int, len(filters))
+	for f, filter := range filters {
+		filterIDs[f] = filter.ID
+	}
+	filter, err := checkFilters(filters, post, nil, request, errEv)
+	return filter, filterIDs, err
+}
+
+// DoNonUploadFiltering runs the incoming post against filters before the post upload has been processed, limiting filters
+// to ones that have no upload related conditions. It logs any errors it receives and returns a sanitized error
+// (if one occured) that can be shown to the end user
+func DoNonUploadFiltering(post *Post, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, []int, error) {
+	return uploadFilterHelper(false, post, boardID, request, errEv)
+}
+
+// DoOnlyUploadFiltering runs the incoming post against filters after the post upload has been processed, limiting filters
+// to ones that only have upload related conditions. It logs any errors it receives and returns a sanitized error
+// (if one occured) that can be shown to the end user
+func DoOnlyUploadFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, []int, error) {
+	return uploadFilterHelper(true, post, boardID, request, errEv)
+}
+
+// DoPostFiltering checks the filters (optionally excluding the given IDs) against the given post. If a match is found,
+// its respective action is taken and the filter is returned. It logs any errors it receives and returns a sanitized
+// error (if one occured) that can be shown to the end user
+func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event, excludeFilterIDs ...int) (*Filter, error) {
+	query := filtersQueryBase + "f LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL)"
+	params := []any{boardID}
+	if len(excludeFilterIDs) > 0 {
+		query += " AND f.id NOT IN " + createArrayPlaceholder(excludeFilterIDs)
+		for _, id := range excludeFilterIDs {
+			params = append(params, id)
+		}
+	}
+
+	filters, err := queryFilters(query, params...)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get filter list")
 		return nil, errors.New("unable to get post filter list")
 	}
 
-	var match bool
-	for f, filter := range filters {
-		if match, err = filter.checkIfMatch(post, upload, request, errEv); err != nil {
-			errEv.Err(err).Caller().
-				Int("filterID", filter.ID).
-				Msg("Unable to check filter for a match")
-			return nil, errors.New("unable to check filter for a match")
-		}
-		if match {
-			filter.handleMatch(post, upload, request)
-			return &filters[f], nil
-		}
-	}
-	return nil, nil
+	return checkFilters(filters, post, upload, request, errEv)
 }
 
 // SetFilterActive updates the filter with the given id, setting its active status and returning an error if one occured

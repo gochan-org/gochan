@@ -273,7 +273,9 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Unable to get filter list")
+		errEv.Err(err).Caller().
+			Str("boardSearch", boardSearch).
+			Msg("Unable to get filter list")
 		return nil, err
 	}
 	fieldsMap := make(map[string]string)
@@ -287,7 +289,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 	for f, filter := range filters {
 		if _, ok := filterActionsMap[filter.MatchAction]; !ok {
-			errEv.Err(err).Caller().Str("filterAction", filter.MatchAction).Send()
+			errEv.Err(gcsql.ErrInvalidMatchAction).Caller().Str("filterAction", filter.MatchAction).Send()
 			return nil, gcsql.ErrInvalidMatchAction
 		}
 		conditions, err := filter.Conditions()
