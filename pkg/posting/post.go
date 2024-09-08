@@ -96,6 +96,41 @@ func handleRecover(writer http.ResponseWriter, wantsJSON bool, infoEv *zerolog.E
 	infoEv.Discard()
 }
 
+// handleFilterAction handles a filter's match action if the filter is not nil, and returns true if post processing should stop (an error page or ban page
+// was shown)
+func handleFilterAction(filter *gcsql.Filter, post *gcsql.Post, upload *gcsql.Upload, board *gcsql.Board, writer http.ResponseWriter, request *http.Request) bool {
+	if filter == nil || filter.MatchAction == "log" {
+		return false
+	}
+	wantsJSON := serverutil.IsRequestingJSON(request)
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+	if upload != nil {
+		filePath := path.Join(documentRoot, board.Dir, "thumb", upload.Filename)
+		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
+			path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
+		os.Remove(filePath)
+		os.Remove(thumbPath)
+		os.Remove(catalogThumbPath)
+	}
+	switch filter.MatchAction {
+	case "reject":
+		gcutil.LogWarning().
+			Str("ip", post.IP).
+			Str("userAgent", request.UserAgent()).
+			Int("filterID", filter.ID).
+			Msg("Post rejected by filter")
+		rejectReason := filter.MatchDetail
+		if rejectReason == "" {
+			rejectReason = "Post rejected"
+		}
+		server.ServeError(writer, rejectReason, wantsJSON, nil)
+	case "ban":
+		// if the filter bans the user, it will be logged
+		checkIpBan(post, board, writer, request)
+	}
+	return true
+}
+
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
 	request.ParseMultipartForm(maxFormBytes)
@@ -324,6 +359,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	filter, excludedFilterIDs, err := gcsql.DoNonUploadFiltering(post, boardID, request, errEv)
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
+	}
+	if handleFilterAction(filter, post, nil, postBoard, writer, request) {
+		return
+	}
+
 	upload, err := uploads.AttachUploadFromRequest(request, writer, post, postBoard, infoEv, errEv)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
@@ -338,31 +382,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
 			path.Join(documentRoot, postBoard.Dir, "thumb", upload.Filename))
 	}
-	filter, err := gcsql.DoPostFiltering(post, upload, boardID, request, errEv)
-	if err != nil {
+	if filter, err = gcsql.DoPostFiltering(post, upload, boardID, request, errEv, excludedFilterIDs...); err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
-	if filter != nil && filter.MatchAction != "log" {
-		os.Remove(filePath)
-		os.Remove(thumbPath)
-		os.Remove(catalogThumbPath)
-		switch filter.MatchAction {
-		case "reject":
-			gcutil.LogWarning().
-				Str("ip", post.IP).
-				Str("userAgent", request.UserAgent()).
-				Int("filterID", filter.ID).
-				Msg("Post rejected by filter")
-			rejectReason := filter.MatchDetail
-			if rejectReason == "" {
-				rejectReason = "Post rejected"
-			}
-			server.ServeError(writer, rejectReason, wantsJSON, nil)
-		case "ban":
-			// if the filter bans the user, it will be logged
-			checkIpBan(post, postBoard, writer, request)
-		}
+	if handleFilterAction(filter, post, upload, postBoard, writer, request) {
 		return
 	}
 

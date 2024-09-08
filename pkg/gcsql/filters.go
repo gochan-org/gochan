@@ -21,7 +21,7 @@ const (
 	RegexMatch
 	// ExactMatch represents a condition that checks if the field exactly matches string
 	ExactMatch
-	filtersQueryBase = `SELECT DBPREFIXfilters.id, staff_id, staff_note, issued_at, match_action, match_detail, handle_if_any, is_active FROM DBPREFIXfilters `
+	filtersQueryBase = `SELECT f.id, staff_id, staff_note, issued_at, match_action, match_detail, handle_if_any, is_active FROM DBPREFIXfilters f `
 )
 
 var (
@@ -79,7 +79,7 @@ func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
 }
 
 func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
-	query := `LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id
+	query := `LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id
 		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
 
 	if useWordFilters {
@@ -115,7 +115,7 @@ func GetFiltersByBoardDir(dir string, includeAllBoards bool, show BooleanFilter)
 // filters set to "All boards" if includeAllBoards is true. It can optionally return only the active or
 // only the inactive filters (or return all)
 func GetFiltersByBoardID(boardID int, includeAllBoards bool, activeFilter BooleanFilter) ([]Filter, error) {
-	query := filtersQueryBase + `LEFT JOIN DBPREFIXfilter_boards ON filter_id = DBPREFIXfilters.id WHERE match_action <> 'replace' AND`
+	query := filtersQueryBase + `LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE match_action <> 'replace' AND`
 	if includeAllBoards {
 		query += " (board_id = ? OR board_id IS NULL) "
 	} else {
@@ -542,7 +542,7 @@ func checkFilters(filters []Filter, post *Post, upload *Upload, request *http.Re
 }
 
 func uploadFilterHelper(withUploads bool, post *Post, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, []int, error) {
-	query := "f LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL) AND "
+	query := " LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL) AND "
 	if !withUploads {
 		query += "NOT "
 	}
@@ -569,18 +569,11 @@ func DoNonUploadFiltering(post *Post, boardID int, request *http.Request, errEv 
 	return uploadFilterHelper(false, post, boardID, request, errEv)
 }
 
-// DoOnlyUploadFiltering runs the incoming post against filters after the post upload has been processed, limiting filters
-// to ones that only have upload related conditions. It logs any errors it receives and returns a sanitized error
-// (if one occured) that can be shown to the end user
-func DoOnlyUploadFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event) (*Filter, []int, error) {
-	return uploadFilterHelper(true, post, boardID, request, errEv)
-}
-
 // DoPostFiltering checks the filters (optionally excluding the given IDs) against the given post. If a match is found,
 // its respective action is taken and the filter is returned. It logs any errors it receives and returns a sanitized
 // error (if one occured) that can be shown to the end user
 func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Request, errEv *zerolog.Event, excludeFilterIDs ...int) (*Filter, error) {
-	query := filtersQueryBase + "f LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL)"
+	query := "LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id WHERE is_active AND (board_id = ? OR board_id IS NULL)"
 	params := []any{boardID}
 	if len(excludeFilterIDs) > 0 {
 		query += " AND f.id NOT IN " + createArrayPlaceholder(excludeFilterIDs)
@@ -589,6 +582,7 @@ func DoPostFiltering(post *Post, upload *Upload, boardID int, request *http.Requ
 		}
 	}
 
+	fmt.Println(filtersQueryBase, query)
 	filters, err := queryFilters(query, params...)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to get filter list")
