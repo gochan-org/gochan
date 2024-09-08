@@ -56,7 +56,6 @@ func (*MessageFormatter) ApplyWordFilters(message string, boardDir string) (stri
 	} else {
 		filters, err = gcsql.GetBoardWordfilters(boardDir)
 	}
-	fmt.Println(err)
 	if err != nil {
 		return message, err
 	}
