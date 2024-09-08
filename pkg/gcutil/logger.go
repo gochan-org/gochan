@@ -163,7 +163,7 @@ func LogAccess(request *http.Request) *zerolog.Event {
 // IP, the user-agent string, and the requested path and HTTP method
 func LogRequest(request *http.Request) (*zerolog.Event, *zerolog.Event) {
 	infoEv := logger.Info()
-	errEv := logger.Err(nil)
+	errEv := logger.Error()
 	if request != nil {
 		LogStr("IP", GetRealIP(request), infoEv, errEv)
 		LogStr("path", request.URL.Path, infoEv, errEv)
