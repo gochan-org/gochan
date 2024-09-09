@@ -283,14 +283,14 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			})
 			return
 		}
-		if err = building.BuildBoardPages(srcBoard); err != nil {
+		if err = building.BuildBoardPages(srcBoard, errEv); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"srcBoardID": srcBoardID,
 			})
 			return
 		}
-		if err = building.BuildBoardPages(destBoard); err != nil {
+		if err = building.BuildBoardPages(destBoard, errEv); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			server.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
 				"destBoardID": destBoardID,

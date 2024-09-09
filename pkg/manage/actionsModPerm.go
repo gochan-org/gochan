@@ -551,7 +551,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 				errEv.Err(err).Caller().Send()
 				return "", err
 			}
-			if err = building.BuildBoardPages(board); err != nil {
+			if err = building.BuildBoardPages(board, errEv); err != nil {
 				return "", err
 			}
 			post, err := gcsql.GetPostFromID(topPostID, true)

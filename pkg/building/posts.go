@@ -30,11 +30,12 @@ const (
 	coalesce(DBPREFIXfiles.height,0) AS height,
 	t.locked as locked,
 	t.stickied as stickied,
+	t.cyclical as cyclical,
 	flag, country
 	FROM DBPREFIXposts
 	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id AND is_deleted = FALSE
 	LEFT JOIN (
-		SELECT id, board_id, last_bump, locked, stickied FROM DBPREFIXthreads
+		SELECT id, board_id, last_bump, locked, stickied,cyclical FROM DBPREFIXthreads
 	) t ON t.id = DBPREFIXposts.thread_id
 	INNER JOIN (
 		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
@@ -128,6 +129,10 @@ func (p *Post) Stickied() bool {
 	return p.thread.Stickied
 }
 
+func (p *Post) Cyclical() bool {
+	return p.thread.Cyclical
+}
+
 func QueryPosts(query string, params []any, cb func(*Post) error) error {
 	sqlCfg := config.GetSQLConfig()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds)*time.Second)
@@ -151,10 +156,10 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 		var lastBump time.Time
 		dest = append(dest,
 			&post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardDir,
-			&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw,
+			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied, &post.Country.Flag, &post.Country.Name)
+			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.Country.Flag, &post.Country.Name)
 
 		if err = rows.Scan(dest...); err != nil {
 			return err
@@ -190,10 +195,10 @@ func GetBuildablePost(id int, _ int) (*Post, error) {
 		out = append(out, &ip)
 	}
 	out = append(out, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
-		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID, &post.BoardDir,
-		&post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
+		&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-		&post.thread.Locked, &post.thread.Stickied, &post.Country.Flag, &post.Country.Name)
+		&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.Country.Flag, &post.Country.Name)
 
 	err := gcsql.QueryRowSQL(query, []any{id}, out)
 	if err != nil {

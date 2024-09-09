@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="120"
+   height="120"
+   viewBox="0 0 120 120"
+   version="1.1"
+   id="svg5"
+   inkscape:export-filename="cyclical.png"
+   inkscape:export-xdpi="12.8"
+   inkscape:export-ydpi="12.8"
+   inkscape:version="1.3.2 (091e20ef0f, 2023-11-25, custom)"
+   sodipodi:docname="cyclical.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     showgrid="false"
+     inkscape:zoom="5.6568542"
+     inkscape:cx="81.494057"
+     inkscape:cy="42.161242"
+     inkscape:window-width="1600"
+     inkscape:window-height="847"
+     inkscape:window-x="0"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-11.819245,-12.978415)">
+    <path
+       id="path1"
+       style="fill:#007d00;fill-opacity:1;stroke:#071c03;stroke-width:1.84009;stroke-dasharray:none;stroke-opacity:1;paint-order:markers fill stroke"
+       d="m 65.392959,15.250404 -0.01876,26.759311 c -24.120401,3.017883 -42.853162,19.489798 -42.853162,43.230186 -2e-6,25.856989 22.071703,46.818449 49.298206,46.818469 27.226529,0 49.298217,-20.96148 49.298207,-46.818469 0,-13.822775 -6.31249,-26.243601 -16.34332,-34.81374 l 1.01102,12.066637 -10.385976,-0.425793 c 6.384136,5.860967 12.353576,13.307053 12.353626,22.405718 -9e-5,17.801907 -17.592073,35.807807 -36.336841,35.807877 -18.744771,-7e-5 -38.266888,-17.85968 -38.266978,-35.66157 8e-5,-15.772069 16.450065,-30.735172 32.219591,-33.528857 l -0.01876,27.734696 29.466003,-30.276324 1.509972,-1.348657 -0.106918,-0.09379 0.0019,-0.0019 z" />
+  </g>
+  <metadata
+     id="metadata8181">
+    <rdf:RDF>
+      <cc:License
+         rdf:about="http://creativecommons.org/licenses/by-sa/4.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Notice" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#Attribution" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://creativecommons.org/ns#ShareAlike" />
+      </cc:License>
+      <cc:Work
+         rdf:about="">
+        <cc:license
+           rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>

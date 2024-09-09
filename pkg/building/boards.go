@@ -15,6 +15,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -50,11 +51,13 @@ func boolToInt(b bool) int {
 }
 
 // BuildBoardPages builds the front pages for the given board, and returns any error it encountered.
-func BuildBoardPages(board *gcsql.Board) error {
-	errEv := gcutil.LogError(nil).
-		Int("boardID", board.ID).
-		Str("boardDir", board.Dir)
-	defer errEv.Discard()
+func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
+	if errEv == nil {
+		errEv = gcutil.LogError(nil).
+			Int("boardID", board.ID).
+			Str("boardDir", board.Dir)
+		defer errEv.Discard()
+	}
 	err := gctemplates.InitTemplates(gctemplates.BoardPage)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("unable to initialize boardpage template")
@@ -507,8 +510,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
 	}
 
-	if err = BuildBoardPages(board); err != nil {
-		errEv.Err(err).Caller().Send()
+	if err = BuildBoardPages(board, errEv); err != nil {
 		return err
 	}
 	if err = BuildThreads(true, board.ID, 0); err != nil {
