@@ -21,7 +21,7 @@ var (
 	bbcodeTagRE = regexp.MustCompile(`\[/?[^\[\]\s]+\]`)
 )
 
-type recentPost struct {
+type frontPagePost struct {
 	Board         string
 	URL           string
 	ThumbURL      string
@@ -30,7 +30,7 @@ type recentPost struct {
 	MessageSample string
 }
 
-func getRecentPosts() ([]recentPost, error) {
+func getFrontPagePosts() ([]frontPagePost, error) {
 	siteCfg := config.GetSiteConfig()
 	query := `SELECT
 	DBPREFIXposts.id, DBPREFIXposts.message_raw,
@@ -52,9 +52,9 @@ func getRecentPosts() ([]recentPost, error) {
 		return nil, err
 	}
 	defer rows.Close()
-	var recentPosts []recentPost
+	var recentPosts []frontPagePost
 	for rows.Next() {
-		var post recentPost
+		var post frontPagePost
 		var id, topPostID string
 		var message, boardDir, filename string
 		err = rows.Scan(&id, &message, &boardDir, &filename, &topPostID)
@@ -66,7 +66,7 @@ func getRecentPosts() ([]recentPost, error) {
 			message = message[:37] + "..."
 		}
 		thumbnail, _ := uploads.GetThumbnailFilenames(filename)
-		post = recentPost{
+		post = frontPagePost{
 			Board:         boardDir,
 			URL:           config.WebPath(boardDir, "res", topPostID+".html") + "#" + id,
 			ThumbURL:      config.WebPath(boardDir, "thumb", thumbnail),
@@ -102,9 +102,9 @@ func BuildFrontPage() error {
 		return errors.New("Failed setting file ownership for front page: " + err.Error())
 	}
 
-	var recentPostsArr []recentPost
+	var recentPostsArr []frontPagePost
 	siteCfg := config.GetSiteConfig()
-	recentPostsArr, err = getRecentPosts()
+	recentPostsArr, err = getFrontPagePosts()
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return errors.New("Failed loading recent posts: " + err.Error())
