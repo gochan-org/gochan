@@ -28,29 +28,29 @@ type BoardStaff struct {
 
 // table: DBPREFIXboards
 type Board struct {
-	ID               int       // sql: id
-	SectionID        int       // sql: section_id
-	URI              string    // sql: uri
-	Dir              string    // sql: dir
-	NavbarPosition   int       // sql: navbar_position
-	Title            string    // sql: title
-	Subtitle         string    // sql: suttitle
-	Description      string    // sql: description
-	MaxFilesize      int       // sql: max_file_size
-	MaxThreads       int       // sql: max_threads
-	DefaultStyle     string    // sql: default_style
-	Locked           bool      // sql: locked
-	CreatedAt        time.Time // sql: created_at
-	AnonymousName    string    // sql: anonymous_name
-	ForceAnonymous   bool      // sql: force_anonymous
-	AutosageAfter    int       // sql: autosage_after
-	NoImagesAfter    int       // sql: no_images_after
-	MaxMessageLength int       // sql: max_message_length
-	MinMessageLength int       // sql: min_message_length
-	AllowEmbeds      bool      // sql: allow_embeds
-	RedirectToThread bool      // sql: redirect_to_thread
-	RequireFile      bool      // sql: require_file
-	EnableCatalog    bool      // sql: enable_catalog
+	ID               int       `json:"-"`                 // sql: id
+	SectionID        int       `json:"-"`                 // sql: section_id
+	URI              string    `json:"-"`                 // sql: uri
+	Dir              string    `json:"board"`             // sql: dir
+	NavbarPosition   int       `json:"-"`                 // sql: navbar_position
+	Title            string    `json:"title"`             // sql: title
+	Subtitle         string    `json:"meta_description"`  // sql: suttitle
+	Description      string    `json:"-"`                 // sql: description
+	MaxFilesize      int       `json:"max_filesize"`      // sql: max_file_size
+	MaxThreads       int       `json:"-"`                 // sql: max_threads
+	DefaultStyle     string    `json:"-"`                 // sql: default_style
+	Locked           bool      `json:"is_archived"`       // sql: locked
+	CreatedAt        time.Time `json:"-"`                 // sql: created_at
+	AnonymousName    string    `json:"-"`                 // sql: anonymous_name
+	ForceAnonymous   bool      `json:"-"`                 // sql: force_anonymous
+	AutosageAfter    int       `json:"-"`                 // sql: autosage_after
+	NoImagesAfter    int       `json:"image_limit"`       // sql: no_images_after
+	MaxMessageLength int       `json:"max_comment_chars"` // sql: max_message_length
+	MinMessageLength int       `json:"min_comment_chars"` // sql: min_message_length
+	AllowEmbeds      bool      `json:"-"`                 // sql: allow_embeds
+	RedirectToThread bool      `json:"-"`                 // sql: redirect_to_thread
+	RequireFile      bool      `json:"-"`                 // sql: require_file
+	EnableCatalog    bool      `json:"-"`                 // sql: enable_catalog
 }
 
 // Filter represents an entry in gochan's new filter system which merges username bans, file bans, and filename bans,
@@ -166,112 +166,112 @@ func (ipb *IPBan) IsBanned(ipStr string) (bool, error) {
 
 // table: DBPREFIXip_ban_audit
 type IPBanAudit struct {
-	IPBanID   int       // sql: `ip_ban_id`
-	Timestamp time.Time // sql: `timestamp`
+	IPBanID   int       // sql: ip_ban_id
+	Timestamp time.Time // sql: timestamp
 	IPBanBase
 }
 
 // used to composition IPBanAppeal and IPBanAppealAudit
 type ipBanAppealBase struct {
-	StaffID       int    // sql: `staff_id`
-	AppealText    string // sql: `appeal_text`
-	StaffResponse string // sql: `staff_response`
-	IsDenied      bool   // sql: `is_denied`
+	StaffID       int    // sql: staff_id
+	AppealText    string // sql: appeal_text
+	StaffResponse string // sql: staff_response
+	IsDenied      bool   // sql: is_denied
 }
 
 // table: DBPREFIXip_ban_appeals
 type IPBanAppeal struct {
-	ID      int // sql: `id`
-	IPBanID int // sql: `ip_ban_id`
+	ID      int // sql: id
+	IPBanID int // sql: ip_ban_id
 	ipBanAppealBase
 }
 
 // table: DBPREFIXip_ban_appeals_audit
 type IPBanAppealAudit struct {
-	AppealID  int       // sql: `appeal_id`
-	Timestamp time.Time // sql: `timestamp`
+	AppealID  int       // sql: appeal_id
+	Timestamp time.Time // sql: timestamp
 	ipBanAppealBase
 }
 
 // table: DBPREFIXposts
 type Post struct {
-	ID              int           // sql: `id`
-	ThreadID        int           // sql: `thread_id`
-	IsTopPost       bool          // sql: `is_top_post`
-	IP              string        // sql: `ip`
-	CreatedOn       time.Time     // sql: `created_on`
-	Name            string        // sql: `name`
-	Tripcode        string        // sql: `tripcode`
-	IsRoleSignature bool          // sql: `is_role_signature`
-	Email           string        // sql: `email`
-	Subject         string        // sql: `subject`
-	Message         template.HTML // sql: `message`
-	MessageRaw      string        // sql: `message_raw`
+	ID              int           // sql: id
+	ThreadID        int           // sql: thread_id
+	IsTopPost       bool          // sql: is_top_post
+	IP              string        // sql: ip
+	CreatedOn       time.Time     // sql: created_on
+	Name            string        // sql: name
+	Tripcode        string        // sql: tripcode
+	IsRoleSignature bool          // sql: is_role_signature
+	Email           string        // sql: email
+	Subject         string        // sql: subject
+	Message         template.HTML // sql: message
+	MessageRaw      string        // sql: message_raw
 	Password        string        `json:"-"` // sql: `password`
-	DeletedAt       time.Time     // sql: `deleted_at`
-	IsDeleted       bool          // sql: `is_deleted`
-	BannedMessage   string        // sql: `banned_message`
-	Flag            string        // sql: `flag`
-	Country         string        // sql: `country`
+	DeletedAt       time.Time     // sql: deleted_at
+	IsDeleted       bool          // sql: is_deleted
+	BannedMessage   string        // sql: banned_message
+	Flag            string        // sql: flag
+	Country         string        // sql: country
 }
 
 // table: DBPREFIXreports
 type Report struct {
-	ID               int    // sql: `id`
-	HandledByStaffID int    // sql: `handled_by_staff_id`
-	PostID           int    // sql: `post_id`
-	IP               string // sql: `ip`
-	Reason           string // sql: `reason`
-	IsCleared        bool   // sql: `is_cleared`
+	ID               int    // sql: id
+	HandledByStaffID int    // sql: handled_by_staff_id
+	PostID           int    // sql: post_id
+	IP               string // sql: ip
+	Reason           string // sql: reason
+	IsCleared        bool   // sql: is_cleared
 }
 
 // table: DBPREFIXreports_audit
 type ReportAudit struct {
-	Report           int       // sql: `report_id`
-	Timestamp        time.Time // sql: `timestamp`
-	HandledByStaffID int       // sql: `handled_by_staff_id`
-	IsCleared        bool      // sql: `is_cleared`
+	Report           int       // sql: report_id
+	Timestamp        time.Time // sql: timestamp
+	HandledByStaffID int       // sql: handled_by_staff_id
+	IsCleared        bool      // sql: is_cleared
 }
 
 // table: DBPREFIXsections
 type Section struct {
-	ID           int    // sql: `id`
-	Name         string // sql: `name`
-	Abbreviation string // sql: `abbreviation`
-	Position     int    // sql: `position`
-	Hidden       bool   // sql: `hidden`
+	ID           int    // sql: id
+	Name         string // sql: name
+	Abbreviation string // sql: abbreviation
+	Position     int    // sql: position
+	Hidden       bool   // sql: hidden
 }
 
 // table: DBPREFIXsessions
 type LoginSession struct {
-	ID      int       // sql: `id`
-	StaffID int       // sql: `staff_id`
-	Expires time.Time // sql: `expires`
-	Data    string    // sql: `data`
+	ID      int       // sql: id
+	StaffID int       // sql: staff_id
+	Expires time.Time // sql: expires
+	Data    string    // sql: data
 }
 
 // table: DBPREFIXstaff
 type Staff struct {
-	ID               int       // sql: `id`
-	Username         string    // sql: `username`
-	PasswordChecksum string    `json:"-"` // sql: `password_checksum`
-	Rank             int       // sql: `global_rank`
-	AddedOn          time.Time `json:"-"` // sql: `added_on`
-	LastLogin        time.Time `json:"-"` // sql: `last_login`
-	IsActive         bool      `json:"-"` // sql: `is_active`
+	ID               int       // sql: id
+	Username         string    // sql: username
+	PasswordChecksum string    `json:"-"` // sql: password_checksum
+	Rank             int       // sql: global_rank
+	AddedOn          time.Time `json:"-"` // sql: added_on
+	LastLogin        time.Time `json:"-"` // sql: last_login
+	IsActive         bool      `json:"-"` // sql: is_active
 }
 
 // table: DBPREFIXthreads
 type Thread struct {
-	ID        int       // sql: `id`
-	BoardID   int       // sql: `board_id`
-	Locked    bool      // sql: `locked`
-	Stickied  bool      // sql: `stickied`
-	Anchored  bool      // sql: `anchored`
-	Cyclical  bool      // sql: `cyclical`
-	LastBump  time.Time // sql: `last_bump`
-	DeletedAt time.Time // sql: `deleted_at`
-	IsDeleted bool      // sql: `is_deleted`
+	ID        int       // sql: id
+	BoardID   int       // sql: board_id
+	Locked    bool      // sql: locked
+	Stickied  bool      // sql: stickied
+	Anchored  bool      // sql: anchored
+	Cyclical  bool      // sql: cyclical
+	LastBump  time.Time // sql: last_bump
+	DeletedAt time.Time // sql: deleted_at
+	IsDeleted bool      // sql: is_deleted
 }
 
 // Wordfilter is used for filters that are expected to have a single FilterCondition and a "replace" MatchAction

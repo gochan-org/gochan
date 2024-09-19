@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"strconv"
@@ -30,16 +31,7 @@ var (
 )
 
 type boardJSON struct {
-	Dir             string `json:"board"`
-	Title           string `json:"title"`
-	Subtitle        string `json:"meta_description"`
-	MaxFilesize     int    `json:"max_filesize"`
-	Locked          bool   `json:"is_archived"`
-	BumpLimit       int    `json:"bump_limit"`
-	ImageLimit      int    `json:"image_limit"`
-	MaxCommentChars int    `json:"max_comment_chars"`
-	MinCommentChars int    `json:"min_comment_chars"`
-
+	*gcsql.Board
 	Cooldowns config.BoardCooldowns `json:"cooldowns"`
 }
 
@@ -167,6 +159,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 				Msg("Failed getting board page")
 			return fmt.Errorf("failed opening /%s/board.html: %s", board.Dir, err.Error())
 		}
+		defer boardPageFile.Close()
 
 		if err = config.TakeOwnershipOfFile(boardPageFile); err != nil {
 			errEv.Err(err).Caller().
@@ -192,7 +185,14 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 				Msg("Failed building board")
 			return fmt.Errorf("failed building /%s/: %s", board.Dir, err.Error())
 		}
-		return boardPageFile.Close()
+
+		if err = boardPageFile.Close(); err != nil {
+			errEv.Err(err).Caller().
+				Str("page", "board.html").
+				Msg("Unable to close board file")
+			return err
+		}
+		return nil
 	}
 
 	// Create the archive pages.
@@ -208,6 +208,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 			Msg("Failed opening catalog.json")
 		return fmt.Errorf("failed opening /%s/catalog.json: %s", board.Dir, err.Error())
 	}
+	defer catalogJSONFile.Close()
 
 	if err = config.TakeOwnershipOfFile(catalogJSONFile); err != nil {
 		errEv.Err(err).Caller().
@@ -277,7 +278,11 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		errEv.Err(err).Caller().Msg("Unable to write catalog JSON to file")
 		return errors.New("failed to marshal to catalog JSON")
 	}
-	return catalogJSONFile.Close()
+	if err = catalogJSONFile.Close(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
+	}
+	return nil
 }
 
 // BuildBoards builds the specified board IDs, or all boards if no arguments are passed
@@ -354,6 +359,12 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		return err
 	}
 	boardDir := path.Join(config.GetSystemCriticalConfig().DocumentRoot, board.Dir)
+
+	if err = os.MkdirAll(boardDir, config.DirFileMode); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		errEv.Err(err).Caller().Msg("Unable to create board directory")
+		return err
+	}
+
 	for _, postID := range oldPosts {
 		post, err := gcsql.GetPostFromID(postID, false)
 		if err != nil {
@@ -538,6 +549,10 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	return nil
 }
 
+type boardsListJSON struct {
+	Boards []boardJSON `json:"boards"`
+}
+
 // BuildBoardListJSON generates a JSON file with info about the boards
 func BuildBoardListJSON() error {
 	boardsJsonPath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, "boards.json")
@@ -554,34 +569,31 @@ func BuildBoardListJSON() error {
 		return errors.New("unable to update boards.json ownership: " + err.Error())
 	}
 
-	boardsMap := map[string][]boardJSON{
-		"boards": {},
+	boardsListJSONData := boardsListJSON{
+		Boards: make([]boardJSON, len(gcsql.AllBoards)),
 	}
-	for _, board := range gcsql.AllBoards {
-		boardsMap["boards"] = append(boardsMap["boards"], boardJSON{
-			Dir:             board.Dir,
-			Title:           board.Title,
-			Subtitle:        board.Subtitle,
-			MaxFilesize:     board.MaxFilesize,
-			Locked:          board.Locked,
-			BumpLimit:       board.AutosageAfter,
-			ImageLimit:      board.NoImagesAfter,
-			MaxCommentChars: board.MaxMessageLength,
-			MinCommentChars: board.MinMessageLength,
-			Cooldowns:       config.GetBoardConfig(board.Dir).Cooldowns,
-		})
+
+	for b, board := range gcsql.AllBoards {
+		boardsListJSONData.Boards[b] = boardJSON{
+			Cooldowns: config.GetBoardConfig(board.Dir).Cooldowns,
+		}
+		boardsListJSONData.Boards[b].Board = &gcsql.AllBoards[b]
 	}
 
 	// TODO: properly check if the board is in a hidden section
-	boardJSON, err := json.Marshal(boardsMap)
+	boardJSON, err := json.Marshal(boardsListJSONData)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed to create boards.json: " + err.Error())
+		return errors.New("Failed to create boards.json " + err.Error())
 	}
 
 	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed writing boards.json file: " + err.Error())
+		return errors.New("Failed writing boards.json file")
 	}
-	return boardListFile.Close()
+	if err = boardListFile.Close(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return errors.New("Failed closing boards.json")
+	}
+	return nil
 }
