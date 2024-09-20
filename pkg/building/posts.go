@@ -3,7 +3,6 @@ package building
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"net"
 	"path"
 	"strconv"
@@ -53,19 +52,13 @@ func truncateString(msg string, limit int, ellipsis bool) string {
 	return msg
 }
 
+// Post represents a post in a thread for building (hence why ParentID is used instead of ThreadID)
 type Post struct {
-	ID               int           `json:"no"`
+	gcsql.Post
 	ParentID         int           `json:"resto"`
-	IsTopPost        bool          `json:"-"`
 	BoardID          int           `json:"-"`
 	BoardDir         string        `json:"-"`
 	IP               net.IP        `json:"-"`
-	Name             string        `json:"name"`
-	Tripcode         string        `json:"trip"`
-	Email            string        `json:"email"`
-	Subject          string        `json:"sub"`
-	MessageRaw       string        `json:"com"`
-	Message          template.HTML `json:"-"`
 	Filename         string        `json:"tim"`
 	OriginalFilename string        `json:"filename"`
 	Checksum         string        `json:"md5"`
@@ -75,13 +68,12 @@ type Post struct {
 	UploadHeight     int           `json:"h"`
 	ThumbnailWidth   int           `json:"tn_w"`
 	ThumbnailHeight  int           `json:"tn_h"`
-	Capcode          string        `json:"capcode"`
-	Timestamp        time.Time     `json:"time"`
 	LastModified     string        `json:"last_modified"`
 	Country          geoip.Country `json:"-"`
 	thread           gcsql.Thread
 }
 
+// TitleText returns the text to be used for the title of the page
 func (p *Post) TitleText() string {
 	title := "/" + p.BoardDir + "/ - "
 	if p.Subject != "" {
@@ -100,6 +92,12 @@ func (p *Post) ThreadPath() string {
 		threadID = p.ID
 	}
 	return config.WebPath(p.BoardDir, "res", strconv.Itoa(threadID)+".html")
+}
+
+// Timestamp returns the time the post was created.
+// Deprecated: Use CreatedOn instead.
+func (p *Post) Timestamp() time.Time {
+	return p.CreatedOn
 }
 
 func (p *Post) WebPath() string {
@@ -155,7 +153,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 		}
 		var lastBump time.Time
 		dest = append(dest,
-			&post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+			&post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.CreatedOn,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw,
 			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
@@ -194,7 +192,7 @@ func GetBuildablePost(id int, _ int) (*Post, error) {
 	} else {
 		out = append(out, &ip)
 	}
-	out = append(out, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.Timestamp,
+	out = append(out, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.CreatedOn,
 		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
 		&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,

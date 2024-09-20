@@ -195,24 +195,24 @@ type IPBanAppealAudit struct {
 
 // table: DBPREFIXposts
 type Post struct {
-	ID              int           // sql: id
-	ThreadID        int           // sql: thread_id
-	IsTopPost       bool          // sql: is_top_post
-	IP              string        // sql: ip
-	CreatedOn       time.Time     // sql: created_on
-	Name            string        // sql: name
-	Tripcode        string        // sql: tripcode
-	IsRoleSignature bool          // sql: is_role_signature
-	Email           string        // sql: email
-	Subject         string        // sql: subject
-	Message         template.HTML // sql: message
-	MessageRaw      string        // sql: message_raw
-	Password        string        `json:"-"` // sql: `password`
-	DeletedAt       time.Time     // sql: deleted_at
-	IsDeleted       bool          // sql: is_deleted
-	BannedMessage   string        // sql: banned_message
-	Flag            string        // sql: flag
-	Country         string        // sql: country
+	ID              int           `json:"no"`    // sql: id
+	ThreadID        int           `json:"-"`     // sql: thread_id
+	IsTopPost       bool          `json:"-"`     // sql: is_top_post
+	IP              string        `json:"-"`     // sql: ip
+	CreatedOn       time.Time     `json:"time"`  // sql: created_on
+	Name            string        `json:"name"`  // sql: name
+	Tripcode        string        `json:"trip"`  // sql: tripcode
+	IsRoleSignature bool          `json:"-"`     // sql: is_role_signature
+	Email           string        `json:"email"` // sql: email
+	Subject         string        `json:"sub"`   // sql: subject
+	Message         template.HTML `json:"-"`     // sql: message
+	MessageRaw      string        `json:"com"`   // sql: message_raw
+	Password        string        `json:"-"`     // sql: `password`
+	DeletedAt       time.Time     `json:"-"`     // sql: deleted_at
+	IsDeleted       bool          `json:"-"`     // sql: is_deleted
+	BannedMessage   string        `json:"-"`     // sql: banned_message
+	Flag            string        `json:"-"`     // sql: flag
+	Country         string        `json:"-"`     // sql: country
 }
 
 // table: DBPREFIXreports

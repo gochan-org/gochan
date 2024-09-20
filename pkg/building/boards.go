@@ -202,7 +202,8 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 	var catalogPages boardCatalog
 
 	// catalog JSON file is built with the pages because pages are recorded in the JSON file
-	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
+	catalogJSONFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, board.Dir, "catalog.json"),
+		os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().
 			Msg("Failed opening catalog.json")
