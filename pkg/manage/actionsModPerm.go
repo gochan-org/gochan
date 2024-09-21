@@ -603,31 +603,44 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	return attrBuffer.String(), nil
 }
 
+type postJSONWithIP struct {
+	// gcsql.Post.IP's struct tag hides the IP field, but we want to see it here
+	*gcsql.Post
+	IP string
+}
+
 type postInfoJSON struct {
-	Post *gcsql.Post `json:"post"`
-	FQDN []string    `json:"ipFQDN"`
+	Post *postJSONWithIP `json:"post"`
+	FQDN []string        `json:"ipFQDN"`
 
 	OriginalFilename string `json:"originalFilename,omitempty"`
 	Checksum         string `json:"checksum,omitempty"`
 	Fingerprint      string `json:"fingerprint,omitempty"`
 }
 
-func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
+func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
 	postIDstr := request.FormValue("postid")
 	if postIDstr == "" {
 		return "", errors.New("invalid request (missing postid)")
 	}
 	var postID int
 	if postID, err = strconv.Atoi(postIDstr); err != nil {
+		errEv.Err(err).Caller().
+			Str("postID", postIDstr).Send()
 		return "", err
 	}
 	post, err := gcsql.GetPostFromID(postID, true)
 	if err != nil {
+		errEv.Err(err).Caller().
+			Int("postID", postID).Send()
 		return "", err
 	}
 
 	postInfo := postInfoJSON{
-		Post: post,
+		Post: &postJSONWithIP{
+			Post: post,
+			IP:   post.IP,
+		},
 	}
 	names, err := net.LookupAddr(post.IP)
 	if err == nil {
@@ -637,14 +650,18 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 	}
 	upload, err := post.GetUpload()
 	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to get upload")
 		return "", err
 	}
 	if upload != nil {
 		postInfo.OriginalFilename = upload.OriginalFilename
 		postInfo.Checksum = upload.Checksum
-		postInfo.Fingerprint, err = uploads.GetPostImageFingerprint(postID)
-		if err != nil {
-			return "", err
+		if postInfo.OriginalFilename != "deleted" {
+			postInfo.Fingerprint, err = uploads.GetPostImageFingerprint(postID)
+			if err != nil {
+				errEv.Err(err).Caller().Msg("Unable to get image fingerprint")
+				return "", err
+			}
 		}
 	}
 	return postInfo, nil

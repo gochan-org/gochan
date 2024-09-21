@@ -377,9 +377,9 @@ func doesTableExist(tableName string) (bool, error) {
 
 	switch config.GetSQLConfig().DBtype {
 	case "mysql":
-		fallthrough
+		existQuery = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ? AND TABLE_SCHEMA = DATABASE()`
 	case "postgres":
-		existQuery = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?`
+		existQuery = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ? AND TABLE_CATALOG = CURRENT_DATABASE()`
 	case "sqlite3":
 		existQuery = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?`
 	default:
@@ -391,7 +391,7 @@ func doesTableExist(tableName string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return count == 1, nil
+	return count > 0, nil
 }
 
 // getDatabaseVersion gets the version of the database, or an error if none or multiple exist
