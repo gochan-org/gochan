@@ -53,7 +53,7 @@ if [ "$DBTYPE" = "mysql" ]; then
 	EOF1
 elif [ "$DBTYPE" = "postgresql" ]; then
 	echo "Creating pre-2021 PostgreSQL DB 'gochan_pre2021' if it doesn't already exist"
-	sed -i /etc/gochan/gochan.json \
+	sed -i gochan.json \
 		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
 	sudo -u postgres psql -f - <<- EOF1
 	CREATE DATABASE gochan_pre2021;
