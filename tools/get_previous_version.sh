@@ -39,7 +39,7 @@ sed -i gochan.json \
 	-e 's/"SiteSlogan": ""/"SiteSlogan": "Gochan instance used for testing gochan-migrate -updatedb"/' \
 	-e 's/"DebugMode": false/"DebugMode": true/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/' \
-	-e 's/"GeoIPType": .*/"GeoIPType": "",/'
+	-e 's/"GeoIPType": .*/"GeoIPType": "",/' \
 	-e 's/"EnableGeoIP": .*/"EnableGeoIP": false,/'
 
 if [ "$DBTYPE" = "mysql" ]; then
@@ -48,7 +48,7 @@ if [ "$DBTYPE" = "mysql" ]; then
 	CREATE DATABASE IF NOT EXISTS gochan_prev;
 	GRANT USAGE ON *.* TO gochan IDENTIFIED BY 'gochan'; \
 	GRANT ALL PRIVILEGES ON gochan_prev.* TO gochan; \
-	SET PASSWORD FOR 'gochan'@'%' = PASSWORD('gochan');
+	SET PASSWORD FOR 'gochan'@'%' = PASSWORD('gochan'); \
 	FLUSH PRIVILEGES;
 	EOF1
 elif [ "$DBTYPE" = "postgresql" ]; then
