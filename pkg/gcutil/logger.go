@@ -65,10 +65,10 @@ func LogDiscard(events ...*zerolog.Event) {
 	}
 }
 
-// isTerminal returns true if the ModeCharDevice bit is set, meaning that
+// RunningInTerminal returns true if the ModeCharDevice bit is set, meaning that
 // gochan is probably running in a standard terminal and not being piped
 // to a file
-func isTerminal() bool {
+func RunningInTerminal() bool {
 	fi, err := os.Stdout.Stat()
 	if err != nil {
 		return false
@@ -91,7 +91,7 @@ func initLog(logPath string, logToConsole bool) (err error) {
 	var writer io.Writer
 	if logToConsole {
 		cw := zerolog.NewConsoleWriter()
-		cw.NoColor = !isTerminal()
+		cw.NoColor = !RunningInTerminal()
 		writer = zerolog.MultiLevelWriter(logFile, cw)
 	} else {
 		writer = logFile

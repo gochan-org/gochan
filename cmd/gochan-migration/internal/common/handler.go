@@ -57,7 +57,8 @@ type DBMigrator interface {
 	// will exit
 	IsMigrated() (bool, error)
 
-	// MigrateDB migrates the imageboard data (posts, boards, etc) to the new database
+	// MigrateDB migrates the imageboard data (posts, boards, etc) to the new database. It is
+	// assumed that MigrateDB will handle logging any errors that occur during the migration
 	MigrateDB() (bool, error)
 
 	// MigrateBoards gets info about the old boards in the board table and inserts each one

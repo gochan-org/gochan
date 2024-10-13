@@ -25,7 +25,7 @@ var (
 	ErrCorruptedDB        = errors.New("database contains gochan prefixed tables but is missing versioning tables (possibly corrupted)")
 	ErrDeprecatedDB       = errors.New("database layout is deprecated, please run gochan-migration -updatedb")
 	ErrInvalidDBVersion   = errors.New("invalid version flag returned by GetCompleteDatabaseVersion()")
-	targetDatabaseVersion = 3
+	targetDatabaseVersion = -1
 )
 
 func initDB(initFile string) error {
@@ -84,9 +84,11 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 
 // CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
 func CheckAndInitializeDatabase(dbType string, targetDbVersionStr string) (err error) {
-	targetDatabaseVersion, err = strconv.Atoi(targetDbVersionStr)
-	if err != nil {
-		return err
+	if targetDatabaseVersion == -1 {
+		targetDatabaseVersion, err = strconv.Atoi(targetDbVersionStr)
+		if err != nil {
+			return err
+		}
 	}
 
 	dbVersion, versionFlag, err := GetCompleteDatabaseVersion()

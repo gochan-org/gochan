@@ -14,81 +14,61 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-const (
-	banner = `Welcome to the gochan database migration tool for gochan %s!
-Make sure you check the README and/or the -h command line flag, and back up your current database before you use it.
-`
-	migrateCompleteTxt = `Database migration successful!
-To migrate the uploads for each board, move or copy the uploads to /path/to/gochan/document/root/<boardname>/src/
-Then copy the thumbnails to /path/to/gochan/documentroot/<boardname>/thumb/
-Then start the gochan server and go to http://yoursite/manage/rebuildall to generate the html files
-for the threads and board pages`
-
-	allowedDirActions = "Valid values are noaction, copy, and move (defaults to noaction if unset)"
-)
-
 var (
 	versionStr   string
 	migrator     common.DBMigrator
 	dbVersionStr string
 )
 
-func cleanup() int {
-	returnVal := 0
+func cleanup() {
 	var err error
+	exitCode := 0
 	if migrator != nil {
 		if err = migrator.Close(); err != nil {
-			returnVal = 1
-			log.Println("Error closing migrator:", err.Error())
+			common.LogError().Err(err).Caller().Msg("Error closing migrator")
+			exitCode = 1
 		}
 	}
 	if err = gcsql.Close(); err != nil {
-		returnVal = 1
-		log.Println("Error closing SQL connection:", err.Error())
+		common.LogError().Err(err).Caller().Msg("Error closing SQL connection")
+		exitCode = 1
 	}
-	return returnVal
+	os.Exit(exitCode)
 }
 
 func main() {
 	var options common.MigrationOptions
-	var dirAction string
 	var updateDB bool
 
-	log.SetFlags(0)
 	flag.BoolVar(&updateDB, "updatedb", false, "If this is set, gochan-migrate will check, and if needed, update gochan's database schema")
 	flag.StringVar(&options.ChanType, "oldchan", "", "The imageboard we are migrating from (currently only pre2021 is supported, but more are coming")
 	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
-	// flag.StringVar(&dirAction, "diraction", "", "Action taken on each board directory after it has been migrated. "+allowedDirActions)
 	flag.Parse()
 
 	config.InitConfig(versionStr)
+	err := common.InitMigrationLog()
+	if err != nil {
+		log.Fatalln("Unable to initialize migration log:", err.Error())
+	}
+	fatalEv := common.LogFatal()
+	defer func() {
+		cleanup()
+		fatalEv.Discard()
+	}()
 
 	if !updateDB && (options.ChanType == "" || options.OldChanConfig == "") {
 		flag.PrintDefaults()
-		log.Fatal("Missing required oldchan value")
-		return
+		fatalEv.Msg("Missing required oldchan value")
 	} else if updateDB {
 		options.ChanType = "gcupdate"
 	}
-	switch dirAction {
-	case "":
-		fallthrough
-	case "noaction":
-		options.DirAction = common.DirNoAction
-	case "copy":
-		options.DirAction = common.DirCopy
-	case "move":
-		options.DirAction = common.DirMove
-	default:
-		log.Fatalln("Invalid diraction value. " + allowedDirActions)
-	}
+	fatalEv.Str("chanType", options.ChanType)
 
-	log.Printf(banner, versionStr)
 	switch options.ChanType {
 	case "gcupdate":
 		targetDBVer, err := strconv.Atoi(dbVersionStr)
 		if err != nil {
-			log.Fatalf("Invalid database version string %q, unable to parse to int", dbVersionStr)
+			fatalEv.Err(err).Caller().Msg("Invalid database version string, unable to parse as integer")
 		}
 		migrator = &gcupdate.GCDatabaseUpdater{
 			TargetDBVer: targetDBVer,
@@ -100,44 +80,31 @@ func main() {
 	case "tinyboard":
 		fallthrough
 	default:
-		log.Fatalf(
-			"Unsupported chan type %q, Currently only pre2021 database migration is supported\n",
-			options.ChanType)
-		return
+		fatalEv.Msg("Unsupported chan type, Currently only pre2021 database migration is supported")
 	}
 	config.InitConfig(versionStr)
-	var err error
 	if !updateDB {
 		sqlCfg := config.GetSQLConfig()
 		err = gcsql.ConnectToDB(&sqlCfg)
 		if err != nil {
-			log.Fatalf("Failed to connect to the database: %s", err.Error())
+			fatalEv.Err(err).Caller().Msg("Failed to connect to the database")
 		}
 		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype, dbVersionStr); err != nil {
-			log.Fatalf("Failed to initialize the database: %s", err.Error())
+			fatalEv.Err(err).Caller().Msg("Unable to initialize the database")
 		}
 	}
 
 	if err = migrator.Init(&options); err != nil {
-		cleanup()
-		log.Fatalf("Unable to initialize %s migrator: %s\n",
-			options.ChanType, err.Error())
-		return
+		fatalEv.Err(err).Caller().Msg("Unable to initialize migrator")
 	}
-	var migrated bool
 
+	var migrated bool
 	if migrated, err = migrator.MigrateDB(); err != nil {
-		cleanup()
-		log.Fatalln("Error migrating database:", err.Error())
+		fatalEv.Msg("Unable to migrate database")
 	}
 	if migrated {
-		log.Println("Database is already migrated")
-		return
-	}
-	if updateDB {
-		log.Println("Database schema updated successfully")
+		common.LogInfo().Msg("Database is already migrated")
 	} else {
-		log.Println(migrateCompleteTxt)
+		common.LogInfo().Str("chanType", options.ChanType).Msg("Database migration complete")
 	}
-	os.Exit(cleanup())
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -39,7 +40,15 @@ func AddFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig 
 
 // MigrateFileBans migrates file checksum and image fingerprint bans to the filter table
 func MigrateFileBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *config.SQLConfig) error {
-	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,checksum,fingerprinter,ban_ip,ban_ip_message FROM DBPREFIXfile_ban`)
+	fileBanTableExists, err := TableExists(ctx, db, tx, "DBPREFIXfilename_ban", cfg)
+	if err != nil {
+		return err
+	}
+	if !fileBanTableExists {
+		// no filename bans to migrate (database partially migrated?)
+		return nil
+	}
+	rows, err := db.QueryContextSQL(ctx, tx, `SELECT board_id,staff_id,staff_note,issued_at,checksum,fingerprinter,ban_ip,ban_ip_message FROM DBPREFIXfile_ban`)
 	if err != nil {
 		return err
 	}
@@ -106,8 +115,17 @@ func MigrateFileBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *confi
 
 // MigrateFilenameBans migrates filename bans to the filter table
 func MigrateFilenameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *config.SQLConfig) error {
-	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,filename,is_regex FROM DBPREFIXfilename_ban`)
+	filenameBanTableExists, err := TableExists(ctx, db, tx, "DBPREFIXfilename_ban", cfg)
 	if err != nil {
+		return err
+	}
+	if !filenameBanTableExists {
+		// no filename bans to migrate (database partially migrated?)
+		return nil
+	}
+	rows, err := db.QueryContextSQL(ctx, tx, `SELECT board_id,staff_id,staff_note,issued_at,filename,is_regex FROM DBPREFIXfilename_ban`)
+	if err != nil {
+		fmt.Println("query error")
 		return err
 	}
 	defer rows.Close()
@@ -162,8 +180,17 @@ func MigrateFilenameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *c
 
 // MigrateUsernameBans migrates poster name bans to the filter table
 func MigrateUsernameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *config.SQLConfig) error {
-	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_id,staff_id,staff_note,issued_at,username,is_regex FROM DBPREFIXusername_ban`)
+	usernameBanTableExists, err := TableExists(ctx, db, tx, "DBPREFIXusername_ban", cfg)
 	if err != nil {
+		return err
+	}
+	if !usernameBanTableExists {
+		// no name bans to migrate (database partially migrated?)
+		return nil
+	}
+	rows, err := db.QueryContextSQL(ctx, tx, `SELECT board_id,staff_id,staff_note,issued_at,username,is_regex FROM DBPREFIXusername_ban`)
+	if err != nil {
+		fmt.Println("MigrateUsernameBans rows error")
 		return err
 	}
 	defer rows.Close()
@@ -184,7 +211,7 @@ func MigrateUsernameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *c
 		}
 
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail, is_active) VALUES(?,?,?,?,?)`,
+			`INSERT INTO DBPREFIXfilters(staff_id, staff_note, issued_at, match_action, match_detail, is_active) VALUES(?,?,?,?,?,?)`,
 			unBanStaffID, unBanStaffNote, unBanIssuedAt, "reject", "", true,
 		); err != nil {
 			return err
@@ -213,14 +240,22 @@ func MigrateUsernameBans(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, cfg *c
 			return err
 		}
 	}
-
 	return rows.Close()
 }
 
 // MigrateWordfilters migrates pre-filter wordfilters to the filter table
 func MigrateWordfilters(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
-	rows, err := db.QueryContextSQL(ctx, nil, `SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters`)
+	wordfiltersTableExists, err := TableExists(ctx, db, tx, "DBPREFIXwordfilters", sqlConfig)
 	if err != nil {
+		return err
+	}
+	if !wordfiltersTableExists {
+		// no wordfilters to migrate (database partially migrated?)
+		return nil
+	}
+	rows, err := db.QueryContextSQL(ctx, tx, `SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters`)
+	if err != nil {
+		fmt.Println("MigrateWordfilters rows error")
 		return err
 	}
 	defer rows.Close()
@@ -281,7 +316,8 @@ func MigrateWordfilters(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConf
 		}
 
 		if _, err = db.ExecContextSQL(ctx, tx,
-			`INSERT INTO DBPREFIXfilter_conditions(filter_id, match_mode, search, field) VALUES(?,?,?,'body')`, filterID, matchMode, search,
+			`INSERT INTO DBPREFIXfilter_conditions(filter_id, match_mode, search, field) VALUES(?,?,?,'body')`,
+			filterID, matchMode, search,
 		); err != nil {
 			return err
 		}

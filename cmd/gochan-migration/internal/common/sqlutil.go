@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -20,7 +21,7 @@ var (
 
 // ColumnType returns a string representation of the column's data type. It does not return an error
 // if the column does not exist, instead returning an empty string.
-func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string, sqlConfig *config.SQLConfig) (string, error) {
+func ColumnType(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string, sqlConfig *config.SQLConfig) (string, error) {
 	var query string
 	var dataType string
 	var err error
@@ -32,7 +33,7 @@ func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string,
 		query = `SELECT DATA_TYPE FROM information_schema.COLUMNS
 		WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1`
 		params = []any{dbName, tableName, columnName}
-	case "postgresql":
+	case "postgres", "postgresql":
 		query = `SELECT data_type FROM information_schema.columns
 		WHERE (table_schema = ? OR table_schema = 'public')
 		AND table_name = ? AND column_name = ? LIMIT 1`
@@ -43,7 +44,7 @@ func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string,
 	default:
 		return "", gcsql.ErrUnsupportedDB
 	}
-	err = db.QueryRowTxSQL(tx, query, params, []any{&dataType})
+	err = db.QueryRowContextSQL(ctx, tx, query, params, []any{&dataType})
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
@@ -51,26 +52,21 @@ func ColumnType(db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string,
 }
 
 // TableExists returns true if the given table exists in the given database, and an error if one occured
-func TableExists(db *gcsql.GCDB, tx *sql.Tx, tableName string, sqlConfig *config.SQLConfig) (bool, error) {
+func TableExists(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, tableName string, sqlConfig *config.SQLConfig) (bool, error) {
 	tableName = strings.ReplaceAll(tableName, "DBPREFIX", sqlConfig.DBprefix)
-	dbName := sqlConfig.DBname
 	var query string
-	var params []any
 	switch sqlConfig.DBtype {
 	case "mysql":
-		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?`
-		params = []any{dbName, tableName}
-	case "postgresql":
-		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = ? AND table_name = ?`
-		params = []any{dbName, tableName}
+		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`
+	case "postgres", "postgresql":
+		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = CURRENT_DATABASE() AND table_name = ?`
 	case "sqlite3":
 		query = `SELECT COUNT(*) FROM sqlite_master WHERE name = ? AND type = 'table'`
-		params = []any{tableName}
 	default:
 		return false, gcsql.ErrUnsupportedDB
 	}
 	var count int
-	err := db.QueryRowTxSQL(tx, query, params, []any{&count})
+	err := db.QueryRowContextSQL(ctx, tx, query, []any{tableName}, []any{&count})
 	return count == 1, err
 }
 

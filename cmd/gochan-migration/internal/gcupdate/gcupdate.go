@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -51,7 +52,8 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 	}
 
 	sqlConfig := config.GetSQLConfig()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
 	tx, err := dbu.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: 0,
 		ReadOnly:  false,
@@ -63,46 +65,56 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
 
 	switch sqlConfig.DBtype {
 	case "mysql":
-		err = updateMysqlDB(dbu.db, tx, &sqlConfig)
+		err = updateMysqlDB(ctx, dbu.db, tx, &sqlConfig)
 	case "postgres":
-		err = updatePostgresDB(dbu.db, tx, &sqlConfig)
+		err = updatePostgresDB(ctx, dbu.db, tx, &sqlConfig)
 	case "sqlite3":
-		err = updateSqliteDB(dbu.db, tx, &sqlConfig)
+		err = updateSqliteDB(ctx, dbu.db, tx, &sqlConfig)
 	}
 	if err != nil {
 		return false, err
 	}
 
-	filterTableExists, err := common.TableExists(dbu.db, nil, "DBPREFIXfilters", &sqlConfig)
+	// commit the transaction and start a new one (to avoid deadlocks)
+	if err = tx.Commit(); err != nil {
+		return false, err
+	}
+
+	if err = ctx.Err(); err != nil {
+		return false, err
+	}
+
+	filterTableExists, err := common.TableExists(ctx, dbu.db, nil, "DBPREFIXfilters", &sqlConfig)
 	if err != nil {
 		return false, err
 	}
 
 	if !filterTableExists {
 		// DBPREFIXfilters not found, create it and migrate data from DBPREFIXfile_bans, DBPREFIXfilename_bans, and DBPREFIXusername_bans,
-		if err = common.AddFilterTables(ctx, dbu.db, tx, &sqlConfig); err != nil {
+		if err = common.AddFilterTables(ctx, dbu.db, nil, &sqlConfig); err != nil {
 			return false, err
 		}
-		if err = common.MigrateFileBans(ctx, dbu.db, tx, &sqlConfig); err != nil {
+		if err = common.MigrateFileBans(ctx, dbu.db, nil, &sqlConfig); err != nil {
 			return false, err
 		}
-		if err = common.MigrateFilenameBans(ctx, dbu.db, tx, &sqlConfig); err != nil {
+		if err = common.MigrateFilenameBans(ctx, dbu.db, nil, &sqlConfig); err != nil {
 			return false, err
 		}
-		if err = common.MigrateUsernameBans(ctx, dbu.db, tx, &sqlConfig); err != nil {
+		if err = common.MigrateUsernameBans(ctx, dbu.db, nil, &sqlConfig); err != nil {
 			return false, err
 		}
-		if err = common.MigrateWordfilters(ctx, dbu.db, tx, &sqlConfig); err != nil {
+		if err = common.MigrateWordfilters(ctx, dbu.db, nil, &sqlConfig); err != nil {
 			return false, err
 		}
 	}
 
 	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
-	_, err = dbu.db.ExecTxSQL(tx, query, dbu.TargetDBVer)
+	_, err = dbu.db.ExecContextSQL(ctx, nil, query, dbu.TargetDBVer)
 	if err != nil {
 		return false, err
 	}
-	return false, tx.Commit()
+	// return false, tx.Commit()
+	return false, nil
 }
 
 func (*GCDatabaseUpdater) MigrateBoards() error {
