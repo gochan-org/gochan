@@ -87,7 +87,7 @@
 		<tr>
 			<th>Board(s):</th>
 			<td id="boardslist">
-				If no boards are selected, the filter will be applied to all boards
+				If no boards are selected, the filter will be applied to all boards<br/>
 				{{- range $_,$board := .allBoards -}}
 					<label for="applyboard{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}} <input type="checkbox" name="applyboard{{$board.ID}}" id="applyboard{{$board.ID}}"
 					{{- range $_,$boardID := $.filterBoards -}}
