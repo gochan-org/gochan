@@ -14,34 +14,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
-const (
-	postQueryBase = `SELECT DBPREFIXposts.id, DBPREFIXposts.thread_id, ip, name, tripcode, email, subject, created_on, created_on as last_modified,
-	p.id AS parent_id, t.last_bump as last_bump,
-	message, message_raw,
-	(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
-	coalesce(DBPREFIXfiles.original_filename,'') as original_filename,
-	coalesce(DBPREFIXfiles.filename,'') AS filename,
-	coalesce(DBPREFIXfiles.checksum,'') AS checksum,
-	coalesce(DBPREFIXfiles.file_size,0) AS filesize,
-	coalesce(DBPREFIXfiles.thumbnail_width,0) AS tw,
-	coalesce(DBPREFIXfiles.thumbnail_height,0) AS th,
-	coalesce(DBPREFIXfiles.width,0) AS width,
-	coalesce(DBPREFIXfiles.height,0) AS height,
-	t.locked as locked,
-	t.stickied as stickied,
-	t.cyclical as cyclical,
-	flag, country
-	FROM DBPREFIXposts
-	LEFT JOIN DBPREFIXfiles ON DBPREFIXfiles.post_id = DBPREFIXposts.id AND is_deleted = FALSE
-	LEFT JOIN (
-		SELECT id, board_id, last_bump, locked, stickied,cyclical FROM DBPREFIXthreads
-	) t ON t.id = DBPREFIXposts.thread_id
-	INNER JOIN (
-		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
-	) p on p.thread_id = DBPREFIXposts.thread_id
-	WHERE is_deleted = FALSE `
-)
-
 func truncateString(msg string, limit int, ellipsis bool) string {
 	if len(msg) > limit {
 		if ellipsis {
@@ -180,7 +152,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 }
 
 func GetBuildablePost(id int, _ int) (*Post, error) {
-	const query = postQueryBase + " AND DBPREFIXposts.id = ?"
+	const query = "SELECT * FROM DBPREFIXv_building_posts WHERE DBPREFIXposts.id = ?"
 
 	var post Post
 	var lastBump time.Time
@@ -214,7 +186,7 @@ func GetBuildablePost(id int, _ int) (*Post, error) {
 }
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
-	query := postQueryBase + " AND DBPREFIXposts.ip = PARAM_ATON ORDER BY DBPREFIXposts.id DESC"
+	query := "SELECT * FROM DBPREFIXv_building_posts WHERE ip = PARAM_ATON ORDER BY DBPREFIXposts.id DESC"
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
@@ -228,7 +200,7 @@ func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
 }
 
 func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
-	const query = postQueryBase + " AND DBPREFIXposts.thread_id = ? ORDER BY DBPREFIXposts.id ASC"
+	const query = "SELECT * FROM DBPREFIXv_building_posts WHERE thread_id = ? ORDER BY id ASC"
 	var posts []*Post
 	err := QueryPosts(query, []any{thread.ID}, func(p *Post) error {
 		posts = append(posts, p)
@@ -238,7 +210,7 @@ func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
-	query := postQueryBase
+	query := "SELECT * FROM DBPREFIXv_recent_posts"
 	var args []any
 
 	if boardid > 0 {
@@ -246,7 +218,7 @@ func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
 		args = append(args, boardid)
 	}
 
-	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(limit)
+	query += " LIMIT " + strconv.Itoa(limit)
 
 	var posts []*Post
 	err := QueryPosts(query, args, func(post *Post) error {

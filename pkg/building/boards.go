@@ -65,7 +65,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 			Msg("Failed getting board threads")
 		return fmt.Errorf("error getting threads for /%s/: %s", board.Dir, err.Error())
 	}
-	topPosts, err := getBoardTopPosts(board.ID)
+	topPosts, err := getBoardTopPosts(board.Dir)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed getting board threads")
 		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
@@ -590,11 +590,11 @@ func BuildBoardListJSON() error {
 
 	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed writing boards.json file")
+		return errors.New("failed writing boards.json file")
 	}
 	if err = boardListFile.Close(); err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed closing boards.json")
+		return errors.New("failed closing boards.json")
 	}
 	return nil
 }

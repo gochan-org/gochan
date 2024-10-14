@@ -62,11 +62,11 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 	}
 }
 
-func getBoardTopPosts(boardID int) ([]*Post, error) {
-	const query = postQueryBase + " AND is_top_post AND t.board_id = ? ORDER BY t.stickied DESC, last_bump DESC"
+func getBoardTopPosts(board string) ([]*Post, error) {
+	const query = "SELECT * FROM DBPREFIXv_board_top_posts WHERE DIR = ?"
 	var posts []*Post
 
-	err := QueryPosts(query, []any{boardID}, func(p *Post) error {
+	err := QueryPosts(query, []any{board}, func(p *Post) error {
 		posts = append(posts, p)
 		return nil
 	})
@@ -103,7 +103,7 @@ func BuildCatalog(boardID int) error {
 		return fmt.Errorf("failed taking ownership of /%s/catalog.html", board.Dir)
 	}
 
-	threadOPs, err := getBoardTopPosts(boardID)
+	threadOPs, err := getBoardTopPosts(board.Dir)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed building catalog for /%s/", board.Dir)
