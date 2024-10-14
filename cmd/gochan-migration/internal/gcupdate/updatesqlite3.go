@@ -8,14 +8,18 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
+func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
 	db := dbu.db
 	var query string
 
-	_, err := db.ExecContextSQL(ctx, nil, `PRAGMA foreign_keys = ON`)
+	_, err = db.ExecContextSQL(ctx, nil, `PRAGMA foreign_keys = ON`)
 	defer func() {
-		if err != nil {
+		if a := recover(); a != nil {
+			errEv.Caller(4).Interface("panic", a).Send()
+			errEv.Discard()
+		} else if err != nil {
 			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
 		}
 	}()
 	if err != nil {

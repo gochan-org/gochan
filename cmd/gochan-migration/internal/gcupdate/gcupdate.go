@@ -48,14 +48,18 @@ func (dbu *GCDatabaseUpdater) IsMigrated() (bool, error) {
 	return false, nil
 }
 
-func (dbu *GCDatabaseUpdater) MigrateDB() (bool, error) {
+func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 	errEv := common.LogError()
 
 	gcsql.SetDB(dbu.db)
-	migrated, err := dbu.IsMigrated()
+	migrated, err = dbu.IsMigrated()
 	defer func() {
-		if err != nil {
+		if a := recover(); a != nil {
+			errEv.Caller(4).Interface("panic", a).Send()
+			errEv.Discard()
+		} else if err != nil {
 			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
 		}
 	}()
 	if err != nil {

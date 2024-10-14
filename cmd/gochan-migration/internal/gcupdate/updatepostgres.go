@@ -8,14 +8,18 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
+func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
 	db := dbu.db
-	var query string
+	var query, dataType string
 
-	dataType, err := common.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
 	defer func() {
-		if err != nil {
+		if a := recover(); a != nil {
+			errEv.Caller(4).Interface("panic", a).Send()
+			errEv.Discard()
+		} else if err != nil {
 			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
 		}
 	}()
 	if err != nil {

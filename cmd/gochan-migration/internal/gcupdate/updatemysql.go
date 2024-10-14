@@ -10,13 +10,16 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
+func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
 	var query string
 	var dataType string
-	var err error
 	defer func() {
-		if err != nil {
+		if a := recover(); a != nil {
+			errEv.Caller(4).Interface("panic", a).Send()
+			errEv.Discard()
+		} else if err != nil {
 			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
 		}
 	}()
 	dbName := sqlConfig.DBname
