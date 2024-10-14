@@ -2,7 +2,6 @@ package gcupdate
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -120,11 +119,7 @@ func (dbu *GCDatabaseUpdater) migrateFilters(ctx context.Context, sqlConfig *con
 
 	fileBansExist, err = common.TableExists(ctx, dbu.db, nil, "DBPREFIXfile_ban", sqlConfig)
 	defer func() {
-		if a := recover(); a != nil {
-			err = errors.New(fmt.Sprintf("recovered: %v", a))
-			errEv.Caller(4).Err(err).Send()
-			errEv.Discard()
-		} else if err != nil {
+		if err != nil {
 			errEv.Err(err).Caller(1).Send()
 			errEv.Discard()
 		}
@@ -148,224 +143,324 @@ func (dbu *GCDatabaseUpdater) migrateFilters(ctx context.Context, sqlConfig *con
 		return err
 	}
 
-	var rows *sql.Rows
 	if fileBansExist {
-		query := "SELECT board_id, staff_id, staff_note, issued_at, checksum, fingerprinter, ban_ip, ban_ip_message FROM DBPREFIXfile_ban"
-		var fingerprinterCol string
-		fingerprinterCol, err = common.ColumnType(ctx, dbu.db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
-		if err != nil {
-			return err
-		}
-
-		if fingerprinterCol == "" {
-			query = strings.ReplaceAll(query, "fingerprinter", "'checksum' AS fingerprinter")
-		}
-
-		var banIPCol string
-		banIPCol, err = common.ColumnType(ctx, dbu.db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
-		if err != nil {
-			return err
-		}
-		if banIPCol == "" {
-			query = strings.ReplaceAll(query, "ban_ip", "FALSE AS ban_ip")
-		}
-
-		rows, err = dbu.db.QueryContextSQL(ctx, nil, query)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var ban FileBan
-			if err = rows.Scan(
-				&ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
-				&ban.Fingerprinter, &ban.BanIP, &ban.BanIPMessage,
-			); err != nil {
-				return err
-			}
-
-			filter := &gcsql.Filter{
-				StaffID:     &ban.StaffID,
-				StaffNote:   ban.StaffNote,
-				IssuedAt:    ban.IssuedAt,
-				MatchAction: "reject",
-				IsActive:    true,
-			}
-			if ban.BanIP {
-				filter.MatchAction = "ban"
-				if ban.BanIPMessage != nil {
-					filter.MatchDetail = *ban.BanIPMessage
-				}
-			}
-			var boards []int
-			if ban.BoardID != nil {
-				boards = append(boards, *ban.BoardID)
-			}
-
-			condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: ban.Checksum, Field: "checksum"}
-			if ban.Fingerprinter != nil {
-				condition.Field = *ban.Fingerprinter
-			}
-
-			if err = gcsql.ApplyFilter(filter, []gcsql.FilterCondition{condition}, boards); err != nil {
-				return err
-			}
-		}
-		if err = rows.Close(); err != nil {
+		if err = dbu.migrateFileBans(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
 
 	if filenameBansExist {
-		query := "SELECT board_id, staff_id, staff_note, issued_at, filename, is_regex FROM DBPREFIXfilename_ban"
-		rows, err = dbu.db.QueryContextSQL(ctx, nil, query)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var ban FilenameBan
-			if err = rows.Scan(
-				&ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex,
-			); err != nil {
-				return err
-			}
-
-			filter := &gcsql.Filter{
-				StaffID:     &ban.StaffID,
-				StaffNote:   ban.StaffNote,
-				IssuedAt:    ban.IssuedAt,
-				MatchAction: "reject",
-				IsActive:    true,
-				MatchDetail: "File rejected",
-			}
-
-			condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: ban.Filename, Field: "filename"}
-			if ban.IsRegex {
-				condition.MatchMode = gcsql.RegexMatch
-			}
-			var boards []int
-			if ban.BoardID != nil {
-				boards = append(boards, *ban.BoardID)
-			}
-			if err = gcsql.ApplyFilter(filter, []gcsql.FilterCondition{condition}, boards); err != nil {
-				return err
-			}
-		}
-		if err = rows.Close(); err != nil {
+		if err = dbu.migrateFilenameBans(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
 
 	if usernameBansExist {
-		query := "SELECT board_id, staff_id, staff_note, issued_at, username FROM DBPREFIXusername_ban"
-		rows, err = dbu.db.QueryContextSQL(ctx, nil, query)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var ban UsernameBan
-			if err = rows.Scan(
-				&ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username,
-			); err != nil {
-				return err
-			}
-
-			filter := &gcsql.Filter{
-				StaffID:     &ban.StaffID,
-				StaffNote:   ban.StaffNote,
-				IssuedAt:    ban.IssuedAt,
-				MatchAction: "reject",
-				IsActive:    true,
-				MatchDetail: "Username rejected",
-			}
-
-			condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: ban.Username, Field: "username"}
-			if ban.IsRegex {
-				condition.MatchMode = gcsql.RegexMatch
-			}
-			var boards []int
-			if ban.BoardID != nil {
-				boards = append(boards, *ban.BoardID)
-			}
-			if err = gcsql.ApplyFilter(filter, []gcsql.FilterCondition{condition}, boards); err != nil {
-				return err
-			}
-		}
-		if err = rows.Close(); err != nil {
+		if err = dbu.migrateUsernameBans(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
 
 	if wordfiltersExist {
-		query := "SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters"
-		var boardIDCol string
-		boardIDCol, err = common.ColumnType(ctx, dbu.db, nil, "board_id", "DBPREFIXwordfilters", sqlConfig)
-		if err != nil {
+		if err = dbu.migrateWordfilters(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
-		if boardIDCol != "" {
-			query = strings.ReplaceAll(query, "board_dirs", "board_id")
+	}
+
+	return nil
+}
+
+func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.db.BeginTx(ctx, nil)
+	defer func() {
+		if a := recover(); a != nil {
+			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			errEv.Caller(4).Err(err).Send()
+			errEv.Discard()
+		} else if err != nil {
+			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
+		}
+		_ = tx.Rollback()
+	}()
+	if err != nil {
+		return err
+	}
+
+	query := "SELECT board_id, staff_id, staff_note, issued_at, checksum, fingerprinter, ban_ip, ban_ip_message FROM DBPREFIXfile_ban"
+	var fingerprinterCol string
+	fingerprinterCol, err = common.ColumnType(ctx, dbu.db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
+	if err != nil {
+		return err
+	}
+
+	if fingerprinterCol == "" {
+		query = strings.ReplaceAll(query, "fingerprinter", "'checksum' AS fingerprinter")
+	}
+
+	var banIPCol string
+	banIPCol, err = common.ColumnType(ctx, dbu.db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
+	if err != nil {
+		return err
+	}
+	if banIPCol == "" {
+		query = strings.ReplaceAll(query, "ban_ip", "FALSE AS ban_ip")
+	}
+
+	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ban FileBan
+		if err = rows.Scan(
+			&ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Checksum,
+			&ban.Fingerprinter, &ban.BanIP, &ban.BanIPMessage,
+		); err != nil {
+			return err
 		}
 
-		rows, err = dbu.db.QueryContextSQL(ctx, nil, query)
-		if err != nil {
+		filter := &gcsql.Filter{
+			StaffID:     &ban.StaffID,
+			StaffNote:   ban.StaffNote,
+			IssuedAt:    ban.IssuedAt,
+			MatchAction: "reject",
+			IsActive:    true,
+		}
+		if ban.BanIP {
+			filter.MatchAction = "ban"
+			if ban.BanIPMessage != nil {
+				filter.MatchDetail = *ban.BanIPMessage
+			}
+		}
+		var boards []int
+		if ban.BoardID != nil {
+			boards = append(boards, *ban.BoardID)
+		}
+
+		condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: ban.Checksum, Field: "checksum"}
+		if ban.Fingerprinter != nil {
+			condition.Field = *ban.Fingerprinter
+			if condition.Field == "" {
+				condition.Field = "checksum"
+			}
+		}
+
+		if err = gcsql.ApplyFilterTx(ctx, tx, filter, []gcsql.FilterCondition{condition}, boards); err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var wf Wordfilter
-			var boards []int
-			if boardIDCol != "" {
-				if err = rows.Scan(
-					&wf.BoardID, &wf.StaffID, &wf.StaffNote, &wf.IssuedAt, &wf.Search, &wf.IsRegex, &wf.ChangeTo,
-				); err != nil {
-					return err
-				}
-				if wf.BoardID != nil {
-					boards = append(boards, *wf.BoardID)
-				}
-			} else {
-				if err = rows.Scan(
-					&wf.BoardDirs, &wf.StaffID, &wf.StaffNote, &wf.IssuedAt, &wf.Search, &wf.IsRegex, &wf.ChangeTo,
-				); err != nil {
-					return err
-				}
-				if wf.BoardDirs != nil {
+	}
+	if err = rows.Close(); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (dbu *GCDatabaseUpdater) migrateFilenameBans(ctx context.Context, _ *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.db.BeginTx(ctx, nil)
+	defer func() {
+		if a := recover(); a != nil {
+			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			errEv.Caller(4).Err(err).Send()
+			errEv.Discard()
+		} else if err != nil {
+			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
+		}
+		_ = tx.Rollback()
+	}()
+	if err != nil {
+		return err
+	}
+
+	query := "SELECT board_id, staff_id, staff_note, issued_at, filename, is_regex FROM DBPREFIXfilename_ban"
+	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ban FilenameBan
+		if err = rows.Scan(
+			&ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Filename, &ban.IsRegex,
+		); err != nil {
+			return err
+		}
+
+		filter := &gcsql.Filter{
+			StaffID:     &ban.StaffID,
+			StaffNote:   ban.StaffNote,
+			IssuedAt:    ban.IssuedAt,
+			MatchAction: "reject",
+			IsActive:    true,
+			MatchDetail: "File rejected",
+		}
+
+		condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: ban.Filename, Field: "filename"}
+		if ban.IsRegex {
+			condition.MatchMode = gcsql.RegexMatch
+		}
+		var boards []int
+		if ban.BoardID != nil {
+			boards = append(boards, *ban.BoardID)
+		}
+		if err = gcsql.ApplyFilterTx(ctx, tx, filter, []gcsql.FilterCondition{condition}, boards); err != nil {
+			return err
+		}
+	}
+	if err = rows.Close(); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (dbu *GCDatabaseUpdater) migrateUsernameBans(ctx context.Context, _ *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.db.BeginTx(ctx, nil)
+	defer func() {
+		if a := recover(); a != nil {
+			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			errEv.Caller(4).Err(err).Send()
+			errEv.Discard()
+		} else if err != nil {
+			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
+		}
+		_ = tx.Rollback()
+	}()
+	if err != nil {
+		return err
+	}
+
+	query := "SELECT board_id, staff_id, staff_note, issued_at, username FROM DBPREFIXusername_ban"
+	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ban UsernameBan
+		if err = rows.Scan(
+			&ban.BoardID, &ban.StaffID, &ban.StaffNote, &ban.IssuedAt, &ban.Username,
+		); err != nil {
+			return err
+		}
+
+		filter := &gcsql.Filter{
+			StaffID:     &ban.StaffID,
+			StaffNote:   ban.StaffNote,
+			IssuedAt:    ban.IssuedAt,
+			MatchAction: "reject",
+			IsActive:    true,
+			MatchDetail: "Name rejected",
+		}
+
+		condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: ban.Username, Field: "name"}
+		if ban.IsRegex {
+			condition.MatchMode = gcsql.RegexMatch
+		}
+		var boards []int
+		if ban.BoardID != nil {
+			boards = append(boards, *ban.BoardID)
+		}
+		if err = gcsql.ApplyFilterTx(ctx, tx, filter, []gcsql.FilterCondition{condition}, boards); err != nil {
+			return err
+		}
+	}
+	if err = rows.Close(); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (dbu *GCDatabaseUpdater) migrateWordfilters(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.db.BeginTx(ctx, nil)
+	defer func() {
+		if a := recover(); a != nil {
+			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			errEv.Caller(4).Err(err).Send()
+			errEv.Discard()
+		} else if err != nil {
+			errEv.Err(err).Caller(1).Send()
+			errEv.Discard()
+		}
+		_ = tx.Rollback()
+	}()
+	if err != nil {
+		return err
+	}
+
+	query := "SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters"
+	var boardIDCol string
+	boardIDCol, err = common.ColumnType(ctx, dbu.db, nil, "board_id", "DBPREFIXwordfilters", sqlConfig)
+	if err != nil {
+		return err
+	}
+	if boardIDCol != "" {
+		query = strings.ReplaceAll(query, "board_dirs", "board_id")
+	}
+
+	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var wf Wordfilter
+		var boards []int
+		if boardIDCol != "" {
+			if err = rows.Scan(
+				&wf.BoardID, &wf.StaffID, &wf.StaffNote, &wf.IssuedAt, &wf.Search, &wf.IsRegex, &wf.ChangeTo,
+			); err != nil {
+				return err
+			}
+			if wf.BoardID != nil {
+				boards = append(boards, *wf.BoardID)
+			}
+		} else {
+			if err = rows.Scan(
+				&wf.BoardDirs, &wf.StaffID, &wf.StaffNote, &wf.IssuedAt, &wf.Search, &wf.IsRegex, &wf.ChangeTo,
+			); err != nil {
+				return err
+			}
+			if wf.BoardDirs != nil {
+				boardDirsVal := *wf.BoardDirs
+				if boardDirsVal != "" && boardDirsVal != "*" {
 					boardDirs := strings.Split(*wf.BoardDirs, ",")
 					for _, boardDir := range boardDirs {
 						boardID, err := gcsql.GetBoardIDFromDir(strings.TrimSpace(boardDir))
 						if err != nil {
+							errEv.Str("boardDir", boardDir)
 							return err
 						}
 						boards = append(boards, boardID)
 					}
 				}
 			}
-
-			filter := &gcsql.Filter{
-				StaffID:     &wf.StaffID,
-				StaffNote:   wf.StaffNote,
-				IssuedAt:    wf.IssuedAt,
-				MatchAction: "replace",
-				IsActive:    true,
-				MatchDetail: wf.ChangeTo,
-			}
-			condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: wf.Search, Field: "body"}
-			if wf.IsRegex {
-				condition.MatchMode = gcsql.RegexMatch
-			}
-			if err = gcsql.ApplyFilter(filter, []gcsql.FilterCondition{condition}, boards); err != nil {
-				return err
-			}
 		}
-		if err = rows.Close(); err != nil {
+
+		filter := &gcsql.Filter{
+			StaffID:     &wf.StaffID,
+			StaffNote:   wf.StaffNote,
+			IssuedAt:    wf.IssuedAt,
+			MatchAction: "replace",
+			IsActive:    true,
+			MatchDetail: wf.ChangeTo,
+		}
+		condition := gcsql.FilterCondition{MatchMode: gcsql.ExactMatch, Search: wf.Search, Field: "body"}
+		if wf.IsRegex {
+			condition.MatchMode = gcsql.RegexMatch
+		}
+		if err = gcsql.ApplyFilterTx(ctx, tx, filter, []gcsql.FilterCondition{condition}, boards); err != nil {
 			return err
 		}
 	}
+	if err = rows.Close(); err != nil {
+		return err
+	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (*GCDatabaseUpdater) MigrateBoards() error {

@@ -603,24 +603,21 @@ func DeleteFilter(id int) error {
 	return err
 }
 
-// ApplyFilter inserts the given filter into the database if filter.ID == 0. Otherwise it updates the details, boards, and
-// filter conditions for the filter in the database with the given ID
-func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) error {
+func ApplyFilterTx(ctx context.Context, tx *sql.Tx, filter *Filter, conditions []FilterCondition, boards []int) (err error) {
 	if filter == nil {
 		return errors.New("filter must not be null")
 	}
 	if len(conditions) == 0 {
 		return ErrNoConditions
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	tx, err := BeginContextTx(ctx)
-	if err != nil {
-		return err
+	singleFilterTx := tx == nil
+	if singleFilterTx {
+		tx, err = BeginContextTx(ctx)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
 	}
-	defer tx.Rollback()
 
 	if filter.ID == 0 {
 		// new filter
@@ -642,6 +639,27 @@ func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) err
 		return err
 	}
 	if err = filter.setBoardIDsContext(ctx, tx, boards...); err != nil {
+		return err
+	}
+	if singleFilterTx {
+		return tx.Commit()
+	}
+	return nil
+}
+
+// ApplyFilter inserts the given filter into the database if filter.ID == 0. Otherwise it updates the details, boards, and
+// filter conditions for the filter in the database with the given ID
+func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = ApplyFilterTx(ctx, tx, filter, conditions, boards); err != nil {
 		return err
 	}
 	return tx.Commit()
