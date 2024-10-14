@@ -81,7 +81,7 @@ var (
 				`<input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0">` +
 				`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><br />` +
 				`<input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 		{
 			desc: "unappealable permaban (banned forever)",
@@ -120,7 +120,7 @@ var (
 				`<img id="banpage-image"src="/permabanned.jpg"style="float:right; margin: 4px 8px 8px 4px"/><br/>` +
 				`<audio id="jack"preload="auto"autobuffer loop><source src="/static/hittheroad.ogg"/><source src="/static/hittheroad.wav"/><source src="/static/hittheroad.mp3"/></audio>` +
 				`<script type="text/javascript">document.getElementById("jack").play();</script></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 		{
 			desc: "appealable temporary ban",
@@ -160,7 +160,7 @@ var (
 				`<input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0">` +
 				`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><br />` +
 				`<input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 		{
 			desc: "unappealable temporary ban",
@@ -196,7 +196,7 @@ var (
 				`Your ban was placed on Mon,January 01,0001 12:00:00 AM and will expire on&nbsp;<b>Mon,January 01,0001 12:00:00 AM</b>.<br />` +
 				`Your IP address is<b>192.168.56.1</b>.<br /><br/>You may&nbsp;<b>not</b> appeal this ban.<br />` +
 				`</div></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 	}
 
@@ -213,7 +213,7 @@ var (
 			},
 			expectedOutput: boardPageHeaderBase +
 				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 		{
 			desc: "base case, multi threads and pages",
@@ -227,7 +227,7 @@ var (
 			},
 			expectedOutput: boardPageHeaderBase +
 				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 3.10.1</a><br /></div></div></body></html>`,
+				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 	}
 

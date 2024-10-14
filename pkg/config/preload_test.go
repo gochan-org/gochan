@@ -29,7 +29,7 @@ func (tC *preloadTest) run(t *testing.T) {
 }
 
 func TestPreload(t *testing.T) {
-	InitConfig("3.10.1")
+	InitConfig("4.0.0")
 	testCases := []preloadTest{
 		{
 			desc: "access system critical config from lua",

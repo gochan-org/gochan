@@ -34,7 +34,7 @@ var (
 		`CREATE TABLE filter_boards\(\s*id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s*filter_id BIGINT NOT NULL,\s*board_id BIGINT NOT NULL,\s*CONSTRAINT filter_boards_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE,\s*CONSTRAINT filter_boards_board_id_fk\s*FOREIGN KEY\(board_id\)\s*REFERENCES boards\(id\)\s*ON DELETE CASCADE\s*\)`,
 		`CREATE TABLE filter_conditions\(\s*id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s*filter_id BIGINT NOT NULL,\s*match_mode SMALLINT NOT NULL,\s*search VARCHAR\(75\) NOT NULL,\s*field VARCHAR\(75\) NOT NULL,\s*CONSTRAINT filter_conditions_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE,\s*CONSTRAINT filter_conditions_search_check CHECK \(search <> '' OR match_mode = 3\)\s*\)`,
 		`CREATE TABLE filter_hits\(\s*id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s*filter_id BIGINT NOT NULL,\s*post_data TEXT NOT NULL,\s*match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s*CONSTRAINT filter_hits_filter_id_fk\s*FOREIGN KEY\(filter_id\)\s*REFERENCES filters\(id\)\s*ON DELETE CASCADE\s*\)`,
-		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 3\)`,
+		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 4\)`,
 	}
 	testInitDBPostgresStatements = []string{
 		`CREATE TABLE database_version\(\s+component VARCHAR\(40\) NOT NULL PRIMARY KEY,\s+version INT NOT NULL \)`,
@@ -59,7 +59,7 @@ var (
 		`CREATE TABLE filter_boards\(\s*id BIGSERIAL PRIMARY KEY,\s*filter_id BIGINT NOT NULL,\s*board_id BIGINT NOT NULL,\s*CONSTRAINT filter_boards_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE,\s*CONSTRAINT filter_boards_board_id_fk\s*FOREIGN KEY\(board_id\) REFERENCES boards\(id\)\s*ON DELETE CASCADE\s*\)`,
 		`CREATE TABLE filter_conditions\(\s*id BIGSERIAL PRIMARY KEY,\s*filter_id BIGINT NOT NULL,\s*match_mode SMALLINT NOT NULL,\s*search VARCHAR\(75\) NOT NULL,\s*field VARCHAR\(75\) NOT NULL,\s*CONSTRAINT filter_conditions_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE,\s*CONSTRAINT filter_conditions_search_check CHECK \(search <> '' OR match_mode = 3\)\s*\)`,
 		`CREATE TABLE filter_hits\(\s*id BIGSERIAL PRIMARY KEY,\s*filter_id BIGINT NOT NULL,\s*post_data TEXT NOT NULL,\s*match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s*CONSTRAINT filter_hits_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE\s*\)`,
-		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 3\)`,
+		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 4\)`,
 	}
 	testInitDBSQLite3Statements = []string{
 		`CREATE TABLE database_version\(\s+component VARCHAR\(40\) NOT NULL PRIMARY KEY,\s+version INT NOT NULL \)`,
@@ -84,7 +84,7 @@ var (
 		`CREATE TABLE filter_boards\(\s*id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s*filter_id BIGINT NOT NULL,\s*board_id BIGINT NOT NULL,\s*CONSTRAINT filter_boards_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE,\s*CONSTRAINT filter_boards_board_id_fk\s*FOREIGN KEY\(board_id\) REFERENCES boards\(id\)\s*ON DELETE CASCADE\s*\)`,
 		`CREATE TABLE filter_conditions\(\s*id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s*filter_id BIGINT NOT NULL,\s*match_mode SMALLINT NOT NULL,\s*search VARCHAR\(75\) NOT NULL,\s*field VARCHAR\(75\) NOT NULL,\s*CONSTRAINT filter_conditions_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE,\s*CONSTRAINT filter_conditions_search_check CHECK \(search <> '' OR match_mode = 3\)\s*\)`,
 		`CREATE TABLE filter_hits\(\s*id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s*filter_id BIGINT NOT NULL,\s*post_data TEXT NOT NULL,\s*match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s*CONSTRAINT filter_hits_filter_id_fk\s*FOREIGN KEY\(filter_id\) REFERENCES filters\(id\)\s*ON DELETE CASCADE\s*\)`,
-		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 3\)`,
+		`INSERT INTO database_version\(component, version\)\s+VALUES\('gochan', 4\)`,
 	}
 )
 

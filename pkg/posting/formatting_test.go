@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	versionStr         = "3.10.0"
+	versionStr         = "4.0.0"
 	bbcodeMsgPreRender = `[b]Bold[/b]
 [i]Italics[/i]
 [u]Underline[/u]

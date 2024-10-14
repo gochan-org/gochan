@@ -66,7 +66,7 @@ func runTemplateTestCases(t *testing.T, templateName string, testCases []templat
 	if !assert.NoError(t, err) {
 		return
 	}
-	config.SetVersion("3.10.1")
+	config.SetVersion("4.0.0")
 	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "gochan", "")
 	if !assert.NoError(t, gcsql.SetTestingDB("mysql", "gochan", "", db)) {
 		return

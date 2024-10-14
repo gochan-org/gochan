@@ -82,7 +82,7 @@ func TestCanMinify(t *testing.T) {
 			desc: "don't minify HTML or JS",
 		},
 	}
-	config.SetVersion("3.10.1")
+	config.SetVersion("4.0.0")
 	siteCfg := config.GetSiteConfig()
 	for _, tC := range testCases {
 		t.Run(tC.desc, func(t *testing.T) {
@@ -153,7 +153,7 @@ func TestMinifyWriter(t *testing.T) {
 			expectOutput: unminifiedJSON,
 		},
 	}
-	config.SetVersion("3.10.1")
+	config.SetVersion("4.0.0")
 	siteCfg := config.GetSiteConfig()
 	buf := new(bytes.Buffer)
 	var err error
@@ -212,7 +212,7 @@ func TestMinifyTemplate(t *testing.T) {
 		return
 	}
 	config.SetTestTemplateDir("templates")
-	config.SetVersion("3.10.1")
+	config.SetVersion("4.0.0")
 
 	tmplRefStringTests := []testCaseMinifyTemplate{
 		{
@@ -254,7 +254,7 @@ func TestMinifyTemplate(t *testing.T) {
 				mediaType: "text/html",
 				isTmplRef: true,
 			},
-			expectWriterString: `<!doctype html><meta charset=utf-8><title>Error</title><h1>Error</h1><p>Error<hr><address>Site powered by Gochan 3.10.1</address>`,
+			expectWriterString: `<!doctype html><meta charset=utf-8><title>Error</title><h1>Error</h1><p>Error<hr><address>Site powered by Gochan 4.0</address>`,
 		},
 		{
 			testCaseCanMinify: testCaseCanMinify{
@@ -279,7 +279,7 @@ func TestMinifyTemplate(t *testing.T) {
 <body>
 <h1>Error</h1>
 <p>Error</p>
-<hr><address>Site powered by Gochan 3.10.1</address>
+<hr><address>Site powered by Gochan 4.0</address>
 </body>
 </html>`,
 		},

@@ -51,7 +51,7 @@ type webRootTest struct {
 }
 
 func TestWebPath(t *testing.T) {
-	InitConfig("3.10.1")
+	InitConfig("4.0.0")
 	testCases := []webRootTest{
 		{
 			webRoot:    "/",
