@@ -86,6 +86,10 @@ func (db *GCDB) Close() error {
 	return nil
 }
 
+func (db *GCDB) GetBaseDB() *sql.DB {
+	return db.db
+}
+
 func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 	return db.PrepareContextSQL(context.Background(), query, tx)
 }

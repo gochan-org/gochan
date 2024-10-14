@@ -6,56 +6,31 @@ import (
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/rs/zerolog"
 )
 
-func updateMysqlDB(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig) error {
+func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
 	var query string
 	var dataType string
-	dbName := sqlConfig.DBname
-
-	wordfiltersTableExists, err := common.TableExists(ctx, db, tx, "DBPREFIXwordfilters", sqlConfig)
-	if err != nil {
-		return err
-	}
-	if wordfiltersTableExists {
-		// wordfilters table is going to be migrated by the end of the update, but we want to make sure its legacy data is migrated first
-		// so it can be properly merged into the filter table
-
-		var numConstraints int
-		query = `SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-		WHERE CONSTRAINT_NAME = 'wordfilters_board_id_fk'
-		AND TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'DBPREFIXwordfilters'`
-
-		if err = db.QueryRowContextSQL(ctx, tx, query, nil, []any{&numConstraints}); err != nil {
-			return err
-		}
-		if numConstraints > 0 {
-			query = `ALTER TABLE DBPREFIXwordfilters DROP FOREIGN KEY wordfilters_board_id_fk`
-		} else {
-			query = ""
-		}
-		dataType, err = common.ColumnType(ctx, db, tx, "board_dirs", "DBPREFIXwordfilters", sqlConfig)
+	var err error
+	defer func() {
 		if err != nil {
-			return err
+			errEv.Err(err).Caller(1).Send()
 		}
-		if dataType == "" {
-			query = `ALTER TABLE DBPREFIXwordfilters ADD COLUMN board_dirs varchar(255) DEFAULT '*'`
-			if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
-				return err
-			}
-		}
-	}
+	}()
+	dbName := sqlConfig.DBname
+	db := dbu.db
 
-	// Yay, collation! Everybody loves MySQL's default collation!
+	// fix default collation
 	query = `ALTER DATABASE ` + dbName + ` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci`
-	if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+	if _, err = db.GetBaseDB().ExecContext(ctx, query); err != nil {
 		return err
 	}
 
+	var rows *sql.Rows
 	query = `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`
-	rows, err := db.QueryContextSQL(ctx, tx, query, dbName)
+	rows, err = db.QueryContextSQL(ctx, nil, query, dbName)
 	if err != nil {
 		return err
 	}
@@ -69,15 +44,15 @@ func updateMysqlDB(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *c
 			return err
 		}
 		query = `ALTER TABLE ` + tableName + ` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
-
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 	}
 	if err = rows.Close(); err != nil {
 		return err
 	}
-	dataType, err = common.ColumnType(ctx, db, tx, "ip", "DBPREFIXip_ban", sqlConfig)
+
+	dataType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -86,11 +61,12 @@ func updateMysqlDB(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *c
 		query = `ALTER TABLE DBPREFIXip_ban
 		ADD COLUMN IF NOT EXISTS range_start VARBINARY(16) NOT NULL,
 		ADD COLUMN IF NOT EXISTS range_end VARBINARY(16) NOT NULL`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
+
 		// convert ban IP string to IP range
-		if rows, err = db.QueryContextSQL(ctx, tx, `SELECT id, ip FROM DBPREFIXip_ban`); err != nil {
+		if rows, err = db.QueryContextSQL(ctx, nil, "SELECT id, ip FROM DBPREFIXip_ban"); err != nil {
 			return err
 		}
 		var rangeStart, rangeEnd string
@@ -105,11 +81,11 @@ func updateMysqlDB(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *c
 			}
 			query = `UPDATE DBPREFIXip_ban
 			SET range_start = INET6_ATON(?), range_end = INET6_ATON(?) WHERE id = ?`
-			if _, err = db.ExecContextSQL(ctx, tx, query, rangeStart, rangeEnd, id); err != nil {
+			if _, err = db.ExecContextSQL(ctx, nil, query, rangeStart, rangeEnd, id); err != nil {
 				return err
 			}
 			query = `ALTER TABLE DBPREFIXip_ban DROP COLUMN IF EXISTS ip`
-			if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+			if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 				return err
 			}
 		}
@@ -119,130 +95,86 @@ func updateMysqlDB(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *c
 	}
 
 	// Convert DBPREFIXposts.ip to from varchar to varbinary
-	dataType, err = common.ColumnType(ctx, db, tx, "ip", "DBPREFIXposts", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if common.IsStringType(dataType) {
 		// rename `ip` to a temporary column to then be removed
-		query = `ALTER TABLE DBPREFIXposts CHANGE ip ip_str varchar(45)`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		query = "ALTER TABLE DBPREFIXposts CHANGE ip ip_str varchar(45)"
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 
 		query = `ALTER TABLE DBPREFIXposts
 		ADD COLUMN IF NOT EXISTS ip VARBINARY(16) NOT NULL`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 
 		// convert post IP VARCHAR(45) to VARBINARY(16)
 		query = `UPDATE DBPREFIXposts SET ip = INET6_ATON(ip_str)`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 
 		query = `ALTER TABLE DBPREFIXposts DROP COLUMN IF EXISTS ip_str`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 	}
 
 	// Convert DBPREFIXreports.ip to from varchar to varbinary
-	dataType, err = common.ColumnType(ctx, db, tx, "ip", "DBPREFIXreports", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXreports", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if common.IsStringType(dataType) {
 		// rename `ip` to a temporary column to then be removed
-		query = `ALTER TABLE DBPREFIXreports CHANGE ip ip_str varchar(45)`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		query = "ALTER TABLE DBPREFIXreports CHANGE ip ip_str varchar(45)"
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 
 		query = `ALTER TABLE DBPREFIXreports
 		ADD COLUMN IF NOT EXISTS ip VARBINARY(16) NOT NULL`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 
 		// convert report IP VARCHAR(45) to VARBINARY(16)
 		query = `UPDATE DBPREFIXreports SET ip = INET6_ATON(ip_str)`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 
 		query = `ALTER TABLE DBPREFIXreports DROP COLUMN IF EXISTS ip_str`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 	}
 
 	// add flag column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, tx, "flag", "DBPREFIXposts", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if dataType == "" {
 		query = `ALTER TABLE DBPREFIXposts ADD COLUMN flag VARCHAR(45) NOT NULL DEFAULT ''`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
 	}
 
 	// add country column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, tx, "country", "DBPREFIXposts", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if dataType == "" {
 		query = `ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''`
-		if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
-		}
-	}
-
-	fileBanTableExists, err := common.TableExists(ctx, db, tx, "DBPREFIXfile_ban", sqlConfig)
-	if err != nil {
-		return err
-	}
-	if fileBanTableExists {
-		// file ban table is going to be migrated by the end of the update, but we want to make sure its legacy data is migrated first
-		// so it can be properly merged into the filter table
-
-		// add fingerprinter column to DBPREFIXfile_ban
-		dataType, err = common.ColumnType(ctx, db, tx, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
-		if err != nil {
-			return err
-		}
-		if dataType == "" {
-			query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN fingerprinter VARCHAR(64)`
-			if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
-				return err
-			}
-		}
-
-		// add ban_ip column to DBPREFIXfile_ban
-		dataType, err = common.ColumnType(ctx, db, tx, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
-		if err != nil {
-			return err
-		}
-		if dataType == "" {
-			query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip BOOL NOT NULL`
-			if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
-				return err
-			}
-		}
-		// add ban_ip_message column to DBPREFIXfile_ban
-		dataType, err = common.ColumnType(ctx, db, tx, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
-		if err != nil {
-			return err
-		}
-		if dataType == "" {
-			query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip_message TEXT`
-			if _, err = db.ExecContextSQL(ctx, tx, query); err != nil {
-				return err
-			}
 		}
 	}
 

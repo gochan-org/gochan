@@ -11,8 +11,7 @@ const (
 )
 
 var (
-	ErrInvalidSchema     = errors.New("invalid database schema for old database")
-	ErrUnsupportedDBType = errors.New("unsupported SQL driver, currently only MySQL and Postgres are supported")
+	ErrInvalidSchema = errors.New("invalid database schema for old database")
 )
 
 type MigrationError struct {
@@ -57,8 +56,9 @@ type DBMigrator interface {
 	// will exit
 	IsMigrated() (bool, error)
 
-	// MigrateDB migrates the imageboard data (posts, boards, etc) to the new database. It is
-	// assumed that MigrateDB will handle logging any errors that occur during the migration
+	// MigrateDB alters the database schema to match the new schema, then migrates the imageboard
+	// data (posts, boards, etc) to the new database. It is assumed that MigrateDB will handle
+	// logging any errors that occur during the migration
 	MigrateDB() (bool, error)
 
 	// MigrateBoards gets info about the old boards in the board table and inserts each one
@@ -83,6 +83,6 @@ type DBMigrator interface {
 	// and inserts them into the new database,
 	MigrateAnnouncements() error
 
-	// Close closes the database if initialized
+	// Close closes the database if initialized and deltes the temporary columns created
 	Close() error
 }

@@ -24,7 +24,7 @@ var (
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z",
 	}
-	ErrUnsupportedDB = errors.New("unsupported SQL driver")
+	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(sql.Drivers(), ", "))
 	ErrNotConnected  = errors.New("error connecting to database")
 )
 

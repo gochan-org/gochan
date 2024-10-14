@@ -21,6 +21,11 @@ func ConnectToDB(cfg *config.SQLConfig) error {
 	return err
 }
 
+// SetDB sets the global database connection (mainly used by gochan-migration)
+func SetDB(db *GCDB) {
+	gcdb = db
+}
+
 func SetTestingDB(dbDriver string, dbName string, dbPrefix string, db *sql.DB) (err error) {
 	testutil.PanicIfNotTest()
 	sqlConfig := config.GetSQLConfig()

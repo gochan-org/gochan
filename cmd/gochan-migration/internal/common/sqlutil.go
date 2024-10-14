@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	commentRemover = regexp.MustCompile("--.*\n?")
+	CommentRemover = regexp.MustCompile("--.*\n?")
 )
 
 // ColumnType returns a string representation of the column's data type. It does not return an error
@@ -82,7 +82,7 @@ func RunSQLFile(path string, db *gcsql.GCDB) error {
 		return err
 	}
 
-	sqlStr := commentRemover.ReplaceAllString(string(sqlBytes), " ")
+	sqlStr := CommentRemover.ReplaceAllString(string(sqlBytes), " ")
 	sqlArr := strings.Split(sqlStr, ";")
 
 	for _, statement := range sqlArr {
@@ -96,7 +96,8 @@ func RunSQLFile(path string, db *gcsql.GCDB) error {
 	return nil
 }
 
-func getInitFilePath(initFile string) (string, error) {
+// GetInitFilePath returns the path to the given SQL initialization file and returns an error if it is not found
+func GetInitFilePath(initFile string) (string, error) {
 	filePath := gcutil.FindResource(initFile,
 		path.Join("./sql", initFile),
 		path.Join("/usr/local/share/gochan", initFile),
@@ -108,7 +109,7 @@ func getInitFilePath(initFile string) (string, error) {
 }
 
 func InitDB(initFile string, db *gcsql.GCDB) error {
-	filePath, err := getInitFilePath(initFile)
+	filePath, err := GetInitFilePath(initFile)
 	if err != nil {
 		return err
 	}
