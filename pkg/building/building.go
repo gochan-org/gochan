@@ -32,19 +32,15 @@ type frontPagePost struct {
 
 func getFrontPagePosts() ([]frontPagePost, error) {
 	siteCfg := config.GetSiteConfig()
-	query := `SELECT
-	DBPREFIXposts.id, DBPREFIXposts.message_raw,
-	(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id),
-	COALESCE(f.filename, ''), op.id
-	FROM DBPREFIXposts
-	LEFT JOIN (SELECT id, board_id FROM DBPREFIXthreads) t ON t.id = DBPREFIXposts.thread_id
-	LEFT JOIN (SELECT post_id, filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id
-	INNER JOIN (SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post) op ON op.thread_id = DBPREFIXposts.thread_id
-	WHERE DBPREFIXposts.is_deleted = FALSE`
-	if !siteCfg.RecentPostsWithNoFile {
-		query += " AND f.filename IS NOT NULL AND f.filename != '' AND f.filename != 'deleted'"
+	var query string
+
+	if siteCfg.RecentPostsWithNoFile {
+		// get recent posts, including those with no file
+		query = "SELECT * FROM DBPREFIXv_front_page_posts"
+	} else {
+		query = "SELECT * FROM DBPREFIXv_front_page_posts_with_file"
 	}
-	query += " ORDER BY DBPREFIXposts.id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
+	query += " ORDER BY id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 
 	rows, cancel, err := gcsql.QueryTimeoutSQL(nil, query)
 	defer cancel()

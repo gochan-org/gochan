@@ -113,24 +113,16 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 			setPart += "?)"
 		}
 	}
-	query := `SELECT p.id AS postid, (
-		SELECT op.id AS opid FROM DBPREFIXposts op
-		WHERE op.thread_id = p.thread_id AND is_top_post LIMIT 1
-	) as opid, is_top_post, COALESCE(filename, "") AS filename, dir
-	FROM DBPREFIXboards b
-	LEFT JOIN DBPREFIXthreads t ON t.board_id = b.id
-	LEFT JOIN DBPREFIXposts p ON p.thread_id = t.id
-	LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id
-	WHERE p.id IN ` + setPart
+	var query string
 	params := postIDs
 	if fileOnly {
 		// only deleting this post's file, not subfiles if it's an OP
-		query += " AND filename IS NOT NULL"
+		query = "SELECT * FROM DBPREFIXv_posts_to_delete_file_only WHERE p.id IN " + setPart
 	} else {
 		// deleting everything, including subfiles
 		params = append(params, postIDs...)
-		query += ` OR p.thread_id IN (
-			SELECT thread_id from DBPREFIXposts op WHERE op.id IN ` + setPart + ` AND is_top_post)`
+		query = "SELECT * FROM DBPREFIXv_posts_to_delete WHERE p.id IN " + setPart +
+			` OR p.thread_id IN (SELECT thread_id from DBPREFIXposts op WHERE op.id IN ` + setPart + ` AND is_top_post)`
 	}
 	rows, err := gcsql.QuerySQL(query, params...)
 	if err != nil {
