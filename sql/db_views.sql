@@ -41,8 +41,8 @@ WHERE is_deleted = FALSE;
 
 
 CREATE VIEW DBPREFIXv_recent_posts AS
-SELECT * FROM DBPREFIXv_building_posts
-ORDER BY id DESC;
+SELECT p.*, b.id as board_id FROM DBPREFIXv_building_posts p
+left join DBPREFIXboards b;
 
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS

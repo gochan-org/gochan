@@ -214,11 +214,10 @@ func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
 	var args []any
 
 	if boardid > 0 {
-		query += " WHERE t.board_id = ?"
+		query += " WHERE board_id = ?"
 		args = append(args, boardid)
 	}
-
-	query += " LIMIT " + strconv.Itoa(limit)
+	query += " ORDER BY id DESC LIMIT " + strconv.Itoa(limit)
 
 	var posts []*Post
 	err := QueryPosts(query, args, func(post *Post) error {
