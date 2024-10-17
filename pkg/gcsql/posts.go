@@ -4,8 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"html/template"
+	"strconv"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -91,11 +91,7 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 
 // GetTopPostAndBoardDirFromPostID returns the ID of the top post and the board dir in postID's thread
 func GetTopPostAndBoardDirFromPostID(postID int) (int, string, error) {
-	const query = `SELECT op.id AS op_id, b.dir FROM DBPREFIXposts p
-		INNER JOIN DBPREFIXthreads t ON p.thread_id = t.id
-		INNER JOIN DBPREFIXboards b ON t.board_id = b.id
-		INNER JOIN DBPREFIXposts op ON op.thread_id = t.id AND op.is_top_post = TRUE
-		WHERE p.id = ?`
+	const query = "SELECT * FROM DBPREFIXv_top_post_board_dir WHERE p.id = ?"
 	var opID int
 	var dir string
 	err := QueryRowTimeoutSQL(nil, query, []any{postID}, []any{&opID, &dir})
@@ -144,14 +140,7 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 }
 
 func GetBoardTopPosts(boardID int) ([]*Post, error) {
-	query := `SELECT DBPREFIXposts.id, thread_id, is_top_post, ip, created_on, name,
-		tripcode, is_role_signature, email, subject, message, message_raw,
-		password, deleted_at, is_deleted, banned_message
-		FROM DBPREFIXposts
-		LEFT JOIN (
-		SELECT id, board_id from DBPREFIXthreads
-		) t on t.id = DBPREFIXposts.thread_id
-		WHERE is_deleted = FALSE AND is_top_post AND t.board_id = ?`
+	const query = `SELECT * FROM DBPREFIXv_board_top_posts WHERE t.board_id = ?`
 
 	rows, err := QuerySQL(query, boardID)
 	if err != nil {
@@ -409,23 +398,15 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 }
 
 func (p *Post) WebPath() string {
+	if p.opID > 0 && p.boardDir != "" {
+		return config.WebPath(p.boardDir, "res/", strconv.Itoa(p.opID)+".html#"+strconv.Itoa(p.ID))
+	}
 	webRoot := config.GetSystemCriticalConfig().WebRoot
-	var opID int
-	var boardDir string
-	const query = `SELECT
-		op.id,
-		(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
-	FROM DBPREFIXposts
-	LEFT JOIN (
-		SELECT id, board_id FROM DBPREFIXthreads
-	) t ON t.id = DBPREFIXposts.thread_id
-	INNER JOIN (
-		SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post
-	) op on op.thread_id = DBPREFIXposts.thread_id
-	WHERE DBPREFIXposts.id = ?`
-	err := QueryRowSQL(query, []any{p.ID}, []any{&opID, &boardDir})
+
+	const query = "SELECT * FROM DBPREFIXv_top_post_board_dir WHERE DBPREFIXposts.id = ?"
+	err := QueryRowSQL(query, []any{p.ID}, []any{&p.opID, &p.boardDir})
 	if err != nil {
 		return webRoot
 	}
-	return webRoot + boardDir + fmt.Sprintf("/res/%d.html#%d", opID, p.ID)
+	return config.WebPath(p.boardDir, "res/", strconv.Itoa(p.opID)+".html#"+strconv.Itoa(p.ID))
 }

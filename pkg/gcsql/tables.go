@@ -213,6 +213,10 @@ type Post struct {
 	BannedMessage   string        `json:"-"`     // sql: banned_message
 	Flag            string        `json:"-"`     // sql: flag
 	Country         string        `json:"-"`     // sql: country
+
+	// used for convenience to avoid needing to do multiple queries
+	opID     int
+	boardDir string
 }
 
 // table: DBPREFIXreports

@@ -357,14 +357,7 @@ func fixThumbnailsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsq
 	board := request.FormValue("board")
 	var uploads []uploadInfo
 	if board != "" {
-		const query = `SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,
-		filename, is_spoilered, width, height, thumbnail_width, thumbnail_height
-		FROM DBPREFIXposts p1
-		JOIN DBPREFIXthreads t ON t.id = p1.thread_id
-		JOIN DBPREFIXboards b ON b.id = t.board_id
-		LEFT JOIN DBPREFIXfiles f ON f.post_id = p1.id
-		WHERE dir = ? AND p1.is_deleted = FALSE AND filename IS NOT NULL AND filename != 'deleted'
-		ORDER BY created_on DESC`
+		const query = "SELECT * FROM DBPREFIXv_upload_info WHERE dir = ? ORDER BY created_on DESC"
 		rows, err := gcsql.QuerySQL(query, board)
 		if err != nil {
 			return "", err
