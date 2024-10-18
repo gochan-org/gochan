@@ -50,7 +50,7 @@ WHERE is_deleted = FALSE;
 
 CREATE VIEW DBPREFIXv_recent_posts AS
 SELECT p.*, b.id as board_id FROM DBPREFIXv_building_posts p
-left join DBPREFIXboards b;
+inner join DBPREFIXboards b on b.dir = p.dir;
 
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS
@@ -91,7 +91,7 @@ tripcode, is_role_signature, email, subject, message, message_raw,
 password, deleted_at, is_deleted, banned_message
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t on t.id = DBPREFIXposts.thread_id
-WHERE is_deleted = FALSE AND is_top_post
+WHERE is_deleted = FALSE AND is_top_post;
 
 CREATE VIEW DBPREFIXv_upload_info AS
 SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,
@@ -100,10 +100,10 @@ FROM DBPREFIXposts p1
 JOIN DBPREFIXthreads t ON t.id = p1.thread_id
 JOIN DBPREFIXboards b ON b.id = t.board_id
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p1.id
-WHERE p1.is_deleted = FALSE AND filename IS NOT NULL AND filename != 'deleted'
+WHERE p1.is_deleted = FALSE AND filename IS NOT NULL AND filename != 'deleted';
 
 CREATE VIEW DBPREFIXv_top_post_board_dir AS
 SELECT op.id, (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
-INNER JOIN DBPREFIXv_top_post_thread_ids op on op.thread_id = DBPREFIXposts.thread_id
+INNER JOIN DBPREFIXv_top_post_thread_ids op on op.thread_id = DBPREFIXposts.thread_id;

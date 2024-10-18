@@ -82,7 +82,7 @@ func main() {
 		return nil
 	})
 	if err = gcsql.ResetViews(); err != nil {
-		gcutil.LogFatal().Err(err).Send()
+		gcutil.LogFatal().Err(err).Caller().Msg("Failed resetting SQL views")
 	}
 
 	parseCommandLine()
