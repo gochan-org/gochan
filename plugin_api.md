@@ -109,6 +109,9 @@ This is a list of events that gochan may trigger at some point and can be used i
 - **db-initialized**
 	- Triggered after the database is successfully initialized (db version checking, provisioning, etc)
 
+- **db-views-reset**
+	- Triggered after the SQL views have been successfully reset, either immediately after the database is initialized, or by a staff member
+
 - **incoming-upload**
 	- Triggered by the `gcsql` package when an upload is attached to a post. It is triggered before the upload is entered in the database
 

@@ -77,6 +77,14 @@ func main() {
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
+	events.RegisterEvent([]string{"db-views-reset"}, func(trigger string, i ...interface{}) error {
+		gcutil.LogInfo().Msg("SQL views reset")
+		return nil
+	})
+	if err = gcsql.ResetViews(); err != nil {
+		gcutil.LogFatal().Err(err).Send()
+	}
+
 	parseCommandLine()
 	serverutil.InitMinifier()
 	siteCfg := config.GetSiteConfig()

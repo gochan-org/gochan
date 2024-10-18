@@ -3,6 +3,7 @@ package gcsql
 import (
 	"errors"
 	"fmt"
+	"path"
 	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -28,11 +29,15 @@ var (
 	targetDatabaseVersion = -1
 )
 
+func findSQLFile(filename string) string {
+	return gcutil.FindResource(filename,
+		path.Join("./sql/", filename),
+		path.Join("/usr/local/share/gochan/", filename),
+		path.Join("/usr/share/gochan/", filename))
+}
+
 func initDB(initFile string) error {
-	filePath := gcutil.FindResource(initFile,
-		"./sql/"+initFile,
-		"/usr/local/share/gochan/"+initFile,
-		"/usr/share/gochan/"+initFile)
+	filePath := findSQLFile(initFile)
 	if filePath == "" {
 		return fmt.Errorf("missing SQL database initialization file (%s), please reinstall gochan", initFile)
 	}
