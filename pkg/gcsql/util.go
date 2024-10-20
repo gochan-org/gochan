@@ -45,6 +45,12 @@ func (af BooleanFilter) whereClause(columnName string, and bool) string {
 	return ""
 }
 
+// intOrStringConstraint can be used to make using/creating query functions easier and to reduce the amount of reused code
+// i.e., so we don't need GetPostsOnBoardByID() and GetPostsOnBoardByDir()
+type intOrStringConstraint interface {
+	int | string
+}
+
 // BeginTx begins a new transaction for the gochan database. It uses a background context
 func BeginTx() (*sql.Tx, error) {
 	return BeginContextTx(context.Background())

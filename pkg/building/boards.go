@@ -525,7 +525,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	if err = BuildBoardPages(board, errEv); err != nil {
 		return err
 	}
-	if err = BuildThreads(true, board.ID, 0); err != nil {
+	if err = BuildThreads(true, board.Dir, 0); err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
 	}

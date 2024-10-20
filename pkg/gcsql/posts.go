@@ -139,30 +139,37 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 	return post, err
 }
 
-func GetBoardTopPosts(boardID int) ([]*Post, error) {
-	const query = `SELECT * FROM DBPREFIXv_board_top_posts WHERE t.board_id = ?`
+// GetBoardTopPosts gets the top posts of the given
+func GetBoardTopPosts[B intOrStringConstraint](board B) ([]*Post, error) {
+	query := `SELECT id, thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature,
+		email, subject, message, message_raw, password, deleted_at, is_deleted, coalesce(banned_message,''),
+		flag, country
+		FROM DBPREFIXv_post_with_board WHERE is_top_post AND is_deleted = FALSE`
+	switch any(board).(type) {
+	case int:
+		query += " AND id = ?"
+	case string:
+		query += " AND dir = ?"
+	}
 
-	rows, err := QuerySQL(query, boardID)
+	rows, cancel, err := QueryTimeoutSQL(nil, query, board)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 	var posts []*Post
 	for rows.Next() {
 		var post Post
-		// var tmp int // only needed for WHERE clause in query
-
-		bannedMessage := new(string)
-		err = rows.Scan(
+		if err = rows.Scan(
 			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &bannedMessage,
-		)
-		if err != nil {
+			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted, &post.BannedMessage,
+			&post.Flag, &post.Country,
+		); err != nil {
 			return posts, err
-		}
-		if bannedMessage != nil {
-			post.BannedMessage = *bannedMessage
 		}
 		posts = append(posts, &post)
 	}

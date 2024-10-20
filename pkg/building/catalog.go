@@ -63,7 +63,7 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 }
 
 func getBoardTopPosts(board string) ([]*Post, error) {
-	const query = "SELECT * FROM DBPREFIXv_board_top_posts WHERE DIR = ?"
+	const query = "SELECT * FROM DBPREFIXv_building_posts WHERE id = parent_id AND dir = ?"
 	var posts []*Post
 
 	err := QueryPosts(query, []any{board}, func(p *Post) error {

@@ -1,9 +1,9 @@
 -- SQL views for simplifying queries in gochan
 
 -- First drop views if they exist in reverse order to avoid dependency issues
+DROP VIEW IF EXISTS DBPREFIXv_post_with_board;
 DROP VIEW IF EXISTS DBPREFIXv_top_post_board_dir;
 DROP VIEW IF EXISTS DBPREFIXv_upload_info;
-DROP VIEW IF EXISTS DBPREFIXv_board_top_posts;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts_with_file;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts;
 DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete_file_only;
@@ -85,14 +85,6 @@ SELECT * FROM DBPREFIXv_front_page_posts
 WHERE filename IS NOT NULL AND filename <> '' AND filename <> 'deleted';
 
 
-CREATE VIEW DBPREFIXv_board_top_posts AS
-SELECT DBPREFIXposts.id, thread_id, is_top_post, ip, created_on, name,
-tripcode, is_role_signature, email, subject, message, message_raw,
-password, deleted_at, is_deleted, banned_message
-FROM DBPREFIXposts
-LEFT JOIN DBPREFIXv_thread_board_ids t on t.id = DBPREFIXposts.thread_id
-WHERE is_deleted = FALSE AND is_top_post;
-
 CREATE VIEW DBPREFIXv_upload_info AS
 SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,
 filename, is_spoilered, width, height, thumbnail_width, thumbnail_height
@@ -107,3 +99,11 @@ SELECT op.id, (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op on op.thread_id = DBPREFIXposts.thread_id;
+
+CREATE VIEW DBPREFIXv_post_with_board AS
+SELECT p.id AS id, thread_id, is_top_post, created_on, name, tripcode, is_role_signature, email,
+subject, message, message_raw, password, p.deleted_at AS deleted_at, p.is_deleted AS is_deleted,
+banned_message, ip, flag, country, dir, board_id
+FROM DBPREFIXposts p
+LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
+LEFT JOIN DBPREFIXboards b ON b.id = t.board_id;

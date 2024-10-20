@@ -18,11 +18,11 @@ import (
 // BuildThreads builds thread(s) given a boardid, or if all = false, also given a threadid.
 // if all is set to true, ignore which, otherwise, which = build only specified boardid
 // TODO: make it variadic
-func BuildThreads(all bool, boardid, threadid int) error {
+func BuildThreads(all bool, board string, threadid int) error {
 	var threads []*gcsql.Post
 	var err error
 	if all {
-		threads, err = gcsql.GetBoardTopPosts(boardid)
+		threads, err = gcsql.GetBoardTopPosts(board)
 	} else {
 		var post *gcsql.Post
 		post, err = gcsql.GetThreadTopPost(threadid)
@@ -91,6 +91,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("unable to set file permissions for /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
+	fmt.Println(thread.ID, thread.BoardID)
 	errEv.Int("op", posts[0].ID)
 
 	// render thread page
