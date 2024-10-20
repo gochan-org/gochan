@@ -91,7 +91,7 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 
 // GetTopPostAndBoardDirFromPostID returns the ID of the top post and the board dir in postID's thread
 func GetTopPostAndBoardDirFromPostID(postID int) (int, string, error) {
-	const query = "SELECT * FROM DBPREFIXv_top_post_board_dir WHERE p.id = ?"
+	const query = "SELECT * FROM DBPREFIXv_top_post_board_dir WHERE id = ?"
 	var opID int
 	var dir string
 	err := QueryRowTimeoutSQL(nil, query, []any{postID}, []any{&opID, &dir})

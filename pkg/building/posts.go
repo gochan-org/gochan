@@ -151,7 +151,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 	return rows.Close()
 }
 
-func GetBuildablePost(id int, _ int) (*Post, error) {
+/* func GetBuildablePost(id int, _ int) (*Post, error) {
 	const query = "SELECT * FROM DBPREFIXv_building_posts WHERE DBPREFIXposts.id = ?"
 
 	var post Post
@@ -183,10 +183,10 @@ func GetBuildablePost(id int, _ int) (*Post, error) {
 	post.IsTopPost = post.ParentID == 0
 	post.Extension = path.Ext(post.Filename)
 	return &post, nil
-}
+} */
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
-	query := "SELECT * FROM DBPREFIXv_building_posts WHERE ip = PARAM_ATON ORDER BY DBPREFIXposts.id DESC"
+	query := "SELECT * FROM DBPREFIXv_building_posts WHERE ip = PARAM_ATON ORDER BY id DESC"
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}

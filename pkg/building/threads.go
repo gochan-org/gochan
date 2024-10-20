@@ -91,7 +91,6 @@ func BuildThreadPages(op *gcsql.Post) error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("unable to set file permissions for /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
 	}
-	fmt.Println(thread.ID, thread.BoardID)
 	errEv.Int("op", posts[0].ID)
 
 	// render thread page
