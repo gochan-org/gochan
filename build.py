@@ -200,7 +200,7 @@ def set_vars(goos=""):
 	migration_exe = "gochan-migration" + exe
 
 
-def build(debugging=False, plugin_path=""):
+def build(debugging=False, plugin_path="", static_templates=False):
 	"""Build the gochan executable for the current GOOS"""
 	pwd = os.getcwd()
 	trimpath = f"-trimpath={pwd}"
@@ -211,17 +211,18 @@ def build(debugging=False, plugin_path=""):
 	ldflags = f"-ldflags=-X main.versionStr={GOCHAN_VERSION} -X main.dbVersionStr={DATABASE_VERSION} {ldflags_debug}"
 	build_cmd_base = ["go", "build", "-v", "-trimpath", gcflags, ldflags]
 
-	print("Building error pages from templates")
-	with open("templates/404.html", "r") as tmpl404:
-		tmpl404str = tmpl404.read().strip()
-		with open("html/error/404.html", "w") as page404:
-			page404.write(tmpl404str.format(GOCHAN_VERSION))
-	with open("templates/5xx.html", "r") as tmpl5xx:
-		tmpl5xxStr = tmpl5xx.read().strip()
-		with open("html/error/500.html", "w") as page500:
-			page500.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 500: Internal Server error"))
-		with open("html/error/502.html", "w") as page502:
-			page502.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 502: Bad gateway"))
+	if static_templates:
+		print("Building error pages from templates")
+		with open("templates/404.html", "r") as tmpl404:
+			tmpl404str = tmpl404.read().strip()
+			with open("html/error/404.html", "w") as page404:
+				page404.write(tmpl404str.format(GOCHAN_VERSION))
+		with open("templates/5xx.html", "r") as tmpl5xx:
+			tmpl5xxStr = tmpl5xx.read().strip()
+			with open("html/error/500.html", "w") as page500:
+				page500.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 500: Internal Server error"))
+			with open("html/error/502.html", "w") as page502:
+				page502.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 502: Bad gateway"))
 
 	if debugging:
 		print(f"Building for {gcos} with debugging symbols")
@@ -258,28 +259,6 @@ def clean():
 	del_files = ("gochan", "gochan.exe", "gochan-migration", "gochan-migration.exe", "releases/")
 	for del_file in del_files:
 		delete(del_file)
-
-
-def dependencies():
-	print("Installing dependencies for gochan")
-	run_cmd(("go", "get"), realtime=True, print_command=True)
-
-
-def docker(option="guestdb", attached=False):
-	db_option = ""
-	if option == "guestdb":
-		db_option = "docker/docker-compose-mariadb.yaml"
-	elif option == "hostdb":
-		db_option = "docker/docker-compose.yml.default"
-	elif option == "macos":
-		db_option = "docker/docker-compose-syncForMac.yaml"
-	cmd = ["docker-compose", "-f", db_option, "up", "--build"]
-	if attached is False:
-		cmd += ["--detach"]
-	status = run_cmd(cmd, print_output=True, realtime=True, print_command=True)[1]
-	if status != 0:
-		print("Failed starting a docker container, exited with status code", status)
-		sys.exit(1)
 
 
 def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=False, css_only=False, templates_only=False):
@@ -463,11 +442,10 @@ if __name__ == "__main__":
 		pass
 	if action.startswith("-") is False:
 		sys.argv.insert(1, action)
-	if action != "dependencies":
-		set_vars()
+	set_vars()
 
 	valid_actions = (
-		"build", "clean", "dependencies", "docker", "install", "js", "release", "sass", "test", "selenium"
+		"build", "clean", "install", "js", "release", "sass", "test", "selenium"
 	)
 	parser = argparse.ArgumentParser(description="gochan build script")
 	parser.add_argument("action", nargs=1, default="build", choices=valid_actions)
@@ -481,26 +459,14 @@ if __name__ == "__main__":
 			action="store_true")
 		parser.add_argument("--plugin",
 			help="if used, builds the gochan-compatible Go plugin at the specified directory")
+		parser.add_argument("--static-templates",
+			help="if used, also (re)builds the static error page templates based on the current gochan version",
+			action="store_true")
 		args = parser.parse_args()
-		build(args.debug, args.plugin)
+		build(args.debug, args.plugin, args.static_templates)
 	elif action == "clean":
 		clean()
 		sys.exit(0)
-	elif action == "dependencies":
-		dependencies()
-	elif action == "docker":
-		parser.add_argument("--option",
-			default="guestdb",
-			choices=["guestdb", "hostdb", "macos"],
-			help="create a Docker container, see docker/README.md for more info")
-		parser.add_argument("--attached",
-			action="store_true",
-			help="keep the command line attached to the container while it runs")
-		args = parser.parse_args()
-		try:
-			docker(args.option, args.attached)
-		except KeyboardInterrupt:
-			print("Received keyboard interrupt, exiting")
 	elif action == "install":
 		parser.add_argument("--js",
 			action="store_true",

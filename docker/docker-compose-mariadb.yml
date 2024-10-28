@@ -1,0 +1,44 @@
+services:
+  gochan:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gochan-server
+    ports:
+      - "80:80"
+    volumes:
+      - ../:/opt/gochan # note: this doesn't work too well in MacOS. 
+      - ./volumes/gochan/log:/var/log/gochan
+      - ./volumes/gochan/www:/var/www
+    networks:
+      - gochan-bridge
+    environment:
+      - DBTYPE=mysql
+      - DATABASE_HOST=gochan-mariadb
+      - DATABASE_PORT=3306
+      - DATABASE_NAME=gochan
+      - DATABASE_USER=gochan
+      - DATABASE_PASSWORD=gochan
+    depends_on:
+      - mariadb
+
+  mariadb:
+    image: mariadb:11.5.2-noble
+    container_name: gochan-mariadb
+    tty: true
+    expose:
+      - "3306"
+    networks:
+      - gochan-bridge
+    environment:
+      - MARIADB_ROOT_PASSWORD=root
+      - MARIADB_DATABASE=gochan
+      - MARIADB_USER=gochan
+      - MARIADB_PASSWORD=gochan
+    volumes:
+      - ./volumes/mariadb:/var/lib/mysql
+
+networks:
+  gochan-bridge:
+    name: gochan-bridge
+    driver: bridge

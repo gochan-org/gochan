@@ -1,0 +1,146 @@
+{
+	"ListenIP": "gochan-server",
+	"Port": 80,
+	"UseFastCGI": false,
+	"DocumentRoot": "/var/www",
+	"TemplateDir": "/opt/gochan/templates",
+	"LogDir": "/var/log/gochan",
+	"Plugins": null,
+	"PluginSettings": null,
+	"SiteHeaderURL": "",
+	"WebRoot": "/",
+	"SiteDomain": "127.0.0.1",
+	"DBtype": "mysql",
+	"DBhost": "gochan-mariadb:3306",
+	"DBname": "gochan",
+	"DBusername": "gochan",
+	"DBpassword": "gochan",
+	"DBprefix": "",
+	"DBTimeoutSeconds": 15,
+	"DBMaxOpenConnections": 10,
+	"DBMaxIdleConnections": 10,
+	"DBConnMaxLifetimeMin": 3,
+	"DebugMode": true,
+	"RandomSeed": "c,b25Y]]\"?:Q#^|f",
+	"FirstPage": [
+		"index.html",
+		"firstrun.html",
+		"1.html"
+	],
+	"Username": "",
+	"CookieMaxAge": "1y",
+	"StaffSessionDuration": "3mo",
+	"Lockdown": false,
+	"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
+	"SiteName": "Gochan",
+	"SiteSlogan": "",
+	"Modboard": "",
+	"MaxRecentPosts": 12,
+	"RecentPostsWithNoFile": false,
+	"EnableAppeals": true,
+	"MinifyHTML": true,
+	"MinifyJS": true,
+	"GeoIPType": "",
+	"GeoIPOptions": null,
+	"Captcha": {
+		"Type": "",
+		"OnlyNeededForThreads": false,
+		"SiteKey": "",
+		"AccountSecret": ""
+	},
+	"FingerprintVideoThumbnails": false,
+	"FingerprintHashLength": 0,
+	"InheritGlobalStyles": false,
+	"Styles": [
+		{
+			"Name": "Pipes",
+			"Filename": "pipes.css"
+		},
+		{
+			"Name": "BunkerChan",
+			"Filename": "bunkerchan.css"
+		},
+		{
+			"Name": "Burichan",
+			"Filename": "burichan.css"
+		},
+		{
+			"Name": "Clear",
+			"Filename": "clear.css"
+		},
+		{
+			"Name": "Dark",
+			"Filename": "dark.css"
+		},
+		{
+			"Name": "Photon",
+			"Filename": "photon.css"
+		},
+		{
+			"Name": "Yotsuba",
+			"Filename": "yotsuba.css"
+		},
+		{
+			"Name": "Yotsuba B",
+			"Filename": "yotsubab.css"
+		},
+		{
+			"Name": "Windows 9x",
+			"Filename": "win9x.css"
+		}
+	],
+	"DefaultStyle": "pipes.css",
+	"Banners": [
+		{
+			"Filename": "gochan_go-parody.png",
+			"Width": 300,
+			"Height": 100
+		}
+	],
+	"MaxLineLength": 150,
+	"ReservedTrips": [
+		"thischangesto##this",
+		"andthischangesto##this"
+	],
+	"RepliesOnBoardPage": 3,
+	"StickyRepliesOnBoardPage": 1,
+	"NewThreadsRequireUpload": false,
+	"CyclicalThreadNumPosts": 500,
+	"BanColors": [
+		"admin:#0000A0",
+		"somemod:blue"
+	],
+	"BanMessage": "USER WAS BANNED FOR THIS POST",
+	"EmbedWidth": 200,
+	"EmbedHeight": 164,
+	"EnableEmbeds": true,
+	"ImagesOpenNewTab": true,
+	"NewTabOnOutlinks": true,
+	"DisableBBcode": false,
+	"RejectDuplicateImages": false,
+	"ThumbWidth": 200,
+	"ThumbHeight": 200,
+	"ThumbWidthReply": 125,
+	"ThumbHeightReply": 125,
+	"ThumbWidthCatalog": 50,
+	"ThumbHeightCatalog": 50,
+	"AllowOtherExtensions": null,
+	"StripImageMetadata": "none",
+	"ExiftoolPath": "",
+	"DateTimeFormat": "Mon, January 02, 2006 3:04 PM",
+	"ShowPosterID": false,
+	"EnableSpoileredImages": true,
+	"EnableSpoileredThreads": true,
+	"Worksafe": true,
+	"ThreadPage": 0,
+	"Cooldowns": {
+		"threads": 30,
+		"replies": 7,
+		"images": 7
+	},
+	"RenderURLsAsLinks": true,
+	"ThreadsPerPage": 15,
+	"EnableGeoIP": false,
+	"EnableNoFlag": false,
+	"CustomFlags": null
+}

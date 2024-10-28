@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -42,9 +41,9 @@ type GochanConfig struct {
 // ValidateValues checks to make sure that the configuration options are usable
 // (e.g., ListenIP is a valid IP address, Port isn't a negative number, etc)
 func (gcfg *GochanConfig) ValidateValues() error {
-	if net.ParseIP(gcfg.ListenIP) == nil {
-		return &InvalidValueError{Field: "ListenIP", Value: gcfg.ListenIP}
-	}
+	// if net.ParseIP(gcfg.ListenIP) == nil {
+	// 	return &InvalidValueError{Field: "ListenIP", Value: gcfg.ListenIP}
+	// }
 	changed := false
 
 	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
