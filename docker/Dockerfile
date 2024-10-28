@@ -1,10 +1,7 @@
 FROM golang:1.20-alpine3.18
 
-COPY docker/build-image.sh .
-
 WORKDIR /opt/gochan
 
-# Get all
 COPY . .
 
 RUN apk add \
@@ -16,12 +13,12 @@ RUN apk add \
 	musl-dev \
 	openssl \
 	exiftool && \
-	mkdir -p /var/www/ && \
-	ln -sn /opt/gochan/html/* /var/www/
-
+	mkdir -p /var/www/gochan && \
+	ln -sn /opt/gochan/html/* /var/www/gochan/
 
 COPY docker/gochan-docker.json /etc/gochan/gochan.json
-
-RUN ["./build.py"]
+ENV DBTYPE=mysql
+ENV DATABASE_HOST=gochan-mariadb
+ENV DATABASE_PORT=3306
 
 CMD ["/opt/gochan/docker/startup.sh"]

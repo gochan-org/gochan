@@ -2,7 +2,7 @@
 	"ListenIP": "gochan-server",
 	"Port": 80,
 	"UseFastCGI": false,
-	"DocumentRoot": "/var/www",
+	"DocumentRoot": "/var/www/gochan",
 	"TemplateDir": "/opt/gochan/templates",
 	"LogDir": "/var/log/gochan",
 	"Plugins": null,
