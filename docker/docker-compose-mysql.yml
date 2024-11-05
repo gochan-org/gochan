@@ -4,8 +4,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        - GOCHAN_DBTYPE=mariadb
-        - GOCHAN_DBHOST=gochan-mariadb:3306
+        - GOCHAN_DBTYPE=mysql
+        - GOCHAN_DBHOST=gochan-mysql:3306
     container_name: gochan-server
     ports:
       - "80:80"
@@ -15,23 +15,23 @@ services:
     networks:
       - gochan-bridge
     depends_on:
-      - mariadb
+      - mysql
 
-  mariadb:
-    image: mariadb:11.5.2-noble
-    container_name: gochan-mariadb
+  mysql:
+    image: mysql:8.0-bookworm
+    container_name: gochan-mysql
     tty: true
     expose:
       - "3306"
     networks:
       - gochan-bridge
     environment:
-      - MARIADB_ROOT_PASSWORD=root
-      - MARIADB_DATABASE=gochan
-      - MARIADB_USER=gochan
-      - MARIADB_PASSWORD=gochan
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=gochan
+      - MYSQL_USER=gochan
+      - MYSQL_PASSWORD=gochan
     volumes:
-      - ./volumes/mariadb:/var/lib/mysql
+      - ./volumes/mysql:/var/lib/mysql
 
 networks:
   gochan-bridge:

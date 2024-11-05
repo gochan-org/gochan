@@ -15,6 +15,8 @@ linkwww static
 linkwww favicon.png
 linkwww firstrun.html
 
-echo "pinging database $DATABASE_HOST:$DATABASE_PORT, DBTYPE: '$DBTYPE'"
-./docker/wait-for.sh "$DATABASE_HOST:$DATABASE_PORT" -t 30
+if [ "$DBTYPE" != "sqlite3" ]; then
+    echo "pinging database $DBHOST, DBTYPE: '$DBTYPE'"
+    ./docker/wait-for.sh "$DBHOST" -t 30
+fi
 gochan
