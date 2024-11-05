@@ -14,7 +14,8 @@ RUN apk add \
 	openssl \
 	exiftool && \
 	mkdir -p /var/www/gochan && \
-	ln -sn /opt/gochan/html/* /var/www/gochan/
+	echo "Building gochan executable" && \
+	./build.py && ./build.py install --symlinks
 
 COPY docker/gochan-docker.json /etc/gochan/gochan.json
 ENV DBTYPE=mysql

@@ -7,7 +7,6 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ../:/opt/gochan # note: this doesn't work too well in MacOS. 
       - ./volumes/gochan/log:/var/log/gochan
       - ./volumes/gochan/www:/var/www/gochan
     networks:

@@ -1,21 +1,20 @@
 #!/bin/sh
 
-set -euo pipefail
-
 cd /opt/gochan
 
-if [ ! -L /var/www/gochan/js ]; then
-    echo "Build stage didn't create links in /var/www/gochan"
-    exit 1
-fi
+linkwww() {
+    if [ ! -L /var/www/gochan/$1 ]; then
+        ln -sv /opt/gochan/html/$1 /var/www/gochan/
+    fi
+}
 
-if [ ! -f /etc/gochan/.installed ]; then
-    git config --global --add safe.directory /opt/gochan
-    echo "Creating gochan executable"
-    ./build.py
-    touch /etc/gochan/.installed
-fi
+linkwww css
+linkwww error
+linkwww js
+linkwww static
+linkwww favicon.png
+linkwww firstrun.html
 
-echo "pinging db, DBTYPE: '$DBTYPE'"
+echo "pinging database $DATABASE_HOST:$DATABASE_PORT, DBTYPE: '$DBTYPE'"
 ./docker/wait-for.sh "$DATABASE_HOST:$DATABASE_PORT" -t 30
-./gochan
+gochan
