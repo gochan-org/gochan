@@ -380,10 +380,6 @@ func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 		db.connStr = fmt.Sprintf(postgresConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, postgresReplacerArr...)
 	case "sqlite3":
-		addrMatches := tcpHostIsolator.FindAllStringSubmatch(cfg.DBhost, -1)
-		if len(addrMatches) > 0 && len(addrMatches[0]) > 2 {
-			cfg.DBhost = addrMatches[0][2]
-		}
 		db.connStr = fmt.Sprintf(sqlite3ConnStr, cfg.DBhost, cfg.DBusername, cfg.DBpassword)
 		replacerArr = append(replacerArr, sqlite3ReplacerArr...)
 	default:

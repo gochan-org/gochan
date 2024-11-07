@@ -69,7 +69,8 @@ func main() {
 	}
 	events.TriggerEvent("db-connected")
 	gcutil.LogInfo().
-		Str("dbType", systemCritical.DBtype).
+		Str("DBtype", systemCritical.DBtype).
+		Str("DBhost", systemCritical.DBhost).
 		Msg("Connected to database")
 
 	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, dbVersionStr); err != nil {

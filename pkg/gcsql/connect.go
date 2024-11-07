@@ -10,10 +10,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 )
 
-var (
-	tcpHostIsolator = regexp.MustCompile(`\b(tcp\()?([^\(\)]*)\b`)
-)
-
 // ConnectToDB initializes the database connection and exits if there are any errors
 func ConnectToDB(cfg *config.SQLConfig) error {
 	var err error
