@@ -57,7 +57,7 @@ CREATE VIEW DBPREFIXv_posts_to_delete AS
 SELECT p.id AS postid, (
     SELECT op.id AS opid FROM DBPREFIXposts op
     WHERE op.thread_id = p.thread_id AND is_top_post LIMIT 1
-) as opid, is_top_post, COALESCE(filename, "") AS filename, dir
+) as opid, is_top_post, COALESCE(filename, '') AS filename, dir
 FROM DBPREFIXboards b
 LEFT JOIN DBPREFIXthreads t ON t.board_id = b.id
 LEFT JOIN DBPREFIXposts p ON p.thread_id = t.id
