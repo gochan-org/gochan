@@ -1,0 +1,39 @@
+services:
+  gochan:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        - GOCHAN_DBTYPE=postgres
+        - GOCHAN_DBHOST=gochan-postgres:5432
+    container_name: gochan-server
+    ports:
+      - "80:80"
+    volumes:
+      - ./volumes/gochan/log:/var/log/gochan
+      - ./volumes/gochan/www:/var/www/gochan
+    networks:
+      - gochan-bridge
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:16-alpine3.19
+    container_name: gochan-postgres
+    tty: true
+    expose:
+      - "5432"
+    networks:
+      - gochan-bridge
+    environment:
+      - POSTGRES_DB=gochan
+      - POSTGRES_USER=gochan
+      - POSTGRES_PASSWORD=gochan
+    volumes:
+      - ./volumes/postgres/data:/var/lib/postgresql/data
+      # - ./volumes/postgres/socket:/var/run/postgresql
+
+networks:
+  gochan-bridge:
+    name: gochan-bridge
+    driver: bridge

@@ -11,8 +11,8 @@ if [ "$DBTYPE" = "mariadb" ]; then
 	CFG_DBTYPE=mysql
 elif [ "$DBTYPE" = "mysql" ]; then
 	apk add mysql-client
-elif [ "$DBTYPE" = "postgresql" ]; then
-	apk add postgresql17-client
+elif [ "$DBTYPE" = "postgres" ]; then
+	apk add postgresql16-client
 elif [ "$DBTYPE" = "sqlite3" ]; then
 	apk add sqlite sqlite-dev sqlite-libs
 elif [ -z "$DBTYPE" ]; then
