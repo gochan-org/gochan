@@ -51,7 +51,7 @@ var (
 
 	templateMap = map[string]*gochanTemplate{
 		BanPage: {
-			files: []string{"banpage.html", "page_footer.html"},
+			files: []string{"banpage.html", "page_header.html", "topbar.html", "page_footer.html"},
 		},
 		BoardPage: {
 			files: []string{"boardpage.html", "topbar.html", "post_flag.html", "post.html", "page_header.html", "postbox.html", "page_footer.html"},

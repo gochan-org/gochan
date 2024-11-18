@@ -102,7 +102,7 @@ body {
   font: 12pt sans-serif;
 }
 
-header h1, span#site-title {
+header h1, #site-title {
   color: #e1b400;
 }
 

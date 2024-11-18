@@ -1,17 +1,23 @@
+{{$title := ""}}
+{{with .board}}
+	{{with $.op}}
+		{{$title = .TitleText}}
+	{{else}}
+		{{$title = print "/" $.board.Dir "/ - " $.board.Title}}
+	{{end}}
+{{else}}
+	{{with $.pageTitle}}
+		{{$title = print $.pageTitle " - "}}
+	{{end}}
+	{{$title = print $title $.siteConfig.SiteName}}
+{{end -}}
+
 <!DOCTYPE html>
 <html>
-<head>
+<head lang="en">
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	{{with .board -}}
-		{{with $.op -}}
-			<title>{{.TitleText}}</title>
-		{{- else}}
-			<title>/{{$.board.Dir}}/ - {{$.board.Title}}</title>
-		{{end}}
-	{{- else -}}
-		<title>{{with $.pageTitle}}{{$.pageTitle}} - {{end}}{{.siteConfig.SiteName}}</title>
-	{{- end}}
+	<title>{{$title}}</title>
 	<link rel="stylesheet" href="{{webPath "/css/global.css"}}" />
 	{{with .board -}}
 		<link id="theme" rel="stylesheet" href="{{webPath "/css/" (getBoardDefaultStyle $.board.Dir)}}" />

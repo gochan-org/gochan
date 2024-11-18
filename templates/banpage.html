@@ -1,40 +1,29 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Banned</title>
-	<link rel="shortcut icon" href="{{webPath `favicon.png`}}">
-	<link rel="stylesheet" href="{{webPath `css/global.css`}}" />
-	<link id="theme" rel="stylesheet" href="{{webPath `css` .boardConfig.DefaultStyle}}" />
-	<script type="text/javascript" src="{{webPath `js/consts.js`}}"></script>
-	<script type="text/javascript" src="{{webPath `js/gochan.js`}}"></script>
-</head>
-<body>
-	<div id="top-pane">
-		<span id="site-title">{{.siteConfig.SiteName}}</span><br />
-		<span id="site-slogan">{{.siteConfig.SiteSlogan}}</span>
-	</div><br />
-	<div class="section-block" style="margin: 0px 26px 0px 24px">
-		<div class="section-title-block">
-			<span class="section-title"><b>{{if .ban.BannedForever}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED&nbsp;:({{end}}</b></span>
+{{- template "page_header.html" map "global" . "pageTitle" $.siteConfig.SiteName "boardConfig" $.boardConfig "siteConfig" $.siteConfig "boards" $.boards "sections" $.sections}}
+<div class="section-block" style="margin: 0px 26px 0px 24px">
+	<div class="section-title-block">
+		<span class="section-title"><span class="ban-title">{{if .ban.BannedForever}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</span></span>
+	</div>
+	<div class="section-body" style="padding-top:8px">
+		<div id="ban-info" style="float:left">{{if .ban.IsGlobalBan}}
+			You are banned from posting on <span class="ban-boards">all boards</span> for the following reason:{{else}}
+			You are banned from posting on <span class="ban-boards">{{.board.Dir}}</span> for the following reason:{{end}}
+			<p class="reason">{{.ban.Message}}</p>
+			Your ban was placed on <time datetime="{{formatTimestampAttribute .ban.IssuedAt}}" class="ban-timestamp">{{formatTimestamp .ban.IssuedAt}}</time> and will 
+				{{- if .ban.Permanent}} <span class="ban-timestamp">not expire</span>
+				{{- else}} expire on <time class="ban-timestamp" datetime="{{formatTimestampAttribute .ban.ExpiresAt}}">{{formatTimestamp .ban.ExpiresAt}}</time>
+				{{- end}}.<br />
+			Your IP address is <span class="ban-ip">{{.ip}}</span>.<br /><br />
+			{{if .ban.CanAppeal}}You may appeal this ban:<br />
+				<form id="appeal-form" action="{{webPath `/post`}}" method="POST">
+					<input type="hidden" name="board" value="{{.board.Dir}}">
+					<input type="hidden" name="banid" value="{{.ban.ID}}">
+					<textarea rows="4" cols="48" name="appealmsg" id="postmsg" placeholder="Appeal message"></textarea>
+					<input type="submit" name="doappeal" value="Submit" /><br />
+				</form>
+			{{- else}}You may <span class="ban-timestamp">not</span> appeal this ban.<br />{{end}}
 		</div>
-		<div class="section-body" style="padding-top:8px">
-			<div id="ban-info" style="float:left">{{if .ban.IsGlobalBan}}
-				You are banned from posting on <b>all boards</b> for the following reason:{{else}}
-				You are banned from posting on <b>{{.board.Dir}}</b> for the following reason:{{end}}
-				<br /><br />
-				<b>{{.ban.Message}}</b>
-				<br /><br />{{$expiresTimestamp := formatTimestamp .ban.ExpiresAt}}{{$appealTimestamp := formatTimestamp .ban.AppealAt}}
-				Your ban was placed on {{formatTimestamp .ban.IssuedAt}} and will {{if .ban.Permanent}}<b>not expire</b>{{else}}expire on&nbsp;<b>{{$expiresTimestamp}}</b>{{end}}.<br />
-				Your IP address is <b>{{.ip}}</b>.<br /><br />
-				{{if .ban.CanAppeal}}You may appeal this ban:<br />
-					<form id="appeal-form" action="{{webPath `/post`}}" method="POST">
-						<input type="hidden" name="board" value="{{.board.Dir}}">
-						<input type="hidden" name="banid" value="{{.ban.ID}}">
-						<textarea rows="4" cols="48" name="appealmsg" id="postmsg" placeholder="Appeal message"></textarea><br />
-						<input type="submit" name="doappeal" value="Submit" /><br />
-					</form>{{else}}You may&nbsp;<b>not</b> appeal this ban.<br />{{end}}
-				</div>{{if .ban.BannedForever}}
-				<img id="banpage-image" src="{{webPath "permabanned.jpg"}}" style="float:right; margin: 4px 8px 8px 4px"/><br />
+			{{- if .ban.BannedForever -}}
+				<img id="banpage-image" src="{{webPath `static/permabanned.jpg`}}" style="float:right; margin: 4px 8px 8px 4px"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
 					<source src="{{webPath `static/hittheroad.ogg`}}" />
 					<source src="{{webPath `static/hittheroad.wav`}}" />
@@ -42,7 +31,8 @@
 				</audio>
 				<script type="text/javascript">
 					document.getElementById("jack").play();
-				</script>{{end}}
-			</div>
-		</div>
-	{{template "page_footer.html" .}}
+				</script>
+			{{- end -}}
+	</div>
+</div>
+{{template "page_footer.html" .}}

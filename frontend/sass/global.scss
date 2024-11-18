@@ -4,12 +4,12 @@
 @import 'global/lightbox';
 @import 'global/qr';
 @import "global/watcher";
+@import 'global/bans';
 
 header {
 	margin-top:50px;
 	text-align:center;
 	h1 {
-		font-size:30px;
 		margin: 0px;
 	}
 }

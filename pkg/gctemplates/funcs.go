@@ -13,10 +13,14 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+const (
+	dateTimeFormat = "2006-01-02T15:04:05Z"
+	maxFilename    = 10
+)
+
 var (
 	ErrInvalidKey = errors.New("template map expects string keys")
 	ErrInvalidMap = errors.New("invalid template map call")
-	maxFilename   = 10
 )
 
 var funcMap = template.FuncMap{
@@ -65,7 +69,10 @@ var funcMap = template.FuncMap{
 		return fmt.Sprintf("%0.2f GB", size/1024/1024/1024)
 	},
 	"formatTimestamp": func(t time.Time) string {
-		return t.Format(config.GetBoardConfig("").DateTimeFormat)
+		return t.UTC().Format(config.GetBoardConfig("").DateTimeFormat)
+	},
+	"formatTimestampAttribute": func(t time.Time) string {
+		return t.UTC().Format(dateTimeFormat)
 	},
 	"stringAppend": func(strings ...string) string {
 		var appended string

@@ -249,8 +249,9 @@ div#top-pane {
   margin-top: 32px;
   width: 100%;
 }
-div#top-pane span#site-title {
+div#top-pane #site-title {
   font-size: 50px;
+  margin-bottom: 0px;
 }
 
 col#recent {
@@ -558,12 +559,19 @@ table#qr-postbox textarea {
   font-weight: bold;
 }
 
+.reason, .ban-boards, .ban-timestamp, .ban-title, .ban-ip {
+  font-weight: bold;
+}
+
+form#appeal-form * {
+  display: block;
+}
+
 header {
   margin-top: 50px;
   text-align: center;
 }
 header h1 {
-  font-size: 30px;
   margin: 0px;
 }
 

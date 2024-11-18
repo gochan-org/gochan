@@ -62,6 +62,6 @@ header, div#top-pane, a {
   color: #f60;
 }
 
-span#site-title, div#board-title {
+#-title, #board-title {
   font-weight: 800;
 }
