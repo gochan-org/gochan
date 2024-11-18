@@ -234,11 +234,11 @@ export function setCustomCSS() {
 }
 
 $(() => {
-	const styleOptions = [{text: "Default", val: ""}];
+	const styleOptions = [];
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
 	}
-	settings.set("style", new DropdownSetting("style", "Style", styleOptions, "", function() {
+	settings.set("style", new DropdownSetting("style", "Style", styleOptions, defaultStyle, function() {
 		const val:string = this.getElementValue();
 		const themeElem = document.getElementById("theme");
 		if(!themeElem) return;
