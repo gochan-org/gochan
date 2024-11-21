@@ -195,6 +195,12 @@ func buildFilterFormData(request *http.Request, errEv *zerolog.Event) (data map[
 		"actions":      filterActionsMap,
 		"filterBoards": make([]int, 0),
 	}
+	defer func() {
+		if err != nil {
+			// prevent repeat logging
+			errEv.Discard()
+		}
+	}()
 
 	var filter *gcsql.Filter
 	var conditions []gcsql.FilterCondition
@@ -240,13 +246,21 @@ func buildFilterFormData(request *http.Request, errEv *zerolog.Event) (data map[
 		if upload == nil {
 			conditions = append(conditions, gcsql.FilterCondition{Field: "nofile", MatchMode: gcsql.SubstrMatch})
 		} else {
-			fingerprint, _ := uploads.GetPostImageFingerprint(postID)
+			fingerprint, err := uploads.GetPostImageFingerprint(postID)
+			if err != nil && errors.Is(err, uploads.ErrVideoThumbFingerprint) && !errors.Is(err, uploads.ErrUnsupportedFileExt) {
+				errEv.Err(err).Caller().Msg("Unable to get upload fingerprint")
+				return nil, err
+			}
 			conditions = append(conditions,
 				gcsql.FilterCondition{Field: "hasfile", MatchMode: gcsql.SubstrMatch},
 				gcsql.FilterCondition{Field: "filename", MatchMode: gcsql.SubstrMatch, Search: upload.OriginalFilename},
 				gcsql.FilterCondition{Field: "checksum", MatchMode: gcsql.ExactMatch, Search: upload.Checksum},
-				gcsql.FilterCondition{Field: "ahash", MatchMode: gcsql.ExactMatch, Search: fingerprint},
 			)
+			if fingerprint != "" {
+				conditions = append(conditions,
+					gcsql.FilterCondition{Field: "ahash", MatchMode: gcsql.ExactMatch, Search: fingerprint},
+				)
+			}
 		}
 
 		opID, opBoard, err := gcsql.GetTopPostAndBoardDirFromPostID(postID)

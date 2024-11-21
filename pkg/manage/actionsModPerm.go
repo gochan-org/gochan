@@ -384,7 +384,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	if err = serverutil.MinifyTemplate(gctemplates.ManageIPSearch, data, manageIpBuffer, "text/html"); err != nil {
 		errEv.Err(err).Caller().
 			Str("template", "manage_ipsearch.html").Send()
-		return "", errors.New("Unable to render IP search page template")
+		return "", errors.New("unable to render IP search page template")
 	}
 	return manageIpBuffer.String(), nil
 }
@@ -693,11 +693,18 @@ func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	}, nil
 }
 
-func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	do := request.PostFormValue("dowordfilter")
 	editIDstr := request.FormValue("edit")
 	disableIDstr := request.FormValue("disable")
 	enableIDstr := request.FormValue("enable")
+
+	defer func() {
+		if err != nil {
+			// prevent repeat logging
+			errEv.Discard()
+		}
+	}()
 
 	if disableIDstr != "" {
 		disableID, err := strconv.Atoi(disableIDstr)
@@ -735,7 +742,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		filter, err = gcsql.GetWordfilterByID(editID)
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get wordfilter")
-			return nil, fmt.Errorf("Unable to get wordfilter with id #%d", editID)
+			return nil, fmt.Errorf("unable to get wordfilter with id #%d", editID)
 		}
 	}
 	searchFor := request.PostFormValue("searchfor")
