@@ -1,0 +1,83 @@
+div#content, div#qr-box {
+  color: #ACACAC;
+  border: 1px double #07371F;
+  border-radius: 5px;
+}
+div#content textarea,
+div#content input:not([type=file]):not([type=checkbox]),
+div#content [type=submit],
+div#content select, div#qr-box textarea,
+div#qr-box input:not([type=file]):not([type=checkbox]),
+div#qr-box [type=submit],
+div#qr-box select {
+  color: #ACACAC;
+  background: #282A2E;
+  border: 1px solid #07371F;
+  border-radius: 5px;
+}
+
+div#qr-box {
+  background: #282A2E;
+}
+
+form#postform a.browse-text, form#qrpostform a.browse-text {
+  background: rgba(200, 200, 200, 0.5);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+div#staffmenu, div#watchermenu {
+  background: black;
+  border: 1px solid #ACACAC;
+}
+
+body {
+  background: #1d1f21;
+  color: #ACACAC;
+  font-family: arial, helvetica, sans-serif;
+  font-size: 10pt;
+}
+
+div#topbar {
+  background: #151515;
+  border-bottom: 2px solid #FFB300;
+}
+div#topbar * {
+  padding: 0px;
+}
+
+hr {
+  color: #117743;
+}
+
+a {
+  color: #FFB300;
+  text-decoration: none;
+}
+
+a:hover {
+  background: inherit;
+  color: #d00;
+}
+
+header h1, header div#board-subtitle {
+  font-family: tahoma;
+  color: #AF0A0F;
+}
+
+th, div.reply {
+  background: #282A2E;
+  border: 1px solid #117743;
+}
+
+div.section-block {
+  border: 1px solid white;
+}
+div.section-block div.section-title-block {
+  background: #8B0000;
+  border: 1px solid white;
+  font-weight: bold;
+}
+
+div#frontpage div.section-block:first-child {
+  background: #282A2E;
+}

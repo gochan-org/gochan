@@ -1,0 +1,33 @@
+@import './vars';
+
+div#content, div#qr-box {
+	color: $txtcol;
+	border: 1px double $inputshadow;
+	border-radius: 5px;
+
+	textarea,
+	input:not([type="file"]):not([type="checkbox"]),
+	[type="submit"],
+	select {
+		color: $txtcol;
+		background: $gridcol;
+		border: 1px solid $inputshadow;
+		border-radius: 5px;
+	}
+}
+
+div#qr-box {
+	background: $gridcol;
+}
+
+form#postform, form#qrpostform {
+	a.browse-text {
+		background: rgba(200, 200, 200, 0.5);
+		color: rgba(0, 0, 0, 0.5);
+	}
+}
+
+div#staffmenu, div#watchermenu {
+	background: black;
+	border: 1px solid $txtcol;
+}

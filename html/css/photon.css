@@ -53,15 +53,15 @@ div#topbar {
   -webkit-filter: drop-shadow(2px 2px 3px #292929);
   filter: drop-shadow(2px 2px 3px #292929);
   z-index: 0;
-  /* div:hover {
-  	background: $bglight;
-  } */
+}
+.dropdown-menu div:hover {
+  background: #222;
 }
 
 header, div#top-pane, a {
   color: #f60;
 }
 
-#-title, #board-title {
+#site-title, #board-title {
   font-weight: 800;
 }

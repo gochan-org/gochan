@@ -1,0 +1,59 @@
+@import './darkbunker/img';
+@import './darkbunker/vars';
+@import './util';
+
+body {
+	background: $bgcol;
+	color: $txtcol;
+	font-family: arial,helvetica,sans-serif;
+	font-size: 10pt;
+}
+
+div#topbar {
+	background: $topbarcol;
+	border-bottom: 2px solid $linkcol;
+	* {
+		padding: 0px;
+	}
+}
+
+hr {
+	color: $bordercol;
+}
+
+a {
+	color: $linkcol;
+	text-decoration: none;
+}
+
+a:hover {
+	background: inherit;
+	color: $linklight;
+}
+
+header {
+	h1, div#board-subtitle {
+		font-family: tahoma;
+		color: $headercol;
+	}
+}
+
+th, div.reply {
+	background: $gridcol;
+	border: 1px solid $bordercol;
+}
+
+div.section-block {
+	border: 1px solid white;
+
+	div.section-title-block {
+		background: $blocktitle;
+		border: 1px solid white;
+		font-weight: bold;
+	}
+}
+
+div#frontpage div.section-block:first-child {
+	background: $gridcol;
+	// border: none;
+}
