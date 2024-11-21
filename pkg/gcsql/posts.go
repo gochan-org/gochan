@@ -91,7 +91,7 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 
 // GetTopPostAndBoardDirFromPostID returns the ID of the top post and the board dir in postID's thread
 func GetTopPostAndBoardDirFromPostID(postID int) (int, string, error) {
-	const query = "SELECT * FROM DBPREFIXv_top_post_board_dir WHERE id = ?"
+	const query = "SELECT op_id, dir FROM DBPREFIXv_top_post_board_dir WHERE id = ?"
 	var opID int
 	var dir string
 	err := QueryRowTimeoutSQL(nil, query, []any{postID}, []any{&opID, &dir})
@@ -410,7 +410,7 @@ func (p *Post) WebPath() string {
 	}
 	webRoot := config.GetSystemCriticalConfig().WebRoot
 
-	const query = "SELECT * FROM DBPREFIXv_top_post_board_dir WHERE DBPREFIXposts.id = ?"
+	const query = "SELECT op_id, dir FROM DBPREFIXv_top_post_board_dir WHERE id = ?"
 	err := QueryRowSQL(query, []any{p.ID}, []any{&p.opID, &p.boardDir})
 	if err != nil {
 		return webRoot

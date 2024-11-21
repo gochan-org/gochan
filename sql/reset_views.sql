@@ -95,7 +95,7 @@ LEFT JOIN DBPREFIXfiles f ON f.post_id = p1.id
 WHERE p1.is_deleted = FALSE AND filename IS NOT NULL AND filename != 'deleted';
 
 CREATE VIEW DBPREFIXv_top_post_board_dir AS
-SELECT op.id, (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
+SELECT DBPREFIXposts.id, op.id as op_id, (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) AS dir
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op on op.thread_id = DBPREFIXposts.thread_id;
