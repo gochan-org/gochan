@@ -38,7 +38,7 @@ release_files = (
 	"README.md",
 )
 
-GOCHAN_VERSION = "4.0"
+GOCHAN_VERSION = "4.0.1"
 DATABASE_VERSION = "4"  # stored in DBNAME.DBPREFIXdatabase_version
 
 PATH_NOTHING = -1
@@ -392,7 +392,7 @@ def eslint(fix=False):
 
 def release(goos):
 	set_vars(goos)
-	build(False)
+	build(False, static_templates=True)
 	release_name = gochan_bin + "-v" + GOCHAN_VERSION + "_" + gcos_name
 	release_dir = path.join("releases", release_name)
 	delete(release_dir)

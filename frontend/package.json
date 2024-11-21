@@ -1,6 +1,6 @@
 {
   "name": "gochan.js",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "",
   "main": "./ts/main.ts",
   "private": true,
