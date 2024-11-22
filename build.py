@@ -34,6 +34,8 @@ release_files = (
 	"sql/initdb_mysql.sql",
 	"sql/initdb_postgres.sql",
 	"sql/initdb_sqlite3.sql",
+	"sql/reset_views.sql",
+	"sql/README.md",
 	"LICENSE",
 	"README.md",
 )
