@@ -24,6 +24,7 @@ import (
 
 type delPost struct {
 	postID   int
+	threadID int
 	opID     int
 	isOP     bool
 	filename string
@@ -117,12 +118,12 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 	params := postIDs
 	if fileOnly {
 		// only deleting this post's file, not subfiles if it's an OP
-		query = "SELECT * FROM DBPREFIXv_posts_to_delete_file_only WHERE p.id IN " + setPart
+		query = "SELECT * FROM DBPREFIXv_posts_to_delete_file_only WHERE postid IN " + setPart
 	} else {
 		// deleting everything, including subfiles
 		params = append(params, postIDs...)
-		query = "SELECT * FROM DBPREFIXv_posts_to_delete WHERE p.id IN " + setPart +
-			` OR p.thread_id IN (SELECT thread_id from DBPREFIXposts op WHERE op.id IN ` + setPart + ` AND is_top_post)`
+		query = "SELECT * FROM DBPREFIXv_posts_to_delete WHERE postid IN " + setPart +
+			` OR thread_id IN (SELECT thread_id from DBPREFIXposts op WHERE opid IN ` + setPart + ` AND is_top_post)`
 	}
 	rows, err := gcsql.QuerySQL(query, params...)
 	if err != nil {
@@ -132,7 +133,7 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 	var postIDsAny []any
 	for rows.Next() {
 		var post delPost
-		if err = rows.Scan(&post.postID, &post.opID, &post.isOP, &post.filename, &post.boardDir); err != nil {
+		if err = rows.Scan(&post.postID, &post.threadID, &post.opID, &post.isOP, &post.filename, &post.boardDir); err != nil {
 			rows.Close()
 			return nil, nil, err
 		}

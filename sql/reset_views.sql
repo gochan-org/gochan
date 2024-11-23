@@ -42,7 +42,7 @@ INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = p.thread_id
 WHERE p.is_deleted = FALSE;
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS
-SELECT p.id AS postid, (
+SELECT p.id AS postid, thread_id, (
 	SELECT op.id AS opid FROM DBPREFIXposts op
 	WHERE op.thread_id = p.thread_id AND is_top_post LIMIT 1
 ) as opid, is_top_post, COALESCE(filename, '') AS filename, dir
