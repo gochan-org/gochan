@@ -103,6 +103,8 @@ func (p *Post) Cyclical() bool {
 	return p.thread.Cyclical
 }
 
+// Select all from v_building_posts (and queries with the same columns) and call the callback function on each Post
+// returned
 func QueryPosts(query string, params []any, cb func(*Post) error) error {
 	sqlCfg := config.GetSQLConfig()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds)*time.Second)
@@ -126,10 +128,11 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 		var lastBump time.Time
 		dest = append(dest,
 			&post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.CreatedOn,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
 			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.Country.Flag, &post.Country.Name)
+			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.Country.Flag, &post.Country.Name,
+			&post.IsDeleted)
 
 		if err = rows.Scan(dest...); err != nil {
 			return err
@@ -150,40 +153,6 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 	}
 	return rows.Close()
 }
-
-/* func GetBuildablePost(id int, _ int) (*Post, error) {
-	const query = "SELECT * FROM DBPREFIXv_building_posts WHERE DBPREFIXposts.id = ?"
-
-	var post Post
-	var lastBump time.Time
-	var ip string
-	out := []any{&post.ID, &post.thread.ID}
-	dbType := config.GetSystemCriticalConfig().DBtype
-	if dbType == "mysql" {
-		out = append(out, &post.IP)
-	} else {
-		out = append(out, &ip)
-	}
-	out = append(out, &post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.CreatedOn,
-		&post.LastModified, &post.ParentID, lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
-		&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-		&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-		&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.Country.Flag, &post.Country.Name)
-
-	err := gcsql.QueryRowSQL(query, []any{id}, out)
-	if err != nil {
-		return nil, err
-	}
-	if dbType != "mysql" {
-		post.IP = net.ParseIP(ip)
-		if post.IP == nil {
-			return nil, fmt.Errorf("invalid post IP address %q", ip)
-		}
-	}
-	post.IsTopPost = post.ParentID == 0
-	post.Extension = path.Ext(post.Filename)
-	return &post, nil
-} */
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
 	query := "SELECT * FROM DBPREFIXv_building_posts WHERE ip = PARAM_ATON ORDER BY id DESC"
@@ -210,7 +179,7 @@ func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
-	query := "SELECT * FROM DBPREFIXv_recent_posts"
+	query := `SELECT * FROM DBPREFIXv_building_posts`
 	var args []any
 
 	if boardid > 0 {
