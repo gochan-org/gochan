@@ -26,13 +26,10 @@ release_files = (
 	"html/favicon2.png",
 	"html/favicon.png",
 	"html/firstrun.html",
-	"html/js/gochan.js",
-	"html/js/gochan.js.LICENSE.txt",
-	"html/js/gochan.js.map",
+	"html/js/",
 	"examples/configs/",
 	"examples/plugins/",
 	"templates/",
-	"sql/initdb_master.sql",
 	"sql/initdb_mysql.sql",
 	"sql/initdb_postgres.sql",
 	"sql/initdb_sqlite3.sql",
@@ -415,6 +412,7 @@ def release(goos):
 			shutil.copytree(file, path.join(release_dir, file))
 	copy(gochan_exe, path.join(release_dir, gochan_exe))
 	copy(migration_exe, path.join(release_dir, migration_exe))
+	delete(path.join(release_dir, "html/js/consts.js"))
 	archive_type = "zip" if goos in ('windows', 'darwin') else "gztar"
 	shutil.make_archive(release_dir, archive_type, root_dir="releases", base_dir=release_name)
 
