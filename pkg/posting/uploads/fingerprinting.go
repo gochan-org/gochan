@@ -40,23 +40,22 @@ func GetPostImageFingerprint(postID int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	subDir := "src"
-	if !IsImage(filename) && !IsVideo(filename) {
-		return "", ErrUnsupportedFileExt
-	} else if IsVideo(filename) {
-		if !config.GetSiteConfig().FingerprintVideoThumbnails {
-			return "", ErrVideoThumbFingerprint
-		}
-		filename, _ = GetThumbnailFilenames(filename)
-		subDir = "thumb"
-	}
-	filePath := path.Join(config.GetSystemCriticalConfig().DocumentRoot,
-		board, subDir, filename)
-
+	filePath := path.Join(config.GetSystemCriticalConfig().DocumentRoot, board, "src", filename)
 	return GetFileFingerprint(filePath)
 }
 
 func GetFileFingerprint(filePath string) (string, error) {
+	if !IsImage(filePath) && !IsVideo(filePath) {
+		return "", ErrUnsupportedFileExt
+	} else if IsVideo(filePath) {
+		if !config.GetSiteConfig().FingerprintVideoThumbnails {
+			return "", ErrVideoThumbFingerprint
+		}
+		filePath, _ = GetThumbnailFilenames(filePath)
+		filename := path.Base(filePath)
+		fileBoardPath := path.Dir(path.Dir(filePath))
+		filePath = path.Join(fileBoardPath, "thumb", filename)
+	}
 	img, err := imaging.Open(filePath)
 	if err != nil {
 		return "", err

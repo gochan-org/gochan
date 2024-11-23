@@ -1,6 +1,7 @@
 package initsql
 
 import (
+	"errors"
 	"net/http"
 	"path"
 	"strconv"
@@ -150,6 +151,10 @@ func init() {
 		fingerprint, err := uploads.GetFileFingerprint(path.Join(
 			config.GetSystemCriticalConfig().DocumentRoot,
 			dir, "src", u.Filename))
+		if errors.Is(err, uploads.ErrVideoThumbFingerprint) {
+			// admin hasn't enabled video thumbnail fingerprinting in the config, let it through
+			return false, nil
+		}
 		return fingerprint == fc.Search, err
 	})
 }
