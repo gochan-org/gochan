@@ -9,8 +9,7 @@
 		{{- with .board -}}
 			{{- with $.op}}{{.TitleText}}{{else}}/{{$.board.Dir}}/ - {{$.board.Title}}{{end -}}
 		{{- else -}}
-			{{- with $.documentTitle}}documentTitle: {{.}}
-			{{- else -}}
+			{{- with $.documentTitle}}{{.}}{{- else -}}
 				{{- with $.pageTitle -}}{{$.pageTitle}} - {{$.siteConfig.SiteName}}
 				{{else}}{{$.siteConfig.SiteName}}
 				{{- end -}}
