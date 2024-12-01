@@ -109,16 +109,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
 
-	mock.ExpectPrepare(`SELECT\s*posts.id,\s*posts.message_raw,\s*` +
-		`\(SELECT dir FROM boards WHERE id = t.board_id\),\s*` +
-		`COALESCE\(f.filename, ''\), op.id\s*` +
-		`FROM posts\s*` +
-		`LEFT JOIN\s*\(SELECT id, board_id FROM threads\) t ON t.id = posts.thread_id\s+` +
-		`LEFT JOIN\s*\(SELECT post_id, filename FROM files\) f on f.post_id = posts.id\s+` +
-		`INNER JOIN\s*\(SELECT id, thread_id FROM posts WHERE is_top_post\) op ON op.thread_id = posts.thread_id\s+` +
-		`WHERE posts.is_deleted = FALSE\s+` +
-		`AND f.filename IS NOT NULL AND f.filename != '' AND f.filename != 'deleted'\s+` +
-		`ORDER BY posts.id DESC LIMIT \d+`).ExpectQuery().WillReturnRows(
+	mock.ExpectPrepare(`SELECT \* FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "op.id"}).
 			AddRows(
 				[]driver.Value{1, "message_raw", "test", "filename", 1},

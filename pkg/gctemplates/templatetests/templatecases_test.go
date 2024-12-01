@@ -10,6 +10,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	headBeginning = `<!DOCTYPE html><html lang="en"><head>` +
+		`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">`
+
+	headEndAndBodyStart = `<link rel="stylesheet"href="/css/global.css"/>` +
+		`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
+		`<link rel="shortcut icon"href="/favicon.png">` +
+		`<script type="text/javascript"src="/js/consts.js"></script>` +
+		`<script type="text/javascript"src="/js/gochan.js"></script></head>` +
+		`<body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div>` +
+		`<header><h1 id="board-title">Gochan</h1></header>` +
+		`<div id="content"><div class="section-block banpage-block">`
+
+	normalBanHeader = headBeginning + `<title>YOU ARE BANNED:(</title>` + headEndAndBodyStart +
+		`<div class="section-title-block"><span class="section-title ban-title">YOU ARE BANNED:(</span></div>` +
+		`<div class="section-body"><div id="ban-info">`
+
+	bannedForeverHeader = headBeginning + `<title>YOU'RE PERMABANNED,&nbsp;IDIOT!</title>` + headEndAndBodyStart +
+		`<div class="section-title-block"><span class="section-title ban-title">YOU'RE PERMABANNED,IDIOT!</span></div>` +
+		`<div class="section-body"><div id="ban-info">`
+
+	appealForm = `<form id="appeal-form"action="/post"method="POST">` +
+		`<input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0">` +
+		`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea>` +
+		`<input type="submit"name="doappeal"value="Submit"/><br/></form>`
+
+	footer = `<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`
+)
+
 var (
 	testingSiteConfig = config.SiteConfig{
 		SiteName:   "Gochan",
@@ -64,24 +93,12 @@ var (
 					DefaultStyle: "pipes.css",
 				},
 			},
-			expectedOutput: `<!DOCTYPE html><html><head><title>Banned</title>` +
-				`<link rel="shortcut icon"href="/favicon.png">` +
-				`<link rel="stylesheet"href="/css/global.css"/>` +
-				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
-				`<script type="text/javascript"src="/js/consts.js"></script>` +
-				`<script type="text/javascript"src="/js/gochan.js"></script></head>` +
-				`<body><div id="top-pane"><span id="site-title">Gochan</span><br /><span id="site-slogan">Gochan test</span></div><br />` +
-				`<div class="section-block"style="margin: 0px 26px 0px 24px">` +
-				`<div class="section-title-block"><span class="section-title"><b>YOU ARE BANNED&nbsp;:(</b></span></div>` +
-				`<div class="section-body"style="padding-top:8px"><div id="ban-info"style="float:left">You are banned from posting on<b>all boards</b>for the following reason:<br/><br/>` +
-				`<b>ban message goes here</b><br/><br/>` +
-				`Your ban was placed on Mon,January 01,0001 12:00:00 AM and will<b>not expire</b>.<br />` +
-				`Your IP address is<b>192.168.56.1</b>.<br /><br/>You may appeal this ban:<br/>` +
-				`<form id="appeal-form"action="/post"method="POST">` +
-				`<input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0">` +
-				`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><br />` +
-				`<input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+			expectedOutput: normalBanHeader +
+				`You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:<p class="reason">ban message goes here</p>` +
+				`Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> and will <span class="ban-timestamp">not expire</span>.<br/>` +
+				`Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>` +
+				`You may appeal this ban:<br/>` + appealForm + `</div></div></div>` +
+				footer,
 		},
 		{
 			desc: "unappealable permaban (banned forever)",
@@ -105,22 +122,14 @@ var (
 					DefaultStyle: "pipes.css",
 				},
 			},
-			expectedOutput: `<!DOCTYPE html><html><head><title>Banned</title>` +
-				`<link rel="shortcut icon"href="/favicon.png">` +
-				`<link rel="stylesheet"href="/css/global.css"/>` +
-				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
-				`<script type="text/javascript"src="/js/consts.js"></script>` +
-				`<script type="text/javascript"src="/js/gochan.js"></script></head>` +
-				`<body><div id="top-pane"><span id="site-title">Gochan</span><br /><span id="site-slogan">Gochan test</span></div><br />` +
-				`<div class="section-block"style="margin: 0px 26px 0px 24px"><div class="section-title-block">` +
-				`<span class="section-title"><b>YOUR'E PERMABANNED,IDIOT!</b></span></div>` +
-				`<div class="section-body"style="padding-top:8px"><div id="ban-info"style="float:left">You are banned from posting on<b>all boards</b>for the following reason:<br/><br/>` +
-				`<b>ban message goes here</b><br/><br/>Your ban was placed on Mon,January 01,0001 12:00:00 AM and will<b>not expire</b>.<br />` +
-				`Your IP address is<b>192.168.56.1</b>.<br /><br/>You may&nbsp;<b>not</b> appeal this ban.<br /></div>` +
-				`<img id="banpage-image"src="/permabanned.jpg"style="float:right; margin: 4px 8px 8px 4px"/><br/>` +
+			expectedOutput: bannedForeverHeader + `You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:` +
+				`<p class="reason">ban message goes here</p>Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> ` +
+				`and will <span class="ban-timestamp">not expire</span>.<br/>` +
+				`Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may<span class="ban-timestamp">not</span> appeal this ban.<br /></div>` +
+				`<img id="banpage-image" src="/static/permabanned.jpg"/><br/>` +
 				`<audio id="jack"preload="auto"autobuffer loop><source src="/static/hittheroad.ogg"/><source src="/static/hittheroad.wav"/><source src="/static/hittheroad.mp3"/></audio>` +
 				`<script type="text/javascript">document.getElementById("jack").play();</script></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+				footer,
 		},
 		{
 			desc: "appealable temporary ban",
@@ -143,24 +152,8 @@ var (
 					DefaultStyle: "pipes.css",
 				},
 			},
-			expectedOutput: `<!DOCTYPE html><html><head><title>Banned</title>` +
-				`<link rel="shortcut icon"href="/favicon.png">` +
-				`<link rel="stylesheet"href="/css/global.css"/>` +
-				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
-				`<script type="text/javascript"src="/js/consts.js"></script>` +
-				`<script type="text/javascript"src="/js/gochan.js"></script></head>` +
-				`<body><div id="top-pane"><span id="site-title">Gochan</span><br /><span id="site-slogan">Gochan test</span></div><br />` +
-				`<div class="section-block"style="margin: 0px 26px 0px 24px">` +
-				`<div class="section-title-block"><span class="section-title"><b>YOU ARE BANNED&nbsp;:(</b></span></div>` +
-				`<div class="section-body"style="padding-top:8px"><div id="ban-info"style="float:left">You are banned from posting on<b>all boards</b>for the following reason:<br/><br/>` +
-				`<b>ban message goes here</b><br/><br/>` +
-				`Your ban was placed on Mon,January 01,0001 12:00:00 AM and will expire on&nbsp;<b>Mon,January 01,0001 12:00:00 AM</b>.<br />` +
-				`Your IP address is<b>192.168.56.1</b>.<br /><br/>You may appeal this ban:<br/>` +
-				`<form id="appeal-form"action="/post"method="POST">` +
-				`<input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0">` +
-				`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><br />` +
-				`<input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+			expectedOutput: normalBanHeader +
+				`You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:<p class="reason">ban message goes here</p>Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> and will expire on <time class="ban-timestamp" datetime="0001-01-01T00:00:00Z">Mon, January 01, 0001 12:00:00 AM</time>.<br/>Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may appeal this ban:<br/><form id="appeal-form"action="/post"method="POST"><input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0"><textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div><div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
 		},
 		{
 			desc: "unappealable temporary ban",
@@ -182,21 +175,12 @@ var (
 					DefaultStyle: "pipes.css",
 				},
 			},
-			expectedOutput: `<!DOCTYPE html><html><head><title>Banned</title>` +
-				`<link rel="shortcut icon"href="/favicon.png">` +
-				`<link rel="stylesheet"href="/css/global.css"/>` +
-				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
-				`<script type="text/javascript"src="/js/consts.js"></script>` +
-				`<script type="text/javascript"src="/js/gochan.js"></script></head>` +
-				`<body><div id="top-pane"><span id="site-title">Gochan</span><br /><span id="site-slogan">Gochan test</span></div><br />` +
-				`<div class="section-block"style="margin: 0px 26px 0px 24px">` +
-				`<div class="section-title-block"><span class="section-title"><b>YOU ARE BANNED&nbsp;:(</b></span></div>` +
-				`<div class="section-body"style="padding-top:8px"><div id="ban-info"style="float:left">You are banned from posting on<b>all boards</b>for the following reason:<br/><br/>` +
-				`<b>ban message goes here</b><br/><br/>` +
-				`Your ban was placed on Mon,January 01,0001 12:00:00 AM and will expire on&nbsp;<b>Mon,January 01,0001 12:00:00 AM</b>.<br />` +
-				`Your IP address is<b>192.168.56.1</b>.<br /><br/>You may&nbsp;<b>not</b> appeal this ban.<br />` +
-				`</div></div></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+			expectedOutput: normalBanHeader + `You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:` +
+				`<p class="reason">ban message goes here</p>` +
+				`Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> ` +
+				`and will expire on <time class="ban-timestamp" datetime="0001-01-01T00:00:00Z">Mon, January 01, 0001 12:00:00 AM</time>.<br/>` +
+				`Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may<span class="ban-timestamp">not</span> appeal this ban.<br />` +
+				`</div></div></div>` + footer,
 		},
 	}
 
@@ -213,7 +197,7 @@ var (
 			},
 			expectedOutput: boardPageHeaderBase +
 				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+				footer,
 		},
 		{
 			desc: "base case, multi threads and pages",
@@ -227,7 +211,7 @@ var (
 			},
 			expectedOutput: boardPageHeaderBase +
 				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
-				`<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+				footer,
 		},
 	}
 
@@ -270,7 +254,7 @@ var (
 )
 
 const (
-	boardPageHeaderBase = `<!DOCTYPE html><html><head>` +
+	boardPageHeaderBase = `<!DOCTYPE html><html lang="en"><head>` +
 		`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
 		`<title>/test/-Testing board</title>` +
 		`<link rel="stylesheet"href="/css/global.css"/><link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +

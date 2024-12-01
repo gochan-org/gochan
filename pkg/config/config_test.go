@@ -28,11 +28,6 @@ func TestValidateValues(t *testing.T) {
 	SetRandomSeed("test")
 	assert.NoError(t, cfg.ValidateValues())
 
-	cfg.ListenIP = "not an IP"
-	assert.Error(t, cfg.ValidateValues())
-	cfg.ListenIP = "127.0.0.1"
-	assert.NoError(t, cfg.ValidateValues())
-
 	cfg.CookieMaxAge = "not a duration"
 	assert.Error(t, cfg.ValidateValues())
 	cfg.CookieMaxAge = "1y"

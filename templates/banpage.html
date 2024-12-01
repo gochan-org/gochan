@@ -1,10 +1,10 @@
-{{- template "page_header.html" map "global" . "pageTitle" $.siteConfig.SiteName "boardConfig" $.boardConfig "siteConfig" $.siteConfig "boards" $.boards "sections" $.sections}}
-<div class="section-block" style="margin: 0px 26px 0px 24px">
+{{- template "page_header.html" map "global" . "pageTitle" $.siteConfig.SiteName "boardConfig" $.boardConfig "siteConfig" $.siteConfig "boards" $.boards "sections" $.sections "ban" $.ban}}
+<div class="section-block banpage-block">
 	<div class="section-title-block">
-		<span class="section-title"><span class="ban-title">{{if .ban.BannedForever}}YOUR'E PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</span></span>
+		<span class="section-title ban-title">{{if (.ban.BannedForever)}}YOU'RE PERMABANNED, IDIOT!{{else}}YOU ARE BANNED :({{end}}</span>
 	</div>
-	<div class="section-body" style="padding-top:8px">
-		<div id="ban-info" style="float:left">{{if .ban.IsGlobalBan}}
+	<div class="section-body">
+		<div id="ban-info">{{if .ban.IsGlobalBan}}
 			You are banned from posting on <span class="ban-boards">all boards</span> for the following reason:{{else}}
 			You are banned from posting on <span class="ban-boards">{{.board.Dir}}</span> for the following reason:{{end}}
 			<p class="reason">{{.ban.Message}}</p>
@@ -23,7 +23,7 @@
 			{{- else}}You may <span class="ban-timestamp">not</span> appeal this ban.<br />{{end}}
 		</div>
 			{{- if .ban.BannedForever -}}
-				<img id="banpage-image" src="{{webPath `static/permabanned.jpg`}}" style="float:right; margin: 4px 8px 8px 4px"/><br />
+				<img id="banpage-image" src="{{webPath `static/permabanned.jpg`}}"/><br />
 				<audio id="jack" preload="auto" autobuffer loop> 
 					<source src="{{webPath `static/hittheroad.ogg`}}" />
 					<source src="{{webPath `static/hittheroad.wav`}}" />

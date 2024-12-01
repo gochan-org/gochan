@@ -122,11 +122,12 @@ func BuildFrontPage() error {
 // of every normal HTML page
 func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]interface{}) error {
 	phMap := map[string]interface{}{
-		"pageTitle":   pageTitle,
-		"siteConfig":  config.GetSiteConfig(),
-		"sections":    gcsql.AllSections,
-		"boards":      gcsql.AllBoards,
-		"boardConfig": config.GetBoardConfig(board),
+		"pageTitle":     pageTitle,
+		"documentTitle": pageTitle + " - " + config.GetSiteConfig().SiteName,
+		"siteConfig":    config.GetSiteConfig(),
+		"sections":      gcsql.AllSections,
+		"boards":        gcsql.AllBoards,
+		"boardConfig":   config.GetBoardConfig(board),
 	}
 	for k, val := range misc {
 		phMap[k] = val

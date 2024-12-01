@@ -1,23 +1,22 @@
-{{$title := ""}}
-{{with .board}}
-	{{with $.op}}
-		{{$title = .TitleText}}
-	{{else}}
-		{{$title = print "/" $.board.Dir "/ - " $.board.Title}}
-	{{end}}
-{{else}}
-	{{with $.pageTitle}}
-		{{$title = print $.pageTitle " - "}}
-	{{end}}
-	{{$title = print $title $.siteConfig.SiteName}}
-{{end -}}
-
 <!DOCTYPE html>
-<html>
-<head lang="en">
+<html lang="en">
+<head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>{{$title}}</title>
+	<title>{{with .ban -}}
+		{{if .BannedForever}}YOU'RE PERMABANNED,&nbsp;IDIOT!{{else}}YOU ARE BANNED :({{end}}
+	{{- else -}}
+		{{- with .board -}}
+			{{- with $.op}}{{.TitleText}}{{else}}/{{$.board.Dir}}/ - {{$.board.Title}}{{end -}}
+		{{- else -}}
+			{{- with $.documentTitle}}documentTitle: {{.}}
+			{{- else -}}
+				{{- with $.pageTitle -}}{{$.pageTitle}} - {{$.siteConfig.SiteName}}
+				{{else}}{{$.siteConfig.SiteName}}
+				{{- end -}}
+			{{- end -}}
+		{{- end -}}
+	{{- end}}</title>
 	<link rel="stylesheet" href="{{webPath "/css/global.css"}}" />
 	{{with .board -}}
 		<link id="theme" rel="stylesheet" href="{{webPath "/css/" (getBoardDefaultStyle $.board.Dir)}}" />

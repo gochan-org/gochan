@@ -5,3 +5,20 @@
 form#appeal-form * {
 	display: block;
 }
+
+.banpage-block {
+	margin: 0px 26px 0px 24px;
+
+	.section-body {
+		padding-top: 8px;
+	}
+}
+
+#ban-info {
+	float: left;
+}
+
+img#banpage-image {
+	float: right;
+	margin: 4px 8px 8px 4px;
+}
