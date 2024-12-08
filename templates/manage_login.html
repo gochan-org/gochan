@@ -1,8 +1,8 @@
-<form method="POST" action="{{webPath "manage/login"}}" id="login-box" class="staff-form">
-<input type="hidden" name="redirect" value="{{.redirect}}" />
-<table>
-	<tr><td>Login</td><td><input type="text" name="username" class="logindata" autofocus /><br /></td></tr>
-	<tr><td>Password</td><td><input type="password" name="password" class="logindata" /><br /></td></tr>
-	<tr><td><input type="submit" value="Login" /></td></tr>
-</table>
-</form><br />
+<form method="POST" action="{{webPath `manage/login`}}" id="login-box" class="staff-form">
+	<input type="hidden" name="redirect" value="{{.redirect}}" />
+	<table class="login">
+		<tr><th class="postblock">Login</th><td><input type="text" name="username" class="logindata" autofocus /><br /></td></tr>
+		<tr><th class="postblock">Password</th><td><input type="password" name="password" class="logindata" /><br /></td></tr>
+	</table>
+	<input type="submit" value="Login" /></td>
+</form>

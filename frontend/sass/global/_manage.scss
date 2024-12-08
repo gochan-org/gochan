@@ -83,3 +83,17 @@ fieldset.fld-cndtns {
 tr#threadoptions > td > label {
 	display:block;
 }
+
+table.login {
+	margin-left: auto;
+	margin-right: auto;
+}
+
+form#login-box {
+	margin-bottom: 2em;
+	input[type=submit] {
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+	}
+}
