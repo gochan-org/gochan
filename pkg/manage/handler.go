@@ -67,6 +67,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		if staff.Username == "" && action.Permissions > NoPerms {
 			// action with permissions requested and user is not logged in, have them go to login page
 			actionCB = loginCallback
+			action.Title = loginTitle
 		} else if staff.Rank < action.Permissions {
 			writer.WriteHeader(http.StatusForbidden)
 			gcutil.LogWarning().
@@ -130,7 +131,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		headerMap := map[string]any{
 			"page_type": "manage",
 		}
-		if action.ID != "dashboard" && action.ID != "login" && action.ID != "logout" {
+		if action.ID != "dashboard" && action.ID != "login" && action.ID != "logout" && staff.Username != "" {
 			headerMap["includeDashboardLink"] = true
 		}
 

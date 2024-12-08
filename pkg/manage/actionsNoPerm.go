@@ -14,6 +14,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	loginTitle = "Login"
+)
+
 func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if staff.Rank > 0 {
@@ -72,5 +76,5 @@ func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staf
 
 func registerNoPermPages() {
 	RegisterManagePage("staffinfo", "", NoPerms, AlwaysJSON, staffInfoCallback)
-	RegisterManagePage("login", "Login", NoPerms, NoJSON, loginCallback)
+	RegisterManagePage("login", loginTitle, NoPerms, NoJSON, loginCallback)
 }
