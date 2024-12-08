@@ -20,3 +20,4 @@ node_modules
 .parcel-cache
 __pycache__
 .venv/
+.vscode/settings.json

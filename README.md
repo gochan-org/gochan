@@ -60,12 +60,11 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 ## Roadmap
 
 ### Near future
+* Fully implement cyclical threads
+* Implement +50
 * Add more banners
 * Add more plugin support (more event triggers)
-* Improve moderation tools
-* Improve API support for existing chan browing phone apps
 
 ### Lower priority
-* Better image fingerpringing and banning system (as opposed to a hash)
 * RSS feeds from boards/specific threads/specific usernames+tripcodes (such as newsanon)
 * Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclical thread.
