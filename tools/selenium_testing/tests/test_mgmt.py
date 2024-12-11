@@ -12,9 +12,15 @@ from ..util.manage import staff_login
 
 
 class TestManageActions(SeleniumTestCase):
-	def setUp(self) -> None:
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+
+
+	def setUp(self):
 		staff_login(self.options)
 		return super().setUp()
+
 
 	def get_recent_post_link(self, msg_text: str):
 		trs = self.driver.find_elements(by=By.CSS_SELECTOR, value="#content table tr")
@@ -26,11 +32,13 @@ class TestManageActions(SeleniumTestCase):
 					link = tds[c-2].find_element(by=By.LINK_TEXT, value="Post")
 					return link
 
+
 	def test_login(self):
 		self.assertEqual(
 			self.driver.find_element(by=By.CSS_SELECTOR, value="header h1").text,
 			"Dashboard",
 			"Testing staff login")
+
 
 	def test_logoutEverywhere(self):
 		self.assertEqual(
@@ -45,6 +53,7 @@ class TestManageActions(SeleniumTestCase):
 		self.assertEqual(
 			self.driver.find_element(by=By.ID, value="board-title").\
 				text, "Login", "At login page")
+
 
 	def test_recentPosts(self):
 		new_msg = f"test_recentPosts {random.randint(0, 9999)}"
@@ -70,6 +79,7 @@ class TestManageActions(SeleniumTestCase):
 		self.options.goto_page("/manage/recentposts")
 		post_link = self.get_recent_post_link(new_msg)
 		self.assertIsNone(post_link, "Confirmed that recent post was deleted")
+
 
 	def test_makeBoard(self):
 		if self.options.board_exists("seleniumtesting"):

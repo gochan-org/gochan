@@ -526,8 +526,8 @@ if __name__ == "__main__":
 		args = parser.parse_args()
 		sass(args.watch)
 	elif action == "selenium":
-		from tools.selenium_testing.runtests import parseArgs, start_tests, close_tests
-		args = parseArgs(parser)
+		from tools.selenium_testing.runtests import setup_selenium_args, start_tests, close_tests
+		args = setup_selenium_args(parser)
 		try:
 			start_tests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/static/notbanned.png", args.singletest)
 		except KeyboardInterrupt:

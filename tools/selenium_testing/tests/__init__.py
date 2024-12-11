@@ -12,9 +12,16 @@ class SeleniumTestCase(unittest.TestCase):
 		options = use_options
 		suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(test_class))
 
+
+	@classmethod
+	def setUpClass(cls):
+		return super().setUpClass()
+
+
 	@property
 	def options(self):
 		return options
+
 
 	@property
 	def driver(self):

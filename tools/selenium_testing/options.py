@@ -15,7 +15,8 @@ default_message = "Hello, from Selenium!\n(driver is %s)"
 default_subject = "Selenium post creation"
 default_upload = "./html/static/notbanned.png"
 default_password = "12345"
-default_board = "test"
+default_board1 = "test"
+default_board2 = "selenium2"
 default_staff_username = "admin"
 default_staff_password = "password"
 
@@ -25,7 +26,8 @@ class TestingOptions:
 	headless: bool
 	keep_open: bool
 	site: str
-	board: str
+	board1: str
+	board2: str
 	name: str
 	email: str
 	subject: str
@@ -39,7 +41,8 @@ class TestingOptions:
 		self.headless = headless
 		self.keep_open = keep_open
 		self.site = default_site
-		self.board = default_board
+		self.board1 = default_board1
+		self.board2 = default_board2
 		self.name = default_name
 		self.email = default_email
 		self.subject = default_subject
@@ -90,6 +93,7 @@ class TestingOptions:
 
 	def goto_page(self, page: str):
 		self.driver.get(urljoin(self.site, page))
+
 
 	def close(self):
 		if not self.keep_open:

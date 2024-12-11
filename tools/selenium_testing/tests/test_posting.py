@@ -10,8 +10,13 @@ from ..util import qr
 from ..util.manage import staff_login
 
 class TestPosting(SeleniumTestCase):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+
+
 	def test_qr(self):
-		self.options.goto_page(self.options.board)
+		self.options.goto_page(self.options.board1)
 		elem = self.driver.find_element(by=By.ID, value="board-subtitle")
 		self.assertIn("Board for testing stuff", elem.text)
 		qr.openQR(self.driver)
@@ -22,7 +27,7 @@ class TestPosting(SeleniumTestCase):
 			"Confirm that the QR box was properly closed")
 
 	def test_makeThread(self):
-		make_post(self.options, self.options.board, self)
+		make_post(self.options, self.options.board1, self)
 
 		threadID = threadRE.findall(self.driver.current_url)[0][1]
 		cur_url = self.driver.current_url
@@ -46,7 +51,7 @@ class TestPosting(SeleniumTestCase):
 			WebDriverWait(self.driver, 10).until(
 				EC.presence_of_element_located((By.CSS_SELECTOR, 'div#topbar a[href="/test2/"]')))
 
-		self.options.goto_page(self.options.board)
+		self.options.goto_page(self.options.board1)
 		WebDriverWait(self.driver, 10).until(
 			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
 
