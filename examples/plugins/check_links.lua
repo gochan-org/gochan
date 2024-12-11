@@ -43,7 +43,7 @@ events.register_event({"message-pre-format"}, function(tr, post, req)
 		return
 	end
 
-	for tld in string.gmatch(post.MessageRaw, "%a+://%w+.(%w+)") do
+	for tld in string.gmatch(post.MessageRaw, "%a+://(%w+.)+(%w+)") do
 		found = false
 		for _, recognized in pairs(recognized_tlds) do
 			if(tld == recognized) then
