@@ -90,6 +90,21 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	return available
 }
 
+func getPageTitle(actionID string, staff *gcsql.Staff) string {
+	notLoggedIn := staff == nil || staff.Rank == 0
+	var useAction Action
+	for _, action := range actions {
+		if action.ID == actionID {
+			useAction = action
+			break
+		}
+	}
+	if notLoggedIn && useAction.Permissions > NoPerms {
+		return loginTitle
+	}
+	return useAction.Title
+}
+
 func getStaffActions(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (interface{}, error) {
 	availableActions := getAvailableActions(staff.Rank, false)
 	return availableActions, nil

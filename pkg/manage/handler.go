@@ -64,10 +64,11 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		gcutil.LogStr("staff", staff.Username, infoEv, accessEv, errEv)
 
 		actionCB := action.Callback
+		pageTitle := getPageTitle(action.ID, staff)
+
 		if staff.Username == "" && action.Permissions > NoPerms {
 			// action with permissions requested and user is not logged in, have them go to login page
 			actionCB = loginCallback
-			action.Title = loginTitle
 		} else if staff.Rank < action.Permissions {
 			writer.WriteHeader(http.StatusForbidden)
 			gcutil.LogWarning().
@@ -136,9 +137,10 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		}
 
 		var buf bytes.Buffer
-		if err = building.BuildPageHeader(&buf, action.Title, "", headerMap); err != nil {
+		if err = building.BuildPageHeader(&buf, pageTitle, "", headerMap); err != nil {
 			gcutil.LogError(err).
 				Str("action", action.ID).
+				Str("pageTitle", pageTitle).
 				Str("staff", "pageHeader").Send()
 			serveError(writer, "error", action.ID, "Failed writing page header: "+err.Error(), false)
 			return
