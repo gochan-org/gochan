@@ -44,7 +44,7 @@ def make_post(options: TestingOptions, url: str, runner: unittest.TestCase):
 		options.message if options.message.find("%s") == -1
 			else (options.message % options.name),
 		path.abspath(options.upload_path),
-		options.password)
+		options.post_password)
 	WebDriverWait(options.driver, 10).until(
 		EC.url_matches(threadRE))
 

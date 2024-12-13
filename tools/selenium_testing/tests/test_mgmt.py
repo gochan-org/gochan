@@ -74,7 +74,7 @@ class TestManageActions(SeleniumTestCase):
 			EC.url_contains(link_href))  # link_href should be something like "/seleniumtesting/ref/<threadOP>.html#<postID>"
 
 		fragment = urllib.parse.urldefrag(self.driver.current_url).fragment
-		delete_post(self.options, fragment, self.options.password)
+		delete_post(self.options, fragment, self.options.post_password)
 
 		self.options.goto_page("/manage/recentposts")
 		post_link = self.get_recent_post_link(new_msg)

@@ -529,7 +529,7 @@ if __name__ == "__main__":
 		from tools.selenium_testing.runtests import setup_selenium_args, start_tests, close_tests
 		args = setup_selenium_args(parser)
 		try:
-			start_tests(args.browser, args.headless, args.keepopen, args.site, args.board, "html/static/notbanned.png", args.singletest)
+			start_tests(args.__dict__)
 		except KeyboardInterrupt:
 			print("Tests interrupted by KeyboardInterrupt, exiting")
 		except Exception:

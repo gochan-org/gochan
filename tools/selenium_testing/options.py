@@ -13,8 +13,8 @@ default_name = "Selenium"
 default_email = "selenium@gochan.org#noko"
 default_message = "Hello, from Selenium!\n(driver is %s)"
 default_subject = "Selenium post creation"
-default_upload = "./html/static/notbanned.png"
-default_password = "12345"
+default_upload = "html/static/notbanned.png"
+default_post_password = "12345"
 default_board1 = "test"
 default_board2 = "selenium2"
 default_staff_username = "admin"
@@ -24,7 +24,7 @@ class TestingOptions:
 	browser: str
 	driver: WebDriver
 	headless: bool
-	keep_open: bool
+	__keep_open: bool
 	site: str
 	board1: str
 	board2: str
@@ -33,9 +33,37 @@ class TestingOptions:
 	subject: str
 	message: str
 	upload_path: str
-	password: str
+	post_password: str
 	staff_username: str
 	staff_password: str
+
+	@property
+	def keep_open(self):
+		return self.__keep_open
+
+
+	@keep_open.setter
+	def keep_open(self, ko:bool):
+		self.__keep_open = ko and not self.headless
+
+
+	@staticmethod
+	def from_dict(src_dict:dict[str,object]):
+		options = TestingOptions(src_dict.get("browser", ""), src_dict.get("headless", False), src_dict.get("keepopen"))
+		options.site = src_dict.get("site", default_site)
+		options.board1 = src_dict.get("board1", default_board1)
+		options.board2 = src_dict.get("board2", default_board2)
+		options.name = src_dict.get("name", default_name)
+		options.email = src_dict.get("email", default_email)
+		options.subject = src_dict.get("subject", default_subject)
+		options.message = src_dict.get("message", default_message)
+		options.upload_path = src_dict.get("upload", default_upload)
+		options.post_password = src_dict.get("post_password", default_post_password)
+		options.staff_username = src_dict.get("staff_username", default_staff_username)
+		options.staff_password = src_dict.get("staff_password", default_staff_password)
+		return options
+
+
 	def __init__(self, browser: str, headless=False, keep_open=False):
 		self.browser = browser
 		self.headless = headless
@@ -48,7 +76,7 @@ class TestingOptions:
 		self.subject = default_subject
 		self.message = default_message
 		self.upload_path = default_upload
-		self.password = default_password
+		self.post_password = default_post_password
 		self.staff_username = default_staff_username
 		self.staff_password = default_staff_password
 
@@ -78,7 +106,8 @@ class TestingOptions:
 				if keep_open:
 					options.add_experimental_option("detach", True)
 				self.driver = webdriver.Edge(options=options)
-
+			case ""|None:
+				raise ValueError("browser argument is required")
 			case _:
 				raise ValueError("Unrecognized browser argument %s" % browser)
 

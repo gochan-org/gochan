@@ -62,7 +62,7 @@ class TestPosting(SeleniumTestCase):
 			self.options.subject,
 			self.options.message % self.driver.name,
 			path.abspath(self.options.upload_path),
-			self.options.password)
+			self.options.post_password)
 		WebDriverWait(self.driver, 10).until(
 			EC.url_matches(threadRE))
 
@@ -100,7 +100,7 @@ class TestPosting(SeleniumTestCase):
 			"",
 			"Reply to thread after it was moved",
 			path.abspath(self.options.upload_path),
-			self.options.password)
+			self.options.post_password)
 
 		delete_post(self.options, int(threadID), "")
 		WebDriverWait(self.driver, 10).until(
