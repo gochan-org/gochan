@@ -18,8 +18,13 @@ default_post_password = "12345"
 default_board1 = "test"
 default_board2 = "test2"
 default_staff_board = "selenium"
-default_staff_username = "admin"
-default_staff_password = "password"
+default_admin_username = "selenium_admin"
+default_admin_password = "password"
+default_moderator_username = "selenium_mod"
+default_moderator_password = "password"
+default_janitor_username = "selenium_janitor"
+default_janitor_password = "password"
+
 
 class TestingOptions:
 	browser: str
@@ -36,8 +41,12 @@ class TestingOptions:
 	message: str
 	upload_path: str
 	post_password: str
-	staff_username: str
-	staff_password: str
+	admin_username: str
+	admin_password: str
+	moderator_username: str
+	moderator_password: str
+	janitor_username: str
+	janitor_password: str
 
 	@property
 	def keep_open(self):
@@ -51,7 +60,7 @@ class TestingOptions:
 
 	@staticmethod
 	def from_dict(src_dict:dict[str,object]):
-		options = TestingOptions(src_dict.get("browser", ""), src_dict.get("headless", False), src_dict.get("keepopen"))
+		options = TestingOptions(src_dict.get("browser", ""), src_dict.get("headless", False), src_dict.get("keep_open", False))
 		options.site = src_dict.get("site", default_site)
 		options.board1 = src_dict.get("board1", default_board1)
 		options.board2 = src_dict.get("board2", default_board2)
@@ -62,8 +71,12 @@ class TestingOptions:
 		options.message = src_dict.get("message", default_message)
 		options.upload_path = src_dict.get("upload", default_upload)
 		options.post_password = src_dict.get("post_password", default_post_password)
-		options.staff_username = src_dict.get("staff_username", default_staff_username)
-		options.staff_password = src_dict.get("staff_password", default_staff_password)
+		options.admin_username = src_dict.get("admin_username", default_admin_username)
+		options.admin_password = src_dict.get("admin_password", default_admin_password)
+		options.moderator_username = src_dict.get("moderator_username", default_moderator_username)
+		options.moderator_password = src_dict.get("moderator_password", default_moderator_password)
+		options.janitor_username = src_dict.get("janitor_username", default_janitor_username)
+		options.janitor_password = src_dict.get("janitor_password", default_janitor_password)
 		return options
 
 
@@ -81,8 +94,8 @@ class TestingOptions:
 		self.message = default_message
 		self.upload_path = default_upload
 		self.post_password = default_post_password
-		self.staff_username = default_staff_username
-		self.staff_password = default_staff_password
+		self.admin_username = default_admin_username
+		self.admin_password = default_admin_password
 
 		match browser:
 			case "firefox":
@@ -117,7 +130,10 @@ class TestingOptions:
 
 
 	def board_exists(self, board: str):
-		req = urlopen(urljoin(default_site, "boards.json"))  # skipcq: BAN-B310
+		boards_json_url = urljoin(self.site, "boards.json")
+		if not boards_json_url.lower().startswith("http"):
+			raise ValueError(f"Invalid site URL (expected http): {self.site}")
+		req = urlopen(boards_json_url)
 		boards = json.load(req)['boards']
 		for entry in boards:
 			if entry['board'] == board:

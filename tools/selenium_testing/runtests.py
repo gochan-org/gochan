@@ -8,8 +8,8 @@ from argparse import ArgumentParser
 import unittest
 
 from .options import (TestingOptions, default_site, default_name, default_email, default_message, default_subject,
-	default_upload, default_post_password, default_board1, default_board2, default_staff_board, default_staff_username,
-	default_staff_password)
+	default_upload, default_post_password, default_board1, default_board2, default_staff_board, default_admin_username,
+	default_admin_password, default_moderator_username, default_moderator_password, default_janitor_username, default_janitor_password)
 from .tests import SeleniumTestCase
 from .tests.test_mgmt import TestManageActions
 from .tests.test_posting import TestPosting
@@ -85,10 +85,18 @@ def setup_selenium_args(parser:ArgumentParser):
 		help="Sets the file to be used when posting")
 	parser.add_argument("--post_password", default=default_post_password,
 		help="Sets the post password")
-	parser.add_argument("--staff_username", default=default_staff_username,
-		help="Sets the staff username to be used when logging in")
-	parser.add_argument("--staff_password", default=default_staff_password,
-		help="Sets the staff password to be used when logging in")
+	parser.add_argument("--admin_username", default=default_admin_username,
+		help="Sets the username to be used when logging in as an admin. Admin tests will fail if this does not exist")
+	parser.add_argument("--admin_password", default=default_admin_password,
+		help="Sets the password to be used when logging in as an admin. Admin tests will fail if this does not exist")
+	parser.add_argument("--moderator_username", default=default_moderator_username,
+		help="Sets the username to be used when logging in as a moderator. Moderator tests will fail if this does not exist")
+	parser.add_argument("--moderator_password", default=default_moderator_password,
+		help="Sets the password to be used when logging in as a moderator. Moderator tests will fail if this does not exist")
+	parser.add_argument("--janitor_username", default=default_janitor_username,
+		help="Sets the username to be used when logging in as a janitor. Janitor tests will fail if this does not exist")
+	parser.add_argument("--janitor_password", default=default_janitor_password,
+		help="Sets the password to be used when logging in as a janitor. Janitor tests will fail if this does not exist")
 	parser.add_argument("--single-test", default="",
 		help="If specified, only the test method with this name will be run")
 	
