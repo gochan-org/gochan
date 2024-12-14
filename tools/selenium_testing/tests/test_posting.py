@@ -15,7 +15,15 @@ class TestPosting(SeleniumTestCase):
 		super().setUpClass()
 
 
+	def checkBoards(self, board1:bool, board2:bool = False):
+		if board1:
+			self.assertTrue(self.options.board_exists(self.options.board1), f"Confirming that /{self.options.board1}/ exists")
+		if board2:
+			self.assertTrue(self.options.board_exists(self.options.board2), f"Confirming that /{self.options.board2}/ exists")
+
+
 	def test_qr(self):
+		self.checkBoards(True)
 		self.options.goto_page(self.options.board1)
 		elem = self.driver.find_element(by=By.ID, value="board-subtitle")
 		self.assertIn("Board for testing stuff", elem.text)
@@ -27,8 +35,8 @@ class TestPosting(SeleniumTestCase):
 			"Confirm that the QR box was properly closed")
 
 	def test_makeThread(self):
+		self.checkBoards(True)
 		make_post(self.options, self.options.board1, self)
-
 		threadID = threadRE.findall(self.driver.current_url)[0][1]
 		cur_url = self.driver.current_url
 		delete_post(self.options, int(threadID), "")
@@ -37,19 +45,7 @@ class TestPosting(SeleniumTestCase):
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the post we just made")
 
 	def test_moveThread(self):
-		if not self.options.board_exists("test2"):
-			staff_login(self.options)
-			self.options.goto_page("manage/boards")
-
-			# fill out the board creation form
-			self.driver.find_element(by=By.NAME, value="dir").send_keys("test2")
-			self.driver.find_element(by=By.NAME, value="title").send_keys("Testing board 2")
-			self.driver.find_element(by=By.NAME, value="subtitle").send_keys("Board for testing thread moving")
-			self.driver.find_element(by=By.NAME, value="description").send_keys("Board for testing thread moving")
-			self.driver.find_element(by=By.NAME, value="docreate").click()
-			self.driver.switch_to.alert.accept()
-			WebDriverWait(self.driver, 10).until(
-				EC.presence_of_element_located((By.CSS_SELECTOR, 'div#topbar a[href="/test2/"]')))
+		self.checkBoards(True, True)
 
 		self.options.goto_page(self.options.board1)
 		WebDriverWait(self.driver, 10).until(

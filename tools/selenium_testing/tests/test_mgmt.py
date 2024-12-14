@@ -10,6 +10,10 @@ from ..util.posting import make_post, delete_post
 import random
 from ..util.manage import staff_login, StaffRole, staff_logout
 
+selenium_board_title = "Selenium testing"
+selenium_board_subtitle = "Selenium testing board"
+selenium_board_description = "Board for testing Selenium"
+
 
 class TestManageActions(SeleniumTestCase):
 	def setUp(self):
@@ -80,11 +84,11 @@ class TestManageActions(SeleniumTestCase):
 		self.driver.find_element(by=By.NAME, value="dir").\
 			send_keys(self.options.staff_board)
 		self.driver.find_element(by=By.NAME, value="title").\
-			send_keys("Selenium testing")
+			send_keys(selenium_board_title)
 		self.driver.find_element(by=By.NAME, value="subtitle").\
-			send_keys("Board for testing Selenium")
+			send_keys(selenium_board_subtitle)
 		self.driver.find_element(by=By.NAME, value="description").\
-			send_keys("Board for testing Selenium")
+			send_keys(selenium_board_description)
 		self.driver.find_element(by=By.NAME, value="docreate").click()
 		self.driver.switch_to.alert.accept()
 		WebDriverWait(self.driver, 10).until(
