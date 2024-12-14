@@ -16,7 +16,8 @@ default_subject = "Selenium post creation"
 default_upload = "html/static/notbanned.png"
 default_post_password = "12345"
 default_board1 = "test"
-default_board2 = "selenium2"
+default_board2 = "test2"
+default_staff_board = "selenium"
 default_staff_username = "admin"
 default_staff_password = "password"
 
@@ -28,6 +29,7 @@ class TestingOptions:
 	site: str
 	board1: str
 	board2: str
+	staff_board: str
 	name: str
 	email: str
 	subject: str
@@ -53,6 +55,7 @@ class TestingOptions:
 		options.site = src_dict.get("site", default_site)
 		options.board1 = src_dict.get("board1", default_board1)
 		options.board2 = src_dict.get("board2", default_board2)
+		options.staff_board = src_dict.get("staff_board", default_staff_board)
 		options.name = src_dict.get("name", default_name)
 		options.email = src_dict.get("email", default_email)
 		options.subject = src_dict.get("subject", default_subject)
@@ -71,6 +74,7 @@ class TestingOptions:
 		self.site = default_site
 		self.board1 = default_board1
 		self.board2 = default_board2
+		self.staff_board = default_staff_board
 		self.name = default_name
 		self.email = default_email
 		self.subject = default_subject

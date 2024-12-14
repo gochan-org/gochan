@@ -8,7 +8,8 @@ from argparse import ArgumentParser
 import unittest
 
 from .options import (TestingOptions, default_site, default_name, default_email, default_message, default_subject,
-	default_upload, default_post_password, default_board1, default_board2, default_staff_username, default_staff_password)
+	default_upload, default_post_password, default_board1, default_board2, default_staff_board, default_staff_username,
+	default_staff_password)
 from .tests import SeleniumTestCase
 from .tests.test_mgmt import TestManageActions
 from .tests.test_posting import TestPosting
@@ -59,7 +60,6 @@ def close_tests():
 def setup_selenium_args(parser:ArgumentParser):
 	testable_browsers = ("firefox","chrome","chromium", "edge")
 
-
 	parser.add_argument("--browser", choices=testable_browsers, required=True)
 	parser.add_argument("--headless", action="store_true",
 		help="If set, the driver will run without opening windows (overrides --keep-open if it is set)")
@@ -68,9 +68,11 @@ def setup_selenium_args(parser:ArgumentParser):
 	parser.add_argument("--site", default=default_site,
 		help=("Sets the site to be used for testing, defaults to %s" % default_site))
 	parser.add_argument("--board1", default=default_board1,
-		help="Sets the board to be used for testing")
+		help="Sets the main board to be used for testing. It must already be created or tests that use it will fail")
 	parser.add_argument("--board2", default=default_board2,
-		help="Sets the board to be used for testing")
+		help="Sets the secondary board to be used for testing. It must already be created or tests that use it will fail")
+	parser.add_argument("--staff-board", default=default_staff_board,
+		help="Sets the board to be used for testing board management operations. It does not need to exist before testing")
 	parser.add_argument("--name", default=default_name,
 		help="Sets the name to be used when posting")
 	parser.add_argument("--email", default=default_email,
