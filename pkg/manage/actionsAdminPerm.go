@@ -21,7 +21,6 @@ import (
 )
 
 var (
-	ErrPasswordConfirm        = errors.New("passwords do not match")
 	ErrInsufficientPermission = errors.New("insufficient account permission")
 )
 

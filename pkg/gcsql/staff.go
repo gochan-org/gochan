@@ -77,7 +77,11 @@ func (s *Staff) ClearSessions() error {
 
 	if s.ID == 0 {
 		// ID field not set, get it from the DB
-		if err = QueryRowContextSQL(ctx, nil, query, []any{s.Username}, []any{&s.ID}); err != nil {
+		err = QueryRowContextSQL(ctx, nil, query, []any{s.Username}, []any{&s.ID})
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrUnrecognizedUsername
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -96,11 +100,29 @@ func (s *Staff) RankTitle() string {
 	return ""
 }
 
+// UpdateStaff sets the rank and password of the staff account with the given username
+func UpdateStaff(username string, rank int, password string) error {
+	// first check if it's a recognized username
+	id, err := GetStaffID(username)
+	if err != nil {
+		return err
+	}
+	const sqlUpdate = `UPDATE DBPREFIXstaff SET global_rank = ?, password_checksum = ? WHERE id = ?`
+	checksum := gcutil.BcryptSum(password)
+	_, err = ExecTimeoutSQL(nil, sqlUpdate, rank, checksum, id)
+	return err
+}
+
+// UpdateStaff sets the password of the staff account with the given username
 func UpdatePassword(username string, newPassword string) error {
-	const sqlUPDATE = `UPDATE DBPREFIXstaff SET password_checksum = ? WHERE username = ?`
+	const sqlUPDATE = `UPDATE DBPREFIXstaff SET password_checksum = ? WHERE id = ?`
+	id, err := GetStaffID(username)
+	if err != nil {
+		return err
+	}
 	checksum := gcutil.BcryptSum(newPassword)
 
-	_, err := ExecTimeoutSQL(nil, sqlUPDATE, checksum, username)
+	_, err = ExecTimeoutSQL(nil, sqlUPDATE, checksum, id)
 	return err
 }
 
@@ -147,11 +169,15 @@ func GetStaffUsernameFromID(id int) (string, error) {
 	return username, err
 }
 
+// GetStaffID gets the ID of the given staff, given the username, and returns ErrUnrecognizedUsername if none match
 func GetStaffID(username string) (int, error) {
-	const query = `SELECT id  FROM DBPREFIXstaff WHERE username = ?`
+	const query = `SELECT id FROM DBPREFIXstaff WHERE username = ?`
 	var id int
 
 	err := QueryRowTimeoutSQL(nil, query, []any{username}, []any{&id})
+	if errors.Is(err, sql.ErrNoRows) {
+		err = ErrUnrecognizedUsername
+	}
 	return id, err
 }
 

@@ -17,6 +17,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
+var (
+	ErrPasswordsDoNotMatch = errors.New("passwords do not match")
+)
+
 // manage actions that require at least janitor-level permission go here
 
 func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
@@ -116,7 +120,6 @@ func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staf
 }
 
 func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-	var outputStr string
 	do := request.FormValue("do")
 	allStaff, err := getAllStaffNopass(true)
 	if wantsJSON {
@@ -130,16 +133,21 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 		err = errors.New("Error getting staff list: " + err.Error())
 		return "", err
 	}
+	warnEv := gcutil.LogWarning().
+		Str("IP", gcutil.GetRealIP(request)).
+		Str("userAgent", request.UserAgent()).
+		Str("staff", staff.Username)
+	defer warnEv.Discard()
 
 	updateUsername := request.FormValue("update")
-	username := request.FormValue("username")
-	password := request.FormValue("password")
+	username := request.PostFormValue("username")
+	password := request.PostFormValue("password")
 	passwordConfirm := request.FormValue("passwordconfirm")
 	if (do == "add" || do == "update") && password != passwordConfirm {
-		return "", ErrPasswordConfirm
+		return "", ErrPasswordsDoNotMatch
 	}
 
-	rankStr := request.FormValue("rank")
+	rankStr := request.PostFormValue("rank")
 	var rank int
 	if rankStr != "" {
 		if rank, err = strconv.Atoi(rankStr); err != nil {
@@ -149,11 +157,32 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 		}
 	}
 
+	data := map[string]any{
+		"do":             do,
+		"updateUsername": updateUsername,
+		"allstaff":       allStaff,
+		"currentStaff":   staff,
+	}
+	if updateUsername != "" && staff.Rank == AdminPerms {
+		var found bool
+		for _, user := range allStaff {
+			if user.Username == updateUsername {
+				data["updateRank"] = user.Rank
+				found = true
+				break
+			}
+		}
+		if !found {
+			writer.WriteHeader(http.StatusBadRequest)
+			errEv.Err(gcsql.ErrUnrecognizedUsername).Caller().Str("username", updateUsername).Send()
+			return "", gcsql.ErrUnrecognizedUsername
+		}
+	}
+
 	if do == "add" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
-			errEv.Err(ErrInsufficientPermission).Caller().
-				Int("rank", staff.Rank).Send()
+			warnEv.Caller().Str("username", username).Msg("non-admin tried to create a new account")
 			return "", ErrInsufficientPermission
 		}
 		if _, err = gcsql.NewStaff(username, password, rank); err != nil {
@@ -168,8 +197,7 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	} else if do == "del" && username != "" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
-			errEv.Err(ErrInsufficientPermission).Caller().
-				Int("rank", staff.Rank).Send()
+			warnEv.Msg("non-admin tried to deactivate an account")
 			return "", ErrInsufficientPermission
 		}
 		if err = gcsql.DeactivateStaff(username); err != nil {
@@ -180,40 +208,46 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 				username, staff.Username, err.Error())
 		}
 	} else if do == "update" && updateUsername != "" {
-		if staff.Username != updateUsername && staff.Rank < 3 {
+		if (staff.Username != updateUsername || rank > 0) && staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
-			errEv.Err(ErrInsufficientPermission).Caller().
-				Int("rank", staff.Rank).Send()
+			warnEv.Caller().Str("username", username).Msg("non-admin tried to modify a staff account's rank")
 			return "", ErrInsufficientPermission
 		}
-		if err = gcsql.UpdatePassword(updateUsername, password); err != nil {
+		if rank > 0 {
+			err = gcsql.UpdateStaff(updateUsername, rank, password)
+		} else {
+			err = gcsql.UpdatePassword(updateUsername, password)
+		}
+		if err != nil {
+			logRank := rank
+			if logRank == 0 {
+				// user does not have admin rank and is updating their own account
+				logRank = staff.Rank
+			}
 			errEv.Err(err).Caller().
 				Str("updateStaff", username).
-				Msg("Error updating password")
-			return "", err
+				Int("updateRank", logRank).
+				Msg("Error updating account")
+			writer.WriteHeader(http.StatusInternalServerError)
+			return "", errors.New("unable to update staff account")
 		}
-	}
-	if do == "add" || do == "del" {
+	} else if do == "add" || do == "del" {
 		allStaff, err = getAllStaffNopass(true)
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Error getting updated staff list")
-			err = errors.New("Error getting updated staff list: " + err.Error())
+			writer.WriteHeader(http.StatusInternalServerError)
+			err = errors.New("Unable to get updated staff list")
 			return "", err
 		}
 	}
 
 	staffBuffer := bytes.NewBufferString("")
-	if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, map[string]interface{}{
-		"do":             do,
-		"updateUsername": updateUsername,
-		"allstaff":       allStaff,
-		"currentStaff":   staff,
-	}, staffBuffer, "text/html"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, data, staffBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_staff.html").Send()
-		return "", errors.New("Error executing staff management page template: " + err.Error())
+		writer.WriteHeader(http.StatusInternalServerError)
+		return "", errors.New("Unable to execute staff management page template")
 	}
-	outputStr += staffBuffer.String()
-	return outputStr, nil
+	return staffBuffer.String(), nil
 }
 
 func registerJanitorPages() {

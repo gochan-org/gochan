@@ -32,12 +32,14 @@
 	<tr><td>Username:</td><td><input id="username" name="username" type="text" value="{{if $isAdmin}}{{.updateUsername}}{{else}}{{.currentStaff.Username}}{{end}}" {{if not $showNewStaffForm}}disabled{{end}}/></td></tr>
 	<tr><td>Password:</td><td><input id="password" name="password" type="password"/></td></tr>
 	<tr><td>Confirm password:</td><td><input id="passwordconfirm" name="passwordconfirm" type="password"/></td></tr>
-	{{if $showNewStaffForm -}}
+	{{if $isAdmin -}}
 	<tr><td>Rank:</td><td><select id="rank" name="rank">
-		<option value="3">Admin</option>
-		<option value="2">Moderator</option>
-		<option value="1">Janitor</option>
+		<option value="3"{{with .updateRank}}{{if eq $.updateRank 3}}selected="selected"{{end}}{{end}}>Admin</option>
+		<option value="2"{{with .updateRank}}{{if eq $.updateRank 2}}selected="selected"{{end}}{{end}}>Moderator</option>
+		<option value="1"{{with .updateRank}}{{if eq $.updateRank 1}}selected="selected"{{end}}{{end}}>Janitor</option>
 	</select></td></tr>
+	{{end -}}
+	{{if $showNewStaffForm -}}
 	<tr><td>
 		<input type="hidden" name="do" value="add" />
 		<input id="submitnewstaff" type="submit" value="Add" /></td></tr>
