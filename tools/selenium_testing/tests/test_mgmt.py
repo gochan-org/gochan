@@ -76,8 +76,25 @@ class TestManageActions(SeleniumTestCase):
 
 
 	def test_makeBoard(self):
+		board_topbar_selector = f'div#topbar a[href="/{self.options.staff_board}/"]'
 		if self.options.board_exists(self.options.staff_board):
-			raise Exception(f"Board /{self.options.staff_board}/ already exists")
+			# /selenium/ already exists, delete it so we can recreate it
+			self.options.goto_page("manage/boards")
+			board_dropdown = Select(self.driver.find_element(by=By.ID, value="modifyboard"))
+			self.assertIsNotNone(board_dropdown, "Verify the board dropdown is visible")
+			use_val = ""
+			for option in board_dropdown.options:
+				if option.text.startswith(f"/{self.options.staff_board}/"):
+					use_val = option.get_attribute("value")
+					break
+			self.assertIsNotNone(use_val)
+			board_dropdown.select_by_value(use_val)
+			self.driver.find_element(by=By.NAME, value="dodelete").click()
+			self.driver.switch_to.alert.accept()
+			WebDriverWait(self.driver, 10).until_not(
+				EC.presence_of_element_located((By.CSS_SELECTOR, board_topbar_selector)))
+
+		self.assertFalse(self.options.board_exists(self.options.staff_board), f"Confirming that /{self.options.staff_board}/ doesn't exist")
 		self.options.goto_page("manage/boards")
 
 		# fill out the board creation form
@@ -92,9 +109,7 @@ class TestManageActions(SeleniumTestCase):
 		self.driver.find_element(by=By.NAME, value="docreate").click()
 		self.driver.switch_to.alert.accept()
 		WebDriverWait(self.driver, 10).until(
-			EC.presence_of_element_located((
-				By.CSS_SELECTOR,
-				f'div#topbar a[href="/{self.options.staff_board}/"]')))
+			EC.presence_of_element_located((By.CSS_SELECTOR, board_topbar_selector)))
 		make_post(self.options, self.options.staff_board, self)
 
 		self.options.goto_page("manage/boards")
@@ -103,6 +118,4 @@ class TestManageActions(SeleniumTestCase):
 		self.driver.find_element(by=By.NAME, value="dodelete").click()
 		self.driver.switch_to.alert.accept()
 		WebDriverWait(self.driver, 10).until_not(
-			EC.presence_of_element_located((
-				By.CSS_SELECTOR,
-				f'div#topbar a[href="/{self.options.staff_board}/"]')))
+			EC.presence_of_element_located((By.CSS_SELECTOR, board_topbar_selector)))
