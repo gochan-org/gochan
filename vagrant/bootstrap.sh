@@ -3,7 +3,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-export GO_VERSION=1.20
+export GO_VERSION=1.22
 
 if [ -z "$DBTYPE" ]; then
 	echo "DBTYPE environment variable not set, must be 'mysql', 'postgresql', or 'sqlite3'"
@@ -11,7 +11,6 @@ if [ -z "$DBTYPE" ]; then
 fi
 echo "Using DBTYPE $DBTYPE"
 
-add-apt-repository -y ppa:longsleep/golang-backports
 apt-get -y update && apt-get -y upgrade
 
 if [ "$DBTYPE" == "mysql" ]; then
