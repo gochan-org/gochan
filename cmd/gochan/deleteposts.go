@@ -330,9 +330,19 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 	var tmpErr error
 	for _, post := range posts {
 		if tmpErr = post.deleteFile(permDelete); tmpErr != nil {
-			errArr.Int(post.postID).Err(err)
-			if err == nil {
-				err = tmpErr
+			gcutil.LogWarning().Err(tmpErr).Caller().
+				Int("postID", post.postID).
+				Int("opID", post.opID).
+				Str("filename", post.filename).
+				Str("board", post.boardDir).
+				Msg("Got error when trying to delete file")
+			if os.IsNotExist(tmpErr) {
+				tmpErr = nil
+			} else {
+				errArr.Int(post.postID).Err(err)
+				if err == nil {
+					err = tmpErr
+				}
 			}
 		}
 	}
