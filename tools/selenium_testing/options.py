@@ -129,16 +129,29 @@ class TestingOptions:
 				raise ValueError("Unrecognized browser argument %s" % browser)
 
 
-	def board_exists(self, board: str):
+	def boards_json(self) -> dict[str, object]:
 		boards_json_url = urljoin(self.site, "boards.json")
 		if not boards_json_url.lower().startswith("http"):
 			raise ValueError(f"Invalid site URL (expected http): {self.site}")
 		req = urlopen(boards_json_url)
-		boards = json.load(req)['boards']
+		return json.load(req)
+
+
+	def board_info(self, board: str) -> dict[str, object]:
+		boards = self.boards_json()['boards']
+		for entry in boards:
+			if entry['board'] == board:
+				return entry
+		raise ValueError(f"Board /{board}/ not found in boards.json")
+
+
+	def board_exists(self, board: str):
+		boards = self.boards_json()['boards']
 		for entry in boards:
 			if entry['board'] == board:
 				return True
 		return False
+
 
 	def goto_page(self, page: str):
 		self.driver.get(urljoin(self.site, page))

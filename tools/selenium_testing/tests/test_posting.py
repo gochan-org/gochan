@@ -7,7 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from . import SeleniumTestCase
 from ..util.posting import make_post, delete_post, send_post, threadRE
 from ..util import qr
-from ..util.manage import staff_login
+
 
 class TestPosting(SeleniumTestCase):
 	@classmethod
@@ -23,16 +23,15 @@ class TestPosting(SeleniumTestCase):
 
 
 	def test_qr(self):
-		self.checkBoards(True)
+		board_info = self.options.board_info(self.options.board1)
 		self.options.goto_page(self.options.board1)
 		elem = self.driver.find_element(by=By.ID, value="board-subtitle")
-		self.assertIn("Board for testing stuff", elem.text)
+		self.assertIn(board_info['meta_description'], elem.text, "Verify that we're on the correct board")
 		qr.openQR(self.driver)
-		self.assertTrue(qr.qrIsVisible(self.driver),
-			"Confirm that the QR box was properly opened")
+		self.assertTrue(qr.qrIsVisible(self.driver), "Confirm that the QR box was properly opened")
 		qr.closeQR(self.driver)
-		self.assertFalse(qr.qrIsVisible(self.driver),
-			"Confirm that the QR box was properly closed")
+		self.assertFalse(qr.qrIsVisible(self.driver), "Confirm that the QR box was properly closed")
+
 
 	def test_makeThread(self):
 		self.checkBoards(True)
@@ -43,6 +42,7 @@ class TestPosting(SeleniumTestCase):
 		WebDriverWait(self.driver, 10).until(
 			EC.url_changes(cur_url))
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the post we just made")
+
 
 	def test_moveThread(self):
 		self.checkBoards(True, True)
@@ -59,35 +59,27 @@ class TestPosting(SeleniumTestCase):
 			self.options.message % self.driver.name,
 			path.abspath(self.options.upload_path),
 			self.options.post_password)
-		WebDriverWait(self.driver, 10).until(
-			EC.url_matches(threadRE))
+		WebDriverWait(self.driver, 10).until(EC.url_matches(threadRE))
 
 		cur_url = self.driver.current_url
 		threadID = threadRE.findall(cur_url)[0][1]
-		self.driver.find_element(
-			by=By.CSS_SELECTOR,
-			value=("input#check%s"%threadID)).click()
+		self.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%threadID)).click()
 		cur_url = self.driver.current_url
-		self.driver.find_element(
-			by=By.CSS_SELECTOR,
-			value="input[name=move_btn]").click()
+		self.driver.find_element(by=By.CSS_SELECTOR, value="input[name=move_btn]").click()
 		# wait for response to move_btn
-		WebDriverWait(self.driver, 10).until(
-			EC.title_contains("Move thread #%s" % threadID))
+		WebDriverWait(self.driver, 10).until(EC.title_contains("Move thread #%s" % threadID))
 
-		self.driver.find_element(
-			by=By.CSS_SELECTOR,
-			value="input[type=submit]").click()
+		self.driver.find_element(by=By.CSS_SELECTOR, value="input[type=submit]").click()
 		# wait for response to move request (domove=1)
 		WebDriverWait(self.driver, 10).until(
 			EC.url_matches(threadRE))
 
+		expected_title = self.options.board_info(self.options.board2)['title']
 		self.assertEqual(
-			self.driver.find_element(
-				by=By.CSS_SELECTOR,
-				value="h1#board-title").text,
-			"/test2/ - Testing board 2",
-			"Verify that we properly moved the thread to /test2/")
+			self.driver.find_element(by=By.CSS_SELECTOR, value="h1#board-title").text,
+			f"/{self.options.board2}/ - {expected_title}",
+			"Verify that we properly moved the thread to /test2/"
+		)
 
 		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
 		send_post(form,
@@ -99,8 +91,6 @@ class TestPosting(SeleniumTestCase):
 			self.options.post_password)
 
 		delete_post(self.options, int(threadID), "")
-		WebDriverWait(self.driver, 10).until(
-			EC.url_changes(cur_url))
-		self.assertNotIn("Error :c", self.driver.title,
-			"No errors when we try to delete the moved thread")
+		WebDriverWait(self.driver, 10).until(EC.url_changes(cur_url))
+		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the moved thread")
 
