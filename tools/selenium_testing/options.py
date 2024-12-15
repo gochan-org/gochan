@@ -132,7 +132,7 @@ class TestingOptions:
 	def boards_json(self) -> dict[str, object]:
 		boards_json_url = urljoin(self.site, "boards.json")
 		if boards_json_url.lower().startswith("http"):
-			with urlopen(boards_json_url) as req:
+			with urlopen(boards_json_url) as req: # skipcq: BAN-B310
 				return json.load(req)
 		else:
 			raise ValueError(f"Invalid site URL (expected http): {self.site}")
