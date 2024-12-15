@@ -9,22 +9,24 @@ import unittest
 
 from .options import (TestingOptions, default_site, default_name, default_email, default_message, default_subject,
 	default_upload, default_post_password, default_board1, default_board2, default_staff_board, default_admin_username,
-	default_admin_password, default_moderator_username, default_moderator_password, default_janitor_username, default_janitor_password)
+	default_admin_password, default_moderator_username, default_moderator_password, default_janitor_username, default_janitor_password,
+	set_active_options, active_options)
 from .tests import SeleniumTestCase
 from .tests.test_mgmt import TestManageActions
 from .tests.test_posting import TestPosting
+from .tests.test_staff_permissions import TestStaffPermissions
 
-options:TestingOptions = None
 
 def start_tests(dict_options:dict[str,object]=None):
-	global options
 	options = TestingOptions.from_dict(dict_options)
+	set_active_options(options)
 	single_test = dict_options.get("single_test", "")
 	print("Using browser %s (headless: %s) on site %s" % (options.browser, options.headless, options.site))
 	if single_test == "":
 		suite = unittest.suite.TestSuite()
 		SeleniumTestCase.add(suite, options, TestPosting)
 		SeleniumTestCase.add(suite, options, TestManageActions)
+		SeleniumTestCase.add(suite, options, TestStaffPermissions)
 		unittest.TextTestRunner(verbosity=3, descriptions=True).run(suite)
 	else:
 		import importlib.util
@@ -53,6 +55,7 @@ def start_tests(dict_options:dict[str,object]=None):
 
 
 def close_tests():
+	options = active_options()
 	if options is not None:
 		options.close()
 

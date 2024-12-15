@@ -20,7 +20,7 @@ default_board2 = "test2"
 default_staff_board = "selenium"
 default_admin_username = "selenium_admin"
 default_admin_password = "password"
-default_moderator_username = "selenium_mod"
+default_moderator_username = "selenium_moderator"
 default_moderator_password = "password"
 default_janitor_username = "selenium_janitor"
 default_janitor_password = "password"
@@ -161,3 +161,12 @@ class TestingOptions:
 	def close(self):
 		if not self.keep_open:
 			self.driver.close()
+
+__active_options:TestingOptions = None
+
+def set_active_options(options: TestingOptions):
+	global __active_options
+	__active_options = options
+
+def active_options():
+	return __active_options

@@ -13,11 +13,6 @@ class SeleniumTestCase(unittest.TestCase):
 		suite.addTest(unittest.defaultTestLoader.loadTestsFromTestCase(test_class))
 
 
-	@classmethod
-	def setUpClass(cls):
-		return super().setUpClass()
-
-
 	@property
 	def options(self):
 		return options
