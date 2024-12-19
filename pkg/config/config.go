@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	cfg     *GochanConfig
+	Cfg     *GochanConfig
 	cfgPath string
 
 	boardConfigs = map[string]BoardConfig{}
@@ -39,7 +39,9 @@ type GochanConfig struct {
 }
 
 func SetMockConfig() {
+  
 	cfg = &GochanConfig{
+
 		SystemCriticalConfig: SystemCriticalConfig{
 			ListenIP:     "127.0.0.1",
 			Port:         8080,
@@ -432,24 +434,24 @@ type PostConfig struct {
 }
 
 func WriteConfig() error {
-	return cfg.Write()
+	return Cfg.Write()
 }
 
 // GetSQLConfig returns SQL configuration info. It returns a value instead of a a pointer to it
 // because it is not safe to edit while Gochan is running
 func GetSQLConfig() SQLConfig {
-	return cfg.SQLConfig
+	return Cfg.SQLConfig
 }
 
 // GetSystemCriticalConfig returns system-critical configuration options like listening IP
 // It returns a value instead of a pointer, because it is not usually safe to edit while Gochan is running.
-func GetSystemCriticalConfig() SystemCriticalConfig {
-	return cfg.SystemCriticalConfig
+func GetSystemCriticalConfig() *SystemCriticalConfig {
+	return &Cfg.SystemCriticalConfig
 }
 
 // GetSiteConfig returns the global site configuration (site name, slogan, etc)
 func GetSiteConfig() *SiteConfig {
-	return &cfg.SiteConfig
+	return &Cfg.SiteConfig
 }
 
 // GetBoardConfig returns the custom configuration for the specified board (if it exists)
@@ -457,14 +459,14 @@ func GetSiteConfig() *SiteConfig {
 func GetBoardConfig(board string) *BoardConfig {
 	bc, exists := boardConfigs[board]
 	if board == "" || !exists {
-		return &cfg.BoardConfig
+		return &Cfg.BoardConfig
 	}
 	return &bc
 }
 
 // UpdateBoardConfig updates or establishes the configuration for the given board
 func UpdateBoardConfig(dir string) error {
-	ba, err := os.ReadFile(path.Join(cfg.DocumentRoot, dir, "board.json"))
+	ba, err := os.ReadFile(path.Join(Cfg.DocumentRoot, dir, "board.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			// board doesn't have a custom config, use global config
@@ -472,7 +474,7 @@ func UpdateBoardConfig(dir string) error {
 		}
 		return err
 	}
-	boardcfg := cfg.BoardConfig
+	boardcfg := Cfg.BoardConfig
 	if err = json.Unmarshal(ba, &boardcfg); err != nil {
 		return err
 	}
@@ -488,13 +490,13 @@ func DeleteBoardConfig(dir string) {
 }
 
 func VerboseMode() bool {
-	return cfg.testing || cfg.SystemCriticalConfig.Verbose
+	return Cfg.testing || Cfg.SystemCriticalConfig.Verbose
 }
 
 func SetVerbose(verbose bool) {
-	cfg.Verbose = verbose
+	Cfg.Verbose = verbose
 }
 
 func GetVersion() *GochanVersion {
-	return cfg.Version
+	return Cfg.Version
 }

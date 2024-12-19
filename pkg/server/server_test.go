@@ -109,7 +109,7 @@ func TestServeError(t *testing.T) {
 			err:       "page not found",
 			wantsJSON: false,
 			data:      nil,
-			expected:  "",
+			expected:  "", // Should we expect something ?
 		},
 	}
 
