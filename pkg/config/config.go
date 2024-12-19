@@ -39,7 +39,9 @@ type GochanConfig struct {
 }
 
 func SetMockConfig() {
-	Cfg = &GochanConfig{
+  
+	cfg = &GochanConfig{
+
 		SystemCriticalConfig: SystemCriticalConfig{
 			ListenIP:     "127.0.0.1",
 			Port:         8080,
