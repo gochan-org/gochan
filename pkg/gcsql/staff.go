@@ -15,6 +15,8 @@ import (
 
 var (
 	ErrUnrecognizedUsername = errors.New("invalid username")
+	ErrInvalidStaffRank     = errors.New("invalid staff rank")
+	ErrInvalidStaffPassword = errors.New("blank staff passwords are not allowed")
 )
 
 // createDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
@@ -100,16 +102,51 @@ func (s *Staff) RankTitle() string {
 	return ""
 }
 
-// UpdateStaff sets the rank and password of the staff account with the given username
+// UpdateRank sets the global rank of the staff member's account in the database
+func (s *Staff) UpdateRank(rank int) error {
+	if rank < 0 || rank > 3 {
+		return ErrInvalidStaffRank
+	}
+	_, err := ExecTimeoutSQL(nil, "UPDATE DBPREFIXstaff SET global_rank = ? WHERE id = ?", rank, s.ID)
+	if err != nil {
+		return err
+	}
+	s.Rank = rank
+	return nil
+}
+
+// UpdatePassword sets the password the staff member's account in the database
+func (s *Staff) UpdatePassword(password string) error {
+	if password == "" {
+		return ErrInvalidStaffPassword
+	}
+	checksum := gcutil.BcryptSum(password)
+	_, err := ExecTimeoutSQL(nil, "UPDATE DBPREFIXstaff SET password_checksum = ? WHERE id = ?", checksum, s.ID)
+	if err != nil {
+		return err
+	}
+	s.PasswordChecksum = checksum
+	return nil
+}
+
+// UpdateStaff sets the rank and/or password of the staff account with the given username. If password
+// is blank, only the rank will be updated
 func UpdateStaff(username string, rank int, password string) error {
 	// first check if it's a recognized username
 	id, err := GetStaffID(username)
 	if err != nil {
 		return err
 	}
-	const sqlUpdate = `UPDATE DBPREFIXstaff SET global_rank = ?, password_checksum = ? WHERE id = ?`
-	checksum := gcutil.BcryptSum(password)
-	_, err = ExecTimeoutSQL(nil, sqlUpdate, rank, checksum, id)
+	sqlUpdate := "UPDATE DBPREFIXstaff SET global_rank = ?"
+	args := []any{rank}
+	if password != "" {
+		sqlUpdate += ", password_checksum = ?"
+		args = append(args, gcutil.BcryptSum(password))
+	}
+	sqlUpdate += " WHERE id = ?"
+	args = append(args, id)
+
+	_, err = ExecTimeoutSQL(nil, sqlUpdate, args...)
 	return err
 }
 

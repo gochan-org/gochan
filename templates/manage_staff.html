@@ -1,5 +1,4 @@
 {{$isAdmin := (eq .currentStaff.Rank 3) -}}
-{{$showNewStaffForm := (and (eq .updateUsername "") $isAdmin) -}}
 <table class="mgmt-table stafflist">
 <tr><th>Username</th><th>Rank</th><th>Added on</th><th>Action</th></tr>
 {{range $s, $staff := $.allstaff -}}
@@ -9,46 +8,43 @@
 	<td>{{formatTimestamp $staff.AddedOn}}</td>
 	<td>
 		{{if or $isAdmin (eq $staff.Username $.currentStaff.Username) -}}
-			<a href="{{webPath "/manage/staff"}}?update={{$staff.Username}}" title="Update your password">Update</a>
-		{{end -}}
-		{{if eq $.currentStaff.Rank 3}}
-			<a {{if eq $staff.Username $.currentStaff.Username -}}
-				href="{{webPath "/manage/staff"}}" title="Cannot self terminate" style="color: black;"
-			{{- else -}}
-				href="{{webPath "/manage/staff"}}?do=del&username={{$staff.Username}}" title="Delete {{$staff.Username}}" onclick="return confirm('Are you sure you want to delete the staff account for \'{{$staff.Username}}\'?')" style="color:red;"
-			{{end}}>Delete</a>
+			<a href="{{webPath `/manage/staff`}}?update={{$staff.Username}}">Update</a>
+		{{end}}{{if and $isAdmin (not (eq $staff.Username $.currentStaff.Username)) -}}
+			<a
+				href="{{webPath `/manage/staff`}}?do=del&username={{$staff.Username}}"
+				title="Delete {{$staff.Username}}"
+				onclick="return confirm('Are you sure you want to delete the staff account for \'{{$staff.Username}}\'?')"
+				style="color:red;">Delete</a>
 		{{- end}}
 	</td>
 </tr>
 {{end}}
-</table><hr />
-{{if $showNewStaffForm -}}
-<h2>Add new staff</h2>
-{{- else -}}
-<h2>Update password</h2>
-{{- end}}
-<form action="{{webPath "/manage/staff"}}" {{if $showNewStaffForm}}onsubmit="return makeNewStaff();"{{end}} method="POST">
+</table>
+
+{{- if gt $.formMode 0 -}}
+<hr />
+<h2>{{$.formMode}}</h2>
+{{- if eq $.formMode 2 -}}
+<p>If the password fields are left blank, only the rank will be updated</p>
+{{- end -}}
+<form action="{{webPath `/manage/staff`}}" {{if eq $.formMode 3}}onsubmit="return makeNewStaff();"{{end}} method="POST">
+<input type="hidden" name="update" value="{{if lt $.formMode 3}}{{.updateUsername}}{{end}}">
+<input type="hidden" name="do" value="{{if eq $.formMode 3}}add{{else}}update{{end}}" />
 <table>
-	<tr><td>Username:</td><td><input id="username" name="username" type="text" value="{{if $isAdmin}}{{.updateUsername}}{{else}}{{.currentStaff.Username}}{{end}}" {{if not $showNewStaffForm}}disabled{{end}}/></td></tr>
+	<tr><td>Username:</td><td><input id="username" name="username" type="text" value="{{if $isAdmin}}{{.updateUsername}}{{else}}{{.currentStaff.Username}}{{end}}" {{if lt $.formMode 3}}disabled{{end}}/></td></tr>
 	<tr><td>Password:</td><td><input id="password" name="password" type="password"/></td></tr>
 	<tr><td>Confirm password:</td><td><input id="passwordconfirm" name="passwordconfirm" type="password"/></td></tr>
-	{{if $isAdmin -}}
+	{{if gt $.formMode 1 -}}
 	<tr><td>Rank:</td><td><select id="rank" name="rank">
-		<option value="3"{{with .updateRank}}{{if eq $.updateRank 3}}selected="selected"{{end}}{{end}}>Admin</option>
-		<option value="2"{{with .updateRank}}{{if eq $.updateRank 2}}selected="selected"{{end}}{{end}}>Moderator</option>
-		<option value="1"{{with .updateRank}}{{if eq $.updateRank 1}}selected="selected"{{end}}{{end}}>Janitor</option>
+		<option value="3"{{if eq $.updateRank 3}}selected="selected"{{end}}>Admin</option>
+		<option value="2"{{if eq $.updateRank 2}}selected="selected"{{end}}>Moderator</option>
+		<option value="1"{{if eq $.updateRank 1}}selected="selected"{{end}}>Janitor</option>
 	</select></td></tr>
 	{{end -}}
-	{{if $showNewStaffForm -}}
 	<tr><td>
-		<input type="hidden" name="do" value="add" />
-		<input id="submitnewstaff" type="submit" value="Add" /></td></tr>
-		{{- else -}}
-	<tr><td>
-		<input type="hidden" name="do" value="update" />
-		<input type="hidden" name="update" value="{{if $isAdmin}}{{.updateUsername}}{{else}}{{.currentStaff.Username}}{{end}}">
-		<input id="submitupdate" type="submit" value="Update password" />
-	{{- end}}
+		<input type="submit" value="{{if eq $.formMode 3}}Create{{else}}Update{{end}} User" />
+		<input type="button" name="docancel" value="Cancel" onclick="window.location = {{webPath `./manage/staff`}}; return false"/>
 	</td></tr>
 </table>
 </form>
+{{end}}

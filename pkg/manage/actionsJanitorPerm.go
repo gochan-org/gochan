@@ -119,32 +119,54 @@ func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staf
 	return getAllAnnouncements()
 }
 
-func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
-	do := request.FormValue("do")
-	allStaff, err := getAllStaffNopass(true)
+type formMode int
+
+func (fmv formMode) String() string {
+	switch fmv {
+	case updateOwnPasswordForm:
+		return "Update Password"
+	case updateUserForm:
+		return "Update User"
+	case newUserForm:
+		return "Add New User"
+	}
+	return ""
+}
+
+const (
+	noForm formMode = iota
+	updateOwnPasswordForm
+	updateUserForm
+	newUserForm
+)
+
+func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+	var allStaff []gcsql.Staff
 	if wantsJSON {
+		allStaff, err = getAllStaffNopass(true)
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Failed getting staff list")
+			return nil, errors.New("unable to get staff list")
 		}
-		return allStaff, err
+		return allStaff, nil
 	}
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed getting staff list")
-		err = errors.New("Error getting staff list: " + err.Error())
-		return "", err
-	}
+
 	warnEv := gcutil.LogWarning().
 		Str("IP", gcutil.GetRealIP(request)).
 		Str("userAgent", request.UserAgent()).
 		Str("staff", staff.Username)
 	defer warnEv.Discard()
 
+	do := request.PostFormValue("do")
 	updateUsername := request.FormValue("update")
 	username := request.PostFormValue("username")
 	password := request.PostFormValue("password")
 	passwordConfirm := request.FormValue("passwordconfirm")
 	if (do == "add" || do == "update") && password != passwordConfirm {
 		return "", ErrPasswordsDoNotMatch
+	}
+	if username != "" {
+		gcutil.LogStr("username", username, infoEv, errEv, warnEv)
 	}
 
 	rankStr := request.PostFormValue("rank")
@@ -157,11 +179,29 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 		}
 	}
 
+	var formMode formMode = noForm
+	if staff.Rank == 3 {
+		if updateUsername == "" {
+			formMode = newUserForm
+		} else {
+			formMode = updateUserForm
+		}
+	} else {
+		if updateUsername == staff.Username {
+			formMode = updateOwnPasswordForm
+		} else if updateUsername != "" {
+			// user is a moderator or janitor and is trying to update someone else's account
+			writer.WriteHeader(http.StatusUnauthorized)
+			return nil, ErrInsufficientPermission
+		}
+	}
+
 	data := map[string]any{
 		"do":             do,
 		"updateUsername": updateUsername,
-		"allstaff":       allStaff,
 		"currentStaff":   staff,
+		"formMode":       formMode,
+		"updateRank":     -1,
 	}
 	if updateUsername != "" && staff.Rank == AdminPerms {
 		var found bool
@@ -174,27 +214,71 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 		}
 		if !found {
 			writer.WriteHeader(http.StatusBadRequest)
-			errEv.Err(gcsql.ErrUnrecognizedUsername).Caller().Str("username", updateUsername).Send()
+			warnEv.Err(gcsql.ErrUnrecognizedUsername).Caller().Str("username", updateUsername).Send()
 			return "", gcsql.ErrUnrecognizedUsername
 		}
 	}
 
+	// var updateStaffList bool
 	if do == "add" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
 			warnEv.Caller().Str("username", username).Msg("non-admin tried to create a new account")
 			return "", ErrInsufficientPermission
 		}
-		if _, err = gcsql.NewStaff(username, password, rank); err != nil {
-			errEv.Caller().
-				Str("newStaff", username).
-				Str("newPass", password).
-				Int("newRank", rank).
+		var newStaff *gcsql.Staff
+		if newStaff, err = gcsql.NewStaff(username, password, rank); err != nil {
+			errEv.Err(err).Caller().
+				Str("userRank", newStaff.RankTitle()).
 				Msg("Error creating new staff account")
-			return "", fmt.Errorf("Error creating new staff account %q by %q: %s",
+			return "", fmt.Errorf("unable to create new staff account %q by %q: %s",
 				username, staff.Username, err.Error())
 		}
-	} else if do == "del" && username != "" {
+		infoEv.Str("username", username).
+			Str("userRank", newStaff.RankTitle()).
+			Msg("New staff account created")
+	} else if do == "update" || do == "del" {
+		if username == "" {
+			warnEv.Caller().Str("do", do).Msg("Missing username field")
+			return nil, errors.New("missing username field")
+		}
+		gcutil.LogStr("username", username, infoEv, errEv, warnEv)
+		if (do == "update" && staff.Rank < AdminPerms && username != staff.Username) || (do == "del" && staff.Rank < AdminPerms) {
+			writer.WriteHeader(http.StatusUnauthorized)
+			warnEv.Err(ErrInsufficientPermission).Send()
+			return nil, ErrInsufficientPermission
+		}
+
+		var user *gcsql.Staff
+		if user, err = gcsql.GetStaffByUsername(username, true); err != nil {
+			errEv.Err(err).Caller().Bool("onlyActive", true).Msg("Unable to get staff by username")
+			return nil, err
+		}
+		gcutil.LogStr("userRank", user.RankTitle(), infoEv, errEv, warnEv)
+
+		if do == "update" {
+			if password != "" {
+
+			}
+		} else {
+			// del
+			if err = user.ClearSessions(); err != nil {
+				errEv.Err(err).Caller().
+					Msg("Unable to clear user login sessions")
+				return nil, errors.New("unable to clear user login sessions")
+			}
+
+			if err = user.SetActive(false); err != nil {
+				errEv.Err(err).Caller().
+					Msg("Unable to deactivate user")
+				return nil, errors.New("unable to deactivate user")
+			}
+			infoEv.Msg("Account deactivated")
+		}
+
+	}
+
+	if do == "del" && username != "" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
 			warnEv.Msg("non-admin tried to deactivate an account")
@@ -207,6 +291,8 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
 				username, staff.Username, err.Error())
 		}
+		infoEv.Str("deactivatedStaff", username).Msg("Staff account deactivated")
+		// updateStaffList = true
 	} else if do == "update" && updateUsername != "" {
 		if (staff.Username != updateUsername || rank > 0) && staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
@@ -231,21 +317,29 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			writer.WriteHeader(http.StatusInternalServerError)
 			return "", errors.New("unable to update staff account")
 		}
-	} else if do == "add" || do == "del" {
-		allStaff, err = getAllStaffNopass(true)
-		if err != nil {
-			errEv.Err(err).Caller().Msg("Error getting updated staff list")
-			writer.WriteHeader(http.StatusInternalServerError)
-			err = errors.New("Unable to get updated staff list")
-			return "", err
-		}
+		// updateStaffList = true
+	}
+	// if updateStaffList {
+	// 	allStaff, err = getAllStaffNopass(true)
+	// 	if err != nil {
+	// 		errEv.Err(err).Caller().Msg("Error getting updated staff list")
+	// 		writer.WriteHeader(http.StatusInternalServerError)
+	// 		err = errors.New("unable to get updated staff list")
+	// 		return "", err
+	// 	}
+	// }
+
+	data["allstaff"], err = getAllStaffNopass(true)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed getting staff list")
+		return nil, errors.New("unable to get staff list")
 	}
 
 	staffBuffer := bytes.NewBufferString("")
 	if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, data, staffBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_staff.html").Send()
 		writer.WriteHeader(http.StatusInternalServerError)
-		return "", errors.New("Unable to execute staff management page template")
+		return "", errors.New("unable to execute staff management page template")
 	}
 	return staffBuffer.String(), nil
 }
