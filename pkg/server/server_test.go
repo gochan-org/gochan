@@ -75,8 +75,8 @@ func TestServeErrorPage(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", writer.Header().Get("Content-Type"))
 
 	// Check the response body for the error message
-	//assert.Contains(t, body, err)     // Check if the body contains the error message
-	//assert.Contains(t, body, "Error") // Check if the body contains the error title or header
+	//assert.Contains(t, body, err)       Check if the body contains the error message
+	//assert.Contains(t, body, "Error")   Check if the body contains the error title or header
 }
 
 func TestServeError(t *testing.T) {
@@ -132,11 +132,9 @@ func TestServeError(t *testing.T) {
 				if responseMap["error"] != tt.expected {
 					t.Errorf("Expected error %v, got %v", tt.expected, responseMap["error"])
 				}
-			} else {
+			} else if rr.Body.String() != tt.expected {
 				// Check if the response body matches the expected error message
-				if rr.Body.String() != tt.expected {
-					t.Errorf("Expected response %v, got %v", tt.expected, rr.Body.String())
-				}
+				t.Errorf("Expected response %v, got %v", tt.expected, rr.Body.String())
 			}
 		})
 	}
