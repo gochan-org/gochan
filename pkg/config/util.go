@@ -54,7 +54,7 @@ func GetUser() (int, int) {
 }
 
 func TakeOwnership(fp string) (err error) {
-	if runtime.GOOS == "windows" || fp == "" || cfg.Username == "" {
+	if runtime.GOOS == "windows" || fp == "" || Cfg.Username == "" {
 		// Chown returns an error in Windows so skip it, also skip if Username isn't set
 		// because otherwise it'll think we want to switch to uid and gid 0 (root)
 		return nil
@@ -63,7 +63,7 @@ func TakeOwnership(fp string) (err error) {
 }
 
 func TakeOwnershipOfFile(f *os.File) error {
-	if runtime.GOOS == "windows" || f == nil || cfg.Username == "" {
+	if runtime.GOOS == "windows" || f == nil || Cfg.Username == "" {
 		// Chown returns an error in Windows so skip it, also skip if Username isn't set
 		// because otherwise it'll think we want to switch to uid and gid 0 (root)
 		return nil
@@ -73,27 +73,27 @@ func TakeOwnershipOfFile(f *os.File) error {
 
 // InitConfig loads and parses gochan.json on startup and verifies its contents
 func InitConfig(versionStr string) {
-	cfg = defaultGochanConfig
+	Cfg = defaultGochanConfig
 	if strings.HasSuffix(os.Args[0], ".test") {
 		// create a dummy config for testing if we're using go test
-		cfg = defaultGochanConfig
-		cfg.ListenIP = "127.0.0.1"
-		cfg.Port = 8080
-		cfg.UseFastCGI = true
-		cfg.testing = true
-		cfg.TemplateDir = "templates"
-		cfg.DBtype = "sqlite3"
-		cfg.DBhost = "./testdata/gochantest.db"
-		cfg.DBname = "gochan"
-		cfg.DBusername = "gochan"
-		cfg.SiteDomain = "127.0.0.1"
-		cfg.RandomSeed = "test"
-		cfg.Version = ParseVersion(versionStr)
-		cfg.SiteSlogan = "Gochan testing"
-		cfg.Verbose = true
-		cfg.Captcha.OnlyNeededForThreads = true
-		cfg.Cooldowns = BoardCooldowns{0, 0, 0}
-		cfg.BanColors = []string{
+		Cfg = defaultGochanConfig
+		Cfg.ListenIP = "127.0.0.1"
+		Cfg.Port = 8080
+		Cfg.UseFastCGI = true
+		Cfg.testing = true
+		Cfg.TemplateDir = "templates"
+		Cfg.DBtype = "sqlite3"
+		Cfg.DBhost = "./testdata/gochantest.db"
+		Cfg.DBname = "gochan"
+		Cfg.DBusername = "gochan"
+		Cfg.SiteDomain = "127.0.0.1"
+		Cfg.RandomSeed = "test"
+		Cfg.Version = ParseVersion(versionStr)
+		Cfg.SiteSlogan = "Gochan testing"
+		Cfg.Verbose = true
+		Cfg.Captcha.OnlyNeededForThreads = true
+		Cfg.Cooldowns = BoardCooldowns{0, 0, 0}
+		Cfg.BanColors = []string{
 			"admin:#0000A0",
 			"somemod:blue",
 		}
@@ -114,21 +114,21 @@ func InitConfig(versionStr string) {
 		os.Exit(1)
 	}
 
-	if err = json.Unmarshal(cfgBytes, cfg); err != nil {
+	if err = json.Unmarshal(cfgBytes, Cfg); err != nil {
 		fmt.Printf("Error parsing %s: %s", cfgPath, err.Error())
 		os.Exit(1)
 	}
-	cfg.jsonLocation = cfgPath
+	Cfg.jsonLocation = cfgPath
 
-	if err = cfg.ValidateValues(); err != nil {
+	if err = Cfg.ValidateValues(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
 	if runtime.GOOS != "windows" {
 		var gcUser *user.User
-		if cfg.Username != "" {
-			gcUser, err = user.Lookup(cfg.Username)
+		if Cfg.Username != "" {
+			gcUser, err = user.Lookup(Cfg.Username)
 		} else {
 			gcUser, err = user.Current()
 		}
@@ -147,51 +147,51 @@ func InitConfig(versionStr string) {
 		}
 	}
 
-	if _, err = os.Stat(cfg.DocumentRoot); err != nil {
+	if _, err = os.Stat(Cfg.DocumentRoot); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(cfg.TemplateDir); err != nil {
+	if _, err = os.Stat(Cfg.TemplateDir); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if _, err = os.Stat(cfg.LogDir); os.IsNotExist(err) {
-		err = os.MkdirAll(cfg.LogDir, DirFileMode)
+	if _, err = os.Stat(Cfg.LogDir); os.IsNotExist(err) {
+		err = os.MkdirAll(Cfg.LogDir, DirFileMode)
 	}
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
+	Cfg.LogDir = gcutil.FindResource(Cfg.LogDir, "log", "/var/log/gochan/")
 
-	if cfg.Port == 0 {
-		cfg.Port = 80
+	if Cfg.Port == 0 {
+		Cfg.Port = 80
 	}
 
-	if len(cfg.FirstPage) == 0 {
-		cfg.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
+	if len(Cfg.FirstPage) == 0 {
+		Cfg.FirstPage = []string{"index.html", "1.html", "firstrun.html"}
 	}
 
-	if cfg.WebRoot == "" {
-		cfg.WebRoot = "/"
+	if Cfg.WebRoot == "" {
+		Cfg.WebRoot = "/"
 	}
 
-	if cfg.WebRoot[0] != '/' {
-		cfg.WebRoot = "/" + cfg.WebRoot
+	if Cfg.WebRoot[0] != '/' {
+		Cfg.WebRoot = "/" + Cfg.WebRoot
 	}
-	if cfg.WebRoot[len(cfg.WebRoot)-1] != '/' {
-		cfg.WebRoot += "/"
+	if Cfg.WebRoot[len(Cfg.WebRoot)-1] != '/' {
+		Cfg.WebRoot += "/"
 	}
 
 	_, zoneOffset := time.Now().Zone()
-	cfg.TimeZone = zoneOffset / 60 / 60
+	Cfg.TimeZone = zoneOffset / 60 / 60
 
-	cfg.Version = ParseVersion(versionStr)
-	cfg.Version.Normalize()
+	Cfg.Version = ParseVersion(versionStr)
+	Cfg.Version.Normalize()
 }
 
 // WebPath returns an absolute path, starting at the web root (which is "/" by default)
 func WebPath(part ...string) string {
-	return path.Join(cfg.WebRoot, path.Join(part...))
+	return path.Join(Cfg.WebRoot, path.Join(part...))
 }
