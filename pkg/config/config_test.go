@@ -26,17 +26,17 @@ func TestValidJSON(t *testing.T) {
 func TestValidateValues(t *testing.T) {
 	InitConfig("3.1.0")
 	SetRandomSeed("test")
-	assert.NoError(t, Cfg.ValidateValues())
+	assert.NoError(t, cfg.ValidateValues())
 
-	Cfg.CookieMaxAge = "not a duration"
-	assert.Error(t, Cfg.ValidateValues())
-	Cfg.CookieMaxAge = "1y"
-	assert.NoError(t, Cfg.ValidateValues())
+	cfg.CookieMaxAge = "not a duration"
+	assert.Error(t, cfg.ValidateValues())
+	cfg.CookieMaxAge = "1y"
+	assert.NoError(t, cfg.ValidateValues())
 
 	SetTestDBConfig("not a valid driver", "127.0.0.1", "gochan", "gochan", "", "")
-	assert.Error(t, Cfg.ValidateValues())
+	assert.Error(t, cfg.ValidateValues())
 	SetTestDBConfig("postgresql", "127.0.0.1", "gochan", "gochan", "", "")
-	assert.NoError(t, Cfg.ValidateValues())
+	assert.NoError(t, cfg.ValidateValues())
 }
 
 type webRootTest struct {
@@ -61,7 +61,7 @@ func TestWebPath(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.expectPath, func(t *testing.T) {
-			Cfg.WebRoot = tC.webRoot
+			cfg.WebRoot = tC.webRoot
 			wp := WebPath(tC.pathArgs...)
 			assert.Equal(t, tC.expectPath, wp)
 		})

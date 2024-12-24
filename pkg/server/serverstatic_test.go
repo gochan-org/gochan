@@ -13,8 +13,8 @@ import (
 )
 
 func TestServeFile(t *testing.T) {
-	// Set up a mock configuration
-	config.SetMockConfig()
+
+	config.SetVersion("4.0.1")
 
 	tempDir, err := ioutil.TempDir("", "testservefile")
 	if err != nil {
@@ -51,8 +51,8 @@ func TestServeFile(t *testing.T) {
 }
 
 func TestServeFile_NotFound(t *testing.T) {
-	// Set up a mock configuration
-	config.SetMockConfig()
+
+	config.SetVersion("4.0.1")
 
 	// Create a temporary directory for testing
 	tempDir, err := ioutil.TempDir("", "testservefile")

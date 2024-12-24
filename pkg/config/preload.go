@@ -9,11 +9,11 @@ func PreloadModule(l *lua.LState) int {
 	t := l.NewTable()
 	l.SetFuncs(t, map[string]lua.LGFunction{
 		"system_critical_config": func(l *lua.LState) int {
-			l.Push(luar.New(l, &Cfg.SystemCriticalConfig))
+			l.Push(luar.New(l, &cfg.SystemCriticalConfig))
 			return 1
 		},
 		"site_config": func(l *lua.LState) int {
-			l.Push(luar.New(l, &Cfg.SiteConfig))
+			l.Push(luar.New(l, &cfg.SiteConfig))
 			return 1
 		},
 		"board_config": func(l *lua.LState) int {

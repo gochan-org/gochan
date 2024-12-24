@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	Cfg     *GochanConfig
+	cfg     *GochanConfig
 	cfgPath string
 
 	boardConfigs = map[string]BoardConfig{}
@@ -36,106 +36,6 @@ type GochanConfig struct {
 	BoardConfig
 	jsonLocation string
 	testing      bool
-}
-
-func SetMockConfig() {
-
-	Cfg = &GochanConfig{
-
-		SystemCriticalConfig: SystemCriticalConfig{
-			ListenIP:     "127.0.0.1",
-			Port:         8080,
-			UseFastCGI:   false,
-			DocumentRoot: "/var/www/html",
-			TemplateDir:  "/var/www/html/templates",
-			LogDir:       "/var/log/gochan",
-			Plugins:      []string{},
-			PluginSettings: map[string]any{
-				"examplePlugin": true,
-			},
-			SiteHeaderURL: "http://example.com",
-			WebRoot:       "/",
-			SiteDomain:    "example.com",
-			Verbose:       true,
-			RandomSeed:    "testseed",
-		},
-		SiteConfig: SiteConfig{
-			FirstPage:             []string{"index"},
-			Username:              "admin",
-			CookieMaxAge:          "1h",
-			StaffSessionDuration:  "2h",
-			Lockdown:              false,
-			LockdownMessage:       "",
-			SiteName:              "Test Site",
-			SiteSlogan:            "A testing site",
-			Modboard:              "mod",
-			MaxRecentPosts:        10,
-			RecentPostsWithNoFile: false,
-			EnableAppeals:         true,
-			MinifyHTML:            false,
-			MinifyJS:              false,
-			GeoIPType:             "none",
-			GeoIPOptions:          make(map[string]any),
-			Captcha: CaptchaConfig{
-				Type:                 "none",
-				OnlyNeededForThreads: false,
-				SiteKey:              "",
-				AccountSecret:        "",
-			},
-			FingerprintVideoThumbnails: false,
-			FingerprintHashLength:      16,
-		},
-		BoardConfig: BoardConfig{
-			InheritGlobalStyles: true,
-			Styles:              []Style{},
-			DefaultStyle:        "default",
-			Banners:             []PageBanner{},
-			PostConfig: PostConfig{
-				MaxLineLength:            1000,
-				ReservedTrips:            []string{},
-				ThreadsPerPage:           10,
-				RepliesOnBoardPage:       5,
-				StickyRepliesOnBoardPage: 2,
-				NewThreadsRequireUpload:  false,
-				CyclicalThreadNumPosts:   100,
-				BanColors:                []string{"#FF0000"},
-				BanMessage:               "You are banned!",
-				EmbedWidth:               640,
-				EmbedHeight:              360,
-				EnableEmbeds:             true,
-				ImagesOpenNewTab:         false,
-				NewTabOnOutlinks:         true,
-				DisableBBcode:            false,
-			},
-			UploadConfig: UploadConfig{
-				RejectDuplicateImages: true,
-				ThumbWidth:            150,
-				ThumbHeight:           150,
-				ThumbWidthReply:       100,
-				ThumbHeightReply:      100,
-				ThumbWidthCatalog:     200,
-				ThumbHeightCatalog:    200,
-				AllowOtherExtensions:  map[string]string{"pdf": "application/pdf"},
-				StripImageMetadata:    "none",
-				ExiftoolPath:          "",
-			},
-			DateTimeFormat:         "2006-01-02 15:04:05",
-			ShowPosterID:           true,
-			EnableSpoileredImages:  false,
-			EnableSpoileredThreads: false,
-			Worksafe:               false,
-			ThreadPage:             1,
-			Cooldowns:              BoardCooldowns{NewThread: 60, Reply: 30, ImageReply: 15},
-			RenderURLsAsLinks:      true,
-			ThreadsPerPage:         10,
-			EnableGeoIP:            false,
-			EnableNoFlag:           false,
-			CustomFlags:            []geoip.Country{},
-			isGlobal:               true,
-		},
-		jsonLocation: "test_config.json",
-		testing:      true,
-	}
 }
 
 // ValidateValues checks to make sure that the configuration options are usable
@@ -434,24 +334,24 @@ type PostConfig struct {
 }
 
 func WriteConfig() error {
-	return Cfg.Write()
+	return cfg.Write()
 }
 
 // GetSQLConfig returns SQL configuration info. It returns a value instead of a a pointer to it
 // because it is not safe to edit while Gochan is running
 func GetSQLConfig() SQLConfig {
-	return Cfg.SQLConfig
+	return cfg.SQLConfig
 }
 
 // GetSystemCriticalConfig returns system-critical configuration options like listening IP
 // It returns a value instead of a pointer, because it is not usually safe to edit while Gochan is running.
 func GetSystemCriticalConfig() *SystemCriticalConfig {
-	return &Cfg.SystemCriticalConfig
+	return &cfg.SystemCriticalConfig
 }
 
 // GetSiteConfig returns the global site configuration (site name, slogan, etc)
 func GetSiteConfig() *SiteConfig {
-	return &Cfg.SiteConfig
+	return &cfg.SiteConfig
 }
 
 // GetBoardConfig returns the custom configuration for the specified board (if it exists)
@@ -459,14 +359,14 @@ func GetSiteConfig() *SiteConfig {
 func GetBoardConfig(board string) *BoardConfig {
 	bc, exists := boardConfigs[board]
 	if board == "" || !exists {
-		return &Cfg.BoardConfig
+		return &cfg.BoardConfig
 	}
 	return &bc
 }
 
 // UpdateBoardConfig updates or establishes the configuration for the given board
 func UpdateBoardConfig(dir string) error {
-	ba, err := os.ReadFile(path.Join(Cfg.DocumentRoot, dir, "board.json"))
+	ba, err := os.ReadFile(path.Join(cfg.DocumentRoot, dir, "board.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			// board doesn't have a custom config, use global config
@@ -474,7 +374,7 @@ func UpdateBoardConfig(dir string) error {
 		}
 		return err
 	}
-	boardcfg := Cfg.BoardConfig
+	boardcfg := cfg.BoardConfig
 	if err = json.Unmarshal(ba, &boardcfg); err != nil {
 		return err
 	}
@@ -490,13 +390,13 @@ func DeleteBoardConfig(dir string) {
 }
 
 func VerboseMode() bool {
-	return Cfg.testing || Cfg.SystemCriticalConfig.Verbose
+	return cfg.testing || cfg.SystemCriticalConfig.Verbose
 }
 
 func SetVerbose(verbose bool) {
-	Cfg.Verbose = verbose
+	cfg.Verbose = verbose
 }
 
 func GetVersion() *GochanVersion {
-	return Cfg.Version
+	return cfg.Version
 }

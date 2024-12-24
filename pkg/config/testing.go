@@ -3,8 +3,8 @@ package config
 import "github.com/gochan-org/gochan/pkg/gcutil/testutil"
 
 func setDefaultCfgIfNotSet() {
-	if Cfg == nil {
-		Cfg = defaultGochanConfig
+	if cfg == nil {
+		cfg = defaultGochanConfig
 	}
 }
 
@@ -13,7 +13,7 @@ func SetVersion(version string) {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
 
-	Cfg.Version = ParseVersion(version)
+	cfg.Version = ParseVersion(version)
 }
 
 // SetTestTemplateDir sets the directory for templates, used only in testing. If it is not run via `go test`, it will panic.
@@ -21,7 +21,7 @@ func SetTestTemplateDir(dir string) {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
 
-	Cfg.TemplateDir = dir
+	cfg.TemplateDir = dir
 }
 
 // SetTestDBConfig sets up the database configuration for a testing environment. If it is not run via `go test`, it will panic
@@ -29,19 +29,19 @@ func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername str
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
 
-	Cfg.DBtype = dbType
-	Cfg.DBhost = dbHost
-	Cfg.DBname = dbName
-	Cfg.DBusername = dbUsername
-	Cfg.DBpassword = dbPassword
-	Cfg.DBprefix = dbPrefix
+	cfg.DBtype = dbType
+	cfg.DBhost = dbHost
+	cfg.DBname = dbName
+	cfg.DBusername = dbUsername
+	cfg.DBpassword = dbPassword
+	cfg.DBprefix = dbPrefix
 }
 
 // SetRandomSeed is usd to set a deterministic seed to make testing easier. If it is not run via `go test`, it will panic
 func SetRandomSeed(seed string) {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
-	Cfg.RandomSeed = seed
+	cfg.RandomSeed = seed
 }
 
 // SetSystemCriticalConfig sets system critical configuration values in testing. It will panic if it is not run in a
@@ -49,14 +49,14 @@ func SetRandomSeed(seed string) {
 func SetSystemCriticalConfig(systemCritical *SystemCriticalConfig) {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
-	Cfg.SystemCriticalConfig = *systemCritical
+	cfg.SystemCriticalConfig = *systemCritical
 }
 
 // SetSiteConfig sets the site configuration values in testing. It will panic if it is not run in a test environment
 func SetSiteConfig(siteConfig *SiteConfig) {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
-	Cfg.SiteConfig = *siteConfig
+	cfg.SiteConfig = *siteConfig
 }
 
 // SetBoardConfig applies the configuration to the given board. It will panic if it is not run in a test environment
@@ -65,7 +65,7 @@ func SetBoardConfig(board string, boardCfg *BoardConfig) {
 	setDefaultCfgIfNotSet()
 
 	if board == "" {
-		Cfg.BoardConfig = *boardCfg
+		cfg.BoardConfig = *boardCfg
 	} else {
 		boardConfigs[board] = *boardCfg
 	}
