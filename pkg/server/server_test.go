@@ -2,17 +2,27 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestServeJSON(t *testing.T) {
-	// Set up a mock configuration
-	config.SetMockConfig()
+
+	dir, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		t.Fatalf("Failed to get current working directory: %v", err)
+		fmt.Println("Current working directory:", dir)
+		return
+	}
+
+	config.SetVersion("4.0.1")
+	config.SetRandomSeed("test")
 
 	writer := httptest.NewRecorder()
 	data := map[string]interface{}{
@@ -56,14 +66,21 @@ func TestServeJSON(t *testing.T) {
 }
 
 func TestServeErrorPage(t *testing.T) {
-	// Set up a mock configuration
-	config.SetMockConfig()
+
+	dir, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		t.Fatalf("Failed to get current working directory: %v", err)
+		fmt.Println("Current working directory:", dir)
+		return
+	}
+
+	config.SetVersion("4.0.1")
 
 	// Set writer and error string message
 	writer := httptest.NewRecorder()
-	err := "Unexpected error has occurred."
+	errorMsg := "Unexpected error has occurred."
 
-	ServeErrorPage(writer, err)
+	ServeErrorPage(writer, errorMsg)
 
 	body := writer.Body.String()
 	t.Log("=============")
@@ -75,13 +92,13 @@ func TestServeErrorPage(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", writer.Header().Get("Content-Type"))
 
 	// Check the response body for the error message
-	//assert.Contains(t, body, err)       Check if the body contains the error message
-	//assert.Contains(t, body, "Error")   Check if the body contains the error title or header
+	assert.Contains(t, body, err)
+	assert.Contains(t, body, "Error")
 }
 
 func TestServeError(t *testing.T) {
-	// Set up a mock configuration
-	config.SetMockConfig()
+
+	config.SetVersion("4.0.1")
 
 	tests := []struct {
 		name      string

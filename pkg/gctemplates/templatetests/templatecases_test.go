@@ -230,7 +230,7 @@ var (
 					".ext": "thumb.png",
 				},
 			},
-			expectedOutput: `var styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];var defaultStyle="pipes.css";var webroot="/";var serverTZ=-1;var fileTypes=[".ext",];`,
+			expectedOutput: `const styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];const defaultStyle="pipes.css";const webroot="/";const serverTZ=-1;const fileTypes=[".ext",];`,
 		},
 		{
 			desc: "empty values",
@@ -239,7 +239,7 @@ var (
 				"webroot":      "",
 				"timezone":     0,
 			},
-			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;var fileTypes=[];`,
+			expectedOutput: `const styles=[];const defaultStyle="";const webroot="";const serverTZ=0;const fileTypes=[];`,
 		},
 		{
 			desc: "escaped string",
@@ -248,7 +248,7 @@ var (
 				"webroot":      "",
 				"timezone":     0,
 			},
-			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;var fileTypes=[];`,
+			expectedOutput: `const styles=[];const defaultStyle="\&#34;a\\a\&#34;";const webroot="";const serverTZ=0;const fileTypes=[];`,
 		},
 	}
 )
