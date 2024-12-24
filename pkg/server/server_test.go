@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,10 +13,9 @@ import (
 
 func TestServeJSON(t *testing.T) {
 
-	dir, err := testutil.GoToGochanRoot(t)
+	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		t.Fatalf("Failed to get current working directory: %v", err)
-		fmt.Println("Current working directory:", dir)
 		return
 	}
 
@@ -67,10 +65,9 @@ func TestServeJSON(t *testing.T) {
 
 func TestServeErrorPage(t *testing.T) {
 
-	dir, err := testutil.GoToGochanRoot(t)
+	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		t.Fatalf("Failed to get current working directory: %v", err)
-		fmt.Println("Current working directory:", dir)
 		return
 	}
 
