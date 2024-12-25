@@ -1,7 +1,7 @@
 package server
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,7 +16,7 @@ func TestServeFile(t *testing.T) {
 
 	config.SetVersion("4.0.1")
 
-	tempDir, err := ioutil.TempDir("", "testservefile")
+	tempDir, err := os.MkdirTemp("", "testservefile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestServeFile(t *testing.T) {
 	// Create a test file
 	testFileName := "testfile.txt"
 	testFilePath := path.Join(tempDir, testFileName)
-	err = ioutil.WriteFile(testFilePath, []byte("Hello, World!"), 0644)
+	err = os.WriteFile(testFilePath, []byte("Hello, World!"), 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestServeFile(t *testing.T) {
 	res := rr.Result()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func TestServeFile_NotFound(t *testing.T) {
 	config.SetVersion("4.0.1")
 
 	// Create a temporary directory for testing
-	tempDir, err := ioutil.TempDir("", "testservefile")
+	tempDir, err := os.MkdirTemp("", "testservefile")
 	if err != nil {
 		t.Fatal(err)
 	}

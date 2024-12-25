@@ -7,7 +7,10 @@ import (
 	"testing"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
+	_ "github.com/gochan-org/gochan/pkg/posting/uploads/inituploads"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -64,14 +67,15 @@ func TestServeJSON(t *testing.T) {
 }
 
 func TestServeErrorPage(t *testing.T) {
-
 	_, err := testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, err) {
-		t.Fatalf("Failed to get current working directory: %v", err)
+	if !assert.NoError(t, err, "Unable to switch to gochan root directory") {
 		return
 	}
-
 	config.SetVersion("4.0.1")
+	config.SetTestTemplateDir("templates")
+	if !assert.NoError(t, gctemplates.InitTemplates()) {
+		return
+	}
 
 	// Set writer and error string message
 	writer := httptest.NewRecorder()
@@ -89,7 +93,7 @@ func TestServeErrorPage(t *testing.T) {
 	assert.Equal(t, "text/html; charset=utf-8", writer.Header().Get("Content-Type"))
 
 	// Check the response body for the error message
-	assert.Contains(t, body, err)
+	assert.Contains(t, body, errorMsg)
 	assert.Contains(t, body, "Error")
 }
 
@@ -123,7 +127,7 @@ func TestServeError(t *testing.T) {
 			err:       "page not found",
 			wantsJSON: false,
 			data:      nil,
-			expected:  "", // Should we expect something ?
+			expected:  "<!doctype html><meta charset=utf-8><title>Error :c</title><h1>Error</h1><p>page not found<hr><address>Site powered by Gochan 4.0.1</address>",
 		},
 	}
 
