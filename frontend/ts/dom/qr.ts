@@ -101,6 +101,7 @@ function fixFileList() {
 			files = el.files;
 			return false;
 		}
+		return;
 	});
 	$browseBtns.each((_i, el) => {
 		if(files)
