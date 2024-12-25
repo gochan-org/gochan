@@ -86,13 +86,19 @@ function replaceBrowseButton() {
 		$("<a/>").addClass("browse-text")
 			.attr("href", "#")
 			.text("Select/drop/paste upload here")
-			.on("click", () => $browseBtn.trigger("click"))
+			.on("click", e => {
+				e.preventDefault();
+				$browseBtn.trigger("click");
+			})
 	).on("dragenter dragover drop", dragAndDrop).insertBefore($browseBtn);
 
 	$("form#postform, form#qrpostform").on("paste", e => {
 		const clipboardData = (e.originalEvent as ClipboardEvent).clipboardData;
-		if(clipboardData.items.length < 1 || clipboardData.items[0].kind !== "file") {
-			console.log("No files in clipboard");
+		if(clipboardData.items.length < 1) {
+			alertLightbox("No files in clipboard", "Unable to paste");
+			return;
+		}
+		if(clipboardData.items[0].kind !== "file") {
 			return;
 		}
 		const clipboardFile = clipboardData.items[0].getAsFile();

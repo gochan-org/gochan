@@ -93,6 +93,21 @@ function setButtonTimeout(prefix = "", cooldown = 5) {
 	timeoutCB();
 }
 
+function fixFileList() {
+	let files:FileList = null;
+	const $browseBtns = $<HTMLInputElement>("input[name=imagefile]");
+	$browseBtns.each((_i, el) => {
+		if(el.files?.length > 0 && !files) {
+			files = el.files;
+			return false;
+		}
+	});
+	$browseBtns.each((_i, el) => {
+		if(files)
+			el.files = files;
+	});
+}
+
 export function initQR() {
 	if($qr !== null) {
 		// QR box already initialized
@@ -204,6 +219,7 @@ export function initQR() {
 	resetSubmitButtonText();
 
 	$postform.on("submit", function(e) {
+		fixFileList();
 		const $form = $<HTMLFormElement>(this);
 		e.preventDefault();
 		copyCaptchaResponse($form);
