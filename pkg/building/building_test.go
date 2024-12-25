@@ -32,7 +32,7 @@ func TestBuildJS(t *testing.T) {
 	systemCriticalCfg.LogDir = path.Join(outDir, "logs")
 	systemCriticalCfg.WebRoot = "/chan"
 	systemCriticalCfg.TimeZone = 8
-	config.SetSystemCriticalConfig(&systemCriticalCfg)
+	config.SetSystemCriticalConfig(systemCriticalCfg)
 
 	boardCfg := config.GetBoardConfig("")
 	boardCfg.Styles = []config.Style{
@@ -154,7 +154,7 @@ func TestBuildFrontPage(t *testing.T) {
 			systemCriticalCfg.LogDir = path.Join(outDir, "logs")
 			systemCriticalCfg.WebRoot = "/chan"
 			systemCriticalCfg.TimeZone = 8
-			config.SetSystemCriticalConfig(&systemCriticalCfg)
+			config.SetSystemCriticalConfig(systemCriticalCfg)
 
 			boardCfg := config.GetBoardConfig("")
 			boardCfg.Styles = []config.Style{{Name: "test1", Filename: "test1.css"}}

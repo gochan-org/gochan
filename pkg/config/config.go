@@ -345,8 +345,8 @@ func GetSQLConfig() SQLConfig {
 
 // GetSystemCriticalConfig returns system-critical configuration options like listening IP
 // It returns a value instead of a pointer, because it is not usually safe to edit while Gochan is running.
-func GetSystemCriticalConfig() SystemCriticalConfig {
-	return cfg.SystemCriticalConfig
+func GetSystemCriticalConfig() *SystemCriticalConfig {
+	return &cfg.SystemCriticalConfig
 }
 
 // GetSiteConfig returns the global site configuration (site name, slogan, etc)
