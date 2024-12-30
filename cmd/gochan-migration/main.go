@@ -56,9 +56,14 @@ func main() {
 		fatalEv.Discard()
 	}()
 
-	if !updateDB && (options.ChanType == "" || options.OldChanConfig == "") {
-		flag.PrintDefaults()
-		fatalEv.Msg("Missing required oldchan value")
+	if !updateDB {
+		if options.ChanType == "" {
+			flag.PrintDefaults()
+			fatalEv.Msg("Missing required oldchan value")
+		} else if options.OldChanConfig == "" {
+			flag.PrintDefaults()
+			fatalEv.Msg("Missing required oldconfig value")
+		}
 	} else if updateDB {
 		options.ChanType = "gcupdate"
 	}
@@ -82,8 +87,15 @@ func main() {
 	default:
 		fatalEv.Msg("Unsupported chan type, Currently only pre2021 database migration is supported")
 	}
+	migratingInPlace := migrator.IsMigratingInPlace()
+	common.LogInfo().
+		Str("oldChanType", options.ChanType).
+		Str("oldChanConfig", options.OldChanConfig).
+		Bool("migratingInPlace", migratingInPlace).
+		Msg("Starting database migration")
+
 	config.InitConfig(versionStr)
-	if !updateDB {
+	if !migratingInPlace {
 		sqlCfg := config.GetSQLConfig()
 		err = gcsql.ConnectToDB(&sqlCfg)
 		if err != nil {

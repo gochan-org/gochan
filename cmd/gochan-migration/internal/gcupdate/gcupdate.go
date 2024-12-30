@@ -2,7 +2,6 @@ package gcupdate
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -20,6 +19,11 @@ type GCDatabaseUpdater struct {
 	// if the database version is less than TargetDBVer, it is assumed to be out of date, and the schema needs to be adjusted.
 	// It is expected to be set by the build script
 	TargetDBVer int
+}
+
+// IsMigratingInPlace implements common.DBMigrator.
+func (dbu *GCDatabaseUpdater) IsMigratingInPlace() bool {
+	return true
 }
 
 func (dbu *GCDatabaseUpdater) Init(options *common.MigrationOptions) error {
@@ -174,7 +178,7 @@ func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *co
 	tx, err := dbu.db.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
-			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			err = fmt.Errorf("recovered: %v", a)
 			errEv.Caller(4).Err(err).Send()
 			errEv.Discard()
 		} else if err != nil {
@@ -262,7 +266,7 @@ func (dbu *GCDatabaseUpdater) migrateFilenameBans(ctx context.Context, _ *config
 	tx, err := dbu.db.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
-			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			err = fmt.Errorf("recovered: %v", a)
 			errEv.Caller(4).Err(err).Send()
 			errEv.Discard()
 		} else if err != nil {
@@ -320,7 +324,7 @@ func (dbu *GCDatabaseUpdater) migrateUsernameBans(ctx context.Context, _ *config
 	tx, err := dbu.db.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
-			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			err = fmt.Errorf("recovered: %v", a)
 			errEv.Caller(4).Err(err).Send()
 			errEv.Discard()
 		} else if err != nil {
@@ -378,7 +382,7 @@ func (dbu *GCDatabaseUpdater) migrateWordfilters(ctx context.Context, sqlConfig 
 	tx, err := dbu.db.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
-			err = errors.New(fmt.Sprintf("recovered: %v", a))
+			err = fmt.Errorf("recovered: %v", a)
 			errEv.Caller(4).Err(err).Send()
 			errEv.Discard()
 		} else if err != nil {

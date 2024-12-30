@@ -416,8 +416,7 @@ func SetupMockDB(driver string) (sqlmock.Sqlmock, error) {
 	return mock, err
 }
 
-// Open opens and returns a new gochan database connection with the provided host, driver, DB name,
-// username, password, and table prefix
+// Open opens and returns a new gochan database connection with the provided SQL options
 func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
 	db, err = setupDBConn(cfg)
 	if err != nil {

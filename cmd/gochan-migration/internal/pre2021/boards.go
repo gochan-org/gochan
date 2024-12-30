@@ -1,12 +1,19 @@
 package pre2021
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
 func (m *Pre2021Migrator) MigrateBoards() error {
+	defer func() {
+		if r := recover(); r != nil {
+			common.LogFatal().Interface("recover", r).Msg("Recovered from panic in MigrateBoards")
+		}
+	}()
 	if m.oldBoards == nil {
 		m.oldBoards = map[int]string{}
 	}
@@ -14,10 +21,14 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 		m.newBoards = map[int]string{}
 	}
 	// get all boards from new db
+	fmt.Println("0")
 	err := gcsql.ResetBoardSectionArrays()
+	fmt.Println("1")
 	if err != nil {
+		fmt.Println("2")
 		return nil
 	}
+	fmt.Println("3")
 
 	// get boards from old db
 	rows, err := m.db.QuerySQL(boardsQuery)

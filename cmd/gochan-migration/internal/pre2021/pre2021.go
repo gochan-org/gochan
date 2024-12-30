@@ -12,12 +12,6 @@ import (
 
 type Pre2021Config struct {
 	config.SQLConfig
-	// DBtype       string
-	// DBhost       string
-	// DBname       string
-	// DBusername   string
-	// DBpassword   string
-	// DBprefix     string
 	DocumentRoot string
 }
 
@@ -29,6 +23,11 @@ type Pre2021Migrator struct {
 	posts     []postTable
 	oldBoards map[int]string // map[boardid]dir
 	newBoards map[int]string // map[board]dir
+}
+
+// IsMigratingInPlace implements common.DBMigrator.
+func (m *Pre2021Migrator) IsMigratingInPlace() bool {
+	return m.config.DBname == config.GetSQLConfig().DBname
 }
 
 func (m *Pre2021Migrator) readConfig() error {
@@ -68,7 +67,7 @@ func (m *Pre2021Migrator) IsMigrated() (bool, error) {
 		return false, gcsql.ErrUnsupportedDB
 	}
 	if err = m.db.QueryRowSQL(query,
-		[]interface{}{m.config.DBprefix + "migrated", m.config.DBname},
+		[]interface{}{m.config.DBprefix + "database_version", m.config.DBname},
 		[]interface{}{&migrated}); err != nil {
 		return migrated, err
 	}
@@ -82,12 +81,14 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	}
 	if migrated {
 		// db is already migrated, stop
+		common.LogWarning().Msg("Database is already migrated (database_version table exists)")
 		return true, nil
 	}
 
 	if err := m.MigrateBoards(); err != nil {
 		return false, err
 	}
+	common.LogInfo().Msg("Migrated boards")
 	// if err = m.MigratePosts(); err != nil {
 	// 	return false, err
 	// }

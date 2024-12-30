@@ -56,6 +56,11 @@ type DBMigrator interface {
 	// will exit
 	IsMigrated() (bool, error)
 
+	// IsMigratingInPlace returns true if the old database name is the same as the new database name,
+	// meaning that the tables will be altered to match the new schema, instead of creating tables in the
+	// new database and copying data over
+	IsMigratingInPlace() bool
+
 	// MigrateDB alters the database schema to match the new schema, then migrates the imageboard
 	// data (posts, boards, etc) to the new database. It is assumed that MigrateDB will handle
 	// logging any errors that occur during the migration
