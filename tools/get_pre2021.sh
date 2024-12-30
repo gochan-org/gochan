@@ -10,11 +10,6 @@ RELEASE_DIR="gochan-${TESTING_VERSION}_linux"
 RELEASE_GZ="$RELEASE_DIR.tar.gz"
 RELEASE_URL="https://github.com/gochan-org/gochan/releases/download/$TESTING_VERSION/$RELEASE_GZ"
 
-if [ -z "$STY" ]; then
-	echo "This command should be run from a screen instance"
-	echo "Example: screen -S get_pre2021 $0"
-	exit 1
-fi
 
 if [ "$USER" != "vagrant" ]; then
 	echo "This must be run in the vagrant VM (expected \$USER to be vagrant, got $USER)"
@@ -29,7 +24,7 @@ echo "Extracting $RELEASE_GZ"
 tar -xf gochan-v2.12.0_linux.tar.gz
 cd $RELEASE_DIR
 
-cp examples/configs/gochan.example.json gochan.json
+cp sample-configs/gochan.example.json gochan.json
 echo "Modifying $PWD/gochan.json for testing migration"
 sed -i gochan.json \
 	-e 's/"Port": .*/"Port": 9000,/' \
