@@ -39,7 +39,7 @@ release_files = (
 	"README.md",
 )
 
-GOCHAN_VERSION = "4.0.1"
+GOCHAN_VERSION = "4.0.2"
 DATABASE_VERSION = "4"  # stored in DBNAME.DBPREFIXdatabase_version
 
 PATH_NOTHING = -1
