@@ -3,9 +3,9 @@ package pre2021
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
@@ -39,6 +39,7 @@ type postTable struct {
 	reviewed          bool
 
 	newBoardID int
+	foundBoard bool
 	// oldParentID int
 }
 
@@ -102,12 +103,21 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			tx.Rollback()
 			return err
 		}
-		_, ok := m.oldBoards[post.boardid]
-		if !ok {
-			// board doesn't exist
-			log.Printf(
-				"Pre-migrated post #%d has an invalid boardid %d (board doesn't exist), skipping",
-				post.id, post.boardid)
+		var postBoardDir string
+		for _, oldBoard := range m.oldBoards {
+			if oldBoard.id == post.boardid {
+				postBoardDir = oldBoard.dir
+			}
+		}
+		for _, newBoard := range gcsql.AllBoards {
+			if newBoard.Dir == postBoardDir {
+				post.newBoardID = newBoard.ID
+				post.foundBoard = true
+			}
+		}
+		if !post.foundBoard {
+			common.LogWarning().Int("boardID", post.boardid).
+				Msg("Pre-migrated post has an invalid boardid (board doesn't exist), skipping")
 			continue
 		}
 

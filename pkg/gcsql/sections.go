@@ -9,7 +9,8 @@ import (
 var (
 	// AllSections provides a quick and simple way to access a list of all non-hidden sections without
 	// having to do any SQL queries. It and AllBoards are updated by ResetBoardSectionArrays
-	AllSections []Section
+	AllSections            []Section
+	ErrSectionDoesNotExist = errors.New("section does not exist")
 )
 
 // GetAllSections gets a list of all existing sections, optionally omitting hidden ones
@@ -62,18 +63,37 @@ func getOrCreateDefaultSectionID() (sectionID int, err error) {
 	return id, nil
 }
 
+// GetSectionFromID returns a section from the database, given its ID
 func GetSectionFromID(id int) (*Section, error) {
 	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE id = ?`
 	var section Section
 	err := QueryRowTimeoutSQL(nil, query, []any{id}, []any{
 		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
 	})
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrSectionDoesNotExist
+	} else if err != nil {
 		return nil, err
 	}
 	return &section, err
 }
 
+// GetSectionFromID returns a section from the database, given its name
+func GetSectionFromName(name string) (*Section, error) {
+	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE name = ?`
+	var section Section
+	err := QueryRowTimeoutSQL(nil, query, []any{name}, []any{
+		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrSectionDoesNotExist
+	} else if err != nil {
+		return nil, err
+	}
+	return &section, err
+}
+
+// DeleteSection deletes a section from the database and resets the AllSections array
 func DeleteSection(id int) error {
 	const query = `DELETE FROM DBPREFIXsections WHERE id = ?`
 	_, err := ExecSQL(query, id)

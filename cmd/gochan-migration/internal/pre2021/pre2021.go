@@ -20,9 +20,10 @@ type Pre2021Migrator struct {
 	options *common.MigrationOptions
 	config  Pre2021Config
 
-	posts     []postTable
-	oldBoards map[int]string // map[boardid]dir
-	newBoards map[int]string // map[board]dir
+	migrationSectionID int
+	posts              []postTable
+	oldBoards          map[string]boardTable
+	newBoards          map[string]boardTable
 }
 
 // IsMigratingInPlace implements common.DBMigrator.

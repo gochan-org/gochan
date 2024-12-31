@@ -41,7 +41,6 @@ type MigrationOptions struct {
 	OldChanConfig string
 	OldDBName     string
 	NewDBName     string
-	DirAction     int
 }
 
 // DBMigrator is used for handling the migration from one database type to a
