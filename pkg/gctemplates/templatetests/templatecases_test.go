@@ -70,6 +70,18 @@ var (
 		AnonymousName: "Anonymous Coward",
 	}
 
+	simpleBoard2 = &gcsql.Board{
+		ID:            2,
+		SectionID:     2,
+		URI:           "sup",
+		Dir:           "sup",
+		Title:         "Gochan Support board",
+		Subtitle:      "Board for helping out gochan users/admins",
+		Description:   "Board for helping out gochan users/admins",
+		DefaultStyle:  "yotsuba.css",
+		AnonymousName: "Anonymous Coward",
+	}
+
 	banPageCases = []templateTestCase{
 		{
 			desc: "appealable permaban",
@@ -249,6 +261,195 @@ var (
 				"timezone":     0,
 			},
 			expectedOutput: `const styles=[];const defaultStyle="\&#34;a\\a\&#34;";const webroot="";const serverTZ=0;const fileTypes=[];`,
+		},
+	}
+
+	baseFooterCases = []templateTestCase{
+		{
+			desc: "base footer test",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard1,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: footer,
+		},
+		{
+			desc: "base footer test",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard2,
+				"numPages":    3,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: footer,
+		},
+	}
+
+	baseHeaderCases = []templateTestCase{
+		{
+			desc: "Header Test /test/",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard1,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: headBeginning +
+				`<title>/test/-Testing board</title>` +
+				`<link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
+				`<link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script>` +
+				`<script type="text/javascript"src="/js/gochan.js"></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section">` +
+				`<a href="/"class="topbar-item">home</a></div>` +
+				`<div class="topbar-section"><a href="/test/"class="topbar-item"title="Testing board">/test/</a>` +
+				`<a href="/test2/" class="topbar-item" title="Testing board#2">/test2/</a></div></div>` +
+				`<div id="content">`,
+		},
+		{
+			desc: "Header Test /sup/",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard2,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: headBeginning +
+				`<title>/sup/-Gochan Support board</title>` +
+				`<link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
+				`<link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script>` +
+				`<script type="text/javascript"src="/js/gochan.js"></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section">` +
+				`<a href="/"class="topbar-item">home</a></div>` +
+				`<div class="topbar-section"><a href="/test/"class="topbar-item"title="Testing board">/test/</a>` +
+				`<a href="/test2/" class="topbar-item" title="Testing board#2">/test2/</a></div></div>` +
+				`<div id="content">`,
+		},
+		{
+			desc: "Perma Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						IsActive:  true,
+						Permanent: true,
+						StaffID:   1,
+						Message:   "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en"><head>` +
+				`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU'RE PERMABANNED,&nbsp;IDIOT!</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
+		},
+		{
+			desc: "Appealable Perma Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						Permanent: true,
+						CanAppeal: true,
+						StaffID:   1,
+						Message:   "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en"><head>` +
+				`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU ARE BANNED:(</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
+		},
+		{
+			desc: "Appealable Temp Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						CanAppeal: true,
+						StaffID:   1,
+						Message:   "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en">` +
+				`<head><meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU ARE BANNED:(</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
+		},
+		{
+			desc: "Unappealable Temp Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						StaffID: 1,
+						Message: "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en"><head>` +
+				`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU ARE BANNED:(</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
 		},
 	}
 )
