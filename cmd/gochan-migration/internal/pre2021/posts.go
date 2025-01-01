@@ -104,11 +104,6 @@ func (m *Pre2021Migrator) migrateThreads() error {
 			return err
 		}
 		var postBoardDir string
-		for _, oldBoard := range m.oldBoards {
-			if oldBoard.id == post.boardid {
-				postBoardDir = oldBoard.dir
-			}
-		}
 		for _, newBoard := range gcsql.AllBoards {
 			if newBoard.Dir == postBoardDir {
 				post.newBoardID = newBoard.ID

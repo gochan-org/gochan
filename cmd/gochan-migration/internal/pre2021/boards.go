@@ -4,38 +4,16 @@ import (
 	"errors"
 	"runtime/debug"
 	"strings"
-	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/rs/zerolog"
 )
 
-type boardTable struct {
-	id               int
-	listOrder        int
-	dir              string
-	boardType        int
-	uploadType       int
-	title            string
-	subtitle         string
-	description      string
-	section          int
-	maxFileSize      int
-	maxPages         int
-	defaultStyle     string
-	locked           bool
-	createdOn        time.Time
-	anonymous        string
-	forcedAnon       bool
-	maxAge           int
-	autosageAfter    int
-	noImagesAfter    int
-	maxMessageLength int
-	embedsAllowed    bool
-	redirectToThread bool
-	requireFile      bool
-	enableCatalog    bool
+type migrationBoard struct {
+	oldID int
+	gcsql.Board
 }
 
 func (m *Pre2021Migrator) migrateBoardsInPlace() error {
@@ -47,7 +25,7 @@ func (m *Pre2021Migrator) createSectionIfNotExist(sectionCheck *gcsql.Section) (
 	section, err := gcsql.GetSectionFromName(sectionCheck.Name)
 	if errors.Is(err, gcsql.ErrSectionDoesNotExist) {
 		// section doesn't exist, create it
-		section, err = gcsql.NewSection(sectionCheck.Name, section.Abbreviation, true, 0)
+		section, err = gcsql.NewSection(sectionCheck.Name, sectionCheck.Abbreviation, true, 0)
 		if err != nil {
 			return 0, err
 		}
@@ -92,11 +70,8 @@ func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
 }
 
 func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
-	if m.oldBoards == nil {
-		m.oldBoards = make(map[string]boardTable)
-	}
-	if m.newBoards == nil {
-		m.newBoards = make(map[string]boardTable)
+	if m.boards == nil {
+		m.boards = make(map[string]migrationBoard)
 	}
 	errEv := common.LogError()
 	defer errEv.Discard()
@@ -119,57 +94,40 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var board boardTable
+		var board migrationBoard
+		var maxPages int
 		if err = rows.Scan(
-			&board.id, &board.listOrder, &board.dir, &board.boardType, &board.uploadType, &board.title, &board.subtitle,
-			&board.description, &board.section, &board.maxFileSize, &board.maxPages, &board.defaultStyle, &board.locked,
-			&board.createdOn, &board.anonymous, &board.forcedAnon, &board.maxAge, &board.autosageAfter, &board.noImagesAfter,
-			&board.maxMessageLength, &board.embedsAllowed, &board.redirectToThread, &board.requireFile, &board.enableCatalog,
+			&board.ID, &board.NavbarPosition, &board.Dir, &board.Title, &board.Subtitle,
+			&board.Description, &board.SectionID, &board.MaxFilesize, &maxPages, &board.DefaultStyle, &board.Locked,
+			&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
+			&board.MaxMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
 		); err != nil {
 			errEv.Err(err).Caller().Msg("Failed to scan row into board")
 			return err
 		}
+		board.MaxThreads = maxPages * config.GetBoardConfig(board.Dir).ThreadsPerPage
 		found := false
 		for _, newBoard := range gcsql.AllBoards {
-			if _, ok := m.oldBoards[board.dir]; !ok {
-				m.oldBoards[board.dir] = board
+			if _, ok := m.boards[board.Dir]; !ok {
+				m.boards[board.Dir] = board
 			}
-
-			if newBoard.Dir == board.dir {
-				common.LogWarning().Str("board", board.dir).Msg("Board already exists in new db, moving on")
+			if newBoard.Dir == board.Dir {
+				common.LogWarning().Str("board", board.Dir).Msg("Board already exists in new db, moving on")
 				found = true
 				break
 			}
 		}
+		m.boards[board.Dir] = board
 		if found {
 			continue
 		}
 		// create new board using the board data from the old db
 		// omitting things like ID and creation date since we don't really care
-		if err = gcsql.CreateBoard(&gcsql.Board{
-			Dir:              board.dir,
-			Title:            board.title,
-			Subtitle:         board.subtitle,
-			Description:      board.description,
-			SectionID:        board.section,
-			MaxFilesize:      board.maxFileSize,
-			DefaultStyle:     board.defaultStyle,
-			Locked:           board.locked,
-			AnonymousName:    board.anonymous,
-			ForceAnonymous:   board.forcedAnon,
-			AutosageAfter:    board.autosageAfter,
-			NoImagesAfter:    board.noImagesAfter,
-			MaxMessageLength: board.maxMessageLength,
-			AllowEmbeds:      board.embedsAllowed,
-			RedirectToThread: board.redirectToThread,
-			RequireFile:      board.requireFile,
-			EnableCatalog:    board.enableCatalog,
-		}, false); err != nil {
-			errEv.Err(err).Caller().Str("board", board.dir).Msg("Failed to create board")
+		if err = gcsql.CreateBoard(&board.Board, false); err != nil {
+			errEv.Err(err).Caller().Str("board", board.Dir).Msg("Failed to create board")
 			return err
 		}
-		m.newBoards[board.dir] = board
-		common.LogInfo().Str("board", board.dir).Msg("Board successfully migrated")
+		common.LogInfo().Str("board", board.Dir).Msg("Board successfully created")
 	}
 	return nil
 }

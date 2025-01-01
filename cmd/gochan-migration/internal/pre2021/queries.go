@@ -3,8 +3,8 @@ package pre2021
 const (
 	sectionsQuery = `SELECT id, list_order, hidden, name, abbreviation FROM DBPREFIXsections`
 
-	boardsQuery = `SELECT id, list_order, dir, type, upload_type, title, subtitle, description, section, max_file_size, max_pages,
-default_style, locked, created_on, anonymous, forced_anon, max_age, autosage_after, no_images_after, max_message_length, embeds_allowed,
+	boardsQuery = `SELECT id, list_order, dir, title, subtitle, description, section, max_file_size, max_pages,
+default_style, locked, created_on, anonymous, forced_anon, autosage_after, no_images_after, max_message_length, embeds_allowed,
 redirect_to_thread, require_file, enable_catalog
 FROM DBPREFIXboards`
 

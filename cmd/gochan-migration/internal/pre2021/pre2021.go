@@ -24,9 +24,8 @@ type Pre2021Migrator struct {
 
 	migrationSectionID int
 	posts              []postTable
-	oldBoards          map[string]boardTable
-	newBoards          map[string]boardTable
-	threads            map[int]int // old thread id (previously stored in posts as the id) to new thread id (threads.id)
+	boards             map[string]migrationBoard
+	threads            map[int]gcsql.Thread // old thread id (previously stored in posts as the id) to new thread id (threads.id)
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
