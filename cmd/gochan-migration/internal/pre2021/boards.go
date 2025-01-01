@@ -2,10 +2,13 @@ package pre2021
 
 import (
 	"errors"
+	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/rs/zerolog"
 )
 
 type boardTable struct {
@@ -44,7 +47,7 @@ func (m *Pre2021Migrator) createSectionIfNotExist(sectionCheck *gcsql.Section) (
 	section, err := gcsql.GetSectionFromName(sectionCheck.Name)
 	if errors.Is(err, gcsql.ErrSectionDoesNotExist) {
 		// section doesn't exist, create it
-		section, err = gcsql.NewSection(sectionCheck.Name, section.Abbreviation, section.Hidden, section.Position)
+		section, err = gcsql.NewSection(sectionCheck.Name, section.Abbreviation, true, 0)
 		if err != nil {
 			return 0, err
 		}
@@ -174,7 +177,16 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 func (m *Pre2021Migrator) MigrateBoards() error {
 	defer func() {
 		if r := recover(); r != nil {
-			common.LogFatal().Interface("recover", r).Msg("Recovered from panic in MigrateBoards")
+			stackTrace := debug.Stack()
+			traceLines := strings.Split(string(stackTrace), "\n")
+			zlArr := zerolog.Arr()
+			for _, line := range traceLines {
+				zlArr.Str(line)
+			}
+			common.LogFatal().Caller().
+				Interface("recover", r).
+				Array("stackTrace", zlArr).
+				Msg("Recovered from panic in MigrateBoards")
 		}
 	}()
 	if m.IsMigratingInPlace() {

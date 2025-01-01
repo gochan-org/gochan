@@ -2,8 +2,10 @@
 package pre2021
 
 import (
+	"context"
 	"encoding/json"
 	"os"
+	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -24,6 +26,7 @@ type Pre2021Migrator struct {
 	posts              []postTable
 	oldBoards          map[string]boardTable
 	newBoards          map[string]boardTable
+	threads            map[int]int // old thread id (previously stored in posts as the id) to new thread id (threads.id)
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
@@ -36,48 +39,34 @@ func (m *Pre2021Migrator) readConfig() error {
 	if err != nil {
 		return err
 	}
+	m.config.SQLConfig = config.GetSQLConfig()
 	return json.Unmarshal(ba, &m.config)
 }
 
 func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 	m.options = options
 	var err error
+	m.config.SQLConfig = config.GetSQLConfig()
 	if err = m.readConfig(); err != nil {
 		return err
 	}
-	m.config.DBTimeoutSeconds = config.DefaultSQLTimeout
-	m.config.DBMaxOpenConnections = config.DefaultSQLMaxConns
-	m.config.DBMaxIdleConnections = config.DefaultSQLMaxConns
-	m.config.DBConnMaxLifetimeMin = config.DefaultSQLConnMaxLifetimeMin
 
 	m.db, err = gcsql.Open(&m.config.SQLConfig)
 	return err
 }
 
 func (m *Pre2021Migrator) IsMigrated() (bool, error) {
-	var migrated bool
-	var err error
-	var query string
-	switch m.config.DBtype {
-	case "mysql":
-		fallthrough
-	case "postgres":
-		query = `SELECT COUNT(*) > 0 FROM INFORMATION_SCHEMA.TABLES
-		WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?`
-	default:
-		return false, gcsql.ErrUnsupportedDB
-	}
-	if err = m.db.QueryRowSQL(query,
-		[]interface{}{m.config.DBprefix + "database_version", m.config.DBname},
-		[]interface{}{&migrated}); err != nil {
-		return migrated, err
-	}
-	return migrated, err
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.config.DBTimeoutSeconds)*time.Second)
+	defer cancel()
+	return common.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &m.config.SQLConfig)
 }
 
 func (m *Pre2021Migrator) MigrateDB() (bool, error) {
+	errEv := common.LogError()
+	defer errEv.Discard()
 	migrated, err := m.IsMigrated()
 	if err != nil {
+		errEv.Caller().Err(err).Msg("Error checking if database is migrated")
 		return false, err
 	}
 	if migrated {
@@ -87,6 +76,7 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	}
 
 	if err := m.MigrateBoards(); err != nil {
+		errEv.Caller().Err(err).Msg("Failed to migrate boards")
 		return false, err
 	}
 	common.LogInfo().Msg("Migrated boards")
