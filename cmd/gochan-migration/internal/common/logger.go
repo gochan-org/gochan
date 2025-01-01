@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"testing"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -20,6 +21,16 @@ var (
 	migrationLogFile *os.File
 	migrationLog     zerolog.Logger
 )
+
+func InitTestMigrationLog(t *testing.T) (err error) {
+	dir := os.TempDir()
+	migrationLogFile, err = os.CreateTemp(dir, "migration-test")
+	if err != nil {
+		return err
+	}
+	migrationLog = zerolog.New(zerolog.NewTestWriter(t))
+	return nil
+}
 
 func InitMigrationLog() (err error) {
 	if migrationLogFile != nil {
