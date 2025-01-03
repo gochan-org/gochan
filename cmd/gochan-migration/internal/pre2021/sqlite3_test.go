@@ -1,6 +1,8 @@
 package pre2021
 
 import (
+	"io"
+	"os"
 	"path"
 	"testing"
 
@@ -20,6 +22,27 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		t.FailNow()
 	}
 	dbPath := path.Join(dir, sqlite3DBPath)
+	if migrateInPlace {
+		oldDbFile, err := os.Open(dbPath)
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+		defer oldDbFile.Close()
+
+		newDbFile, err := os.OpenFile(path.Join(outDir, "gochan-pre2021.sqlite3db"), os.O_CREATE|os.O_RDWR, 0644)
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+		defer newDbFile.Close()
+
+		_, err = io.Copy(newDbFile, oldDbFile)
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+		assert.NoError(t, oldDbFile.Close())
+		assert.NoError(t, newDbFile.Close())
+		dbPath = path.Join(outDir, "gochan-pre2021.sqlite3db")
+	}
 
 	oldSQLConfig := config.SQLConfig{
 		DBtype:           "sqlite3",
@@ -59,6 +82,9 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 func TestMigrateBoardsToNewDB(t *testing.T) {
 	outDir := t.TempDir()
 	migrator := setupMigrationTest(t, outDir, false)
+	if !assert.False(t, migrator.IsMigratingInPlace(), "This test should not be migrating in place") {
+		t.FailNow()
+	}
 	assert.NoError(t, gcsql.ResetBoardSectionArrays())
 
 	numBoards := len(gcsql.AllBoards)
@@ -67,7 +93,9 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 	assert.Equal(t, 1, numBoards, "Expected to have 1 board pre-migration (/test/ is automatically created during provisioning)")
 	assert.Equal(t, 1, numSections, "Expected to have 1 section pre-migration (Main is automatically created during provisioning)")
 
-	assert.NoError(t, migrator.MigrateBoards())
+	if !assert.NoError(t, migrator.MigrateBoards()) {
+		t.FailNow()
+	}
 
 	migratedBoards, err := gcsql.GetAllBoards(false)
 	if !assert.NoError(t, err) {
