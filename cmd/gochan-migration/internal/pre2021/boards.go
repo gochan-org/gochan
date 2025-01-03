@@ -12,6 +12,7 @@ import (
 
 type migrationBoard struct {
 	oldSectionID int
+	oldID        int
 	gcsql.Board
 }
 
@@ -71,8 +72,20 @@ func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
 		var found bool
 		for s, newSection := range m.sections {
 			if section.Name == newSection.Name {
+				// section already exists, update values
 				m.sections[s].oldID = section.ID
-
+				m.sections[s].Abbreviation = section.Abbreviation
+				m.sections[s].Hidden = section.Hidden
+				m.sections[s].Position = section.Position
+				common.LogInfo().
+					Int("sectionID", section.ID).
+					Int("oldSectionID", m.sections[s].oldID).
+					Str("sectionName", section.Name).
+					Str("sectionAbbreviation", section.Abbreviation).
+					Msg("Section already exists in new db, updating values")
+				if err = m.sections[s].UpdateValues(); err != nil {
+					errEv.Err(err).Caller().Str("sectionName", section.Name).Msg("Failed to update pre-existing section values")
+				}
 				found = true
 				break
 			}
@@ -96,9 +109,7 @@ func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
 }
 
 func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
-	if m.boards == nil {
-		m.boards = make(map[string]migrationBoard)
-	}
+	m.boards = nil
 	errEv := common.LogError()
 	defer errEv.Discard()
 
@@ -110,8 +121,20 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 	}
 
 	if err = m.migrateSectionsToNewDB(); err != nil {
-		// error already logged
+		// error should already be logged by migrateSectionsToNewDB
 		return err
+	}
+
+	allBoards, err := gcsql.GetAllBoards(false)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed to get all boards from new db")
+		return err
+	}
+	for _, board := range allBoards {
+		m.boards = append(m.boards, migrationBoard{
+			oldSectionID: -1,
+			Board:        board,
+		})
 	}
 
 	// get boards from old db
@@ -126,44 +149,49 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 		var board migrationBoard
 		var maxPages int
 		if err = rows.Scan(
-			&board.ID, &board.NavbarPosition, &board.Dir, &board.Title, &board.Subtitle,
-			&board.Description, &board.SectionID, &board.MaxFilesize, &maxPages, &board.DefaultStyle, &board.Locked,
-			&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
-			&board.MaxMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
+			&board.ID, &board.NavbarPosition, &board.Dir, &board.Title, &board.Subtitle, &board.Description,
+			&board.SectionID, &board.MaxFilesize, &maxPages, &board.DefaultStyle, &board.Locked, &board.CreatedAt,
+			&board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
+			&board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
 		); err != nil {
 			errEv.Err(err).Caller().Msg("Failed to scan row into board")
 			return err
 		}
 		board.MaxThreads = maxPages * config.GetBoardConfig(board.Dir).ThreadsPerPage
 		found := false
-		for _, newBoard := range gcsql.AllBoards {
-			if _, ok := m.boards[board.Dir]; !ok {
-				m.boards[board.Dir] = board
-			}
+
+		for b, newBoard := range m.boards {
 			if newBoard.Dir == board.Dir {
-				common.LogWarning().Str("board", board.Dir).Msg("Board already exists in new db, moving on")
+				m.boards[b].oldID = board.ID
+				m.boards[b].oldSectionID = board.SectionID
+				common.LogInfo().Str("board", board.Dir).Msg("Board already exists in new db, updating values")
+				// don't update other values in the array since they don't affect migrating threads or posts
+				if _, err = gcsql.ExecSQL(`UPDATE DBPREFIXboards
+					SET uri = ?, navbar_position = ?, title = ?, subtitle = ?, description = ?,
+					max_file_size = ?, max_threads = ?, default_style = ?, locked = ?,
+					anonymous_name = ?, force_anonymous = ?, autosage_after = ?, no_images_after = ?, max_message_length = ?,
+					min_message_length = ?, allow_embeds = ?, redirect_to_thread = ?, require_file = ?, enable_catalog = ?
+					WHERE id = ?`,
+					board.Dir, board.NavbarPosition, board.Title, board.Subtitle, board.Description,
+					board.MaxFilesize, board.MaxThreads, board.DefaultStyle, board.Locked,
+					board.AnonymousName, board.ForceAnonymous, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength,
+					board.MinMessageLength, board.AllowEmbeds, board.RedirectToThread, board.RequireFile, board.EnableCatalog,
+					newBoard.ID); err != nil {
+					errEv.Err(err).Caller().Str("board", board.Dir).Msg("Failed to update board values")
+					return err
+				}
 				found = true
 				break
 			}
 		}
-		if !found {
-			for _, section := range m.sections {
-				if section.oldID == board.oldSectionID {
-					board.SectionID = section.ID
-					break
-				}
-			}
-		}
 
-		m.boards[board.Dir] = board
 		if found {
-			// TODO: update board title, subtitle, section etc. in new db
 			continue
 		}
 
 		// create new board using the board data from the old db
 		// omitting things like ID and creation date since we don't really care
-		if err = gcsql.CreateBoard(&board.Board, false); err != nil {
+		if err = gcsql.CreateBoard(&board.Board, board.IsHidden(false)); err != nil {
 			errEv.Err(err).Caller().Str("board", board.Dir).Msg("Failed to create board")
 			return err
 		}
