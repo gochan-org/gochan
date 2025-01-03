@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	sqlite3DBPath = "tools/gochan-pre2021.sqlite3db" // relative to gochan project root
+	sqlite3DBDir = "tools/" // relative to gochan project root
 )
 
 func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre2021Migrator {
@@ -21,15 +21,19 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	dbPath := path.Join(dir, sqlite3DBPath)
+	dbName := "gochan-pre2021.sqlite3db"
+	dbHost := path.Join(dir, sqlite3DBDir, dbName)
+	migratedDBName := "gochan-migrated.sqlite3db"
+	migratedDBHost := path.Join(outDir, migratedDBName)
+
 	if migrateInPlace {
-		oldDbFile, err := os.Open(dbPath)
+		oldDbFile, err := os.Open(dbHost)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
 		defer oldDbFile.Close()
 
-		newDbFile, err := os.OpenFile(path.Join(outDir, "gochan-pre2021.sqlite3db"), os.O_CREATE|os.O_RDWR, 0644)
+		newDbFile, err := os.OpenFile(migratedDBHost, os.O_CREATE|os.O_WRONLY, 0644)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}
@@ -41,13 +45,14 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		}
 		assert.NoError(t, oldDbFile.Close())
 		assert.NoError(t, newDbFile.Close())
-		dbPath = path.Join(outDir, "gochan-pre2021.sqlite3db")
+		migratedDBHost = dbHost
+		migratedDBName = dbName
 	}
 
 	oldSQLConfig := config.SQLConfig{
 		DBtype:           "sqlite3",
-		DBname:           path.Base(dbPath),
-		DBhost:           dbPath,
+		DBname:           dbName,
+		DBhost:           dbHost,
 		DBprefix:         "gc_",
 		DBusername:       "gochan",
 		DBpassword:       "password",
@@ -63,17 +68,18 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		t.FailNow()
 	}
 	migrator.db = db
-	migratedDBPath := path.Join(outDir, "gochan-migrated.sqlite3db")
 
-	config.SetTestDBConfig("sqlite3", migratedDBPath, path.Base(migratedDBPath), "gochan", "password", "gc_")
+	config.SetTestDBConfig("sqlite3", migratedDBHost, migratedDBName, "gochan", "password", "gc_")
 	sqlConfig := config.GetSQLConfig()
 	sqlConfig.DBTimeoutSeconds = 600
 
 	if !assert.NoError(t, gcsql.ConnectToDB(&sqlConfig)) {
 		t.FailNow()
 	}
-	if !assert.NoError(t, gcsql.CheckAndInitializeDatabase("sqlite3", "4")) {
-		t.FailNow()
+	if !migrateInPlace {
+		if !assert.NoError(t, gcsql.CheckAndInitializeDatabase("sqlite3", "4")) {
+			t.FailNow()
+		}
 	}
 
 	return migrator
@@ -134,4 +140,16 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, "Hidden Board", hiddenBoard.Title)
+}
+
+func TestMigrateBoardsInPlace(t *testing.T) {
+	outDir := t.TempDir()
+	migrator := setupMigrationTest(t, outDir, true)
+	if !assert.True(t, migrator.IsMigratingInPlace(), "This test should be migrating in place") {
+		t.FailNow()
+	}
+
+	if !assert.Error(t, migrator.MigrateBoards(), "Not yet implemented") {
+		t.FailNow()
+	}
 }

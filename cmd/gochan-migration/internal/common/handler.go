@@ -25,10 +25,14 @@ func (me *MigrationError) OldChanType() string {
 
 func (me *MigrationError) Error() string {
 	from := me.oldChanType
+	errStr := "unable to migrate"
 	if from != "" {
-		from = " from " + from
+		errStr += " from " + from
 	}
-	return "unable to migrate " + from + ": " + me.errMessage
+	if me.errMessage != "" {
+		errStr += ": " + me.errMessage
+	}
+	return errStr
 }
 
 func NewMigrationError(oldChanType string, errMessage string) *MigrationError {
