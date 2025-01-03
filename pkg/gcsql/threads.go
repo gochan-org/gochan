@@ -19,7 +19,8 @@ var (
 	ErrThreadLocked       = errors.New("thread is locked and cannot be replied to")
 )
 
-func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
+// CreateThread creates a new thread in the database with the given board ID and statuses
+func CreateThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) (threadID int, err error) {
 	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
 	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	var boardIsLocked bool
@@ -32,8 +33,7 @@ func createThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored 
 	if _, err = ExecTxSQL(tx, insertQuery, boardID, locked, stickied, anchored, cyclical); err != nil {
 		return 0, err
 	}
-	QueryRowTxSQL(tx, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID})
-	return threadID, err
+	return threadID, QueryRowTxSQL(tx, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID})
 }
 
 // GetThread returns a a thread object from the database, given its ID

@@ -371,7 +371,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		// thread doesn't exist yet, this is a new post
 		p.IsTopPost = true
 		var threadID int
-		threadID, err = createThread(tx, boardID, locked, stickied, anchored, cyclical)
+		threadID, err = CreateThread(tx, boardID, locked, stickied, anchored, cyclical)
 		if err != nil {
 			return err
 		}
