@@ -40,48 +40,59 @@ func (m *Pre2021Migrator) migrateBoardsInPlace() error {
 func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
 	// creates sections in the new db if they don't exist, and also creates a migration section that
 	// boards will be set to, to be moved to the correct section by the admin after migration
+	errEv := common.LogError()
+	defer errEv.Discard()
+	// populate m.sections with all sections from the new db
+	currentAllSections, err := gcsql.GetAllSections(false)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed to get all sections from new db")
+		return err
+	}
+
+	for _, section := range currentAllSections {
+		m.sections = append(m.sections, migrationSection{
+			oldID:   -1,
+			Section: section,
+		})
+	}
+
 	rows, err := m.db.QuerySQL(sectionsQuery)
 	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed to query old database sections")
 		return err
 	}
 	defer rows.Close()
-	errEv := common.LogError()
-	defer errEv.Discard()
 	for rows.Next() {
 		var section gcsql.Section
-		if err = rows.Scan(
-			&section.ID,
-			&section.Position,
-			&section.Hidden,
-			&section.Name,
-			&section.Abbreviation,
-		); err != nil {
+		if err = rows.Scan(&section.ID, &section.Position, &section.Hidden, &section.Name, &section.Abbreviation); err != nil {
+			errEv.Err(err).Caller().Msg("Failed to scan row into section")
 			return err
 		}
-		m.sections = append(m.sections, migrationSection{
-			oldID:   section.ID,
-			Section: section,
-		})
+		var found bool
+		for s, newSection := range m.sections {
+			if section.Name == newSection.Name {
+				m.sections[s].oldID = section.ID
 
-		for _, newSection := range gcsql.AllSections {
-			if newSection.Name == section.Name || newSection.Abbreviation == section.Abbreviation {
-				common.LogWarning().Str("section", section.Name).Msg("Section already exists in new db, moving on")
-				m.sections[len(m.sections)-1].ID = newSection.ID
+				found = true
 				break
 			}
 		}
-		if _, err = gcsql.NewSection(section.Name, section.Abbreviation, false, section.Position); err != nil {
-			errEv.Err(err).Caller().
-				Str("sectionName", section.Name).
-				Msg("Failed to create section")
-			return err
+		if !found {
+			migratedSection, err := gcsql.NewSection(section.Name, section.Abbreviation, section.Hidden, section.Position)
+			if err != nil {
+				errEv.Err(err).Caller().Str("sectionName", section.Name).Msg("Failed to migrate section")
+				return err
+			}
+			m.sections = append(m.sections, migrationSection{
+				Section: *migratedSection,
+			})
 		}
 	}
 	if err = rows.Close(); err != nil {
 		errEv.Caller().Msg("Failed to close section rows")
 		return err
 	}
-	return err
+	return nil
 }
 
 func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
@@ -99,7 +110,7 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 	}
 
 	if err = m.migrateSectionsToNewDB(); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to migrate sections")
+		// error already logged
 		return err
 	}
 
@@ -110,6 +121,7 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 		return err
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var board migrationBoard
 		var maxPages int
@@ -134,9 +146,18 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 				break
 			}
 		}
+		if !found {
+			for _, section := range m.sections {
+				if section.oldID == board.oldSectionID {
+					board.SectionID = section.ID
+					break
+				}
+			}
+		}
 
 		m.boards[board.Dir] = board
 		if found {
+			// TODO: update board title, subtitle, section etc. in new db
 			continue
 		}
 
@@ -147,6 +168,10 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 			return err
 		}
 		common.LogInfo().Str("board", board.Dir).Msg("Board successfully created")
+	}
+	if err = gcsql.ResetBoardSectionArrays(); err != nil {
+		errEv.Err(err).Caller().Msg("Failed to reset board and section arrays")
+		return err
 	}
 	return nil
 }

@@ -14,7 +14,7 @@ const (
 	sqlite3DBPath = "tools/gochan-pre2021.sqlite3db" // relative to gochan project root
 )
 
-func setupMigrationTest(t *testing.T) *Pre2021Migrator {
+func setupMigrationTest(t *testing.T, outDir string) *Pre2021Migrator {
 	dir, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		t.FailNow()
@@ -40,9 +40,10 @@ func setupMigrationTest(t *testing.T) *Pre2021Migrator {
 		t.FailNow()
 	}
 	migrator.db = db
+	migratedDBPath := path.Join(outDir, "gochan-migrated.sqlite3db")
+	t.Log("Migrated DB path:", migratedDBPath)
 
-	outDir := t.TempDir()
-	config.SetTestDBConfig("sqlite3", path.Join(outDir, "gochan-migrated.sqlite3db"), "gochan-migrated.sqlite3db", "gochan", "password", "gc_")
+	config.SetTestDBConfig("sqlite3", migratedDBPath, path.Base(migratedDBPath), "gochan", "password", "gc_")
 	sqlConfig := config.GetSQLConfig()
 	sqlConfig.DBTimeoutSeconds = 600
 
@@ -56,26 +57,45 @@ func setupMigrationTest(t *testing.T) *Pre2021Migrator {
 	return migrator
 }
 
-func TestMigrateToNewDB(t *testing.T) {
-	migrator := setupMigrationTest(t)
+func TestMigrateBoardsToNewDB(t *testing.T) {
+	outDir := t.TempDir()
+	migrator := setupMigrationTest(t, outDir)
+	assert.NoError(t, gcsql.ResetBoardSectionArrays())
+
+	numBoards := len(gcsql.AllBoards)
+	numSections := len(gcsql.AllSections)
+
+	assert.Equal(t, 1, numBoards, "Expected to have 1 board pre-migration (/test/ is automatically created during provisioning)")
+	assert.Equal(t, 1, numSections, "Expected to have 1 section pre-migration (Main is automatically created during provisioning)")
 
 	assert.NoError(t, migrator.migrateBoardsToNewDB())
 
-	newBoards, err := gcsql.GetAllBoards(false)
+	migratedBoards, err := gcsql.GetAllBoards(false)
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
-	assert.GreaterOrEqual(t, len(newBoards), 2, "Expected new boards list to have at least 2 boards") // old DB has 2 boards, /test/ and /hidden/
+	migratedSections, err := gcsql.GetAllSections(false)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	assert.Equal(t, len(migratedBoards), 2, "Expected updated boards list to have two boards")
+	assert.Equal(t, len(migratedSections), 2, "Expected updated sections list to have two sections")
 
 	hiddenBoard, err := gcsql.GetBoardFromDir("hidden")
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
 	t.Logf("Hidden board section ID: %d", hiddenBoard.SectionID)
+
+	t.Log("Number of sections:", len(migratedSections))
+	for _, section := range migratedSections {
+		t.Logf("Section ID %d: %#v", section.ID, section)
+	}
 	hiddenSection, err := gcsql.GetSectionFromID(hiddenBoard.SectionID)
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
-	assert.Equal(t, "Hidden", hiddenSection.Name, "Expected Hidden section to have name 'Hidden'")
+	assert.Equal(t, "Hidden section", hiddenSection.Name, "Expected /hidden/ board's section to have name 'Hidden'")
 	assert.True(t, hiddenSection.Hidden, "Expected Hidden section to be hidden")
 }
