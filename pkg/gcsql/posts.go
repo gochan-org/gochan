@@ -347,7 +347,7 @@ func (p *Post) Delete() error {
 	return err
 }
 
-func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
+func (p *Post) InsertWithContext(ctx context.Context, tx *sql.Tx, bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
 	if p.ID > 0 {
 		// already inserted
 		return ErrorPostAlreadySent
@@ -358,15 +358,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	tx, err := BeginContextTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
+	var err error
 	if p.ThreadID == 0 {
 		// thread doesn't exist yet, this is a new post
 		p.IsTopPost = true
@@ -401,6 +393,23 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 			return err
 		}
 	}
+	return nil
+}
+
+func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = p.InsertWithContext(ctx, tx, bumpThread, boardID, locked, stickied, anchored, cyclical); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 

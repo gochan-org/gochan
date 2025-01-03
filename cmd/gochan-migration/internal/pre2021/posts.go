@@ -1,6 +1,7 @@
 package pre2021
 
 import (
+	"context"
 	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
@@ -9,16 +10,11 @@ import (
 
 type postTable struct {
 	gcsql.Post
-	// id               int
-	// boardID          int
-	// parentID         int
-	// name             string
-	// tripcode         string
-	// email            string
-	// subject          string
-	// message          string
-	// messageRaw       string
-	// password         string
+	autosage bool
+	bumped   time.Time
+	stickied bool
+	locked   bool
+
 	filename         string
 	filenameOriginal string
 	fileChecksum     string
@@ -27,14 +23,7 @@ type postTable struct {
 	imageH           int
 	thumbW           int
 	thumbH           int
-	// ip               string
-	// tag              string
-	// timestamp        time.Time
-	autosage bool
-	bumped   time.Time
-	stickied bool
-	locked   bool
-	// reviewed         bool
+
 	oldID       int
 	boardID     int
 	oldBoardID  int
@@ -94,10 +83,60 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 			continue
 		}
 
-		if thread.ThreadID, err = gcsql.CreateThread(tx, thread.boardID, thread.locked, thread.stickied, thread.autosage, false); err != nil {
+		// create the thread as not locked so migration replies can be inserted. It will be locked after they are all inserted
+		if thread.ThreadID, err = gcsql.CreateThread(tx, thread.boardID, false, thread.stickied, thread.autosage, false); err != nil {
 			errEv.Err(err).Caller().
 				Int("boardID", thread.boardID).
 				Msg("Failed to create thread")
+		}
+
+		// insert thread top post
+		if err = thread.InsertWithContext(context.Background(), tx, true, thread.boardID, false, thread.stickied, thread.autosage, false); err != nil {
+			errEv.Err(err).Caller().
+				Int("boardID", thread.boardID).
+				Int("threadID", thread.ThreadID).
+				Msg("Failed to insert thread OP")
+		}
+
+		// get and insert replies
+		replyRows, err := m.db.QuerySQL(postsQuery+" AND parentid = ?", thread.oldID)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Int("parentID", thread.oldID).
+				Msg("Failed to get reply rows")
+			return err
+		}
+		defer replyRows.Close()
+
+		for replyRows.Next() {
+			var reply postTable
+			if err = replyRows.Scan(
+				&reply.oldID, &reply.oldBoardID, &reply.oldParentID, &reply.Name, &reply.Tripcode, &reply.Email,
+				&reply.Subject, &reply.Message, &reply.MessageRaw, &reply.Password, &reply.filename,
+				&reply.filenameOriginal, &reply.fileChecksum, &reply.filesize, &reply.imageW, &reply.imageH,
+				&reply.thumbW, &reply.thumbH, &reply.IP, &reply.CreatedOn, &reply.autosage,
+				&reply.bumped, &reply.stickied, &reply.locked,
+			); err != nil {
+				errEv.Err(err).Caller().
+					Int("parentID", thread.oldID).
+					Msg("Failed to scan reply")
+				return err
+			}
+			reply.ThreadID = thread.ThreadID
+			if err = reply.InsertWithContext(context.Background(), tx, true, reply.boardID, false, false, false, false); err != nil {
+				errEv.Err(err).Caller().
+					Int("parentID", thread.oldID).
+					Msg("Failed to insert reply post")
+				return err
+			}
+		}
+
+		if thread.locked {
+			if _, err = gcsql.ExecTxSQL(tx, "UPDATE DBPREFIXthreads SET locked = TRUE WHERE id = ?", thread.ThreadID); err != nil {
+				errEv.Err(err).Caller().
+					Int("threadID", thread.ThreadID).
+					Msg("Unable to re-lock migrated thread")
+			}
 		}
 	}
 	if len(threadIDsWithInvalidBoards) > 0 {

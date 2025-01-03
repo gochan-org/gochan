@@ -33,4 +33,10 @@ func TestMigratePostsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, 2, numMigratedThreads, "Expected to have three migrated threads")
+
+	var locked bool
+	if !assert.NoError(t, gcsql.QueryRowSQL("SELECT locked FROM DBPREFIXthreads WHERE id = 1", nil, []any{&locked})) {
+		t.FailNow()
+	}
+	assert.True(t, locked, "Expected thread ID 1 to be locked")
 }
