@@ -133,6 +133,7 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 	for _, board := range allBoards {
 		m.boards = append(m.boards, migrationBoard{
 			oldSectionID: -1,
+			oldID:        -1,
 			Board:        board,
 		})
 	}
@@ -149,7 +150,7 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 		var board migrationBoard
 		var maxPages int
 		if err = rows.Scan(
-			&board.ID, &board.NavbarPosition, &board.Dir, &board.Title, &board.Subtitle, &board.Description,
+			&board.oldID, &board.NavbarPosition, &board.Dir, &board.Title, &board.Subtitle, &board.Description,
 			&board.SectionID, &board.MaxFilesize, &maxPages, &board.DefaultStyle, &board.Locked, &board.CreatedAt,
 			&board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
 			&board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
@@ -162,9 +163,13 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 
 		for b, newBoard := range m.boards {
 			if newBoard.Dir == board.Dir {
-				m.boards[b].oldID = board.ID
+				m.boards[b].oldID = board.oldID
 				m.boards[b].oldSectionID = board.SectionID
-				common.LogInfo().Str("board", board.Dir).Msg("Board already exists in new db, updating values")
+				common.LogInfo().
+					Str("board", board.Dir).
+					Int("oldBoardID", board.ID).
+					Int("migratedBoardID", newBoard.ID).
+					Msg("Board already exists in new db, updating values")
 				// don't update other values in the array since they don't affect migrating threads or posts
 				if _, err = gcsql.ExecSQL(`UPDATE DBPREFIXboards
 					SET uri = ?, navbar_position = ?, title = ?, subtitle = ?, description = ?,
@@ -195,7 +200,11 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 			errEv.Err(err).Caller().Str("board", board.Dir).Msg("Failed to create board")
 			return err
 		}
-		common.LogInfo().Str("board", board.Dir).Msg("Board successfully created")
+		m.boards = append(m.boards, board)
+		common.LogInfo().
+			Str("dir", board.Dir).
+			Int("boardID", board.ID).
+			Msg("Board successfully created")
 	}
 	if err = gcsql.ResetBoardSectionArrays(); err != nil {
 		errEv.Err(err).Caller().Msg("Failed to reset board and section arrays")

@@ -77,7 +77,7 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 		errEv.Caller().Err(err).Msg("Failed to migrate boards")
 		return false, err
 	}
-	common.LogInfo().Msg("Migrated boards")
+	common.LogInfo().Msg("Migrated boards successfully")
 	// if err = m.MigratePosts(); err != nil {
 	// 	return false, err
 	// }

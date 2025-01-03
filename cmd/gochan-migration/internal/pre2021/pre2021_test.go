@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
@@ -21,6 +22,10 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+	if !assert.NoError(t, common.InitTestMigrationLog(t)) {
+		t.FailNow()
+	}
+
 	dbName := "gochan-pre2021.sqlite3db"
 	dbHost := path.Join(dir, sqlite3DBDir, dbName)
 	migratedDBName := "gochan-migrated.sqlite3db"
