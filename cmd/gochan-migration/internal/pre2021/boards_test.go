@@ -34,7 +34,7 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 
-	assert.Equal(t, len(migratedBoards), 2, "Expected updated boards list to have two boards")
+	assert.Equal(t, len(migratedBoards), 3, "Expected updated boards list to have three boards")
 	assert.Equal(t, len(migratedSections), 2, "Expected updated sections list to have two sections")
 
 	// Test migrated sections
@@ -49,8 +49,10 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+	assert.Equal(t, 1, testBoard.ID)
 	assert.Equal(t, "Testing Board", testBoard.Title)
 	assert.Equal(t, "Board for testing pre-2021 migration", testBoard.Subtitle)
+	assert.Equal(t, "Board for testing pre-2021 migration description", testBoard.Description)
 	testBoardSection, err := gcsql.GetSectionFromID(testBoard.SectionID)
 	if !assert.NoError(t, err) {
 		t.FailNow()

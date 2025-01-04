@@ -39,4 +39,9 @@ func TestMigratePostsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	assert.True(t, locked, "Expected thread ID 1 to be locked")
+
+	// make sure deleted posts and threads weren't migrated
+	var numDeleted int
+	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXposts WHERE message_raw LIKE '%deleted%' OR is_deleted", nil, []any{&numDeleted}))
+	assert.Zero(t, numDeleted, "Expected no deleted threads to be migrated")
 }
