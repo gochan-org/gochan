@@ -1,6 +1,7 @@
 package pre2021
 
 import (
+	"database/sql"
 	"errors"
 	"net"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/rs/zerolog"
 )
 
 type migrationBan struct {
@@ -38,6 +40,27 @@ type migrationBan struct {
 
 func (m *Pre2021Migrator) migrateBansInPlace() error {
 	return common.NewMigrationError("pre2021", "migrateBansInPlace not yet implemented")
+}
+
+func (m *Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int, errEv *zerolog.Event) error {
+	migratedBan := &gcsql.IPBan{
+		BoardID:    boardID,
+		RangeStart: ban.ip,
+		RangeEnd:   ban.ip,
+		IssuedAt:   ban.timestamp,
+	}
+	migratedBan.CanAppeal = ban.canAppeal
+	migratedBan.AppealAt = ban.appealAt
+	migratedBan.ExpiresAt = ban.expires
+	migratedBan.Permanent = ban.permaban
+	migratedBan.Message = ban.reason
+	migratedBan.StaffNote = ban.staffNote
+	if err := gcsql.NewIPBanTx(tx, migratedBan); err != nil {
+		errEv.Err(err).Caller().
+			Int("oldID", ban.oldID).Msg("Failed to migrate ban")
+		return err
+	}
+	return nil
 }
 
 func (m *Pre2021Migrator) migrateBansToNewDB() error {
@@ -86,34 +109,29 @@ func (m *Pre2021Migrator) migrateBansToNewDB() error {
 			}
 		}
 
-		if len(ban.boardIDs) == 0 {
-			if ban.ip != "" {
-				if net.ParseIP(ban.ip) == nil {
-					gcutil.LogWarning().
-						Int("oldID", ban.oldID).
-						Str("ip", ban.ip).
-						Msg("Found ban with invalid IP address, skipping")
-					continue
+		if ban.ip != "" {
+			if net.ParseIP(ban.ip) == nil {
+				gcutil.LogWarning().
+					Int("oldID", ban.oldID).
+					Str("ip", ban.ip).
+					Msg("Found ban with invalid IP address, skipping")
+				continue
+			}
+			if len(ban.boardIDs) == 0 {
+				if err = m.migrateBan(tx, &ban, nil, errEv); err != nil {
+					return err
 				}
-				migratedBan := &gcsql.IPBan{
-					BoardID:    nil,
-					RangeStart: ban.ip,
-					RangeEnd:   ban.ip,
-					IssuedAt:   ban.timestamp,
+			} else {
+				for b := range ban.boardIDs {
+					if err = m.migrateBan(tx, &ban, &ban.boardIDs[b], errEv); err != nil {
+						return err
+					}
 				}
-				migratedBan.CanAppeal = ban.canAppeal
-				migratedBan.AppealAt = ban.appealAt
-				migratedBan.ExpiresAt = ban.expires
-				migratedBan.Permanent = ban.permaban
-				migratedBan.Message = ban.reason
-				migratedBan.StaffNote = ban.staffNote
-				gcsql.NewIPBanTx(tx, migratedBan)
 			}
 		}
-
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (m *Pre2021Migrator) MigrateBans() error {
