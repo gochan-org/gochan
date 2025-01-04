@@ -25,7 +25,7 @@ type Ban interface {
 	Deactivate(int) error
 }
 
-func NewIPBan(ban *IPBan) error {
+func NewIPBanTx(tx *sql.Tx, ban *IPBan) error {
 	const query = `INSERT INTO DBPREFIXip_ban
 	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
 		is_active, range_start, range_end, appeal_at, expires_at,
@@ -34,27 +34,28 @@ func NewIPBan(ban *IPBan) error {
 	if ban.ID > 0 {
 		return ErrBanAlreadyInserted
 	}
+	_, err := ExecTxSQL(tx, query, ban.StaffID, ban.BoardID, ban.BannedForPostID, ban.CopyPostText,
+		ban.IsThreadBan, ban.IsActive, ban.RangeStart, ban.RangeEnd, ban.AppealAt,
+		ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal)
+	if err != nil {
+		return err
+	}
+
+	ban.ID, err = getLatestID("DBPREFIXip_ban", tx)
+	return err
+}
+
+func NewIPBan(ban *IPBan) error {
 	tx, err := BeginTx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	stmt, err := PrepareSQL(query, tx)
-	if err != nil {
+
+	if err = NewIPBanTx(tx, ban); err != nil {
 		return err
 	}
-	defer stmt.Close()
-	if _, err = stmt.Exec(
-		ban.StaffID, ban.BoardID, ban.BannedForPostID, ban.CopyPostText,
-		ban.IsThreadBan, ban.IsActive, ban.RangeStart, ban.RangeEnd, ban.AppealAt,
-		ban.ExpiresAt, ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal,
-	); err != nil {
-		return err
-	}
-	ban.ID, err = getLatestID("DBPREFIXip_ban", tx)
-	if err != nil {
-		return err
-	}
+
 	return tx.Commit()
 }
 

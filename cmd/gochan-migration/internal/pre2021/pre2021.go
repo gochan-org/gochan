@@ -89,9 +89,9 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	// if err = m.MigrateStaff("password"); err != nil {
 	// 	return false, err
 	// }
-	// if err = m.MigrateBans(); err != nil {
-	// 	return false, err
-	// }
+	if err = m.MigrateBans(); err != nil {
+		return false, err
+	}
 	// if err = m.MigrateAnnouncements(); err != nil {
 	// 	return false, err
 	// }
@@ -100,10 +100,6 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 }
 
 func (*Pre2021Migrator) MigrateStaff(_ string) error {
-	return nil
-}
-
-func (*Pre2021Migrator) MigrateBans() error {
 	return nil
 }
 

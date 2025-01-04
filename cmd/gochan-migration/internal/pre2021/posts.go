@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type postTable struct {
+type migrationPost struct {
 	gcsql.Post
 	autosage bool
 	bumped   time.Time
@@ -40,7 +40,7 @@ func (m *Pre2021Migrator) MigratePosts() error {
 	return m.migratePostsToNewDB()
 }
 
-func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *postTable, errEv *zerolog.Event) error {
+func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
 	var err error
 
 	if post.oldParentID == 0 {
@@ -103,7 +103,7 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 	var missingBoardIDs []int
 	var migratedThreads int
 	for rows.Next() {
-		var thread postTable
+		var thread migrationPost
 		if err = rows.Scan(
 			&thread.oldID, &thread.oldBoardID, &thread.oldParentID, &thread.Name, &thread.Tripcode, &thread.Email,
 			&thread.Subject, &thread.Message, &thread.MessageRaw, &thread.Password, &thread.filename,
@@ -143,7 +143,7 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 		defer replyRows.Close()
 
 		for replyRows.Next() {
-			var reply postTable
+			var reply migrationPost
 			if err = replyRows.Scan(
 				&reply.oldID, &reply.oldBoardID, &reply.oldParentID, &reply.Name, &reply.Tripcode, &reply.Email,
 				&reply.Subject, &reply.Message, &reply.MessageRaw, &reply.Password, &reply.filename,
