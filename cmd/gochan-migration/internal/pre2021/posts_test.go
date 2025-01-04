@@ -44,4 +44,8 @@ func TestMigratePostsToNewDB(t *testing.T) {
 	var numDeleted int
 	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXposts WHERE message_raw LIKE '%deleted%' OR is_deleted", nil, []any{&numDeleted}))
 	assert.Zero(t, numDeleted, "Expected no deleted threads to be migrated")
+
+	var numUploadPosts int
+	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXfiles", nil, []any{&numUploadPosts}))
+	assert.Equal(t, 1, numUploadPosts, "Expected to have 1 upload post")
 }

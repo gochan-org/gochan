@@ -22,14 +22,14 @@ type Pre2021Migrator struct {
 	options *common.MigrationOptions
 	config  Pre2021Config
 
-	posts    []postTable
 	boards   []migrationBoard
 	sections []migrationSection
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
 func (m *Pre2021Migrator) IsMigratingInPlace() bool {
-	return m.config.DBname == config.GetSQLConfig().DBname
+	sqlConfig := config.GetSQLConfig()
+	return m.config.DBname == sqlConfig.DBname && m.config.DBhost == sqlConfig.DBhost && m.config.DBprefix == sqlConfig.DBprefix
 }
 
 func (m *Pre2021Migrator) readConfig() error {
@@ -56,7 +56,13 @@ func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 func (m *Pre2021Migrator) IsMigrated() (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.config.DBTimeoutSeconds)*time.Second)
 	defer cancel()
-	return common.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &m.config.SQLConfig)
+	var sqlConfig config.SQLConfig
+	if m.IsMigratingInPlace() {
+		sqlConfig = config.GetSQLConfig()
+	} else {
+		sqlConfig = m.config.SQLConfig
+	}
+	return common.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &sqlConfig)
 }
 
 func (m *Pre2021Migrator) MigrateDB() (bool, error) {
@@ -74,13 +80,12 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	}
 
 	if err := m.MigrateBoards(); err != nil {
-		errEv.Caller().Err(err).Msg("Failed to migrate boards")
 		return false, err
 	}
 	common.LogInfo().Msg("Migrated boards successfully")
-	// if err = m.MigratePosts(); err != nil {
-	// 	return false, err
-	// }
+	if err = m.MigratePosts(); err != nil {
+		return false, err
+	}
 	// if err = m.MigrateStaff("password"); err != nil {
 	// 	return false, err
 	// }

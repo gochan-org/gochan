@@ -49,7 +49,7 @@ func (p *Post) nextFileOrder() (int, error) {
 	return next, err
 }
 
-func (p *Post) AttachFile(upload *Upload) error {
+func (p *Post) AttachFileTx(tx *sql.Tx, upload *Upload) error {
 	if upload == nil {
 		return nil // no upload to attach, so no error
 	}
@@ -69,38 +69,28 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload.ID > 0 {
 		return ErrAlreadyAttached
 	}
-	tx, err := BeginTx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 
-	stmt, err := PrepareSQL(insertSQL, tx)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	if upload.FileOrder < 1 {
-		upload.FileOrder, err = p.nextFileOrder()
-		if err != nil {
-			return err
-		}
-	}
-	upload.PostID = p.ID
-	if _, err = stmt.Exec(
+	if _, err = ExecTxSQL(tx, insertSQL,
 		&upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum, &upload.FileSize,
 		&upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
 	); err != nil {
 		return err
 	}
-	if upload.ID, err = getLatestID("DBPREFIXfiles", tx); err != nil {
+
+	upload.ID, err = getLatestID("DBPREFIXfiles", tx)
+	return err
+}
+
+func (p *Post) AttachFile(upload *Upload) error {
+	tx, err := BeginTx()
+	if err != nil {
 		return err
 	}
-	if err = tx.Commit(); err != nil {
+	defer tx.Rollback()
+	if err = p.AttachFileTx(tx, upload); err != nil {
 		return err
 	}
-	return stmt.Close()
+	return tx.Commit()
 }
 
 // GetUploadFilenameAndBoard returns the filename (or an empty string) and

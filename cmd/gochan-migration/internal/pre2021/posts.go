@@ -2,10 +2,13 @@ package pre2021
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/rs/zerolog"
 )
 
 type postTable struct {
@@ -37,6 +40,47 @@ func (m *Pre2021Migrator) MigratePosts() error {
 	return m.migratePostsToNewDB()
 }
 
+func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *postTable, errEv *zerolog.Event) error {
+	var err error
+
+	if post.oldParentID == 0 {
+		// migrating post was a thread OP, create the row in the threads table
+		if post.ThreadID, err = gcsql.CreateThread(tx, post.boardID, false, post.stickied, post.autosage, false); err != nil {
+			errEv.Err(err).Caller().
+				Int("boardID", post.boardID).
+				Msg("Failed to create thread")
+		}
+	}
+
+	// insert thread top post
+	if err = post.InsertWithContext(context.Background(), tx, true, post.boardID, false, post.stickied, post.autosage, false); err != nil {
+		errEv.Err(err).Caller().
+			Int("boardID", post.boardID).
+			Int("threadID", post.ThreadID).
+			Msg("Failed to insert thread OP")
+	}
+
+	if post.filename != "" {
+		if err = post.AttachFileTx(tx, &gcsql.Upload{
+			PostID:           post.ID,
+			OriginalFilename: post.filenameOriginal,
+			Filename:         post.filename,
+			Checksum:         post.fileChecksum,
+			FileSize:         post.filesize,
+			ThumbnailWidth:   post.thumbW,
+			ThumbnailHeight:  post.thumbH,
+			Width:            post.imageW,
+			Height:           post.imageH,
+		}); err != nil {
+			errEv.Err(err).Caller().
+				Int("oldPostID", post.oldID).
+				Msg("Failed to attach upload to migrated post")
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *Pre2021Migrator) migratePostsToNewDB() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
@@ -57,6 +101,7 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 
 	var threadIDsWithInvalidBoards []int
 	var missingBoardIDs []int
+	var migratedThreads int
 	for rows.Next() {
 		var thread postTable
 		if err = rows.Scan(
@@ -83,19 +128,8 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 			continue
 		}
 
-		// create the thread as not locked so migration replies can be inserted. It will be locked after they are all inserted
-		if thread.ThreadID, err = gcsql.CreateThread(tx, thread.boardID, false, thread.stickied, thread.autosage, false); err != nil {
-			errEv.Err(err).Caller().
-				Int("boardID", thread.boardID).
-				Msg("Failed to create thread")
-		}
-
-		// insert thread top post
-		if err = thread.InsertWithContext(context.Background(), tx, true, thread.boardID, false, thread.stickied, thread.autosage, false); err != nil {
-			errEv.Err(err).Caller().
-				Int("boardID", thread.boardID).
-				Int("threadID", thread.ThreadID).
-				Msg("Failed to insert thread OP")
+		if err = m.migratePost(tx, &thread, errEv); err != nil {
+			return err
 		}
 
 		// get and insert replies
@@ -123,10 +157,7 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 				return err
 			}
 			reply.ThreadID = thread.ThreadID
-			if err = reply.InsertWithContext(context.Background(), tx, true, reply.boardID, false, false, false, false); err != nil {
-				errEv.Err(err).Caller().
-					Int("parentID", thread.oldID).
-					Msg("Failed to insert reply post")
+			if err = m.migratePost(tx, &reply, errEv); err != nil {
 				return err
 			}
 		}
@@ -138,6 +169,7 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 					Msg("Unable to re-lock migrated thread")
 			}
 		}
+		migratedThreads++
 	}
 	if len(threadIDsWithInvalidBoards) > 0 {
 		errEv.Caller().
@@ -149,8 +181,12 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 
 	if err = tx.Commit(); err != nil {
 		errEv.Err(err).Caller().Msg("Failed to commit transaction")
+		return err
 	}
-	return err
+	gcutil.LogInfo().
+		Int("migratedThreads", migratedThreads).
+		Msg("Migrated threads successfully")
+	return nil
 }
 
 func (m *Pre2021Migrator) migratePostsInPlace() error {
