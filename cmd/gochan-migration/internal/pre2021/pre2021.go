@@ -83,12 +83,15 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 		return false, err
 	}
 	common.LogInfo().Msg("Migrated boards successfully")
+
 	if err = m.MigratePosts(); err != nil {
 		return false, err
 	}
-	// if err = m.MigrateStaff("password"); err != nil {
-	// 	return false, err
-	// }
+	common.LogInfo().Msg("Migrated threads, posts, and uploads successfully")
+
+	if err = m.MigrateStaff(); err != nil {
+		return false, err
+	}
 	if err = m.MigrateBans(); err != nil {
 		return false, err
 	}
@@ -99,12 +102,8 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	return true, nil
 }
 
-func (*Pre2021Migrator) MigrateStaff(_ string) error {
-	return nil
-}
-
 func (*Pre2021Migrator) MigrateAnnouncements() error {
-	return nil
+	return common.NewMigrationError("pre2021", "MigrateAnnouncements not yet implemented")
 }
 
 func (m *Pre2021Migrator) Close() error {

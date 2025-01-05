@@ -69,28 +69,26 @@ type DBMigrator interface {
 	// logging any errors that occur during the migration
 	MigrateDB() (bool, error)
 
-	// MigrateBoards gets info about the old boards in the board table and inserts each one
-	// into the new database if they don't already exist
+	// MigrateBoards migrates the board sections (if they exist) and boards if each one
+	// doesn't already exists
 	MigrateBoards() error
 
-	// MigratePosts gets the threads and replies in the old database, and inserts them into
-	// the new database, creating new threads to avoid putting replies in threads that already
-	// exist
+	// MigratePosts gets the threads and replies (excluding deleted ones) in the old database, and inserts them into
+	// the new database, creating new threads to avoid putting replies in threads that already exist
 	MigratePosts() error
 
 	// MigrateStaff gets the staff list in the old board and inserts them into the new board if
-	// the username doesn't already exist. It sets the starting password to the given password
-	MigrateStaff(password string) error
+	// the username doesn't already exist. Migrated staff accounts will need to have their password reset
+	// in order to be logged into
+	MigrateStaff() error
 
-	// MigrateBans gets the list of bans and appeals in the old database and inserts them into the
-	// new one if, for each entry, the IP/name/etc isn't already banned for the same length
-	// e.g. 1.1.1.1 is permabanned on both, 1.1.2.2 is banned for 5 days on both, etc
+	// MigrateBans migrates IP bans, appeals, and filters
 	MigrateBans() error
 
 	// MigrateAnnouncements gets the list of public and staff announcements in the old database
-	// and inserts them into the new database,
+	// and inserts them into the new database
 	MigrateAnnouncements() error
 
-	// Close closes the database if initialized and deltes the temporary columns created
+	// Close closes the database if initialized and deletes any temporary columns created
 	Close() error
 }

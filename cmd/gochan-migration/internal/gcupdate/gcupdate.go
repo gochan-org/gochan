@@ -475,7 +475,7 @@ func (*GCDatabaseUpdater) MigratePosts() error {
 	return gcutil.ErrNotImplemented
 }
 
-func (*GCDatabaseUpdater) MigrateStaff(_ string) error {
+func (*GCDatabaseUpdater) MigrateStaff() error {
 	return gcutil.ErrNotImplemented
 }
 

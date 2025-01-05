@@ -22,7 +22,9 @@ type migrationSection struct {
 }
 
 func (m *Pre2021Migrator) migrateSectionsInPlace() error {
-	return common.NewMigrationError("pre2021", "migrateSectionsInPlace not implemented")
+	err := common.NewMigrationError("pre2021", "migrateSectionsInPlace not implemented")
+	common.LogError().Err(err).Caller().Msg("Failed to migrate sections")
+	return err
 }
 
 func (m *Pre2021Migrator) migrateBoardsInPlace() error {
