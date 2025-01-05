@@ -400,15 +400,20 @@ func doesTableExist(tableName string) (bool, error) {
 	return count > 0, nil
 }
 
-// getDatabaseVersion gets the version of the database, or an error if none or multiple exist
-func getDatabaseVersion(componentKey string) (int, error) {
+// GetComponentVersion gets the version of the database component (e.g., gochan), or an error if none exist
+func GetComponentVersion(componentKey string) (int, error) {
 	const sql = `SELECT version FROM DBPREFIXdatabase_version WHERE component = ?`
 	var version int
 	err := QueryRowSQL(sql, []any{componentKey}, []any{&version})
-	if err != nil {
-		return 0, err
-	}
 	return version, err
+}
+
+// RegisterComponent adds a new component and version to the database_version table. It returns an error if
+// the component is already in the table, or any other SQL errors that occurred
+func RegisterComponent(tx *sql.Tx, component string, version int) error {
+	const sql = "INSERT INTO DBPREFIXdatabase_version (component, version) VALUES (?,?)"
+	_, err := ExecTxSQL(tx, sql, component, version)
+	return err
 }
 
 // doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.

@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 
@@ -42,10 +43,11 @@ func GetThreadFiles(post *Post) ([]Upload, error) {
 	return uploads, nil
 }
 
-func (p *Post) nextFileOrder() (int, error) {
+// NextFileOrder gets what would be the next file_order value (not particularly useful until multi-file posting is implemented)
+func (p *Post) NextFileOrder(ctx context.Context, tx *sql.Tx) (int, error) {
 	const query = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
 	var next int
-	err := QueryRowSQL(query, []any{p.ID}, []any{&next})
+	err := QueryRowContextSQL(ctx, tx, query, []any{p.ID}, []any{&next})
 	return next, err
 }
 
