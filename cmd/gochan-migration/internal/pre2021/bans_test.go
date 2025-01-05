@@ -22,6 +22,10 @@ func TestMigrateBansToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 
+	if !assert.NoError(t, migrator.MigrateStaff()) {
+		t.FailNow()
+	}
+
 	if !assert.NoError(t, migrator.MigrateBans()) {
 		t.FailNow()
 	}
@@ -30,6 +34,7 @@ func TestMigrateBansToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, 6, len(bans), "Expected to have 4 valid bans")
+	assert.NotZero(t, bans[0].StaffID, "Expected ban staff ID field to be set")
 
 	var numInvalidBans int
 	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXip_ban WHERE message = ?", []any{"Full ban on 8.8.0.0/16"}, []any{&numInvalidBans}))

@@ -54,6 +54,7 @@ func (m *Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int
 	migratedBan.ExpiresAt = ban.expires
 	migratedBan.Permanent = ban.permaban
 	migratedBan.Message = ban.reason
+	migratedBan.StaffID = ban.staffID
 	migratedBan.StaffNote = ban.staffNote
 	if err := gcsql.NewIPBanTx(tx, migratedBan); err != nil {
 		errEv.Err(err).Caller().
@@ -107,6 +108,20 @@ func (m *Pre2021Migrator) migrateBansToNewDB() error {
 				}
 				ban.boardIDs = append(ban.boardIDs, boardID)
 			}
+		}
+
+		ban.staffID, err = gcsql.GetStaffID(ban.staff)
+		if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
+			// username not found after staff were migrated, use a stand-in account to be updated by the admin later
+			migrationUser, err := m.getMigrationUser(errEv)
+			if err != nil {
+				return err
+			}
+			common.LogWarning().
+				Str("username", ban.staff).
+				Str("migrationUser", migrationUser.Username).
+				Msg("Ban staff not found in migrated staff table, using migration user instead")
+			ban.staffID = migrationUser.ID
 		}
 
 		if ban.ip != "" {
