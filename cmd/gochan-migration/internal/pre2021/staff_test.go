@@ -3,6 +3,7 @@ package pre2021
 import (
 	"testing"
 
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,4 +21,9 @@ func TestMigrateStaffToNewDB(t *testing.T) {
 	if !assert.NoError(t, migrator.MigrateStaff()) {
 		t.FailNow()
 	}
+	migratedAdmin, err := gcsql.GetStaffByUsername("migratedadmin", true)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, 3, migratedAdmin.Rank)
 }

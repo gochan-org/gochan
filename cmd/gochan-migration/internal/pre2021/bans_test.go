@@ -29,7 +29,7 @@ func TestMigrateBansToNewDB(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	assert.Equal(t, 4, len(bans), "Expected to have 4 valid bans")
+	assert.Equal(t, 6, len(bans), "Expected to have 4 valid bans")
 
 	var numInvalidBans int
 	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXip_ban WHERE message = ?", []any{"Full ban on 8.8.0.0/16"}, []any{&numInvalidBans}))

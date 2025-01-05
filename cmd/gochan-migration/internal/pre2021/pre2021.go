@@ -22,8 +22,9 @@ type Pre2021Migrator struct {
 	options *common.MigrationOptions
 	config  Pre2021Config
 
-	boards   []migrationBoard
-	sections []migrationSection
+	migrationUser *gcsql.Staff
+	boards        []migrationBoard
+	sections      []migrationSection
 }
 
 // IsMigratingInPlace implements common.DBMigrator.

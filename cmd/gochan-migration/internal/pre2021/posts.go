@@ -171,6 +171,11 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 		}
 		migratedThreads++
 	}
+	if err = rows.Close(); err != nil {
+		errEv.Err(err).Caller().Msg("Failed to close posts rows")
+		return err
+	}
+
 	if len(threadIDsWithInvalidBoards) > 0 {
 		errEv.Caller().
 			Ints("threadIDs", threadIDsWithInvalidBoards).
