@@ -1,23 +1,30 @@
-/gochan*
-/lib/
-/log/
-/releases/
-/vagrant/.vagrant/
-/html/boards.json
+*.bak
 /html/index.html
 /html/test*
-/html/js/
-/templates/override
-*.bak
-*.log
+/html/boards.json
+.vscode/settings.json
+.parcel-cache
 *.swp
-*.db
+.vagrant/
+*.log
+/templates/override
+
+# Go output
+/gochan*
+/releases/
 *.so
-__debug_bin
+__debug_bin*
+
+# Node.js/TypeScript
+/html/js/
 node_modules
 /frontend/coverage
 /frontend/tests/coverage
-.parcel-cache
+
+# Python
 __pycache__
 .venv/
-.vscode/settings.json
+
+# SQLite
+*.db
+*.*-journal
