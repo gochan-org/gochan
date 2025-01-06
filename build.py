@@ -425,15 +425,13 @@ def sass(watch=False):
 		sys.exit(status)
 
 def test(verbose=False, coverage=False):
-	pkgs = os.listdir("pkg")
-	for pkg in pkgs:
-		cmd = ["go", "test"]
-		if verbose:
-			cmd += ["-v"]
-		if coverage:
-			cmd += ["-cover"]
-		cmd += [path.join("./pkg", pkg)]
-		run_cmd(cmd, realtime=True, print_command=True)
+	cmd = ["go", "test"]
+	if verbose:
+		cmd += ["-v"]
+	if coverage:
+		cmd += ["-cover"]
+	cmd += ["./pkg/...", "./cmd/..."]
+	run_cmd(cmd, realtime=True, print_command=True)
 
 
 if __name__ == "__main__":
