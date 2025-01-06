@@ -1,6 +1,7 @@
 package pre2021
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"net"
@@ -33,9 +34,7 @@ type migrationBan struct {
 	canAppeal    bool
 
 	boardIDs []int
-	banID    int
 	staffID  int
-	filterID int
 }
 
 func (m *Pre2021Migrator) migrateBansInPlace() error {
@@ -110,20 +109,27 @@ func (m *Pre2021Migrator) migrateBansToNewDB() error {
 			}
 		}
 
+		migrationUser, err := m.getMigrationUser(errEv)
+		if err != nil {
+			return err
+		}
 		ban.staffID, err = gcsql.GetStaffID(ban.staff)
 		if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
 			// username not found after staff were migrated, use a stand-in account to be updated by the admin later
-			migrationUser, err := m.getMigrationUser(errEv)
-			if err != nil {
-				return err
-			}
 			common.LogWarning().
 				Str("username", ban.staff).
 				Str("migrationUser", migrationUser.Username).
 				Msg("Ban staff not found in migrated staff table, using migration user instead")
 			ban.staffID = migrationUser.ID
+		} else if err != nil {
+			errEv.Err(err).Caller().Str("username", ban.staff).Msg("Failed to get staff from username")
+			return err
 		}
 
+		if ban.ip == "" && ban.name == "" && ban.fileChecksum == "" && ban.filename == "" {
+			common.LogWarning().Int("banID", ban.oldID).Msg("Found invalid ban (no IP, name, file checksum, or filename set)")
+			continue
+		}
 		if ban.ip != "" {
 			if net.ParseIP(ban.ip) == nil {
 				gcutil.LogWarning().
@@ -142,6 +148,50 @@ func (m *Pre2021Migrator) migrateBansToNewDB() error {
 						return err
 					}
 				}
+			}
+		}
+		if ban.name != "" || ban.fileChecksum != "" || ban.filename != "" {
+			filter := &gcsql.Filter{
+				StaffID:     &ban.staffID,
+				StaffNote:   ban.staffNote,
+				IsActive:    true,
+				HandleIfAny: true,
+				MatchAction: "reject",
+				MatchDetail: ban.reason,
+			}
+			var conditions []gcsql.FilterCondition
+			if ban.name != "" {
+				nameCondition := gcsql.FilterCondition{
+					Field:     "name",
+					Search:    ban.name,
+					MatchMode: gcsql.ExactMatch,
+				}
+				if ban.nameIsRegex {
+					nameCondition.MatchMode = gcsql.RegexMatch
+				}
+				conditions = append(conditions, nameCondition)
+			}
+			if ban.fileChecksum != "" {
+				conditions = append(conditions, gcsql.FilterCondition{
+					Field:     "checksum",
+					MatchMode: gcsql.ExactMatch,
+					Search:    ban.fileChecksum,
+				})
+			}
+			if ban.filename != "" {
+				filenameCondition := gcsql.FilterCondition{
+					Field:     "filename",
+					Search:    ban.filename,
+					MatchMode: gcsql.ExactMatch,
+				}
+				if ban.nameIsRegex {
+					filenameCondition.MatchMode = gcsql.RegexMatch
+				}
+				conditions = append(conditions, filenameCondition)
+			}
+			if err = gcsql.ApplyFilterTx(context.Background(), tx, filter, conditions, ban.boardIDs); err != nil {
+				errEv.Err(err).Caller().Int("banID", ban.oldID).Msg("Failed to migrate ban to filter")
+				return err
 			}
 		}
 	}

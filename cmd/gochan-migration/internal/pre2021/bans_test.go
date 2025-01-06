@@ -39,4 +39,15 @@ func TestMigrateBansToNewDB(t *testing.T) {
 	var numInvalidBans int
 	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXip_ban WHERE message = ?", []any{"Full ban on 8.8.0.0/16"}, []any{&numInvalidBans}))
 	assert.Equal(t, 0, numInvalidBans, "Expected the invalid test to not be migrated")
+
+	filters, err := gcsql.GetAllFilters(gcsql.TrueOrFalse)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, 1, len(filters))
+	conditions, err := filters[0].Conditions()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, 3, len(conditions), "Expected filter to have three conditions")
 }
