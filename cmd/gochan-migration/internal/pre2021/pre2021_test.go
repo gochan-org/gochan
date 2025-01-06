@@ -89,3 +89,14 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 
 	return migrator
 }
+
+func TestPre2021Migration(t *testing.T) {
+	outDir := t.TempDir()
+	migrator := setupMigrationTest(t, outDir, false)
+	if !assert.False(t, migrator.IsMigratingInPlace(), "This test should not be migrating in place") {
+		t.FailNow()
+	}
+	migrated, err := migrator.MigrateDB()
+	assert.True(t, migrated)
+	assert.NoError(t, err)
+}

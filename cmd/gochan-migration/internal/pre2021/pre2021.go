@@ -93,18 +93,19 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	if err = m.MigrateStaff(); err != nil {
 		return false, err
 	}
+	common.LogInfo().Msg("Migrated staff successfully")
+
 	if err = m.MigrateBans(); err != nil {
 		return false, err
 	}
-	// if err = m.MigrateAnnouncements(); err != nil {
-	// 	return false, err
-	// }
+	common.LogInfo().Msg("Migrated bans and filters successfully")
+
+	if err = m.MigrateAnnouncements(); err != nil {
+		return false, err
+	}
+	common.LogInfo().Msg("Migrated staff announcements successfully")
 
 	return true, nil
-}
-
-func (*Pre2021Migrator) MigrateAnnouncements() error {
-	return common.NewMigrationError("pre2021", "MigrateAnnouncements not yet implemented")
 }
 
 func (m *Pre2021Migrator) Close() error {

@@ -18,4 +18,6 @@ bumped, stickied, locked FROM DBPREFIXposts WHERE deleted_timestamp IS NULL`
 
 	bansQuery = `SELECT  id, allow_read, COALESCE(ip, '') as ip, name, name_is_regex, filename, file_checksum, boards, staff,
 timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal FROM DBPREFIXbanlist`
+
+	announcementsQuery = "SELECT id, subject, message, poster, timestamp FROM DBPREFIXannouncements"
 )
