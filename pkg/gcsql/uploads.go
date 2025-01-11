@@ -73,6 +73,13 @@ func (p *Post) AttachFileTx(tx *sql.Tx, upload *Upload) error {
 		return ErrAlreadyAttached
 	}
 
+	if upload.FileOrder < 1 {
+		upload.FileOrder, err = p.NextFileOrder(context.Background(), tx)
+		if err != nil {
+			return err
+		}
+	}
+	upload.PostID = p.ID
 	if _, err = ExecTxSQL(tx, insertSQL,
 		&upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum, &upload.FileSize,
 		&upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
