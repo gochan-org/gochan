@@ -11,12 +11,7 @@
             "mode": "auto",
             "cwd":"${workspaceFolder}",
             "program": "${workspaceFolder}/cmd/gochan/",
-            "env": {},
-            "args": [],
-            "dlvLoadConfig": {
-                "maxStringLen": 5000,
-                "maxArrayValues": 500
-            },
+            "showGlobalVariables": true
         },
         {
             "name": "gochan-migration",
@@ -25,12 +20,7 @@
             "mode": "auto",
             "cwd":"${workspaceFolder}",
             "program": "${workspaceFolder}/cmd/gochan-migration/",
-            "env": {},
-            "args": [],
-            "dlvLoadConfig": {
-                "maxStringLen": 5000,
-                "maxArrayValues": 500
-            },
+            "showGlobalVariables": true
         }
     ]
 }
