@@ -3,6 +3,7 @@ package manage
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
 	"path"
 
@@ -41,7 +42,7 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			"redirect":    redirectAction,
 		}, manageLoginBuffer, "text/html"); err != nil {
 			errEv.Err(err).Str("template", "manage_login.html").Send()
-			return "", errors.New("Error executing staff login page template: " + err.Error())
+			return "", fmt.Errorf("failed executing staff login page template: %w", err)
 		}
 		output = manageLoginBuffer.String()
 	} else {

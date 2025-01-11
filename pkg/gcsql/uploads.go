@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/gochan-org/gochan/pkg/events"
 )
@@ -61,7 +62,7 @@ func (p *Post) AttachFileTx(tx *sql.Tx, upload *Upload) error {
 		return errors.New("recovered from a panic in an event handler (incoming-upload)")
 	}
 	if err != nil {
-		return errors.New("unable to attach upload to post: " + err.Error())
+		return fmt.Errorf("unable to attach upload to post: %w", err)
 	}
 
 	const insertSQL = `INSERT INTO DBPREFIXfiles (

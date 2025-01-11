@@ -97,7 +97,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	data, err := io.ReadAll(file)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return nil, errors.New("Error while trying to read file: " + err.Error())
+		return nil, fmt.Errorf("got an error while trying to read file: %w", err)
 	}
 	defer file.Close()
 
@@ -152,7 +152,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	if err = uploadHandler(upload, post, postBoard.Dir, filePath, thumbPath, catalogThumbPath, infoEv, accessEv, errEv); err != nil {
 		// uploadHandler is assumed to handle logging
-		return nil, errors.New("error processing upload: " + err.Error())
+		return nil, fmt.Errorf("error processing upload: %w", err)
 	}
 
 	accessEv.Send()

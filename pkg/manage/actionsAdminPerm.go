@@ -187,7 +187,7 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 			return "", err
 		}
 		if err = board.ModifyInDB(); err != nil {
-			return "", errors.New("Unable to apply changes: " + err.Error())
+			return "", fmt.Errorf("unable to apply changes: %w", err)
 		}
 	case "cancel":
 		// cancel button was clicked
@@ -201,7 +201,7 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 	if requestType == "create" || requestType == "modify" || requestType == "delete" {
 		if err = gcsql.ResetBoardSectionArrays(); err != nil {
 			errEv.Err(err).Caller().Send()
-			return "", errors.New("unable to reset board list: " + err.Error())
+			return "", fmt.Errorf("unable to reset board list: %w", err)
 		}
 		if err = building.BuildBoardListJSON(); err != nil {
 			return "", err
@@ -339,7 +339,7 @@ func cleanupCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staf
 		if err != nil {
 			errEv.Err(err).Caller().
 				Str("sql", "optimization").Send()
-			err = errors.New("Error optimizing SQL tables: " + err.Error())
+			err = fmt.Errorf("failed optimizing SQL tables: %w", err)
 			return outputStr + "<tr><td>" + err.Error() + "</td></tr></table>", err
 		}
 		outputStr += "Cleanup finished"

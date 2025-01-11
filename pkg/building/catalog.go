@@ -95,7 +95,7 @@ func BuildCatalog(boardID int) error {
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed opening /%s/catalog.html: %s", board.Dir, err.Error())
+		return fmt.Errorf("failed opening /%s/catalog.html: %w", board.Dir, err)
 	}
 
 	if err = config.TakeOwnershipOfFile(catalogFile); err != nil {

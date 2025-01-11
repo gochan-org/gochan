@@ -103,7 +103,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	banlist, err := gcsql.GetIPBans(filterBoardID, limit, true)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Error getting ban list")
-		err = errors.New("Error getting ban list: " + err.Error())
+		err = fmt.Errorf("failed getting ban list: %w", err)
 		return "", err
 	}
 	manageBansBuffer := bytes.NewBufferString("")
@@ -115,7 +115,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 		"filterboardid": filterBoardID,
 	}, manageBansBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
-		return "", errors.New("Error executing ban management page template: " + err.Error())
+		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
 	outputStr += manageBansBuffer.String()
 	return outputStr, nil
@@ -158,7 +158,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	appeals, err := gcsql.GetAppeals(banID, limit)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return "", errors.New("Unable to get appeals: " + err.Error())
+		return "", fmt.Errorf("failed to get appeals list: %w", err)
 	}
 
 	if wantsJSON {
@@ -171,7 +171,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_appeals.html").Caller().Send()
-		return "", errors.New("Error executing appeal management page template: " + err.Error())
+		return "", fmt.Errorf("failed executing appeal management page template: %w", err)
 	}
 	return manageAppealsBuffer.String(), err
 }
@@ -344,7 +344,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, data, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
-		return "", errors.New("Unable to execute filter management template: " + err.Error())
+		return "", fmt.Errorf("failed to execute filter management template: %w", err)
 	}
 	return buf.String(), nil
 }
@@ -376,7 +376,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 				Int("limit", limit).
 				Bool("onlyNotDeleted", true).
 				Send()
-			return "", fmt.Errorf("Error getting list of posts from %q by staff %s: %s", ipQuery, staff.Username, err.Error())
+			return "", fmt.Errorf("Error getting list of posts from %q by staff %s: %w", ipQuery, staff.Username, err)
 		}
 	}
 

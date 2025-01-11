@@ -176,7 +176,7 @@ func ResetBoardSectionArrays() error {
 	AllBoards = append(AllBoards, allBoardsArr...)
 	for _, board := range AllBoards {
 		if err = config.UpdateBoardConfig(board.Dir); err != nil {
-			return fmt.Errorf("unable to update board config for /%s/: %s", board.Dir, err.Error())
+			return fmt.Errorf("unable to update board config for /%s/: %w", board.Dir, err)
 		}
 	}
 

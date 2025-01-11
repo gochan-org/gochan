@@ -146,7 +146,7 @@ func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
 	if err = QueryRowContextSQL(ctx, nil, `SELECT staff_id FROM DBPREFIXsessions WHERE data = ?`,
 		[]any{session.Value}, []any{&staffID}); err != nil && err != sql.ErrNoRows {
 		// something went wrong with the query and it's not caused by no rows being returned
-		return errors.New("failed getting staff ID: " + err.Error())
+		return fmt.Errorf("failed getting staff ID: %w", err)
 	}
 
 	_, err = ExecContextSQL(ctx, nil, `DELETE FROM DBPREFIXsessions WHERE data = ?`, sessionVal)

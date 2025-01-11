@@ -109,7 +109,7 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		"limit":       limit,
 	}, manageRecentsBuffer, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return "", errors.New("Error executing ban management page template: " + err.Error())
+		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
 	return manageRecentsBuffer.String(), nil
 }
@@ -130,7 +130,7 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	}
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed getting staff list")
-		err = errors.New("Error getting staff list: " + err.Error())
+		err = fmt.Errorf("failed getting staff list: %w", err)
 		return "", err
 	}
 	warnEv := gcutil.LogWarning().
@@ -236,16 +236,17 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Error getting updated staff list")
 			writer.WriteHeader(http.StatusInternalServerError)
-			err = errors.New("Unable to get updated staff list")
+			err = errors.New("unable to get updated staff list")
 			return "", err
 		}
+		data["allstaff"] = allStaff
 	}
 
 	staffBuffer := bytes.NewBufferString("")
 	if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, data, staffBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_staff.html").Send()
 		writer.WriteHeader(http.StatusInternalServerError)
-		return "", errors.New("Unable to execute staff management page template")
+		return "", errors.New("unable to execute staff management page template")
 	}
 	return staffBuffer.String(), nil
 }
