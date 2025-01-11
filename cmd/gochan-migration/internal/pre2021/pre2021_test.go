@@ -97,6 +97,6 @@ func TestPre2021Migration(t *testing.T) {
 		t.FailNow()
 	}
 	migrated, err := migrator.MigrateDB()
-	assert.True(t, migrated)
+	assert.False(t, migrated)
 	assert.NoError(t, err)
 }
