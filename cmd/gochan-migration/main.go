@@ -115,7 +115,7 @@ func main() {
 		fatalEv.Msg("Unable to migrate database")
 	}
 	if migrated {
-		common.LogInfo().Msg("Database is already migrated")
+		common.LogWarning().Msg("Database is already migrated")
 	} else {
 		common.LogInfo().Str("chanType", options.ChanType).Msg("Database migration complete")
 	}

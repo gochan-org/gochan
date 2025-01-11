@@ -48,45 +48,40 @@ type MigrationOptions struct {
 }
 
 // DBMigrator is used for handling the migration from one database type to a
-// database compatible with gochan 3.x onward
+// database compatible with the latest gochan database version
 type DBMigrator interface {
-	// Init sets the variables for connecting to the databases
+	// Init sets up the migrator and sets up the database connection(s)
 	Init(options *MigrationOptions) error
 
-	// IsMigrated checks to see if the database has already been migrated and quits if it has
-	// and returns any errors that aren't "table doesn't exist". if the boolean value is true,
-	// it can be assumed that the database has already been migrated and gochan-migration
-	// will exit
+	// IsMigrated returns true if the database is already migrated, and an error if any occured,
+	// excluding missing table errors
 	IsMigrated() (bool, error)
 
-	// IsMigratingInPlace returns true if the old database name is the same as the new database name,
-	// meaning that the tables will be altered to match the new schema, instead of creating tables in the
-	// new database and copying data over
+	// IsMigratingInPlace returns true if the source database and the destination database are both the
+	// same installation, meaning both have the same host/connection, database, table and prefix, meaning that
+	// the tables will be altered during the migration to match the new schema, instead of creating tables in
+	// the destination database and copying data over
 	IsMigratingInPlace() bool
 
-	// MigrateDB alters the database schema to match the new schema, then migrates the imageboard
-	// data (posts, boards, etc) to the new database. It is assumed that MigrateDB will handle
-	// logging any errors that occur during the migration
+	// MigrateDB handles migration of the source database, altering it in place or migrating it to the configured
+	// gochan database. It returns true if the database is already migrated and an error if any occured. It is
+	// assumed that MigrateDB implementations will handle logging any errors that occur during the migration
 	MigrateDB() (bool, error)
 
-	// MigrateBoards migrates the board sections (if they exist) and boards if each one
-	// doesn't already exists
+	// MigrateBoards migrates the board sections and boards if each one doesn't already exists
 	MigrateBoards() error
 
-	// MigratePosts gets the threads and replies (excluding deleted ones) in the old database, and inserts them into
-	// the new database, creating new threads to avoid putting replies in threads that already exist
+	// MigratePosts migrates the threads and replies (excluding deleted ones), creating new threads where necessary
 	MigratePosts() error
 
-	// MigrateStaff gets the staff list in the old board and inserts them into the new board if
-	// the username doesn't already exist. Migrated staff accounts will need to have their password reset
-	// in order to be logged into
+	// MigrateStaff migrates the staff, creating new staff accounts that don't already exist. Accounts created by this
+	// will need to have their password reset in order to be logged into
 	MigrateStaff() error
 
 	// MigrateBans migrates IP bans, appeals, and filters
 	MigrateBans() error
 
-	// MigrateAnnouncements gets the list of public and staff announcements in the old database
-	// and inserts them into the new database
+	// MigrateAnnouncements migrates the list of public and staff announcements, if applicable
 	MigrateAnnouncements() error
 
 	// Close closes the database if initialized and deletes any temporary columns created

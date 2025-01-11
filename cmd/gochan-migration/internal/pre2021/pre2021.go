@@ -75,8 +75,6 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 		return false, err
 	}
 	if migrated {
-		// db is already migrated, stop
-		common.LogWarning().Msg("Database is already migrated (database_version table exists)")
 		return true, nil
 	}
 
@@ -105,7 +103,7 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	}
 	common.LogInfo().Msg("Migrated staff announcements successfully")
 
-	return true, nil
+	return false, nil
 }
 
 func (m *Pre2021Migrator) Close() error {
