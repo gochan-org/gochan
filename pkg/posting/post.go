@@ -335,6 +335,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	isCyclical := request.PostFormValue("cyclical") == "on"
 	if isCyclical && boardConfig.CyclicalThreadNumPosts == 0 {
+		writer.WriteHeader(http.StatusBadRequest)
 		server.ServeError(writer, "Board does not support cyclical threads", wantsJSON, nil)
 		return
 	}
@@ -460,15 +461,41 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		if err = config.TakeOwnership(filePath); err != nil {
 			errEv.Err(err).Caller().
 				Str("file", filePath).Send()
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			post.Delete()
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 		}
 		if err = config.TakeOwnership(thumbPath); err != nil {
 			errEv.Err(err).Caller().
 				Str("thumbnail", thumbPath).Send()
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			post.Delete()
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 		}
 		if err = config.TakeOwnership(catalogThumbPath); err != nil && !os.IsNotExist(err) {
 			errEv.Err(err).Caller().
 				Str("catalogThumbnail", catalogThumbPath).Send()
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			post.Delete()
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 		}
+	}
+
+	inCyclicalThread, err := post.InCyclicalThread()
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		server.ServeError(writer, "Unable to get thread info", wantsJSON, nil)
+		return
+	}
+	if inCyclicalThread {
+		// post is a cyclical thread
+		errEv.Bool("cyclical", inCyclicalThread)
 	}
 
 	// rebuild the board page

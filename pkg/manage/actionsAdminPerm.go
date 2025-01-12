@@ -356,7 +356,8 @@ func fixThumbnailsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsq
 	board := request.FormValue("board")
 	var uploads []uploadInfo
 	if board != "" {
-		const query = "SELECT * FROM DBPREFIXv_upload_info WHERE dir = ? ORDER BY created_on DESC"
+		const query = `SELECT id, op, filename, is_spoilered, width, height, thumbnail_width, thumbnail_height
+		FROM DBPREFIXv_upload_info WHERE dir = ? ORDER BY created_on DESC`
 		rows, err := gcsql.QuerySQL(query, board)
 		if err != nil {
 			return "", err

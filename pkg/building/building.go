@@ -35,9 +35,9 @@ func getFrontPagePosts() ([]frontPagePost, error) {
 
 	if siteCfg.RecentPostsWithNoFile {
 		// get recent posts, including those with no file
-		query = "SELECT * FROM DBPREFIXv_front_page_posts"
+		query = "SELECT id, message_raw, dir, filename, op_id FROM DBPREFIXv_front_page_posts"
 	} else {
-		query = "SELECT * FROM DBPREFIXv_front_page_posts_with_file"
+		query = "SELECT id, message_raw, dir, filename, op_id FROM DBPREFIXv_front_page_posts_with_file"
 	}
 	query += " ORDER BY id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 

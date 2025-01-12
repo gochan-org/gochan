@@ -118,12 +118,12 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 	params := postIDs
 	if fileOnly {
 		// only deleting this post's file, not subfiles if it's an OP
-		query = "SELECT * FROM DBPREFIXv_posts_to_delete_file_only WHERE postid IN " + setPart
+		query = "SELECT post_id, thread_id, op_id, is_top_post, filename, dir FROM DBPREFIXv_posts_to_delete_file_only WHERE post_id IN " + setPart
 	} else {
 		// deleting everything, including subfiles
 		params = append(params, postIDs...)
-		query = "SELECT * FROM DBPREFIXv_posts_to_delete WHERE postid IN " + setPart +
-			` OR thread_id IN (SELECT thread_id from DBPREFIXposts op WHERE opid IN ` + setPart + ` AND is_top_post)`
+		query = "SELECT post_id, thread_id, op_id, is_top_post, filename, dir FROM DBPREFIXv_posts_to_delete WHERE post_id IN " +
+			setPart + " OR thread_id IN (SELECT thread_id from DBPREFIXposts op WHERE op_id IN " + setPart + " AND is_top_post)"
 	}
 	rows, err := gcsql.QuerySQL(query, params...)
 	if err != nil {

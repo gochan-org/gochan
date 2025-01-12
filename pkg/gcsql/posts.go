@@ -337,6 +337,16 @@ func (p *Post) UnlinkUploads(leaveDeletedBox bool) error {
 	return err
 }
 
+// InCyclicalThread returns true if the post is in a cyclical thread
+func (p *Post) InCyclicalThread() (bool, error) {
+	var cyclical bool
+	err := QueryRowTimeoutSQL(nil, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclical})
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrThreadDoesNotExist
+	}
+	return cyclical, err
+}
+
 // Delete sets the post as deleted and sets the deleted_at timestamp to the current time
 func (p *Post) Delete() error {
 	if p.IsTopPost {
@@ -412,6 +422,31 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 
 	return tx.Commit()
 }
+
+type cyclicalThreadPost struct {
+	PostID int // sql: post_id
+
+}
+
+// returns post IDs that should be deleted in a cyclical thread
+// func (p *Post) postsToBeBumpedOff() ([]int, error) {
+// 	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+// 	defer cancel()
+// 	tx, err := BeginContextTx(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	var cyclical bool
+// 	if err = QueryRowContextSQL(ctx, tx, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclical}); err != nil {
+// 		return nil, err
+// 	}
+
+// 	if !cyclical {
+// 		return nil, nil
+// 	}
+
+// 	QueryContextSQL(ctx, tx, "SELECT post_id, thread_id, op_id, is_top_post, filename, dir FROM DBPREFIXv_posts_to_delete WHERE thread_id = ?")
+// }
 
 func (p *Post) WebPath() string {
 	if p.opID > 0 && p.boardDir != "" {
