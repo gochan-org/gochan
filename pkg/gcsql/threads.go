@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -227,13 +228,24 @@ func (t *Thread) UpdateAttribute(attribute string, value bool) error {
 }
 
 // deleteThread updates the thread and sets it as deleted, as well as the posts where thread_id = threadID
-func deleteThread(threadID int) error {
+func deleteThread(ctx context.Context, tx *sql.Tx, threadID int) error {
+	const checkPostExistsSQL = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ?`
 	const deletePostsSQL = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE thread_id = ?`
 	const deleteThreadSQL = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := ExecSQL(deletePostsSQL, threadID)
+
+	var rowCount int
+	err := QueryRowContextSQL(ctx, tx, checkPostExistsSQL, []any{threadID}, []any{&rowCount})
 	if err != nil {
 		return err
 	}
-	_, err = ExecSQL(deleteThreadSQL, threadID)
+	if rowCount == 0 {
+		return ErrThreadDoesNotExist
+	}
+
+	_, err = ExecContextSQL(ctx, tx, deletePostsSQL, threadID)
+	if err != nil {
+		return err
+	}
+	_, err = ExecContextSQL(ctx, tx, deleteThreadSQL, threadID)
 	return err
 }

@@ -487,15 +487,37 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	inCyclicalThread, err := post.InCyclicalThread()
-	if err != nil {
-		errEv.Err(err).Caller().Send()
-		server.ServeError(writer, "Unable to get thread info", wantsJSON, nil)
-		return
-	}
-	if inCyclicalThread {
-		// post is a cyclical thread
-		errEv.Bool("cyclical", inCyclicalThread)
+	if !post.IsTopPost {
+		toBePruned, err := post.CyclicalPostsToBePruned()
+		if err != nil {
+			errEv.Err(err).Caller().Msg("Unable to get posts to be pruned from cyclical thread")
+			server.ServeError(writer, "Unable to get cyclical thread info", wantsJSON, nil)
+			return
+		}
+		gcutil.LogInt("toBePruned", len(toBePruned), infoEv, errEv)
+		// prune posts from cyclical thread
+		for _, prunePost := range toBePruned {
+			p := &gcsql.Post{ID: prunePost.PostID, ThreadID: prunePost.ThreadID}
+
+			if err = p.Delete(); err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", prunePost.PostID).
+					Msg("Unable to prune post from cyclical thread")
+				server.ServeError(writer, "Unable to prune post from cyclical thread", wantsJSON, nil)
+				return
+			}
+			documentRoot := config.GetSystemCriticalConfig().DocumentRoot
+			prunePostThumb := path.Join(documentRoot, prunePost.Dir, "thumb", uploads.GetThumbnailExtension(prunePost.Filename))
+			prunePostFile := path.Join(documentRoot, prunePost.Dir, "src", prunePost.Filename)
+			if err = os.Remove(prunePostThumb); err != nil {
+				errEv.Err(err).Caller().
+					Str("pruneThumb", prunePostThumb).Send()
+			}
+			if err = os.Remove(prunePostFile); err != nil {
+				errEv.Err(err).Caller().
+					Str("pruneFile", prunePostFile).Send()
+			}
+		}
 	}
 
 	// rebuild the board page

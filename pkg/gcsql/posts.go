@@ -349,14 +349,33 @@ func (p *Post) InCyclicalThread() (bool, error) {
 
 // Delete sets the post as deleted and sets the deleted_at timestamp to the current time
 func (p *Post) Delete() error {
-	if p.IsTopPost {
-		return deleteThread(p.ThreadID)
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return err
 	}
-	const deleteSQL = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
-	_, err := ExecSQL(deleteSQL, p.ID)
-	return err
+	defer tx.Rollback()
+
+	var rowCount int
+	err = QueryRowContextSQL(ctx, tx, "SELECT COUNT(*) FROM DBPREFIXposts WHERE id = ?", []any{p.ID}, []any{&rowCount})
+	if errors.Is(err, sql.ErrNoRows) {
+		err = ErrPostDoesNotExist
+	}
+	if err != nil {
+		return err
+	}
+
+	if p.IsTopPost {
+		return deleteThread(ctx, tx, p.ThreadID)
+	}
+	if _, err = ExecContextSQL(ctx, tx, "UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?", p.ID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
+// InsertWithContext inserts the post into the database with the given context and transaction
 func (p *Post) InsertWithContext(ctx context.Context, tx *sql.Tx, bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
 	if p.ID > 0 {
 		// already inserted
@@ -423,30 +442,62 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	return tx.Commit()
 }
 
-type cyclicalThreadPost struct {
-	PostID int // sql: post_id
-
+// CyclicalThreadPost represents a post that should be deleted in a cyclical thread
+type CyclicalThreadPost struct {
+	PostID    int    // sql: post_id
+	ThreadID  int    // sql: thread_id
+	OPID      int    // sql: op_id
+	IsTopPost bool   // sql: is_top_post
+	Filename  string // sql: filename
+	Dir       string // sql: dir
 }
 
-// returns post IDs that should be deleted in a cyclical thread
-// func (p *Post) postsToBeBumpedOff() ([]int, error) {
-// 	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-// 	defer cancel()
-// 	tx, err := BeginContextTx(ctx)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	var cyclical bool
-// 	if err = QueryRowContextSQL(ctx, tx, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclical}); err != nil {
-// 		return nil, err
-// 	}
+// CyclicalPostsToBePruned returns posts that should be deleted in a cyclical thread that has reached its board's post limit
+func (p *Post) CyclicalPostsToBePruned() ([]CyclicalThreadPost, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	defer cancel()
+	tx, err := BeginContextTx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var cyclical bool
+	err = QueryRowContextSQL(ctx, tx, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclical})
+	if errors.Is(err, sql.ErrNoRows) {
+		err = ErrThreadDoesNotExist
+	}
+	if err != nil {
+		return nil, err
+	}
 
-// 	if !cyclical {
-// 		return nil, nil
-// 	}
+	if !cyclical {
+		return nil, nil
+	}
 
-// 	QueryContextSQL(ctx, tx, "SELECT post_id, thread_id, op_id, is_top_post, filename, dir FROM DBPREFIXv_posts_to_delete WHERE thread_id = ?")
-// }
+	rows, err := QueryContextSQL(ctx, tx, `SELECT post_id, thread_id, op_id, filename, dir
+		FROM DBPREFIXv_posts_to_delete WHERE thread_id = ? ORDER BY post_id DESC`, p.ThreadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []CyclicalThreadPost
+	for rows.Next() {
+		var post CyclicalThreadPost
+		if err = rows.Scan(&post.PostID, &post.ThreadID, &post.OPID, &post.Filename, &post.Dir); err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	cyclicalThreadMaxPosts := config.GetBoardConfig(posts[0].Dir).CyclicalThreadNumPosts
+
+	if len(posts) == 0 || len(posts) < cyclicalThreadMaxPosts {
+		return nil, nil
+	}
+
+	return posts[:cyclicalThreadMaxPosts], nil
+}
 
 func (p *Post) WebPath() string {
 	if p.opID > 0 && p.boardDir != "" {
