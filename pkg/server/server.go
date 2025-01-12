@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -15,17 +16,40 @@ var (
 	router *bunrouter.Router
 )
 
+type serverError struct {
+	err        any
+	statusCode int
+}
+
+func (e *serverError) Error() string {
+	return fmt.Sprint(e.err)
+}
+
+func (e *serverError) Unwrap() error {
+	if err, ok := e.err.(error); ok {
+		return err
+	}
+	return nil
+}
+
+func NewServerError(message any, statusCode int) error {
+	return &serverError{err: message, statusCode: statusCode}
+}
+
 // ServeJSON serves data as a JSON string
-func ServeJSON(writer http.ResponseWriter, data map[string]interface{}) {
+func ServeJSON(writer http.ResponseWriter, data map[string]any) {
 	jsonStr, _ := gcutil.MarshalJSON(data, false)
 	writer.Header().Set("Content-Type", "application/json")
 	serverutil.MinifyWriter(writer, []byte(jsonStr), "application/json")
 }
 
 // ServeErrorPage shows a general error page if something goes wrong
-func ServeErrorPage(writer http.ResponseWriter, err string) {
+func ServeErrorPage(writer http.ResponseWriter, err any) {
+	if se, ok := err.(*serverError); ok {
+		writer.WriteHeader(se.statusCode)
+	}
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	serverutil.MinifyTemplate(gctemplates.ErrorPage, map[string]interface{}{
+	serverutil.MinifyTemplate(gctemplates.ErrorPage, map[string]any{
 		"systemCritical": config.GetSystemCriticalConfig(),
 		"siteConfig":     config.GetSiteConfig(),
 		"boardConfig":    config.GetBoardConfig(""),
@@ -37,14 +61,15 @@ func ServeErrorPage(writer http.ResponseWriter, err string) {
 
 // ServeError serves the given map as a JSON file (with the error string included) if wantsJSON is true,
 // otherwise it serves a regular HTML error page
-func ServeError(writer http.ResponseWriter, err string, wantsJSON bool, data map[string]interface{}) {
+func ServeError(writer http.ResponseWriter, err any, wantsJSON bool, data map[string]any) {
 	if wantsJSON {
 		servedMap := data
 		if servedMap == nil {
-			servedMap = make(map[string]interface{})
+			servedMap = make(map[string]any)
 		}
-		if _, ok := servedMap["error"]; !ok {
-			servedMap["error"] = err
+		servedMap["error"] = err
+		if se, ok := err.(*serverError); ok {
+			writer.WriteHeader(se.statusCode)
 		}
 		ServeJSON(writer, servedMap)
 	} else {
