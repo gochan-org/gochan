@@ -491,7 +491,11 @@ func (p *Post) CyclicalPostsToBePruned() ([]CyclicalThreadPost, error) {
 	if err = rows.Close(); err != nil {
 		return nil, err
 	}
-	cyclicalThreadMaxPosts := config.GetBoardConfig(posts[0].Dir).CyclicalThreadNumPosts
+	boardCfg := config.GetBoardConfig(posts[0].Dir)
+	if !boardCfg.EnableCyclicThreads {
+		return nil, nil
+	}
+	cyclicalThreadMaxPosts := boardCfg.CyclicalThreadNumPosts
 	if cyclicalThreadMaxPosts < 1 {
 		// no limit set
 		return nil, nil
