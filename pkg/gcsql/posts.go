@@ -454,14 +454,15 @@ type CyclicalThreadPost struct {
 
 // CyclicalPostsToBePruned returns posts that should be deleted in a cyclical thread that has reached its board's post limit
 func (p *Post) CyclicalPostsToBePruned() ([]CyclicalThreadPost, error) {
+	if p.IsTopPost {
+		// don't prune if this is the OP
+		return nil, nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
 	defer cancel()
-	tx, err := BeginContextTx(ctx)
-	if err != nil {
-		return nil, err
-	}
+
 	var cyclical bool
-	err = QueryRowContextSQL(ctx, tx, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclical})
+	err := QueryRowContextSQL(ctx, nil, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclical})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrThreadDoesNotExist
 	}
@@ -473,8 +474,8 @@ func (p *Post) CyclicalPostsToBePruned() ([]CyclicalThreadPost, error) {
 		return nil, nil
 	}
 
-	rows, err := QueryContextSQL(ctx, tx, `SELECT post_id, thread_id, op_id, filename, dir
-		FROM DBPREFIXv_posts_to_delete WHERE thread_id = ? ORDER BY post_id DESC`, p.ThreadID)
+	rows, err := QueryContextSQL(ctx, nil, `SELECT post_id, thread_id, op_id, filename, dir
+		FROM DBPREFIXv_posts_cyclical_check WHERE thread_id = ? AND post_id <> op_id ORDER BY post_id ASC`, p.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -491,12 +492,16 @@ func (p *Post) CyclicalPostsToBePruned() ([]CyclicalThreadPost, error) {
 		return nil, err
 	}
 	cyclicalThreadMaxPosts := config.GetBoardConfig(posts[0].Dir).CyclicalThreadNumPosts
+	if cyclicalThreadMaxPosts < 1 {
+		// no limit set
+		return nil, nil
+	}
 
 	if len(posts) == 0 || len(posts) < cyclicalThreadMaxPosts {
 		return nil, nil
 	}
 
-	return posts[:cyclicalThreadMaxPosts], nil
+	return posts[:len(posts)-cyclicalThreadMaxPosts], nil
 }
 
 func (p *Post) WebPath() string {

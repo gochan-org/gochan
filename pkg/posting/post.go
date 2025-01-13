@@ -417,8 +417,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	var filePath, thumbPath, catalogThumbPath string
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	if upload != nil {
-		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 		filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
 		thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
 			path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
@@ -495,8 +495,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			return
 		}
 		gcutil.LogInt("toBePruned", len(toBePruned), infoEv, errEv)
+
 		// prune posts from cyclical thread
 		for _, prunePost := range toBePruned {
+			fmt.Printf("%#v\n", prunePost)
 			p := &gcsql.Post{ID: prunePost.PostID, ThreadID: prunePost.ThreadID}
 
 			if err = p.Delete(); err != nil {
@@ -506,16 +508,19 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				server.ServeError(writer, "Unable to prune post from cyclical thread", wantsJSON, nil)
 				return
 			}
-			documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-			prunePostThumb := path.Join(documentRoot, prunePost.Dir, "thumb", uploads.GetThumbnailExtension(prunePost.Filename))
-			prunePostFile := path.Join(documentRoot, prunePost.Dir, "src", prunePost.Filename)
-			if err = os.Remove(prunePostThumb); err != nil {
-				errEv.Err(err).Caller().
-					Str("pruneThumb", prunePostThumb).Send()
-			}
-			if err = os.Remove(prunePostFile); err != nil {
-				errEv.Err(err).Caller().
-					Str("pruneFile", prunePostFile).Send()
+			if prunePost.Filename != "" && prunePost.Filename != "deleted" {
+				prunePostFile := path.Join(documentRoot, prunePost.Dir, "src", prunePost.Filename)
+				prunePostThumbName, _ := uploads.GetThumbnailFilenames(prunePost.Filename)
+				prunePostThumb := path.Join(documentRoot, prunePost.Dir, "thumb", prunePostThumbName)
+				gcutil.LogStr("prunePostFile", prunePostFile, infoEv, errEv)
+				gcutil.LogStr("prunePostThumb", prunePostThumb, infoEv, errEv)
+
+				if err = os.Remove(prunePostFile); err != nil {
+					errEv.Err(err).Caller().Msg("Unable to delete post file")
+				}
+				if err = os.Remove(prunePostThumb); err != nil {
+					errEv.Err(err).Caller().Msg("Unable to delete post thumbnail")
+				}
 			}
 		}
 	}
