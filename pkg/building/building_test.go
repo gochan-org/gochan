@@ -109,7 +109,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
 
-	mock.ExpectPrepare(`SELECT \* FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
+	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "op.id"}).
 			AddRows(
 				[]driver.Value{1, "message_raw", "test", "filename", 1},
