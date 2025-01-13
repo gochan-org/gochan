@@ -48,6 +48,7 @@ var (
 				ThreadsPerPage:           20,
 				RepliesOnBoardPage:       3,
 				StickyRepliesOnBoardPage: 1,
+				EnableCyclicThreads:      true,
 				CyclicalThreadNumPosts:   500,
 				BanMessage:               "USER WAS BANNED FOR THIS POST",
 				EmbedWidth:               200,
