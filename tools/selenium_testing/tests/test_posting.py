@@ -94,3 +94,37 @@ class TestPosting(SeleniumTestCase):
 		WebDriverWait(self.driver, 10).until(EC.url_changes(cur_url))
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the moved thread")
 
+	def test_cyclical(self):
+		self.assertTrue(self.options.board_exists(self.options.cyclical_board), f"Confirming that /{self.options.cyclical_board}/ exists")
+
+		self.options.goto_page(self.options.cyclical_board)
+		WebDriverWait(self.driver, 10).until(
+			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
+		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+		send_post(form,
+			self.options.name,
+			"noko",
+			"Cyclical thread test",
+			"Cyclical thread OP",
+			path.abspath(self.options.upload_path),
+			self.options.post_password)
+		WebDriverWait(self.driver, 10).until(EC.url_matches(threadRE))
+
+		for r in range(self.options.cyclical_count + 2):
+			form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+			send_post(form,
+				self.options.name,
+				"noko",
+				"",
+				f"Reply {r+1}",
+				path.abspath(self.options.upload_path),
+				self.options.post_password)
+			WebDriverWait(self.driver, 10).until(EC.url_matches(threadRE))
+
+		# go to the thread and make sure that the first two replies are pruned
+		cur_url = self.driver.current_url
+		threadID = threadRE.findall(cur_url)[0][1]
+		replies = self.driver.find_elements(by=By.CSS_SELECTOR, value="div.reply")
+		self.assertEqual(len(replies), self.options.cyclical_count, "Verify that the cyclical thread has the correct number of replies")
+		self.assertEqual(replies[0].find_element(by=By.CSS_SELECTOR, value="div.post-text").text, "3", "Verify that the first reply is the third post")
+		delete_post(self.options, int(threadID), self.options.post_password)
