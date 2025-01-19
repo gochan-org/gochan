@@ -334,7 +334,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	isCyclic := request.PostFormValue("cyclic") == "on"
-	if isCyclic && boardConfig.CyclicThreadNumPosts == 0 {
+	if isCyclic && !boardConfig.EnableCyclicThreads {
 		writer.WriteHeader(http.StatusBadRequest)
 		server.ServeError(writer, "Board does not support cyclic threads", wantsJSON, nil)
 		return
