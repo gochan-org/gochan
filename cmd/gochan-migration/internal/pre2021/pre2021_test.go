@@ -50,8 +50,8 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		}
 		assert.NoError(t, oldDbFile.Close())
 		assert.NoError(t, newDbFile.Close())
-		migratedDBHost = dbHost
-		migratedDBName = dbName
+		dbHost = migratedDBHost
+		dbName = migratedDBName
 	}
 
 	oldSQLConfig := config.SQLConfig{

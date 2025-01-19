@@ -73,7 +73,7 @@ func TestMigrateBoardsInPlace(t *testing.T) {
 		t.FailNow()
 	}
 
-	if !assert.Error(t, migrator.MigrateBoards(), "Not yet implemented") {
+	if !assert.NoError(t, migrator.MigrateBoards()) {
 		t.FailNow()
 	}
 }

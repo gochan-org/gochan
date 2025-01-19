@@ -22,8 +22,10 @@ type migrationSection struct {
 }
 
 func (m *Pre2021Migrator) migrateSectionsInPlace() error {
-	err := common.NewMigrationError("pre2021", "migrateSectionsInPlace not implemented")
-	common.LogError().Err(err).Caller().Msg("Failed to migrate sections")
+	_, err := m.db.ExecSQL(`ALTER TABLE DBPREFIXsections RENAME COLUMN list_order TO position`)
+	if err != nil {
+		common.LogError().Caller().Msg("Failed to rename list_order column to position")
+	}
 	return err
 }
 
