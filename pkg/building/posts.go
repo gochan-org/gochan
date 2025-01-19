@@ -99,8 +99,8 @@ func (p *Post) Stickied() bool {
 	return p.thread.Stickied
 }
 
-func (p *Post) Cyclical() bool {
-	return p.thread.Cyclical
+func (p *Post) Cyclic() bool {
+	return p.thread.Cyclic
 }
 
 // Select all from v_building_posts (and queries with the same columns) and call the callback function on each Post
@@ -131,7 +131,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
 			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.Country.Flag, &post.Country.Name,
+			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclic, &post.Country.Flag, &post.Country.Name,
 			&post.IsDeleted)
 
 		if err = rows.Scan(dest...); err != nil {

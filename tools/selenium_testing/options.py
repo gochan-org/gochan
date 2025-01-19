@@ -18,8 +18,8 @@ default_post_password = "12345"
 default_board1 = "test"
 default_board2 = "test2"
 default_staff_board = "selenium"
-default_cyclical_board = "cyclicaltest"
-default_cyclical_count = 5
+default_cyclic_board = "cyclictest"
+default_cyclic_count = 5
 default_admin_username = "selenium_admin"
 default_admin_password = "password"
 default_moderator_username = "selenium_moderator"
@@ -37,8 +37,8 @@ class TestingOptions:
 	board1: str
 	board2: str
 	staff_board: str
-	cyclical_board: str
-	cyclical_count: int
+	cyclic_board: str
+	cyclic_count: int
 	name: str
 	email: str
 	subject: str
@@ -69,8 +69,8 @@ class TestingOptions:
 		options.board1 = src_dict.get("board1", default_board1)
 		options.board2 = src_dict.get("board2", default_board2)
 		options.staff_board = src_dict.get("staff_board", default_staff_board)
-		options.cyclical_board = src_dict.get("cyclical_board", default_cyclical_board)
-		options.cyclical_count = src_dict.get("cyclical_count", default_cyclical_count)
+		options.cyclic_board = src_dict.get("cyclic_board", default_cyclic_board)
+		options.cyclic_count = src_dict.get("cyclic_count", default_cyclic_count)
 		options.name = src_dict.get("name", default_name)
 		options.email = src_dict.get("email", default_email)
 		options.subject = src_dict.get("subject", default_subject)

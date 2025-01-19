@@ -60,11 +60,10 @@ See [`frontend/README.md`](frontend/README.md) for information on working with S
 ## Roadmap
 
 ### Near future
-* Fully implement cyclical threads
 * Implement +50
 * Add more banners
 * Add more plugin support (more event triggers)
 
 ### Lower priority
 * RSS feeds from boards/specific threads/specific usernames+tripcodes (such as newsanon)
-* Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclical thread.
+* Pinning a post within a thread even if its not the OP, to prevent its deletion in a cyclic thread.

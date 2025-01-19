@@ -333,10 +333,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	isCyclical := request.PostFormValue("cyclical") == "on"
-	if isCyclical && boardConfig.CyclicalThreadNumPosts == 0 {
+	isCyclic := request.PostFormValue("cyclic") == "on"
+	if isCyclic && boardConfig.CyclicThreadNumPosts == 0 {
 		writer.WriteHeader(http.StatusBadRequest)
-		server.ServeError(writer, "Board does not support cyclical threads", wantsJSON, nil)
+		server.ServeError(writer, "Board does not support cyclic threads", wantsJSON, nil)
 		return
 	}
 
@@ -431,7 +431,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	_, emailCommand := getEmailAndCommand(request)
-	if err = post.Insert(emailCommand != "sage", board.ID, isLocked, isSticky, false, isCyclical); err != nil {
+	if err = post.Insert(emailCommand != "sage", board.ID, isLocked, isSticky, false, isCyclic); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
@@ -488,15 +488,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if !post.IsTopPost {
-		toBePruned, err := post.CyclicalPostsToBePruned()
+		toBePruned, err := post.CyclicPostsToBePruned()
 		if err != nil {
-			errEv.Err(err).Caller().Msg("Unable to get posts to be pruned from cyclical thread")
-			server.ServeError(writer, "Unable to get cyclical thread info", wantsJSON, nil)
+			errEv.Err(err).Caller().Msg("Unable to get posts to be pruned from cyclic thread")
+			server.ServeError(writer, "Unable to get cyclic thread info", wantsJSON, nil)
 			return
 		}
 		gcutil.LogInt("toBePruned", len(toBePruned), infoEv, errEv)
 
-		// prune posts from cyclical thread
+		// prune posts from cyclic thread
 		for _, prunePost := range toBePruned {
 			fmt.Printf("%#v\n", prunePost)
 			p := &gcsql.Post{ID: prunePost.PostID, ThreadID: prunePost.ThreadID}
@@ -504,8 +504,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 			if err = p.Delete(); err != nil {
 				errEv.Err(err).Caller().
 					Int("postID", prunePost.PostID).
-					Msg("Unable to prune post from cyclical thread")
-				server.ServeError(writer, "Unable to prune post from cyclical thread", wantsJSON, nil)
+					Msg("Unable to prune post from cyclic thread")
+				server.ServeError(writer, "Unable to prune post from cyclic thread", wantsJSON, nil)
 				return
 			}
 			if prunePost.Filename != "" && prunePost.Filename != "deleted" {

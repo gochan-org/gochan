@@ -31,12 +31,12 @@
 			</tr>
 			{{- end -}}
 			{{with $.op}}{{else -}}
-			{{$noCyclicalThreads := or (eq $.boardConfig.CyclicalThreadNumPosts 0) (not $.boardConfig.EnableCyclicThreads)}}
-			<tr id="threadoptions" {{if $noCyclicalThreads}}style="display: none;"{{end}}>
+			{{$noCyclicThreads := or (eq $.boardConfig.CyclicThreadNumPosts 0) (not $.boardConfig.EnableCyclicThreads)}}
+			<tr id="threadoptions" {{if $noCyclicThreads}}style="display: none;"{{end}}>
 				<th class="postblock">Options</th>
 				<td>
-					{{if not $noCyclicalThreads}}
-					<label for="cyclical"><input type="checkbox" name="cyclical" id="cyclical"> Cyclical thread</label>
+					{{if not $noCyclicThreads}}
+					<label for="cyclic"><input type="checkbox" name="cyclic" id="cyclic"> Cyclic thread</label>
 					{{end}}
 				</td>
 			</tr>{{end}}
