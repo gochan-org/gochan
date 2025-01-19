@@ -126,6 +126,6 @@ class TestPosting(SeleniumTestCase):
 		cur_url = self.driver.current_url
 		threadID = threadRE.findall(cur_url)[0][1]
 		replies = self.driver.find_elements(by=By.CSS_SELECTOR, value="div.reply")
-		self.assertEqual(len(replies), self.options.cyclic_count, "Verify that the cyclic thread has the correct number of replies")
+		self.assertEqual(len(replies), self.options.cyclic_count, f"Verify that the cyclic thread has the correct number of replies (CyclicThreadNumPosts in /{self.options.cyclic_board}/board.json must be set to {self.options.cyclic_count})")
 		self.assertEqual(replies[0].find_element(by=By.CSS_SELECTOR, value="div.post-text").text, "Reply 3", "Verify that the first reply is the third post")
 		delete_post(self.options, int(threadID), self.options.post_password)
