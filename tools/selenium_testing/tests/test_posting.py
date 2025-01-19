@@ -101,6 +101,7 @@ class TestPosting(SeleniumTestCase):
 		WebDriverWait(self.driver, 10).until(
 			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
 		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+		form.find_element(by=By.NAME, value="cyclic").click()
 		send_post(form,
 			self.options.name,
 			"noko",
@@ -126,5 +127,5 @@ class TestPosting(SeleniumTestCase):
 		threadID = threadRE.findall(cur_url)[0][1]
 		replies = self.driver.find_elements(by=By.CSS_SELECTOR, value="div.reply")
 		self.assertEqual(len(replies), self.options.cyclic_count, "Verify that the cyclic thread has the correct number of replies")
-		self.assertEqual(replies[0].find_element(by=By.CSS_SELECTOR, value="div.post-text").text, "3", "Verify that the first reply is the third post")
+		self.assertEqual(replies[0].find_element(by=By.CSS_SELECTOR, value="div.post-text").text, "Reply 3", "Verify that the first reply is the third post")
 		delete_post(self.options, int(threadID), self.options.post_password)
