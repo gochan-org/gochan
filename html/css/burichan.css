@@ -28,6 +28,7 @@ div.inlinepostprev {
 }
 
 select.post-actions,
+div.reply,
 div.postprev,
 div.inlinepostprev {
   border: 1px solid #9295a4;
@@ -108,7 +109,6 @@ h2 a {
 
 h3 {
   margin: 0px;
-  text-align: center;
   font-size: medium;
 }
 
@@ -136,12 +136,17 @@ div.dropdown-menu {
   color: #EEF2FF;
 }
 
-div.dropdown-menu a,
-div.dropdown-menu a:visited {
+div.dropdown-menu {
+  -webkit-filter: drop-shadow(3px 5px 6px #555555);
+  filter: drop-shadow(3px 5px 6px #555555);
+}
+div.dropdown-menu a, div.dropdown-menu h3 {
   color: #EEF2FF;
 }
 
-a.topbar-item:hover, a.topbar-item:active {
+a.topbar-item:hover,
+a.topbar-item:active,
+div.dropdown-menu a:hover {
   background: #0a127b;
 }
 

@@ -4,7 +4,7 @@ body {
 	background: $bgcol;
 	font-family: $font-family;
 	color: $color;
-	font-size: 80%;
+	// font-size: 80%;
 }
 
 a {
@@ -58,6 +58,13 @@ span.postername {
 
 span.tripcode {
 	color: $headercol;
+}
+
+.dropdown-menu {
+	background: $topbarbg!important;
+	b {
+		color: black;
+	}
 }
 
 span.subject {

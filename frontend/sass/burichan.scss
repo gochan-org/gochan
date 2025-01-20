@@ -32,7 +32,6 @@ h2 a {
 
 h3 {
 	margin: 0px;
-	text-align: center;
 	font-size: medium;
 }
 
@@ -59,12 +58,16 @@ div.dropdown-menu {
 	color: $bgcol;
 }
 
-div.dropdown-menu a,
-div.dropdown-menu a:visited {
-	color: $bgcol;
+div.dropdown-menu {
+	@include shadow-filter(3px 5px 6px $shadowcol);
+	a, h3 {
+		color: $bgcol;
+	}
 }
 
-a.topbar-item:hover, a.topbar-item:active {
+a.topbar-item:hover,
+a.topbar-item:active,
+div.dropdown-menu a:hover {
 	background: #0a127b;
 }
 

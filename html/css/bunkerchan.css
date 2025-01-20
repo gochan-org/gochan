@@ -83,9 +83,19 @@ div#staff, select.post-actions {
 
 div#topbar,
 div#topbar a,
-div#topbar a:visited {
+div#topbar a:visited,
+div.dropdown-menu {
   background: #151515;
   border-bottom: 1px solid #B0790A;
+}
+
+div.dropdown-menu {
+  border-left: 1px solid #B0790A;
+  border-right: 1px solid #B0790A;
+}
+
+div.dropdown-menu a:hover, div.dropdown-menu a:active {
+  background: #1D1F21;
 }
 
 table#pages, table#pages * {
