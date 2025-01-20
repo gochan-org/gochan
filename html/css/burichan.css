@@ -1,6 +1,6 @@
 h1#board-title {
   font-family: serif;
-  font-size: 24pt;
+  font-size: 2em;
   color: #AF0A0F;
 }
 
@@ -9,12 +9,12 @@ h1#board-title {
 }
 
 div.file-info {
-  font-size: 12px;
+  font-size: 1em;
   font-family: sans-serif;
 }
 
 span.postername {
-  font-size: 12px;
+  font-size: 1em;
   font-family: serif;
   color: #117743;
   font-weight: 800;
@@ -31,6 +31,16 @@ select.post-actions,
 div.postprev,
 div.inlinepostprev {
   border: 1px solid #9295a4;
+}
+
+div#upload-box {
+  background: #aaa;
+}
+div#upload-box a {
+  color: #444;
+}
+div#upload-box a:hover, div#upload-box a:target, div#upload-box a:focus {
+  color: #666;
 }
 
 #site-title {
@@ -114,18 +124,27 @@ h1, h2, h3 {
 div#topbar {
   -webkit-filter: drop-shadow(3px 5px 6px #555555);
   filter: drop-shadow(3px 5px 6px #555555);
-  height: 30px;
+  min-height: 1.5em;
 }
 
 div#topbar,
-.topbar-item,
-.topbar-item:visited,
+a.topbar-item,
+a.topbar-item:visited,
 .dropdown-button,
-.dropdown-menu {
-  background: #000A89;
+div.dropdown-menu {
+  background: #080e5e;
   color: #EEF2FF;
 }
 
+div.dropdown-menu a,
+div.dropdown-menu a:visited {
+  color: #EEF2FF;
+}
+
+a.topbar-item:hover, a.topbar-item:active {
+  background: #0a127b;
+}
+
 div#footer {
-  font-size: 8pt;
+  font-size: 0.75em;
 }

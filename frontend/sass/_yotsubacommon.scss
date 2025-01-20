@@ -1,4 +1,4 @@
-
+@import 'util';
 
 @mixin yotsuba(
 	$fadepath,
@@ -101,4 +101,6 @@
 		color: $subjectcol;
 		font-weight: 700;
 	}
+
+	@include upload-box(#aaa, #444, #666);
 }

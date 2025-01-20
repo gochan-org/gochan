@@ -93,3 +93,13 @@ span.subject {
   color: #0F0C5D;
   font-weight: 700;
 }
+
+div#upload-box {
+  background: #aaa;
+}
+div#upload-box a {
+  color: #444;
+}
+div#upload-box a:hover, div#upload-box a:target, div#upload-box a:focus {
+  color: #666;
+}

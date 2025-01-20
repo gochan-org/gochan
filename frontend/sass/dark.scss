@@ -25,7 +25,6 @@ header {
 }
 
 div#content {
-	// input:not([type=submit]):not([type=button]),
 	input:not(div#qrbuttons input),
 	textarea, select {
 		background: $inputbg;
@@ -40,10 +39,6 @@ th.postblock, table.mgmt-table tr:first-of-type th {
 	border-radius: 5px;
 	text-align: left;
 }
-
-// select.post-actions {
-// 	color: $color;
-// }
 
 div.reply,
 div.postprev,
