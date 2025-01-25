@@ -21,3 +21,22 @@ timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal FR
 
 	announcementsQuery = "SELECT id, subject, message, poster, timestamp FROM DBPREFIXannouncements"
 )
+
+var (
+	alterStatements = []string{
+		"ALTER TABLE DBPREFIXboards RENAME COLUMN section TO section_id",
+		"ALTER TABLE DBPREFIXboards RENAME COLUMN list_order TO navbar_position",
+		"ALTER TABLE DBPREFIXboards RENAME COLUMN created_on TO created_at",
+		"ALTER TABLE DBPREFIXboards RENAME COLUMN anonymous TO anonymous_name",
+		"ALTER TABLE DBPREFIXboards RENAME COLUMN forced_anon TO force_anonymous",
+		"ALTER TABLE DBPREFIXboards RENAME COLUMN embeds_allowed TO allow_embeds",
+		"ALTER TABLE DBPREFIXboards ADD COLUMN uri VARCHAR(45) NOT NULL DEFAULT ''",
+		"ALTER TABLE DBPREFIXboards ADD COLUMN min_message_length SMALLINT NOT NULL DEFAULT 0",
+		"ALTER TABLE DBPREFIXboards ADD COLUMN max_threads SMALLINT NOT NULL DEFAULT 65535",
+		// the following statements don't work in SQLite since it doesn't support adding foreign keys after table creation.
+		// "in-place" migration support for SQLite may be removed
+		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_section_id_fk FOREIGN KEY (section_id) REFERENCES DBPREFIXsections(id)",
+		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_dir_unique UNIQUE (dir)",
+		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_uri_unique UNIQUE (uri)",
+	}
+)

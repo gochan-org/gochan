@@ -10,28 +10,6 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var (
-	alterStatements = []string{
-		"ALTER TABLE DBPREFIXboards RENAME COLUMN section TO section_id",
-		"ALTER TABLE DBPREFIXboards RENAME COLUMN list_order TO navbar_position",
-		"ALTER TABLE DBPREFIXboards RENAME COLUMN created_on TO created_at",
-		"ALTER TABLE DBPREFIXboards RENAME COLUMN anonymous TO anonymous_name",
-		"ALTER TABLE DBPREFIXboards RENAME COLUMN forced_anon TO force_anonymous",
-		"ALTER TABLE DBPREFIXboards RENAME COLUMN embeds_allowed TO allow_embeds",
-		"ALTER TABLE DBPREFIXboards ADD COLUMN uri VARCHAR(45) NOT NULL",
-		"ALTER TABLE DBPREFIXboards ADD COLUMN min_message_length SMALLINT NOT NULL",
-		"ALTER TABLE DBPREFIXboards ADD COLUMN max_threads SMALLINT NOT NULL",
-		"ALTER TABLE DBPREFIXboards DROP COLUMN type",
-		"ALTER TABLE DBPREFIXboards DROP COLUMN upload_type",
-		"ALTER TABLE DBPREFIXboards DROP COLUMN max_age",
-		// the following statements don't work in SQLite since it doesn't support adding foreign keys after table creation.
-		// "in-place" migration support for SQLite may be removed
-		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_section_id_fk FOREIGN KEY (section_id) REFERENCES DBPREFIXsections(id)",
-		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_dir_unique UNIQUE (dir)",
-		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_uri_unique UNIQUE (uri)",
-	}
-)
-
 type migrationBoard struct {
 	oldSectionID int
 	oldID        int
@@ -59,9 +37,22 @@ func (m *Pre2021Migrator) migrateBoardsInPlace() error {
 		errEv.Err(err).Caller().Msg("Failed to migrate sections")
 		return err
 	}
-	err = common.NewMigrationError("pre2021", "migrateBoardsInPlace not implemented")
-	errEv.Err(err).Caller().Msg("Failed to migrate boards")
-	return err
+
+	for _, statement := range alterStatements {
+		if strings.Contains(statement, "CONSTRAINT") && m.db.SQLDriver() == "sqlite3" {
+			// skip constraints in SQLite since they can't be added after table creation
+			continue
+		}
+		_, err = m.db.ExecSQL(statement)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Str("statement", statement).
+				Msg("Failed to execute alter statement")
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *Pre2021Migrator) migrateSectionsToNewDB() error {

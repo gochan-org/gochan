@@ -1,7 +1,9 @@
 package pre2021
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/stretchr/testify/assert"
@@ -76,4 +78,13 @@ func TestMigrateBoardsInPlace(t *testing.T) {
 	if !assert.NoError(t, migrator.MigrateBoards()) {
 		t.FailNow()
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(migrator.config.DBTimeoutSeconds))
+	defer cancel()
+	var uri string
+	var sectionID int
+	assert.NoError(t, migrator.db.QueryRowContextSQL(ctx, nil, "SELECT uri FROM DBPREFIXboards WHERE dir = ?", []any{"test"}, []any{&uri}))
+	assert.NoError(t, migrator.db.QueryRowContextSQL(ctx, nil, "SELECT section_id FROM DBPREFIXboards WHERE dir = ?", []any{"test"}, []any{&sectionID}))
+	assert.Equal(t, "", uri)
+	assert.Greater(t, sectionID, 0)
 }
