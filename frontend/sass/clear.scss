@@ -64,7 +64,7 @@ table.mgmt-table tr:first-of-type th {
 }
 
 span.subject {
-	font-weight: bold;
+	font-weight: 800;
 	color: $subjectcol;
 }
 
@@ -76,3 +76,5 @@ div.section-title-block {
 	background: #A7A7A7;
 	border-bottom: 1px solid $replyborder;
 }
+
+@include upload-box(#aaa, #444, #666);

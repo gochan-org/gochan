@@ -3,7 +3,7 @@
 
 h1#board-title {
 	font-family: serif;
-	font-size: 24pt;
+	font-size: 2em;
 	color: $headercol;
 }
 
@@ -12,15 +12,15 @@ h1#board-title {
 }
 
 div.file-info {
-	font-size:12px;
-	font-family:sans-serif;
+	font-size: 1em;
+	font-family: sans-serif;
 }
 
 span.postername {
-	font-size:12px;
-	font-family:serif;
+	font-size: 1em;
+	font-family: serif;
 	color: $namecol;
-	font-weight:800;
+	font-weight: 800;
 }
 
 div.reply,
@@ -31,7 +31,10 @@ div.inlinepostprev {
 }
 
 select.post-actions,
+div.reply,
 div.postprev,
 div.inlinepostprev {
 	border: 1px solid $bordercol;
 }
+
+@include upload-box(#aaa, #444, #666);

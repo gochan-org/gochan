@@ -597,6 +597,10 @@ img#banpage-image {
   margin: 4px 8px 8px 4px;
 }
 
+.increase-line-height {
+  line-height: 1.5;
+}
+
 header {
   margin-top: 50px;
   text-align: center;

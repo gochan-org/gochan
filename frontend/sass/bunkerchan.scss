@@ -30,9 +30,19 @@ div#staff, select.post-actions {
 
 div#topbar,
 div#topbar a,
-div#topbar a:visited {
+div#topbar a:visited,
+div.dropdown-menu {
 	background: $topbarbg;
 	border-bottom: 1px solid $topborder;
+}
+
+div.dropdown-menu {
+	border-left: 1px solid $topborder;
+	border-right: 1px solid $topborder;
+}
+
+div.dropdown-menu a:hover, div.dropdown-menu a:active {
+	background: $bgcol;
 }
 
 table#pages, table#pages * {

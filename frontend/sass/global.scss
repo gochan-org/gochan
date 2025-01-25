@@ -6,20 +6,24 @@
 @import "global/watcher";
 @import 'global/bans';
 
+.increase-line-height {
+	line-height: 1.5;
+}
+
 header {
-	margin-top:50px;
-	text-align:center;
+	margin-top: 50px;
+	text-align: center;
 	h1 {
 		margin: 0px;
 	}
 }
 
 div#topbar {
-	left:0;
-	position:fixed;
-	top:0;
-	width:100%;
-	margin-top:0px;
+	left: 0;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	margin-top: 0px;
 
 	* {
 		padding: 4px;
@@ -63,15 +67,15 @@ div#staffmenu {
 div.section-block {
 	margin-bottom: 8px;
 	div.section-title-block {
-		display:block;
-		padding:4px 8px 4px 8px;
+		display: block;
+		padding: 4px 8px 4px 8px;
 	}
 	div.section-body {
 		overflow-y: hidden;
 		margin-right: 0px;
 		margin-bottom:8px;
 		min-height: 48px;
-		padding:8px;
+		padding: 8px;
 	}
 }
 
@@ -81,12 +85,12 @@ div.section-block {
 }
 
 #footer {
-	bottom:0px;
-	clear:both;
-	left:0px;
-	position:static;
-	text-align:center;
-	width:100%;
+	bottom: 0px;
+	clear: both;
+	left: 0px;
+	position: static;
+	text-align: center;
+	width: 100%;
 }
 
 select.post-actions {

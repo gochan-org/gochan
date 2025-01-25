@@ -91,6 +91,9 @@
 		"somemod:blue"
 	],
 	"BanMessage": "USER WAS BANNED FOR THIS POST",
+
+	"EnableCyclicThreads": true,
+	"CyclicThreadNumPosts": 500,
 	"EnableEmbeds": true,
 	"EnableNoFlag": true,
 	"EmbedWidth": 200,

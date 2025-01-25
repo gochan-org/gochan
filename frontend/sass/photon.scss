@@ -38,3 +38,5 @@ header, div#top-pane, a {
 #site-title, #board-title {
 	font-weight: 800;
 }
+
+@include upload-box(#aaa, #444, #666);

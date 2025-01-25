@@ -19,3 +19,15 @@
 	-webkit-border-radius: $properties;
 	border-radius: $properties;
 }
+
+@mixin upload-box($bg, $a, $a-visited) {
+	div#upload-box {
+		background: $bg;
+		a {
+			color: $a;
+		}
+		a:hover, a:target, a:focus {
+			color: $a-visited;
+		}
+	}
+}

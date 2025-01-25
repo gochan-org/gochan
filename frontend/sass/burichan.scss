@@ -32,12 +32,10 @@ h2 a {
 
 h3 {
 	margin: 0px;
-	text-align: center;
 	font-size: medium;
 }
 
-h1,h2 {
-	// background:#D6DAF0;
+h1, h2 {
 	font-family: $hfont-family;
 }
 
@@ -47,21 +45,32 @@ h1, h2, h3 {
 }
 
 div#topbar {
-	// @include box-shadow(3px 3px 5px 6px $shadowcol);
 	@include shadow-filter(3px 5px 6px $shadowcol);
-	height: 30px;
+	min-height: 1.5em;
 }
 
 div#topbar,
-.topbar-item,
-.topbar-item:visited,
+a.topbar-item,
+a.topbar-item:visited,
 .dropdown-button,
-.dropdown-menu/* ,
-.dropdown-menu a  */{
-	background: #000A89;
+div.dropdown-menu {
+	background: #080e5e;
 	color: $bgcol;
 }
 
+div.dropdown-menu {
+	@include shadow-filter(3px 5px 6px $shadowcol);
+	a, h3 {
+		color: $bgcol;
+	}
+}
+
+a.topbar-item:hover,
+a.topbar-item:active,
+div.dropdown-menu a:hover {
+	background: #0a127b;
+}
+
 div#footer {
-	font-size: 8pt;
+	font-size: 0.75em;
 }
