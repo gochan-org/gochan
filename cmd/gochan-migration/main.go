@@ -95,8 +95,14 @@ func main() {
 		Msg("Starting database migration")
 
 	config.InitConfig(versionStr)
+	sqlCfg := config.GetSQLConfig()
+	if migratingInPlace && sqlCfg.DBtype == "sqlite3" && !updateDB {
+		common.LogWarning().
+			Str("dbType", sqlCfg.DBtype).
+			Bool("migrateInPlace", migratingInPlace).
+			Msg("SQLite has limitations with table column changes")
+	}
 	if !migratingInPlace {
-		sqlCfg := config.GetSQLConfig()
 		err = gcsql.ConnectToDB(&sqlCfg)
 		if err != nil {
 			fatalEv.Err(err).Caller().Msg("Failed to connect to the database")
