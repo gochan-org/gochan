@@ -23,7 +23,7 @@ timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal FR
 )
 
 var (
-	alterStatements = []string{
+	boardAlterStatements = []string{
 		"ALTER TABLE DBPREFIXboards RENAME COLUMN section TO section_id",
 		"ALTER TABLE DBPREFIXboards RENAME COLUMN list_order TO navbar_position",
 		"ALTER TABLE DBPREFIXboards RENAME COLUMN created_on TO created_at",
@@ -38,5 +38,18 @@ var (
 		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_section_id_fk FOREIGN KEY (section_id) REFERENCES DBPREFIXsections(id)",
 		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_dir_unique UNIQUE (dir)",
 		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_uri_unique UNIQUE (uri)",
+	}
+	postAlterStatements = []string{
+		"ALTER TABLE DBPREFIXposts RENAME COLUMN parentid TO thread_id",
+		"ALTER TABLE DBPREFIXposts RENAME COLUMN timestamp TO created_on",
+		"ALTER TABLE DBPREFIXposts RENAME COLUMN deleted_timestamp TO deleted_at",
+		// "ALTER TABLE DBPREFIXposts RENAME COLUMN ip TO ip_old",
+		"ALTER TABLE DBPREFIXposts ADD COLUMN is_top_post BOOL NOT NULL DEFAULT FALSE",
+		"ALTER TABLE DBPREFIXposts ADD COLUMN is_role_signature BOOL NOT NULL DEFAULT FALSE",
+		"ALTER TABLE DBPREFIXposts ADD COLUMN is_deleted BOOL NOT NULL DEFAULT FALSE",
+		"ALTER TABLE DBPREFIXposts ADD COLUMN banned_message TEXT",
+		"ALTER TABLE DBPREFIXposts ADD COLUMN flag VARCHAR(45) NOT NULL DEFAULT ''",
+		"ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''",
+		"UPDATE DBPREFIXposts SET is_top_post = TRUE WHERE thread_id = 0",
 	}
 )

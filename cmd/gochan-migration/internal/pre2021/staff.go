@@ -12,8 +12,8 @@ import (
 )
 
 func (*Pre2021Migrator) migrateStaffInPlace() error {
-	err := common.NewMigrationError("pre2021", "migrateSectionsInPlace not yet implemented")
-	common.LogError().Err(err).Caller().Msg("Failed to migrate sections")
+	err := common.NewMigrationError("pre2021", "migrateStaff not yet implemented")
+	common.LogError().Err(err).Caller().Msg("Failed to migrate staff")
 	return err
 }
 

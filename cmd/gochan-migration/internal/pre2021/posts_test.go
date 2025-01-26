@@ -49,3 +49,32 @@ func TestMigratePostsToNewDB(t *testing.T) {
 	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXfiles", nil, []any{&numUploadPosts}))
 	assert.Equal(t, 1, numUploadPosts, "Expected to have 1 upload post")
 }
+
+func TestMigratePostsInPlace(t *testing.T) {
+	outDir := t.TempDir()
+	migrator := setupMigrationTest(t, outDir, true)
+	if !assert.True(t, migrator.IsMigratingInPlace(), "This test should be migrating in place") {
+		t.FailNow()
+	}
+
+	if !assert.NoError(t, migrator.MigrateBoards()) {
+		t.FailNow()
+	}
+
+	if !assert.NoError(t, migrator.MigratePosts()) {
+		t.FailNow()
+	}
+	var numThreads int
+	if !assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXthreads", nil, []any{&numThreads}), "Failed to get number of threads") {
+		t.FailNow()
+	}
+	assert.Equal(t, 2, numThreads, "Expected to have two threads pre-migration")
+
+	var numUploadPosts int
+	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXfiles", nil, []any{&numUploadPosts}))
+	assert.Equal(t, 1, numUploadPosts, "Expected to have 1 upload post")
+
+	var ip string
+	assert.NoError(t, gcsql.QueryRowSQL("SELECT IP_NTOA FROM DBPREFIXposts WHERE id = 1", nil, []any{&ip}))
+	assert.Equal(t, "192.168.56.1", ip, "Expected to have the correct IP address")
+}

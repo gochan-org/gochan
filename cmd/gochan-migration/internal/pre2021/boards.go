@@ -38,7 +38,7 @@ func (m *Pre2021Migrator) migrateBoardsInPlace() error {
 		return err
 	}
 
-	for _, statement := range alterStatements {
+	for _, statement := range boardAlterStatements {
 		if strings.Contains(statement, "CONSTRAINT") && m.db.SQLDriver() == "sqlite3" {
 			// skip constraints in SQLite since they can't be added after table creation
 			continue
