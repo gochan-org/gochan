@@ -17,33 +17,14 @@ func (m *Pre2021Migrator) migrateAnnouncementsInPlace() error {
 		return err
 	}
 
-	var staffIDs []int
-	rows, err := m.db.QuerySQL("SELECT id FROM DBPREFIXstaff")
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed to get staff IDs")
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id int
-		if err = rows.Scan(&id); err != nil {
-			errEv.Err(err).Caller().Msg("Failed to scan staff ID")
-			return err
-		}
-		staffIDs = append(staffIDs, id)
-	}
-	if err = rows.Close(); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to close staff ID rows")
-		return err
-	}
-
+	var err error
 	m.migrationUser, err = m.getMigrationUser(errEv)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get migration user")
 		return err
 	}
 
-	rows, err = m.db.QuerySQL("SELECT poster FROM DBPREFIXannouncements")
+	rows, err := m.db.QuerySQL("SELECT poster FROM DBPREFIXannouncements")
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get announcements")
 		return err
@@ -111,6 +92,7 @@ func (m *Pre2021Migrator) migrateAnnouncementsToNewDB() error {
 			// user doesn't exist, use migration user
 			common.LogWarning().Str("staff", staff).Msg("Staff username not found in database")
 			message += "\n(originally by " + staff + ")"
+			staffID = m.migrationUser.ID
 		} else if err != nil {
 			errEv.Err(err).Caller().Str("staff", staff).Msg("Failed to get staff ID")
 			return err
