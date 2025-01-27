@@ -20,6 +20,8 @@ bumped, stickied, locked FROM DBPREFIXposts WHERE deleted_timestamp IS NULL`
 timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal FROM DBPREFIXbanlist`
 
 	announcementsQuery = "SELECT id, subject, message, poster, timestamp FROM DBPREFIXannouncements"
+
+	announcementsAlterStatement = "ALTER TABLE DBPREFIXannouncements ADD COLUMN staff_id INT NOT NULL DEFAULT 1"
 )
 
 var (
