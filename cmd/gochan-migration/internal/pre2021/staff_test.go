@@ -27,3 +27,20 @@ func TestMigrateStaffToNewDB(t *testing.T) {
 	}
 	assert.Equal(t, 3, migratedAdmin.Rank)
 }
+
+func TestMigrateStaffInPlace(t *testing.T) {
+	outDir := t.TempDir()
+	migrator := setupMigrationTest(t, outDir, true)
+	if !assert.True(t, migrator.IsMigratingInPlace(), "This test should be migrating in place") {
+		t.FailNow()
+	}
+
+	if !assert.NoError(t, migrator.MigrateStaff()) {
+		t.FailNow()
+	}
+	migratedAdmin, err := gcsql.GetStaffByUsername("migratedadmin", true)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, 3, migratedAdmin.Rank)
+}

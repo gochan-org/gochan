@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -38,7 +39,31 @@ type migrationBan struct {
 }
 
 func (m *Pre2021Migrator) migrateBansInPlace() error {
-	return common.NewMigrationError("pre2021", "migrateBansInPlace not yet implemented")
+	errEv := common.LogError()
+	defer errEv.Discard()
+	initSQLPath := gcutil.FindResource("sql/initdb_" + m.db.SQLDriver() + ".sql")
+	ba, err := os.ReadFile(initSQLPath)
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("initDBFile", initSQLPath).
+			Msg("Failed to read initdb file")
+		return err
+	}
+	statements := strings.Split(string(ba), ";")
+	for _, stmt := range statements {
+		stmt = strings.TrimSpace(stmt)
+		if strings.HasPrefix(stmt, "CREATE TABLE DBPREFIXip_ban") || strings.HasPrefix(stmt, "CREATE TABLE DBPREFIXfilter") {
+			_, err = gcsql.ExecSQL(stmt)
+			if err != nil {
+				errEv.Err(err).Caller().
+					Str("statement", stmt).
+					Msg("Failed to create table")
+				return err
+			}
+		}
+	}
+	// since the table names are different, migrateBansToNewDB can be called directly to migrate bans
+	return m.migrateBansToNewDB()
 }
 
 func (m *Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int, errEv *zerolog.Event) error {

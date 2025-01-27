@@ -52,4 +52,9 @@ var (
 		"ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''",
 		"UPDATE DBPREFIXposts SET is_top_post = TRUE WHERE thread_id = 0",
 	}
+	staffAlterStatements = []string{
+		"ALTER TABLE DBPREFIXstaff RENAME COLUMN rank TO global_rank",
+		"ALTER TABLE DBPREFIXstaff RENAME COLUMN last_active TO last_login",
+		"ALTER TABLE DBPREFIXstaff ADD COLUMN is_active BOOL NOT NULL DEFAULT TRUE",
+	}
 )

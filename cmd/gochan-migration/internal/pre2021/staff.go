@@ -11,10 +11,23 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func (*Pre2021Migrator) migrateStaffInPlace() error {
-	err := common.NewMigrationError("pre2021", "migrateStaff not yet implemented")
-	common.LogError().Err(err).Caller().Msg("Failed to migrate staff")
-	return err
+func (m *Pre2021Migrator) migrateStaffInPlace() error {
+	errEv := common.LogError()
+	defer errEv.Discard()
+
+	for _, stmt := range staffAlterStatements {
+		if _, err := gcsql.ExecSQL(stmt); err != nil {
+			errEv.Err(err).Caller().Msg("Failed to alter staff table")
+			return err
+		}
+	}
+
+	_, err := m.getMigrationUser(errEv)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *Pre2021Migrator) getMigrationUser(errEv *zerolog.Event) (*gcsql.Staff, error) {
