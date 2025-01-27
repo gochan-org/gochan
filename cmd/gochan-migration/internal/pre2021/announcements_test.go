@@ -26,9 +26,7 @@ func TestMigrateAnnouncementsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 
-	var numAnnouncements int
-	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXannouncements WHERE staff_id > 0", nil, []any{&numAnnouncements}))
-	assert.Equal(t, 2, numAnnouncements, "Expected to have two announcement")
+	validateAnnouncementMigration(t)
 }
 
 func TestMigrateAnnouncementsInPlace(t *testing.T) {
@@ -49,7 +47,10 @@ func TestMigrateAnnouncementsInPlace(t *testing.T) {
 	if !assert.NoError(t, migrator.MigrateAnnouncements()) {
 		t.FailNow()
 	}
+	validateAnnouncementMigration(t)
+}
 
+func validateAnnouncementMigration(t *testing.T) {
 	var numAnnouncements int
 	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXannouncements WHERE staff_id > 0", nil, []any{&numAnnouncements}))
 	assert.Equal(t, 2, numAnnouncements, "Expected to have two announcement")

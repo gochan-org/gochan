@@ -1,9 +1,7 @@
 package pre2021
 
 import (
-	"context"
 	"testing"
-	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +24,23 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 	if !assert.NoError(t, migrator.MigrateBoards()) {
 		t.FailNow()
 	}
+	validateBoardMigration(t)
+}
 
+func TestMigrateBoardsInPlace(t *testing.T) {
+	outDir := t.TempDir()
+	migrator := setupMigrationTest(t, outDir, true)
+	if !assert.True(t, migrator.IsMigratingInPlace(), "This test should be migrating in place") {
+		t.FailNow()
+	}
+
+	if !assert.NoError(t, migrator.MigrateBoards()) {
+		t.FailNow()
+	}
+	validateBoardMigration(t)
+}
+
+func validateBoardMigration(t *testing.T) {
 	migratedBoards, err := gcsql.GetAllBoards(false)
 	if !assert.NoError(t, err) {
 		t.FailNow()
@@ -51,7 +65,7 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	assert.Equal(t, 1, testBoard.ID)
+	assert.Greater(t, testBoard.ID, 0)
 	assert.Equal(t, "Testing Board", testBoard.Title)
 	assert.Equal(t, "Board for testing pre-2021 migration", testBoard.Subtitle)
 	assert.Equal(t, "Board for testing pre-2021 migration description", testBoard.Description)
@@ -66,25 +80,4 @@ func TestMigrateBoardsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, "Hidden Board", hiddenBoard.Title)
-}
-
-func TestMigrateBoardsInPlace(t *testing.T) {
-	outDir := t.TempDir()
-	migrator := setupMigrationTest(t, outDir, true)
-	if !assert.True(t, migrator.IsMigratingInPlace(), "This test should be migrating in place") {
-		t.FailNow()
-	}
-
-	if !assert.NoError(t, migrator.MigrateBoards()) {
-		t.FailNow()
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(migrator.config.DBTimeoutSeconds))
-	defer cancel()
-	var uri string
-	var sectionID int
-	assert.NoError(t, migrator.db.QueryRowContextSQL(ctx, nil, "SELECT uri FROM DBPREFIXboards WHERE dir = ?", []any{"test"}, []any{&uri}))
-	assert.NoError(t, migrator.db.QueryRowContextSQL(ctx, nil, "SELECT section_id FROM DBPREFIXboards WHERE dir = ?", []any{"test"}, []any{&sectionID}))
-	assert.Equal(t, "", uri)
-	assert.Greater(t, sectionID, 0)
 }

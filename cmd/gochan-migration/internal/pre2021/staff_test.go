@@ -21,11 +21,7 @@ func TestMigrateStaffToNewDB(t *testing.T) {
 	if !assert.NoError(t, migrator.MigrateStaff()) {
 		t.FailNow()
 	}
-	migratedAdmin, err := gcsql.GetStaffByUsername("migratedadmin", true)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	assert.Equal(t, 3, migratedAdmin.Rank)
+	validateStaffMigration(t)
 }
 
 func TestMigrateStaffInPlace(t *testing.T) {
@@ -38,6 +34,10 @@ func TestMigrateStaffInPlace(t *testing.T) {
 	if !assert.NoError(t, migrator.MigrateStaff()) {
 		t.FailNow()
 	}
+	validateStaffMigration(t)
+}
+
+func validateStaffMigration(t *testing.T) {
 	migratedAdmin, err := gcsql.GetStaffByUsername("migratedadmin", true)
 	if !assert.NoError(t, err) {
 		t.FailNow()
