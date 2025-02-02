@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMigratePostsToNewDB(t *testing.T) {
+func TestMigratePosts(t *testing.T) {
 	outDir := t.TempDir()
 	migrator := setupMigrationTest(t, outDir, false)
 	if !assert.False(t, migrator.IsMigratingInPlace(), "This test should not be migrating in place") {
@@ -23,23 +23,6 @@ func TestMigratePostsToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, 2, numThreads, "Expected to have two threads pre-migration")
-
-	if !assert.NoError(t, migrator.MigratePosts()) {
-		t.FailNow()
-	}
-	validatePostMigration(t)
-}
-
-func TestMigratePostsInPlace(t *testing.T) {
-	outDir := t.TempDir()
-	migrator := setupMigrationTest(t, outDir, true)
-	if !assert.True(t, migrator.IsMigratingInPlace(), "This test should be migrating in place") {
-		t.FailNow()
-	}
-
-	if !assert.NoError(t, migrator.MigrateBoards()) {
-		t.FailNow()
-	}
 
 	if !assert.NoError(t, migrator.MigratePosts()) {
 		t.FailNow()

@@ -1,13 +1,9 @@
 package pre2021
 
 import (
-	"runtime/debug"
-	"strings"
-
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/rs/zerolog"
 )
 
 type migrationBoard struct {
@@ -21,41 +17,7 @@ type migrationSection struct {
 	gcsql.Section
 }
 
-func (m *Pre2021Migrator) migrateSectionsInPlace() error {
-	_, err := m.db.ExecSQL(`ALTER TABLE DBPREFIXsections RENAME COLUMN list_order TO position`)
-	if err != nil {
-		common.LogError().Caller().Msg("Failed to rename list_order column to position")
-	}
-	return err
-}
-
-func (m *Pre2021Migrator) migrateBoardsInPlace() error {
-	errEv := common.LogError()
-	defer errEv.Discard()
-	err := m.migrateSectionsInPlace()
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed to migrate sections")
-		return err
-	}
-
-	for _, statement := range boardAlterStatements {
-		if strings.Contains(statement, "CONSTRAINT") && m.db.SQLDriver() == "sqlite3" {
-			// skip constraints in SQLite since they can't be added after table creation
-			continue
-		}
-		_, err = m.db.ExecSQL(statement)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("statement", statement).
-				Msg("Failed to execute alter statement")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
+func (m *Pre2021Migrator) migrateSections() error {
 	// creates sections in the new db if they don't exist, and also creates a migration section that
 	// boards will be set to, to be moved to the correct section by the admin after migration
 	errEv := common.LogError()
@@ -74,6 +36,7 @@ func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
 		})
 	}
 
+	var sectionsToBeCreated []gcsql.Section
 	rows, err := m.db.QuerySQL(sectionsQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to query old database sections")
@@ -99,33 +62,40 @@ func (m *Pre2021Migrator) migrateSectionsToNewDB() error {
 					Int("oldSectionID", m.sections[s].oldID).
 					Str("sectionName", section.Name).
 					Str("sectionAbbreviation", section.Abbreviation).
-					Msg("Section already exists in new db, updating values")
-				if err = m.sections[s].UpdateValues(); err != nil {
-					errEv.Err(err).Caller().Str("sectionName", section.Name).Msg("Failed to update pre-existing section values")
-				}
+					Msg("Section already exists in new db, values will be updated")
 				found = true
 				break
 			}
 		}
 		if !found {
-			migratedSection, err := gcsql.NewSection(section.Name, section.Abbreviation, section.Hidden, section.Position)
-			if err != nil {
-				errEv.Err(err).Caller().Str("sectionName", section.Name).Msg("Failed to migrate section")
-				return err
-			}
-			m.sections = append(m.sections, migrationSection{
-				Section: *migratedSection,
-			})
+			sectionsToBeCreated = append(sectionsToBeCreated, section)
 		}
 	}
 	if err = rows.Close(); err != nil {
 		errEv.Caller().Msg("Failed to close section rows")
 		return err
 	}
+	for _, section := range sectionsToBeCreated {
+		migratedSection, err := gcsql.NewSection(section.Name, section.Abbreviation, section.Hidden, section.Position)
+		if err != nil {
+			errEv.Err(err).Caller().Str("sectionName", section.Name).Msg("Failed to migrate section")
+			return err
+		}
+		m.sections = append(m.sections, migrationSection{
+			Section: *migratedSection,
+		})
+	}
+
+	for s, section := range m.sections {
+		if err = m.sections[s].UpdateValues(); err != nil {
+			errEv.Err(err).Caller().Str("sectionName", section.Name).Msg("Failed to update pre-existing section values")
+		}
+	}
+
 	return nil
 }
 
-func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
+func (m *Pre2021Migrator) MigrateBoards() error {
 	m.boards = nil
 	errEv := common.LogError()
 	defer errEv.Discard()
@@ -137,7 +107,7 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 		return nil
 	}
 
-	if err = m.migrateSectionsToNewDB(); err != nil {
+	if err = m.migrateSections(); err != nil {
 		// error should already be logged by migrateSectionsToNewDB
 		return err
 	}
@@ -162,6 +132,7 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 		return err
 	}
 	defer rows.Close()
+	var boardsTmp []migrationBoard
 
 	for rows.Next() {
 		var board migrationBoard
@@ -176,8 +147,11 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 			return err
 		}
 		board.MaxThreads = maxPages * config.GetBoardConfig(board.Dir).ThreadsPerPage
-		found := false
+		boardsTmp = append(boardsTmp, board)
+	}
 
+	for _, board := range boardsTmp {
+		found := false
 		for b, newBoard := range m.boards {
 			if newBoard.Dir == board.Dir {
 				m.boards[b].oldID = board.oldID
@@ -228,25 +202,4 @@ func (m *Pre2021Migrator) migrateBoardsToNewDB() error {
 		return err
 	}
 	return nil
-}
-
-func (m *Pre2021Migrator) MigrateBoards() error {
-	defer func() {
-		if r := recover(); r != nil {
-			stackTrace := debug.Stack()
-			traceLines := strings.Split(string(stackTrace), "\n")
-			zlArr := zerolog.Arr()
-			for _, line := range traceLines {
-				zlArr.Str(line)
-			}
-			common.LogFatal().Caller().
-				Interface("recover", r).
-				Array("stackTrace", zlArr).
-				Msg("Recovered from panic in MigrateBoards")
-		}
-	}()
-	if m.IsMigratingInPlace() {
-		return m.migrateBoardsInPlace()
-	}
-	return m.migrateBoardsToNewDB()
 }

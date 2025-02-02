@@ -8,63 +8,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
-func (m *Pre2021Migrator) migrateAnnouncementsInPlace() error {
-	errEv := common.LogError()
-	defer errEv.Discard()
-
-	if _, err := gcsql.ExecSQL(announcementsAlterStatement); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to alter announcements table")
-		return err
-	}
-
-	var err error
-	m.migrationUser, err = m.getMigrationUser(errEv)
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed to get migration user")
-		return err
-	}
-
-	rows, err := m.db.QuerySQL("SELECT poster FROM DBPREFIXannouncements")
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed to get announcements")
-		return err
-	}
-	defer rows.Close()
-
-	var announcementPosters []string
-	for rows.Next() {
-		var poster string
-		if err = rows.Scan(&poster); err != nil {
-			errEv.Err(err).Caller().Msg("Failed to scan announcement row")
-			return err
-		}
-		announcementPosters = append(announcementPosters, poster)
-	}
-	if err = rows.Close(); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to close announcement rows")
-		return err
-	}
-	for _, poster := range announcementPosters {
-		id, err := gcsql.GetStaffID(poster)
-		if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
-			// user doesn't exist, use migration user
-			common.LogWarning().Str("staff", poster).Msg("Staff username not found in database")
-			id = m.migrationUser.ID
-		} else if err != nil {
-			errEv.Err(err).Caller().Str("staff", poster).Msg("Failed to get staff ID")
-			return err
-		}
-
-		if _, err = gcsql.ExecSQL("UPDATE DBPREFIXannouncements SET staff_id = ? WHERE poster = ?", id, poster); err != nil {
-			errEv.Err(err).Caller().Str("staff", poster).Msg("Failed to update announcement poster")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *Pre2021Migrator) migrateAnnouncementsToNewDB() error {
+func (m *Pre2021Migrator) MigrateAnnouncements() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
 
@@ -111,11 +55,4 @@ func (m *Pre2021Migrator) migrateAnnouncementsToNewDB() error {
 		return err
 	}
 	return nil
-}
-
-func (m *Pre2021Migrator) MigrateAnnouncements() error {
-	if m.IsMigratingInPlace() {
-		return m.migrateAnnouncementsInPlace()
-	}
-	return m.migrateAnnouncementsToNewDB()
 }

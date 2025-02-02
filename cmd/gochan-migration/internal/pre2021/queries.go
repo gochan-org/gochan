@@ -14,14 +14,14 @@ bumped, stickied, locked FROM DBPREFIXposts WHERE deleted_timestamp IS NULL`
 
 	threadsQuery = postsQuery + " AND parentid = 0"
 
-	staffQuery = `SELECT username, rank, boards, added_on, last_active FROM DBPREFIXstaff`
+	staffQuery = `SELECT id, username, rank, boards, added_on, last_active FROM DBPREFIXstaff`
 
 	bansQuery = `SELECT  id, allow_read, COALESCE(ip, '') as ip, name, name_is_regex, filename, file_checksum, boards, staff,
 timestamp, expires, permaban, reason, type, staff_note, appeal_at, can_appeal FROM DBPREFIXbanlist`
 
 	announcementsQuery = "SELECT id, subject, message, poster, timestamp FROM DBPREFIXannouncements"
 
-	announcementsAlterStatement = "ALTER TABLE DBPREFIXannouncements ADD COLUMN staff_id INT NOT NULL DEFAULT 1"
+	renameTableStatementTemplate = "ALTER TABLE %s RENAME TO _tmp_%s"
 )
 
 var (
@@ -41,22 +41,10 @@ var (
 		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_dir_unique UNIQUE (dir)",
 		"ALTER TABLE DBPREFIXboards ADD CONSTRAINT boards_uri_unique UNIQUE (uri)",
 	}
-	postAlterStatements = []string{
-		"ALTER TABLE DBPREFIXposts RENAME COLUMN parentid TO thread_id",
-		"ALTER TABLE DBPREFIXposts RENAME COLUMN timestamp TO created_on",
-		"ALTER TABLE DBPREFIXposts RENAME COLUMN deleted_timestamp TO deleted_at",
-		// "ALTER TABLE DBPREFIXposts RENAME COLUMN ip TO ip_old",
-		"ALTER TABLE DBPREFIXposts ADD COLUMN is_top_post BOOL NOT NULL DEFAULT FALSE",
-		"ALTER TABLE DBPREFIXposts ADD COLUMN is_role_signature BOOL NOT NULL DEFAULT FALSE",
-		"ALTER TABLE DBPREFIXposts ADD COLUMN is_deleted BOOL NOT NULL DEFAULT FALSE",
-		"ALTER TABLE DBPREFIXposts ADD COLUMN banned_message TEXT",
-		"ALTER TABLE DBPREFIXposts ADD COLUMN flag VARCHAR(45) NOT NULL DEFAULT ''",
-		"ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''",
-		"UPDATE DBPREFIXposts SET is_top_post = TRUE WHERE thread_id = 0",
-	}
-	staffAlterStatements = []string{
-		"ALTER TABLE DBPREFIXstaff RENAME COLUMN rank TO global_rank",
-		"ALTER TABLE DBPREFIXstaff RENAME COLUMN last_active TO last_login",
-		"ALTER TABLE DBPREFIXstaff ADD COLUMN is_active BOOL NOT NULL DEFAULT TRUE",
+
+	// tables to be renamed to _tmp_DBPREFIX* to work around SQLite's lack of support for changing/removing columns
+	renameTables = []string{
+		"DBPREFIXannouncements", "DBPREFIXappeals", "DBPREFIXbanlist", "DBPREFIXboards", "DBPREFIXembeds", "DBPREFIXlinks",
+		"DBPREFIXposts", "DBPREFIXreports", "DBPREFIXsections", "DBPREFIXsessions", "DBPREFIXstaff", "DBPREFIXwordfilters",
 	}
 )

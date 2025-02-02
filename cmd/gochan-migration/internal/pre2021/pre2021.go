@@ -4,6 +4,7 @@ package pre2021
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"time"
 
@@ -25,6 +26,7 @@ type Pre2021Migrator struct {
 	migrationUser *gcsql.Staff
 	boards        []migrationBoard
 	sections      []migrationSection
+	staff         []migrationStaff
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
@@ -45,7 +47,7 @@ func (m *Pre2021Migrator) readConfig() error {
 func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 	m.options = options
 	var err error
-	m.config.SQLConfig = config.GetSQLConfig()
+
 	if err = m.readConfig(); err != nil {
 		return err
 	}
@@ -66,6 +68,43 @@ func (m *Pre2021Migrator) IsMigrated() (bool, error) {
 	return common.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &sqlConfig)
 }
 
+func (m *Pre2021Migrator) renameTablesForInPlace() error {
+	var err error
+	errEv := common.LogError()
+	defer errEv.Discard()
+	if _, err = m.db.ExecSQL("DROP TABLE DBPREFIXinfo"); err != nil {
+		errEv.Err(err).Caller().Msg("Error dropping info table")
+		return err
+	}
+	for _, table := range renameTables {
+		if _, err = m.db.ExecSQL(fmt.Sprintf(renameTableStatementTemplate, table, table)); err != nil {
+			errEv.Caller().Err(err).
+				Str("table", table).
+				Msg("Error renaming table")
+			return err
+		}
+	}
+
+	if err = gcsql.CheckAndInitializeDatabase(m.config.DBtype, "4"); err != nil {
+		errEv.Caller().Err(err).Msg("Error checking and initializing database")
+		return err
+	}
+
+	if err = m.Close(); err != nil {
+		errEv.Err(err).Caller().Msg("Error closing database")
+		return err
+	}
+	m.config.SQLConfig.DBprefix = "_tmp_" + m.config.DBprefix
+	m.db, err = gcsql.Open(&m.config.SQLConfig)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Error reopening database with new prefix")
+		return err
+	}
+
+	common.LogInfo().Msg("Renamed tables for in-place migration")
+	return err
+}
+
 func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	errEv := common.LogError()
 	defer errEv.Discard()
@@ -76,6 +115,12 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 	}
 	if migrated {
 		return true, nil
+	}
+
+	if m.IsMigratingInPlace() {
+		if err = m.renameTablesForInPlace(); err != nil {
+			return false, err
+		}
 	}
 
 	if err := m.MigrateBoards(); err != nil {

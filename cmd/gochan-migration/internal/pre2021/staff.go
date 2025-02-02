@@ -11,23 +11,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func (m *Pre2021Migrator) migrateStaffInPlace() error {
-	errEv := common.LogError()
-	defer errEv.Discard()
-
-	for _, stmt := range staffAlterStatements {
-		if _, err := gcsql.ExecSQL(stmt); err != nil {
-			errEv.Err(err).Caller().Msg("Failed to alter staff table")
-			return err
-		}
-	}
-
-	_, err := m.getMigrationUser(errEv)
-	if err != nil {
-		return err
-	}
-
-	return nil
+type migrationStaff struct {
+	gcsql.Staff
+	boards string
+	oldID  int
 }
 
 func (m *Pre2021Migrator) getMigrationUser(errEv *zerolog.Event) (*gcsql.Staff, error) {
@@ -36,7 +23,7 @@ func (m *Pre2021Migrator) getMigrationUser(errEv *zerolog.Event) (*gcsql.Staff, 
 	}
 
 	user := &gcsql.Staff{
-		Username: "pre2021-migration" + gcutil.RandomString(15),
+		Username: "pre2021-migration" + gcutil.RandomString(8),
 		AddedOn:  time.Now(),
 	}
 	_, err := gcsql.ExecSQL("INSERT INTO DBPREFIXstaff(username,password_checksum,global_rank,is_active) values(?,'',0,0)", user.Username)
@@ -50,10 +37,11 @@ func (m *Pre2021Migrator) getMigrationUser(errEv *zerolog.Event) (*gcsql.Staff, 
 		return nil, err
 	}
 	m.migrationUser = user
+	m.staff = append(m.staff, migrationStaff{Staff: *user})
 	return user, nil
 }
 
-func (m *Pre2021Migrator) migrateStaffToNewDB() error {
+func (m *Pre2021Migrator) MigrateStaff() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
 
@@ -70,56 +58,53 @@ func (m *Pre2021Migrator) migrateStaffToNewDB() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		var username string
-		var rank int
-		var boards string
-		var addedOn, lastActive time.Time
-
-		if err = rows.Scan(&username, &rank, &boards, &addedOn, &lastActive); err != nil {
+		var staff migrationStaff
+		if err = rows.Scan(&staff.oldID, &staff.Username, &staff.Rank, &staff.boards, &staff.AddedOn, &staff.LastLogin); err != nil {
 			errEv.Err(err).Caller().Msg("Failed to scan staff row")
 			return err
 		}
-		_, err = gcsql.GetStaffByUsername(username, false)
+		m.staff = append(m.staff, staff)
+	}
+	for _, staff := range m.staff {
+		newStaff, err := gcsql.GetStaffByUsername(staff.Username, false)
 		if err == nil {
 			// found staff
-			gcutil.LogInfo().Str("username", username).Int("rank", rank).Msg("Found matching staff account")
-		}
-		if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
+			gcutil.LogInfo().Str("username", staff.Username).Int("rank", staff.Rank).Msg("Found matching staff account")
+			staff.ID = newStaff.ID
+		} else if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
 			// staff doesn't exist, create it (with invalid checksum to be updated by the admin)
-			if _, err2 := gcsql.ExecSQL(
+			if _, err := gcsql.ExecSQL(
 				"INSERT INTO DBPREFIXstaff(username,password_checksum,global_rank,added_on,last_login,is_active) values(?,'',?,?,?,1)",
-				username, rank, addedOn, lastActive,
-			); err2 != nil {
-				errEv.Err(err2).Caller().
-					Str("username", username).Int("rank", rank).
-					Msg("Failed to migrate staff account")
+				staff.Username, staff.Rank, staff.AddedOn, staff.LastLogin,
+			); err != nil {
+				errEv.Err(err).Caller().Str("username", staff.Username).Int("rank", staff.Rank).Msg("Failed to migrate staff account")
 				return err
 			}
-			gcutil.LogInfo().Str("username", username).Int("rank", rank).Msg("Successfully migrated staff account")
-		} else if err != nil {
-			errEv.Err(err).Caller().Str("username", username).Msg("Failed to get staff account info")
+			if staff.ID, err = gcsql.GetStaffID(staff.Username); err != nil {
+				errEv.Err(err).Caller().Str("username", staff.Username).Msg("Failed to get staff account ID")
+				return err
+			}
+			gcutil.LogInfo().Str("username", staff.Username).Int("rank", staff.Rank).Msg("Successfully migrated staff account")
+		} else {
+			errEv.Err(err).Caller().Str("username", staff.Username).Msg("Failed to get staff account info")
 			return err
 		}
-		staffID, err := gcsql.GetStaffID(username)
-		if err != nil {
-			errEv.Err(err).Caller().Str("username", username).Msg("Failed to get staff account ID")
-			return err
-		}
-		if boards != "" && boards != "*" {
-			boardsArr := strings.Split(boards, ",")
+
+		if staff.boards != "" && staff.boards != "*" {
+			boardsArr := strings.Split(staff.boards, ",")
 			for _, board := range boardsArr {
 				board = strings.TrimSpace(board)
 				boardID, err := gcsql.GetBoardIDFromDir(board)
 				if err != nil {
 					errEv.Err(err).Caller().
-						Str("username", username).
+						Str("username", staff.Username).
 						Str("board", board).
 						Msg("Failed to get board ID")
 					return err
 				}
-				if _, err = gcsql.ExecSQL("INSERT INTO DBPREFIXboard_staff(board_id,staff_id) VALUES(?,?)", boardID, staffID); err != nil {
+				if _, err = gcsql.ExecSQL("INSERT INTO DBPREFIXboard_staff(board_id,staff_id) VALUES(?,?)", boardID, staff.ID); err != nil {
 					errEv.Err(err).Caller().
-						Str("username", username).
+						Str("username", staff.Username).
 						Str("board", board).
 						Msg("Failed to apply staff board info")
 					return err
@@ -133,11 +118,4 @@ func (m *Pre2021Migrator) migrateStaffToNewDB() error {
 		return err
 	}
 	return nil
-}
-
-func (m *Pre2021Migrator) MigrateStaff() error {
-	if m.IsMigratingInPlace() {
-		return m.migrateStaffInPlace()
-	}
-	return m.migrateStaffToNewDB()
 }

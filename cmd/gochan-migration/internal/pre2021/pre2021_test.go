@@ -97,7 +97,9 @@ func TestPre2021MigrationToNewDB(t *testing.T) {
 		t.FailNow()
 	}
 	migrated, err := migrator.MigrateDB()
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
 	assert.False(t, migrated)
 
 	validateBoardMigration(t)
@@ -113,7 +115,9 @@ func TestPre2021MigrationInPlace(t *testing.T) {
 		t.FailNow()
 	}
 	migrated, err := migrator.MigrateDB()
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
 	assert.False(t, migrated)
 
 	validateBoardMigration(t)

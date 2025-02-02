@@ -3,8 +3,6 @@ package pre2021
 import (
 	"context"
 	"database/sql"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
@@ -33,13 +31,6 @@ type migrationPost struct {
 	boardID     int
 	oldBoardID  int
 	oldParentID int
-}
-
-func (m *Pre2021Migrator) MigratePosts() error {
-	if m.IsMigratingInPlace() {
-		return m.migratePostsInPlace()
-	}
-	return m.migratePostsToNewDB()
 }
 
 func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
@@ -83,7 +74,7 @@ func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *ze
 	return nil
 }
 
-func (m *Pre2021Migrator) migratePostsToNewDB() error {
+func (m *Pre2021Migrator) MigratePosts() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
 
@@ -193,157 +184,5 @@ func (m *Pre2021Migrator) migratePostsToNewDB() error {
 	gcutil.LogInfo().
 		Int("migratedThreads", migratedThreads).
 		Msg("Migrated threads successfully")
-	return nil
-}
-
-func (m *Pre2021Migrator) migratePostsInPlace() error {
-	errEv := common.LogError()
-	defer errEv.Discard()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(m.config.DBTimeoutSeconds))
-	defer cancel()
-
-	ba, err := os.ReadFile(gcutil.FindResource("sql/initdb_" + m.db.SQLDriver() + ".sql"))
-	if err != nil {
-		errEv.Err(err).Caller().
-			Msg("Failed to read initdb SQL file")
-		return err
-	}
-	statements := strings.Split(string(ba), ";")
-	for _, statement := range statements {
-		statement = strings.TrimSpace(statement)
-		if strings.HasPrefix(statement, "CREATE TABLE DBPREFIXthreads") || strings.HasPrefix(statement, "CREATE TABLE DBPREFIXfiles") {
-			if _, err = m.db.ExecContextSQL(ctx, nil, statement); err != nil {
-				errEv.Err(err).Caller().Msg("Failed to create threads table")
-				return err
-			}
-		}
-	}
-
-	rows, err := m.db.QueryContextSQL(ctx, nil, threadsQuery+" AND parentid = 0")
-	if err != nil {
-		errEv.Err(err).Caller().
-			Msg("Failed to get threads")
-		return err
-	}
-	defer rows.Close()
-
-	var threads []migrationPost
-	for rows.Next() {
-		var post migrationPost
-		if err = rows.Scan(
-			&post.ID, &post.oldBoardID, &post.oldParentID, &post.Name, &post.Tripcode, &post.Email,
-			&post.Subject, &post.Message, &post.MessageRaw, &post.Password, &post.filename,
-			&post.filenameOriginal, &post.fileChecksum, &post.filesize, &post.imageW, &post.imageH,
-			&post.thumbW, &post.thumbH, &post.IP, &post.CreatedOn, &post.autosage,
-			&post.bumped, &post.stickied, &post.locked,
-		); err != nil {
-			errEv.Err(err).Caller().
-				Msg("Failed to scan thread")
-			return err
-		}
-		threads = append(threads, post)
-	}
-	if err = rows.Close(); err != nil {
-		errEv.Caller().Msg("Failed to close thread rows")
-		return err
-	}
-
-	for _, statements := range postAlterStatements {
-		if _, err = m.db.ExecContextSQL(ctx, nil, statements); err != nil {
-			errEv.Err(err).Caller().Msg("Failed to alter posts table")
-			return err
-		}
-	}
-
-	switch m.db.SQLDriver() {
-	case "mysql":
-		_, err = m.db.ExecContextSQL(ctx, nil, "ALTER TABLE DBPREFIXposts ADD COLUMN ip_new VARBINARY(16) NOT NULL")
-	case "postgres", "postgresql":
-		_, err = m.db.ExecContextSQL(ctx, nil, "ALTER TABLE DBPREFIXposts ADD COLUMN ip_new INET NOT NULL")
-	case "sqlite3":
-		_, err = m.db.ExecContextSQL(ctx, nil, "ALTER TABLE DBPREFIXposts ADD COLUMN ip_new VARCHAR(45) NOT NULL DEFAULT '0.0.0.0'")
-	}
-	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed to update IP column")
-		return err
-	}
-	if _, err = m.db.ExecContextSQL(ctx, nil, "UPDATE DBPREFIXposts SET ip_new = IP_ATON"); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to update IP column")
-		return err
-	}
-	if _, err = m.db.ExecContextSQL(ctx, nil, "ALTER TABLE DBPREFIXposts RENAME COLUMN ip TO ip_old"); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to rename old IP column")
-		return err
-	}
-	if _, err = m.db.ExecContextSQL(ctx, nil, "ALTER TABLE DBPREFIXposts RENAME COLUMN ip_new TO ip"); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to rename new IP column")
-		return err
-	}
-
-	for _, op := range threads {
-		if _, err = m.db.ExecContextSQL(ctx, nil,
-			`INSERT INTO DBPREFIXthreads(board_id,locked,stickied,anchored,cyclical,last_bump,is_deleted) VALUES(?,?,?,?,?,?,?)`,
-			op.oldBoardID, op.locked, op.stickied, op.autosage, false, op.bumped, false,
-		); err != nil {
-			errEv.Err(err).Caller().
-				Int("postID", op.ID).
-				Msg("Failed to insert thread")
-			return err
-		}
-		if err = m.db.QueryRowContextSQL(ctx, nil, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&op.ThreadID}); err != nil {
-			errEv.Err(err).Caller().
-				Int("postID", op.ID).
-				Msg("Failed to get thread ID")
-			return err
-		}
-
-		if _, err = m.db.ExecContextSQL(ctx, nil,
-			"UPDATE DBPREFIXposts SET thread_id = ? WHERE (id = ? and is_top_post) or thread_id = ?", op.ThreadID, op.oldID, op.oldID,
-		); err != nil {
-			errEv.Err(err).Caller().
-				Int("postID", op.ID).
-				Int("threadID", op.ThreadID).
-				Msg("Failed to set thread ID")
-			return err
-		}
-	}
-	if rows, err = m.db.QueryContextSQL(ctx, nil,
-		"SELECT id,filename,filename_original,file_checksum,filesize,image_w,image_h,thumb_w,thumb_h FROM DBPREFIXposts WHERE filename <> ''",
-	); err != nil {
-		errEv.Err(err).Caller().Msg("Failed to get uploads")
-		return err
-	}
-	defer rows.Close()
-
-	var uploads []gcsql.Upload
-	for rows.Next() {
-		var upload gcsql.Upload
-		if err = rows.Scan(&upload.PostID, &upload.Filename, &upload.OriginalFilename, &upload.Checksum, &upload.FileSize, &upload.Width,
-			&upload.Height, &upload.ThumbnailWidth, &upload.ThumbnailHeight,
-		); err != nil {
-			errEv.Err(err).Caller().Msg("Failed to scan upload")
-			return err
-		}
-		uploads = append(uploads, upload)
-	}
-	if err = rows.Close(); err != nil {
-		errEv.Caller().Msg("Failed to close upload rows")
-		return err
-	}
-
-	for _, upload := range uploads {
-		if _, err = m.db.ExecContextSQL(ctx, nil,
-			`INSERT INTO DBPREFIXfiles(post_id,file_order,filename,original_filename,checksum,file_size,width,height,thumbnail_width,thumbnail_height,is_spoilered) VALUES
-			(?,0,?,?,?,?,?,?,?,?,0)`,
-			upload.PostID, upload.Filename, upload.OriginalFilename, upload.Checksum, upload.FileSize, upload.Width, upload.Height,
-			upload.ThumbnailWidth, upload.ThumbnailHeight,
-		); err != nil {
-			errEv.Err(err).Caller().
-				Int("postID", upload.PostID).
-				Msg("Failed to insert upload")
-			return err
-		}
-	}
-
 	return nil
 }
