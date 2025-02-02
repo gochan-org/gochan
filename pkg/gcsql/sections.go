@@ -148,7 +148,15 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 }
 
 func (s *Section) UpdateValues() error {
+	var count int
+	err := QueryRowTimeoutSQL(nil, `SELECT COUNT(*) FROM DBPREFIXsections WHERE id = ?`, []any{s.ID}, []any{&count})
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrSectionDoesNotExist
+	}
+	if err != nil {
+		return err
+	}
 	const query = `UPDATE DBPREFIXsections set name = ?, abbreviation = ?, position = ?, hidden = ? WHERE id = ?`
-	_, err := ExecTimeoutSQL(nil, query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
+	_, err = ExecTimeoutSQL(nil, query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
 	return err
 }
