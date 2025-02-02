@@ -13,8 +13,8 @@ import (
 
 // table: DBPREFIXannouncements
 type Announcement struct {
-	ID        uint      // sql: id
-	StaffID   uint      // sql: staff_id
+	ID        int       // sql: id
+	StaffID   int       // sql: staff_id
 	Subject   string    // sql: subject
 	Message   string    // sql: message
 	Timestamp time.Time // sql: timestamp

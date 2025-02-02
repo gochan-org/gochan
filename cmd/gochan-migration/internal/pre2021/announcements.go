@@ -2,11 +2,15 @@ package pre2021
 
 import (
 	"errors"
-	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
+
+type migrationAnnouncement struct {
+	gcsql.Announcement
+	oldPoster string
+}
 
 func (m *Pre2021Migrator) MigrateAnnouncements() error {
 	errEv := common.LogError()
@@ -23,29 +27,33 @@ func (m *Pre2021Migrator) MigrateAnnouncements() error {
 		return err
 	}
 
+	var oldAnnouncements []migrationAnnouncement
+
 	for rows.Next() {
-		var id int
-		var subject, message, staff string
-		var timestamp time.Time
-		if err = rows.Scan(&id, &subject, &message, &staff, &timestamp); err != nil {
+		var announcement migrationAnnouncement
+
+		if err = rows.Scan(&announcement.ID, &announcement.Subject, &announcement.Message, &announcement.oldPoster, &announcement.Timestamp); err != nil {
 			errEv.Err(err).Caller().Msg("Failed to scan announcement row")
 			return err
 		}
-		staffID, err := gcsql.GetStaffID(staff)
+		oldAnnouncements = append(oldAnnouncements, announcement)
+	}
+	for _, announcement := range oldAnnouncements {
+		announcement.StaffID, err = gcsql.GetStaffID(announcement.oldPoster)
 		if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
 			// user doesn't exist, use migration user
-			common.LogWarning().Str("staff", staff).Msg("Staff username not found in database")
-			message += "\n(originally by " + staff + ")"
-			staffID = m.migrationUser.ID
+			common.LogWarning().Str("staff", announcement.oldPoster).Msg("Staff username not found in database")
+			announcement.Message += "\n(originally by " + announcement.oldPoster + ")"
+			announcement.StaffID = m.migrationUser.ID
 		} else if err != nil {
-			errEv.Err(err).Caller().Str("staff", staff).Msg("Failed to get staff ID")
+			errEv.Err(err).Caller().Str("staff", announcement.oldPoster).Msg("Failed to get staff ID")
 			return err
 		}
 		if _, err = gcsql.ExecSQL(
 			"INSERT INTO DBPREFIXannouncements(staff_id,subject,message,timestamp) values(?,?,?,?)",
-			staffID, subject, message, timestamp,
+			announcement.StaffID, announcement.Subject, announcement.Message, announcement.Timestamp,
 		); err != nil {
-			errEv.Err(err).Caller().Str("staff", staff).Msg("Failed to migrate announcement")
+			errEv.Err(err).Caller().Str("staff", announcement.oldPoster).Msg("Failed to migrate announcement")
 			return err
 		}
 	}
