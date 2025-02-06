@@ -80,7 +80,7 @@ func (m *Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int
 	migratedBan.Message = ban.reason
 	migratedBan.StaffID = ban.staffID
 	migratedBan.StaffNote = ban.staffNote
-	if err := gcsql.NewIPBanTx(tx, migratedBan); err != nil {
+	if err := gcsql.NewIPBan(migratedBan, &gcsql.RequestOptions{Tx: tx}); err != nil {
 		errEv.Err(err).Caller().
 			Int("oldID", ban.oldID).Msg("Failed to migrate ban")
 		return err

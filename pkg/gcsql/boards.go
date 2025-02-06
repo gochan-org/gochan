@@ -459,7 +459,7 @@ func (board *Board) ModifyInDB() error {
 		require_file = ?,
 		enable_catalog = ?
 		WHERE id = ?`
-	_, err := ExecSQL(query,
+	_, err := Exec(nil, query,
 		board.SectionID, board.NavbarPosition, board.Title, board.Subtitle, board.Description,
 		board.MaxFilesize, board.MaxThreads, board.DefaultStyle, board.Locked, board.AnonymousName,
 		board.ForceAnonymous, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength,

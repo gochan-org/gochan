@@ -51,6 +51,39 @@ type intOrStringConstraint interface {
 	int | string
 }
 
+// RequestOptions is used to pass an optional context, transaction, and any other things to the various SQL functions
+// in a future-proof way
+type RequestOptions struct {
+	Context context.Context
+	Tx      *sql.Tx
+	Cancel  context.CancelFunc
+}
+
+func setupOptions(opts ...*RequestOptions) *RequestOptions {
+	if len(opts) == 0 || opts[0] == nil {
+		return &RequestOptions{Context: context.Background()}
+	}
+	if opts[0].Context == nil {
+		opts[0].Context = context.Background()
+	}
+	return opts[0]
+}
+
+// Query is a wrapper for QueryContextSQL that uses the given options, or defaults to a background context if nil
+func Query(opts *RequestOptions, query string, a ...any) (*sql.Rows, error) {
+	return gcdb.Query(opts, query, a...)
+}
+
+// QueryRow is a wrapper for QueryRowContextSQL that uses the given options, or defaults to a background context if nil
+func QueryRow(opts *RequestOptions, query string, values, out []any) error {
+	return gcdb.QueryRow(opts, query, values, out)
+}
+
+// Exec is a wrapper for ExecContextSQL that uses the given options, or defaults to a background context if nil
+func Exec(opts *RequestOptions, query string, values ...any) (sql.Result, error) {
+	return gcdb.Exec(opts, query, values...)
+}
+
 // BeginTx begins a new transaction for the gochan database. It uses a background context
 func BeginTx() (*sql.Tx, error) {
 	return BeginContextTx(context.Background())
@@ -111,7 +144,7 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	return prepared, err
 }
 
-// Close closes the connection to the SQL database
+// Close closes the connection to the SQL database if it is open
 func Close() error {
 	if gcdb != nil {
 		return gcdb.Close()
@@ -121,6 +154,7 @@ func Close() error {
 
 /*
 ExecSQL executes the given SQL statement with the given parameters
+
 Example:
 
 	var intVal int
@@ -136,8 +170,8 @@ func ExecSQL(query string, values ...any) (sql.Result, error) {
 }
 
 /*
-ExecContextSQL executes the given SQL statement with the given context, optionally with the given transaction (if non-nil)
-
+ExecContextSQL executes the given SQL statement with the given context, optionally with the given transaction (if non-nil).
+Deprecated: Use Exec instead
 Example:
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second)
@@ -154,6 +188,7 @@ func ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...an
 	return gcdb.ExecContextSQL(ctx, tx, sqlStr, values...)
 }
 
+// ExecTimeoutSQL is a helper function for executing a SQL statement with the configured timeout in seconds
 func ExecTimeoutSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
 	defer cancel()
@@ -162,7 +197,9 @@ func ExecTimeoutSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error
 }
 
 /*
-ExecTxSQL automatically escapes the given values and caches the statement
+ExecTxSQL executes the given SQL statement with the given transaction and parameters.
+Deprecated: Use Exec instead with a transaction in the RequestOptions
+
 Example:
 
 	tx, err := BeginTx()
@@ -190,8 +227,8 @@ func ExecTxSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
 }
 
 /*
-QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
-Automatically escapes the given values and caches the query
+QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[].
+Deprecated: Use QueryRow instead
 
 Example:
 
@@ -211,7 +248,8 @@ func QueryRowSQL(query string, values, out []any) error {
 
 /*
 QueryRowContextSQL gets a row from the database with the values in values[] and fills the respective pointers in out[]
-using the given context as a deadline, and the given transaction (if non-nil)
+using the given context as a deadline, and the given transaction (if non-nil).
+Deprecated: Use QueryRow instead with an optional context and/or tx in the RequestOptions
 
 Example:
 
@@ -239,8 +277,8 @@ func QueryRowTimeoutSQL(tx *sql.Tx, query string, values, out []any) error {
 }
 
 /*
-QueryRowTxSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
-Automatically escapes the given values and caches the query
+QueryRowTxSQL gets a row from the db with the values in values[] and fills the respective pointers in out[].
+Deprecated: Use QueryRow instead with a transaction in the RequestOptions
 
 Example:
 
@@ -261,8 +299,8 @@ func QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error {
 }
 
 /*
-QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
-Automatically escapes the given values and caches the query
+QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[].
+Deprecated: Use Query instead
 
 Example:
 
@@ -285,7 +323,8 @@ func QuerySQL(query string, a ...any) (*sql.Rows, error) {
 
 /*
 QueryContextSQL queries the database with a prepared statement and the given parameters, using the given context
-for a deadline
+for a deadline.
+Deprecated: Use Query instead with an optional context/transaction in the RequestOptions
 
 Example:
 
@@ -317,7 +356,9 @@ func QueryTimeoutSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, context.Can
 
 /*
 QueryTxSQL gets all rows from the db using the transaction tx with the values in values[] and fills the
-respective pointers in out[]. Automatically escapes the given values and caches the query
+respective pointers in out[].
+Deprecated: Use Query instead with a transaction in the RequestOptions
+
 Example:
 
 	tx, err := BeginTx()
@@ -347,6 +388,7 @@ func QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
 	return rows, stmt.Close()
 }
 
+// ParseSQLTimeString attempts to parse a string into a time.Time object using the known SQL date/time formats
 func ParseSQLTimeString(str string) (time.Time, error) {
 	var t time.Time
 	var err error
@@ -359,22 +401,10 @@ func ParseSQLTimeString(str string) (time.Time, error) {
 }
 
 // getLatestID returns the latest inserted id column value from the given table
-func getLatestID(tableName string, tx *sql.Tx) (id int, err error) {
+func getLatestID(opts *RequestOptions, tableName string) (id int, err error) {
+	opts = setupOptions(opts)
 	query := `SELECT MAX(id) FROM ` + tableName
-	if tx != nil {
-		var stmt *sql.Stmt
-		stmt, err = PrepareSQL(query, tx)
-		if err != nil {
-			return 0, err
-		}
-		defer stmt.Close()
-		if err = stmt.QueryRow().Scan(&id); err != nil {
-			return
-		}
-		err = stmt.Close()
-	} else {
-		err = QueryRowSQL(query, nil, []any{&id})
-	}
+	QueryRow(opts, query, nil, []any{&id})
 	return
 }
 
@@ -393,7 +423,7 @@ func doesTableExist(tableName string) (bool, error) {
 	}
 
 	var count int
-	err := QueryRowSQL(existQuery, []any{config.GetSystemCriticalConfig().DBprefix + tableName}, []any{&count})
+	err := QueryRow(nil, existQuery, []any{config.GetSystemCriticalConfig().DBprefix + tableName}, []any{&count})
 	if err != nil {
 		return false, err
 	}
@@ -404,7 +434,7 @@ func doesTableExist(tableName string) (bool, error) {
 func GetComponentVersion(componentKey string) (int, error) {
 	const sql = `SELECT version FROM DBPREFIXdatabase_version WHERE component = ?`
 	var version int
-	err := QueryRowSQL(sql, []any{componentKey}, []any{&version})
+	err := QueryRow(nil, sql, []any{componentKey}, []any{&version})
 	return version, err
 }
 
@@ -434,7 +464,7 @@ func doesGochanPrefixTableExist() (bool, error) {
 	}
 
 	var count int
-	err := QueryRowSQL(prefixTableExist, []any{}, []any{&count})
+	err := QueryRow(nil, prefixTableExist, []any{}, []any{&count})
 	if err != nil && err != sql.ErrNoRows {
 		return false, err
 	}

@@ -1,7 +1,6 @@
 package pre2021
 
 import (
-	"context"
 	"database/sql"
 	"time"
 
@@ -35,10 +34,10 @@ type migrationPost struct {
 
 func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
 	var err error
-
+	opts := &gcsql.RequestOptions{Tx: tx}
 	if post.oldParentID == 0 {
 		// migrating post was a thread OP, create the row in the threads table
-		if post.ThreadID, err = gcsql.CreateThread(tx, post.boardID, false, post.stickied, post.autosage, false); err != nil {
+		if post.ThreadID, err = gcsql.CreateThread(opts, post.boardID, false, post.stickied, post.autosage, false); err != nil {
 			errEv.Err(err).Caller().
 				Int("boardID", post.boardID).
 				Msg("Failed to create thread")
@@ -46,7 +45,7 @@ func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *ze
 	}
 
 	// insert thread top post
-	if err = post.InsertWithContext(context.Background(), tx, true, post.boardID, false, post.stickied, post.autosage, false); err != nil {
+	if err = post.Insert(true, post.boardID, false, post.stickied, post.autosage, false, opts); err != nil {
 		errEv.Err(err).Caller().
 			Int("boardID", post.boardID).
 			Int("threadID", post.ThreadID).
@@ -54,7 +53,7 @@ func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *ze
 	}
 
 	if post.filename != "" {
-		if err = post.AttachFileTx(tx, &gcsql.Upload{
+		if err = post.AttachFile(&gcsql.Upload{
 			PostID:           post.ID,
 			OriginalFilename: post.filenameOriginal,
 			Filename:         post.filename,
@@ -64,7 +63,7 @@ func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *ze
 			ThumbnailHeight:  post.thumbH,
 			Width:            post.imageW,
 			Height:           post.imageH,
-		}); err != nil {
+		}, opts); err != nil {
 			errEv.Err(err).Caller().
 				Int("oldPostID", post.oldID).
 				Msg("Failed to attach upload to migrated post")
@@ -85,7 +84,7 @@ func (m *Pre2021Migrator) MigratePosts() error {
 	}
 	defer tx.Rollback()
 
-	rows, err := m.db.QuerySQL(threadsQuery)
+	rows, err := m.db.Query(nil, threadsQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get threads")
 		return err
@@ -126,7 +125,7 @@ func (m *Pre2021Migrator) MigratePosts() error {
 		}
 
 		// get and insert replies
-		replyRows, err := m.db.QuerySQL(postsQuery+" AND parentid = ?", thread.oldID)
+		replyRows, err := m.db.Query(nil, postsQuery+" AND parentid = ?", thread.oldID)
 		if err != nil {
 			errEv.Err(err).Caller().
 				Int("parentID", thread.oldID).
@@ -156,7 +155,7 @@ func (m *Pre2021Migrator) MigratePosts() error {
 		}
 
 		if thread.locked {
-			if _, err = gcsql.ExecTxSQL(tx, "UPDATE DBPREFIXthreads SET locked = TRUE WHERE id = ?", thread.ThreadID); err != nil {
+			if _, err = gcsql.Exec(&gcsql.RequestOptions{Tx: tx}, "UPDATE DBPREFIXthreads SET locked = TRUE WHERE id = ?", thread.ThreadID); err != nil {
 				errEv.Err(err).Caller().
 					Int("threadID", thread.ThreadID).
 					Msg("Unable to re-lock migrated thread")

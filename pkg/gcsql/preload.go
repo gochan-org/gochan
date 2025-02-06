@@ -39,7 +39,7 @@ func PreloadModule(l *lua.LState) int {
 				})
 			}
 
-			rows, err := QuerySQL(queryStr, queryArgs...)
+			rows, err := Query(nil, queryStr, queryArgs...)
 
 			l.Push(luar.New(l, rows))
 			l.Push(luar.New(l, err))
@@ -57,7 +57,7 @@ func PreloadModule(l *lua.LState) int {
 					execArgs = append(execArgs, arg)
 				})
 			}
-			result, err := ExecSQL(execStr)
+			result, err := Exec(nil, execStr)
 
 			l.Push(luar.New(l, result))
 			l.Push(luar.New(l, err))

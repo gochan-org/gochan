@@ -1,7 +1,6 @@
 package gcsql
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -21,27 +20,27 @@ var (
 )
 
 // CreateThread creates a new thread in the database with the given board ID and statuses
-func CreateThread(tx *sql.Tx, boardID int, locked bool, stickied bool, anchored bool, cyclic bool) (threadID int, err error) {
+func CreateThread(requestOptions *RequestOptions, boardID int, locked bool, stickied bool, anchored bool, cyclic bool) (threadID int, err error) {
 	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
 	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	var boardIsLocked bool
-	if err = QueryRowTxSQL(tx, lockedQuery, []any{boardID}, []any{&boardIsLocked}); err != nil {
+	if err = QueryRow(requestOptions, lockedQuery, []any{boardID}, []any{&boardIsLocked}); err != nil {
 		return 0, err
 	}
 	if boardIsLocked {
 		return 0, ErrBoardIsLocked
 	}
-	if _, err = ExecTxSQL(tx, insertQuery, boardID, locked, stickied, anchored, cyclic); err != nil {
+	if _, err = Exec(requestOptions, insertQuery, boardID, locked, stickied, anchored, cyclic); err != nil {
 		return 0, err
 	}
-	return threadID, QueryRowTxSQL(tx, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID})
+	return threadID, QueryRow(requestOptions, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID})
 }
 
 // GetThread returns a a thread object from the database, given its ID
 func GetThread(threadID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = ?`
 	thread := new(Thread)
-	err := QueryRowSQL(query, []any{threadID}, []any{
+	err := QueryRow(nil, query, []any{threadID}, []any{
 		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic,
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	})
@@ -52,7 +51,7 @@ func GetThread(threadID int) (*Thread, error) {
 func GetPostThread(opID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = (SELECT thread_id FROM DBPREFIXposts WHERE id = ? LIMIT 1)`
 	thread := new(Thread)
-	err := QueryRowSQL(query, []any{opID}, []any{
+	err := QueryRow(nil, query, []any{opID}, []any{
 		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic,
 		&thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	})
@@ -66,7 +65,7 @@ func GetPostThread(opID int) (*Thread, error) {
 func GetTopPostThreadID(opID int) (int, error) {
 	const query = `SELECT thread_id FROM DBPREFIXposts WHERE id = ? and is_top_post`
 	var threadID int
-	err := QueryRowSQL(query, []any{opID}, []any{&threadID})
+	err := QueryRow(nil, query, []any{opID}, []any{&threadID})
 	if err == sql.ErrNoRows {
 		err = ErrThreadDoesNotExist
 	}
@@ -81,7 +80,7 @@ func GetThreadsWithBoardID(boardID int, onlyNotDeleted bool) ([]Thread, error) {
 	if onlyNotDeleted {
 		query += " AND  is_deleted = FALSE"
 	}
-	rows, err := QuerySQL(query, boardID)
+	rows, err := Query(nil, query, boardID)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +103,7 @@ func GetThreadReplyCountFromOP(opID int) (int, error) {
 	const query = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = (
 		SELECT thread_id FROM DBPREFIXposts WHERE id = ?) AND is_deleted = FALSE AND is_top_post = FALSE`
 	var num int
-	err := QueryRowSQL(query, []any{opID}, []any{&num})
+	err := QueryRow(nil, query, []any{opID}, []any{&num})
 	return num, err
 }
 
@@ -113,7 +112,7 @@ func ChangeThreadBoardID(threadID int, newBoardID int) error {
 	if !DoesBoardExistByID(newBoardID) {
 		return ErrBoardDoesNotExist
 	}
-	_, err := ExecSQL(`UPDATE DBPREFIXthreads SET board_id = ? WHERE id = ?`, newBoardID, threadID)
+	_, err := Exec(nil, "UPDATE DBPREFIXthreads SET board_id = ? WHERE id = ?", newBoardID, threadID)
 	return err
 }
 
@@ -135,15 +134,15 @@ func (t *Thread) GetReplyFileCount() (int, error) {
 	const query = `SELECT COUNT(filename) FROM DBPREFIXfiles WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = ? AND is_deleted = FALSE)`
 	var fileCount int
-	err := QueryRowSQL(query, []any{t.ID}, []any{&fileCount})
+	err := QueryRow(nil, query, []any{t.ID}, []any{&fileCount})
 	return fileCount, err
 }
 
 // GetReplyCount returns the number of posts in the thread, not including the top post or any deleted posts
 func (t *Thread) GetReplyCount() (int, error) {
-	const query = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ? AND is_top_post = FALSE AND is_deleted = FALSE`
+	const query = "SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ? AND is_top_post = FALSE AND is_deleted = FALSE"
 	var numReplies int
-	err := QueryRowSQL(query, []any{t.ID}, []any{&numReplies})
+	err := QueryRow(nil, query, []any{t.ID}, []any{&numReplies})
 	return numReplies, err
 }
 
@@ -161,7 +160,7 @@ func (t *Thread) GetPosts(repliesOnly bool, boardPage bool, limit int) ([]Post, 
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
 
-	rows, err := QuerySQL(query, t.ID)
+	rows, err := Query(nil, query, t.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +184,7 @@ func (t *Thread) GetPosts(repliesOnly bool, boardPage bool, limit int) ([]Post, 
 func (t *Thread) GetUploads() ([]Upload, error) {
 	const query = selectFilesBaseSQL + ` WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = ? and is_deleted = FALSE) AND filename != 'deleted'`
-	rows, err := QuerySQL(query, t.ID)
+	rows, err := Query(nil, query, t.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -223,18 +222,18 @@ func (t *Thread) UpdateAttribute(attribute string, value bool) error {
 		return fmt.Errorf("invalid thread attribute %q", attribute)
 	}
 	updateSQL += attribute + " = ? WHERE id = ?"
-	_, err := ExecSQL(updateSQL, value, t.ID)
+	_, err := Exec(nil, updateSQL, value, t.ID)
 	return err
 }
 
 // deleteThread updates the thread and sets it as deleted, as well as the posts where thread_id = threadID
-func deleteThread(ctx context.Context, tx *sql.Tx, threadID int) error {
+func deleteThread(opts *RequestOptions, threadID int) error {
 	const checkPostExistsSQL = `SELECT COUNT(*) FROM DBPREFIXposts WHERE thread_id = ?`
 	const deletePostsSQL = `UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE thread_id = ?`
 	const deleteThreadSQL = `UPDATE DBPREFIXthreads SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?`
 
 	var rowCount int
-	err := QueryRowContextSQL(ctx, tx, checkPostExistsSQL, []any{threadID}, []any{&rowCount})
+	err := QueryRow(opts, checkPostExistsSQL, []any{threadID}, []any{&rowCount})
 	if err != nil {
 		return err
 	}
@@ -242,10 +241,10 @@ func deleteThread(ctx context.Context, tx *sql.Tx, threadID int) error {
 		return ErrThreadDoesNotExist
 	}
 
-	_, err = ExecContextSQL(ctx, tx, deletePostsSQL, threadID)
+	_, err = Exec(opts, deletePostsSQL, threadID)
 	if err != nil {
 		return err
 	}
-	_, err = ExecContextSQL(ctx, tx, deleteThreadSQL, threadID)
+	_, err = Exec(opts, deleteThreadSQL, threadID)
 	return err
 }

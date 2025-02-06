@@ -118,21 +118,16 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 	return stmt, sqlVersionError(err, db.driver, &prepared)
 }
 
-/*
-ExecSQL executes the given SQL statement with the given parameters
-Example:
-
-	var intVal int
-	var stringVal string
-	result, err := db.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
-*/
-func (db *GCDB) ExecSQL(query string, values ...any) (sql.Result, error) {
-	stmt, err := db.PrepareSQL(query, nil)
+// Exec executes the given SQL statement with the given parameters, optionally with the given RequestOptions struct
+// or a background context and transaction if nil
+func (db *GCDB) Exec(opts *RequestOptions, query string, values ...any) (sql.Result, error) {
+	opts = setupOptions(opts)
+	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
-	result, err := stmt.Exec(values...)
+	result, err := stmt.ExecContext(opts.Context, values...)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +135,22 @@ func (db *GCDB) ExecSQL(query string, values ...any) (sql.Result, error) {
 }
 
 /*
-ExecContextSQL executes the given SQL statement with the given context, optionally with the given transaction (if non-nil)
+ExecSQL executes the given SQL statement with the given parameters.
+Deprecated: Use Exec instead
+
+Example:
+
+	var intVal int
+	var stringVal string
+	result, err := db.ExecSQL("INSERT INTO tablename (intval,stringval) VALUES(?,?)", intVal, stringVal)
+*/
+func (db *GCDB) ExecSQL(query string, values ...any) (sql.Result, error) {
+	return db.Exec(nil, query, values...)
+}
+
+/*
+ExecContextSQL executes the given SQL statement with the given context, optionally with the given transaction (if non-nil).
+Deprecated: Use Exec instead, with a RequestOptions struct for the context and transaction
 
 Example:
 
@@ -152,21 +162,12 @@ Example:
 		intVal, stringVal)
 */
 func (db *GCDB) ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
-	stmt, err := db.PrepareContextSQL(ctx, sqlStr, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	result, err := stmt.ExecContext(ctx, values...)
-	if err != nil {
-		return nil, err
-	}
-	return result, stmt.Close()
+	return db.Exec(&RequestOptions{Context: ctx, Tx: tx}, sqlStr, values...)
 }
 
 /*
-ExecTxSQL executes the given SQL statemtnt, optionally with the given transaction (if non-nil)
+ExecTxSQL executes the given SQL statemtnt, optionally with the given transaction (if non-nil).
+Deprecated: Use Exec instead, with a RequestOptions struct for the transaction
 
 Example:
 
@@ -179,16 +180,7 @@ Example:
 		intVal, stringVal)
 */
 func (db *GCDB) ExecTxSQL(tx *sql.Tx, query string, values ...any) (sql.Result, error) {
-	stmt, err := db.PrepareSQL(query, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	res, err := stmt.Exec(values...)
-	if err != nil {
-		return res, err
-	}
-	return res, stmt.Close()
+	return db.Exec(&RequestOptions{Tx: tx}, query, values...)
 }
 
 /*
@@ -209,9 +201,25 @@ func (db *GCDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, erro
 	return db.db.BeginTx(ctx, opts)
 }
 
+// QueryRow gets a row from the db with the values in values[] and fills the respective pointers in out[],
+// with an optional RequestOptions struct for the context and transaction
+func (db *GCDB) QueryRow(opts *RequestOptions, query string, values []any, out []any) error {
+	opts = setupOptions(opts)
+	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	if err = stmt.QueryRowContext(opts.Context, values...).Scan(out...); err != nil {
+		return err
+	}
+	return stmt.Close()
+}
+
 /*
-QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[]
-Automatically escapes the given values and caches the query
+QueryRowSQL gets a row from the db with the values in values[] and fills the respective pointers in out[].
+Deprecated: Use QueryRow instead
+
 Example:
 
 	id := 32
@@ -222,12 +230,7 @@ Example:
 		[]any{&intVal, &stringVal})
 */
 func (db *GCDB) QueryRowSQL(query string, values, out []any) error {
-	stmt, err := db.PrepareSQL(query, nil)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	return stmt.QueryRow(values...).Scan(out...)
+	return db.QueryRow(nil, query, values, out)
 }
 
 /*
@@ -244,16 +247,7 @@ Example:
 		[]any{id}, []any{&name})
 */
 func (db *GCDB) QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, out []any) error {
-	stmt, err := db.PrepareContextSQL(ctx, query, tx)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	if err = stmt.QueryRowContext(ctx, values...).Scan(out...); err != nil {
-		return err
-	}
-	return stmt.Close()
+	return db.QueryRow(&RequestOptions{Context: ctx, Tx: tx}, query, values, out)
 }
 
 /*
@@ -273,21 +267,29 @@ Example:
 		[]any{&intVal, &stringVal})
 */
 func (db *GCDB) QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error {
-	stmt, err := db.PrepareSQL(query, tx)
+	return db.QueryRow(&RequestOptions{Tx: tx}, query, values, out)
+}
+
+// Query sends the query to the database with the given options (or a background context if nil), and the given parameters
+func (db *GCDB) Query(opts *RequestOptions, query string, a ...any) (*sql.Rows, error) {
+	opts = setupOptions(opts)
+	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer stmt.Close()
 
-	if err = stmt.QueryRow(values...).Scan(out...); err != nil {
-		return err
+	rows, err := stmt.QueryContext(opts.Context, a...)
+	if err != nil {
+		return rows, err
 	}
-	return stmt.Close()
+
+	return rows, stmt.Close()
 }
 
 /*
-QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
-Automatically escapes the given values and caches the query
+QuerySQL gets all rows from the db with the values in values[] and fills the respective pointers in out[].
+Deprecated: Use Query instead
 Example:
 
 	rows, err := db.QuerySQL("SELECT * FROM table")
@@ -301,17 +303,13 @@ Example:
 	}
 */
 func (db *GCDB) QuerySQL(query string, a ...any) (*sql.Rows, error) {
-	stmt, err := db.PrepareSQL(query, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	return stmt.Query(a...)
+	return db.Query(nil, query, a...)
 }
 
 /*
 QueryContextSQL queries the database with a prepared statement and the given parameters, using the given context
-for a deadline
+for a deadline.
+Deprecated: Use Query instead, with a RequestOptions struct for the context and transaction
 
 Example:
 
@@ -320,22 +318,12 @@ Example:
 	rows, err := db.QueryContextSQL(ctx, nil, "SELECT name from posts where NOT is_deleted")
 */
 func (db *GCDB) QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
-	stmt, err := db.PrepareContextSQL(ctx, query, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-
-	rows, err := stmt.QueryContext(ctx, a...)
-	if err != nil {
-		return rows, err
-	}
-	return rows, stmt.Close()
+	return db.Query(&RequestOptions{Context: ctx, Tx: tx}, query, a...)
 }
 
 /*
-QueryTxSQL gets all rows from the db with the values in values[] and fills the respective pointers in out[]
-Automatically escapes the given values and caches the query
+QueryTxSQL gets all rows from the db with the values in values[] and fills the respective pointers in out[].
+Deprecated: Use Query instead, with a RequestOptions struct for the transaction
 Example:
 
 	tx, _ := db.Begin()
@@ -350,16 +338,7 @@ Example:
 	}
 */
 func (db *GCDB) QueryTxSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, error) {
-	stmt, err := db.PrepareSQL(query, tx)
-	if err != nil {
-		return nil, err
-	}
-	defer stmt.Close()
-	rows, err := stmt.Query(a...)
-	if err != nil {
-		return nil, err
-	}
-	return rows, stmt.Close()
+	return db.Query(&RequestOptions{Tx: tx}, query, a...)
 }
 
 func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
@@ -404,6 +383,7 @@ func setupSqlTestConfig(dbDriver string, dbName string, dbPrefix string) *config
 	}
 }
 
+// SetupMockDB sets up a mock database connection for testing
 func SetupMockDB(driver string) (sqlmock.Sqlmock, error) {
 	var err error
 	gcdb, err = setupDBConn(setupSqlTestConfig(driver, "gochan", ""))

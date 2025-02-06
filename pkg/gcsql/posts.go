@@ -39,23 +39,24 @@ func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
 		query += " AND is_deleted = FALSE"
 	}
 	post := new(Post)
-	err := QueryRowSQL(query, []any{id}, []any{
+	err := QueryRow(nil, query, []any{id}, []any{
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
 		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
 		&post.BannedMessage, &post.Flag, &post.Country,
 	})
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrPostDoesNotExist
-
+	} else if err != nil {
+		return nil, err
 	}
-	return post, err
+	return post, nil
 }
 
 func GetPostIP(postID int) (string, error) {
 	sql := "SELECT IP_NTOA FROM DBPREFIXposts WHERE id = ?"
 	var ip string
-	err := QueryRowSQL(sql, []any{postID}, []any{&ip})
+	err := QueryRow(nil, sql, []any{postID}, []any{&ip})
 	return ip, err
 }
 
@@ -68,7 +69,7 @@ func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
 	}
 
 	sql += " ORDER BY id DESC LIMIT ?"
-	rows, err := QuerySQL(sql, ip, limit)
+	rows, err := Query(nil, sql, ip, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func GetTopPostIDsInThreadIDs(threads ...any) (map[any]int, error) {
 	}
 	params := createArrayPlaceholder(threads)
 	query := `SELECT id FROM DBPREFIXposts WHERE thread_id in ` + params + " AND is_top_post"
-	rows, err := QuerySQL(query, threads...)
+	rows, err := Query(nil, query, threads...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func GetTopPostIDsInThreadIDs(threads ...any) (map[any]int, error) {
 func GetThreadTopPost(threadID int) (*Post, error) {
 	const query = selectPostsBaseSQL + "WHERE thread_id = ? AND is_top_post = TRUE LIMIT 1"
 	post := new(Post)
-	err := QueryRowSQL(query, []any{threadID}, []any{
+	err := QueryRow(nil, query, []any{threadID}, []any{
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
 		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
@@ -180,19 +181,23 @@ func GetBoardTopPosts[B intOrStringConstraint](board B) ([]*Post, error) {
 func GetPostPassword(id int) (string, error) {
 	const query = `SELECT password FROM DBPREFIXposts WHERE id = ?`
 	var passwordChecksum string
-	err := QueryRowSQL(query, []any{id}, []any{&passwordChecksum})
+	err := QueryRow(nil, query, []any{id}, []any{&passwordChecksum})
 	return passwordChecksum, err
 }
 
 // PermanentlyRemoveDeletedPosts removes all posts and files marked as deleted from the database
-func PermanentlyRemoveDeletedPosts() error {
+func PermanentlyRemoveDeletedPosts(opts ...*RequestOptions) error {
 	const sql1 = `DELETE FROM DBPREFIXposts WHERE is_deleted`
 	const sql2 = `DELETE FROM DBPREFIXthreads WHERE is_deleted`
-	_, err := ExecSQL(sql1)
+	var useOpts *RequestOptions
+	if len(opts) > 0 {
+		useOpts = opts[0]
+	}
+	_, err := Exec(useOpts, sql1)
 	if err != nil {
 		return err
 	}
-	_, err = ExecSQL(sql2)
+	_, err = Exec(useOpts, sql2)
 	return err
 }
 
@@ -201,7 +206,7 @@ func PermanentlyRemoveDeletedPosts() error {
 func SinceLastPost(postIP string) (int, error) {
 	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ?`
 	var whenStr string
-	err := QueryRowSQL(query, []any{postIP}, []any{&whenStr})
+	err := QueryRow(nil, query, []any{postIP}, []any{&whenStr})
 	if err != nil {
 		return -1, err
 	}
@@ -219,7 +224,7 @@ func SinceLastThread(postIP string) (int, error) {
 	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
 	var whenStr string
 
-	err := QueryRowSQL(query, []any{postIP}, []any{&whenStr})
+	err := QueryRow(nil, query, []any{postIP}, []any{&whenStr})
 	if err != nil {
 		return -1, err
 	}
@@ -233,7 +238,7 @@ func SinceLastThread(postIP string) (int, error) {
 // UpdateContents updates the email, subject, and message text of the post
 func (p *Post) UpdateContents(email string, subject string, message template.HTML, messageRaw string) error {
 	const sqlUpdate = `UPDATE DBPREFIXposts SET email = ?, subject = ?, message = ?, message_raw = ? WHERE ID = ?`
-	_, err := ExecSQL(sqlUpdate, email, subject, message, messageRaw, p.ID)
+	_, err := Exec(nil, sqlUpdate, email, subject, message, messageRaw, p.ID)
 	if err != nil {
 		return err
 	}
@@ -244,27 +249,27 @@ func (p *Post) UpdateContents(email string, subject string, message template.HTM
 	return nil
 }
 
-func (p *Post) GetBoardID() (int, error) {
+func (p *Post) GetBoardID(opts ...*RequestOptions) (int, error) {
 	const query = `SELECT board_id FROM DBPREFIXthreads where id = ?`
 	var boardID int
-	err := QueryRowSQL(query, []any{p.ThreadID}, []any{&boardID})
+	err := QueryRow(setupOptions(opts...), query, []any{p.ThreadID}, []any{&boardID})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrBoardDoesNotExist
 	}
 	return boardID, err
 }
 
-func (p *Post) GetBoardDir() (string, error) {
+func (p *Post) GetBoardDir(opts ...*RequestOptions) (string, error) {
 	const query = "SELECT dir FROM DBPREFIXboards" + boardFromPostIdSuffixSQL
 	var dir string
-	err := QueryRowSQL(query, []any{p.ID}, []any{&dir})
+	err := QueryRow(setupOptions(opts...), query, []any{p.ID}, []any{&dir})
 	return dir, err
 }
 
-func (p *Post) GetBoard() (*Board, error) {
+func (p *Post) GetBoard(opts ...*RequestOptions) (*Board, error) {
 	const query = selectBoardsBaseSQL + boardFromPostIdSuffixSQL
 	board := new(Board)
-	err := QueryRowSQL(query, []any{p.ID}, []any{
+	err := QueryRow(setupOptions(opts...), query, []any{p.ID}, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
@@ -284,13 +289,13 @@ func (p *Post) ChangeBoardID(newBoardID int) error {
 }
 
 // TopPostID returns the OP post ID of the thread that p is in
-func (p *Post) TopPostID() (int, error) {
+func (p *Post) TopPostID(opts ...*RequestOptions) (int, error) {
 	if p.IsTopPost {
 		return p.ID, nil
 	}
 	const query = `SELECT id FROM DBPREFIXposts WHERE thread_id = ? and is_top_post = TRUE ORDER BY id ASC LIMIT 1`
 	var topPostID int
-	err := QueryRowSQL(query, []any{p.ThreadID}, []any{&topPostID})
+	err := QueryRow(setupOptions(opts...), query, []any{p.ThreadID}, []any{&topPostID})
 	return topPostID, err
 }
 
@@ -306,13 +311,13 @@ func (p *Post) GetTopPost() (*Post, error) {
 // GetPostUpload returns the upload info associated with the file as well as any errors encountered.
 // If the file has no uploads, then *Upload is nil. If the file was removed from the post, then Filename
 // and OriginalFilename = "deleted"
-func (p *Post) GetUpload() (*Upload, error) {
+func (p *Post) GetUpload(opts ...*RequestOptions) (*Upload, error) {
 	const query = `SELECT
 	id, post_id, file_order, original_filename, filename, checksum,
 	file_size, is_spoilered, thumbnail_width, thumbnail_height, width, height
 	FROM DBPREFIXfiles WHERE post_id = ?`
 	upload := new(Upload)
-	err := QueryRowSQL(query, []any{p.ID}, []any{
+	err := QueryRow(setupOptions(opts...), query, []any{p.ID}, []any{
 		&upload.ID, &upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum,
 		&upload.FileSize, &upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
 	})
@@ -325,7 +330,7 @@ func (p *Post) GetUpload() (*Upload, error) {
 // UnlinkUploads disassociates the post with any uploads in DBPREFIXfiles
 // that may have been uploaded with it, optionally leaving behind a "File Deleted"
 // frame where the thumbnail appeared
-func (p *Post) UnlinkUploads(leaveDeletedBox bool) error {
+func (p *Post) UnlinkUploads(leaveDeletedBox bool, requestOpts ...*RequestOptions) error {
 	var sqlStr string
 	if leaveDeletedBox {
 		// leave a "File Deleted" box
@@ -333,7 +338,7 @@ func (p *Post) UnlinkUploads(leaveDeletedBox bool) error {
 	} else {
 		sqlStr = `DELETE FROM DBPREFIXfiles WHERE post_id = ?`
 	}
-	_, err := ExecSQL(sqlStr, p.ID)
+	_, err := Exec(setupOptions(requestOpts...), sqlStr, p.ID)
 	return err
 }
 
@@ -348,17 +353,24 @@ func (p *Post) InCyclicThread() (bool, error) {
 }
 
 // Delete sets the post as deleted and sets the deleted_at timestamp to the current time
-func (p *Post) Delete() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-	tx, err := BeginContextTx(ctx)
-	if err != nil {
-		return err
+func (p *Post) Delete(requestOptions ...*RequestOptions) error {
+	shouldCommit := len(requestOptions) == 0
+	opts := setupOptions(requestOptions...)
+	if opts.Context == context.Background() {
+		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		defer opts.Cancel()
 	}
-	defer tx.Rollback()
+	var err error
+	if opts.Tx == nil {
+		opts.Tx, err = BeginContextTx(opts.Context)
+		if err != nil {
+			return err
+		}
+		defer opts.Tx.Rollback()
+	}
 
 	var rowCount int
-	err = QueryRowContextSQL(ctx, tx, "SELECT COUNT(*) FROM DBPREFIXposts WHERE id = ?", []any{p.ID}, []any{&rowCount})
+	err = QueryRow(opts, "SELECT COUNT(*) FROM DBPREFIXposts WHERE id = ?", []any{p.ID}, []any{&rowCount})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrPostDoesNotExist
 	}
@@ -367,16 +379,33 @@ func (p *Post) Delete() error {
 	}
 
 	if p.IsTopPost {
-		return deleteThread(ctx, tx, p.ThreadID)
+		return deleteThread(opts, p.ThreadID)
 	}
-	if _, err = ExecContextSQL(ctx, tx, "UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?", p.ID); err != nil {
+	if _, err = Exec(opts, "UPDATE DBPREFIXposts SET is_deleted = TRUE, deleted_at = CURRENT_TIMESTAMP WHERE id = ?", p.ID); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if shouldCommit {
+		return opts.Tx.Commit()
+	}
+	return nil
 }
 
-// InsertWithContext inserts the post into the database with the given context and transaction
-func (p *Post) InsertWithContext(ctx context.Context, tx *sql.Tx, bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
+// Insert inserts the post into the database with the optional given options
+func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool, requestOptions ...*RequestOptions) error {
+	opts := setupOptions(requestOptions...)
+	if len(requestOptions) == 0 {
+		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		defer opts.Cancel()
+	}
+	var err error
+	if opts.Tx == nil {
+		opts.Tx, err = BeginContextTx(opts.Context)
+		if err != nil {
+			return err
+		}
+		defer opts.Tx.Rollback()
+	}
+
 	if p.ID > 0 {
 		// already inserted
 		return ErrorPostAlreadySent
@@ -387,19 +416,18 @@ func (p *Post) InsertWithContext(ctx context.Context, tx *sql.Tx, bumpThread boo
 	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
-	var err error
 	if p.ThreadID == 0 {
 		// thread doesn't exist yet, this is a new post
 		p.IsTopPost = true
 		var threadID int
-		threadID, err = CreateThread(tx, boardID, locked, stickied, anchored, cyclical)
+		threadID, err = CreateThread(opts, boardID, locked, stickied, anchored, cyclical)
 		if err != nil {
 			return err
 		}
 		p.ThreadID = threadID
 	} else {
 		var threadIsLocked bool
-		if err = QueryRowTxSQL(tx, "SELECT locked FROM DBPREFIXthreads WHERE id = ?",
+		if err = QueryRow(opts, "SELECT locked FROM DBPREFIXthreads WHERE id = ?",
 			[]any{p.ThreadID}, []any{&threadIsLocked}); err != nil {
 			return err
 		}
@@ -408,38 +436,24 @@ func (p *Post) InsertWithContext(ctx context.Context, tx *sql.Tx, bumpThread boo
 		}
 	}
 
-	if _, err = ExecContextSQL(ctx, tx, insertSQL,
+	if _, err = Exec(opts, insertSQL,
 		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
 		p.Message, p.MessageRaw, p.Password, p.Flag, p.Country,
 	); err != nil {
 		return err
 	}
-	if p.ID, err = getLatestID("DBPREFIXposts", tx); err != nil {
+	if p.ID, err = getLatestID(opts, "DBPREFIXposts"); err != nil {
 		return err
 	}
 	if bumpThread {
-		if _, err = ExecContextSQL(ctx, tx, bumpSQL, p.ThreadID); err != nil {
+		if _, err = Exec(opts, bumpSQL, p.ThreadID); err != nil {
 			return err
 		}
 	}
+	if len(requestOptions) == 0 {
+		return opts.Tx.Commit()
+	}
 	return nil
-}
-
-func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
-
-	tx, err := BeginContextTx(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	if err = p.InsertWithContext(ctx, tx, bumpThread, boardID, locked, stickied, anchored, cyclical); err != nil {
-		return err
-	}
-
-	return tx.Commit()
 }
 
 // CyclicThreadPost represents a post that should be deleted in a cyclic thread
@@ -515,7 +529,7 @@ func (p *Post) WebPath() string {
 	webRoot := config.GetSystemCriticalConfig().WebRoot
 
 	const query = "SELECT op_id, dir FROM DBPREFIXv_top_post_board_dir WHERE id = ?"
-	err := QueryRowSQL(query, []any{p.ID}, []any{&p.opID, &p.boardDir})
+	err := QueryRow(nil, query, []any{p.ID}, []any{&p.opID, &p.boardDir})
 	if err != nil {
 		return webRoot
 	}

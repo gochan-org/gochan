@@ -37,7 +37,7 @@ func (m *Pre2021Migrator) migrateSections() error {
 	}
 
 	var sectionsToBeCreated []gcsql.Section
-	rows, err := m.db.QuerySQL(sectionsQuery)
+	rows, err := m.db.Query(nil, sectionsQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to query old database sections")
 		return err
@@ -126,7 +126,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 	}
 
 	// get boards from old db
-	rows, err := m.db.QuerySQL(boardsQuery)
+	rows, err := m.db.Query(nil, boardsQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to query old database boards")
 		return err
@@ -162,7 +162,7 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 					Int("migratedBoardID", newBoard.ID).
 					Msg("Board already exists in new db, updating values")
 				// don't update other values in the array since they don't affect migrating threads or posts
-				if _, err = gcsql.ExecSQL(`UPDATE DBPREFIXboards
+				if _, err = gcsql.Exec(nil, `UPDATE DBPREFIXboards
 					SET uri = ?, navbar_position = ?, title = ?, subtitle = ?, description = ?,
 					max_file_size = ?, max_threads = ?, default_style = ?, locked = ?,
 					anonymous_name = ?, force_anonymous = ?, autosage_after = ?, no_images_after = ?, max_message_length = ?,
