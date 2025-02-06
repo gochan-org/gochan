@@ -97,7 +97,7 @@ func getBoardDefaultStyleTmplFunc(dir string) string {
 		return boardCfg.DefaultStyle
 	}
 	var defaultStyle string
-	err := gcsql.QueryRowSQL(`SELECT default_style FROM DBPREFIXboards WHERE dir = ?`,
+	err := gcsql.QueryRowTimeoutSQL(nil, "SELECT default_style FROM DBPREFIXboards WHERE dir = ?",
 		[]any{dir}, []any{&defaultStyle})
 	if err != nil || defaultStyle == "" {
 		gcutil.LogError(err).Caller().

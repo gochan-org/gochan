@@ -72,12 +72,12 @@ func (m *Pre2021Migrator) renameTablesForInPlace() error {
 	var err error
 	errEv := common.LogError()
 	defer errEv.Discard()
-	if _, err = m.db.ExecSQL("DROP TABLE DBPREFIXinfo"); err != nil {
+	if _, err = m.db.Exec(nil, "DROP TABLE DBPREFIXinfo"); err != nil {
 		errEv.Err(err).Caller().Msg("Error dropping info table")
 		return err
 	}
 	for _, table := range renameTables {
-		if _, err = m.db.ExecSQL(fmt.Sprintf(renameTableStatementTemplate, table, table)); err != nil {
+		if _, err = m.db.Exec(nil, fmt.Sprintf(renameTableStatementTemplate, table, table)); err != nil {
 			errEv.Caller().Err(err).
 				Str("table", table).
 				Msg("Error renaming table")

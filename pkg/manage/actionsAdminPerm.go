@@ -358,7 +358,7 @@ func fixThumbnailsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsq
 	if board != "" {
 		const query = `SELECT id, op, filename, is_spoilered, width, height, thumbnail_width, thumbnail_height
 		FROM DBPREFIXv_upload_info WHERE dir = ? ORDER BY created_on DESC`
-		rows, err := gcsql.QuerySQL(query, board)
+		rows, err := gcsql.Query(nil, query, board)
 		if err != nil {
 			return "", err
 		}

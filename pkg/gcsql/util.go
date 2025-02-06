@@ -69,17 +69,26 @@ func setupOptions(opts ...*RequestOptions) *RequestOptions {
 	return opts[0]
 }
 
-// Query is a wrapper for QueryContextSQL that uses the given options, or defaults to a background context if nil
+func setupOptionsWithTimeout(opts ...*RequestOptions) *RequestOptions {
+	withoutContext := len(opts) == 0 || opts[0] == nil || opts[0].Context == nil
+	requestOptions := setupOptions(opts...)
+	if withoutContext {
+		requestOptions.Context, requestOptions.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	}
+	return requestOptions
+}
+
+// Query is a function for querying rows from the configured database, using the given options, or defaults to a background context if nil
 func Query(opts *RequestOptions, query string, a ...any) (*sql.Rows, error) {
 	return gcdb.Query(opts, query, a...)
 }
 
-// QueryRow is a wrapper for QueryRowContextSQL that uses the given options, or defaults to a background context if nil
+// QueryRow is a function for querying a single row from the configured database, using the given options, or defaults to a background context if nil
 func QueryRow(opts *RequestOptions, query string, values, out []any) error {
 	return gcdb.QueryRow(opts, query, values, out)
 }
 
-// Exec is a wrapper for ExecContextSQL that uses the given options, or defaults to a background context if nil
+// Exec is a function for executing a statement with the configured database, using the given options, or defaults to a background context if nil
 func Exec(opts *RequestOptions, query string, values ...any) (sql.Result, error) {
 	return gcdb.Exec(opts, query, values...)
 }
@@ -269,7 +278,7 @@ func QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, o
 
 // QueryRowTimeoutSQL is a helper function for querying a single row with the configured default timeout.
 // It creates a context with the default timeout to only be used for this query and then disposed.
-// It should only be used by a function that does a single SQL query, otherwise use QueryRowContextSQL
+// It should only be used by a function that does a single SQL query, otherwise use QueryRow with a context.
 func QueryRowTimeoutSQL(tx *sql.Tx, query string, values, out []any) error {
 	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
 	defer cancel()

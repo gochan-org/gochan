@@ -53,7 +53,7 @@ func (m *Pre2021Migrator) migrateBansInPlace() error {
 	for _, stmt := range statements {
 		stmt = strings.TrimSpace(stmt)
 		if strings.HasPrefix(stmt, "CREATE TABLE DBPREFIXip_ban") || strings.HasPrefix(stmt, "CREATE TABLE DBPREFIXfilter") {
-			_, err = gcsql.ExecSQL(stmt)
+			_, err = gcsql.Exec(nil, stmt)
 			if err != nil {
 				errEv.Err(err).Caller().
 					Str("statement", stmt).
@@ -99,7 +99,7 @@ func (m *Pre2021Migrator) migrateBansToNewDB() error {
 	}
 	defer tx.Rollback()
 
-	rows, err := m.db.QuerySQL(bansQuery)
+	rows, err := m.db.Query(nil, bansQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get bans")
 		return err

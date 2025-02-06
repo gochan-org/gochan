@@ -19,7 +19,7 @@ func TestMigratePosts(t *testing.T) {
 	}
 
 	var numThreads int
-	if !assert.NoError(t, migrator.db.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXposts WHERE parentid = 0 AND deleted_timestamp IS NULL", nil, []any{&numThreads}), "Failed to get number of threads") {
+	if !assert.NoError(t, migrator.db.QueryRow(nil, "SELECT COUNT(*) FROM DBPREFIXposts WHERE parentid = 0 AND deleted_timestamp IS NULL", nil, []any{&numThreads}), "Failed to get number of threads") {
 		t.FailNow()
 	}
 	assert.Equal(t, 2, numThreads, "Expected to have two threads pre-migration")
@@ -32,27 +32,27 @@ func TestMigratePosts(t *testing.T) {
 
 func validatePostMigration(t *testing.T) {
 	var numThreads int
-	if !assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXthreads", nil, []any{&numThreads}), "Failed to get number of threads") {
+	if !assert.NoError(t, gcsql.QueryRow(nil, "SELECT COUNT(*) FROM DBPREFIXthreads", nil, []any{&numThreads}), "Failed to get number of threads") {
 		t.FailNow()
 	}
 	assert.Equal(t, 2, numThreads, "Expected to have two threads pre-migration")
 
 	var numUploadPosts int
-	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXfiles", nil, []any{&numUploadPosts}))
+	assert.NoError(t, gcsql.QueryRow(nil, "SELECT COUNT(*) FROM DBPREFIXfiles", nil, []any{&numUploadPosts}))
 	assert.Equal(t, 1, numUploadPosts, "Expected to have 1 upload post")
 
 	var ip string
-	assert.NoError(t, gcsql.QueryRowSQL("SELECT IP_NTOA FROM DBPREFIXposts WHERE id = 1", nil, []any{&ip}))
+	assert.NoError(t, gcsql.QueryRow(nil, "SELECT IP_NTOA FROM DBPREFIXposts WHERE id = 1", nil, []any{&ip}))
 	assert.Equal(t, "192.168.56.1", ip, "Expected to have the correct IP address")
 
 	var numMigratedThreads int
-	if !assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXthreads", nil, []any{&numMigratedThreads}), "Failed to get number of migrated threads") {
+	if !assert.NoError(t, gcsql.QueryRow(nil, "SELECT COUNT(*) FROM DBPREFIXthreads", nil, []any{&numMigratedThreads}), "Failed to get number of migrated threads") {
 		t.FailNow()
 	}
 	assert.Equal(t, 2, numMigratedThreads, "Expected to have three migrated threads")
 
 	var locked bool
-	if !assert.NoError(t, gcsql.QueryRowSQL("SELECT locked FROM DBPREFIXthreads WHERE id = 1", nil, []any{&locked})) {
+	if !assert.NoError(t, gcsql.QueryRow(nil, "SELECT locked FROM DBPREFIXthreads WHERE id = 1", nil, []any{&locked})) {
 		t.FailNow()
 	}
 	assert.True(t, locked, "Expected thread ID 1 to be locked")

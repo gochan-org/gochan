@@ -36,7 +36,7 @@ func (dbu *GCDatabaseUpdater) Init(options *common.MigrationOptions) error {
 
 func (dbu *GCDatabaseUpdater) IsMigrated() (bool, error) {
 	var currentDatabaseVersion int
-	err := dbu.db.QueryRowSQL(`SELECT version FROM DBPREFIXdatabase_version WHERE component = 'gochan'`, nil,
+	err := dbu.db.QueryRow(nil, "SELECT version FROM DBPREFIXdatabase_version WHERE component = 'gochan'", nil,
 		[]any{&currentDatabaseVersion})
 	if err != nil {
 		return false, err

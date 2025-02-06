@@ -16,7 +16,7 @@ func (m *Pre2021Migrator) MigrateAnnouncements() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
 
-	rows, err := m.db.QuerySQL(announcementsQuery)
+	rows, err := m.db.Query(nil, announcementsQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get announcements")
 		return err
@@ -49,7 +49,7 @@ func (m *Pre2021Migrator) MigrateAnnouncements() error {
 			errEv.Err(err).Caller().Str("staff", announcement.oldPoster).Msg("Failed to get staff ID")
 			return err
 		}
-		if _, err = gcsql.ExecSQL(
+		if _, err = gcsql.Exec(nil,
 			"INSERT INTO DBPREFIXannouncements(staff_id,subject,message,timestamp) values(?,?,?,?)",
 			announcement.StaffID, announcement.Subject, announcement.Message, announcement.Timestamp,
 		); err != nil {

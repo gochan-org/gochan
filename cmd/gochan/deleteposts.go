@@ -125,16 +125,19 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 		query = "SELECT post_id, thread_id, op_id, is_top_post, filename, dir FROM DBPREFIXv_posts_to_delete WHERE post_id IN " +
 			setPart + " OR thread_id IN (SELECT thread_id from DBPREFIXposts op WHERE op_id IN " + setPart + " AND is_top_post)"
 	}
-	rows, err := gcsql.QuerySQL(query, params...)
+	rows, cancel, err := gcsql.QueryTimeoutSQL(nil, query, params...)
 	if err != nil {
 		return nil, nil, err
 	}
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 	var posts []delPost
 	var postIDsAny []any
 	for rows.Next() {
 		var post delPost
 		if err = rows.Scan(&post.postID, &post.threadID, &post.opID, &post.isOP, &post.filename, &post.boardDir); err != nil {
-			rows.Close()
 			return nil, nil, err
 		}
 		posts = append(posts, post)
@@ -258,7 +261,7 @@ func validatePostPasswords(posts []any, passwordMD5 string) (bool, error) {
 		params = append(params, posts[p])
 	}
 
-	err := gcsql.QueryRowSQL(queryPosts, params, []any{&count})
+	err := gcsql.QueryRow(nil, queryPosts, params, []any{&count})
 	return count == len(posts), err
 }
 
@@ -281,21 +284,24 @@ func markPostsAsDeleted(posts []any, request *http.Request, writer http.Response
 	defer cancel()
 
 	tx, err := gcsql.BeginContextTx(ctx)
+	opts := &gcsql.RequestOptions{Context: ctx, Tx: tx, Cancel: cancel}
 
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err != nil {
+		errEv.Err(err).Caller().Msg("Unable to start deletion transaction")
 		serveError(writer, "Unable to delete posts", http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
 		return false
 	}
 	defer tx.Rollback()
-	const postsError = "Unable to mark post(s) as deleted"
-	const threadsError = "Unable to mark thread(s) as deleted"
-	if _, err = gcsql.ExecTxSQL(tx, deletePostsSQL, posts...); err != nil {
+	const postsError = "Unable to delete post(s)"
+	const threadsError = "Unable to delete thread(s)"
+	if _, err = gcsql.Exec(opts, deletePostsSQL, posts...); err != nil {
 		serveError(writer, postsError, http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
 		return false
 	}
 
-	if _, err = gcsql.ExecTxSQL(tx, deleteThreadSQL, posts...); err != nil {
+	if _, err = gcsql.Exec(opts, deleteThreadSQL, posts...); err != nil {
+		errEv.Err(err).Caller().Msg("Unable to mark thread(s) as deleted")
 		serveError(writer, threadsError, http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
 		return false
 	}
@@ -351,7 +357,7 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 			http.StatusInternalServerError, wantsJSON, errEv.Array("errors", errArr))
 		return false
 	}
-	_, err = gcsql.ExecSQL(deleteFilesSQL, deleteIDs...)
+	_, err = gcsql.ExecTimeoutSQL(nil, deleteFilesSQL, deleteIDs...)
 	if err != nil {
 		serveError(writer, "Unable to delete file entries from database",
 			http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())

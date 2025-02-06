@@ -26,13 +26,13 @@ func (m *Pre2021Migrator) getMigrationUser(errEv *zerolog.Event) (*gcsql.Staff, 
 		Username: "pre2021-migration" + gcutil.RandomString(8),
 		AddedOn:  time.Now(),
 	}
-	_, err := gcsql.ExecSQL("INSERT INTO DBPREFIXstaff(username,password_checksum,global_rank,is_active) values(?,'',0,0)", user.Username)
+	_, err := gcsql.Exec(nil, "INSERT INTO DBPREFIXstaff(username,password_checksum,global_rank,is_active) values(?,'',0,0)", user.Username)
 	if err != nil {
 		errEv.Err(err).Caller().Str("username", user.Username).Msg("Failed to create migration user")
 		return nil, err
 	}
 
-	if err = gcsql.QueryRowSQL("SELECT id FROM DBPREFIXstaff WHERE username = ?", []any{user.Username}, []any{&user.ID}); err != nil {
+	if err = gcsql.QueryRow(nil, "SELECT id FROM DBPREFIXstaff WHERE username = ?", []any{user.Username}, []any{&user.ID}); err != nil {
 		errEv.Err(err).Caller().Str("username", user.Username).Msg("Failed to get migration user ID")
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (m *Pre2021Migrator) MigrateStaff() error {
 		return err
 	}
 
-	rows, err := m.db.QuerySQL(staffQuery)
+	rows, err := m.db.Query(nil, staffQuery)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get ban rows")
 		return err
@@ -73,7 +73,7 @@ func (m *Pre2021Migrator) MigrateStaff() error {
 			staff.ID = newStaff.ID
 		} else if errors.Is(err, gcsql.ErrUnrecognizedUsername) {
 			// staff doesn't exist, create it (with invalid checksum to be updated by the admin)
-			if _, err := gcsql.ExecSQL(
+			if _, err := gcsql.Exec(nil,
 				"INSERT INTO DBPREFIXstaff(username,password_checksum,global_rank,added_on,last_login,is_active) values(?,'',?,?,?,1)",
 				staff.Username, staff.Rank, staff.AddedOn, staff.LastLogin,
 			); err != nil {
@@ -102,7 +102,7 @@ func (m *Pre2021Migrator) MigrateStaff() error {
 						Msg("Failed to get board ID")
 					return err
 				}
-				if _, err = gcsql.ExecSQL("INSERT INTO DBPREFIXboard_staff(board_id,staff_id) VALUES(?,?)", boardID, staff.ID); err != nil {
+				if _, err = gcsql.Exec(nil, "INSERT INTO DBPREFIXboard_staff(board_id,staff_id) VALUES(?,?)", boardID, staff.ID); err != nil {
 					errEv.Err(err).Caller().
 						Str("username", staff.Username).
 						Str("board", board).

@@ -2,6 +2,7 @@ package manage
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"errors"
 	"net/http"
@@ -191,11 +192,15 @@ func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
 	if activeOnly {
 		query += " WHERE is_active"
 	}
-	rows, err := gcsql.QuerySQL(query)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GetSQLConfig().DBTimeoutSeconds)*time.Second)
+	rows, err := gcsql.Query(&gcsql.RequestOptions{Context: ctx, Cancel: cancel}, query)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		rows.Close()
+		cancel()
+	}()
 	var staff []gcsql.Staff
 	for rows.Next() {
 		var s gcsql.Staff
@@ -204,6 +209,9 @@ func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
 			return nil, err
 		}
 		staff = append(staff, s)
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
 	}
 	return staff, nil
 }

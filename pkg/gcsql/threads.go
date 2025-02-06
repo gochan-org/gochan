@@ -33,7 +33,10 @@ func CreateThread(requestOptions *RequestOptions, boardID int, locked bool, stic
 	if _, err = Exec(requestOptions, insertQuery, boardID, locked, stickied, anchored, cyclic); err != nil {
 		return 0, err
 	}
-	return threadID, QueryRow(requestOptions, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID})
+	if err = QueryRow(requestOptions, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID}); err != nil {
+		return 0, err
+	}
+	return threadID, nil
 }
 
 // GetThread returns a a thread object from the database, given its ID

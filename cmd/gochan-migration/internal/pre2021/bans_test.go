@@ -42,7 +42,7 @@ func validateBanMigration(t *testing.T) {
 	assert.NotZero(t, bans[0].StaffID, "Expected ban staff ID field to be set")
 
 	var numInvalidBans int
-	assert.NoError(t, gcsql.QueryRowSQL("SELECT COUNT(*) FROM DBPREFIXip_ban WHERE message = ?", []any{"Full ban on 8.8.0.0/16"}, []any{&numInvalidBans}))
+	assert.NoError(t, gcsql.QueryRow(nil, "SELECT COUNT(*) FROM DBPREFIXip_ban WHERE message = ?", []any{"Full ban on 8.8.0.0/16"}, []any{&numInvalidBans}))
 	assert.Equal(t, 0, numInvalidBans, "Expected the invalid test to not be migrated")
 
 	filters, err := gcsql.GetAllFilters(gcsql.TrueOrFalse)

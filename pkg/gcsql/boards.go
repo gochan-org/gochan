@@ -36,18 +36,18 @@ var (
 )
 
 // DoesBoardExistByID returns a bool indicating whether a board with a given id exists
-func DoesBoardExistByID(ID int) bool {
-	const query = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
+func DoesBoardExistByID(ID int, requestOptions ...*RequestOptions) bool {
+	opts := setupOptionsWithTimeout(requestOptions...)
 	var count int
-	QueryRowSQL(query, []any{ID}, []any{&count})
+	QueryRow(opts, "SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?", []any{ID}, []any{&count})
 	return count > 0
 }
 
 // DoesBoardExistByDir returns a bool indicating whether a board with a given directory exists
-func DoesBoardExistByDir(dir string) bool {
-	const query = `SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?`
+func DoesBoardExistByDir(dir string, requestOpts ...*RequestOptions) bool {
+	opts := setupOptionsWithTimeout(requestOpts...)
 	var count int
-	QueryRowSQL(query, []any{dir}, []any{&count})
+	QueryRow(opts, "SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?", []any{dir}, []any{&count})
 	return count > 0
 }
 
@@ -108,10 +108,10 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 	return boardURI, err
 }
 
-func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
+func getBoardBase(requestOptions *RequestOptions, where string, whereParameters ...any) (*Board, error) {
 	query := selectBoardsBaseSQL + where
 	board := new(Board)
-	err := QueryRowTimeoutSQL(nil, query, whereParameters, []any{
+	err := QueryRow(requestOptions, query, whereParameters, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
@@ -124,13 +124,15 @@ func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
 }
 
 // GetBoardFromID returns the board corresponding to a given id
-func GetBoardFromID(id int) (*Board, error) {
-	return getBoardBase("WHERE DBPREFIXboards.id = ?", []any{id})
+func GetBoardFromID(id int, requestOptions ...*RequestOptions) (*Board, error) {
+	opts := setupOptionsWithTimeout(requestOptions...)
+	return getBoardBase(opts, "WHERE DBPREFIXboards.id = ?", id)
 }
 
 // GetBoardFromDir returns the board corresponding to a given dir
-func GetBoardFromDir(dir string) (*Board, error) {
-	return getBoardBase("WHERE DBPREFIXboards.dir = ?", []any{dir})
+func GetBoardFromDir(dir string, requestOptions ...*RequestOptions) (*Board, error) {
+	opts := setupOptionsWithTimeout(requestOptions...)
+	return getBoardBase(opts, "WHERE DBPREFIXboards.dir = ?", dir)
 }
 
 // GetIDFromDir returns the id of the board with the given dir value
