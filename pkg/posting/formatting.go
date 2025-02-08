@@ -39,10 +39,10 @@ func (mf *MessageFormatter) Init() {
 	for _, tag := range unsetBBcodeTags {
 		mf.bbCompiler.SetTag(tag, nil)
 	}
-	mf.bbCompiler.SetTag("?", func(bn *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+	mf.bbCompiler.SetTag("?", func(_ *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
 		return &bbcode.HTMLTag{Name: "span", Attrs: map[string]string{"class": "spoiler"}}, true
 	})
-	mf.bbCompiler.SetTag("hide", func(bn *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+	mf.bbCompiler.SetTag("hide", func(_ *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
 		return &bbcode.HTMLTag{Name: "div", Attrs: map[string]string{"class": "hideblock hidden"}}, true
 	})
 	mf.linkFixer = strings.NewReplacer(
