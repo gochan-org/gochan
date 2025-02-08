@@ -227,30 +227,6 @@ function selectedText() {
 	return window.getSelection().toString();
 }
 
-export function prepareHideBlocks() {
-	$("div.hideblock").each((_i,el) => {
-		const $el = $(el);
-		const $button = $("<button />").prop({
-			class: "hideblock-button",
-		}).text($el.hasClass("open") ? "Hide" : "Show").on("click", e => {
-			e.preventDefault();
-			const hidden = $el.hasClass("hidden");
-			$el.removeClass("close");
-			$button.text(hidden ? "Hide" : "Show");
-			if(hidden) {
-				$el.removeClass("hidden").addClass("open");
-			} else {
-				$el.addClass("close").removeClass("open");
-			}
-		}).insertBefore($el);
-		$el.on("animationend", () => {
-			if($el.hasClass("close")) {
-				$el.addClass("hidden").removeClass("close");
-			}
-		});
-	});
-}
-
 export function quote(no: number) {
 	if(getBooleanStorageVal("useqr", true)) {
 		openQR();

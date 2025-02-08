@@ -271,6 +271,7 @@ $(() => {
 		min: 2
 	}, initWatcher));
 	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", true, updateBrowseButton));
+	settings.set("smoothhidetoggle", new BooleanSetting("smoothhidetoggle", "Smooth hide block toggle", true));
 
 	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", ""));
 	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));

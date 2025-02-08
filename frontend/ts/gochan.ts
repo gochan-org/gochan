@@ -14,7 +14,6 @@ import { initFlags } from "./dom/flags";
 import { initQR } from "./dom/qr";
 import { getBooleanStorageVal } from "./storage";
 import { updateBrowseButton } from "./dom/uploaddata";
-import { prepareHideBlocks } from "./postutil";
 import "./management/filters";
 
 export function toTop() {
@@ -44,7 +43,6 @@ $(() => {
 
 	const passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
-	prepareHideBlocks();
 
 	setPageBanner();
 	if(pageThread.board !== "") {
