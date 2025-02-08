@@ -14,8 +14,9 @@ import (
 )
 
 var (
-	msgfmtr *MessageFormatter
-	urlRE   = regexp.MustCompile(`https?://(\S+)`)
+	msgfmtr         *MessageFormatter
+	urlRE           = regexp.MustCompile(`https?://(\S+)`)
+	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
 )
 
 // InitPosting prepares the formatter and the temp post pruner
@@ -35,12 +36,12 @@ type MessageFormatter struct {
 
 func (mf *MessageFormatter) Init() {
 	mf.bbCompiler = bbcode.NewCompiler(true, true)
-	mf.bbCompiler.SetTag("center", nil)
-	// mf.bbCompiler.SetTag("code", nil)
-	mf.bbCompiler.SetTag("color", nil)
-	mf.bbCompiler.SetTag("img", nil)
-	mf.bbCompiler.SetTag("quote", nil)
-	mf.bbCompiler.SetTag("size", nil)
+	for _, tag := range unsetBBcodeTags {
+		mf.bbCompiler.SetTag(tag, nil)
+	}
+	mf.bbCompiler.SetTag("?", func(bn *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		return &bbcode.HTMLTag{Name: "span", Attrs: map[string]string{"class": "spoiler"}}, true
+	})
 	mf.linkFixer = strings.NewReplacer(
 		"[url=[url]", "[url=",
 		"[/url][/url]", "[/url]",
