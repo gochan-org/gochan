@@ -6,6 +6,12 @@
 	color: $color;
 }
 
+%darkselect {
+	background: $inputbg2;
+	border-radius: 5px;
+	color: $color;
+	@extend %formstyle;
+}
 
 div.reply,
 th.postblock,
@@ -17,20 +23,25 @@ table.mgmt-table tr:first-of-type th {
 	border-radius: 5px;
 }
 
-table#postbox-static, div#report-delbox {
+table#postbox-static, div#report-delbox, form#filterform {
 	input,
-	select,
 	textarea,
 	input[type="file"]::file-selector-button,
 	input[type="file"]::-webkit-file-upload-button {
-		border-radius: 5px;
 		@extend %formstyle;
 	}
+	select {
+		@extend %darkselect;
+	}
 	button, input[type=submit] {
-		background:#16171A;
+		background: $inputbg2;
 	}
 }
 
-select#changepage {
-	@extend %formstyle;
+button.hideblock-button,
+select#changepage,
+select.post-actions,
+select#boardsearch,
+select[name="show"] {
+	@extend %darkselect;
 }

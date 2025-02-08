@@ -17,17 +17,32 @@ div.section-body {
   background: #282A2E;
 }
 
-select#changepage, table#postbox-static input,
-table#postbox-static select,
+table#postbox-static input,
 table#postbox-static textarea,
 table#postbox-static input[type=file]::file-selector-button,
 table#postbox-static input[type=file]::-webkit-file-upload-button, div#report-delbox input,
-div#report-delbox select,
 div#report-delbox textarea,
 div#report-delbox input[type=file]::file-selector-button,
-div#report-delbox input[type=file]::-webkit-file-upload-button {
+div#report-delbox input[type=file]::-webkit-file-upload-button, form#filterform input,
+form#filterform textarea,
+form#filterform input[type=file]::file-selector-button,
+form#filterform input[type=file]::-webkit-file-upload-button, button.hideblock-button,
+select#changepage,
+select.post-actions,
+select#boardsearch,
+select[name=show], table#postbox-static select, div#report-delbox select, form#filterform select {
   background: #282A2E;
   border: 1px double #07371F;
+  color: #ACACAC;
+}
+
+button.hideblock-button,
+select#changepage,
+select.post-actions,
+select#boardsearch,
+select[name=show], table#postbox-static select, div#report-delbox select, form#filterform select {
+  background: #16171A;
+  border-radius: 5px;
   color: #ACACAC;
 }
 
@@ -41,18 +56,7 @@ table.mgmt-table tr:first-of-type th {
   border-radius: 5px;
 }
 
-table#postbox-static input,
-table#postbox-static select,
-table#postbox-static textarea,
-table#postbox-static input[type=file]::file-selector-button,
-table#postbox-static input[type=file]::-webkit-file-upload-button, div#report-delbox input,
-div#report-delbox select,
-div#report-delbox textarea,
-div#report-delbox input[type=file]::file-selector-button,
-div#report-delbox input[type=file]::-webkit-file-upload-button {
-  border-radius: 5px;
-}
-table#postbox-static button, table#postbox-static input[type=submit], div#report-delbox button, div#report-delbox input[type=submit] {
+table#postbox-static button, table#postbox-static input[type=submit], div#report-delbox button, div#report-delbox input[type=submit], form#filterform button, form#filterform input[type=submit] {
   background: #16171A;
 }
 
