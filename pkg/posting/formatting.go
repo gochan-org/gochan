@@ -42,6 +42,9 @@ func (mf *MessageFormatter) Init() {
 	mf.bbCompiler.SetTag("?", func(bn *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
 		return &bbcode.HTMLTag{Name: "span", Attrs: map[string]string{"class": "spoiler"}}, true
 	})
+	mf.bbCompiler.SetTag("hide", func(bn *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		return &bbcode.HTMLTag{Name: "div", Attrs: map[string]string{"class": "hideblock hidden"}}, true
+	})
 	mf.linkFixer = strings.NewReplacer(
 		"[url=[url]", "[url=",
 		"[/url][/url]", "[/url]",

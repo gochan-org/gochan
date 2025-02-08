@@ -219,3 +219,10 @@ div.inlinepostprev {
 	margin:8px;
 	padding: 4px 8px;
 }
+
+.hideblock {
+	border: 2px solid black;
+}
+.hideblock.hidden {
+	display: none;
+}

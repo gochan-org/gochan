@@ -220,6 +220,14 @@ div.inlinepostprev {
   padding: 4px 8px;
 }
 
+.hideblock {
+  border: 2px solid black;
+}
+
+.hideblock.hidden {
+  display: none;
+}
+
 div.section-block {
   margin-bottom: 8px;
 }
