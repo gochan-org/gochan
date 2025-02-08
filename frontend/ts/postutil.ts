@@ -227,6 +227,19 @@ function selectedText() {
 	return window.getSelection().toString();
 }
 
+export function prepareHideBlocks() {
+	$("div.hideblock").each((_i,el) => {
+		const $el = $(el);
+		const $button = $("<button />").prop({
+			class: "hideblock-button",
+		}).text($el.hasClass("hidden") ? "Show" : "Hide").on("click", e => {
+			e.preventDefault();
+			$el.toggleClass("hidden");
+			$button.text($el.hasClass("hidden") ? "Show" : "Hide");
+		}).insertBefore($el);
+	});
+}
+
 export function quote(no: number) {
 	if(getBooleanStorageVal("useqr", true)) {
 		openQR();

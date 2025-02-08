@@ -228,6 +228,10 @@ div.inlinepostprev {
   display: none;
 }
 
+.hideblock-button {
+  display: block;
+}
+
 div.section-block {
   margin-bottom: 8px;
 }
