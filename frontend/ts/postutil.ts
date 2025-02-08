@@ -232,11 +232,22 @@ export function prepareHideBlocks() {
 		const $el = $(el);
 		const $button = $("<button />").prop({
 			class: "hideblock-button",
-		}).text($el.hasClass("hidden") ? "Show" : "Hide").on("click", e => {
+		}).text($el.hasClass("open") ? "Hide" : "Show").on("click", e => {
 			e.preventDefault();
-			$el.toggleClass("hidden");
-			$button.text($el.hasClass("hidden") ? "Show" : "Hide");
+			const hidden = $el.hasClass("hidden");
+			$el.removeClass("close");
+			$button.text(hidden ? "Hide" : "Show");
+			if(hidden) {
+				$el.removeClass("hidden").addClass("open");
+			} else {
+				$el.addClass("close").removeClass("open");
+			}
 		}).insertBefore($el);
+		$el.on("animationend", () => {
+			if($el.hasClass("close")) {
+				$el.addClass("hidden").removeClass("close");
+			}
+		});
 	});
 }
 

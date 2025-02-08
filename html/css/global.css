@@ -1,3 +1,23 @@
+@keyframes slideopen {
+  from {
+    transform: scale(1, 0);
+    transform-origin: top center;
+  }
+  to {
+    transform: scale(1, 1);
+    transform-origin: top center;
+  }
+}
+@keyframes slideclose {
+  from {
+    transform: scale(1, 1);
+    transform-origin: top center;
+  }
+  to {
+    transform: scale(1, 0);
+    transform-origin: top center;
+  }
+}
 #boardmenu-bottom {
   margin-top: 16px;
 }
@@ -221,7 +241,16 @@ div.inlinepostprev {
 }
 
 .hideblock {
-  border: 2px solid black;
+  border: 1px solid black;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.hideblock.open {
+  animation: slideopen 0.25s;
+}
+
+.hideblock.close {
+  animation: slideclose 0.25s;
 }
 
 .hideblock.hidden {
@@ -609,6 +638,26 @@ img#banpage-image {
   margin: 4px 8px 8px 4px;
 }
 
+@keyframes slideopen {
+  from {
+    transform: scale(1, 0);
+    transform-origin: top center;
+  }
+  to {
+    transform: scale(1, 1);
+    transform-origin: top center;
+  }
+}
+@keyframes slideclose {
+  from {
+    transform: scale(1, 1);
+    transform-origin: top center;
+  }
+  to {
+    transform: scale(1, 0);
+    transform-origin: top center;
+  }
+}
 .increase-line-height {
   line-height: 1.5;
 }

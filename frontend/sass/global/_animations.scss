@@ -1,0 +1,21 @@
+@keyframes slideopen {
+	from {
+		transform: scale(1, 0);
+		transform-origin: top center;
+	}
+	to {
+	transform: scale(1, 1);
+	transform-origin: top center;
+	}
+}
+
+@keyframes slideclose {
+	from {
+		transform: scale(1, 1);
+		transform-origin: top center;
+	}
+	to {
+		transform: scale(1, 0);
+		transform-origin: top center;
+	}
+}

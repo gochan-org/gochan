@@ -1,3 +1,5 @@
+@import 'animations';
+
 #boardmenu-bottom {
 	margin-top: 16px;
 }
@@ -221,11 +223,22 @@ div.inlinepostprev {
 }
 
 .hideblock {
-	border: 2px solid black;
+	border: 1px solid black;
+	background: rgba(0, 0, 0, 0.1);
 }
+
+.hideblock.open {
+	animation: slideopen 0.25s;
+}
+
+.hideblock.close {
+	animation: slideclose 0.25s;
+}
+
 .hideblock.hidden {
 	display: none;
 }
+
 .hideblock-button {
 	display: block;
 }
