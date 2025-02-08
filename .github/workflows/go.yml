@@ -22,6 +22,9 @@ jobs:
 
     - name: Build
       run: ./build.py
+    
+    - name: Build plugins
+      run: ./build.py build --plugin ./examples/plugins/geoip-legacy/ &&./build.py build --plugin ./examples/plugins/gochaninfo-mgmt-action/ && ./build.py build --plugin ./examples/plugins/ip2location/
 
     - name: Test
-      run: go test -v ./pkg/... ./cmd/...
+      run: go test -cover -v ./pkg/... ./cmd/...
