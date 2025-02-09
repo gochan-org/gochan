@@ -14,14 +14,13 @@ import (
 )
 
 var (
-	msgfmtr         *MessageFormatter
+	msgfmtr         MessageFormatter
 	urlRE           = regexp.MustCompile(`https?://(\S+)`)
 	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
 )
 
 // InitPosting prepares the formatter and the temp post pruner
 func InitPosting() {
-	msgfmtr = new(MessageFormatter)
 	msgfmtr.Init()
 	go tempCleaner()
 }

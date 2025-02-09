@@ -5,20 +5,17 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/stretchr/testify/assert"
+	lua "github.com/yuin/gopher-lua"
 )
 
 const (
 	versionStr         = "4.0.0"
-	bbcodeMsgPreRender = `[b]Bold[/b]
-[i]Italics[/i]
-[u]Underline[/u]
-[url=https://gochan.org]URL[/url]
-[code]Code[/code]`
-	bbcodeMsgExpected = `<b>Bold</b><br>` +
-		`<i>Italics</i><br>` +
-		`<u>Underline</u><br>` +
-		`<a href="https://gochan.org">URL</a><br>` +
-		`<pre>Code</pre>`
+	bbcodeMsgPreRender = `[b]Bold[/b] [i]Italics[/i] [u]Underline[/u] [url=https://gochan.org]URL[/url] [?]Spoiler[/?]
+[code]Code[/code]
+[hide]Hidden[/hide]`
+	bbcodeMsgExpected = `<b>Bold</b> <i>Italics</i> <u>Underline</u> <a href="https://gochan.org">URL</a> <span class="spoiler">Spoiler</span><br>` +
+		`<pre>Code</pre><br>` +
+		`<div class="hideblock hidden">Hidden</div>`
 
 	linkTestPreRender = `gochan.org: https://gochan.org
 gochan.org with path: https://gochan.org/a
@@ -29,6 +26,12 @@ gochan.org with bad link: https://gochan.org/a">:)</a>`
 
 	doubleTagPreRender = `[url=https://gochan.org]Gochan[/url] [url]https://gochan.org[/url]`
 	doubleTagExpected  = `<a href="https://gochan.org">Gochan</a> <a href="https://gochan.org">https://gochan.org</a>`
+	luaBBCodeTest      = `local bbcode = require("bbcode")
+local msg = "[lua]Lua test[/lua]"
+bbcode.set_tag("lua", function(node)
+	return {name="span", attrs={class="lua"}}
+end)`
+	luaBBCodeTestExpected = `<span class="lua">Lua test</span>`
 )
 
 func TestBBCode(t *testing.T) {
@@ -50,9 +53,22 @@ func TestLinks(t *testing.T) {
 
 func TestNoDoubleTags(t *testing.T) {
 	config.SetVersion(versionStr)
-	msgfmtr = new(MessageFormatter)
 	msgfmtr.Init()
 	rendered, err := FormatMessage(doubleTagPreRender, "")
 	assert.NoError(t, err)
 	assert.EqualValues(t, doubleTagExpected, rendered)
+}
+
+func TestLuaBBCode(t *testing.T) {
+	config.SetVersion(versionStr)
+	msgfmtr.Init()
+	l := lua.NewState()
+	defer l.Close()
+	l.PreloadModule("bbcode", PreloadBBCodeModule)
+	assert.NoError(t, l.DoString(luaBBCodeTest))
+	compiled := msgfmtr.bbCompiler.Compile("[lua]Lua test[/lua]")
+	assert.Equal(t, luaBBCodeTestExpected, compiled)
+	assert.NoError(t, l.DoString(`require("bbcode").set_tag("b", nil)`))
+	assert.Equal(t, "[b]Lua test[/b]", msgfmtr.bbCompiler.Compile("[b]Lua test[/b]"))
+	assert.Error(t, l.DoString(`bbcode.set_tag("lua", 1)`))
 }
