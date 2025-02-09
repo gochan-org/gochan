@@ -339,7 +339,7 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 		rows.Close()
 	}()
 
-	var threadIDs []interface{}
+	var threadIDs []any
 	var id int
 	var threadsProccessed int
 	for rows.Next() {

@@ -119,7 +119,7 @@ func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
 }
 
 func init() {
-	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...interface{}) error {
+	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...any) error {
 		return gcsql.ResetBoardSectionArrays()
 	})
 	gctemplates.AddTemplateFuncs(template.FuncMap{

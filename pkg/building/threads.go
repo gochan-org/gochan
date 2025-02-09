@@ -95,7 +95,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 
 	// render thread page
 	captchaCfg := config.GetSiteConfig().Captcha
-	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]any{
 		"boards":      gcsql.AllBoards,
 		"board":       board,
 		"boardConfig": config.GetBoardConfig(board.Dir),

@@ -26,7 +26,7 @@ func TestServeJSON(t *testing.T) {
 	config.SetRandomSeed("test")
 
 	writer := httptest.NewRecorder()
-	data := map[string]interface{}{
+	data := map[string]any{
 		"status":    "success",
 		"postID":    "777",
 		"srcBoard":  "srcBoard",
@@ -46,7 +46,7 @@ func TestServeJSON(t *testing.T) {
 	}
 
 	// Check the response body
-	var response map[string]interface{}
+	var response map[string]any
 	if err := json.Unmarshal(writer.Body.Bytes(), &response); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestServeError(t *testing.T) {
 		name      string
 		err       string
 		wantsJSON bool
-		data      map[string]interface{}
+		data      map[string]any
 		expected  string
 	}{
 		{
@@ -119,7 +119,7 @@ func TestServeError(t *testing.T) {
 			name:      "JSON response with existing data",
 			err:       "another error occurred",
 			wantsJSON: true,
-			data:      map[string]interface{}{"info": "some info"},
+			data:      map[string]any{"info": "some info"},
 			expected:  `another error occurred`,
 		},
 		{
@@ -141,7 +141,7 @@ func TestServeError(t *testing.T) {
 			// Check the response
 			if tt.wantsJSON {
 				// Check if the response is JSON
-				var responseMap map[string]interface{}
+				var responseMap map[string]any
 				if err := json.NewDecoder(rr.Body).Decode(&responseMap); err != nil {
 					t.Fatalf("Failed to decode JSON response: %v", err)
 				}

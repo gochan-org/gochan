@@ -4,7 +4,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-func LValueToInterface(l *lua.LState, v lua.LValue) interface{} {
+func LValueToInterface(l *lua.LState, v lua.LValue) any {
 	lt := v.Type()
 	switch lt {
 	case lua.LTNil:

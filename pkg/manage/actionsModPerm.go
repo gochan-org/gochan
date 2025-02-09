@@ -27,7 +27,7 @@ import (
 
 // manage actions that require moderator-level permission go here
 
-func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	var outputStr string
 	var ban gcsql.IPBan
 	ban.StaffID = staff.ID
@@ -108,7 +108,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	}
 	manageBansBuffer := bytes.NewBufferString("")
 
-	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]any{
 		"banlist":       banlist,
 		"allBoards":     gcsql.AllBoards,
 		"ban":           ban,
@@ -121,7 +121,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	return outputStr, nil
 }
 
-func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	banIDstr := request.FormValue("banid")
 	var banID int
 	if banIDstr != "" {
@@ -165,7 +165,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		return appeals, nil
 	}
 	manageAppealsBuffer := bytes.NewBufferString("")
-	pageData := map[string]interface{}{}
+	pageData := map[string]any{}
 	if len(appeals) > 0 {
 		pageData["appeals"] = appeals
 	}
@@ -349,10 +349,10 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return buf.String(), nil
 }
 
-func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	ipQuery := request.FormValue("ip")
 	limitStr := request.FormValue("limit")
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ipQuery": ipQuery,
 		"limit":   20,
 	}
@@ -389,7 +389,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	return manageIpBuffer.String(), nil
 }
 
-func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	dismissIDstr := request.FormValue("dismiss")
 	if dismissIDstr != "" {
 		// staff is dismissing a report
@@ -422,10 +422,10 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		return nil, err
 	}
 	defer rows.Close()
-	reports := make([]map[string]interface{}, 0)
+	reports := make([]map[string]any, 0)
 	for rows.Next() {
 		var id int
-		var staff_id interface{}
+		var staff_id any
 		var staff_user []byte
 		var post_id int
 		var ip string
@@ -442,7 +442,7 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		}
 
 		staff_id_int, _ := staff_id.(int64)
-		reports = append(reports, map[string]interface{}{
+		reports = append(reports, map[string]any{
 			"id":         id,
 			"staff_id":   int(staff_id_int),
 			"staff_user": string(staff_user),
@@ -457,7 +457,7 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 	reportsBuffer := bytes.NewBufferString("")
 	err = serverutil.MinifyTemplate(gctemplates.ManageReports,
-		map[string]interface{}{
+		map[string]any{
 			"reports": reports,
 			"staff":   staff,
 		}, reportsBuffer, "text/html")
@@ -469,10 +469,10 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return
 }
 
-func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	boardDir := request.FormValue("board")
 	attrBuffer := bytes.NewBufferString("")
-	data := map[string]interface{}{
+	data := map[string]any{
 		"boards": gcsql.AllBoards,
 	}
 	if boardDir == "" {
@@ -572,7 +572,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		return "", err
 	}
 	data["threads"] = threads
-	var threadIDs []interface{}
+	var threadIDs []any
 	for i := len(threads) - 1; i >= 0; i-- {
 		threadIDs = append(threadIDs, threads[i].ID)
 	}
@@ -617,7 +617,7 @@ type postInfoJSON struct {
 	Fingerprint      string `json:"fingerprint,omitempty"`
 }
 
-func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	postIDstr := request.FormValue("postid")
 	if postIDstr == "" {
 		return "", errors.New("invalid request (missing postid)")
@@ -670,7 +670,7 @@ type fingerprintJSON struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	postIDstr := request.Form.Get("post")
 	if postIDstr == "" {
 		return "", errors.New("missing 'post' field")

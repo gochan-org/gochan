@@ -17,7 +17,7 @@ func PreloadModule(l *lua.LState) int {
 			tmplUD := l.CheckUserData(1)
 			tmpl := tmplUD.Value.(*template.Template)
 			dataTable := l.CheckTable(2)
-			data := map[string]interface{}{}
+			data := map[string]any{}
 			dataTable.ForEach(func(l1, l2 lua.LValue) {
 				data[l1.String()] = luautil.LValueToInterface(l, l2)
 			})

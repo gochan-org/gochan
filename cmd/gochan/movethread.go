@@ -59,7 +59,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			return
 		}
 		if !post.IsTopPost {
-			server.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]any{
 				"postid": checkedPosts[0],
 			})
 			return
@@ -69,7 +69,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			errEv.Err(err).Caller().
 				Str("srcBoardIDstr", request.PostFormValue("boardid")).Send()
-			server.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostFormValue("boardid")), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostFormValue("boardid")), wantsJSON, map[string]any{
 				"boardid": srcBoardID,
 			})
 			return
@@ -85,7 +85,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		}
 		gcutil.LogStr("srcBoard", srcBoard.Dir, errEv, infoEv)
 		buf := bytes.NewBufferString("")
-		if err = serverutil.MinifyTemplate(gctemplates.MoveThreadPage, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.MoveThreadPage, map[string]any{
 			"boardConfig": config.GetBoardConfig(srcBoard.Dir),
 			"postid":      post.ID,
 			"destBoards":  destBoards,
@@ -106,7 +106,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Str("postIDstr", postIDstr).Send()
 			writer.WriteHeader(http.StatusBadRequest)
-			server.ServeError(writer, fmt.Sprintf("Error parsing postid value: %q: %s", postIDstr, err.Error()), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Error parsing postid value: %q: %s", postIDstr, err.Error()), wantsJSON, map[string]any{
 				"postid": postIDstr,
 			})
 			return
@@ -119,7 +119,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Str("srcBoardIDstr", srcBoardIDstr).Send()
 			writer.WriteHeader(http.StatusBadRequest)
-			server.ServeError(writer, fmt.Sprintf("Error parsing srcboardid value: %q: %s", srcBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Error parsing srcboardid value: %q: %s", srcBoardIDstr, err.Error()), wantsJSON, map[string]any{
 				"srcboardid": srcBoardIDstr,
 			})
 			return
@@ -129,7 +129,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Int("srcBoardID", srcBoardID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 				"srcboardid": srcBoardID,
 			})
 			return
@@ -142,7 +142,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Str("destBoardIDstr", destBoardIDstr).Send()
 			writer.WriteHeader(http.StatusBadRequest)
-			server.ServeError(writer, fmt.Sprintf("Error parsing destboardid value: %q: %s", destBoardIDstr, err.Error()), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, fmt.Sprintf("Error parsing destboardid value: %q: %s", destBoardIDstr, err.Error()), wantsJSON, map[string]any{
 				"destboardid": destBoardIDstr,
 			})
 			return
@@ -153,7 +153,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Int("destBoardID", destBoardID).Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 				"destboardid": destBoardID,
 			})
 			return
@@ -164,7 +164,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			errEv.Err(err).Caller().Send()
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 				"postid": postID,
 			})
 			return
@@ -178,7 +178,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 
 		if err = post.ChangeBoardID(destBoardID); err != nil {
 			errEv.Err(err).Caller().Msg("Failed changing thread board ID")
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 				"postID":      postID,
 				"destBoardID": destBoardID,
 			})
@@ -189,7 +189,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get upload info")
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Error getting list of files in thread", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Error getting list of files in thread", wantsJSON, map[string]any{
 				"postid": post.ID,
 			})
 		}
@@ -245,7 +245,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			// got at least one error while trying to move files (if there were any)
 			server.ServeError(writer, "Error while moving post upload: "+err.Error(), wantsJSON,
-				map[string]interface{}{
+				map[string]any{
 					"postID":    postID,
 					"srcBoard":  srcBoard.Dir,
 					"destBoard": destBoard.Dir,
@@ -258,7 +258,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Msg("Failed deleting thread page")
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Failed deleting thread page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed deleting thread page: "+err.Error(), wantsJSON, map[string]any{
 				"postID":   postID,
 				"srcBoard": srcBoard.Dir,
 			})
@@ -269,7 +269,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			errEv.Err(err).Caller().
 				Msg("Failed deleting thread JSON file")
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Failed deleting thread JSON file: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed deleting thread JSON file: "+err.Error(), wantsJSON, map[string]any{
 				"postID":   postID,
 				"srcBoard": srcBoard.Dir,
 			})
@@ -278,27 +278,27 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 
 		if err = building.BuildThreadPages(post); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Failed building thread page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed building thread page: "+err.Error(), wantsJSON, map[string]any{
 				"postid": postID,
 			})
 			return
 		}
 		if err = building.BuildBoardPages(srcBoard, errEv); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed building board page: "+err.Error(), wantsJSON, map[string]any{
 				"srcBoardID": srcBoardID,
 			})
 			return
 		}
 		if err = building.BuildBoardPages(destBoard, errEv); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Failed building destination board page: "+err.Error(), wantsJSON, map[string]any{
 				"destBoardID": destBoardID,
 			})
 			return
 		}
 		if wantsJSON {
-			server.ServeJSON(writer, map[string]interface{}{
+			server.ServeJSON(writer, map[string]any{
 				"status":    "success",
 				"postID":    postID,
 				"srcBoard":  srcBoard.Dir,

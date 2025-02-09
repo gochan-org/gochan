@@ -169,7 +169,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		captchaCfg := config.GetSiteConfig().Captcha
-		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]any{
 			"boards":      gcsql.AllBoards,
 			"sections":    gcsql.AllSections,
 			"threads":     threads,
@@ -243,7 +243,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		if (numThreads % boardConfig.ThreadsPerPage) > 0 {
 			numPages++
 		}
-		data := map[string]interface{}{
+		data := map[string]any{
 			"boards":      gcsql.AllBoards,
 			"sections":    gcsql.AllSections,
 			"threads":     page.Threads,

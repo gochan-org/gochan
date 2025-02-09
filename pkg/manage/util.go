@@ -131,7 +131,7 @@ func InitManagePages() {
 	registerAdminPages()
 }
 
-func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (interface{}, error) {
+func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (any, error) {
 	dashBuffer := bytes.NewBufferString("")
 	announcements, err := getAllAnnouncements()
 	if err != nil {
@@ -148,7 +148,7 @@ func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staf
 	}
 
 	availableActions := getAvailableActions(staff.Rank, true)
-	if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ManageDashboard, map[string]any{
 		"actions":       availableActions,
 		"rank":          staff.Rank,
 		"rankString":    rankString,

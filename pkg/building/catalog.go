@@ -113,7 +113,7 @@ func BuildCatalog(boardID int) error {
 	}
 	boardConfig := config.GetBoardConfig(board.Dir)
 
-	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]any{
 		"boards":      gcsql.AllBoards,
 		"board":       board,
 		"boardConfig": boardConfig,

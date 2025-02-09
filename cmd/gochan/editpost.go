@@ -70,7 +70,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 
-		data := map[string]interface{}{
+		data := map[string]any{
 			"boards":         gcsql.AllBoards,
 			"systemCritical": config.GetSystemCriticalConfig(),
 			"siteConfig":     config.GetSiteConfig(),
@@ -101,7 +101,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		errEv.Err(err).Caller().
 			Str("postid", postIDstr).
 			Msg("Invalid form data")
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]any{
 			"postid": postid,
 		})
 		return
@@ -110,7 +110,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	post, err := gcsql.GetPostFromID(postid, true)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to find post")
-		server.ServeError(writer, "Unable to find post", wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Unable to find post", wantsJSON, map[string]any{
 			"postid": postid,
 		})
 		return
@@ -135,7 +135,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 
 	board, err := gcsql.GetBoardFromID(boardid)
 	if err != nil {
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]interface{}{
+		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]any{
 			"boardid": boardid,
 		})
 		errEv.Err(err).Caller().Msg("Invalid form data")
@@ -184,7 +184,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				Str("newFilename", upload.Filename).
 				Str("newOriginalFilename", upload.OriginalFilename).
 				Send()
-			server.ServeError(writer, "Error attaching new upload: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Error attaching new upload: "+err.Error(), wantsJSON, map[string]any{
 				"filename": upload.OriginalFilename,
 			})
 			filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
@@ -201,7 +201,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		_, err, recovered = events.TriggerEvent("message-pre-format", post, request)
 		if recovered {
 			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, map[string]any{
 				"postid": post.ID,
 			})
 			return
@@ -210,7 +210,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			errEv.Err(err).Caller().
 				Str("triggeredEvent", "message-pre-format").
 				Send()
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
 				"postid": post.ID,
 			})
 			return
@@ -259,7 +259,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		); err != nil {
 			errEv.Err(err).Caller().
 				Msg("Unable to edit post")
-			server.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]interface{}{
+			server.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]any{
 				"postid": post.ID,
 			})
 			return

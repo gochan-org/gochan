@@ -111,7 +111,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		}
 		fmt.Println("Success:", result)
 	}
-	err := serverutil.MinifyTemplate(gctemplates.Captcha, map[string]interface{}{
+	err := serverutil.MinifyTemplate(gctemplates.Captcha, map[string]any{
 		"boardConfig": config.GetBoardConfig(""),
 		"boards":      gcsql.AllBoards,
 		"siteKey":     captchaCfg.SiteKey,

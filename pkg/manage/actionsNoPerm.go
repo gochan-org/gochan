@@ -19,7 +19,7 @@ const (
 	loginTitle = "Login"
 )
 
-func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output interface{}, err error) {
+func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output any, err error) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if staff.Rank > 0 {
 		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
@@ -34,7 +34,7 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	if username == "" || password == "" {
 		//assume that they haven't logged in
 		manageLoginBuffer := bytes.NewBufferString("")
-		if err = serverutil.MinifyTemplate(gctemplates.ManageLogin, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.ManageLogin, map[string]any{
 			"siteConfig":  config.GetSiteConfig(),
 			"sections":    gcsql.AllSections,
 			"boards":      gcsql.AllBoards,
@@ -64,7 +64,7 @@ type staffInfoJSON struct {
 	Actions  []Action `json:"actions,omitempty"`
 }
 
-func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
+func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,

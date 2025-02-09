@@ -13,18 +13,18 @@ var (
 	InvalidArgumentErrorStr = "invalid argument(s) passed to event %q"
 )
 
-type EventHandler func(string, ...interface{}) error
+type EventHandler func(string, ...any) error
 
 // RegisterEvent registers a new event handler to be called when any of the elements of triggers are passed
 // to TriggerEvent
-func RegisterEvent(triggers []string, handler func(trigger string, i ...interface{}) error) {
+func RegisterEvent(triggers []string, handler func(trigger string, i ...any) error) {
 	for _, t := range triggers {
 		registeredEvents[t] = append(registeredEvents[t], handler)
 	}
 }
 
 // TriggerEvent triggers the event handler registered to trigger
-func TriggerEvent(trigger string, data ...interface{}) (handled bool, err error, recovered bool) {
+func TriggerEvent(trigger string, data ...any) (handled bool, err error, recovered bool) {
 	errEv := gcutil.LogError(nil).Caller(1)
 	defer func() {
 		if a := recover(); a != nil {

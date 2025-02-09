@@ -21,7 +21,7 @@ func PreloadModule(l *lua.LState) int {
 					Fn:   handler,
 					NRet: 1,
 					// Protect: true,
-				}, luar.New(l, upload), luar.New(l, post), lua.LString(board), lua.LString(filePath), lua.LString(thumbPath), lua.LString(catalogThumbPath))
+				}, luar.New(l, upload), luar.New(l, post), lua.LString(board), lua.LString(filePath), lua.LString(thumbPath), lua.LString(catalogThumbPath), luar.New(l, infoEv), luar.New(l, accessEv), luar.New(l, errEv))
 
 				errRet := l.CheckAny(-1)
 				if errRet != nil && errRet.Type() != lua.LTNil {

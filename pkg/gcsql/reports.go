@@ -86,7 +86,7 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 	sql := `SELECT COUNT(*), MAX(is_cleared) FROM DBPREFIXreports
 		WHERE post_id = ? AND (reason = ? OR is_cleared = 2)`
 	var num int
-	var isCleared interface{}
+	var isCleared any
 	err := QueryRowTimeoutSQL(nil, sql, []any{postID, reason}, []any{&num, &isCleared})
 	isClearedInt, _ := isCleared.(int64)
 	return num > 0, isClearedInt == 2, err
@@ -111,7 +111,7 @@ func GetReports(includeCleared bool) ([]Report, error) {
 	var reports []Report
 	for rows.Next() {
 		var report Report
-		var staffID interface{}
+		var staffID any
 		err = rows.Scan(&report.ID, &staffID, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
 		if err != nil {
 			return nil, err

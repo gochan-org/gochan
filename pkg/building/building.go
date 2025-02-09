@@ -104,7 +104,7 @@ func BuildFrontPage() error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed loading recent posts: %w", err)
 	}
-	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]any{
 		"siteConfig":  siteCfg,
 		"sections":    gcsql.AllSections,
 		"boards":      gcsql.AllBoards,
@@ -119,8 +119,8 @@ func BuildFrontPage() error {
 
 // BuildPageHeader is a convenience function for automatically generating the top part
 // of every normal HTML page
-func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]interface{}) error {
-	phMap := map[string]interface{}{
+func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]any) error {
+	phMap := map[string]any{
 		"pageTitle":     pageTitle,
 		"documentTitle": pageTitle + " - " + config.GetSiteConfig().SiteName,
 		"siteConfig":    config.GetSiteConfig(),
