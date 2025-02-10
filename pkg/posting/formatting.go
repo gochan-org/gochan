@@ -3,6 +3,7 @@ package posting
 import (
 	"fmt"
 	"html/template"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,6 +18,7 @@ var (
 	msgfmtr         MessageFormatter
 	urlRE           = regexp.MustCompile(`https?://(\S+)`)
 	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
+	diceRoller      = regexp.MustCompile(`(?i)\[(\d*)d(\d+)(?:([+-])(\d+))?\]`)
 )
 
 // InitPosting prepares the formatter and the temp post pruner
@@ -130,4 +132,52 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 		postLines[i] = line
 	}
 	return template.HTML(strings.Join(postLines, "<br />")), nil // skipcq: GSC-G203
+}
+
+func ApplyDiceRoll(p *gcsql.Post) (rollSum int, err error) {
+	words := strings.Split(string(p.Message), " ")
+	for w, word := range words {
+		roll := diceRoller.FindStringSubmatch(word)
+		if len(roll) == 0 {
+			continue
+		}
+		numDice := 1
+		if roll[1] != "" {
+			numDice, err = strconv.Atoi(roll[1])
+			if err != nil {
+				return 0, err
+			}
+		}
+		dieSize, err := strconv.Atoi(roll[2])
+		if err != nil {
+			return 0, err
+		}
+		if numDice < 1 || dieSize < 1 {
+			return 0, fmt.Errorf("dice roll too small")
+		}
+		for i := 0; i < numDice; i++ {
+			rollSum += rand.Intn(dieSize) + 1
+			switch roll[3] {
+			case "+":
+				mod, err := strconv.Atoi(roll[4])
+				if err != nil {
+					return 0, err
+				}
+				rollSum += mod
+			case "-":
+				mod, err := strconv.Atoi(roll[4])
+				if err != nil {
+					return 0, err
+				}
+				rollSum -= mod
+			}
+		}
+		words[w] = fmt.Sprintf(`<span class="dice-roll">%dd%d`, numDice, dieSize)
+		if roll[3] != "" {
+			words[w] += roll[3] + roll[4]
+		}
+		words[w] += fmt.Sprintf(" = %d</span>", rollSum)
+	}
+	p.Message = template.HTML(strings.Join(words, " "))
+	return
 }

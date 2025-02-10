@@ -100,6 +100,8 @@
 	"EmbedHeight": 164,
 	"ImagesOpenNewTab": true,
 	"NewTabOnOutlinks": true,
+	"DisableBBcode": false,
+	"AllowDiceRerolls": false,
 
 	"MinifyHTML": true,
 	"MinifyJS": true,
@@ -111,8 +113,8 @@
 		"SiteKey": "your site key goes here (if you want a captcha, make sure to replace '_Captcha' with 'Captcha'",
 		"AccountSecret": "your account secret key goes here"
 	},
-	"GeoIPType": "mmdb",
-	"GeoIPOptions": {
+	"_GeoIPType": "mmdb",
+	"_GeoIPOptions": {
 		"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
 		"isoCode": "en"
 	},

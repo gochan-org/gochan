@@ -1,9 +1,11 @@
 package posting
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -33,6 +35,56 @@ bbcode.set_tag("lua", function(node)
 end)`
 	luaBBCodeTestExpected = `<span class="lua">Lua test</span>`
 )
+
+var (
+	diceTestCases = []diceRollerTestCase{
+		{
+			desc: "[1d6]",
+			post: gcsql.Post{
+				MessageRaw: "before [1d6] after",
+			},
+			matcher:   regexp.MustCompile(`before <span class="dice-roll">1d6 = \d</span> after`),
+			expectMin: 1,
+			expectMax: 6,
+		},
+		{
+			desc: "[1d6+1]",
+			post: gcsql.Post{
+				MessageRaw: "before [1d6+1] after",
+			},
+			matcher:   regexp.MustCompile(`before <span class="dice-roll">1d6\+1 = \d</span> after`),
+			expectMin: 2,
+			expectMax: 7,
+		},
+		{
+			desc: "[1d6-1]",
+			post: gcsql.Post{
+				MessageRaw: "before [1d6-1] after",
+			},
+			matcher:   regexp.MustCompile(`before <span class="dice-roll">1d6-1 = \d</span> after`),
+			expectMin: 0,
+			expectMax: 5,
+		},
+		{
+			desc: "[d8]",
+			post: gcsql.Post{
+				MessageRaw: "[d8]",
+			},
+			matcher:   regexp.MustCompile(`<span class="dice-roll">1d8 = \d</span>`),
+			expectMin: 1,
+			expectMax: 8,
+		},
+	}
+)
+
+type diceRollerTestCase struct {
+	desc        string
+	post        gcsql.Post
+	expectError bool
+	matcher     *regexp.Regexp
+	expectMin   int
+	expectMax   int
+}
 
 func TestBBCode(t *testing.T) {
 	config.SetVersion(versionStr)
@@ -71,4 +123,36 @@ func TestLuaBBCode(t *testing.T) {
 	assert.NoError(t, l.DoString(`require("bbcode").set_tag("b", nil)`))
 	assert.Equal(t, "[b]Lua test[/b]", msgfmtr.bbCompiler.Compile("[b]Lua test[/b]"))
 	assert.Error(t, l.DoString(`bbcode.set_tag("lua", 1)`))
+}
+
+func diceRollRunner(t *testing.T, tC *diceRollerTestCase) {
+	var err error
+	tC.post.Message, err = FormatMessage(tC.post.MessageRaw, "")
+	assert.NoError(t, err)
+	result, err := ApplyDiceRoll(&tC.post)
+	if tC.expectError {
+		assert.Error(t, err)
+		assert.Equal(t, 0, result)
+	} else {
+		assert.NoError(t, err)
+		assert.Regexp(t, tC.matcher, tC.post.Message)
+		assert.GreaterOrEqual(t, result, tC.expectMin)
+		assert.LessOrEqual(t, result, tC.expectMax)
+	}
+	if t.Failed() {
+		t.FailNow()
+	}
+}
+
+func TestDiceRoll(t *testing.T) {
+	config.SetVersion(versionStr)
+	msgfmtr.Init()
+	for _, tC := range diceTestCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			for i := 0; i < 100; i++ {
+				// Run the test case multiple times to account for randomness
+				diceRollRunner(t, &tC)
+			}
+		})
+	}
 }

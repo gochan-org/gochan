@@ -332,6 +332,7 @@ type PostConfig struct {
 	ImagesOpenNewTab bool
 	NewTabOnOutlinks bool
 	DisableBBcode    bool
+	AllowDiceRerolls bool
 }
 
 func WriteConfig() error {

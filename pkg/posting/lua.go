@@ -21,7 +21,6 @@ func luaTableToHTMLTag(l *lua.LState, table *lua.LTable) (*bbcode.HTMLTag, error
 	switch attrsLV.Type() {
 	case lua.LTTable:
 		attrsLT := attrsLV.(*lua.LTable)
-		fmt.Println("attrs size:", attrsLT.Len())
 		attrsLT.ForEach(func(key, val lua.LValue) {
 			if tag.Attrs == nil {
 				tag.Attrs = make(map[string]string)

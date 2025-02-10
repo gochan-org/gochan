@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -29,16 +30,16 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	if editBtn == "Edit post" {
 		var err error
 		if len(checkedPosts) == 0 {
-			server.ServeErrorPage(writer, "You need to select one post to edit.")
+			server.ServeError(writer, server.NewServerError("You need to select one post to edit", http.StatusBadRequest), wantsJSON, nil)
 			return
 		} else if len(checkedPosts) > 1 {
-			server.ServeErrorPage(writer, "You can only edit one post at a time.")
+			server.ServeError(writer, server.NewServerError("You can only edit one post at a time", http.StatusBadRequest), wantsJSON, nil)
 			return
 		}
 
 		rank := manage.GetStaffRank(request)
 		if password == "" && rank == 0 {
-			server.ServeErrorPage(writer, "Password required for post editing")
+			server.ServeError(writer, server.NewServerError("Password required for post editing", http.StatusUnauthorized), wantsJSON, nil)
 			return
 		}
 		passwordMD5 := gcutil.Md5Sum(password)
@@ -47,26 +48,32 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		if err != nil {
 			errEv.Err(err).Caller().
 				Msg("Error getting post information")
+			server.ServeError(writer, server.NewServerError("Error getting post information", http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 		errEv.Int("postID", post.ID)
 
 		if post.Password != passwordMD5 && rank == 0 {
-			server.ServeErrorPage(writer, "Wrong password")
+			server.ServeError(writer, server.NewServerError("Wrong password", http.StatusUnauthorized), wantsJSON, nil)
 			return
 		}
 
 		board, err := post.GetBoard()
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Unable to get board ID from post")
-			server.ServeErrorPage(writer, "Unable to get board ID from post: "+err.Error())
+			server.ServeError(writer, server.NewServerError("Unable to get board ID from post", http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
+		if strings.Contains(string(post.Message), `<span class="dice-roll">`) && !config.GetBoardConfig(board.Dir).AllowDiceRerolls {
+			server.ServeError(writer, server.NewServerError("Dice rerolls are not allowed on this board", http.StatusBadRequest), wantsJSON, nil)
+			return
+		}
+
 		errEv.Str("board", board.Dir)
 		upload, err := post.GetUpload()
 		if err != nil {
 			errEv.Err(err).Caller().Send()
-			server.ServeErrorPage(writer, "Error getting post upload info: "+err.Error())
+			server.ServeError(writer, server.NewServerError("Error getting post upload info: "+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 
@@ -87,7 +94,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		if err = serverutil.MinifyTemplate(gctemplates.PostEdit, data, &buf, "text/html"); err != nil {
 			errEv.Err(err).Caller().
 				Msg("Error executing edit post template")
-			server.ServeError(writer, "Error executing edit post template: "+err.Error(), wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError("Error executing edit post template: "+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 		writer.Write(buf.Bytes())
@@ -101,7 +108,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		errEv.Err(err).Caller().
 			Str("postid", postIDstr).
 			Msg("Invalid form data")
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]any{
+		server.ServeError(writer, server.NewServerError("Invalid form data: "+err.Error(), http.StatusBadRequest), wantsJSON, map[string]any{
 			"postid": postid,
 		})
 		return
@@ -110,7 +117,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	post, err := gcsql.GetPostFromID(postid, true)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to find post")
-		server.ServeError(writer, "Unable to find post", wantsJSON, map[string]any{
+		server.ServeError(writer, server.NewServerError("Unable to find post", http.StatusBadRequest), wantsJSON, map[string]any{
 			"postid": postid,
 		})
 		return
@@ -121,7 +128,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		errEv.Err(err).Caller().
 			Str("boardID", boardIDstr).
 			Msg("Invalid form data")
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, nil)
+		server.ServeError(writer, server.NewServerError("Invalid form data: "+err.Error(), http.StatusBadRequest), wantsJSON, nil)
 		return
 	}
 	gcutil.LogInt("boardID", boardid, infoEv, errEv)
@@ -129,13 +136,13 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	rank := manage.GetStaffRank(request)
 	passwordMD5 := gcutil.Md5Sum(password)
 	if post.Password != passwordMD5 && rank == 0 {
-		server.ServeError(writer, "Wrong password", wantsJSON, nil)
+		server.ServeError(writer, server.NewServerError("Wrong password", http.StatusUnauthorized), wantsJSON, nil)
 		return
 	}
 
 	board, err := gcsql.GetBoardFromID(boardid)
 	if err != nil {
-		server.ServeError(writer, "Invalid form data: "+err.Error(), wantsJSON, map[string]any{
+		server.ServeError(writer, server.NewServerError("Invalid form data: "+err.Error(), http.StatusBadRequest), wantsJSON, map[string]any{
 			"boardid": boardid,
 		})
 		errEv.Err(err).Caller().Msg("Invalid form data")
@@ -145,18 +152,18 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	if doEdit == "upload" {
 		oldUpload, err := post.GetUpload()
 		if err != nil {
-			errEv.Err(err).Caller().Send()
-			server.ServeError(writer, err.Error(), wantsJSON, nil)
+			errEv.Err(err).Caller().Msg("Unable to get post upload")
+			server.ServeError(writer, server.NewServerError("Error getting post upload info: "+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 
 		upload, err := uploads.AttachUploadFromRequest(request, writer, post, board, gcutil.LogInfo(), errEv)
 		if err != nil {
-			server.ServeError(writer, err.Error(), wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError("Unable to attach upload:"+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 		if upload == nil {
-			server.ServeError(writer, "Missing upload replacement", wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError("Missing upload replacement", http.StatusBadRequest), wantsJSON, nil)
 			return
 		}
 		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
@@ -167,7 +174,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				path.Join(documentRoot, board.Dir, "thumb", oldUpload.Filename))
 			if err = post.UnlinkUploads(false); err != nil {
 				errEv.Err(err).Caller().Send()
-				server.ServeError(writer, "Error unlinking old upload from post: "+err.Error(), wantsJSON, nil)
+				server.ServeError(writer, server.NewServerError("Error unlinking old upload from post: "+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 				return
 			}
 			if oldUpload.Filename != "deleted" {
@@ -184,7 +191,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				Str("newFilename", upload.Filename).
 				Str("newOriginalFilename", upload.OriginalFilename).
 				Send()
-			server.ServeError(writer, "Error attaching new upload: "+err.Error(), wantsJSON, map[string]any{
+			server.ServeError(writer, server.NewServerError("Error attaching new upload: "+err.Error(), http.StatusInternalServerError), wantsJSON, map[string]any{
 				"filename": upload.OriginalFilename,
 			})
 			filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
@@ -200,17 +207,15 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		var recovered bool
 		_, err, recovered = events.TriggerEvent("message-pre-format", post, request)
 		if recovered {
-			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, map[string]any{
-				"postid": post.ID,
-			})
+			server.ServeError(writer, server.NewServerError("Recovered from a panic in an event handler (message-pre-format)",
+				http.StatusInternalServerError), wantsJSON, map[string]any{"postid": post.ID})
 			return
 		}
 		if err != nil {
 			errEv.Err(err).Caller().
 				Str("triggeredEvent", "message-pre-format").
 				Send()
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
+			server.ServeError(writer, server.NewServerError(err.Error(), http.StatusInternalServerError), wantsJSON, map[string]any{
 				"postid": post.ID,
 			})
 			return
@@ -219,8 +224,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		// trigger the pre-format event
 		_, err, recovered := events.TriggerEvent("message-pre-format", post, request)
 		if recovered {
-			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, "Recovered from a panic in an event handler (message-pre-format)", wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError("Recovered from a panic in an event handler (message-pre-format)", http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 		if err != nil {
@@ -285,9 +289,9 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 	}
 
 	if err = building.BuildBoards(false, boardid); err != nil {
-		server.ServeErrorPage(writer, "Error rebuilding boards: "+err.Error())
+		server.ServeError(writer, "Error rebuilding boards: "+err.Error(), wantsJSON, nil)
 	} else if err = building.BuildFrontPage(); err != nil {
-		server.ServeErrorPage(writer, "Error rebuilding front page: "+err.Error())
+		server.ServeError(writer, "Error rebuilding front page: "+err.Error(), wantsJSON, nil)
 	} else {
 		http.Redirect(writer, request, post.WebPath(), http.StatusFound)
 		infoEv.Msg("Post edited")
