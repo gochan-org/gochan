@@ -261,6 +261,11 @@ div.inlinepostprev {
   display: block;
 }
 
+.dice-roll {
+  border: 1px dashed #aaa;
+  font-weight: bold;
+}
+
 div.section-block {
   margin-bottom: 8px;
 }

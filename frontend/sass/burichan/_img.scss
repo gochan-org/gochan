@@ -37,4 +37,8 @@ div.inlinepostprev {
 	border: 1px solid $bordercol;
 }
 
+.dice-roll {
+	border: 1px dashed #222;
+}
+
 @include upload-box(#aaa, #444, #666);

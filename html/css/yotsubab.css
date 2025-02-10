@@ -94,6 +94,10 @@ span.subject {
   font-weight: 700;
 }
 
+.dice-roll {
+  border: 1px dashed #222;
+}
+
 div#upload-box {
   background: #aaa;
 }

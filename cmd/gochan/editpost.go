@@ -65,7 +65,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 		if strings.Contains(string(post.Message), `<span class="dice-roll">`) && !config.GetBoardConfig(board.Dir).AllowDiceRerolls {
-			server.ServeError(writer, server.NewServerError("Dice rerolls are not allowed on this board", http.StatusBadRequest), wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError("Unable to edit post, dice rerolls are not allowed on this board", http.StatusForbidden), wantsJSON, nil)
 			return
 		}
 
