@@ -20,6 +20,7 @@
 	"DBprefix": "gc_",
 	"_DBprefix_info": "The prefix automataically applied to tables when the database is being provisioned and queried",
 
+	"CheckRequestReferer": true,
 	"Lockdown": false,
 	"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
 	"Modboard": "staff",

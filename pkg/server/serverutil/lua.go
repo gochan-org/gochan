@@ -14,16 +14,28 @@ func PreloadModule(l *lua.LState) int {
 
 	l.SetFuncs(t, map[string]lua.LGFunction{
 		"minify_template": func(l *lua.LState) int {
-			tmplUD := l.CheckUserData(1)
-			tmpl := tmplUD.Value.(*template.Template)
-			dataTable := l.CheckTable(2)
-			data := map[string]any{}
-			dataTable.ForEach(func(l1, l2 lua.LValue) {
-				data[l1.String()] = luautil.LValueToInterface(l, l2)
-			})
+			tmplLV := l.CheckAny(1)
+			var tmpl *template.Template
+			var tmplStr string
+			switch tmplLV.Type() {
+			case lua.LTUserData:
+				tmpl = tmplLV.(*lua.LUserData).Value.(*template.Template)
+			case lua.LTString:
+				tmplStr = tmplLV.String()
+			default:
+				l.ArgError(1, "expected string or template")
+				return 0
+			}
+			data := luautil.LValueToInterface(l, l.CheckAny(2))
 			writer := l.CheckUserData(3).Value.(io.Writer)
 			mediaType := l.CheckString(4)
-			err := MinifyTemplate(tmpl, data, writer, mediaType)
+			var err error
+			switch tmplLV.Type() {
+			case lua.LTString:
+				err = MinifyTemplate(tmplStr, data, writer, mediaType)
+			case lua.LTUserData:
+				err = MinifyTemplate(tmpl, data, writer, mediaType)
+			}
 			l.Push(luar.New(l, err))
 			return 1
 		},

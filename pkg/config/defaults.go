@@ -10,6 +10,7 @@ var (
 				DBMaxIdleConnections: DefaultSQLMaxConns,
 				DBConnMaxLifetimeMin: DefaultSQLConnMaxLifetimeMin,
 			},
+			CheckRequestReferer: true,
 		},
 		SiteConfig: SiteConfig{
 			FirstPage:            []string{"index.html", "firstrun.html", "1.html"},

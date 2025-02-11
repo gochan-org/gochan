@@ -5,9 +5,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net"
 	"net/http"
-	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Eggbertx/durationutil"
@@ -22,8 +23,6 @@ import (
 )
 
 var (
-	chopPortNumRegex         = regexp.MustCompile(`(.+|\w+):(\d+)$`)
-	ErrSpambot               = errors.New("request looks like a spambot")
 	ErrBadCredentials        = errors.New("invalid username or password")
 	ErrUnableToCreateSession = errors.New("unable to create login session")
 	ErrInvalidSession        = errors.New("invalid staff session")
@@ -37,26 +36,42 @@ var (
 
 func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) error {
 	domain := request.Host
-	errEv := gcutil.LogError(nil).
-		Str("staff", username).
-		Str("IP", gcutil.GetRealIP(request))
-	defer errEv.Discard()
+	infoEv, errEv := gcutil.LogRequest(request)
+	defer func() {
+		infoEv.Discard()
+		errEv.Discard()
+	}()
 
-	domain = chopPortNumRegex.Split(domain, -1)[0]
-
-	if !serverutil.ValidReferer(request) {
-		gcutil.LogWarning().
-			Str("staff", username).
-			Str("IP", gcutil.GetRealIP(request)).
-			Str("remoteAddr", request.Response.Request.RemoteAddr).
-			Msg("Rejected login from possible spambot")
-		return ErrSpambot
+	if strings.Contains(domain, ":") {
+		domain, _, err := net.SplitHostPort(domain)
+		if err != nil {
+			errEv.Err(err).Caller().Str("host", domain).Send()
+			return server.NewServerError("Invalid request host", http.StatusBadRequest)
+		}
 	}
+
+	refererResult, err := serverutil.CheckReferer(request)
+	if err != nil {
+		errEv.Err(err).Caller().
+			Str("staff", username).
+			Str("referer", request.Referer()).
+			Msg("Error checking referer")
+		return err
+	}
+	if refererResult != serverutil.InternalReferer {
+		gcutil.LogWarning().
+			Int("refererResult", int(refererResult)).
+			Str("referer", request.Referer()).
+			Str("siteDomain", config.GetSystemCriticalConfig().SiteDomain).
+			Str("staff", username).
+			Msg("Rejected login from possible spambot")
+		return serverutil.ErrSpambot
+	}
+
 	staff, err := gcsql.GetStaffByUsername(username, true)
 	if err != nil {
 		if err != sql.ErrNoRows {
 			errEv.Err(err).Caller().
-				Str("remoteAddr", request.RemoteAddr).
 				Msg("Unrecognized username")
 		}
 		return ErrBadCredentials

@@ -41,10 +41,14 @@ type GochanConfig struct {
 // ValidateValues checks to make sure that the configuration options are usable
 // (e.g., ListenIP is a valid IP address, Port isn't a negative number, etc)
 func (gcfg *GochanConfig) ValidateValues() error {
-	// if net.ParseIP(gcfg.ListenIP) == nil {
-	// 	return &InvalidValueError{Field: "ListenIP", Value: gcfg.ListenIP}
-	// }
 	changed := false
+
+	if gcfg.SiteDomain == "" {
+		return &InvalidValueError{Field: "SiteDomain", Value: gcfg.SiteDomain, Details: "must be set"}
+	}
+	if strings.Contains(gcfg.SiteDomain, " ") || strings.Contains(gcfg.SiteDomain, "://") {
+		return &InvalidValueError{Field: "SiteDomain", Value: gcfg.SiteDomain, Details: "must be a host (port optional)"}
+	}
 
 	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
 	if errors.Is(err, durationutil.ErrInvalidDurationString) {
@@ -162,10 +166,11 @@ type SystemCriticalConfig struct {
 
 	SQLConfig
 
-	Verbose    bool `json:"DebugMode"`
-	RandomSeed string
-	Version    *GochanVersion `json:"-"`
-	TimeZone   int            `json:"-"`
+	CheckRequestReferer bool
+	Verbose             bool `json:"DebugMode"`
+	RandomSeed          string
+	Version             *GochanVersion `json:"-"`
+	TimeZone            int            `json:"-"`
 }
 
 // SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),

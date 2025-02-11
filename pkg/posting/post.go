@@ -253,7 +253,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	infoEv, errEv := gcutil.LogRequest(request)
 
-	if !serverutil.ValidReferer(request) {
+	refererResult, err := serverutil.CheckReferer(request)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		server.ServeError(writer, "Error checking referer", wantsJSON, nil)
+		return
+	}
+	if refererResult != serverutil.InternalReferer {
 		// post has no referrer, or has a referrer from a different domain, probably a spambot
 		gcutil.LogWarning().
 			Str("spam", "badReferer").
