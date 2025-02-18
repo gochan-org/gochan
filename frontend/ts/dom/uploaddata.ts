@@ -54,7 +54,7 @@ function onReaderLoad(name:string, e:ProgressEvent<FileReader>) {
 			"href": "#"
 		}).text("X").on("click", (e:JQuery.ClickEvent) => {
 			const $target = $(e.target);
-			const $browseBtn = $target.parents<HTMLInputElement>("#upload-box").siblings("input[name=imagefile]");
+			const $browseBtn = $target.parents<HTMLInputElement>("#upload-box").siblings<HTMLInputElement>("input[name=imagefile]");
 			$browseBtn.each((_, el) => {
 				el.value = null;
 			});
