@@ -36,7 +36,7 @@ const (
 		`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea>` +
 		`<input type="submit"name="doappeal"value="Submit"/><br/></form>`
 
-	footer = `<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`
+	footer = `<footer>Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></footer></div></body></html>`
 )
 
 var (
@@ -165,7 +165,7 @@ var (
 				},
 			},
 			expectedOutput: normalBanHeader +
-				`You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:<p class="reason">ban message goes here</p>Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> and will expire on <time class="ban-timestamp" datetime="0001-01-01T00:00:00Z">Mon, January 01, 0001 12:00:00 AM</time>.<br/>Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may appeal this ban:<br/><form id="appeal-form"action="/post"method="POST"><input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0"><textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div><div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+				`You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:<p class="reason">ban message goes here</p>Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> and will expire on <time class="ban-timestamp" datetime="0001-01-01T00:00:00Z">Mon, January 01, 0001 12:00:00 AM</time>.<br/>Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may appeal this ban:<br/><form id="appeal-form"action="/post"method="POST"><input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0"><textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div><footer>Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></footer></div></body></html>`,
 		},
 		{
 			desc: "unappealable temporary ban",

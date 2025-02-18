@@ -485,19 +485,17 @@ form#login-box input[type=submit] {
 }
 
 .lightbox-title {
-  font-size: 42px;
-  font-weight: 700;
   text-align: center;
+  margin-top: 0px;
 }
 
 .lightbox-x {
   color: #000 !important;
   float: right;
-  font-size: 32px;
-  font-weight: 700;
+  font-size: inherit;
 }
 
-.lightbox-x:hover {
+.lightbox-x:hover, .lightbox-x:active {
   color: #555;
 }
 
@@ -552,7 +550,7 @@ div#qr-box {
 }
 div#qr-box input[type=text], div#qr-box textarea {
   display: table-cell;
-  min-width: 300px;
+  min-width: 320px;
   background: #FFF;
   color: #000;
   width: 100%;
@@ -663,7 +661,7 @@ img#banpage-image {
     transform-origin: top center;
   }
 }
-.increase-line-height {
+.increase-line-height header, .increase-line-height .post, .increase-line-height .reply {
   line-height: 1.5;
 }
 
@@ -738,7 +736,7 @@ div.section-block div.section-body {
   text-align: center;
 }
 
-#footer {
+footer {
   bottom: 0px;
   clear: both;
   left: 0px;

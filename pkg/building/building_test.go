@@ -25,7 +25,7 @@ func TestBuildJS(t *testing.T) {
 	}
 
 	outDir := t.TempDir()
-	config.SetVersion("3.11.0")
+	config.SetVersion("4.0.2")
 	systemCriticalCfg := config.GetSystemCriticalConfig()
 	systemCriticalCfg.DocumentRoot = path.Join(outDir, "html")
 	systemCriticalCfg.TemplateDir = path.Join(testRoot, "templates")
@@ -147,7 +147,7 @@ func TestBuildFrontPage(t *testing.T) {
 		}
 		t.Run(driver, func(t *testing.T) {
 			outDir := t.TempDir()
-			config.SetVersion("3.11.0")
+			config.SetVersion("4.0.2")
 			systemCriticalCfg := config.GetSystemCriticalConfig()
 			systemCriticalCfg.DocumentRoot = path.Join(outDir, "html")
 			systemCriticalCfg.TemplateDir = path.Join(testRoot, "templates")

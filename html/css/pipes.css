@@ -121,7 +121,7 @@ a.topbar-item:hover {
   background: #404040;
 }
 
-div#footer, div#footer * {
+footer, footer * {
   font-size: 9pt;
 }
 

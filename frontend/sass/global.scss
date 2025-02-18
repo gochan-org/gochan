@@ -8,7 +8,9 @@
 @import 'global/animations';
 
 .increase-line-height {
-	line-height: 1.5;
+	header, .post, .reply {
+		line-height: 1.5;
+	}
 }
 
 header {
@@ -85,7 +87,7 @@ div.section-block {
 	text-align: center;
 }
 
-#footer {
+footer {
 	bottom: 0px;
 	clear: both;
 	left: 0px;
