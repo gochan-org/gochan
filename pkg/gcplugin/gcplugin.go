@@ -91,7 +91,7 @@ func preloadLua() {
 				result, err := url.QueryUnescape(query)
 				l.Push(lua.LString(result))
 				l.Push(luar.New(l, err))
-				return 1
+				return 2
 			},
 		})
 		l.Push(t)
