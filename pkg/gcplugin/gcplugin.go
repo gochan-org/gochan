@@ -45,6 +45,7 @@ func initLua() {
 func ClosePlugins() {
 	if lState != nil {
 		lState.Close()
+		lState = nil
 	}
 }
 
@@ -112,17 +113,6 @@ func preloadLua() {
 	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GetVersion().String()))
 }
 
-func registerEventFunction(name string, fn *lua.LFunction) {
-	switch name {
-	case "onStartup":
-		fallthrough
-	case "onPost":
-		fallthrough
-	case "onDelete":
-		eventPlugins[name] = append(eventPlugins[name], fn)
-	}
-}
-
 func LoadPlugins(paths []string) error {
 	var err error
 	initLua()
@@ -134,15 +124,6 @@ func LoadPlugins(paths []string) error {
 			if err = lState.DoFile(pluginPath); err != nil {
 				return err
 			}
-			pluginTable := lState.NewTable()
-			pluginTable.ForEach(func(key, val lua.LValue) {
-				keyStr := key.String()
-				fn, ok := val.(*lua.LFunction)
-				if !ok {
-					return
-				}
-				registerEventFunction(keyStr, fn)
-			})
 		case ".so":
 			nativePlugin, err := plugin.Open(pluginPath)
 			if err != nil {

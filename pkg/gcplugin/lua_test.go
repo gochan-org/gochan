@@ -6,6 +6,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
@@ -38,7 +39,7 @@ return { ListenIP = system_critical_cfg.ListenIP, SiteSlogan = site_cfg.SiteSlog
 )
 
 func initPluginTests() {
-	config.SetVersion("3.8.0")
+	config.SetVersion("4.0.2")
 	initLua()
 }
 
@@ -105,5 +106,16 @@ return joined, query_escaped, query_unescaped, err`)
 	assert.Equal(t, "test+%2B%2Fstring", queryEscaped)
 	assert.Equal(t, "test +/string", queryUnescaped)
 	assert.Equal(t, errLV.Type(), lua.LTNil)
+	ClosePlugins()
+}
+
+func TestLoadPlugin(t *testing.T) {
+	testutil.GoToGochanRoot(t)
+	initPluginTests()
+	assert.NoError(t, LoadPlugins([]string{"examples/plugins/uploadfilenameupper.lua"}))
+	assert.NoError(t, LoadPlugins(nil))
+	assert.Error(t, LoadPlugins([]string{"not_a_file.lua"}))
+	assert.Error(t, LoadPlugins([]string{"invalid_ext.dll"}))
+	assert.ErrorContains(t, LoadPlugins([]string{"not_a_file.so"}), "realpath failed")
 	ClosePlugins()
 }
