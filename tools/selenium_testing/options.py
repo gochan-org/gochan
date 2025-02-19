@@ -132,7 +132,7 @@ class TestingOptions:
 			case ""|None:
 				raise ValueError("browser argument is required")
 			case _:
-				raise ValueError("Unrecognized browser argument %s" % browser)
+				raise ValueError(f"Unrecognized browser argument {browser}")
 
 
 	def boards_json(self) -> dict[str, object]:

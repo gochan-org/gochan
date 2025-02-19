@@ -31,7 +31,6 @@ import (
 
 var (
 	lState             *lua.LState
-	eventPlugins       map[string][]*lua.LFunction
 	ErrInvalidInitFunc = errors.New("invalid InitPlugin, expected function with 0 arguments and 1 return value (error type)")
 )
 

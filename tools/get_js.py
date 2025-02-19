@@ -11,8 +11,8 @@ from os import path
 import sys
 
 VERSION = "v3.10.2"
-DIR = "gochan-{}_linux".format(VERSION)
-DOWNLOAD_URL = "https://github.com/gochan-org/gochan/releases/download/{}/{}.tar.gz".format(VERSION, DIR)
+DIR = f"gochan-{VERSION}_linux"
+DOWNLOAD_URL = f"https://github.com/gochan-org/gochan/releases/download/{VERSION}/{DIR}.tar.gz"
 JS_DIR = path.join(DIR, "html/js/")
 
 if __name__ == "__main__":
@@ -20,7 +20,7 @@ if __name__ == "__main__":
 	if len(sys.argv) == 2:
 		match sys.argv[1]:
 			case "-h" | "--help":
-				print("usage: {} [path/to/out/js/]".format(sys.argv[0]))
+				print(f"usage: {sys.argv[0]} [path/to/out/js/]")
 				sys.exit(0)
 			case _:
 				out_dir = sys.argv[1]

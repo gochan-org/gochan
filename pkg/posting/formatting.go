@@ -156,7 +156,7 @@ func ApplyDiceRoll(p *gcsql.Post) (rollSum int, err error) {
 			return 0, fmt.Errorf("dice roll too small")
 		}
 		for i := 0; i < numDice; i++ {
-			rollSum += rand.Intn(dieSize) + 1
+			rollSum += rand.Intn(dieSize) + 1 // skipcq: GSC-G404
 			switch roll[3] {
 			case "+":
 				mod, err := strconv.Atoi(roll[4])

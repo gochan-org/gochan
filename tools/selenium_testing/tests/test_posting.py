@@ -63,11 +63,11 @@ class TestPosting(SeleniumTestCase):
 
 		cur_url = self.driver.current_url
 		threadID = threadRE.findall(cur_url)[0][1]
-		self.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%threadID)).click()
+		self.driver.find_element(by=By.CSS_SELECTOR, value=f"input#check{threadID}").click()
 		cur_url = self.driver.current_url
 		self.driver.find_element(by=By.CSS_SELECTOR, value="input[name=move_btn]").click()
 		# wait for response to move_btn
-		WebDriverWait(self.driver, 10).until(EC.title_contains("Move thread #%s" % threadID))
+		WebDriverWait(self.driver, 10).until(EC.title_contains(f"Move thread #{threadID}"))
 
 		self.driver.find_element(by=By.CSS_SELECTOR, value="input[type=submit]").click()
 		# wait for response to move request (domove=1)
