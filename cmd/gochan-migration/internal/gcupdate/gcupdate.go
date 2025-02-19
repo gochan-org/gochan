@@ -22,7 +22,7 @@ type GCDatabaseUpdater struct {
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
-func (dbu *GCDatabaseUpdater) IsMigratingInPlace() bool {
+func (*GCDatabaseUpdater) IsMigratingInPlace() bool {
 	return true
 }
 

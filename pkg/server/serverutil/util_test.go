@@ -62,7 +62,7 @@ type testResponseWriter struct {
 func (w *testResponseWriter) Header() http.Header {
 	return w.header
 }
-func (w *testResponseWriter) Write([]byte) (int, error) {
+func (*testResponseWriter) Write([]byte) (int, error) {
 	return 0, nil
 }
 func (w *testResponseWriter) WriteHeader(s int) {

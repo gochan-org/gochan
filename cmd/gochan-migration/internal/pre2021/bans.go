@@ -66,7 +66,7 @@ func (m *Pre2021Migrator) migrateBansInPlace() error {
 	return m.migrateBansToNewDB()
 }
 
-func (m *Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int, errEv *zerolog.Event) error {
+func (*Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int, errEv *zerolog.Event) error {
 	migratedBan := &gcsql.IPBan{
 		BoardID:    boardID,
 		RangeStart: ban.ip,

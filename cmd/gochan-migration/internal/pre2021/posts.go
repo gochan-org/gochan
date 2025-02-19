@@ -32,7 +32,7 @@ type migrationPost struct {
 	oldParentID int
 }
 
-func (m *Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
+func (*Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
 	var err error
 	opts := &gcsql.RequestOptions{Tx: tx}
 	if post.oldParentID == 0 {
