@@ -38,7 +38,7 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		}
 		defer oldDbFile.Close()
 
-		newDbFile, err := os.OpenFile(migratedDBHost, os.O_CREATE|os.O_WRONLY, 0644)
+		newDbFile, err := os.OpenFile(migratedDBHost, os.O_CREATE|os.O_WRONLY, 0600)
 		if !assert.NoError(t, err) {
 			t.FailNow()
 		}

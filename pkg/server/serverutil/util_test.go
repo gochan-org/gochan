@@ -36,7 +36,7 @@ type isRequestingJSONTestCase struct {
 }
 
 func TestIsRequestingJSON(t *testing.T) {
-	req, _ := http.NewRequest("GET", "http://localhost:8080", nil)
+	req, _ := http.NewRequest("GET", "https://localhost:8080", nil)
 	assert.False(t, IsRequestingJSON(req))
 	for _, tc := range isRequestingJSONTestCases {
 		t.Run("GET "+tc.val, func(t *testing.T) {
@@ -70,7 +70,7 @@ func (w *testResponseWriter) WriteHeader(s int) {
 }
 
 func TestDeleteCookie(t *testing.T) {
-	req, _ := http.NewRequest("GET", "http://localhost:8080", nil)
+	req, _ := http.NewRequest("GET", "https://localhost:8080", nil)
 	writer := testResponseWriter{
 		header: make(http.Header),
 	}

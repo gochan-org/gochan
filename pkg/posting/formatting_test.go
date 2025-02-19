@@ -74,6 +74,25 @@ var (
 			expectMin: 1,
 			expectMax: 8,
 		},
+		{
+			desc: "before[1d6]after, no space",
+			post: gcsql.Post{
+				MessageRaw: "before[1d6]after",
+			},
+			matcher:   regexp.MustCompile(`before<span class="dice-roll">1d6 = \d</span>after`),
+			expectMin: 1,
+			expectMax: 6,
+		},
+		{
+			desc: "before [1d6] after, no space (test for injection)",
+			post: gcsql.Post{
+				MessageRaw: `<script>alert("lol")</script>[1d6]<script>alert("lmao")</script>`,
+			},
+			expectError: false,
+			matcher:     regexp.MustCompile(`&lt;script&gt;alert\(&#34;lol&#34;\)&lt;/script&gt;<span class="dice-roll">1d6 = \d</span>&lt;script&gt;alert\(&#34;lmao&#34;\)&lt;/script&gt;`),
+			expectMin:   1,
+			expectMax:   6,
+		},
 	}
 )
 

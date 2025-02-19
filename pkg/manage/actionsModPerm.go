@@ -219,7 +219,7 @@ func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff
 			errEv.Err(err).Caller().RawJSON("postData", []byte(hit.PostData)).Msg("Unable to marshal un-minified post data")
 			return nil, err
 		}
-		hitsJSON = append(hitsJSON, template.HTML(strings.ReplaceAll(jsonBuf.String(), "\n", "<br>")))
+		hitsJSON = append(hitsJSON, template.HTML(strings.ReplaceAll(jsonBuf.String(), "\n", "<br>"))) // skipcq: GSC-G203
 	}
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilterHits, map[string]any{

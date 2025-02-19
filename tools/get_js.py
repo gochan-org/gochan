@@ -25,7 +25,7 @@ if __name__ == "__main__":
 			case _:
 				out_dir = sys.argv[1]
 
-	with urlopen(DOWNLOAD_URL) as response:
+	with urlopen(DOWNLOAD_URL) as response: # skipcq: BAN-B310
 		data = response.read()
 		tar_bytes = gzip.decompress(data)
 		buf = io.BytesIO(tar_bytes)
