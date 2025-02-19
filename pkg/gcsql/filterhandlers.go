@@ -118,87 +118,87 @@ func init() {
 	filterFieldHandlers = map[string]FilterConditionHandler{
 		"name": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
 				return matchString(fc, p.Name)
 			},
 		},
 		"trip": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
 				return matchString(fc, p.Tripcode)
 			},
 		},
 		"email": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
 				return matchString(fc, p.Email)
 			},
 		},
 		"subject": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
 				return matchString(fc, p.Subject)
 			},
 		},
 		"body": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
 				return matchString(fc, p.MessageRaw)
 			},
 		},
 		"firsttimeboard": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				return firstPost(p, false)
 			},
 		},
 		"notfirsttimeboard": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				first, err := firstPost(p, false)
 				return !first, err
 			},
 		},
 		"firsttimesite": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				return firstPost(p, true)
 			},
 		},
 		"notfirsttimesite": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				first, err := firstPost(p, true)
 				return !first, err
 			},
 		},
 		"isop": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				return p.IsTopPost, nil
 			},
 		},
 		"notop": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				return !p.IsTopPost, nil
 			},
 		},
 		"hasfile": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, u *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, _ *Post, u *Upload, _ *FilterCondition) (bool, error) {
 				return u != nil, nil
 			},
 		},
 		"nofile": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(r *http.Request, p *Post, u *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, _ *Post, u *Upload, _ *FilterCondition) (bool, error) {
 				return u == nil, nil
 			},
 		},
 		"filename": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, u *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, _ *Post, u *Upload, fc *FilterCondition) (bool, error) {
 				if u == nil {
 					return false, nil
 				}
@@ -207,7 +207,7 @@ func init() {
 		},
 		"checksum": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, u *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, _ *Post, u *Upload, fc *FilterCondition) (bool, error) {
 				if u == nil {
 					return false, nil
 				}
@@ -216,7 +216,7 @@ func init() {
 		},
 		"useragent": &conditionHandler{
 			fieldType: StringField,
-			matchFunc: func(r *http.Request, p *Post, _ *Upload, fc *FilterCondition) (bool, error) {
+			matchFunc: func(r *http.Request, _ *Post, _ *Upload, fc *FilterCondition) (bool, error) {
 				return matchString(fc, r.UserAgent())
 			},
 		},
