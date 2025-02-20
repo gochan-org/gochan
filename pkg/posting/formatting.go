@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
 	"math/rand"
@@ -18,7 +19,7 @@ var (
 	msgfmtr         MessageFormatter
 	urlRE           = regexp.MustCompile(`https?://(\S+)`)
 	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
-	diceRoller      = regexp.MustCompile(`(?i)(\S*)\[(\d*)d(\d+)(?:([+-])(\d+))?\](\S*)`)
+	diceRollRE      = regexp.MustCompile(`\[(\d*)d(\d+)(?:([+-])(\d+))?\]`)
 )
 
 // InitPosting prepares the formatter and the temp post pruner
@@ -134,50 +135,42 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 	return template.HTML(strings.Join(postLines, "<br />")), nil // skipcq: GSC-G203
 }
 
-func ApplyDiceRoll(p *gcsql.Post) (rollSum int, err error) {
-	words := strings.Split(string(p.Message), " ")
-	for w, word := range words {
-		roll := diceRoller.FindStringSubmatch(word)
-		if len(roll) == 0 {
-			continue
-		}
-		numDice := 1
-		if roll[2] != "" {
-			numDice, err = strconv.Atoi(roll[2])
-			if err != nil {
-				return 0, err
-			}
-		}
-		dieSize, err := strconv.Atoi(roll[3])
-		if err != nil {
-			return 0, err
-		}
-		if numDice < 1 || dieSize < 1 {
-			return 0, fmt.Errorf("dice roll too small")
-		}
-		for i := 0; i < numDice; i++ {
-			rollSum += rand.Intn(dieSize) + 1 // skipcq: GSC-G404
-			switch roll[4] {
-			case "+":
-				mod, err := strconv.Atoi(roll[5])
-				if err != nil {
-					return 0, err
-				}
-				rollSum += mod
-			case "-":
-				mod, err := strconv.Atoi(roll[5])
-				if err != nil {
-					return 0, err
-				}
-				rollSum -= mod
-			}
-		}
-		words[w] = fmt.Sprintf(`%s<span class="dice-roll">%dd%d`, roll[1], numDice, dieSize)
-		if roll[4] != "" {
-			words[w] += roll[4] + roll[5]
-		}
-		words[w] += fmt.Sprintf(" = %d</span>%s", rollSum, roll[6])
+func diceRoller(numDice int, diceSides int, modifier int) int {
+	rollSum := 0
+	for i := 0; i < numDice; i++ {
+		rollSum += rand.Intn(diceSides) + 1 // skipcq: GSC-G404
 	}
-	p.Message = template.HTML(strings.Join(words, " ")) // skipcq: GSC-G203
-	return
+	return rollSum + modifier
+}
+
+func ApplyDiceRoll(p *gcsql.Post) error {
+	var err error
+	result := diceRollRE.ReplaceAllStringFunc(string(p.Message), func(roll string) string {
+		rollMatch := diceRollRE.FindStringSubmatch(roll)
+		numDice := 1
+		if rollMatch[1] != "" {
+			numDice, _ = strconv.Atoi(rollMatch[1])
+		}
+		if numDice < 1 {
+			err = errors.New("number of dice must be at least 1")
+			return roll
+		}
+		dieSize, _ := strconv.Atoi(rollMatch[2])
+		if dieSize <= 1 {
+			err = errors.New("die size must be greater than 1")
+			return roll
+		}
+		modifierIsNegative := rollMatch[3] == "-"
+		modifier, _ := strconv.Atoi(rollMatch[4])
+		if modifierIsNegative {
+			modifier = -modifier
+		}
+		rollSum := diceRoller(numDice, dieSize, modifier)
+		return fmt.Sprintf(`<span class="dice-roll">%dd%d%s%s = %d</span>`, numDice, dieSize, rollMatch[3], rollMatch[4], rollSum)
+	})
+	if err != nil {
+		return err
+	}
+	p.Message = template.HTML(result) // skipcq: GSC-G203
+	return nil
 }

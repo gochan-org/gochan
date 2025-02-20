@@ -39,31 +39,31 @@ end)`
 var (
 	diceTestCases = []diceRollerTestCase{
 		{
-			desc: "[1d6]",
+			desc: "[2d6]",
 			post: gcsql.Post{
-				MessageRaw: "before [1d6] after",
+				MessageRaw: "[2d6]",
 			},
-			matcher:   regexp.MustCompile(`before <span class="dice-roll">1d6 = \d</span> after`),
-			expectMin: 1,
-			expectMax: 6,
-		},
-		{
-			desc: "[1d6+1]",
-			post: gcsql.Post{
-				MessageRaw: "before [1d6+1] after",
-			},
-			matcher:   regexp.MustCompile(`before <span class="dice-roll">1d6\+1 = \d</span> after`),
+			matcher:   regexp.MustCompile(`<span class="dice-roll">2d6 = \d{1,2}</span>`),
 			expectMin: 2,
-			expectMax: 7,
+			expectMax: 12,
 		},
 		{
-			desc: "[1d6-1]",
+			desc: "[2d6+1]",
 			post: gcsql.Post{
-				MessageRaw: "before [1d6-1] after",
+				MessageRaw: "[2d6+1]",
 			},
-			matcher:   regexp.MustCompile(`before <span class="dice-roll">1d6-1 = \d</span> after`),
-			expectMin: 0,
-			expectMax: 5,
+			matcher:   regexp.MustCompile(`<span class="dice-roll">2d6\+1 = \d{1,2}</span>`),
+			expectMin: 3,
+			expectMax: 13,
+		},
+		{
+			desc: "[2d6-1]",
+			post: gcsql.Post{
+				MessageRaw: "[2d6-1]",
+			},
+			matcher:   regexp.MustCompile(`<span class="dice-roll">2d6-1 = \d{1,2}</span>`),
+			expectMin: 1,
+			expectMax: 11,
 		},
 		{
 			desc: "[d8]",
@@ -88,10 +88,48 @@ var (
 			post: gcsql.Post{
 				MessageRaw: `<script>alert("lol")</script>[1d6]<script>alert("lmao")</script>`,
 			},
-			expectError: false,
-			matcher:     regexp.MustCompile(`&lt;script&gt;alert\(&#34;lol&#34;\)&lt;/script&gt;<span class="dice-roll">1d6 = \d</span>&lt;script&gt;alert\(&#34;lmao&#34;\)&lt;/script&gt;`),
-			expectMin:   1,
-			expectMax:   6,
+			matcher:   regexp.MustCompile(`&lt;script&gt;alert\(&#34;lol&#34;\)&lt;/script&gt;<span class="dice-roll">1d6 = \d</span>&lt;script&gt;alert\(&#34;lmao&#34;\)&lt;/script&gt;`),
+			expectMin: 1,
+			expectMax: 6,
+		},
+		{
+			desc: "two dice rolls, no space",
+			post: gcsql.Post{
+				MessageRaw: "[d6][2d6]",
+			},
+			matcher:   regexp.MustCompile(`<span class="dice-roll">1d6 = \d</span><span class="dice-roll">2d6 = \d{1,2}</span>`),
+			expectMin: 0,
+			expectMax: 7,
+		},
+		{
+			desc: "multiple dice rolls, no space",
+			post: gcsql.Post{
+				MessageRaw: "[d6][2d20-2][3d8+1]",
+			},
+			matcher:   regexp.MustCompile(`<span class="dice-roll">1d6 = \d</span><span class="dice-roll">2d20-2 = \d{1,2}</span><span class="dice-roll">3d8\+1 = \d{1,2}</span>`),
+			expectMin: 0,
+			expectMax: 38,
+		},
+		{
+			desc: "invalid number of dice",
+			post: gcsql.Post{
+				MessageRaw: "[0d6]",
+			},
+			expectError: true,
+		},
+		{
+			desc: "invalid die size",
+			post: gcsql.Post{
+				MessageRaw: "[1d0]",
+			},
+			expectError: true,
+		},
+		{
+			desc: "invalid modifier",
+			post: gcsql.Post{
+				MessageRaw: "[1d6+]",
+			},
+			matcher: regexp.MustCompile(`\[1d6\+\]`),
 		},
 	}
 )
@@ -148,15 +186,12 @@ func diceRollRunner(t *testing.T, tC *diceRollerTestCase) {
 	var err error
 	tC.post.Message, err = FormatMessage(tC.post.MessageRaw, "")
 	assert.NoError(t, err)
-	result, err := ApplyDiceRoll(&tC.post)
+	err = ApplyDiceRoll(&tC.post)
 	if tC.expectError {
 		assert.Error(t, err)
-		assert.Equal(t, 0, result)
 	} else {
 		assert.NoError(t, err)
 		assert.Regexp(t, tC.matcher, tC.post.Message)
-		assert.GreaterOrEqual(t, result, tC.expectMin)
-		assert.LessOrEqual(t, result, tC.expectMax)
 	}
 	if t.Failed() {
 		t.FailNow()

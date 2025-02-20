@@ -226,7 +226,7 @@ func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, e
 		errEv.Err(err).Caller().Msg("Unable to format message")
 		return errors.New("unable to format message")
 	}
-	if _, err = ApplyDiceRoll(post); err != nil {
+	if err = ApplyDiceRoll(post); err != nil {
 		errEv.Err(err).Caller().Msg("Error applying dice roll")
 		return err
 	}
