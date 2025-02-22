@@ -1,23 +1,23 @@
-@import 'global/colors';
-@import 'yotsuba/colors';
-@import 'yotsubacommon';
+@use 'global/colors' as global-colors;
+@use 'yotsuba/colors' as yotsuba-colors;
+@use 'yotsubacommon';
 
-@include yotsuba(
+@include yotsubacommon.yotsuba(
 	'res/yotsuba_bg.png',
-	$bgcol, /* $bodybg */
+	yotsuba-colors.$bgcol, /* $bodybg */
 	maroon, /* $bodycol */
-	$topbarbg,
-	$topbarborder,
-	$headercol,
-	$postblockbg,
-	$postblockborder,
-	$postblockborder, /* $sectiontitlecol */
+	yotsuba-colors.$topbarbg,
+	yotsuba-colors.$topbarborder,
+	global-colors.$headercol,
+	yotsuba-colors.$postblockbg,
+	yotsuba-colors.$postblockborder,
+	yotsuba-colors.$postblockborder, /* $sectiontitlecol */
 	#fca, /* $sectiontitlebg */
-	$borderbotright,
+	yotsuba-colors.$borderbotright,
 	maroon, /* $linkcol */
 	#D9BfB7, /* $hrcol */
 	#CC1105, /* $subjectcol */
-	$namecol,
-	$replybg,
+	global-colors.$namecol,
+	yotsuba-colors.$replybg,
 	navy /* $postlinkcol */
 );

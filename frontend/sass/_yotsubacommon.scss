@@ -1,4 +1,4 @@
-@import 'util';
+@use 'util';
 
 @mixin yotsuba(
 	$fadepath,
@@ -106,5 +106,5 @@
 		border: 1px dashed #222;
 	}
 
-	@include upload-box(#aaa, #444, #666);
+	@include util.upload-box(#aaa, #444, #666);
 }

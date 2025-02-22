@@ -1,10 +1,10 @@
-@import 'photon/colors';
-@import 'photon/img';
-@import 'util';
+@use 'photon/colors';
+@use 'photon/img';
+@use 'util';
 
 body {
-	background: $bgcol;
-	font: 15px $font;
+	background: colors.$bgcol;
+	font: 15px colors.$font;
 }
 
 a {
@@ -18,25 +18,25 @@ div#topbar, div.dropdown-menu {
 }
 
 div#topbar {
-	@include shadow-filter(0px 2px 2px $shadowcol);
+	@include util.shadow-filter(0px 2px 2px colors.$shadowcol);
 }
 
 .dropdown-menu {
 	color: #FFF;
 	background: #000!important;
-	@include shadow-filter(2px 2px 3px $shadowcol);
+	@include util.shadow-filter(2px 2px 3px colors.$shadowcol);
 	z-index: 0;
 	div:hover {
-		background: $dropdowncol;
+		background: colors.$dropdowncol;
 	}
 }
 
 header, div#top-pane, a {
-	color: $linkcol;
+	color: colors.$linkcol;
 }
 
 #site-title, #board-title {
 	font-weight: 800;
 }
 
-@include upload-box(#aaa, #444, #666);
+@include util.upload-box(#aaa, #444, #666);

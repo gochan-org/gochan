@@ -1,17 +1,17 @@
-@import 'colors';
-@import '../util';
+@use 'colors';
+@use '../util';
 
 .loginbox input {
 	height: 20%;
 }
 
 .manage-header {
-	background: $bgcol;
+	background: colors.$bgcol;
 	border-radius: 8px;
 }
 
 table.mgmt-table {
 	tr:first-of-type th {
-		background: $postblock;
+		background: colors.$postblock;
 	}
 }

@@ -1,8 +1,8 @@
-@import '_colors';
-@import '../util';
+@use '_colors';
+@use '../util';
 
 .dropdown-button:hover {
-	background: $bglight;
+	background: colors.$bglight;
 }
 
 img.thumbnail {
@@ -12,13 +12,13 @@ img.thumbnail {
 }
 
 .reply, .inlinepostprev, .postprev {
-	background: $postblock;
-	border: 1px solid $postblockcol;
+	background: colors.$postblock;
+	border: 1px solid colors.$postblockcol;
 }
 
 .postblock,
 table.mgmt-table tr:first-of-type th {
-	background: $postblock;
+	background: colors.$postblock;
 	font-weight: 700;
 }
 
@@ -45,8 +45,8 @@ div#content {
 	textarea,
 	select#changepage,
 	select.post-actions {
-		background: $postblock;
-		border: 1px solid $postblockcol;
+		background: colors.$postblock;
+		border: 1px solid colors.$postblockcol;
 		color: #FFF;
 	}
 }

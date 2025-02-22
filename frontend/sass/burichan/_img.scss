@@ -1,14 +1,15 @@
-@import 'colors';
-@import '../global/colors';
+@use 'colors';
+@use '../global/colors' as global-colors;
+@use "../util";
 
 h1#board-title {
 	font-family: serif;
 	font-size: 2em;
-	color: $headercol;
+	color: global-colors.$headercol;
 }
 
 .postblock {
-	background:$postblock;
+	background:colors.$postblock;
 }
 
 div.file-info {
@@ -19,7 +20,7 @@ div.file-info {
 span.postername {
 	font-size: 1em;
 	font-family: serif;
-	color: $namecol;
+	color: global-colors.$namecol;
 	font-weight: 800;
 }
 
@@ -34,11 +35,11 @@ select.post-actions,
 div.reply,
 div.postprev,
 div.inlinepostprev {
-	border: 1px solid $bordercol;
+	border: 1px solid colors.$bordercol;
 }
 
 .dice-roll {
 	border: 1px dashed #222;
 }
 
-@include upload-box(#aaa, #444, #666);
+@include util.upload-box(#aaa, #444, #666);

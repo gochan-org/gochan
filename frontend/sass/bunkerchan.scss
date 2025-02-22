@@ -1,12 +1,12 @@
-@import 'bunkerchan/colors';
-@import 'bunkerchan/front';
-@import 'bunkerchan/img';
-@import 'util';
+@use 'bunkerchan/colors';
+@use 'bunkerchan/front';
+@use 'bunkerchan/img';
+@use 'util';
 
 body {
-	background: $bgcol;
-	color: $color;
-	font-family: $font-family;
+	background: colors.$bgcol;
+	color: colors.$color;
+	font-family: colors.$font-family;
 	font-size: 70%;
 }
 
@@ -19,30 +19,30 @@ hr {
 }
 
 a, a:visited {
-	color: $topborder;
+	color: colors.$topborder;
 	text-decoration: none;
 }
 
 div#staff, select.post-actions {
-	background: $topbarbg;
-	border: 1px solid $topborder;
+	background: colors.$topbarbg;
+	border: 1px solid colors.$topborder;
 }
 
 div#topbar,
 div#topbar a,
 div#topbar a:visited,
 div.dropdown-menu {
-	background: $topbarbg;
-	border-bottom: 1px solid $topborder;
+	background: colors.$topbarbg;
+	border-bottom: 1px solid colors.$topborder;
 }
 
 div.dropdown-menu {
-	border-left: 1px solid $topborder;
-	border-right: 1px solid $topborder;
+	border-left: 1px solid colors.$topborder;
+	border-right: 1px solid colors.$topborder;
 }
 
 div.dropdown-menu a:hover, div.dropdown-menu a:active {
-	background: $bgcol;
+	background: colors.$bgcol;
 }
 
 table#pages, table#pages * {

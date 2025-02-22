@@ -1,51 +1,51 @@
-@import 'clear/colors';
-@import './util';
+@use 'clear/colors';
+@use 'util';
 
 body {
-	background: $bgcol;
+	background: colors.$bgcol;
 	font-family: monospace, sans-serif;
 	font-size: 80%;
 }
 
 div#topbar {
-	background: $topbarbg;
-	border-bottom: 1px solid $topbarborder;
+	background: colors.$topbarbg;
+	border-bottom: 1px solid colors.$topbarborder;
 }
 
 a {
-	color: $linkcol;
+	color: colors.$linkcol;
 	text-decoration: none;
 	&:hover {
-		text-shadow: 0px 0px 5px $hrcol;
+		text-shadow: 0px 0px 5px colors.$hrcol;
 	}
 }
 
 header {
-	color: $headercol;
+	color: colors.$headercol;
 }
 
 hr {
 	border: none;
-	border-top: 1px solid $hrcol;
+	border-top: 1px solid colors.$hrcol;
 	height: 0;
 }
 
 div#content {
 	input, select, textarea {
-		border: 1px double $inputshadow;
+		border: 1px double colors.$inputshadow;
 		border-radius: 5px;
-		background: $inputcol;
+		background: colors.$inputcol;
 		color: #000;
 	}
 	input:active, select:active, textarea:active {
-		@include shadow-filter(0px 0px 5px $replyborder);
+		@include util.shadow-filter(0px 0px 5px colors.$replyborder);
 	}
 	input[type="button"],
 	input[type="submit"],
 	input[type="file"]::file-selector-button,
 	input[type="file"]::webkit-file-upload-button {
 		background: #A7A7A7;
-		border: 3px double $inputshadow;
+		border: 3px double colors.$inputshadow;
 		border-radius: 5px;
 		color: #000;
 	}
@@ -58,14 +58,14 @@ th.postblock,
 div.postprev,
 div.inlinepostprev,
 table.mgmt-table tr:first-of-type th {
-	background: $inputcol;
-	border: 1px solid $replyborder;
+	background: colors.$inputcol;
+	border: 1px solid colors.$replyborder;
 	border-radius: 5px;
 }
 
 span.subject {
 	font-weight: 800;
-	color: $subjectcol;
+	color: colors.$subjectcol;
 }
 
 table#pages, table#pages * {
@@ -74,7 +74,7 @@ table#pages, table#pages * {
 
 div.section-title-block {
 	background: #A7A7A7;
-	border-bottom: 1px solid $replyborder;
+	border-bottom: 1px solid colors.$replyborder;
 }
 
-@include upload-box(#aaa, #444, #666);
+@include util.upload-box(#aaa, #444, #666);

@@ -1,25 +1,25 @@
-@import '../util';
-@import 'colors';
+@use '../util';
+@use 'colors';
 
 div.reply,
 div.postprev,
 div.inlinepostprev,
 th.postblock {
-	background: $replycol;
-	border: 1px solid $replyborder;
-	@include border-radius(5px);
+	background: colors.$replycol;
+	border: 1px solid colors.$replyborder;
+	@include util.border-radius(5px);
 }
 
 span.subject {
-	color: $subjectcol;
+	color: colors.$subjectcol;
 }
 
 div.section-title-block {
-	background: $replyborder;
+	background: colors.$replyborder;
 }
 
 div.section-block {
-	@include border-radius(5px);
-	background: $sectionbg;
-	border: 1px solid $sectionborder;
+	@include util.border-radius(5px);
+	background: colors.$sectionbg;
+	border: 1px solid colors.$sectionborder;
 }

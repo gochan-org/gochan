@@ -1,59 +1,59 @@
-@import './darkbunker/img';
-@import './darkbunker/vars';
-@import './util';
+@use 'darkbunker/img';
+@use 'darkbunker/vars';
+@use 'util';
 
 body {
-	background: $bgcol;
-	color: $txtcol;
+	background: vars.$bgcol;
+	color: vars.$txtcol;
 	font-family: arial,helvetica,sans-serif;
 	font-size: 10pt;
 }
 
 div#topbar {
-	background: $topbarcol;
-	border-bottom: 2px solid $linkcol;
+	background: vars.$topbarcol;
+	border-bottom: 2px solid vars.$linkcol;
 	* {
 		padding: 0px;
 	}
 }
 
 hr {
-	color: $bordercol;
+	color: vars.$bordercol;
 }
 
 a {
-	color: $linkcol;
+	color: vars.$linkcol;
 	text-decoration: none;
 }
 
 a:hover {
 	background: inherit;
-	color: $linklight;
+	color: vars.$linklight;
 }
 
 header {
 	h1, div#board-subtitle {
 		font-family: tahoma;
-		color: $headercol;
+		color: vars.$headercol;
 	}
 }
 
 th, div.reply {
-	background: $gridcol;
-	border: 1px solid $bordercol;
+	background: vars.$gridcol;
+	border: 1px solid vars.$bordercol;
 }
 
 div.section-block {
 	border: 1px solid white;
 
 	div.section-title-block {
-		background: $blocktitle;
+		background: vars.$blocktitle;
 		border: 1px solid white;
 		font-weight: bold;
 	}
 }
 
 div#frontpage div.section-block:first-child {
-	background: $gridcol;
+	background: vars.$gridcol;
 	// border: none;
 }

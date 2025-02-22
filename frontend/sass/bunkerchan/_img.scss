@@ -1,15 +1,15 @@
-@import 'colors';
+@use 'colors';
 
 %formstyle {
-	background: $inputbg;
-	border: 1px double $inputborder;
-	color: $color;
+	background: colors.$inputbg;
+	border: 1px double colors.$inputborder;
+	color: colors.$color;
 }
 
 %darkselect {
-	background: $inputbg2;
+	background: colors.$inputbg2;
 	border-radius: 5px;
-	color: $color;
+	color: colors.$color;
 	@extend %formstyle;
 }
 
@@ -34,7 +34,7 @@ table#postbox-static, div#report-delbox, form#filterform {
 		@extend %darkselect;
 	}
 	button, input[type=submit] {
-		background: $inputbg2;
+		background: colors.$inputbg2;
 	}
 }
 

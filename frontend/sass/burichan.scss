@@ -1,17 +1,17 @@
-@import 'util';
-@import 'burichan/colors';
-@import 'burichan/img';
-@import 'burichan/front';
-@import 'burichan/manage';
+@use 'util';
+@use 'burichan/colors';
+@use 'burichan/img';
+@use 'burichan/front';
+@use 'burichan/manage';
 
 body {
-	font: $font;
-	background: $bgcol;
+	font: colors.$font;
+	background: colors.$bgcol;
 	margin: 8px;
 }
 
 a, a:visited {
-	color: $linkcol;
+	color: colors.$linkcol;
 	text-decoration: none;
 }
 
@@ -36,7 +36,7 @@ h3 {
 }
 
 h1, h2 {
-	font-family: $hfont-family;
+	font-family: colors.$hfont-family;
 }
 
 h1, h2, h3 {
@@ -45,7 +45,7 @@ h1, h2, h3 {
 }
 
 div#topbar {
-	@include shadow-filter(3px 5px 6px $shadowcol);
+	@include util.shadow-filter(3px 5px 6px colors.$shadowcol);
 	min-height: 1.5em;
 }
 
@@ -55,13 +55,13 @@ a.topbar-item:visited,
 .dropdown-button,
 div.dropdown-menu {
 	background: #080e5e;
-	color: $bgcol;
+	color: colors.$bgcol;
 }
 
 div.dropdown-menu {
-	@include shadow-filter(3px 5px 6px $shadowcol);
+	@include util.shadow-filter(3px 5px 6px colors.$shadowcol);
 	a, h3 {
-		color: $bgcol;
+		color: colors.$bgcol;
 	}
 }
 

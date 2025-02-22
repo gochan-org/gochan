@@ -1,11 +1,11 @@
-@import 'global/img';
-@import 'global/front';
-@import 'global/manage';
-@import 'global/lightbox';
-@import 'global/qr';
-@import "global/watcher";
-@import 'global/bans';
-@import 'global/animations';
+@use 'global/img';
+@use 'global/front';
+@use 'global/manage';
+@use 'global/lightbox';
+@use 'global/qr';
+@use "global/watcher";
+@use 'global/bans';
+@use 'global/animations';
 
 .increase-line-height {
 	header, .post, .reply {

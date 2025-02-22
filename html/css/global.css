@@ -641,26 +641,6 @@ img#banpage-image {
   margin: 4px 8px 8px 4px;
 }
 
-@keyframes slideopen {
-  from {
-    transform: scale(1, 0);
-    transform-origin: top center;
-  }
-  to {
-    transform: scale(1, 1);
-    transform-origin: top center;
-  }
-}
-@keyframes slideclose {
-  from {
-    transform: scale(1, 1);
-    transform-origin: top center;
-  }
-  to {
-    transform: scale(1, 0);
-    transform-origin: top center;
-  }
-}
 .increase-line-height header, .increase-line-height .post, .increase-line-height .reply {
   line-height: 1.5;
 }
