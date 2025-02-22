@@ -217,6 +217,19 @@ function setLineHeight() {
 	}
 }
 
+export function updateExternalLinks(post?: JQuery<HTMLElement>) {
+	const $src = post ?? $(".post-text");
+	const extPostLinks = $src.find<HTMLAnchorElement>("a:not(.postref)");
+	const newTab = getBooleanStorageVal("extlinksnewtab", true);
+	for(const link of extPostLinks) {
+		if(link.hostname !== location.hostname) {
+			link.target = newTab?"_blank":"_self";
+		} else {
+			link.target = "_self";
+		}
+	}
+}
+
 /**
  * executes the custom JavaScript set in the settings
  */
@@ -266,6 +279,7 @@ $(() => {
 		if(getBooleanStorageVal("useqr", true)) initQR();
 		else closeQR();
 	}));
+	settings.set("extlinksnewtab", new BooleanSetting("extlinksnewtab", "Open external links in new tab", true, updateExternalLinks));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 15, {
 		min: 2
@@ -276,6 +290,5 @@ $(() => {
 	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", ""));
 	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));
 
-	if($settingsButton === null)
-		$settingsButton = new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
+	$settingsButton ??= new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
 });
