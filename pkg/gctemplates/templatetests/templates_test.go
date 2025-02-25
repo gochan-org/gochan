@@ -108,3 +108,11 @@ func TestTemplateBase(t *testing.T) {
 
 	initTemplatesMock(t, mock)
 }
+
+func TestBaseFooter(t *testing.T) {
+	runTemplateTestCases(t, gctemplates.PageFooter, baseFooterCases)
+}
+
+func TestBaseHeader(t *testing.T) {
+	runTemplateTestCases(t, gctemplates.PageHeader, baseHeaderCases)
+}

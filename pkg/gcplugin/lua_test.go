@@ -1,10 +1,12 @@
 package gcplugin
 
 import (
+	"html/template"
 	"testing"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
@@ -37,7 +39,7 @@ return { ListenIP = system_critical_cfg.ListenIP, SiteSlogan = site_cfg.SiteSlog
 )
 
 func initPluginTests() {
-	config.SetVersion("3.8.0")
+	config.SetVersion("4.0.2")
 	initLua()
 }
 
@@ -61,9 +63,8 @@ func TestStructPassing(t *testing.T) {
 	err := lState.DoString(structPassingStr)
 	assert.NoError(t, err)
 	t.Logf("Modified message text after Lua: %q", p.MessageRaw)
-	if p.MessageRaw != "Message modified by a plugin\n" || p.Message != "Message modified by a plugin<br />" {
-		t.Fatal("message was not properly modified by plugin")
-	}
+	assert.Equal(t, "Message modified by a plugin\n", p.MessageRaw)
+	assert.Equal(t, template.HTML("Message modified by a plugin<br />"), p.Message)
 }
 
 func TestEventModule(t *testing.T) {
@@ -81,4 +82,40 @@ func TestConfigModule(t *testing.T) {
 	assert.Equal(t, "127.0.0.1", returnTable.RawGetString("ListenIP").(lua.LString).String())
 	assert.Equal(t, "Gochan testing", returnTable.RawGetString("SiteSlogan").(lua.LString).String())
 	assert.Equal(t, "pipes.css", returnTable.RawGetString("DefaultStyle").(lua.LString).String())
+}
+
+func TestLuaURL(t *testing.T) {
+	initPluginTests()
+	err := lState.DoString(`local url = require("url")
+local joined = url.join_path("test", "path")
+local path_escaped = url.path_escape("test +/string")
+local path_unescaped = url.path_unescape(path_escaped)
+local query_escaped = url.query_escape("test +/string")
+local query_unescaped, err = url.query_unescape(query_escaped)
+return joined, query_escaped, query_unescaped, err`)
+	assert.NoError(t, err)
+	joined := lState.CheckString(-4)
+	pathEscaped := lState.CheckString(-3)
+	pathUnescaped := lState.CheckString(-2)
+	queryEscaped := lState.CheckString(-3)
+	queryUnescaped := lState.CheckString(-2)
+	errLV := lState.CheckAny(-1)
+	assert.Equal(t, "test/path", joined)
+	assert.Equal(t, "test+%2B%2Fstring", pathEscaped)
+	assert.Equal(t, "test +/string", pathUnescaped)
+	assert.Equal(t, "test+%2B%2Fstring", queryEscaped)
+	assert.Equal(t, "test +/string", queryUnescaped)
+	assert.Equal(t, errLV.Type(), lua.LTNil)
+	ClosePlugins()
+}
+
+func TestLoadPlugin(t *testing.T) {
+	testutil.GoToGochanRoot(t)
+	initPluginTests()
+	assert.NoError(t, LoadPlugins([]string{"examples/plugins/uploadfilenameupper.lua"}))
+	assert.NoError(t, LoadPlugins(nil))
+	assert.Error(t, LoadPlugins([]string{"not_a_file.lua"}))
+	assert.Error(t, LoadPlugins([]string{"invalid_ext.dll"}))
+	assert.ErrorContains(t, LoadPlugins([]string{"not_a_file.so"}), "realpath failed")
+	ClosePlugins()
 }

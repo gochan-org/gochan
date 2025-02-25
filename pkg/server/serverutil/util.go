@@ -20,5 +20,8 @@ func DeleteCookie(writer http.ResponseWriter, request *http.Request, cookieName 
 
 func IsRequestingJSON(request *http.Request) bool {
 	jsonField := request.FormValue("json")
+	if jsonField == "" {
+		jsonField = request.PostFormValue("json")
+	}
 	return jsonField == "1" || jsonField == "true"
 }

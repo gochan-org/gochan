@@ -27,7 +27,7 @@ import (
 
 // manage actions that require moderator-level permission go here
 
-func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	var outputStr string
 	var ban gcsql.IPBan
 	ban.StaffID = staff.ID
@@ -103,25 +103,25 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	banlist, err := gcsql.GetIPBans(filterBoardID, limit, true)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Error getting ban list")
-		err = errors.New("Error getting ban list: " + err.Error())
+		err = fmt.Errorf("failed getting ban list: %w", err)
 		return "", err
 	}
 	manageBansBuffer := bytes.NewBufferString("")
 
-	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]any{
 		"banlist":       banlist,
 		"allBoards":     gcsql.AllBoards,
 		"ban":           ban,
 		"filterboardid": filterBoardID,
 	}, manageBansBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
-		return "", errors.New("Error executing ban management page template: " + err.Error())
+		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
 	outputStr += manageBansBuffer.String()
 	return outputStr, nil
 }
 
-func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	banIDstr := request.FormValue("banid")
 	var banID int
 	if banIDstr != "" {
@@ -158,20 +158,20 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	appeals, err := gcsql.GetAppeals(banID, limit)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return "", errors.New("Unable to get appeals: " + err.Error())
+		return "", fmt.Errorf("failed to get appeals list: %w", err)
 	}
 
 	if wantsJSON {
 		return appeals, nil
 	}
 	manageAppealsBuffer := bytes.NewBufferString("")
-	pageData := map[string]interface{}{}
+	pageData := map[string]any{}
 	if len(appeals) > 0 {
 		pageData["appeals"] = appeals
 	}
 	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_appeals.html").Caller().Send()
-		return "", errors.New("Error executing appeal management page template: " + err.Error())
+		return "", fmt.Errorf("failed executing appeal management page template: %w", err)
 	}
 	return manageAppealsBuffer.String(), err
 }
@@ -219,7 +219,7 @@ func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff
 			errEv.Err(err).Caller().RawJSON("postData", []byte(hit.PostData)).Msg("Unable to marshal un-minified post data")
 			return nil, err
 		}
-		hitsJSON = append(hitsJSON, template.HTML(strings.ReplaceAll(jsonBuf.String(), "\n", "<br>")))
+		hitsJSON = append(hitsJSON, template.HTML(strings.ReplaceAll(jsonBuf.String(), "\n", "<br>"))) // skipcq: GSC-G203
 	}
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilterHits, map[string]any{
@@ -344,15 +344,15 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, data, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
-		return "", errors.New("Unable to execute filter management template: " + err.Error())
+		return "", fmt.Errorf("failed to execute filter management template: %w", err)
 	}
 	return buf.String(), nil
 }
 
-func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	ipQuery := request.FormValue("ip")
 	limitStr := request.FormValue("limit")
-	data := map[string]interface{}{
+	data := map[string]any{
 		"ipQuery": ipQuery,
 		"limit":   20,
 	}
@@ -376,7 +376,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 				Int("limit", limit).
 				Bool("onlyNotDeleted", true).
 				Send()
-			return "", fmt.Errorf("Error getting list of posts from %q by staff %s: %s", ipQuery, staff.Username, err.Error())
+			return "", fmt.Errorf("Error getting list of posts from %q by staff %s: %w", ipQuery, staff.Username, err)
 		}
 	}
 
@@ -389,7 +389,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 	return manageIpBuffer.String(), nil
 }
 
-func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	dismissIDstr := request.FormValue("dismiss")
 	if dismissIDstr != "" {
 		// staff is dismissing a report
@@ -415,18 +415,17 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 			Bool("blocked", block != "").
 			Msg("Report cleared")
 	}
-	rows, err := gcsql.QuerySQL(`SELECT id,
-		handled_by_staff_id as staff_id,
+	rows, err := gcsql.Query(nil, `SELECT id, handled_by_staff_id as staff_id,
 		(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
 		post_id, IP_NTOA, reason, is_cleared from DBPREFIXreports WHERE is_cleared = FALSE`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	reports := make([]map[string]interface{}, 0)
+	reports := make([]map[string]any, 0)
 	for rows.Next() {
 		var id int
-		var staff_id interface{}
+		var staff_id any
 		var staff_user []byte
 		var post_id int
 		var ip string
@@ -443,7 +442,7 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		}
 
 		staff_id_int, _ := staff_id.(int64)
-		reports = append(reports, map[string]interface{}{
+		reports = append(reports, map[string]any{
 			"id":         id,
 			"staff_id":   int(staff_id_int),
 			"staff_user": string(staff_user),
@@ -458,7 +457,7 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 	reportsBuffer := bytes.NewBufferString("")
 	err = serverutil.MinifyTemplate(gctemplates.ManageReports,
-		map[string]interface{}{
+		map[string]any{
 			"reports": reports,
 			"staff":   staff,
 		}, reportsBuffer, "text/html")
@@ -470,10 +469,10 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return
 }
 
-func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
+func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	boardDir := request.FormValue("board")
 	attrBuffer := bytes.NewBufferString("")
-	data := map[string]interface{}{
+	data := map[string]any{
 		"boards": gcsql.AllBoards,
 	}
 	if boardDir == "" {
@@ -534,14 +533,14 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 			attr = "anchored"
 			newVal = true
 			doChange = thread.Anchored != newVal
-		} else if request.FormValue("uncyclical") != "" {
-			attr = "cyclical"
+		} else if request.FormValue("uncyclic") != "" {
+			attr = "cyclic"
 			newVal = false
-			doChange = thread.Cyclical != newVal
-		} else if request.FormValue("cyclical") != "" {
-			attr = "cyclical"
+			doChange = thread.Cyclic != newVal
+		} else if request.FormValue("cyclic") != "" {
+			attr = "cyclic"
 			newVal = true
-			doChange = thread.Cyclical != newVal
+			doChange = thread.Cyclic != newVal
 		}
 
 		if attr != "" && doChange {
@@ -573,7 +572,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		return "", err
 	}
 	data["threads"] = threads
-	var threadIDs []interface{}
+	var threadIDs []any
 	for i := len(threads) - 1; i >= 0; i-- {
 		threadIDs = append(threadIDs, threads[i].ID)
 	}
@@ -618,7 +617,7 @@ type postInfoJSON struct {
 	Fingerprint      string `json:"fingerprint,omitempty"`
 }
 
-func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	postIDstr := request.FormValue("postid")
 	if postIDstr == "" {
 		return "", errors.New("invalid request (missing postid)")
@@ -671,7 +670,7 @@ type fingerprintJSON struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	postIDstr := request.Form.Get("post")
 	if postIDstr == "" {
 		return "", errors.New("missing 'post' field")

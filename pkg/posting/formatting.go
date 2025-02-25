@@ -1,8 +1,10 @@
 package posting
 
 import (
+	"errors"
 	"fmt"
 	"html/template"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -14,13 +16,14 @@ import (
 )
 
 var (
-	msgfmtr *MessageFormatter
-	urlRE   = regexp.MustCompile(`https?://(\S+)`)
+	msgfmtr         MessageFormatter
+	urlRE           = regexp.MustCompile(`https?://(\S+)`)
+	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
+	diceRollRE      = regexp.MustCompile(`\[(\d*)d(\d+)(?:([+-])(\d+))?\]`)
 )
 
 // InitPosting prepares the formatter and the temp post pruner
 func InitPosting() {
-	msgfmtr = new(MessageFormatter)
 	msgfmtr.Init()
 	go tempCleaner()
 }
@@ -35,12 +38,15 @@ type MessageFormatter struct {
 
 func (mf *MessageFormatter) Init() {
 	mf.bbCompiler = bbcode.NewCompiler(true, true)
-	mf.bbCompiler.SetTag("center", nil)
-	// mf.bbCompiler.SetTag("code", nil)
-	mf.bbCompiler.SetTag("color", nil)
-	mf.bbCompiler.SetTag("img", nil)
-	mf.bbCompiler.SetTag("quote", nil)
-	mf.bbCompiler.SetTag("size", nil)
+	for _, tag := range unsetBBcodeTags {
+		mf.bbCompiler.SetTag(tag, nil)
+	}
+	mf.bbCompiler.SetTag("?", func(_ *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		return &bbcode.HTMLTag{Name: "span", Attrs: map[string]string{"class": "spoiler"}}, true
+	})
+	mf.bbCompiler.SetTag("hide", func(_ *bbcode.BBCodeNode) (*bbcode.HTMLTag, bool) {
+		return &bbcode.HTMLTag{Name: "div", Attrs: map[string]string{"class": "hideblock hidden"}}, true
+	})
 	mf.linkFixer = strings.NewReplacer(
 		"[url=[url]", "[url=",
 		"[/url][/url]", "[/url]",
@@ -127,4 +133,44 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 		postLines[i] = line
 	}
 	return template.HTML(strings.Join(postLines, "<br />")), nil // skipcq: GSC-G203
+}
+
+func diceRoller(numDice int, diceSides int, modifier int) int {
+	rollSum := 0
+	for i := 0; i < numDice; i++ {
+		rollSum += rand.Intn(diceSides) + 1 // skipcq: GSC-G404
+	}
+	return rollSum + modifier
+}
+
+func ApplyDiceRoll(p *gcsql.Post) error {
+	var err error
+	result := diceRollRE.ReplaceAllStringFunc(string(p.Message), func(roll string) string {
+		rollMatch := diceRollRE.FindStringSubmatch(roll)
+		numDice := 1
+		if rollMatch[1] != "" {
+			numDice, _ = strconv.Atoi(rollMatch[1])
+		}
+		if numDice < 1 {
+			err = errors.New("number of dice must be at least 1")
+			return roll
+		}
+		dieSize, _ := strconv.Atoi(rollMatch[2])
+		if dieSize <= 1 {
+			err = errors.New("die size must be greater than 1")
+			return roll
+		}
+		modifierIsNegative := rollMatch[3] == "-"
+		modifier, _ := strconv.Atoi(rollMatch[4])
+		if modifierIsNegative {
+			modifier = -modifier
+		}
+		rollSum := diceRoller(numDice, dieSize, modifier)
+		return fmt.Sprintf(`<span class="dice-roll">%dd%d%s%s = %d</span>`, numDice, dieSize, rollMatch[3], rollMatch[4], rollSum)
+	})
+	if err != nil {
+		return err
+	}
+	p.Message = template.HTML(result) // skipcq: GSC-G203
+	return nil
 }

@@ -1,4 +1,4 @@
-
+@use 'util';
 
 @mixin yotsuba(
 	$fadepath,
@@ -101,4 +101,10 @@
 		color: $subjectcol;
 		font-weight: 700;
 	}
+
+	.dice-roll {
+		border: 1px dashed #222;
+	}
+
+	@include util.upload-box(#aaa, #444, #666);
 }

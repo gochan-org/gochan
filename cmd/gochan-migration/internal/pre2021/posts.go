@@ -2,171 +2,186 @@ package pre2021
 
 import (
 	"database/sql"
-	"fmt"
-	"log"
 	"time"
 
+	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/rs/zerolog"
 )
 
-type postTable struct {
-	id                int
-	boardid           int
-	parentid          int
-	name              string
-	tripcode          string
-	email             string
-	subject           string
-	message           string
-	message_raw       string
-	password          string
-	filename          string
-	filename_original string
-	file_checksum     string
-	filesize          int
-	image_w           int
-	image_h           int
-	thumb_w           int
-	thumb_h           int
-	ip                string
-	tag               string
-	timestamp         time.Time
-	autosage          bool
-	deleted_timestamp time.Time
-	bumped            time.Time
-	stickied          bool
-	locked            bool
-	reviewed          bool
+type migrationPost struct {
+	gcsql.Post
+	autosage bool
+	bumped   time.Time
+	stickied bool
+	locked   bool
 
-	newBoardID int
-	// oldParentID int
+	filename         string
+	filenameOriginal string
+	fileChecksum     string
+	filesize         int
+	imageW           int
+	imageH           int
+	thumbW           int
+	thumbH           int
+
+	oldID       int
+	boardID     int
+	oldBoardID  int
+	oldParentID int
+}
+
+func (*Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
+	var err error
+	opts := &gcsql.RequestOptions{Tx: tx}
+	if post.oldParentID == 0 {
+		// migrating post was a thread OP, create the row in the threads table
+		if post.ThreadID, err = gcsql.CreateThread(opts, post.boardID, false, post.stickied, post.autosage, false); err != nil {
+			errEv.Err(err).Caller().
+				Int("boardID", post.boardID).
+				Msg("Failed to create thread")
+		}
+	}
+
+	// insert thread top post
+	if err = post.Insert(true, post.boardID, false, post.stickied, post.autosage, false, opts); err != nil {
+		errEv.Err(err).Caller().
+			Int("boardID", post.boardID).
+			Int("threadID", post.ThreadID).
+			Msg("Failed to insert thread OP")
+	}
+
+	if post.filename != "" {
+		if err = post.AttachFile(&gcsql.Upload{
+			PostID:           post.ID,
+			OriginalFilename: post.filenameOriginal,
+			Filename:         post.filename,
+			Checksum:         post.fileChecksum,
+			FileSize:         post.filesize,
+			ThumbnailWidth:   post.thumbW,
+			ThumbnailHeight:  post.thumbH,
+			Width:            post.imageW,
+			Height:           post.imageH,
+		}, opts); err != nil {
+			errEv.Err(err).Caller().
+				Int("oldPostID", post.oldID).
+				Msg("Failed to attach upload to migrated post")
+			return err
+		}
+	}
+	return nil
 }
 
 func (m *Pre2021Migrator) MigratePosts() error {
-	var err error
-	if err = m.migrateThreads(); err != nil {
-		return err
-	}
-	return m.migratePostsUtil()
-}
+	errEv := common.LogError()
+	defer errEv.Discard()
 
-func (m *Pre2021Migrator) migrateThreads() error {
-	tx, err := m.db.Begin()
+	tx, err := gcsql.BeginTx()
 	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed to start transaction")
 		return err
 	}
+	defer tx.Rollback()
 
-	stmt, err := m.db.PrepareSQL(postsQuery, tx)
+	rows, err := m.db.Query(nil, threadsQuery)
 	if err != nil {
-		tx.Rollback()
+		errEv.Err(err).Caller().Msg("Failed to get threads")
 		return err
 	}
-	rows, err := stmt.Query()
-	if err != nil && err != sql.ErrNoRows {
-		tx.Rollback()
-		return err
-	}
-	defer stmt.Close()
 	defer rows.Close()
+
+	var threadIDsWithInvalidBoards []int
+	var missingBoardIDs []int
+	var migratedThreads int
 	for rows.Next() {
-		var post postTable
+		var thread migrationPost
 		if err = rows.Scan(
-			&post.id,
-			&post.boardid,
-			&post.parentid,
-			&post.name,
-			&post.tripcode,
-			&post.email,
-			&post.subject,
-			&post.message,
-			&post.message_raw,
-			&post.password,
-			&post.filename,
-			&post.filename_original,
-			&post.file_checksum,
-			&post.filesize,
-			&post.image_w,
-			&post.image_h,
-			&post.thumb_w,
-			&post.thumb_h,
-			&post.ip,
-			&post.tag,
-			&post.timestamp,
-			&post.autosage,
-			&post.deleted_timestamp,
-			&post.bumped,
-			&post.stickied,
-			&post.locked,
-			&post.reviewed,
+			&thread.oldID, &thread.oldBoardID, &thread.oldParentID, &thread.Name, &thread.Tripcode, &thread.Email,
+			&thread.Subject, &thread.Message, &thread.MessageRaw, &thread.Password, &thread.filename,
+			&thread.filenameOriginal, &thread.fileChecksum, &thread.filesize, &thread.imageW, &thread.imageH,
+			&thread.thumbW, &thread.thumbH, &thread.IP, &thread.CreatedOn, &thread.autosage,
+			&thread.bumped, &thread.stickied, &thread.locked,
 		); err != nil {
-			tx.Rollback()
+			errEv.Err(err).Caller().Msg("Failed to scan thread")
 			return err
 		}
-		_, ok := m.oldBoards[post.boardid]
-		if !ok {
-			// board doesn't exist
-			log.Printf(
-				"Pre-migrated post #%d has an invalid boardid %d (board doesn't exist), skipping",
-				post.id, post.boardid)
+		var foundBoard bool
+		for _, board := range m.boards {
+			if board.oldID == thread.oldBoardID {
+				thread.boardID = board.ID
+				foundBoard = true
+				break
+			}
+		}
+		if !foundBoard {
+			threadIDsWithInvalidBoards = append(threadIDsWithInvalidBoards, thread.oldID)
+			missingBoardIDs = append(missingBoardIDs, thread.oldBoardID)
 			continue
 		}
 
-		// var stmt *sql.Stmt
-		// var err error
-		preparedStr, _ := gcsql.SetupSQLString(`SELECT id FROM DBPREFIXboards WHERE ui = ?`, m.db)
-		stmt, err := tx.Prepare(preparedStr)
-		if err != nil {
-			tx.Rollback()
+		if err = m.migratePost(tx, &thread, errEv); err != nil {
 			return err
 		}
-		stmt.QueryRow(post.boardid).Scan(&post.newBoardID)
 
-		// gcsql.QueryRowSQL(`SELECT id FROM DBPREFIXboards WHERE uri = ?`, []interface{}{})
-		if post.parentid == 0 {
-			// post is a thread, save it to the DBPREFIXthreads table
-			// []interfaceP{{post.newParentID}
-
-			if err = gcsql.QueryRowSQL(
-				`SELECT board_id FROM DBPREFIXthreads ORDER BY board_id LIMIT 1`,
-				nil,
-				[]interface{}{&post.newBoardID},
-			); err != nil {
-				tx.Rollback()
-				return err
-			}
-			fmt.Println("Current board ID:", post.newBoardID)
-			prepareStr, _ := gcsql.SetupSQLString(
-				`INSERT INTO DBPREFIXthreads
-				(board_id, locked, stickied)
-				VALUES(?, ?, ?)`, m.db)
-			stmt, err = tx.Prepare(prepareStr)
-			if err != nil {
-				tx.Rollback()
-				return err
-			}
-			stmt.Exec(post.newBoardID, post.locked, post.stickied)
-			// 			// stmt, err := db.Prepare("INSERT table SET unique_id=? ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)")
-			// 			gcsql.ExecSQL(`INSERT INTO DBPREFIXthreads (board_id) VALUES(?)`, post.newBoardID)
-
-			// 			/*
-			// id
-			// board_id
-			// locked
-			// stickied
-			// anchored
-			// cyclical
-			// last_bump
-			// deleted_at
-			// is_deleted
-
-			// 			*/
-
+		// get and insert replies
+		replyRows, err := m.db.Query(nil, postsQuery+" AND parentid = ?", thread.oldID)
+		if err != nil {
+			errEv.Err(err).Caller().
+				Int("parentID", thread.oldID).
+				Msg("Failed to get reply rows")
+			return err
 		}
-		m.posts = append(m.posts, post)
-	}
-	return tx.Commit()
-}
+		defer replyRows.Close()
 
-func (*Pre2021Migrator) migratePostsUtil() error {
+		for replyRows.Next() {
+			var reply migrationPost
+			if err = replyRows.Scan(
+				&reply.oldID, &reply.oldBoardID, &reply.oldParentID, &reply.Name, &reply.Tripcode, &reply.Email,
+				&reply.Subject, &reply.Message, &reply.MessageRaw, &reply.Password, &reply.filename,
+				&reply.filenameOriginal, &reply.fileChecksum, &reply.filesize, &reply.imageW, &reply.imageH,
+				&reply.thumbW, &reply.thumbH, &reply.IP, &reply.CreatedOn, &reply.autosage,
+				&reply.bumped, &reply.stickied, &reply.locked,
+			); err != nil {
+				errEv.Err(err).Caller().
+					Int("parentID", thread.oldID).
+					Msg("Failed to scan reply")
+				return err
+			}
+			reply.ThreadID = thread.ThreadID
+			if err = m.migratePost(tx, &reply, errEv); err != nil {
+				return err
+			}
+		}
+
+		if thread.locked {
+			if _, err = gcsql.Exec(&gcsql.RequestOptions{Tx: tx}, "UPDATE DBPREFIXthreads SET locked = TRUE WHERE id = ?", thread.ThreadID); err != nil {
+				errEv.Err(err).Caller().
+					Int("threadID", thread.ThreadID).
+					Msg("Unable to re-lock migrated thread")
+			}
+		}
+		migratedThreads++
+	}
+	if err = rows.Close(); err != nil {
+		errEv.Err(err).Caller().Msg("Failed to close posts rows")
+		return err
+	}
+
+	if len(threadIDsWithInvalidBoards) > 0 {
+		errEv.Caller().
+			Ints("threadIDs", threadIDsWithInvalidBoards).
+			Ints("boardIDs", missingBoardIDs).
+			Msg("Failed to find boards for threads")
+		return common.NewMigrationError("pre2021", "Found threads with missing boards")
+	}
+
+	if err = tx.Commit(); err != nil {
+		errEv.Err(err).Caller().Msg("Failed to commit transaction")
+		return err
+	}
+	gcutil.LogInfo().
+		Int("migratedThreads", migratedThreads).
+		Msg("Migrated threads successfully")
 	return nil
 }

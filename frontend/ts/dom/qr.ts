@@ -1,11 +1,9 @@
 import $ from "jquery";
 import "jquery-ui/ui/version";
 import "jquery-ui/ui/plugin";
-import "jquery-ui/ui/safe-active-element";
 import "jquery-ui/ui/widget";
 import "jquery-ui/ui/scroll-parent";
 import "jquery-ui/ui/widgets/mouse";
-import "jquery-ui/ui/safe-blur";
 import "jquery-ui/ui/widgets/draggable";
 
 import { upArrow, downArrow } from "../vars";
@@ -91,6 +89,22 @@ function setButtonTimeout(prefix = "", cooldown = 5) {
 	};
 	interval = setInterval(timeoutCB, 1000);
 	timeoutCB();
+}
+
+function fixFileList() {
+	let files:FileList = null;
+	const $browseBtns = $<HTMLInputElement>("input[name=imagefile]");
+	$browseBtns.each((_i, el) => {
+		if(el.files?.length > 0 && !files) {
+			files = el.files;
+			return false;
+		}
+		return null;
+	});
+	$browseBtns.each((_i, el) => {
+		if(files)
+			el.files = files;
+	});
 }
 
 export function initQR() {
@@ -204,6 +218,7 @@ export function initQR() {
 	resetSubmitButtonText();
 
 	$postform.on("submit", function(e) {
+		fixFileList();
 		const $form = $<HTMLFormElement>(this);
 		e.preventDefault();
 		copyCaptchaResponse($form);

@@ -23,7 +23,7 @@ var (
 
 // manage actions that require at least janitor-level permission go here
 
-func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
+func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
 	if err = gcsql.EndStaffSession(writer, request); err != nil {
 		return "", err
 	}
@@ -33,7 +33,7 @@ func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.
 	return "Logged out successfully", nil
 }
 
-func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
+func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
 	session, err := request.Cookie("sessiondata")
 	if err != nil {
 		// doesn't have a login session cookie, return with no errors
@@ -74,7 +74,7 @@ func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, 
 	return "Logged out successfully", nil
 }
 
-func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, _, errEv *zerolog.Event) (output interface{}, err error) {
+func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, _, errEv *zerolog.Event) (output any, err error) {
 	limit := 20
 	limitStr := request.FormValue("limit")
 	if limitStr != "" {
@@ -102,19 +102,19 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		return recentposts, nil
 	}
 	manageRecentsBuffer := bytes.NewBufferString("")
-	if err = serverutil.MinifyTemplate(gctemplates.ManageRecentPosts, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ManageRecentPosts, map[string]any{
 		"recentposts": recentposts,
 		"allBoards":   gcsql.AllBoards,
 		"boardid":     boardid,
 		"limit":       limit,
 	}, manageRecentsBuffer, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return "", errors.New("Error executing ban management page template: " + err.Error())
+		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
 	return manageRecentsBuffer.String(), nil
 }
 
-func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output interface{}, err error) {
+func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
 	// return an array of announcements (with staff name instead of ID) and any errors
 	return getAllAnnouncements()
 }
@@ -142,12 +142,12 @@ const (
 
 func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	var allStaff []gcsql.Staff
+	allStaff, err = getAllStaffNopass(true)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Failed getting staff list")
+		return nil, errors.New("unable to get staff list")
+	}
 	if wantsJSON {
-		allStaff, err = getAllStaffNopass(true)
-		if err != nil {
-			errEv.Err(err).Caller().Msg("Failed getting staff list")
-			return nil, errors.New("unable to get staff list")
-		}
 		return allStaff, nil
 	}
 

@@ -36,18 +36,18 @@ var (
 )
 
 // DoesBoardExistByID returns a bool indicating whether a board with a given id exists
-func DoesBoardExistByID(ID int) bool {
-	const query = `SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?`
+func DoesBoardExistByID(ID int, requestOptions ...*RequestOptions) bool {
+	opts := setupOptionsWithTimeout(requestOptions...)
 	var count int
-	QueryRowSQL(query, []any{ID}, []any{&count})
+	QueryRow(opts, "SELECT COUNT(id) FROM DBPREFIXboards WHERE id = ?", []any{ID}, []any{&count})
 	return count > 0
 }
 
 // DoesBoardExistByDir returns a bool indicating whether a board with a given directory exists
-func DoesBoardExistByDir(dir string) bool {
-	const query = `SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?`
+func DoesBoardExistByDir(dir string, requestOpts ...*RequestOptions) bool {
+	opts := setupOptionsWithTimeout(requestOpts...)
 	var count int
-	QueryRowSQL(query, []any{dir}, []any{&count})
+	QueryRow(opts, "SELECT COUNT(dir) FROM DBPREFIXboards WHERE dir = ?", []any{dir}, []any{&count})
 	return count > 0
 }
 
@@ -108,10 +108,10 @@ func GetBoardDirFromPostID(postID int) (string, error) {
 	return boardURI, err
 }
 
-func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
+func getBoardBase(requestOptions *RequestOptions, where string, whereParameters ...any) (*Board, error) {
 	query := selectBoardsBaseSQL + where
 	board := new(Board)
-	err := QueryRowTimeoutSQL(nil, query, whereParameters, []any{
+	err := QueryRow(requestOptions, query, whereParameters, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
 		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
 		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
@@ -124,13 +124,15 @@ func getBoardBase(where string, whereParameters []interface{}) (*Board, error) {
 }
 
 // GetBoardFromID returns the board corresponding to a given id
-func GetBoardFromID(id int) (*Board, error) {
-	return getBoardBase("WHERE DBPREFIXboards.id = ?", []any{id})
+func GetBoardFromID(id int, requestOptions ...*RequestOptions) (*Board, error) {
+	opts := setupOptionsWithTimeout(requestOptions...)
+	return getBoardBase(opts, "WHERE DBPREFIXboards.id = ?", id)
 }
 
 // GetBoardFromDir returns the board corresponding to a given dir
-func GetBoardFromDir(dir string) (*Board, error) {
-	return getBoardBase("WHERE DBPREFIXboards.dir = ?", []any{dir})
+func GetBoardFromDir(dir string, requestOptions ...*RequestOptions) (*Board, error) {
+	opts := setupOptionsWithTimeout(requestOptions...)
+	return getBoardBase(opts, "WHERE DBPREFIXboards.dir = ?", dir)
 }
 
 // GetIDFromDir returns the id of the board with the given dir value
@@ -176,7 +178,7 @@ func ResetBoardSectionArrays() error {
 	AllBoards = append(AllBoards, allBoardsArr...)
 	for _, board := range AllBoards {
 		if err = config.UpdateBoardConfig(board.Dir); err != nil {
-			return fmt.Errorf("unable to update board config for /%s/: %s", board.Dir, err.Error())
+			return fmt.Errorf("unable to update board config for /%s/: %w", board.Dir, err)
 		}
 	}
 
@@ -337,7 +339,7 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 		rows.Close()
 	}()
 
-	var threadIDs []interface{}
+	var threadIDs []any
 	var id int
 	var threadsProccessed int
 	for rows.Next() {
@@ -415,7 +417,7 @@ func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool, sticki
 		var thread Thread
 		err = rows.Scan(
 			&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored,
-			&thread.Cyclical, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
+			&thread.Cyclic, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 		)
 		if err != nil {
 			return threads, err
@@ -459,7 +461,7 @@ func (board *Board) ModifyInDB() error {
 		require_file = ?,
 		enable_catalog = ?
 		WHERE id = ?`
-	_, err := ExecSQL(query,
+	_, err := Exec(nil, query,
 		board.SectionID, board.NavbarPosition, board.Title, board.Subtitle, board.Description,
 		board.MaxFilesize, board.MaxThreads, board.DefaultStyle, board.Locked, board.AnonymousName,
 		board.ForceAnonymous, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength,

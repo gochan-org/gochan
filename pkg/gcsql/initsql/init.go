@@ -97,7 +97,7 @@ func getBoardDefaultStyleTmplFunc(dir string) string {
 		return boardCfg.DefaultStyle
 	}
 	var defaultStyle string
-	err := gcsql.QueryRowSQL(`SELECT default_style FROM DBPREFIXboards WHERE dir = ?`,
+	err := gcsql.QueryRowTimeoutSQL(nil, "SELECT default_style FROM DBPREFIXboards WHERE dir = ?",
 		[]any{dir}, []any{&defaultStyle})
 	if err != nil || defaultStyle == "" {
 		gcutil.LogError(err).Caller().
@@ -119,7 +119,7 @@ func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
 }
 
 func init() {
-	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...interface{}) error {
+	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...any) error {
 		return gcsql.ResetBoardSectionArrays()
 	})
 	gctemplates.AddTemplateFuncs(template.FuncMap{

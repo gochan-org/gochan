@@ -9,6 +9,11 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 - [filepath](https://pkg.go.dev/github.com/vadv/gopher-lua-libs@v0.5.0/filepath)
 - [json](https://pkg.go.dev/layeh.com/gopher-json@v0.0.0-20201124131017-552bb3c4c3bf)
 - [strings](https://pkg.go.dev/github.com/vadv/gopher-lua-libs@v0.5.0/strings)
+
+## bbcode
+- **set_tag(tag string, handler [bbcode.TagCompilerFunc](https://pkg.go.dev/github.com/frustra/bbcode@v0.0.0-20201127003707-6ef347fbe1c8#TagCompilerFunc)))**
+	- Registers a new BBCode function to handle the given tag. Struct-table fields are expected to use snake case (e.g., name instead of Name)
+
 ## config
 - **config.system_critical_config()**
   - Returns the [SystemCriticalConfig](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/config#SystemCriticalConfig)

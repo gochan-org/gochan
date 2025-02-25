@@ -54,7 +54,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 		return 0, 0, err
 	}
 	if versionTableExists {
-		databaseVersion, versionError := getDatabaseVersion(gochanVersionKeyConstant)
+		databaseVersion, versionError := GetComponentVersion(gochanVersionKeyConstant)
 		if versionError != nil {
 			return 0, 0, versionError
 		}
@@ -126,10 +126,10 @@ func buildNewDatabase(dbType string) error {
 		return err
 	}
 	if err = createDefaultAdminIfNoStaff(); err != nil {
-		return errors.New("failed creating default admin account: " + err.Error())
+		return fmt.Errorf("failed creating default admin account: %w", err)
 	}
 	if err = createDefaultBoardIfNoneExist(); err != nil {
-		return errors.New("failed creating default board if non already exists: " + err.Error())
+		return fmt.Errorf("failed creating default board if non already exists: %w", err)
 	}
 	return nil
 }

@@ -1,13 +1,13 @@
-@import 'colors';
-@import '../util';
+@use 'colors';
+@use '../util';
 
 .loginbox input {
 	height: 20%;
 }
 
 .manage-header {
-	background: $topbarcol;
+	background: colors.$topbarcol;
 	// @include box-shadow(2px 2px 3px 4px $shadowcol);
-	@include shadow-filter(4px 4px 4px $shadowcol);
+	@include util.shadow-filter(4px 4px 4px colors.$shadowcol);
 	border-radius: 8px;
 }

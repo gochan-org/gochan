@@ -2,6 +2,7 @@ import $ from "jquery";
 import { extname } from "path";
 import { formatDateString, formatFileSize } from "../formatting";
 import { getThumbFilename } from "../postinfo";
+import { getBooleanStorageVal } from "../storage";
 
 /**
  * creates an element from the given post data
@@ -117,7 +118,35 @@ export function shrinkOriginalFilenames(elem = $(document.body)) {
 	});
 }
 
+export function prepareHideBlocks() {
+	$("div.hideblock").each((_i,el) => {
+		const $el = $(el);
+		const $button = $("<button />").prop({
+			class: "hideblock-button",
+		}).text($el.hasClass("open") ? "Hide" : "Show").on("click", e => {
+			e.preventDefault();
+			const hidden = $el.hasClass("hidden");
+			$button.text(hidden ? "Hide" : "Show");
+			if(el.onanimationend === undefined || !getBooleanStorageVal("smoothhidetoggle", true)) {
+				$el.toggleClass("hidden");
+			} else {
+				$el.removeClass("close");
+				if(hidden) {
+					$el.removeClass("hidden").addClass("open");
+				} else {
+					$el.addClass("close").removeClass("open");
+				}
+			}
+		}).insertBefore($el);
+		$el.on("animationend", () => {
+			if($el.hasClass("close")) {
+				$el.addClass("hidden").removeClass("close");
+			}
+		});
+	});
+}
 
 $(() => {
+	prepareHideBlocks();
 	shrinkOriginalFilenames();
 });

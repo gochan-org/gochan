@@ -131,7 +131,7 @@ func HackyStringToInt(text string) int {
 }
 
 // MarshalJSON creates a JSON string with the given data and returns the string and any errors
-func MarshalJSON(data interface{}, indent bool) (string, error) {
+func MarshalJSON(data any, indent bool) (string, error) {
 	var jsonBytes []byte
 	var err error
 

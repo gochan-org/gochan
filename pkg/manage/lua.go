@@ -140,7 +140,7 @@ func PreloadModule(l *lua.LState) int {
 			actionPerms := l.CheckInt(3)
 			actionJSON := l.CheckInt(4)
 			fn := l.CheckFunction(5)
-			actionHandler := func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error) {
+			actionHandler := func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 				if err = l.CallByParam(lua.P{
 					Fn:   fn,
 					NRet: 2,

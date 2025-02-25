@@ -14,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/gochan-org/gochan/pkg/posting"
 	"github.com/gochan-org/gochan/pkg/posting/geoip"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
@@ -30,7 +31,6 @@ import (
 
 var (
 	lState             *lua.LState
-	eventPlugins       map[string][]*lua.LFunction
 	ErrInvalidInitFunc = errors.New("invalid InitPlugin, expected function with 0 arguments and 1 return value (error type)")
 )
 
@@ -44,6 +44,7 @@ func initLua() {
 func ClosePlugins() {
 	if lState != nil {
 		lState.Close()
+		lState = nil
 	}
 }
 
@@ -90,7 +91,7 @@ func preloadLua() {
 				result, err := url.QueryUnescape(query)
 				l.Push(lua.LString(result))
 				l.Push(luar.New(l, err))
-				return 1
+				return 2
 			},
 		})
 		l.Push(t)
@@ -106,19 +107,9 @@ func preloadLua() {
 	lState.PreloadModule("manage", manage.PreloadModule)
 	lState.PreloadModule("uploads", uploads.PreloadModule)
 	lState.PreloadModule("serverutil", serverutil.PreloadModule)
+	lState.PreloadModule("bbcode", posting.PreloadBBCodeModule)
 
 	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GetVersion().String()))
-}
-
-func registerEventFunction(name string, fn *lua.LFunction) {
-	switch name {
-	case "onStartup":
-		fallthrough
-	case "onPost":
-		fallthrough
-	case "onDelete":
-		eventPlugins[name] = append(eventPlugins[name], fn)
-	}
 }
 
 func LoadPlugins(paths []string) error {
@@ -132,15 +123,6 @@ func LoadPlugins(paths []string) error {
 			if err = lState.DoFile(pluginPath); err != nil {
 				return err
 			}
-			pluginTable := lState.NewTable()
-			pluginTable.ForEach(func(key, val lua.LValue) {
-				keyStr := key.String()
-				fn, ok := val.(*lua.LFunction)
-				if !ok {
-					return
-				}
-				registerEventFunction(keyStr, fn)
-			})
 		case ".so":
 			nativePlugin, err := plugin.Open(pluginPath)
 			if err != nil {

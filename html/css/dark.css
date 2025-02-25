@@ -2,7 +2,6 @@ body {
   background: #1E1E1E;
   font-family: sans-serif;
   color: #999;
-  font-size: 80%;
 }
 
 a {
@@ -54,6 +53,13 @@ span.postername a {
 
 span.tripcode {
   color: #32DD72;
+}
+
+.dropdown-menu {
+  background: #666 !important;
+}
+.dropdown-menu b {
+  color: black;
 }
 
 span.subject {

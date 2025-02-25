@@ -8,11 +8,10 @@ function canNotify() {
 		&& (typeof Notification !== "undefined");
 }
 
-export function notify(title: string, body: string, img = noteIcon) {
+export function notify(title: string, body: string, icon = noteIcon) {
 	const n = new Notification(title, {
 		body: body,
-		image: img,
-		icon: noteIcon
+		icon: icon
 	});
 	setTimeout(() => {
 		n.close();

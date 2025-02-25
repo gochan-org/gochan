@@ -21,7 +21,7 @@ import (
 
 const (
 	dirIsAFileStr = `unable to create %q, path exists and is a file`
-	genericErrStr = `unable to create %q: %s`
+	genericErrStr = `unable to create %q: %w`
 	pathExistsStr = `unable to create %q, path already exists`
 )
 
@@ -63,12 +63,12 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 	if err != nil {
 		errEv.Err(err).Caller().
 			Msg("Failed getting board threads")
-		return fmt.Errorf("error getting threads for /%s/: %s", board.Dir, err.Error())
+		return fmt.Errorf("error getting threads for /%s/: %w", board.Dir, err)
 	}
 	topPosts, err := getBoardTopPosts(board.Dir)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed getting board threads")
-		return fmt.Errorf("error getting OP posts for /%s/: %s", board.Dir, err.Error())
+		return fmt.Errorf("error getting OP posts for /%s/: %w", board.Dir, err)
 	}
 	opMap := make(map[int]*Post)
 	for _, post := range topPosts {
@@ -102,13 +102,13 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		catalogThread.Replies, err = thread.GetReplyCount()
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Failed getting reply count")
-			return errors.New("Error getting reply count: " + err.Error())
+			return fmt.Errorf("error getting reply count: %w", err)
 		}
 
 		catalogThread.Posts, err = getThreadPosts(&thread)
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Failed getting replies")
-			return errors.New("Failed getting replies: " + err.Error())
+			return fmt.Errorf("failed getting replies: %w", err)
 		}
 		if len(catalogThread.Posts) == 0 {
 			continue
@@ -122,7 +122,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		catalogThread.uploads, err = thread.GetUploads()
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Failed getting thread uploads")
-			return errors.New("Failed getting thread uploads: " + err.Error())
+			return fmt.Errorf("failed getting thread uploads: %w", err)
 		}
 
 		var imagesOnBoardPage int
@@ -157,19 +157,19 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 			errEv.Err(err).Caller().
 				Str("page", "board.html").
 				Msg("Failed getting board page")
-			return fmt.Errorf("failed opening /%s/board.html: %s", board.Dir, err.Error())
+			return fmt.Errorf("failed opening /%s/board.html: %w", board.Dir, err)
 		}
 		defer boardPageFile.Close()
 
 		if err = config.TakeOwnershipOfFile(boardPageFile); err != nil {
 			errEv.Err(err).Caller().
 				Msg("Unable to take ownership of board.html")
-			return fmt.Errorf("unable to take ownership of /%s/board.html: %s", board.Dir, err.Error())
+			return fmt.Errorf("unable to take ownership of /%s/board.html: %w", board.Dir, err)
 		}
 		// Render board page template to the file,
 		// packaging the board/section list, threads, and board info
 		captchaCfg := config.GetSiteConfig().Captcha
-		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]interface{}{
+		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, map[string]any{
 			"boards":      gcsql.AllBoards,
 			"sections":    gcsql.AllSections,
 			"threads":     threads,
@@ -183,7 +183,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 			errEv.Err(err).Caller().
 				Str("page", "board.html").
 				Msg("Failed building board")
-			return fmt.Errorf("failed building /%s/: %s", board.Dir, err.Error())
+			return fmt.Errorf("failed building /%s/: %w", board.Dir, err)
 		}
 
 		if err = boardPageFile.Close(); err != nil {
@@ -207,14 +207,14 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 	if err != nil {
 		errEv.Err(err).Caller().
 			Msg("Failed opening catalog.json")
-		return fmt.Errorf("failed opening /%s/catalog.json: %s", board.Dir, err.Error())
+		return fmt.Errorf("failed opening /%s/catalog.json: %w", board.Dir, err)
 	}
 	defer catalogJSONFile.Close()
 
 	if err = config.TakeOwnershipOfFile(catalogJSONFile); err != nil {
 		errEv.Err(err).Caller().
 			Msg("Unable to take ownership of catalog.json")
-		return fmt.Errorf("unable to take ownership of /%s/catalog.json: %s", board.Dir, err.Error())
+		return fmt.Errorf("unable to take ownership of /%s/catalog.json: %w", board.Dir, err)
 	}
 	for _, page := range catalog.pages {
 		catalog.currentPage++
@@ -243,7 +243,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		if (numThreads % boardConfig.ThreadsPerPage) > 0 {
 			numPages++
 		}
-		data := map[string]interface{}{
+		data := map[string]any{
 			"boards":      gcsql.AllBoards,
 			"sections":    gcsql.AllSections,
 			"threads":     page.Threads,
@@ -262,7 +262,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 		}
 		if err = serverutil.MinifyTemplate(gctemplates.BoardPage, data, currentPageFile, "text/html"); err != nil {
 			errEv.Err(err).Caller().Send()
-			return fmt.Errorf("failed building /%s/ boardpage: %s", board.Dir, err.Error())
+			return fmt.Errorf("failed building /%s/ boardpage: %w", board.Dir, err)
 		}
 		if err = currentPageFile.Close(); err != nil {
 			errEv.Err(err).Caller().Send()
@@ -307,7 +307,7 @@ func BuildBoards(verbose bool, which ...int) error {
 				errEv.Err(err).Caller().
 					Int("boardid", boardID).
 					Msg("Unable to get board information")
-				return fmt.Errorf("unable to get board information (ID: %d): %s", boardID, err.Error())
+				return fmt.Errorf("unable to get board information (ID: %d): %w", boardID, err)
 			}
 			boards = append(boards, *board)
 		}
@@ -446,12 +446,12 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	} else if err = os.Mkdir(dirPath, config.DirFileMode); err != nil {
 		errEv.Err(os.ErrExist).Caller().
 			Str("dirPath", dirPath).Send()
-		return fmt.Errorf(genericErrStr, dirPath, err.Error())
+		return fmt.Errorf(genericErrStr, dirPath, err)
 	}
 	if err = config.TakeOwnership(dirPath); err != nil {
 		errEv.Err(err).Caller().
 			Str("dirPath", dirPath).Send()
-		return fmt.Errorf(genericErrStr, dirPath, err.Error())
+		return fmt.Errorf(genericErrStr, dirPath, err)
 	}
 
 	if resInfo != nil {
@@ -468,15 +468,15 @@ func buildBoard(board *gcsql.Board, force bool) error {
 			return err
 		}
 	} else if err = os.Mkdir(resPath, config.DirFileMode); err != nil {
-		err = fmt.Errorf(genericErrStr, resPath, err.Error())
+		err = fmt.Errorf(genericErrStr, resPath, err)
 		errEv.Err(err).Caller().
 			Str("resPath", resPath).Send()
-		return fmt.Errorf(genericErrStr, resPath, err.Error())
+		return fmt.Errorf(genericErrStr, resPath, err)
 	}
 	if err = config.TakeOwnership(resPath); err != nil {
 		errEv.Err(err).Caller().
 			Str("resPath", resPath).Send()
-		return fmt.Errorf(genericErrStr, resPath, err.Error())
+		return fmt.Errorf(genericErrStr, resPath, err)
 	}
 
 	if srcInfo != nil {
@@ -493,7 +493,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 			return err
 		}
 	} else if err = os.Mkdir(srcPath, config.DirFileMode); err != nil {
-		err = fmt.Errorf(genericErrStr, srcPath, err.Error())
+		err = fmt.Errorf(genericErrStr, srcPath, err)
 		errEv.Err(err).Caller().
 			Str("srcPath", srcPath).Send()
 		return err
@@ -501,7 +501,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	if config.TakeOwnership(srcPath); err != nil {
 		errEv.Err(err).Caller().
 			Str("srcPath", srcPath).Send()
-		return fmt.Errorf(genericErrStr, srcPath, err.Error())
+		return fmt.Errorf(genericErrStr, srcPath, err)
 	}
 
 	if thumbInfo != nil {
@@ -514,12 +514,12 @@ func buildBoard(board *gcsql.Board, force bool) error {
 	} else if err = os.Mkdir(thumbPath, config.DirFileMode); err != nil {
 		errEv.Err(err).Caller().
 			Str("thumbPath", thumbPath).Send()
-		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
+		return fmt.Errorf(genericErrStr, thumbPath, err)
 	}
 	if config.TakeOwnership(thumbPath); err != nil {
 		errEv.Err(err).Caller().
 			Str("thumbPath", thumbPath).Send()
-		return fmt.Errorf(genericErrStr, thumbPath, err.Error())
+		return fmt.Errorf(genericErrStr, thumbPath, err)
 	}
 
 	if err = BuildBoardPages(board, errEv); err != nil {
@@ -562,12 +562,12 @@ func BuildBoardListJSON() error {
 	defer errEv.Discard()
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("unable to open boards.json for writing: " + err.Error())
+		return fmt.Errorf("unable to open boards.json for writing: %w", err)
 	}
 
 	if err = config.TakeOwnershipOfFile(boardListFile); err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("unable to update boards.json ownership: " + err.Error())
+		return fmt.Errorf("unable to update boards.json ownership: %w", err)
 	}
 
 	boardsListJSONData := boardsListJSON{
@@ -585,15 +585,15 @@ func BuildBoardListJSON() error {
 	boardJSON, err := json.Marshal(boardsListJSONData)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed to create boards.json " + err.Error())
+		return fmt.Errorf("failed to create boards.json: %w", err)
 	}
 
 	if _, err = serverutil.MinifyWriter(boardListFile, boardJSON, "application/json"); err != nil {
-		errEv.Err(err).Caller().Send()
+		errEv.Err(err).Caller().Msg("Failed writing to boards.json")
 		return errors.New("failed writing boards.json file")
 	}
 	if err = boardListFile.Close(); err != nil {
-		errEv.Err(err).Caller().Send()
+		errEv.Err(err).Caller().Msg("Failed closing boards.json")
 		return errors.New("failed closing boards.json")
 	}
 	return nil

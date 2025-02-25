@@ -31,7 +31,7 @@ const (
 	AlwaysJSON
 )
 
-type CallbackFunction func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output interface{}, err error)
+type CallbackFunction func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error)
 
 // Action represents the functions accessed by staff members at /manage/<functionname>.
 type Action struct {
@@ -105,7 +105,7 @@ func getPageTitle(actionID string, staff *gcsql.Staff) string {
 	return useAction.Title
 }
 
-func getStaffActions(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (interface{}, error) {
+func getStaffActions(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (any, error) {
 	availableActions := getAvailableActions(staff.Rank, false)
 	return availableActions, nil
 }

@@ -13,8 +13,8 @@ import (
 
 // table: DBPREFIXannouncements
 type Announcement struct {
-	ID        uint      // sql: id
-	StaffID   uint      // sql: staff_id
+	ID        int       // sql: id
+	StaffID   int       // sql: staff_id
 	Subject   string    // sql: subject
 	Message   string    // sql: message
 	Timestamp time.Time // sql: timestamp
@@ -272,7 +272,7 @@ type Thread struct {
 	Locked    bool      // sql: locked
 	Stickied  bool      // sql: stickied
 	Anchored  bool      // sql: anchored
-	Cyclical  bool      // sql: cyclical
+	Cyclic    bool      // sql: cyclical
 	LastBump  time.Time // sql: last_bump
 	DeletedAt time.Time // sql: deleted_at
 	IsDeleted bool      // sql: is_deleted

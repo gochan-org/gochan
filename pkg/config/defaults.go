@@ -10,6 +10,7 @@ var (
 				DBMaxIdleConnections: DefaultSQLMaxConns,
 				DBConnMaxLifetimeMin: DefaultSQLConnMaxLifetimeMin,
 			},
+			CheckRequestReferer: true,
 		},
 		SiteConfig: SiteConfig{
 			FirstPage:            []string{"index.html", "firstrun.html", "1.html"},
@@ -48,7 +49,8 @@ var (
 				ThreadsPerPage:           20,
 				RepliesOnBoardPage:       3,
 				StickyRepliesOnBoardPage: 1,
-				CyclicalThreadNumPosts:   500,
+				EnableCyclicThreads:      true,
+				CyclicThreadNumPosts:     500,
 				BanMessage:               "USER WAS BANNED FOR THIS POST",
 				EmbedWidth:               200,
 				EmbedHeight:              164,

@@ -1,3 +1,5 @@
+@use 'animations';
+
 #boardmenu-bottom {
 	margin-top: 16px;
 }
@@ -218,4 +220,30 @@ div.inlinepostprev {
 	overflow: hidden;
 	margin:8px;
 	padding: 4px 8px;
+}
+
+.hideblock {
+	border: 1px solid black;
+	background: rgba(0, 0, 0, 0.1);
+}
+
+.hideblock.open {
+	animation: slideopen 0.25s;
+}
+
+.hideblock.close {
+	animation: slideclose 0.25s;
+}
+
+.hideblock.hidden {
+	display: none;
+}
+
+.hideblock-button {
+	display: block;
+}
+
+.dice-roll {
+	border: 1px dashed #aaa;
+	font-weight: bold;
 }

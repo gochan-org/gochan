@@ -27,7 +27,7 @@ class TestStaffPermissions(SeleniumTestCase):
 		req = Request(urljoin(options.site, "manage/actions"))
 		# modern browsers add pretty printing to JSON so we need to pass the session cookie to a request to get the raw action list data
 		req.add_header("Cookie", f"sessiondata={cookie}")
-		with urlopen(req) as resp:
+		with urlopen(req) as resp: # skipcq: BAN-B310
 			global actions
 			actions = json.load(resp)
 

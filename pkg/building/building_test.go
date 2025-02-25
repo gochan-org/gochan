@@ -25,14 +25,14 @@ func TestBuildJS(t *testing.T) {
 	}
 
 	outDir := t.TempDir()
-	config.SetVersion("3.11.0")
+	config.SetVersion("4.0.2")
 	systemCriticalCfg := config.GetSystemCriticalConfig()
 	systemCriticalCfg.DocumentRoot = path.Join(outDir, "html")
 	systemCriticalCfg.TemplateDir = path.Join(testRoot, "templates")
 	systemCriticalCfg.LogDir = path.Join(outDir, "logs")
 	systemCriticalCfg.WebRoot = "/chan"
 	systemCriticalCfg.TimeZone = 8
-	config.SetSystemCriticalConfig(&systemCriticalCfg)
+	config.SetSystemCriticalConfig(systemCriticalCfg)
 
 	boardCfg := config.GetBoardConfig("")
 	boardCfg.Styles = []config.Style{
@@ -109,7 +109,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
 
-	mock.ExpectPrepare(`SELECT \* FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
+	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "op.id"}).
 			AddRows(
 				[]driver.Value{1, "message_raw", "test", "filename", 1},
@@ -147,14 +147,14 @@ func TestBuildFrontPage(t *testing.T) {
 		}
 		t.Run(driver, func(t *testing.T) {
 			outDir := t.TempDir()
-			config.SetVersion("3.11.0")
+			config.SetVersion("4.0.2")
 			systemCriticalCfg := config.GetSystemCriticalConfig()
 			systemCriticalCfg.DocumentRoot = path.Join(outDir, "html")
 			systemCriticalCfg.TemplateDir = path.Join(testRoot, "templates")
 			systemCriticalCfg.LogDir = path.Join(outDir, "logs")
 			systemCriticalCfg.WebRoot = "/chan"
 			systemCriticalCfg.TimeZone = 8
-			config.SetSystemCriticalConfig(&systemCriticalCfg)
+			config.SetSystemCriticalConfig(systemCriticalCfg)
 
 			boardCfg := config.GetBoardConfig("")
 			boardCfg.Styles = []config.Style{{Name: "test1", Filename: "test1.css"}}

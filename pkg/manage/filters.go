@@ -2,6 +2,7 @@ package manage
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -119,7 +120,7 @@ func submitFilterFormData(request *http.Request, staff *gcsql.Staff, infoEv, err
 					Str("boardIDField", k).
 					Str("boardIDStr", k[10:]).
 					Msg("Unable to parse board ID")
-				return errors.New("unable to parse board ID: " + err.Error())
+				return fmt.Errorf("unable to parse board ID: %w", err)
 			}
 			boardIDLogArr.Int(boardID)
 			boards = append(boards, boardID)
@@ -130,7 +131,7 @@ func submitFilterFormData(request *http.Request, staff *gcsql.Staff, infoEv, err
 			fieldIDstr := k[5:]
 			if _, err = strconv.Atoi(fieldIDstr); err != nil {
 				errEv.Err(err).Caller().Str("fieldID", fieldIDstr).Send()
-				return errors.New("failed to get field data: " + err.Error())
+				return fmt.Errorf("failed to get field data: %w", err)
 			}
 			fc := gcsql.FilterCondition{
 				Field: v[0],

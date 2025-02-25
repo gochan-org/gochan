@@ -1,60 +1,55 @@
-@import 'dark/colors';
+@use 'dark/colors';
 
 body {
-	background: $bgcol;
-	font-family: $font-family;
-	color: $color;
-	font-size: 80%;
+	background: colors.$bgcol;
+	font-family: colors.$font-family;
+	color: colors.$color;
+	// font-size: 80%;
 }
 
 a {
 	text-decoration: none;
-	color: $linkcol;
+	color: colors.$linkcol;
 }
 
 div#topbar {
-	background: $topbarbg;
-	border-bottom: 1px solid $color;
+	background: colors.$topbarbg;
+	border-bottom: 1px solid colors.$color;
 	a {
 		text-shadow: black 1px 1px 1px, black -1px -1px 1px, black -1px 1px 1px, black 1px -1px 1px;
 	}
 }
 
 header {
-	color: $headercol;
+	color: colors.$headercol;
 }
 
 div#content {
-	// input:not([type=submit]):not([type=button]),
 	input:not(div#qrbuttons input),
 	textarea, select {
-		background: $inputbg;
-		border: 1px solid $topbarbg;
-		color: $linkcol;
+		background: colors.$inputbg;
+		border: 1px solid colors.$topbarbg;
+		color: colors.$linkcol;
 	}
 }
 
 th.postblock, table.mgmt-table tr:first-of-type th {
-	background: $blockcol;
-	border: 1px solid $blockborder;
+	background: colors.$blockcol;
+	border: 1px solid colors.$blockborder;
 	border-radius: 5px;
 	text-align: left;
 }
 
-// select.post-actions {
-// 	color: $color;
-// }
-
 div.reply,
 div.postprev,
 div.inlinepostprev {
-	background: $inputbg;
-	border: 1px solid $replyborder;
+	background: colors.$inputbg;
+	border: 1px solid colors.$replyborder;
 	border-radius: 5px;
 }
 
 span.postername {
-	color: $headercol;
+	color: colors.$headercol;
 	font-weight: bold;
 	a {
 		text-decoration: underline;
@@ -62,11 +57,18 @@ span.postername {
 }
 
 span.tripcode {
-	color: $headercol;
+	color: colors.$headercol;
+}
+
+.dropdown-menu {
+	background: colors.$topbarbg!important;
+	b {
+		color: black;
+	}
 }
 
 span.subject {
-	color: $subjectcol;
+	color: colors.$subjectcol;
 }
 
 table#pages, table#pages * {

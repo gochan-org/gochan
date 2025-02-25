@@ -52,7 +52,7 @@ def delete_post(options: TestingOptions, postID:int, password:str):
 	qr_buttons = options.driver.find_element(by=By.ID, value="qr-buttons")
 	if qr_buttons.is_displayed():
 		qr_buttons.find_element(by=By.LINK_TEXT, value="X").click()
-	options.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%postID)).click()
+	options.driver.find_element(by=By.CSS_SELECTOR, value=f"input#check{postID}").click()
 	if password != "":
 		delPasswordInput = options.driver.find_element(
 			by=By.CSS_SELECTOR,

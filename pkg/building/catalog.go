@@ -63,7 +63,10 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 }
 
 func getBoardTopPosts(board string) ([]*Post, error) {
-	const query = "SELECT * FROM DBPREFIXv_building_posts WHERE id = parent_id AND dir = ?"
+	const query = `SELECT id, thread_id, ip, name, tripcode, email, subject, created_on, last_modified, parent_id,
+		last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize, tw, th,
+		width, height, locked, stickied, cyclical, flag, country, is_deleted
+		FROM DBPREFIXv_building_posts WHERE id = parent_id AND dir = ?`
 	var posts []*Post
 
 	err := QueryPosts(query, []any{board}, func(p *Post) error {
@@ -95,7 +98,7 @@ func BuildCatalog(boardID int) error {
 	catalogFile, err := os.OpenFile(catalogPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed opening /%s/catalog.html: %s", board.Dir, err.Error())
+		return fmt.Errorf("failed opening /%s/catalog.html: %w", board.Dir, err)
 	}
 
 	if err = config.TakeOwnershipOfFile(catalogFile); err != nil {
@@ -110,7 +113,7 @@ func BuildCatalog(boardID int) error {
 	}
 	boardConfig := config.GetBoardConfig(board.Dir)
 
-	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.Catalog, map[string]any{
 		"boards":      gcsql.AllBoards,
 		"board":       board,
 		"boardConfig": boardConfig,

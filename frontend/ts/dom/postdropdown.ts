@@ -97,10 +97,10 @@ function deletePost(id: number, board: string, fileOnly = false) {
 				alertLightbox(`Delete failed: ${data.error}`, "Error");
 		}).done(data => {
 			if(data.error === undefined || data === "") {
-				if(location.href.indexOf(`/${board}/res/${id}.html`) > -1) {
-					alertLightbox("Thread deleted", "Success");
-				} else if(fileOnly) {
+				if(fileOnly) {
 					deletePostFile(id);
+				} else if(location.href.indexOf(`/${board}/res/${id}.html`) > -1) {
+					alertLightbox("Thread deleted", "Success");
 				} else {
 					deletePostElement(id);
 				}

@@ -18,7 +18,7 @@ const (
 		`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
 		`<link rel="shortcut icon"href="/favicon.png">` +
 		`<script type="text/javascript"src="/js/consts.js"></script>` +
-		`<script type="text/javascript"src="/js/gochan.js"></script></head>` +
+		`<script type="text/javascript"src="/js/gochan.js"defer></script></head>` +
 		`<body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div>` +
 		`<header><h1 id="board-title">Gochan</h1></header>` +
 		`<div id="content"><div class="section-block banpage-block">`
@@ -36,7 +36,7 @@ const (
 		`<textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea>` +
 		`<input type="submit"name="doappeal"value="Submit"/><br/></form>`
 
-	footer = `<div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`
+	footer = `<footer>Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></footer></div></body></html>`
 )
 
 var (
@@ -67,6 +67,18 @@ var (
 		Subtitle:      "Board for testing",
 		Description:   "Board for testing",
 		DefaultStyle:  "pipes.css",
+		AnonymousName: "Anonymous Coward",
+	}
+
+	simpleBoard2 = &gcsql.Board{
+		ID:            2,
+		SectionID:     2,
+		URI:           "sup",
+		Dir:           "sup",
+		Title:         "Gochan Support board",
+		Subtitle:      "Board for helping out gochan users/admins",
+		Description:   "Board for helping out gochan users/admins",
+		DefaultStyle:  "yotsuba.css",
 		AnonymousName: "Anonymous Coward",
 	}
 
@@ -153,7 +165,7 @@ var (
 				},
 			},
 			expectedOutput: normalBanHeader +
-				`You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:<p class="reason">ban message goes here</p>Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> and will expire on <time class="ban-timestamp" datetime="0001-01-01T00:00:00Z">Mon, January 01, 0001 12:00:00 AM</time>.<br/>Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may appeal this ban:<br/><form id="appeal-form"action="/post"method="POST"><input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0"><textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div><div id="footer">Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></div></div></body></html>`,
+				`You are banned from posting on<span class="ban-boards">all boards</span>for the following reason:<p class="reason">ban message goes here</p>Your ban was placed on<time datetime="0001-01-01T00:00:00Z"class="ban-timestamp">Mon,January 01,0001 12:00:00 AM</time> and will expire on <time class="ban-timestamp" datetime="0001-01-01T00:00:00Z">Mon, January 01, 0001 12:00:00 AM</time>.<br/>Your IP address is<span class="ban-ip">192.168.56.1</span>.<br /><br/>You may appeal this ban:<br/><form id="appeal-form"action="/post"method="POST"><input type="hidden"name="board"value=""><input type="hidden"name="banid"value="0"><textarea rows="4"cols="48"name="appealmsg"id="postmsg"placeholder="Appeal message"></textarea><input type="submit"name="doappeal"value="Submit"/><br/></form></div></div></div><footer>Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></footer></div></body></html>`,
 		},
 		{
 			desc: "unappealable temporary ban",
@@ -196,7 +208,7 @@ var (
 				},
 			},
 			expectedOutput: boardPageHeaderBase +
-				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
+				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#"onClick="window.location.reload(); return false;">Update</a>|<a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
 				footer,
 		},
 		{
@@ -210,7 +222,7 @@ var (
 				},
 			},
 			expectedOutput: boardPageHeaderBase +
-				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
+				`<form action="/util"method="POST"id="main-form"><div id="right-bottom-content"><div id="report-delbox"><input type="hidden"name="board"value="test"/><input type="hidden"name="boardid"value="1"/><label>[<input type="checkbox"name="fileonly"/>File only]</label> <input type="password" size="10" name="password" id="delete-password" /><input type="submit"name="delete_btn"value="Delete"onclick="return confirm('Are you sure you want to delete these posts?')"/><br/>Report reason:<input type="text"size="10"name="reason"id="reason"/><input type="submit"name="report_btn"value="Report"/><br/><input type="submit"name="edit_btn"value="Edit post"/>&nbsp;<input type="submit"name="move_btn"value="Move thread"/></div></div></form><div id="left-bottom-content"><a href="#"onClick="window.location.reload(); return false;">Update</a>|<a href="#">Scroll to top</a><br/><table id="pages"><tr><td>[<a href="/test/1.html">1</a>]</td></tr></table><span id="boardmenu-bottom">[<a href="/">home</a>]&nbsp;[]</span></div>` +
 				footer,
 		},
 	}
@@ -230,7 +242,7 @@ var (
 					".ext": "thumb.png",
 				},
 			},
-			expectedOutput: `var styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];var defaultStyle="pipes.css";var webroot="/";var serverTZ=-1;var fileTypes=[".ext",];`,
+			expectedOutput: `const styles=[{Name:"Pipes",Filename:"pipes.css"},{Name:"Yotsuba A",Filename:"yotsuba.css"}];const defaultStyle="pipes.css";const webroot="/";const serverTZ=-1;const fileTypes=[".ext",];`,
 		},
 		{
 			desc: "empty values",
@@ -239,7 +251,7 @@ var (
 				"webroot":      "",
 				"timezone":     0,
 			},
-			expectedOutput: `var styles=[];var defaultStyle="";var webroot="";var serverTZ=0;var fileTypes=[];`,
+			expectedOutput: `const styles=[];const defaultStyle="";const webroot="";const serverTZ=0;const fileTypes=[];`,
 		},
 		{
 			desc: "escaped string",
@@ -248,7 +260,196 @@ var (
 				"webroot":      "",
 				"timezone":     0,
 			},
-			expectedOutput: `var styles=[];var defaultStyle="\&#34;a\\a\&#34;";var webroot="";var serverTZ=0;var fileTypes=[];`,
+			expectedOutput: `const styles=[];const defaultStyle="\&#34;a\\a\&#34;";const webroot="";const serverTZ=0;const fileTypes=[];`,
+		},
+	}
+
+	baseFooterCases = []templateTestCase{
+		{
+			desc: "base footer test",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard1,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: footer,
+		},
+		{
+			desc: "base footer test",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard2,
+				"numPages":    3,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: footer,
+		},
+	}
+
+	baseHeaderCases = []templateTestCase{
+		{
+			desc: "Header Test /test/",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard1,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: headBeginning +
+				`<title>/test/-Testing board</title>` +
+				`<link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
+				`<link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script>` +
+				`<script type="text/javascript"src="/js/gochan.js"defer></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section">` +
+				`<a href="/"class="topbar-item">home</a></div>` +
+				`<div class="topbar-section"><a href="/test/"class="topbar-item"title="Testing board">/test/</a>` +
+				`<a href="/test2/" class="topbar-item" title="Testing board#2">/test2/</a></div></div>` +
+				`<div id="content">`,
+		},
+		{
+			desc: "Header Test /sup/",
+			data: map[string]any{
+				"boardConfig": simpleBoardConfig,
+				"board":       simpleBoard2,
+				"numPages":    1,
+				"sections": []gcsql.Section{
+					{ID: 1},
+				},
+			},
+			expectedOutput: headBeginning +
+				`<title>/sup/-Gochan Support board</title>` +
+				`<link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
+				`<link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script>` +
+				`<script type="text/javascript"src="/js/gochan.js"defer></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section">` +
+				`<a href="/"class="topbar-item">home</a></div>` +
+				`<div class="topbar-section"><a href="/test/"class="topbar-item"title="Testing board">/test/</a>` +
+				`<a href="/test2/" class="topbar-item" title="Testing board#2">/test2/</a></div></div>` +
+				`<div id="content">`,
+		},
+		{
+			desc: "Perma Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						IsActive:  true,
+						Permanent: true,
+						StaffID:   1,
+						Message:   "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en"><head>` +
+				`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU'RE PERMABANNED,&nbsp;IDIOT!</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"defer></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
+		},
+		{
+			desc: "Appealable Perma Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						Permanent: true,
+						CanAppeal: true,
+						StaffID:   1,
+						Message:   "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en"><head>` +
+				`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU ARE BANNED:(</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"defer></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
+		},
+		{
+			desc: "Appealable Temp Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						CanAppeal: true,
+						StaffID:   1,
+						Message:   "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en">` +
+				`<head><meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU ARE BANNED:(</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"defer></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
+		},
+		{
+			desc: "Unappealable Temp Ban Header Test",
+			data: map[string]any{
+				"ban": &gcsql.IPBan{
+					RangeStart: "192.168.56.0",
+					RangeEnd:   "192.168.56.255",
+					IPBanBase: gcsql.IPBanBase{
+						StaffID: 1,
+						Message: "ban message goes here",
+					},
+				},
+				"ip":         "192.168.56.1",
+				"siteConfig": testingSiteConfig,
+				"systemCritical": config.SystemCriticalConfig{
+					WebRoot: "/",
+				},
+				"boardConfig": config.BoardConfig{
+					DefaultStyle: "pipes.css",
+				},
+			},
+			expectedOutput: `<!DOCTYPE html><html lang="en"><head>` +
+				`<meta charset="UTF-8"><meta name="viewport"content="width=device-width, initial-scale=1.0">` +
+				`<title>YOU ARE BANNED:(</title><link rel="stylesheet"href="/css/global.css"/>` +
+				`<link id="theme"rel="stylesheet"href="/css/pipes.css"/><link rel="shortcut icon"href="/favicon.png">` +
+				`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"defer></script>` +
+				`</head><body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div></div><div id="content">`,
 		},
 	}
 )
@@ -259,7 +460,7 @@ const (
 		`<title>/test/-Testing board</title>` +
 		`<link rel="stylesheet"href="/css/global.css"/><link id="theme"rel="stylesheet"href="/css/pipes.css"/>` +
 		`<link rel="shortcut icon"href="/favicon.png">` +
-		`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"></script></head>` +
+		`<script type="text/javascript"src="/js/consts.js"></script><script type="text/javascript"src="/js/gochan.js"defer></script></head>` +
 		`<body><div id="topbar"><div class="topbar-section"><a href="/"class="topbar-item">home</a></div>` +
 		`<div class="topbar-section"><a href="/test/"class="topbar-item"title="Testing board">/test/</a><a href="/test2/" class="topbar-item" title="Testing board#2">/test2/</a></div></div>` +
 		`<div id="content"><header><h1 id="board-title">/test/-Testing board</h1><div id="board-subtitle">Board for testing<br/><a href="/test/catalog.html">Catalog</a> | <a href="#footer">Bottom</a></div></header><hr />` +
@@ -271,7 +472,7 @@ const (
 		`<tr><th class="postblock">Message</th><td><textarea rows="5" cols="35" name="postmsg" id="postmsg"></textarea></td></tr>` +
 		`<tr><th class="postblock">File</th><td><input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4">` +
 		`<input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>` +
-		`<tr id="threadoptions" style="display:none;"><th class="postblock">Options</th><td></td></tr>` +
+		`<tr id="threadoptions"style="display: none;"><th class="postblock">Options</th><td></td></tr>` +
 		`<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" />(for post/file deletion)</td></tr></table>` +
 		`<input type="password" name="dummy2" style="display:none"/></form></div><hr />`
 )
@@ -290,6 +491,8 @@ func (tC *templateTestCase) Run(t *testing.T, templateName string) {
 		assert.Error(t, err)
 	} else {
 		if !assert.NoError(t, err) {
+			// var allStaff []gcsql.Staff
+
 			return
 		}
 		assert.Equal(t, tC.expectedOutput, buf.String())

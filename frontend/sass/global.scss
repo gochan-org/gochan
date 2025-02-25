@@ -1,25 +1,32 @@
-@import 'global/img';
-@import 'global/front';
-@import 'global/manage';
-@import 'global/lightbox';
-@import 'global/qr';
-@import "global/watcher";
-@import 'global/bans';
+@use 'global/img';
+@use 'global/front';
+@use 'global/manage';
+@use 'global/lightbox';
+@use 'global/qr';
+@use "global/watcher";
+@use 'global/bans';
+@use 'global/animations';
+
+.increase-line-height {
+	header, .post, .reply {
+		line-height: 1.5;
+	}
+}
 
 header {
-	margin-top:50px;
-	text-align:center;
+	margin-top: 50px;
+	text-align: center;
 	h1 {
 		margin: 0px;
 	}
 }
 
 div#topbar {
-	left:0;
-	position:fixed;
-	top:0;
-	width:100%;
-	margin-top:0px;
+	left: 0;
+	position: fixed;
+	top: 0;
+	width: 100%;
+	margin-top: 0px;
 
 	* {
 		padding: 4px;
@@ -63,15 +70,15 @@ div#staffmenu {
 div.section-block {
 	margin-bottom: 8px;
 	div.section-title-block {
-		display:block;
-		padding:4px 8px 4px 8px;
+		display: block;
+		padding: 4px 8px 4px 8px;
 	}
 	div.section-body {
 		overflow-y: hidden;
 		margin-right: 0px;
 		margin-bottom:8px;
 		min-height: 48px;
-		padding:8px;
+		padding: 8px;
 	}
 }
 
@@ -80,13 +87,13 @@ div.section-block {
 	text-align: center;
 }
 
-#footer {
-	bottom:0px;
-	clear:both;
-	left:0px;
-	position:static;
-	text-align:center;
-	width:100%;
+footer {
+	bottom: 0px;
+	clear: both;
+	left: 0px;
+	position: static;
+	text-align: center;
+	width: 100%;
 }
 
 select.post-actions {

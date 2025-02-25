@@ -7,7 +7,7 @@ import (
 )
 
 func TestPanicRecover(t *testing.T) {
-	RegisterEvent([]string{"TestPanicRecoverEvt"}, func(tr string, i ...interface{}) error {
+	RegisterEvent([]string{"TestPanicRecoverEvt"}, func(_ string, i ...any) error {
 		t.Log("Testing panic recover")
 		t.Log(i[0])
 		return nil
@@ -21,7 +21,7 @@ func TestPanicRecover(t *testing.T) {
 }
 
 func TestEventEditValue(t *testing.T) {
-	RegisterEvent([]string{"TestEventEditValue"}, func(tr string, i ...interface{}) error {
+	RegisterEvent([]string{"TestEventEditValue"}, func(_ string, i ...any) error {
 		p := i[0].(*int)
 		*p += 1
 		return nil
@@ -35,7 +35,7 @@ func TestEventEditValue(t *testing.T) {
 
 func TestMultipleEventTriggers(t *testing.T) {
 	triggered := map[string]bool{}
-	RegisterEvent([]string{"a", "b"}, func(tr string, i ...interface{}) error {
+	RegisterEvent([]string{"a", "b"}, func(tr string, _ ...any) error {
 		triggered[tr] = true
 		return nil
 	})

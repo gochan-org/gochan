@@ -34,7 +34,12 @@ func InitMinifier() {
 	}
 }
 
-func canMinify(mediaType string) bool {
+func canMinify(mediaType string) (minify bool) {
+	defer func() {
+		if minify && minifier == nil {
+			InitMinifier()
+		}
+	}()
 	siteConfig := config.GetSiteConfig()
 	if mediaType == "text/html" && siteConfig.MinifyHTML {
 		return true

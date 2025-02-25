@@ -59,7 +59,7 @@ table.mgmt-table tr:first-of-type th {
 }
 
 span.subject {
-  font-weight: bold;
+  font-weight: 800;
   color: #34ED3A;
 }
 
@@ -70,4 +70,14 @@ table#pages, table#pages * {
 div.section-title-block {
   background: #A7A7A7;
   border-bottom: 1px solid #117743;
+}
+
+div#upload-box {
+  background: #aaa;
+}
+div#upload-box a {
+  color: #444;
+}
+div#upload-box a:hover, div#upload-box a:target, div#upload-box a:focus {
+  color: #666;
 }

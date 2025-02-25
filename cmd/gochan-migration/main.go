@@ -56,9 +56,14 @@ func main() {
 		fatalEv.Discard()
 	}()
 
-	if !updateDB && (options.ChanType == "" || options.OldChanConfig == "") {
-		flag.PrintDefaults()
-		fatalEv.Msg("Missing required oldchan value")
+	if !updateDB {
+		if options.ChanType == "" {
+			flag.PrintDefaults()
+			fatalEv.Msg("Missing required oldchan value")
+		} else if options.OldChanConfig == "" {
+			flag.PrintDefaults()
+			fatalEv.Msg("Missing required oldconfig value")
+		}
 	} else if updateDB {
 		options.ChanType = "gcupdate"
 	}
@@ -82,9 +87,22 @@ func main() {
 	default:
 		fatalEv.Msg("Unsupported chan type, Currently only pre2021 database migration is supported")
 	}
+	migratingInPlace := migrator.IsMigratingInPlace()
+	common.LogInfo().
+		Str("oldChanType", options.ChanType).
+		Str("oldChanConfig", options.OldChanConfig).
+		Bool("migratingInPlace", migratingInPlace).
+		Msg("Starting database migration")
+
 	config.InitConfig(versionStr)
-	if !updateDB {
-		sqlCfg := config.GetSQLConfig()
+	sqlCfg := config.GetSQLConfig()
+	if migratingInPlace && sqlCfg.DBtype == "sqlite3" && !updateDB {
+		common.LogWarning().
+			Str("dbType", sqlCfg.DBtype).
+			Bool("migrateInPlace", migratingInPlace).
+			Msg("SQLite has limitations with table column changes")
+	}
+	if !migratingInPlace {
 		err = gcsql.ConnectToDB(&sqlCfg)
 		if err != nil {
 			fatalEv.Err(err).Caller().Msg("Failed to connect to the database")
@@ -103,7 +121,7 @@ func main() {
 		fatalEv.Msg("Unable to migrate database")
 	}
 	if migrated {
-		common.LogInfo().Msg("Database is already migrated")
+		common.LogWarning().Msg("Database is already migrated")
 	} else {
 		common.LogInfo().Str("chanType", options.ChanType).Msg("Database migration complete")
 	}

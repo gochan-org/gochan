@@ -1,73 +1,73 @@
-@import 'pipes/colors';
-@import 'pipes/front';
-@import 'pipes/manage';
-@import 'pipes/img';
-@import 'util';
+@use 'pipes/colors';
+@use 'pipes/front';
+@use 'pipes/manage';
+@use 'pipes/img';
+@use 'util';
 
 * {
 	outline: none;
 }
 
 body {
-	background: $bgcol;
+	background: colors.$bgcol;
 	background-image: url(res/pipes_bg.png);
 	color: #d8d0b9;
-	font: $font;
+	font: colors.$font;
 }
 
 header h1, #site-title {
-	color: $headercol;
+	color: colors.$headercol;
 }
 
 a {
-	color: $linkcol;
-	font: $font;
+	color: colors.$linkcol;
+	font: colors.$font;
 	text-decoration: none;
 }
 
 a:hover {
 	background: inherit;
-	color: $linklight;
+	color: colors.$linklight;
 }
 
 a.topbar-item:hover {
-	background: $bglight;
+	background: colors.$bglight;
 }
 
-div#footer, div#footer * {
+footer, footer * {
 	font-size: 9pt;
 }
 
 div#topbar {
-	background: $topbarcol;
+	background: colors.$topbarcol;
 	// @include box-shadow(0px 2px 2px 3px $shadowcol);
-	@include shadow-filter(0px 4px 2px $shadowcol);
+	@include util.shadow-filter(0px 4px 2px colors.$shadowcol);
 
 	li:hover {
-		background: $bglight;
+		background: colors.$bglight;
 	}
 }
 
 .dropdown-menu {
-	background: $topbarcol!important;
-	@include shadow-filter(2px 2px 3px $shadowcol);
+	background: colors.$topbarcol!important;
+	@include util.shadow-filter(2px 2px 3px colors.$shadowcol);
 	z-index: 0;
 	div:hover {
-		background: $bglight;
+		background: colors.$bglight;
 	}
 }
 
 .ui-tabs-tab {
-	background: $topbarcol;
-	border: 1px solid $bglight;
+	background: colors.$topbarcol;
+	border: 1px solid colors.$bglight;
 }
 
 .ui-tabs-active {
-	background: $bgcol;
+	background: colors.$bgcol;
 }
 
 .ui-tabs-panel {
-	background: $bgcol;
-	border: 1px solid $topbarcol;
+	background: colors.$bgcol;
+	border: 1px solid colors.$topbarcol;
 	padding: 8px;
 }

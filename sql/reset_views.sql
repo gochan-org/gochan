@@ -8,6 +8,7 @@ DROP VIEW IF EXISTS DBPREFIXv_front_page_posts_with_file;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts;
 DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete_file_only;
 DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete;
+DROP VIEW IF EXISTS DBPREFIXv_posts_cyclical_check;
 DROP VIEW IF EXISTS DBPREFIXv_recent_posts;
 DROP VIEW IF EXISTS DBPREFIXv_building_posts;
 DROP VIEW IF EXISTS DBPREFIXv_top_post_thread_ids;
@@ -42,10 +43,10 @@ INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = p.thread_id
 WHERE p.is_deleted = FALSE;
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS
-SELECT p.id AS postid, thread_id, (
-	SELECT op.id AS opid FROM DBPREFIXposts op
+SELECT p.id AS post_id, thread_id, (
+	SELECT op.id AS op_id FROM DBPREFIXposts op
 	WHERE op.thread_id = p.thread_id AND is_top_post LIMIT 1
-) as opid, is_top_post, COALESCE(filename, '') AS filename, dir
+) as op_id, is_top_post, COALESCE(filename, '') AS filename, dir
 FROM DBPREFIXboards b
 LEFT JOIN DBPREFIXthreads t ON t.board_id = b.id
 LEFT JOIN DBPREFIXposts p ON p.thread_id = t.id
@@ -55,10 +56,17 @@ CREATE VIEW DBPREFIXv_posts_to_delete_file_only AS
 SELECT * FROM DBPREFIXv_posts_to_delete
 WHERE filename IS NOT NULL;
 
+CREATE VIEW DBPREFIXv_posts_cyclical_check AS
+SELECT post_id, d.thread_id, op_id, d.is_top_post, filename, dir
+FROM DBPREFIXv_posts_to_delete d
+INNER JOIN DBPREFIXposts p ON p.id = post_id
+INNER JOIN DBPREFIXthreads t ON d.thread_id = t.id
+WHERE p.is_deleted = 0 AND d.is_top_post = 0 and t.cyclical = 1;
+
 CREATE VIEW DBPREFIXv_front_page_posts AS
 SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) as dir,
-COALESCE(f.filename, '') as filename, op.id as opid
+COALESCE(f.filename, '') as filename, op.id as op_id
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 LEFT JOIN (SELECT post_id, filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id

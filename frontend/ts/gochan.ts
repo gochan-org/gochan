@@ -4,7 +4,7 @@ import "./vars";
 import "./cookies";
 import "./notifications";
 import { setPageBanner } from "./dom/banners";
-import { setCustomCSS, setCustomJS, setTheme } from "./settings";
+import { setCustomCSS, setCustomJS, setTheme, updateExternalLinks } from "./settings";
 import { handleKeydown } from "./boardevents";
 import { initStaff, createStaffMenu, addStaffThreadOptions } from "./management/manage";
 import { getPageThread } from "./postinfo";
@@ -57,6 +57,7 @@ $(() => {
 	});
 	$(document).on("keydown", handleKeydown);
 	initFlags();
+	updateExternalLinks();
 	setCustomCSS();
 	setCustomJS();
 });

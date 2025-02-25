@@ -21,7 +21,7 @@ def start_tests(dict_options:dict[str,object]=None):
 	options = TestingOptions.from_dict(dict_options)
 	set_active_options(options)
 	single_test = dict_options.get("single_test", "")
-	print("Using browser %s (headless: %s) on site %s" % (options.browser, options.headless, options.site))
+	print(f"Using browser {options.browser} (headless: {options.headless}) on site {options.site}")
 	if single_test == "":
 		suite = unittest.suite.TestSuite()
 		SeleniumTestCase.add(suite, options, TestPosting)
@@ -69,7 +69,7 @@ def setup_selenium_args(parser:ArgumentParser):
 	parser.add_argument("--keep-open", action="store_true",
 		help="If set, the browser windows will not automatically close after the tests are complete")
 	parser.add_argument("--site", default=default_site,
-		help=("Sets the site to be used for testing, defaults to %s" % default_site))
+		help=f"Sets the site to be used for testing, defaults to {default_site}")
 	parser.add_argument("--board1", default=default_board1,
 		help="Sets the main board to be used for testing. It must already be created or tests that use it will fail")
 	parser.add_argument("--board2", default=default_board2,
@@ -102,14 +102,14 @@ def setup_selenium_args(parser:ArgumentParser):
 		help="Sets the password to be used when logging in as a janitor. Janitor tests will fail if this does not exist")
 	parser.add_argument("--single-test", default="",
 		help="If specified, only the test method with this name will be run")
-	
+
 	return parser.parse_args()
 
 
 if __name__ == "__main__":
 	parser = ArgumentParser(description="Browser testing via Selenium")
 	args = setup_selenium_args(parser)
-	
+
 	try:
 		start_tests(args.__dict__)
 	except KeyboardInterrupt:

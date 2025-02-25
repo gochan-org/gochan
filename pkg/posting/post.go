@@ -226,6 +226,10 @@ func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, e
 		errEv.Err(err).Caller().Msg("Unable to format message")
 		return errors.New("unable to format message")
 	}
+	if err = ApplyDiceRoll(post); err != nil {
+		errEv.Err(err).Caller().Msg("Error applying dice roll")
+		return err
+	}
 	return nil
 }
 
@@ -249,7 +253,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	infoEv, errEv := gcutil.LogRequest(request)
 
-	if !serverutil.ValidReferer(request) {
+	refererResult, err := serverutil.CheckReferer(request)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		server.ServeError(writer, "Error checking referer", wantsJSON, nil)
+		return
+	}
+	if refererResult != serverutil.InternalReferer {
 		// post has no referrer, or has a referrer from a different domain, probably a spambot
 		gcutil.LogWarning().
 			Str("spam", "badReferer").
@@ -333,9 +343,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	isCyclical := request.PostFormValue("cyclical") == "on"
-	if isCyclical && boardConfig.CyclicalThreadNumPosts == 0 {
-		server.ServeError(writer, "Board does not support cyclical threads", wantsJSON, nil)
+	isCyclic := request.PostFormValue("cyclic") == "on"
+	if isCyclic && !boardConfig.EnableCyclicThreads {
+		writer.WriteHeader(http.StatusBadRequest)
+		server.ServeError(writer, "Board does not support cyclic threads", wantsJSON, nil)
 		return
 	}
 
@@ -416,8 +427,8 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	var filePath, thumbPath, catalogThumbPath string
+	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	if upload != nil {
-		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 		filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
 		thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
 			path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
@@ -430,7 +441,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	_, emailCommand := getEmailAndCommand(request)
-	if err = post.Insert(emailCommand != "sage", board.ID, isLocked, isSticky, false, isCyclical); err != nil {
+	if err = post.Insert(emailCommand != "sage", board.ID, isLocked, isSticky, false, isCyclic); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
@@ -460,14 +471,67 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		if err = config.TakeOwnership(filePath); err != nil {
 			errEv.Err(err).Caller().
 				Str("file", filePath).Send()
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			post.Delete()
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 		}
 		if err = config.TakeOwnership(thumbPath); err != nil {
 			errEv.Err(err).Caller().
 				Str("thumbnail", thumbPath).Send()
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			post.Delete()
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
 		}
 		if err = config.TakeOwnership(catalogThumbPath); err != nil && !os.IsNotExist(err) {
 			errEv.Err(err).Caller().
 				Str("catalogThumbnail", catalogThumbPath).Send()
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+			post.Delete()
+			server.ServeError(writer, err.Error(), wantsJSON, nil)
+		}
+	}
+
+	if !post.IsTopPost {
+		toBePruned, err := post.CyclicPostsToBePruned()
+		if err != nil {
+			errEv.Err(err).Caller().Msg("Unable to get posts to be pruned from cyclic thread")
+			server.ServeError(writer, "Unable to get cyclic thread info", wantsJSON, nil)
+			return
+		}
+		gcutil.LogInt("toBePruned", len(toBePruned), infoEv, errEv)
+
+		// prune posts from cyclic thread
+		for _, prunePost := range toBePruned {
+			fmt.Printf("%#v\n", prunePost)
+			p := &gcsql.Post{ID: prunePost.PostID, ThreadID: prunePost.ThreadID}
+
+			if err = p.Delete(); err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", prunePost.PostID).
+					Msg("Unable to prune post from cyclic thread")
+				server.ServeError(writer, "Unable to prune post from cyclic thread", wantsJSON, nil)
+				return
+			}
+			if prunePost.Filename != "" && prunePost.Filename != "deleted" {
+				prunePostFile := path.Join(documentRoot, prunePost.Dir, "src", prunePost.Filename)
+				prunePostThumbName, _ := uploads.GetThumbnailFilenames(prunePost.Filename)
+				prunePostThumb := path.Join(documentRoot, prunePost.Dir, "thumb", prunePostThumbName)
+				gcutil.LogStr("prunePostFile", prunePostFile, infoEv, errEv)
+				gcutil.LogStr("prunePostThumb", prunePostThumb, infoEv, errEv)
+
+				if err = os.Remove(prunePostFile); err != nil {
+					errEv.Err(err).Caller().Msg("Unable to delete post file")
+				}
+				if err = os.Remove(prunePostThumb); err != nil {
+					errEv.Err(err).Caller().Msg("Unable to delete post thumbnail")
+				}
+			}
 		}
 	}
 

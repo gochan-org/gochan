@@ -41,10 +41,14 @@ type GochanConfig struct {
 // ValidateValues checks to make sure that the configuration options are usable
 // (e.g., ListenIP is a valid IP address, Port isn't a negative number, etc)
 func (gcfg *GochanConfig) ValidateValues() error {
-	// if net.ParseIP(gcfg.ListenIP) == nil {
-	// 	return &InvalidValueError{Field: "ListenIP", Value: gcfg.ListenIP}
-	// }
 	changed := false
+
+	if gcfg.SiteDomain == "" {
+		return &InvalidValueError{Field: "SiteDomain", Value: gcfg.SiteDomain, Details: "must be set"}
+	}
+	if strings.Contains(gcfg.SiteDomain, " ") || strings.Contains(gcfg.SiteDomain, "://") {
+		return &InvalidValueError{Field: "SiteDomain", Value: gcfg.SiteDomain, Details: "must be a host (port optional)"}
+	}
 
 	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
 	if errors.Is(err, durationutil.ErrInvalidDurationString) {
@@ -162,10 +166,11 @@ type SystemCriticalConfig struct {
 
 	SQLConfig
 
-	Verbose    bool `json:"DebugMode"`
-	RandomSeed string
-	Version    *GochanVersion `json:"-"`
-	TimeZone   int            `json:"-"`
+	CheckRequestReferer bool
+	Verbose             bool `json:"DebugMode"`
+	RandomSeed          string
+	Version             *GochanVersion `json:"-"`
+	TimeZone            int            `json:"-"`
 }
 
 // SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),
@@ -321,7 +326,8 @@ type PostConfig struct {
 	RepliesOnBoardPage       int
 	StickyRepliesOnBoardPage int
 	NewThreadsRequireUpload  bool
-	CyclicalThreadNumPosts   int
+	EnableCyclicThreads      bool
+	CyclicThreadNumPosts     int
 
 	BanColors        []string
 	BanMessage       string
@@ -331,6 +337,7 @@ type PostConfig struct {
 	ImagesOpenNewTab bool
 	NewTabOnOutlinks bool
 	DisableBBcode    bool
+	AllowDiceRerolls bool
 }
 
 func WriteConfig() error {
@@ -345,8 +352,8 @@ func GetSQLConfig() SQLConfig {
 
 // GetSystemCriticalConfig returns system-critical configuration options like listening IP
 // It returns a value instead of a pointer, because it is not usually safe to edit while Gochan is running.
-func GetSystemCriticalConfig() SystemCriticalConfig {
-	return cfg.SystemCriticalConfig
+func GetSystemCriticalConfig() *SystemCriticalConfig {
+	return &cfg.SystemCriticalConfig
 }
 
 // GetSiteConfig returns the global site configuration (site name, slogan, etc)

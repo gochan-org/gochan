@@ -4,7 +4,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 )
 
-func LValueToInterface(l *lua.LState, v lua.LValue) interface{} {
+func LValueToInterface(l *lua.LState, v lua.LValue) any {
 	lt := v.Type()
 	switch lt {
 	case lua.LTNil:
@@ -18,8 +18,24 @@ func LValueToInterface(l *lua.LState, v lua.LValue) interface{} {
 	case lua.LTUserData:
 		l.Push(v)
 		return l.CheckUserData(l.GetTop()).Value
+	case lua.LTTable:
+		t := v.(*lua.LTable)
+		tableLength := t.Len()
+		if tableLength > 0 {
+			// Array
+			arr := make([]any, tableLength)
+			for i := 1; i <= tableLength; i++ {
+				arr[i-1] = LValueToInterface(l, t.RawGetInt(i))
+			}
+			return arr
+		}
+		m := make(map[string]any)
+		t.ForEach(func(k, v lua.LValue) {
+			m[k.String()] = LValueToInterface(l, v)
+		})
+		return m
 	default:
-		l.RaiseError("Incompatible Lua type")
+		l.ArgError(2, "Incompatible Lua type")
 	}
 	return nil
 }

@@ -18,6 +18,8 @@ default_post_password = "12345"
 default_board1 = "test"
 default_board2 = "test2"
 default_staff_board = "selenium"
+default_cyclic_board = "cyclictest"
+default_cyclic_count = 5
 default_admin_username = "selenium_admin"
 default_admin_password = "password"
 default_moderator_username = "selenium_moderator"
@@ -35,6 +37,8 @@ class TestingOptions:
 	board1: str
 	board2: str
 	staff_board: str
+	cyclic_board: str
+	cyclic_count: int
 	name: str
 	email: str
 	subject: str
@@ -65,6 +69,8 @@ class TestingOptions:
 		options.board1 = src_dict.get("board1", default_board1)
 		options.board2 = src_dict.get("board2", default_board2)
 		options.staff_board = src_dict.get("staff_board", default_staff_board)
+		options.cyclic_board = src_dict.get("cyclic_board", default_cyclic_board)
+		options.cyclic_count = src_dict.get("cyclic_count", default_cyclic_count)
 		options.name = src_dict.get("name", default_name)
 		options.email = src_dict.get("email", default_email)
 		options.subject = src_dict.get("subject", default_subject)
@@ -126,7 +132,7 @@ class TestingOptions:
 			case ""|None:
 				raise ValueError("browser argument is required")
 			case _:
-				raise ValueError("Unrecognized browser argument %s" % browser)
+				raise ValueError(f"Unrecognized browser argument {browser}")
 
 
 	def boards_json(self) -> dict[str, object]:

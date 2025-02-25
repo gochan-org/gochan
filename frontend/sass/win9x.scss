@@ -1,27 +1,27 @@
-@import 'win9x/vars';
+@use 'win9x/vars';
 
 @font-face {
-	@include mssans-font(400, normal);
+	@include vars.mssans-font(400, normal);
 	
 }
 @font-face {
-	@include mssans-font(700, normal);
+	@include vars.mssans-font(700, normal);
 }
 
 body {
-	font-size: $fontsize;
+	font-size: vars.$fontsize;
 	color: white;
-	background: $bgcol;
+	background: vars.$bgcol;
 }
 
 a {
-	color: $txtcol;
+	color: vars.$txtcol;
 	text-decoration: none;
 }
 
 input {
-	color: $txtcol;
-	font-size: $fontsize!important;
+	color: vars.$txtcol;
+	font-size: vars.$fontsize!important;
 	font-family: "Pixelated MS Sans Serif", Arial;
 	outline: none;
 }
@@ -30,7 +30,7 @@ input {
 div#topbar {
 	height: 26px;
 	background: silver!important;
-	box-shadow: $bar-shadow;
+	box-shadow: vars.$bar-shadow;
 	box-sizing: border-box;
 	border: none!important;
 	border-radius: 0!important;
@@ -39,9 +39,9 @@ div#topbar {
 	}
 	a[href="/"] {
 		font-family: "Pixelated MS Sans Serif", Arial;
-		font-size: $fontsize;
+		font-size: vars.$fontsize;
 		content: "Start"!important;
-		background: $start_path!important;
+		background: vars.$start_path!important;
 		background-repeat: no-repeat!important;
 		background-position-x: 3px!important;
 		background-position-y: 4px!important;
@@ -54,12 +54,12 @@ div#topbar {
 div#topbar,
 div#topbar a {
 	background: silver!important;
-	box-shadow: $bar-shadow;
+	box-shadow: vars.$bar-shadow;
 	box-sizing: border-box;
 	border: none!important;
 	border-radius: 0!important;
 	height:24px;
-	color: $txtcol!important;
+	color: vars.$txtcol!important;
 	font-family: "Pixelated MS Sans Serif", Arial;
 	font-size: 11px;
 	cursor: default;
@@ -70,10 +70,10 @@ div#content {
 	input[type=button],
 	input[role=pushbutton],
 	input[type=submit] {
-		color: $txtcol!important;
+		color: vars.$txtcol!important;
 		/* font-size: 12px!important; */
 		background: silver!important;
-		box-shadow: $bar-shadow;
+		box-shadow: vars.$bar-shadow;
 		box-sizing: border-box;
 		border: none!important;
 		border-radius: 0!important;
@@ -95,7 +95,7 @@ div#qr-title {
 	background: linear-gradient(90deg,navy,#1084d0);
 	a {
 		font-family: Arial, Helvetica, sans-serif;
-		box-shadow: $bar-shadow;
+		box-shadow: vars.$bar-shadow;
 		min-width: 16px;
 		min-height: 14px;
 		display: block;
@@ -105,7 +105,7 @@ div#qr-title {
 		background-position: top 3px left 40px!important;
 	}
 	a:hover {
-		color:$txtcol;
+		color:vars.$txtcol;
 	}
 	span#qr-buttons * {
 		display: inline-block;
@@ -125,7 +125,7 @@ div#qr-box {
 		box-shadow: inset -1px -1px #fff,inset 1px 1px grey,inset -2px -2px #dfdfdf,inset 2px 2px #0a0a0a;
 		margin: 0;
 		font-family: "Pixelated MS Sans Serif",Arial;
-		color: $txtcol;
+		color: vars.$txtcol;
 		appearance: none;
 	}
 }
@@ -140,7 +140,7 @@ input[type=text] {
 } */
 
 a.boardlistactive {
-	color: $txtcol!important;
+	color: vars.$txtcol!important;
 	padding: 6px 3px!important;
 	outline: 1px dotted #000;
 	outline-offset: -4px;
@@ -148,7 +148,7 @@ a.boardlistactive {
 
 
 h1, h2, div.subtitle, a#qrDisplayButton {
-	color: $txtcol;
+	color: vars.$txtcol;
 	font-family: Arial, sans-serif;
 }
 
@@ -172,7 +172,7 @@ div#content select {
 }
 
 div.pages {
-	background: $bgcol;
+	background: vars.$bgcol;
 	border: none;
 	color: white;
 	/* border-right: black;

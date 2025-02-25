@@ -3,7 +3,7 @@
 		<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
 		<div id="board-subtitle">
 			{{$.board.Subtitle}}<br/>
-			<a href="{{webPathDir $.board.Dir}}" >Return</a> | <a href="{{webPath $.board.Dir "/catalog.html"}}">Catalog</a> | <a href="#footer">Bottom</a>
+			<a href="{{webPathDir $.board.Dir}}" >Return</a> | <a href="#" onClick="window.location.reload(); return false;">Update</a> | <a href="{{webPath $.board.Dir "/catalog.html"}}">Catalog</a> | <a href="#footer">Bottom</a>
 		</div>
 	</header><hr />
 	{{template "postbox.html" .}}<hr />

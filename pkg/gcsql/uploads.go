@@ -3,6 +3,7 @@ package gcsql
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/gochan-org/gochan/pkg/events"
 )
@@ -23,7 +24,7 @@ func GetThreadFiles(post *Post) ([]Upload, error) {
 	query := selectFilesBaseSQL + `WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?)) AND filename != 'deleted'`
-	rows, err := QuerySQL(query, post.ID)
+	rows, err := Query(nil, query, post.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,16 +43,28 @@ func GetThreadFiles(post *Post) ([]Upload, error) {
 	return uploads, nil
 }
 
-func (p *Post) nextFileOrder() (int, error) {
+// NextFileOrder gets what would be the next file_order value (not particularly useful until multi-file posting is implemented)
+func (p *Post) NextFileOrder(requestOpts ...*RequestOptions) (int, error) {
+	opts := setupOptions(requestOpts...)
 	const query = `SELECT COALESCE(MAX(file_order) + 1, 0) FROM DBPREFIXfiles WHERE post_id = ?`
 	var next int
-	err := QueryRowSQL(query, []any{p.ID}, []any{&next})
+	err := QueryRow(opts, query, []any{p.ID}, []any{&next})
 	return next, err
 }
 
-func (p *Post) AttachFile(upload *Upload) error {
+func (p *Post) AttachFile(upload *Upload, requestOpts ...*RequestOptions) error {
 	if upload == nil {
 		return nil // no upload to attach, so no error
+	}
+	opts := setupOptions(requestOpts...)
+	shouldCommit := opts.Tx == nil
+	var err error
+	if shouldCommit {
+		opts.Tx, err = BeginTx()
+		if err != nil {
+			return err
+		}
+		defer opts.Tx.Rollback()
 	}
 
 	_, err, recovered := events.TriggerEvent("incoming-upload", upload)
@@ -59,7 +72,7 @@ func (p *Post) AttachFile(upload *Upload) error {
 		return errors.New("recovered from a panic in an event handler (incoming-upload)")
 	}
 	if err != nil {
-		return errors.New("unable to attach upload to post: " + err.Error())
+		return fmt.Errorf("unable to attach upload to post: %w", err)
 	}
 
 	const insertSQL = `INSERT INTO DBPREFIXfiles (
@@ -69,38 +82,30 @@ func (p *Post) AttachFile(upload *Upload) error {
 	if upload.ID > 0 {
 		return ErrAlreadyAttached
 	}
-	tx, err := BeginTx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	stmt, err := PrepareSQL(insertSQL, tx)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
 	if upload.FileOrder < 1 {
-		upload.FileOrder, err = p.nextFileOrder()
+		upload.FileOrder, err = p.NextFileOrder(opts)
 		if err != nil {
 			return err
 		}
 	}
 	upload.PostID = p.ID
-	if _, err = stmt.Exec(
+	if _, err = Exec(opts, insertSQL,
 		&upload.PostID, &upload.FileOrder, &upload.OriginalFilename, &upload.Filename, &upload.Checksum, &upload.FileSize,
 		&upload.IsSpoilered, &upload.ThumbnailWidth, &upload.ThumbnailHeight, &upload.Width, &upload.Height,
 	); err != nil {
 		return err
 	}
-	if upload.ID, err = getLatestID("DBPREFIXfiles", tx); err != nil {
+
+	upload.ID, err = getLatestID(opts, "DBPREFIXfiles")
+	if err != nil {
 		return err
 	}
-	if err = tx.Commit(); err != nil {
-		return err
+	if shouldCommit {
+		if err = opts.Tx.Commit(); err != nil {
+			return err
+		}
 	}
-	return stmt.Close()
+	return nil
 }
 
 // GetUploadFilenameAndBoard returns the filename (or an empty string) and
@@ -112,7 +117,7 @@ func GetUploadFilenameAndBoard(postID int) (string, string, error) {
 		JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id
 		WHERE DBPREFIXposts.id = ?`
 	var filename, dir string
-	err := QueryRowSQL(query, []any{postID}, []any{&filename, &dir})
+	err := QueryRow(nil, query, []any{postID}, []any{&filename, &dir})
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", "", nil
 	} else if err != nil {

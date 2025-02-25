@@ -93,3 +93,17 @@ span.subject {
   color: #CC1105;
   font-weight: 700;
 }
+
+.dice-roll {
+  border: 1px dashed #222;
+}
+
+div#upload-box {
+  background: #aaa;
+}
+div#upload-box a {
+  color: #444;
+}
+div#upload-box a:hover, div#upload-box a:target, div#upload-box a:focus {
+  color: #666;
+}

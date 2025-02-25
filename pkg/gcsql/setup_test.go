@@ -171,7 +171,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		ExpectQuery().WithArgs("test").
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
 
-	_, err := ExecSQL("CREATE DATABASE gochan")
+	_, err := Exec(nil, "CREATE DATABASE gochan")
 	if err != nil {
 		return err
 	}

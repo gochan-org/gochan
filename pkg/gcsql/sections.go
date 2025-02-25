@@ -9,7 +9,8 @@ import (
 var (
 	// AllSections provides a quick and simple way to access a list of all non-hidden sections without
 	// having to do any SQL queries. It and AllBoards are updated by ResetBoardSectionArrays
-	AllSections []Section
+	AllSections            []Section
+	ErrSectionDoesNotExist = errors.New("section does not exist")
 )
 
 // GetAllSections gets a list of all existing sections, optionally omitting hidden ones
@@ -62,21 +63,40 @@ func getOrCreateDefaultSectionID() (sectionID int, err error) {
 	return id, nil
 }
 
+// GetSectionFromID returns a section from the database, given its ID
 func GetSectionFromID(id int) (*Section, error) {
 	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE id = ?`
 	var section Section
 	err := QueryRowTimeoutSQL(nil, query, []any{id}, []any{
 		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
 	})
-	if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrSectionDoesNotExist
+	} else if err != nil {
 		return nil, err
 	}
 	return &section, err
 }
 
+// GetSectionFromID returns a section from the database, given its name
+func GetSectionFromName(name string) (*Section, error) {
+	const query = `SELECT id, name, abbreviation, position, hidden FROM DBPREFIXsections WHERE name = ?`
+	var section Section
+	err := QueryRowTimeoutSQL(nil, query, []any{name}, []any{
+		&section.ID, &section.Name, &section.Abbreviation, &section.Position, &section.Hidden,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrSectionDoesNotExist
+	} else if err != nil {
+		return nil, err
+	}
+	return &section, err
+}
+
+// DeleteSection deletes a section from the database and resets the AllSections array
 func DeleteSection(id int) error {
 	const query = `DELETE FROM DBPREFIXsections WHERE id = ?`
-	_, err := ExecSQL(query, id)
+	_, err := Exec(nil, query, id)
 	if err != nil {
 		return err
 	}
@@ -85,38 +105,47 @@ func DeleteSection(id int) error {
 
 // NewSection creates a new board section in the database and returns a *Section struct pointer.
 // If position < 0, it will use the ID
-func NewSection(name string, abbreviation string, hidden bool, position int) (*Section, error) {
+func NewSection(name string, abbreviation string, hidden bool, position int, requestOpts ...*RequestOptions) (*Section, error) {
 	const sqlINSERT = `INSERT INTO DBPREFIXsections (name, abbreviation, hidden, position) VALUES (?,?,?,?)`
 	const sqlPosition = `SELECT COALESCE(MAX(position) + 1, 1) FROM DBPREFIXsections`
-
-	tx, err := BeginTx()
-	if err != nil {
-		return nil, err
+	var opts *RequestOptions
+	var err error
+	shouldCommit := len(requestOpts) == 0
+	if shouldCommit {
+		opts = &RequestOptions{}
+		opts.Tx, err = BeginTx()
+		if err != nil {
+			return nil, err
+		}
+		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		defer func() {
+			opts.Cancel()
+			opts.Tx.Rollback()
+		}()
+	} else {
+		opts = requestOpts[0]
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer func() {
-		cancel()
-		tx.Rollback()
-	}()
 
 	if position < 0 {
 		// position not specified
-		err = QueryRowContextSQL(ctx, tx, sqlPosition, nil, []any{&position})
+		err = QueryRow(opts, sqlPosition, nil, []any{&position})
 		if errors.Is(err, sql.ErrNoRows) {
 			position = 1
 		} else if err != nil {
 			return nil, err
 		}
 	}
-	if _, err = ExecContextSQL(ctx, tx, sqlINSERT, name, abbreviation, hidden, position); err != nil {
+	if _, err = Exec(opts, sqlINSERT, name, abbreviation, hidden, position); err != nil {
 		return nil, err
 	}
-	id, err := getLatestID("DBPREFIXsections", tx)
+	id, err := getLatestID(opts, "DBPREFIXsections")
 	if err != nil {
 		return nil, err
 	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
+	if shouldCommit {
+		if err = opts.Tx.Commit(); err != nil {
+			return nil, err
+		}
 	}
 	return &Section{
 		ID:           id,
@@ -127,8 +156,22 @@ func NewSection(name string, abbreviation string, hidden bool, position int) (*S
 	}, nil
 }
 
-func (s *Section) UpdateValues() error {
+func (s *Section) UpdateValues(requestOpts ...*RequestOptions) error {
+	opts := setupOptions(requestOpts...)
+	if opts.Context == context.Background() {
+		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		defer opts.Cancel()
+	}
+
+	var count int
+	err := QueryRow(opts, `SELECT COUNT(*) FROM DBPREFIXsections WHERE id = ?`, []any{s.ID}, []any{&count})
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrSectionDoesNotExist
+	}
+	if err != nil {
+		return err
+	}
 	const query = `UPDATE DBPREFIXsections set name = ?, abbreviation = ?, position = ?, hidden = ? WHERE id = ?`
-	_, err := ExecTimeoutSQL(nil, query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
+	_, err = Exec(opts, query, s.Name, s.Abbreviation, s.Position, s.Hidden, s.ID)
 	return err
 }

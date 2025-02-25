@@ -63,11 +63,11 @@ class TestPosting(SeleniumTestCase):
 
 		cur_url = self.driver.current_url
 		threadID = threadRE.findall(cur_url)[0][1]
-		self.driver.find_element(by=By.CSS_SELECTOR, value=("input#check%s"%threadID)).click()
+		self.driver.find_element(by=By.CSS_SELECTOR, value=f"input#check{threadID}").click()
 		cur_url = self.driver.current_url
 		self.driver.find_element(by=By.CSS_SELECTOR, value="input[name=move_btn]").click()
 		# wait for response to move_btn
-		WebDriverWait(self.driver, 10).until(EC.title_contains("Move thread #%s" % threadID))
+		WebDriverWait(self.driver, 10).until(EC.title_contains(f"Move thread #{threadID}"))
 
 		self.driver.find_element(by=By.CSS_SELECTOR, value="input[type=submit]").click()
 		# wait for response to move request (domove=1)
@@ -94,3 +94,38 @@ class TestPosting(SeleniumTestCase):
 		WebDriverWait(self.driver, 10).until(EC.url_changes(cur_url))
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the moved thread")
 
+	def test_cyclic(self):
+		self.assertTrue(self.options.board_exists(self.options.cyclic_board), f"Confirming that /{self.options.cyclic_board}/ exists")
+
+		self.options.goto_page(self.options.cyclic_board)
+		WebDriverWait(self.driver, 10).until(
+			EC.element_to_be_clickable((By.CSS_SELECTOR, "form#postform input[type=submit]")))
+		form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+		form.find_element(by=By.NAME, value="cyclic").click()
+		send_post(form,
+			self.options.name,
+			"noko",
+			"Cyclic thread test",
+			"Cyclic thread OP",
+			path.abspath(self.options.upload_path),
+			self.options.post_password)
+		WebDriverWait(self.driver, 10).until(EC.url_matches(threadRE))
+
+		for r in range(self.options.cyclic_count + 2):
+			form = self.driver.find_element(by=By.CSS_SELECTOR, value="form#postform")
+			send_post(form,
+				self.options.name,
+				"noko",
+				"",
+				f"Reply {r+1}",
+				path.abspath(self.options.upload_path),
+				self.options.post_password)
+			WebDriverWait(self.driver, 10).until(EC.url_matches(threadRE))
+
+		# go to the thread and make sure that the first two replies are pruned
+		cur_url = self.driver.current_url
+		threadID = threadRE.findall(cur_url)[0][1]
+		replies = self.driver.find_elements(by=By.CSS_SELECTOR, value="div.reply")
+		self.assertEqual(len(replies), self.options.cyclic_count, f"Verify that the cyclic thread has the correct number of replies (CyclicThreadNumPosts in /{self.options.cyclic_board}/board.json must be set to {self.options.cyclic_count})")
+		self.assertEqual(replies[0].find_element(by=By.CSS_SELECTOR, value="div.post-text").text, "Reply 3", "Verify that the first reply is the third post")
+		delete_post(self.options, int(threadID), self.options.post_password)

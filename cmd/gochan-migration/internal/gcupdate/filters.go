@@ -32,7 +32,6 @@ type filenameOrUsernameBanBase struct {
 	StaffID   int       // sql: staff_id
 	StaffNote string    // sql: staff_note
 	IssuedAt  time.Time // sql: issued_at
-	check     string    // replaced with username or filename
 	IsRegex   bool      // sql: is_regex
 }
 

@@ -20,6 +20,7 @@
 	"DBprefix": "gc_",
 	"_DBprefix_info": "The prefix automataically applied to tables when the database is being provisioned and queried",
 
+	"CheckRequestReferer": true,
 	"Lockdown": false,
 	"LockdownMessage": "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
 	"Modboard": "staff",
@@ -91,12 +92,17 @@
 		"somemod:blue"
 	],
 	"BanMessage": "USER WAS BANNED FOR THIS POST",
+
+	"EnableCyclicThreads": true,
+	"CyclicThreadNumPosts": 500,
 	"EnableEmbeds": true,
 	"EnableNoFlag": true,
 	"EmbedWidth": 200,
 	"EmbedHeight": 164,
 	"ImagesOpenNewTab": true,
 	"NewTabOnOutlinks": true,
+	"DisableBBcode": false,
+	"AllowDiceRerolls": false,
 
 	"MinifyHTML": true,
 	"MinifyJS": true,
@@ -108,8 +114,8 @@
 		"SiteKey": "your site key goes here (if you want a captcha, make sure to replace '_Captcha' with 'Captcha'",
 		"AccountSecret": "your account secret key goes here"
 	},
-	"GeoIPType": "mmdb",
-	"GeoIPOptions": {
+	"_GeoIPType": "mmdb",
+	"_GeoIPOptions": {
 		"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
 		"isoCode": "en"
 	},

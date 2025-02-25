@@ -9,7 +9,7 @@ export function removeLightbox(...customs: any) {
 
 export function showLightBox(title: string, innerHTML: string) {
 	$(document.body).prepend(
-		`<div class="lightbox-bg"></div><div class="lightbox"><div class="lightbox-title">${title}<a href="javascript:;" class="lightbox-x">X</a><hr /></div>${innerHTML}</div>`
+		`<div class="lightbox-bg"></div><div class="lightbox"><h1 class="lightbox-title">${title}<a href="javascript:;" class="lightbox-x">X</a><hr /></h1>${innerHTML}</div>`
 	);
 	$("a.lightbox-x, .lightbox-bg").on("click", removeLightbox);
 }

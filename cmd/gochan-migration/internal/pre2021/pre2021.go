@@ -2,8 +2,11 @@
 package pre2021
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -12,12 +15,6 @@ import (
 
 type Pre2021Config struct {
 	config.SQLConfig
-	// DBtype       string
-	// DBhost       string
-	// DBname       string
-	// DBusername   string
-	// DBpassword   string
-	// DBprefix     string
 	DocumentRoot string
 }
 
@@ -26,9 +23,16 @@ type Pre2021Migrator struct {
 	options *common.MigrationOptions
 	config  Pre2021Config
 
-	posts     []postTable
-	oldBoards map[int]string // map[boardid]dir
-	newBoards map[int]string // map[board]dir
+	migrationUser *gcsql.Staff
+	boards        []migrationBoard
+	sections      []migrationSection
+	staff         []migrationStaff
+}
+
+// IsMigratingInPlace implements common.DBMigrator.
+func (m *Pre2021Migrator) IsMigratingInPlace() bool {
+	sqlConfig := config.GetSQLConfig()
+	return m.config.DBname == sqlConfig.DBname && m.config.DBhost == sqlConfig.DBhost && m.config.DBprefix == sqlConfig.DBprefix
 }
 
 func (m *Pre2021Migrator) readConfig() error {
@@ -36,84 +40,115 @@ func (m *Pre2021Migrator) readConfig() error {
 	if err != nil {
 		return err
 	}
+	m.config.SQLConfig = config.GetSQLConfig()
 	return json.Unmarshal(ba, &m.config)
 }
 
 func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 	m.options = options
 	var err error
+
 	if err = m.readConfig(); err != nil {
 		return err
 	}
-	m.config.DBTimeoutSeconds = config.DefaultSQLTimeout
-	m.config.DBMaxOpenConnections = config.DefaultSQLMaxConns
-	m.config.DBMaxIdleConnections = config.DefaultSQLMaxConns
-	m.config.DBConnMaxLifetimeMin = config.DefaultSQLConnMaxLifetimeMin
 
 	m.db, err = gcsql.Open(&m.config.SQLConfig)
 	return err
 }
 
 func (m *Pre2021Migrator) IsMigrated() (bool, error) {
-	var migrated bool
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.config.DBTimeoutSeconds)*time.Second)
+	defer cancel()
+	var sqlConfig config.SQLConfig
+	if m.IsMigratingInPlace() {
+		sqlConfig = config.GetSQLConfig()
+	} else {
+		sqlConfig = m.config.SQLConfig
+	}
+	return common.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &sqlConfig)
+}
+
+func (m *Pre2021Migrator) renameTablesForInPlace() error {
 	var err error
-	var query string
-	switch m.config.DBtype {
-	case "mysql":
-		fallthrough
-	case "postgres":
-		query = `SELECT COUNT(*) > 0 FROM INFORMATION_SCHEMA.TABLES
-		WHERE TABLE_NAME = ? AND TABLE_SCHEMA = ?`
-	default:
-		return false, gcsql.ErrUnsupportedDB
+	errEv := common.LogError()
+	defer errEv.Discard()
+	if _, err = m.db.Exec(nil, "DROP TABLE DBPREFIXinfo"); err != nil {
+		errEv.Err(err).Caller().Msg("Error dropping info table")
+		return err
 	}
-	if err = m.db.QueryRowSQL(query,
-		[]interface{}{m.config.DBprefix + "migrated", m.config.DBname},
-		[]interface{}{&migrated}); err != nil {
-		return migrated, err
+	for _, table := range renameTables {
+		if _, err = m.db.Exec(nil, fmt.Sprintf(renameTableStatementTemplate, table, table)); err != nil {
+			errEv.Caller().Err(err).
+				Str("table", table).
+				Msg("Error renaming table")
+			return err
+		}
 	}
-	return migrated, err
+
+	if err = gcsql.CheckAndInitializeDatabase(m.config.DBtype, "4"); err != nil {
+		errEv.Caller().Err(err).Msg("Error checking and initializing database")
+		return err
+	}
+
+	if err = m.Close(); err != nil {
+		errEv.Err(err).Caller().Msg("Error closing database")
+		return err
+	}
+	m.config.SQLConfig.DBprefix = "_tmp_" + m.config.DBprefix
+	m.db, err = gcsql.Open(&m.config.SQLConfig)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Error reopening database with new prefix")
+		return err
+	}
+
+	common.LogInfo().Msg("Renamed tables for in-place migration")
+	return err
 }
 
 func (m *Pre2021Migrator) MigrateDB() (bool, error) {
+	errEv := common.LogError()
+	defer errEv.Discard()
 	migrated, err := m.IsMigrated()
 	if err != nil {
+		errEv.Caller().Err(err).Msg("Error checking if database is migrated")
 		return false, err
 	}
 	if migrated {
-		// db is already migrated, stop
 		return true, nil
+	}
+
+	if m.IsMigratingInPlace() {
+		if err = m.renameTablesForInPlace(); err != nil {
+			return false, err
+		}
 	}
 
 	if err := m.MigrateBoards(); err != nil {
 		return false, err
 	}
-	// if err = m.MigratePosts(); err != nil {
-	// 	return false, err
-	// }
-	// if err = m.MigrateStaff("password"); err != nil {
-	// 	return false, err
-	// }
-	// if err = m.MigrateBans(); err != nil {
-	// 	return false, err
-	// }
-	// if err = m.MigrateAnnouncements(); err != nil {
-	// 	return false, err
-	// }
+	common.LogInfo().Msg("Migrated boards successfully")
 
-	return true, nil
-}
+	if err = m.MigratePosts(); err != nil {
+		return false, err
+	}
+	common.LogInfo().Msg("Migrated threads, posts, and uploads successfully")
 
-func (*Pre2021Migrator) MigrateStaff(_ string) error {
-	return nil
-}
+	if err = m.MigrateStaff(); err != nil {
+		return false, err
+	}
+	common.LogInfo().Msg("Migrated staff successfully")
 
-func (*Pre2021Migrator) MigrateBans() error {
-	return nil
-}
+	if err = m.MigrateBans(); err != nil {
+		return false, err
+	}
+	common.LogInfo().Msg("Migrated bans and filters successfully")
 
-func (*Pre2021Migrator) MigrateAnnouncements() error {
-	return nil
+	if err = m.MigrateAnnouncements(); err != nil {
+		return false, err
+	}
+	common.LogInfo().Msg("Migrated staff announcements successfully")
+
+	return false, nil
 }
 
 func (m *Pre2021Migrator) Close() error {

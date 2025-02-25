@@ -84,18 +84,18 @@ func BuildThreadPages(op *gcsql.Post) error {
 	threadPageFile, err = os.OpenFile(threadPageFilepath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("unable to open /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("unable to open /%s/res/%d.html: %w", board.Dir, op.ID, err)
 	}
 
 	if err = config.TakeOwnershipOfFile(threadPageFile); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("unable to set file permissions for /%s/res/%d.html: %s", board.Dir, op.ID, err.Error())
+		return fmt.Errorf("unable to set file permissions for /%s/res/%d.html: %w", board.Dir, op.ID, err)
 	}
 	errEv.Int("op", posts[0].ID)
 
 	// render thread page
 	captchaCfg := config.GetSiteConfig().Captcha
-	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.ThreadPage, map[string]any{
 		"boards":      gcsql.AllBoards,
 		"board":       board,
 		"boardConfig": config.GetBoardConfig(board.Dir),
@@ -107,7 +107,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		"captcha":     captchaCfg,
 	}, threadPageFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("failed building /%s/res/%d threadpage: %s", board.Dir, posts[0].ID, err.Error())
+		return fmt.Errorf("failed building /%s/res/%d threadpage: %w", board.Dir, posts[0].ID, err)
 	}
 	if err = threadPageFile.Close(); err != nil {
 		errEv.Err(err).Caller().Send()

@@ -107,6 +107,7 @@ interface MinMax {
 	min?: number;
 	max?: number;
 }
+
 class NumberSetting extends Setting<number, HTMLInputElement> {
 	constructor(key: string, title: string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave?:()=>any) {
 		super(key, title, defaultVal, onSave);
@@ -205,6 +206,28 @@ export function setTheme() {
 		else
 			themeElem.setAttribute("href", path.join(webroot ?? "/", "css", style));
 	}
+	setLineHeight();
+}
+
+function setLineHeight() {
+	if(getBooleanStorageVal("increaselineheight", false)) {
+		document.body.classList.add("increase-line-height");
+	} else {
+		document.body.classList.remove("increase-line-height");
+	}
+}
+
+export function updateExternalLinks(post?: JQuery<HTMLElement>) {
+	const $src = post ?? $(".post-text");
+	const extPostLinks = $src.find<HTMLAnchorElement>("a:not(.postref)");
+	const newTab = getBooleanStorageVal("extlinksnewtab", true);
+	for(const link of extPostLinks) {
+		if(link.hostname !== location.hostname) {
+			link.target = newTab?"_blank":"_self";
+		} else {
+			link.target = "_self";
+		}
+	}
 }
 
 /**
@@ -249,21 +272,23 @@ $(() => {
 		}
 	}) as Setting);
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
+	settings.set("increaselineheight", new BooleanSetting("increaselineheight", "Increase line height", false, setLineHeight));
 	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", true, initPostPreviews));
 	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true, initPostPreviews));
 	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, () => {
 		if(getBooleanStorageVal("useqr", true)) initQR();
 		else closeQR();
 	}));
+	settings.set("extlinksnewtab", new BooleanSetting("extlinksnewtab", "Open external links in new tab", true, updateExternalLinks));
+	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 15, {
 		min: 2
 	}, initWatcher));
-	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", true, updateBrowseButton));
+	settings.set("smoothhidetoggle", new BooleanSetting("smoothhidetoggle", "Smooth hide block toggle", true));
 
 	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", ""));
 	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));
 
-	if($settingsButton === null)
-		$settingsButton = new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
+	$settingsButton ??= new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
 });

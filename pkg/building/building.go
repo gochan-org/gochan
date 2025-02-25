@@ -1,7 +1,6 @@
 package building
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -36,9 +35,9 @@ func getFrontPagePosts() ([]frontPagePost, error) {
 
 	if siteCfg.RecentPostsWithNoFile {
 		// get recent posts, including those with no file
-		query = "SELECT * FROM DBPREFIXv_front_page_posts"
+		query = "SELECT id, message_raw, dir, filename, op_id FROM DBPREFIXv_front_page_posts"
 	} else {
-		query = "SELECT * FROM DBPREFIXv_front_page_posts_with_file"
+		query = "SELECT id, message_raw, dir, filename, op_id FROM DBPREFIXv_front_page_posts_with_file"
 	}
 	query += " ORDER BY id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 
@@ -84,18 +83,18 @@ func BuildFrontPage() error {
 	err := gctemplates.InitTemplates(gctemplates.FrontPage)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Error loading front page template: " + err.Error())
+		return fmt.Errorf("failed loading front page template: %w", err)
 	}
 	criticalCfg := config.GetSystemCriticalConfig()
 	frontFile, err := os.OpenFile(path.Join(criticalCfg.DocumentRoot, "index.html"), os.O_CREATE|os.O_RDWR|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed opening front page for writing: " + err.Error())
+		return fmt.Errorf("failed opening front page for writing: %w", err)
 	}
 
 	if err = config.TakeOwnershipOfFile(frontFile); err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed setting file ownership for front page: " + err.Error())
+		return fmt.Errorf("failed setting file ownership for front page: %w", err)
 	}
 
 	var recentPostsArr []frontPagePost
@@ -103,9 +102,9 @@ func BuildFrontPage() error {
 	recentPostsArr, err = getFrontPagePosts()
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed loading recent posts: " + err.Error())
+		return fmt.Errorf("failed loading recent posts: %w", err)
 	}
-	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]interface{}{
+	if err = serverutil.MinifyTemplate(gctemplates.FrontPage, map[string]any{
 		"siteConfig":  siteCfg,
 		"sections":    gcsql.AllSections,
 		"boards":      gcsql.AllBoards,
@@ -113,15 +112,15 @@ func BuildFrontPage() error {
 		"recentPosts": recentPostsArr,
 	}, frontFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Failed executing front page template: " + err.Error())
+		return fmt.Errorf("failed executing front page template: %w", err)
 	}
 	return frontFile.Close()
 }
 
 // BuildPageHeader is a convenience function for automatically generating the top part
 // of every normal HTML page
-func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]interface{}) error {
-	phMap := map[string]interface{}{
+func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[string]any) error {
+	phMap := map[string]any{
 		"pageTitle":     pageTitle,
 		"documentTitle": pageTitle + " - " + config.GetSiteConfig().SiteName,
 		"siteConfig":    config.GetSiteConfig(),
@@ -139,7 +138,7 @@ func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[
 // of every normal HTML page
 func BuildPageFooter(writer io.Writer) (err error) {
 	return serverutil.MinifyTemplate(gctemplates.PageFooter,
-		map[string]interface{}{}, writer, "text/html")
+		map[string]any{}, writer, "text/html")
 }
 
 // BuildJS minifies (if enabled) consts.js, which is built from a template
@@ -150,7 +149,7 @@ func BuildJS() error {
 	defer errEv.Discard()
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return errors.New("Error loading consts.js template:" + err.Error())
+		return fmt.Errorf("failed loading consts.js template: %w", err)
 	}
 
 	boardCfg := config.GetBoardConfig("")
@@ -159,12 +158,12 @@ func BuildJS() error {
 	constsJSFile, err := os.OpenFile(constsJSPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, config.NormalFileMode)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("error opening consts.js for writing: %s", err.Error())
+		return fmt.Errorf("failed opening consts.js for writing: %w", err)
 	}
 
 	if err = config.TakeOwnershipOfFile(constsJSFile); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("unable to update file ownership for consts.js: %s", err.Error())
+		return fmt.Errorf("unable to update file ownership for consts.js: %w", err)
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.JsConsts, map[string]any{
@@ -175,7 +174,7 @@ func BuildJS() error {
 		"fileTypes":    boardCfg.AllowOtherExtensions,
 	}, constsJSFile, "text/javascript"); err != nil {
 		errEv.Err(err).Caller().Send()
-		return fmt.Errorf("error building consts.js: %s", err.Error())
+		return fmt.Errorf("failed building consts.js: %w", err)
 	}
 	return constsJSFile.Close()
 }

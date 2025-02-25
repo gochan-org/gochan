@@ -1,3 +1,23 @@
+@keyframes slideopen {
+  from {
+    transform: scale(1, 0);
+    transform-origin: top center;
+  }
+  to {
+    transform: scale(1, 1);
+    transform-origin: top center;
+  }
+}
+@keyframes slideclose {
+  from {
+    transform: scale(1, 1);
+    transform-origin: top center;
+  }
+  to {
+    transform: scale(1, 0);
+    transform-origin: top center;
+  }
+}
 #boardmenu-bottom {
   margin-top: 16px;
 }
@@ -220,6 +240,32 @@ div.inlinepostprev {
   padding: 4px 8px;
 }
 
+.hideblock {
+  border: 1px solid black;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.hideblock.open {
+  animation: slideopen 0.25s;
+}
+
+.hideblock.close {
+  animation: slideclose 0.25s;
+}
+
+.hideblock.hidden {
+  display: none;
+}
+
+.hideblock-button {
+  display: block;
+}
+
+.dice-roll {
+  border: 1px dashed #aaa;
+  font-weight: bold;
+}
+
 div.section-block {
   margin-bottom: 8px;
 }
@@ -439,19 +485,17 @@ form#login-box input[type=submit] {
 }
 
 .lightbox-title {
-  font-size: 42px;
-  font-weight: 700;
   text-align: center;
+  margin-top: 0px;
 }
 
 .lightbox-x {
   color: #000 !important;
   float: right;
-  font-size: 32px;
-  font-weight: 700;
+  font-size: inherit;
 }
 
-.lightbox-x:hover {
+.lightbox-x:hover, .lightbox-x:active {
   color: #555;
 }
 
@@ -506,7 +550,7 @@ div#qr-box {
 }
 div#qr-box input[type=text], div#qr-box textarea {
   display: table-cell;
-  min-width: 300px;
+  min-width: 320px;
   background: #FFF;
   color: #000;
   width: 100%;
@@ -597,6 +641,10 @@ img#banpage-image {
   margin: 4px 8px 8px 4px;
 }
 
+.increase-line-height header, .increase-line-height .post, .increase-line-height .reply {
+  line-height: 1.5;
+}
+
 header {
   margin-top: 50px;
   text-align: center;
@@ -668,7 +716,7 @@ div.section-block div.section-body {
   text-align: center;
 }
 
-#footer {
+footer {
   bottom: 0px;
   clear: both;
   left: 0px;

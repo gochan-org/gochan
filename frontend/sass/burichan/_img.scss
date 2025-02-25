@@ -1,26 +1,27 @@
-@import 'colors';
-@import '../global/colors';
+@use 'colors';
+@use '../global/colors' as global-colors;
+@use "../util";
 
 h1#board-title {
 	font-family: serif;
-	font-size: 24pt;
-	color: $headercol;
+	font-size: 2em;
+	color: global-colors.$headercol;
 }
 
 .postblock {
-	background:$postblock;
+	background:colors.$postblock;
 }
 
 div.file-info {
-	font-size:12px;
-	font-family:sans-serif;
+	font-size: 1em;
+	font-family: sans-serif;
 }
 
 span.postername {
-	font-size:12px;
-	font-family:serif;
-	color: $namecol;
-	font-weight:800;
+	font-size: 1em;
+	font-family: serif;
+	color: global-colors.$namecol;
+	font-weight: 800;
 }
 
 div.reply,
@@ -31,7 +32,14 @@ div.inlinepostprev {
 }
 
 select.post-actions,
+div.reply,
 div.postprev,
 div.inlinepostprev {
-	border: 1px solid $bordercol;
+	border: 1px solid colors.$bordercol;
 }
+
+.dice-roll {
+	border: 1px dashed #222;
+}
+
+@include util.upload-box(#aaa, #444, #666);
