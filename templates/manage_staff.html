@@ -27,12 +27,16 @@
 {{- if eq $.formMode 2 -}}
 <p>If the password fields are left blank, only the rank will be updated</p>
 {{- end -}}
-<form action="{{webPath `/manage/staff`}}" {{if eq $.formMode 3}}onsubmit="return makeNewStaff();"{{end}} method="POST">
-<input type="hidden" name="update" value="{{if lt $.formMode 3}}{{.updateUsername}}{{end}}">
-<input type="hidden" name="do" value="{{if eq $.formMode 3}}add{{else}}update{{end}}" />
+<form action="{{webPath `/manage/staff`}}" method="POST" autocomplete="off">
+{{if lt $.formMode 3}}
+<input type="hidden" name="update" value="{{.updateUsername}}">
+<input type="hidden" name="do" value="update" />
+{{else}}
+<input type="hidden" name="do" value="add" />
+{{end}}
 <table>
-	<tr><td>Username:</td><td><input id="username" name="username" type="text" value="{{if $isAdmin}}{{.updateUsername}}{{else}}{{.currentStaff.Username}}{{end}}" {{if lt $.formMode 3}}disabled{{end}}/></td></tr>
-	<tr><td>Password:</td><td><input id="password" name="password" type="password"/></td></tr>
+	<tr><td>Username:</td><td><input name="username" type="text" autocomplete="new-password" value="{{if $isAdmin}}{{.updateUsername}}{{else}}{{.currentStaff.Username}}{{end}}" {{if lt $.formMode 3}}disabled{{end}}/></td></tr>
+	<tr><td>Password:</td><td><input name="password" type="password" autocomplete="new-password" /></td></tr>
 	<tr><td>Confirm password:</td><td><input id="passwordconfirm" name="passwordconfirm" type="password"/></td></tr>
 	{{if gt $.formMode 1 -}}
 	<tr><td>Rank:</td><td><select id="rank" name="rank">
@@ -43,7 +47,9 @@
 	{{end -}}
 	<tr><td>
 		<input type="submit" value="{{if eq $.formMode 3}}Create{{else}}Update{{end}} User" />
-		<input type="button" name="docancel" value="Cancel" onclick="window.location = {{webPath `./manage/staff`}}; return false"/>
+		{{- if lt $.formMode 3 -}}
+			<input type="button" name="docancel" value="Cancel" onclick="window.location = {{webPath `./manage/staff`}}; return false"/>
+		{{- end -}}
 	</td></tr>
 </table>
 </form>
