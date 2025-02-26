@@ -74,4 +74,7 @@ export function initTopBar() {
 	});
 }
 
-$(initTopBar);
+$(() => {
+	initTopBar();
+	$("body").on("click", () => $(".dropdown-menu").remove());
+});
