@@ -172,6 +172,11 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	rankStr := request.PostFormValue("rank")
 	var rank int
 	if rankStr != "" {
+		if staff.Rank < 3 {
+			writer.WriteHeader(http.StatusUnauthorized)
+			warnEv.Caller().Str("username", username).Msg("non-admin tried to modify a staff account's rank")
+			return "", ErrInsufficientPermission
+		}
 		if rank, err = strconv.Atoi(rankStr); err != nil {
 			errEv.Err(err).Caller().
 				Str("rank", rankStr).Send()
@@ -197,7 +202,6 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	}
 
 	data := map[string]any{
-		"do":             do,
 		"updateUsername": updateUsername,
 		"currentStaff":   staff,
 		"formMode":       formMode,
@@ -212,14 +216,14 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 				break
 			}
 		}
+		gcutil.LogStr("updateUsername", updateUsername, infoEv, errEv, warnEv)
 		if !found {
 			writer.WriteHeader(http.StatusBadRequest)
-			warnEv.Err(gcsql.ErrUnrecognizedUsername).Caller().Str("username", updateUsername).Send()
+			warnEv.Err(gcsql.ErrUnrecognizedUsername).Caller().Send()
 			return "", gcsql.ErrUnrecognizedUsername
 		}
 	}
 
-	// var updateStaffList bool
 	if do == "add" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusUnauthorized)
@@ -234,23 +238,21 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			return "", fmt.Errorf("unable to create new staff account %q by %q: %s",
 				username, staff.Username, err.Error())
 		}
-		infoEv.Str("username", username).
-			Str("userRank", newStaff.RankTitle()).
-			Msg("New staff account created")
+		infoEv.Str("userRank", newStaff.RankTitle()).Msg("New staff account created")
 	} else if do == "update" || do == "del" {
-		if username == "" {
+		if updateUsername == "" {
 			warnEv.Caller().Str("do", do).Msg("Missing username field")
 			return nil, errors.New("missing username field")
 		}
-		gcutil.LogStr("username", username, infoEv, errEv, warnEv)
-		if (do == "update" && staff.Rank < AdminPerms && username != staff.Username) || (do == "del" && staff.Rank < AdminPerms) {
+		if (do == "update" && staff.Rank < AdminPerms && updateUsername != staff.Username) || (do == "del" && staff.Rank < AdminPerms) {
+			// user is not an admin and is trying to update someone else's account (rank change already checked)
 			writer.WriteHeader(http.StatusUnauthorized)
 			warnEv.Err(ErrInsufficientPermission).Send()
 			return nil, ErrInsufficientPermission
 		}
 
 		var user *gcsql.Staff
-		if user, err = gcsql.GetStaffByUsername(username, true); err != nil {
+		if user, err = gcsql.GetStaffByUsername(updateUsername, true); err != nil {
 			errEv.Err(err).Caller().Bool("onlyActive", true).Msg("Unable to get staff by username")
 			return nil, err
 		}
@@ -258,10 +260,30 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 
 		if do == "update" {
 			if password != "" {
-
+				if err = user.UpdatePassword(password); err != nil {
+					writer.WriteHeader(http.StatusInternalServerError)
+					errEv.Err(err).Caller().
+						Msg("Error updating password")
+					return "", errors.New("unable to update staff account password")
+				}
+				infoEv.Msg("Password updated")
+			} else if rank > 0 {
+				if err = user.UpdateRank(rank); err != nil {
+					writer.WriteHeader(http.StatusInternalServerError)
+					errEv.Err(err).Caller().
+						Msg("Error updating rank")
+					return "", errors.New("unable to update staff account rank")
+				}
+				infoEv.
+					Int("rank", user.Rank).
+					Str("rankTitle", user.RankTitle()).
+					Msg("Staff account rank updated")
 			}
+			data["formMode"] = newUserForm
+			data["updateUsername"] = ""
+			data["updateRank"] = -1
 		} else {
-			// del
+			// deactivate account
 			if err = user.ClearSessions(); err != nil {
 				errEv.Err(err).Caller().
 					Msg("Unable to clear user login sessions")
@@ -277,57 +299,6 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 		}
 
 	}
-
-	if do == "del" && username != "" {
-		if staff.Rank < 3 {
-			writer.WriteHeader(http.StatusUnauthorized)
-			warnEv.Msg("non-admin tried to deactivate an account")
-			return "", ErrInsufficientPermission
-		}
-		if err = gcsql.DeactivateStaff(username); err != nil {
-			errEv.Err(err).Caller().
-				Str("delStaff", username).
-				Msg("Error deleting staff account")
-			return "", fmt.Errorf("Error deleting staff account %q by %q: %s",
-				username, staff.Username, err.Error())
-		}
-		infoEv.Str("deactivatedStaff", username).Msg("Staff account deactivated")
-		// updateStaffList = true
-	} else if do == "update" && updateUsername != "" {
-		if (staff.Username != updateUsername || rank > 0) && staff.Rank < 3 {
-			writer.WriteHeader(http.StatusUnauthorized)
-			warnEv.Caller().Str("username", username).Msg("non-admin tried to modify a staff account's rank")
-			return "", ErrInsufficientPermission
-		}
-		if rank > 0 {
-			err = gcsql.UpdateStaff(updateUsername, rank, password)
-		} else {
-			err = gcsql.UpdatePassword(updateUsername, password)
-		}
-		if err != nil {
-			logRank := rank
-			if logRank == 0 {
-				// user does not have admin rank and is updating their own account
-				logRank = staff.Rank
-			}
-			errEv.Err(err).Caller().
-				Str("updateStaff", username).
-				Int("updateRank", logRank).
-				Msg("Error updating account")
-			writer.WriteHeader(http.StatusInternalServerError)
-			return "", errors.New("unable to update staff account")
-		}
-		// updateStaffList = true
-	}
-	// if updateStaffList {
-	// 	allStaff, err = getAllStaffNopass(true)
-	// 	if err != nil {
-	// 		errEv.Err(err).Caller().Msg("Error getting updated staff list")
-	// 		writer.WriteHeader(http.StatusInternalServerError)
-	// 		err = errors.New("unable to get updated staff list")
-	// 		return "", err
-	// 	}
-	// }
 
 	data["allstaff"], err = getAllStaffNopass(true)
 	if err != nil {

@@ -40,9 +40,10 @@
 	<tr><td>Confirm password:</td><td><input id="passwordconfirm" name="passwordconfirm" type="password"/></td></tr>
 	{{if gt $.formMode 1 -}}
 	<tr><td>Rank:</td><td><select id="rank" name="rank">
-		<option value="3"{{if eq $.updateRank 3}}selected="selected"{{end}}>Admin</option>
-		<option value="2"{{if eq $.updateRank 2}}selected="selected"{{end}}>Moderator</option>
-		<option value="1"{{if eq $.updateRank 1}}selected="selected"{{end}}>Janitor</option>
+		<option value="-1"{{if eq $.updateRank -1}}selected{{end}} disabled>Select one</option>
+		<option value="3"{{if eq $.updateRank 3}}selected{{end}}>Admin</option>
+		<option value="2"{{if eq $.updateRank 2}}selected{{end}}>Moderator</option>
+		<option value="1"{{if eq $.updateRank 1}}selected{{end}}>Janitor</option>
 	</select></td></tr>
 	{{end -}}
 	<tr><td>
