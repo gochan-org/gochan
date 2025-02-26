@@ -132,16 +132,30 @@ func (gcfg *GochanConfig) Write() error {
 }
 
 type SQLConfig struct {
-	DBtype     string
-	DBhost     string
-	DBname     string
+	// DBtype is the type of SQL database to use. Currently supported values are "mysql", "postgres", and "sqlite3"
+	DBtype string
+	// DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file
+	DBhost string
+	// DBname is the name of the SQL database to connect to
+	DBname string
+	// DBusername is the username to use when authenticating with the SQL server
 	DBusername string
+	// DBpassword is the password to use when authenticating with the SQL server
 	DBpassword string
-	DBprefix   string
+	// DBprefix is the prefix to add to table names in the database
+	DBprefix string
 
-	DBTimeoutSeconds     int
+	// DBTimeoutSeconds sets the timeout for SQL queries in seconds, 0 means no timeout
+	// default: 15
+	DBTimeoutSeconds int
+	// DBMaxOpenConnections is the maximum number of open connections to the database connection pool
+	// default: 10
 	DBMaxOpenConnections int
+	// DBMaxIdleConnections is the maximum number of idle connections to the database connection pool
+	// default: 10
 	DBMaxIdleConnections int
+	// DBConnMaxLifetimeMin is the maximum lifetime of a connection in minutes
+	// default: 3
 	DBConnMaxLifetimeMin int
 }
 
@@ -151,61 +165,103 @@ the server is running could have site breaking consequences. It should only be c
 file and restarting the server.
 */
 type SystemCriticalConfig struct {
-	ListenIP       string
-	Port           int
-	UseFastCGI     bool
-	DocumentRoot   string
-	TemplateDir    string
-	LogDir         string
+	// ListenIP is the IP address that the server will listen on
+	ListenIP string
+	// Port is the port that the server will listen on
+	Port int
+	// UseFastCGI tells the server to listen on FastCGI instead of HTTP if true
+	UseFastCGI bool
+	// DocumentRoot is the path to the directory that contains the served static files
+	DocumentRoot string
+	// TemplateDir is the path to the directory that contains the template files
+	TemplateDir string
+	// LogDir is the path to the directory that contains the log files. It must be writable by the server and will be created if it doesn't exist
+	LogDir string
+	// Plugins is a list of paths to plugins to be loaded on startup. In Windows, only .lua plugins are supported. In Unix, .so plugins are also supported,
+	// but they must be compiled with the same Go version as the server and must be compiled in plugin mode
 	Plugins        []string
 	PluginSettings map[string]any
 
-	SiteHeaderURL string
-	WebRoot       string
-	SiteDomain    string
-
+	// WebRoot is the base URL path that the server will serve files and generated pages from.
+	// default: /
+	WebRoot string
+	// SiteDomain is the domain name of the site, e.g. "example.com"
+	SiteDomain string
 	SQLConfig
 
+	// CheckRequestReferer tells the server to validate the Referer header from requests to prevent CSRF attacks.
+	// default: true
 	CheckRequestReferer bool
 	Verbose             bool `json:"DebugMode"`
-	RandomSeed          string
-	Version             *GochanVersion `json:"-"`
-	TimeZone            int            `json:"-"`
+	// RandomSeed is a random string used for generating secure tokens. It will be generated if not set and must not be changed
+	RandomSeed string
+	Version    *GochanVersion `json:"-"`
+	TimeZone   int            `json:"-"`
 }
 
 // SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),
 // the first page to look for if a directory is requested, etc
 type SiteConfig struct {
-	FirstPage            []string
-	Username             string
+	// FirstPage is a list of possible filenames to look for if a directory is requested
+	// default: ["index.html", "firstrun.html", "1.html"]
+	FirstPage []string
+	// Username is the name of the user that the server will run as, if set, or the current user if empty or unset. It must be a valid user on the system if it is set
+	Username string
+	// CookieMaxAge is the parsed max age duration of cookies, e.g. "1 year 2 months 3 days 4 hours" or "1y2mo3d4h"
+	// default: 1y
 	CookieMaxAge         string
 	StaffSessionDuration string
-	Lockdown             bool
-	LockdownMessage      string
+	// Lockdown prevents users from posting if true
+	// default: false
+	Lockdown bool
+	// LockdownMessage is the message displayed to users if they try to cretae a post when the site is in lockdown
+	// default: This imageboard has temporarily disabled posting. We apologize for the inconvenience
+	LockdownMessage string
 
+	// SiteName is the name of the site, displayed in the title and front page header
+	// default: Gochan
 	SiteName   string
 	SiteSlogan string
-	Modboard   string
 
-	MaxRecentPosts        int
+	// MaxRecentPosts is the number of recent posts to display on the front page
+	// default: 15
+	MaxRecentPosts int
+	// RecentPostsWithNoFile determines whether to include posts with no file in the recent posts list
+	// default: false
 	RecentPostsWithNoFile bool
-	EnableAppeals         bool
+	// EnableAppeals determines whether to allow users to appeal bans
+	// default: true
+	EnableAppeals bool
 
-	MinifyHTML   bool
-	MinifyJS     bool
-	GeoIPType    string
+	// MinifyHTML tells the server to minify HTML output before sending it to the client
+	// default: true
+	MinifyHTML bool
+	// MinifyJS tells the server to minify JavaScript and JSON output before sending it to the client
+	// default: true
+	MinifyJS bool
+	// GeoIPType is the type of GeoIP database to use. Currently only "mmdb" is supported, though other types may be provided by plugins
+	GeoIPType string
+	// GeoIPOptions is a map of options to pass to the GeoIP plugin
 	GeoIPOptions map[string]any
 	Captcha      CaptchaConfig
 
+	// FingerprintVideoThumbnails determines whether to use video thumbnails for image fingerprinting. If false, the video file will not be checked by fingerprinting filters
+	// default: false
 	FingerprintVideoThumbnails bool
-	FingerprintHashLength      int
+	// FingerprintHashLength is the length of the hash used for image fingerprinting
+	// default: 16
+	FingerprintHashLength int
 }
 
 type CaptchaConfig struct {
-	Type                 string
+	// Type is the type of captcha to use. Currently only "hcaptcha" is supported
+	Type string
+	// OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts
 	OnlyNeededForThreads bool
-	SiteKey              string
-	AccountSecret        string
+	// SiteKey is the public key for the captcha service. Usage depends on the captcha service
+	SiteKey string
+	// AccountSecret is the secret key for the captcha service. Usage depends on the captcha service
+	AccountSecret string
 }
 
 func (cc *CaptchaConfig) UseCaptcha() bool {
@@ -227,14 +283,20 @@ type PageBanner struct {
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json
 // If a board doesn't have board.json, the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
+	// InheritGlobalStyles determines whether to use the global styles in addition to the board's styles, as opposed to only the board's styles
 	InheritGlobalStyles bool
-	Styles              []Style
-	DefaultStyle        string
-	Banners             []PageBanner
+	// Styles is a list of Gochan themes with Name and Filename fields, choosable by the user
+	Styles []Style
+	// DefaultStyle is the filename of the default style to use for the board or the site
+	// default: pipes.css
+	DefaultStyle string
+	// Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields
+	Banners []PageBanner
 
 	PostConfig
 	UploadConfig
 
+	// DateTimeFormat is the human readable format to use for showing post timestamps
 	DateTimeFormat         string
 	ShowPosterID           bool
 	EnableSpoileredImages  bool
@@ -246,8 +308,9 @@ type BoardConfig struct {
 	ThreadsPerPage         int
 	EnableGeoIP            bool
 	EnableNoFlag           bool
-	CustomFlags            []geoip.Country
-	isGlobal               bool
+	// CustomFlags is a list of non-geoip flags with Name (viewable to the user) and Flag (flag image filename) fields
+	CustomFlags []geoip.Country
+	isGlobal    bool
 }
 
 // CheckCustomFlag returns true if the given flag and name are configured for

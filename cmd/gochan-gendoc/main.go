@@ -83,7 +83,7 @@ func docStructs(dir string) (map[string]structType, error) {
 					docLines := strings.Split(fieldT.doc, "\n")
 
 					for _, line := range docLines {
-						if strings.HasPrefix(line, "default: ") {
+						if strings.HasPrefix(strings.ToLower(line), "default: ") && fieldT.defaultVal == "" {
 							fieldT.defaultVal = strings.Replace(line, "default: ", "", 1)
 							break
 						}
