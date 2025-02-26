@@ -182,9 +182,13 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 				Str("rank", rankStr).Send()
 			return "", err
 		}
+		if rank < 0 || rank > 3 {
+			errEv.Caller().Int("rank", rank).Send()
+			return "", errors.New("invalid rank")
+		}
 	}
 
-	var formMode formMode = noForm
+	var formMode = noForm
 	if staff.Rank == 3 {
 		if updateUsername == "" {
 			formMode = newUserForm
