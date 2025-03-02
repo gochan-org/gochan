@@ -2,44 +2,20 @@ package gctemplates
 
 import (
 	"bytes"
-	"errors"
-	"os"
 	"path"
 	"testing"
 
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
 
-const (
-	maxSubdirs = 6 // max expected depth of the current directory before we throw an error
-)
-
-func goToGochanRoot(t *testing.T) (string, error) {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for d := 0; d < maxSubdirs; d++ {
-		if path.Base(dir) == "gochan" {
-			return dir, nil
-		}
-		if err = os.Chdir(".."); err != nil {
-			return dir, err
-		}
-		if dir, err = os.Getwd(); err != nil {
-			return dir, err
-		}
-	}
-	return dir, errors.New("test running from unexpected dir, should be in gochan root or the current testing dir")
-}
-
 func TestLuaTemplateFunctions(t *testing.T) {
-	gochanRoot, err := goToGochanRoot(t)
-	assert.NoError(t, err)
+	gochanRoot, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
 	AddTemplateFuncs(funcMap)
 
 	buf := new(bytes.Buffer)

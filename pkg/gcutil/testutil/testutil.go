@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	numParentDirsBeforeFail = 6
+	numParentDirsBeforeFail = 6 // max expected depth of the current directory before we throw an error
 )
 
 // PanicIfNotTest panics if the function was called directly or indirectly by a test function via go test
@@ -30,7 +30,7 @@ func GoToGochanRoot(t *testing.T) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if filepath.Base(dir) == "gochan" {
+		if filepath.Base(dir) == "gochan" || dir == "/vagrant" {
 			return dir, nil
 		}
 		if err = os.Chdir(".."); err != nil {
