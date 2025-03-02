@@ -328,15 +328,25 @@ func (cc *CaptchaConfig) UseCaptcha() bool {
 }
 
 type BoardCooldowns struct {
-	NewThread  int `json:"threads"`
-	Reply      int `json:"replies"`
+	// NewThread is the number of seconds the user must wait before creating new threads.
+	// Default: 30
+	NewThread int `json:"threads"`
+	// NewReply is the number of seconds the user must wait after replying to a thread before they can create another reply.
+	// Default: 7
+	Reply int `json:"replies"`
+	// NewImageReply is the number of seconds the user must wait after replying to a thread with an upload before they can create another reply.
+	// Default: 7
 	ImageReply int `json:"images"`
 }
 
+// PageBanner represents the filename and dimensions of a banner image to display on board and thread pages
 type PageBanner struct {
+	// Filename is the name of the image file to display as seen by the browser
 	Filename string
-	Width    int
-	Height   int
+	// Width is the width of the image in pixels
+	Width int
+	// Height is the height of the image in pixels
+	Height int
 }
 
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json

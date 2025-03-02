@@ -19,12 +19,11 @@ var (
 )
 
 // Country represents the country data (or custom flag data) used by gochan.
-// For posts set to use the poster's country, `Flag` is the country's
-// abbreviation, and `Name` is the country name. If a custom flag is selected,
-// Flag is the filename accessible in /static/flags/{flag}, and Name is the
-// configured flag name. This package does not handle custom flag validation.
 type Country struct {
+	// Flag is the country abbreviation for standard geoip countries, or the filename accessible in /static/flags/{flag}
+	// for custom flags
 	Flag string
+	// Name is the configured flag name that shows up in the dropdown box and the image alt text
 	Name string
 }
 

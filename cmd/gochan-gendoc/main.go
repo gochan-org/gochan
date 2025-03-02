@@ -13,6 +13,48 @@ import (
 	"strings"
 )
 
+var (
+	compositeStructTypes = []string{
+		"SystemCriticalConfig", "SQLConfig", "SiteConfig", "CaptchaConfig", "BoardConfig", "PostConfig", "UploadConfig",
+	}
+	explicitlyNamedStructTypes = []string{
+		"PageBanner", "BoardCooldowns",
+	}
+)
+
+type columnLengths struct {
+	fieldLength   int
+	typeLength    int
+	defaultLength int
+	docLength     int
+}
+
+func (c *columnLengths) setLengths(strs ...structType) {
+	c.fieldLength = 6
+	c.typeLength = 5
+	c.defaultLength = 0
+	c.docLength = 4
+	for _, str := range strs {
+		for _, field := range str.fields {
+			if len(field.name) > c.fieldLength {
+				c.fieldLength = len(field.name)
+			}
+			if len(field.fType) > c.typeLength {
+				c.typeLength = len(field.fType)
+			}
+			if len(field.defaultVal) > c.defaultLength {
+				c.defaultLength = len(field.defaultVal)
+			}
+			if len(field.doc) > c.docLength {
+				c.docLength = len(field.doc)
+			}
+		}
+	}
+	if c.defaultLength > 0 && c.defaultLength < 8 {
+		c.defaultLength = 8
+	}
+}
+
 func mustParse(fset *token.FileSet, filename, filePath string) *ast.File {
 	ba, err := os.ReadFile(filePath)
 	if err != nil {
@@ -54,12 +96,19 @@ func docStructs(dir string) (map[string]structType, error) {
 		var structName string
 		var structDoc string
 		file := mustParse(fset, d.Name(), path)
+
+		structDocs := make(map[string]string)
+
 		ast.Inspect(file, func(n ast.Node) bool {
 			switch t := n.(type) {
 			case *ast.TypeSpec:
 				structName = t.Name.String()
-				log.Println(structName, "doc:", t.Doc)
-				structDoc = t.Doc.Text()
+				// log.Println(structName, "doc:", t)
+				if t.Doc == nil {
+					structDoc = structDocs[structName]
+				} else {
+					structDoc = t.Doc.Text()
+				}
 			case *ast.StructType:
 				st := structType{
 					name: structName,
@@ -84,7 +133,7 @@ func docStructs(dir string) (map[string]structType, error) {
 
 					for _, line := range docLines {
 						if strings.HasPrefix(strings.ToLower(line), "default: ") && fieldT.defaultVal == "" {
-							fieldT.defaultVal = strings.Replace(line, "default: ", "", 1)
+							fieldT.defaultVal = line[9:]
 							break
 						}
 					}
@@ -93,7 +142,13 @@ func docStructs(dir string) (map[string]structType, error) {
 					case *ast.Ident:
 						fieldT.fType = tt.Name
 					case *ast.ArrayType:
-						fieldT.fType = fmt.Sprint(tt.Elt)
+						// fmt.Printf("%v - %#v\n", tt.Elt, tt.Elt)
+						if selectorExpr, ok := tt.Elt.(*ast.SelectorExpr); ok {
+							fieldT.fType = "[]" + fmt.Sprintf("%v.%v", selectorExpr.X, selectorExpr.Sel)
+						} else {
+							fieldT.fType = "[]" + fmt.Sprint(tt.Elt)
+						}
+						// fieldT.fType = "[]" + fmt.Sprint(tt.Elt)
 					case *ast.MapType:
 						fieldT.fType = fmt.Sprintf("map[%v]%v", tt.Key, tt.Value)
 					case *ast.StarExpr:
@@ -101,7 +156,6 @@ func docStructs(dir string) (map[string]structType, error) {
 					default:
 						panic(fmt.Sprintf("%#v", field.Type))
 					}
-
 					st.fields = append(st.fields, fieldT)
 				}
 				structMap[structName] = st
@@ -130,7 +184,14 @@ func docStructs(dir string) (map[string]structType, error) {
 			case *ast.BlockStmt:
 				// log.Println("blockstmt:", t)
 			case *ast.GenDecl:
-				// log.Println("gendecl:", t.Doc)
+				doc := t.Doc.Text()
+				if doc != "" {
+					firstSpace := strings.Index(doc, " ")
+					if firstSpace > 0 {
+						probableName := doc[:firstSpace]
+						structDocs[probableName] = doc
+					}
+				}
 			}
 			return true
 		})
@@ -140,12 +201,73 @@ func docStructs(dir string) (map[string]structType, error) {
 	return structMap, err
 }
 
-func printFields(str *structType) {
-	for _, field := range str.fields {
-		log.Println(field)
-		if field.composite != "" {
-			log.Println("")
+func fieldsAsMarkdownTable(str *structType, builder *strings.Builder, named bool, showColumnHeaders bool, lengths *columnLengths) {
+	if named {
+		builder.WriteString("## " + str.name + "\n")
+		if str.doc != "" {
+			builder.WriteString(str.doc)
 		}
+	}
+	if lengths == nil {
+		lengths = &columnLengths{}
+		lengths.setLengths(*str)
+	}
+
+	if showColumnHeaders {
+		builder.WriteString("Field")
+		for range lengths.fieldLength - 4 {
+			builder.WriteRune(' ')
+		}
+		builder.WriteString("|Type")
+		for range lengths.typeLength - 3 {
+			builder.WriteRune(' ')
+		}
+		if lengths.defaultLength > 0 {
+			builder.WriteString("|Default")
+			for range lengths.defaultLength - 4 {
+				builder.WriteRune(' ')
+			}
+		}
+		builder.WriteString("|Info\n")
+		for range lengths.fieldLength + 1 {
+			builder.WriteRune('-')
+		}
+		builder.WriteRune('|')
+		for range lengths.typeLength + 1 {
+			builder.WriteRune('-')
+		}
+		if lengths.defaultLength > 0 {
+			builder.WriteRune('|')
+			for range lengths.defaultLength + 3 {
+				builder.WriteRune('-')
+			}
+		}
+		builder.WriteString("|--------------\n")
+	}
+
+	for _, field := range str.fields {
+		if strings.Contains(field.doc, "Deprecated:") {
+			continue
+		}
+		builder.WriteString(field.name)
+		for range lengths.fieldLength - len(field.name) + 1 {
+			builder.WriteRune(' ')
+		}
+		builder.WriteRune('|')
+		builder.WriteString(field.fType)
+		for range lengths.typeLength - len(field.fType) + 1 {
+			builder.WriteRune(' ')
+		}
+		builder.WriteRune('|')
+		if lengths.defaultLength > 0 {
+			builder.WriteString(field.defaultVal)
+			for range lengths.defaultLength - len(field.defaultVal) + 3 {
+				builder.WriteRune(' ')
+			}
+			builder.WriteRune('|')
+		}
+		builder.WriteString(strings.ReplaceAll(field.doc, "\n", " "))
+		builder.WriteRune('\n')
 	}
 }
 
@@ -158,81 +280,48 @@ func main() {
 	// cfgDir := os.Args[1]
 	gochanRoot := os.Args[1]
 	cfgDir := path.Join(gochanRoot, "pkg/config")
-	structs, err := docStructs(cfgDir)
+	configStructs, err := docStructs(cfgDir)
 	if err != nil {
 		log.Fatalf("Error parsing package in %s: %s", cfgDir, err)
 	}
+
+	geoipDir := path.Join(gochanRoot, "pkg/posting/geoip")
+	geoipStructs, err := docStructs(geoipDir)
+	if err != nil {
+		log.Fatalf("Error parsing package in %s: %s", geoipDir, err)
+	}
+
 	var builder strings.Builder
+	builder.WriteString("# Configuration\n\n")
 
-	longestName := 4
-	longestType := 0
-	longestDefault := 5
-	for _, str := range structs {
-		for _, field := range str.fields {
-			if len(field.name) > longestName {
-				longestName = len(field.name)
-			}
-			if len(field.fType) > longestType {
-				longestType = len(field.fType)
-			}
-			if len(field.defaultVal) > longestDefault {
-				longestDefault = len(field.defaultVal)
-			}
+	cfgColumnLengths := columnLengths{}
+	configStructsArray := make([]structType, 0, len(configStructs))
+	for _, str := range compositeStructTypes {
+		configStructsArray = append(configStructsArray, configStructs[str])
+	}
+	cfgColumnLengths.setLengths(configStructsArray...)
+
+	for s, structName := range compositeStructTypes {
+		str := configStructs[structName]
+		fieldsAsMarkdownTable(&str, &builder, false, s == 0, &cfgColumnLengths)
+	}
+	builder.WriteString("\n")
+	for _, structName := range explicitlyNamedStructTypes {
+		str := configStructs[structName]
+		if str.name == "" {
+			fmt.Println(structName, str)
+			continue
 		}
+		fieldsAsMarkdownTable(&str, &builder, true, true, nil)
+		builder.WriteString("\n")
 	}
 
-	builder.WriteString("# Configuration\n\nKey")
-	for range longestName - 2 {
-		builder.WriteRune(' ')
-	}
-	builder.WriteString("|Type")
-	for range longestType - 3 {
-		builder.WriteRune(' ')
-	}
-	builder.WriteString("|Default")
-	for range longestDefault - 4 {
-		builder.WriteRune(' ')
-	}
-	builder.WriteString("|Info\n")
-	for range longestName + 1 {
-		builder.WriteRune('-')
-	}
-	builder.WriteRune('|')
-	for range longestType + 1 {
-		builder.WriteRune('-')
-	}
-	builder.WriteRune('|')
-	for range longestDefault + 3 {
-		builder.WriteRune('-')
-	}
-	builder.WriteString("|----------\n")
-	for _, str := range structs {
-		// log.Println("struct name:", str.name)
-		if str.doc != "" {
-			log.Println("struct doc:", str.doc)
-		}
-		for _, field := range str.fields {
-			builder.WriteString(field.name)
-			for range longestName - len(field.name) + 1 {
-				builder.WriteRune(' ')
-			}
-			builder.WriteRune('|')
-			builder.WriteString(field.fType)
-			for range longestType - len(field.fType) + 1 {
-				builder.WriteRune(' ')
-			}
-			builder.WriteRune('|')
-			builder.WriteString(field.defaultVal)
-			for range longestDefault - len(field.defaultVal) + 3 {
-				builder.WriteRune(' ')
-			}
-			builder.WriteRune('|')
-			builder.WriteString(strings.ReplaceAll(field.doc, "\n", " "))
-			builder.WriteRune('\n')
-		}
-	}
+	country := geoipStructs["Country"]
+	country.name = "geoip.Country"
+	cfgColumnLengths.setLengths(country)
+	fieldsAsMarkdownTable(&country, &builder, true, true, &cfgColumnLengths)
 	log.Println(builder.String())
-	// log.Println("Structs:", structs)
+
 	// fi, err := os.OpenFile("cfgdoc.md", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	// if err != nil {
 	// 	log.Fatalln("Unable to open cfgdoc.md:", err.Error())
