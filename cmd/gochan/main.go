@@ -38,7 +38,6 @@ func cleanup() {
 func main() {
 	fmt.Printf("Starting gochan v%s\n", versionStr)
 	config.InitConfig(versionStr)
-	config.SetVerbose(true)
 
 	uid, gid := config.GetUser()
 	systemCritical := config.GetSystemCriticalConfig()
@@ -103,7 +102,6 @@ func main() {
 
 	for _, board := range gcsql.AllBoards {
 		if _, err = board.DeleteOldThreads(); err != nil {
-			fmt.Printf("Error deleting old threads for board /%s/: %s\n", board.Dir, err)
 			cleanup()
 			gcutil.LogFatal().Err(err).Caller().
 				Str("board", board.Dir).

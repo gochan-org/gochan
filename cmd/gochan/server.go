@@ -24,7 +24,7 @@ func initServer() {
 	var listener net.Listener
 	var err error
 	systemCritical := config.GetSystemCriticalConfig()
-	listenAddr := net.JoinHostPort(systemCritical.ListenIP, strconv.Itoa(systemCritical.Port))
+	listenAddr := net.JoinHostPort(systemCritical.ListenAddress, strconv.Itoa(systemCritical.Port))
 
 	router := server.GetRouter()
 	router.GET(config.WebPath("/captcha"), bunrouter.HTTPHandlerFunc(posting.ServeCaptcha))
@@ -42,12 +42,9 @@ func initServer() {
 	if systemCritical.UseFastCGI {
 		listener, err = net.Listen("tcp", listenAddr)
 		if err != nil {
-			if !systemCritical.Verbose {
-				fmt.Printf("Failed listening on %s:%d: %s", systemCritical.ListenIP, systemCritical.Port, err.Error())
-			}
 			gcutil.LogFatal().Err(err).Caller().
-				Str("ListenIP", systemCritical.ListenIP).
-				Int("Port", systemCritical.Port).Send()
+				Str("ListenAddress", systemCritical.ListenAddress).
+				Int("Port", systemCritical.Port).Msg("Failed listening on address/port")
 		}
 		err = fcgi.Serve(listener, router)
 	} else {
@@ -60,9 +57,6 @@ func initServer() {
 	}
 
 	if err != nil {
-		if !systemCritical.Verbose {
-			fmt.Println("Error initializing server:", err.Error())
-		}
 		gcutil.LogFatal().Err(err).Caller().
 			Msg("Error initializing server")
 	}

@@ -62,7 +62,7 @@ func createSession(key, username, password string, request *http.Request, writer
 		gcutil.LogWarning().
 			Int("refererResult", int(refererResult)).
 			Str("referer", request.Referer()).
-			Str("siteDomain", config.GetSystemCriticalConfig().SiteDomain).
+			Str("SiteHost", config.GetSystemCriticalConfig().SiteHost).
 			Str("staff", username).
 			Msg("Rejected login from possible spambot")
 		return serverutil.ErrSpambot

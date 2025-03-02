@@ -1,5 +1,5 @@
 {
-	"ListenIP": "gochan-server",
+	"ListenAddress": "gochan-server",
 	"Port": 80,
 	"UseFastCGI": false,
 	"DocumentRoot": "/var/www/gochan",
@@ -9,7 +9,7 @@
 	"PluginSettings": null,
 	"SiteHeaderURL": "",
 	"WebRoot": "/",
-	"SiteDomain": "127.0.0.1",
+	"SiteHost": "127.0.0.1",
 	"DBtype": "mysql",
 	"DBhost": "gochan-mariadb:3306",
 	"DBname": "gochan",

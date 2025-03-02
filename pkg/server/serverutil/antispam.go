@@ -38,7 +38,7 @@ func CheckReferer(request *http.Request) (RefererResult, error) {
 	}
 	systemCriticalConfig := config.GetSystemCriticalConfig()
 	siteURLBase := url.URL{
-		Host: systemCriticalConfig.SiteDomain,
+		Host: systemCriticalConfig.SiteHost,
 	}
 	var result RefererResult = ExternalReferer
 	if rURL.Host == siteURLBase.Host {

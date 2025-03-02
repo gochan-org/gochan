@@ -35,7 +35,7 @@ func TestPreload(t *testing.T) {
 			desc: "access system critical config from lua",
 			luaIn: `local config = require("config")
 sys_cfg = config.system_critical_config()
-return sys_cfg.ListenIP`,
+return sys_cfg.ListenAddress`,
 			expectOut: lua.LString("127.0.0.1"),
 		},
 		{

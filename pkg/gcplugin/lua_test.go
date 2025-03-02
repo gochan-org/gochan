@@ -35,7 +35,7 @@ events.trigger_event("newPost", "blah", 16, 3.14, true, nil)`
 local system_critical_cfg = config.system_critical_config()
 local site_cfg = config.site_config()
 local board_cfg = config.board_config()
-return { ListenIP = system_critical_cfg.ListenIP, SiteSlogan = site_cfg.SiteSlogan, DefaultStyle = board_cfg.DefaultStyle }`
+return { ListenAddress = system_critical_cfg.ListenAddress, SiteSlogan = site_cfg.SiteSlogan, DefaultStyle = board_cfg.DefaultStyle }`
 )
 
 func initPluginTests() {
@@ -79,7 +79,7 @@ func TestConfigModule(t *testing.T) {
 	err := lState.DoString(configTestingStr)
 	assert.NoError(t, err)
 	returnTable := lState.CheckTable(-1)
-	assert.Equal(t, "127.0.0.1", returnTable.RawGetString("ListenIP").(lua.LString).String())
+	assert.Equal(t, "127.0.0.1", returnTable.RawGetString("ListenAddress").(lua.LString).String())
 	assert.Equal(t, "Gochan testing", returnTable.RawGetString("SiteSlogan").(lua.LString).String())
 	assert.Equal(t, "pipes.css", returnTable.RawGetString("DefaultStyle").(lua.LString).String())
 }

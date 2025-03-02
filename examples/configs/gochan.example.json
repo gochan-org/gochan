@@ -1,5 +1,5 @@
 {
-	"ListenIP": "127.0.0.1",
+	"ListenAddress": "127.0.0.1",
 	"Port": 8080,
 	"FirstPage": ["index.html","firstrun.html","1.html"],
 	"Username": "",
@@ -27,7 +27,7 @@
 
 	"SiteName": "Gochan",
 	"SiteSlogan": "",
-	"SiteDomain": "127.0.0.1",
+	"SiteHost": "127.0.0.1",
 	"WebRoot": "/",
 	"FingerprintVideoThumbnails": false,
 

@@ -13,7 +13,7 @@ base_headers["Content-Type"] = "application/x-www-form-urlencoded"
 local key = "" -- read from akismet_key.txt
 
 local function check_api_key()
-	local form = "blog=" .. url.query_escape("http://" .. config.system_critical_config().SiteDomain) ..
+	local form = "blog=" .. url.query_escape("http://" .. config.system_critical_config().SiteHost) ..
 		"&key=" .. key
 	local resp, err = http.post(check_key_url, {
 		form = form,
@@ -51,7 +51,7 @@ local function check_akismet(post, user_agent, referrer)
 		comment_type = "forum-post"
 	end
 
-	local form = "blog=" .. url.query_escape("http://" .. config.system_critical_config().SiteDomain) ..
+	local form = "blog=" .. url.query_escape("http://" .. config.system_critical_config().SiteHost) ..
 		"&user_ip=" .. url.query_escape(post.IP) ..
 		"&user_agent=" .. url.query_escape(user_agent) ..
 		"&referrer=" .. url.query_escape(referrer) ..

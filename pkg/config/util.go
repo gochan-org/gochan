@@ -77,7 +77,7 @@ func InitConfig(versionStr string) {
 	if strings.HasSuffix(os.Args[0], ".test") {
 		// create a dummy config for testing if we're using go test
 		cfg = defaultGochanConfig
-		cfg.ListenIP = "127.0.0.1"
+		cfg.ListenAddress = "127.0.0.1"
 		cfg.Port = 8080
 		cfg.UseFastCGI = true
 		cfg.testing = true
@@ -86,7 +86,7 @@ func InitConfig(versionStr string) {
 		cfg.DBhost = "./testdata/gochantest.db"
 		cfg.DBname = "gochan"
 		cfg.DBusername = "gochan"
-		cfg.SiteDomain = "127.0.0.1"
+		cfg.SiteHost = "127.0.0.1"
 		cfg.RandomSeed = "test"
 		cfg.Version = ParseVersion(versionStr)
 		cfg.SiteSlogan = "Gochan testing"

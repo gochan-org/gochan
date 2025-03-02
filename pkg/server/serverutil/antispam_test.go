@@ -13,30 +13,30 @@ var (
 		{
 			desc:           "Internal referer",
 			referer:        "http://gochan.org",
-			siteDomain:     "gochan.org",
+			siteHost:       "gochan.org",
 			expectedResult: InternalReferer,
 		},
 		{
 			desc:           "External referer",
 			referer:        "http://somesketchysite.com",
-			siteDomain:     "gochan.com",
+			siteHost:       "gochan.com",
 			expectedResult: ExternalReferer,
 		},
 		{
 			desc:           "No referer",
-			siteDomain:     "gochan.org",
+			siteHost:       "gochan.org",
 			expectedResult: NoReferer,
 		},
 		{
 			desc:           "Internal referer with port",
 			referer:        "http://127.0.0.1:8080",
-			siteDomain:     "127.0.0.1:8080",
+			siteHost:       "127.0.0.1:8080",
 			expectedResult: InternalReferer,
 		},
 		{
 			desc:           "Internal referer with port, IPv6",
 			referer:        "http://[::1]:8080",
-			siteDomain:     "[::1]:8080",
+			siteHost:       "[::1]:8080",
 			expectedResult: InternalReferer,
 		},
 	}
@@ -45,7 +45,7 @@ var (
 type checkRefererTestCase struct {
 	desc           string
 	referer        string
-	siteDomain     string
+	siteHost       string
 	expectedResult RefererResult
 }
 
@@ -58,7 +58,7 @@ func TestCheckReferer(t *testing.T) {
 	}
 	for _, tC := range checkRefererTestCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			systemCriticalConfig.SiteDomain = tC.siteDomain
+			systemCriticalConfig.SiteHost = tC.siteHost
 			config.SetSystemCriticalConfig(systemCriticalConfig)
 			req.Header.Set("Referer", tC.referer)
 			result, err := CheckReferer(req)

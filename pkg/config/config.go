@@ -39,15 +39,25 @@ type GochanConfig struct {
 }
 
 // ValidateValues checks to make sure that the configuration options are usable
-// (e.g., ListenIP is a valid IP address, Port isn't a negative number, etc)
+// (e.g., ListenAddress is a valid IP address, Port isn't a negative number, etc)
 func (gcfg *GochanConfig) ValidateValues() error {
 	changed := false
 
-	if gcfg.SiteDomain == "" {
-		return &InvalidValueError{Field: "SiteDomain", Value: gcfg.SiteDomain, Details: "must be set"}
+	if gcfg.ListenIP != "" && gcfg.ListenAddress == "" {
+		gcfg.ListenAddress = gcfg.ListenIP
+		changed = true
 	}
-	if strings.Contains(gcfg.SiteDomain, " ") || strings.Contains(gcfg.SiteDomain, "://") {
-		return &InvalidValueError{Field: "SiteDomain", Value: gcfg.SiteDomain, Details: "must be a host (port optional)"}
+
+	if gcfg.SiteDomain != "" && gcfg.SiteHost == "" {
+		gcfg.SiteHost = gcfg.SiteDomain
+		changed = true
+	}
+
+	if gcfg.SiteHost == "" {
+		return &InvalidValueError{Field: "SiteHost", Value: gcfg.SiteHost, Details: "must be set"}
+	}
+	if strings.Contains(gcfg.SiteHost, " ") || strings.Contains(gcfg.SiteHost, "://") {
+		return &InvalidValueError{Field: "SiteHost", Value: gcfg.SiteHost, Details: "must be a valid host (port optional)"}
 	}
 
 	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
@@ -134,110 +144,152 @@ func (gcfg *GochanConfig) Write() error {
 type SQLConfig struct {
 	// DBtype is the type of SQL database to use. Currently supported values are "mysql", "postgres", and "sqlite3"
 	DBtype string
+
 	// DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file
 	DBhost string
+
 	// DBname is the name of the SQL database to connect to
 	DBname string
+
 	// DBusername is the username to use when authenticating with the SQL server
 	DBusername string
+
 	// DBpassword is the password to use when authenticating with the SQL server
 	DBpassword string
-	// DBprefix is the prefix to add to table names in the database
+
+	// DBprefix is the prefix to add to table names in the database. It is not requried but may be useful if you need to share a database.
 	DBprefix string
 
-	// DBTimeoutSeconds sets the timeout for SQL queries in seconds, 0 means no timeout
-	// default: 15
+	// DBTimeoutSeconds sets the timeout for SQL queries in seconds, 0 means no timeout.
+	// Default: 15
 	DBTimeoutSeconds int
-	// DBMaxOpenConnections is the maximum number of open connections to the database connection pool
-	// default: 10
+
+	// DBMaxOpenConnections is the maximum number of open connections to the database connection pool.
+	// Default: 10
 	DBMaxOpenConnections int
-	// DBMaxIdleConnections is the maximum number of idle connections to the database connection pool
-	// default: 10
+
+	// DBMaxIdleConnections is the maximum number of idle connections to the database connection pool.
+	// Default: 10
 	DBMaxIdleConnections int
-	// DBConnMaxLifetimeMin is the maximum lifetime of a connection in minutes
-	// default: 3
+
+	// DBConnMaxLifetimeMin is the maximum lifetime of a connection in minutes.
+	// Default: 3
 	DBConnMaxLifetimeMin int
 }
 
-/*
-SystemCriticalConfig contains configuration options that are extremely important, and fucking with them while
-the server is running could have site breaking consequences. It should only be changed by modifying the configuration
-file and restarting the server.
-*/
+// SystemCriticalConfig contains configuration options that are extremely important, and fucking with them while
+// the server is running could have site breaking consequences. It should only be changed by modifying the configuration
+// file and restarting the server.
 type SystemCriticalConfig struct {
-	// ListenIP is the IP address that the server will listen on
+	// ListenAddress is the IP address or domain name that the server will listen on
+	ListenAddress string
+
+	// ListenIP is an alias for the ListenAddress field.
+	// Deprecated: Use ListenAddress instead
 	ListenIP string
+
 	// Port is the port that the server will listen on
 	Port int
+
 	// UseFastCGI tells the server to listen on FastCGI instead of HTTP if true
 	UseFastCGI bool
+
 	// DocumentRoot is the path to the directory that contains the served static files
 	DocumentRoot string
+
 	// TemplateDir is the path to the directory that contains the template files
 	TemplateDir string
+
 	// LogDir is the path to the directory that contains the log files. It must be writable by the server and will be created if it doesn't exist
 	LogDir string
+
 	// Plugins is a list of paths to plugins to be loaded on startup. In Windows, only .lua plugins are supported. In Unix, .so plugins are also supported,
 	// but they must be compiled with the same Go version as the server and must be compiled in plugin mode
-	Plugins        []string
-	PluginSettings map[string]any
+	Plugins []string
 
 	// WebRoot is the base URL path that the server will serve files and generated pages from.
-	// default: /
+	// Default: /
 	WebRoot string
-	// SiteDomain is the domain name of the site, e.g. "example.com"
+
+	// SiteHost is the publicly accessible domain name or IP address of the site, e.g. "example.com" used for anti-spam checking
+	SiteHost string
+
+	// SiteDomain is an alias for the the SiteHost field.
+	//
+	// Deprecated: Use SiteHost instead
 	SiteDomain string
+
 	SQLConfig
 
 	// CheckRequestReferer tells the server to validate the Referer header from requests to prevent CSRF attacks.
-	// default: true
+	// Default: true
 	CheckRequestReferer bool
-	Verbose             bool `json:"DebugMode"`
+
+	// Verbose currently is not used and may be removed, to be replaced with more granular logging options
+	Verbose bool `json:"DebugMode"`
+
 	// RandomSeed is a random string used for generating secure tokens. It will be generated if not set and must not be changed
 	RandomSeed string
-	Version    *GochanVersion `json:"-"`
-	TimeZone   int            `json:"-"`
+
+	Version  *GochanVersion `json:"-"`
+	TimeZone int            `json:"-"`
 }
 
 // SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),
 // the first page to look for if a directory is requested, etc
 type SiteConfig struct {
 	// FirstPage is a list of possible filenames to look for if a directory is requested
-	// default: ["index.html", "firstrun.html", "1.html"]
+	// Default: ["index.html", "firstrun.html", "1.html"]
 	FirstPage []string
-	// Username is the name of the user that the server will run as, if set, or the current user if empty or unset. It must be a valid user on the system if it is set
+
+	// Username is the name of the user that the server will run as, if set, or the current user if empty or unset.
+	// It must be a valid user on the system if it is set
 	Username string
-	// CookieMaxAge is the parsed max age duration of cookies, e.g. "1 year 2 months 3 days 4 hours" or "1y2mo3d4h"
-	// default: 1y
-	CookieMaxAge         string
+
+	// CookieMaxAge is the parsed max age duration of cookies, e.g. "1 year 2 months 3 days 4 hours" or "1y2mo3d4h".
+	// Default: 1y
+	CookieMaxAge string
+
+	// StaffSessionDuration is the parsed max age duration of staff session cookies, e.g. "1 year 2 months 3 days 4 hours" or "1y2mo3d4h".
+	// Default: 3mo
 	StaffSessionDuration string
+
 	// Lockdown prevents users from posting if true
-	// default: false
+	// Default: false
 	Lockdown bool
+
 	// LockdownMessage is the message displayed to users if they try to cretae a post when the site is in lockdown
-	// default: This imageboard has temporarily disabled posting. We apologize for the inconvenience
+	// Default: This imageboard has temporarily disabled posting. We apologize for the inconvenience
 	LockdownMessage string
 
 	// SiteName is the name of the site, displayed in the title and front page header
-	// default: Gochan
-	SiteName   string
+	// Default: Gochan
+	SiteName string
+
+	// SiteSlogan is the community slogan displayed on the front page below the site name
 	SiteSlogan string
 
+	// Modboard was intended to be the board that moderators would use to discuss moderation, but it is not currently used.
+	// Deprecated: This field is not currently used and may be removed in the future
+	Modboard string
+
 	// MaxRecentPosts is the number of recent posts to display on the front page
-	// default: 15
+	// Default: 15
 	MaxRecentPosts int
+
 	// RecentPostsWithNoFile determines whether to include posts with no file in the recent posts list
-	// default: false
+	// Default: false
 	RecentPostsWithNoFile bool
+
 	// EnableAppeals determines whether to allow users to appeal bans
-	// default: true
+	// Default: true
 	EnableAppeals bool
 
 	// MinifyHTML tells the server to minify HTML output before sending it to the client
-	// default: true
+	// Default: true
 	MinifyHTML bool
 	// MinifyJS tells the server to minify JavaScript and JSON output before sending it to the client
-	// default: true
+	// Default: true
 	MinifyJS bool
 	// GeoIPType is the type of GeoIP database to use. Currently only "mmdb" is supported, though other types may be provided by plugins
 	GeoIPType string
@@ -246,20 +298,24 @@ type SiteConfig struct {
 	Captcha      CaptchaConfig
 
 	// FingerprintVideoThumbnails determines whether to use video thumbnails for image fingerprinting. If false, the video file will not be checked by fingerprinting filters
-	// default: false
+	// Default: false
 	FingerprintVideoThumbnails bool
+
 	// FingerprintHashLength is the length of the hash used for image fingerprinting
-	// default: 16
+	// Default: 16
 	FingerprintHashLength int
 }
 
 type CaptchaConfig struct {
 	// Type is the type of captcha to use. Currently only "hcaptcha" is supported
 	Type string
+
 	// OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts
 	OnlyNeededForThreads bool
+
 	// SiteKey is the public key for the captcha service. Usage depends on the captcha service
 	SiteKey string
+
 	// AccountSecret is the secret key for the captcha service. Usage depends on the captcha service
 	AccountSecret string
 }
@@ -281,14 +337,15 @@ type PageBanner struct {
 }
 
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json
-// If a board doesn't have board.json, the site's default board config (with values set in gochan.json) will be used
+// or all boards if it is stored in the main gochan.json file. If a board doesn't have board.json,
+// the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
 	// InheritGlobalStyles determines whether to use the global styles in addition to the board's styles, as opposed to only the board's styles
 	InheritGlobalStyles bool
 	// Styles is a list of Gochan themes with Name and Filename fields, choosable by the user
 	Styles []Style
-	// DefaultStyle is the filename of the default style to use for the board or the site
-	// default: pipes.css
+	// DefaultStyle is the filename of the default style to use for the board or the site.
+	// Default: pipes.css
 	DefaultStyle string
 	// Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields
 	Banners []PageBanner
@@ -457,14 +514,6 @@ func UpdateBoardConfig(dir string) error {
 // when a board is deleted
 func DeleteBoardConfig(dir string) {
 	delete(boardConfigs, dir)
-}
-
-func VerboseMode() bool {
-	return cfg.testing || cfg.SystemCriticalConfig.Verbose
-}
-
-func SetVerbose(verbose bool) {
-	cfg.Verbose = verbose
 }
 
 func GetVersion() *GochanVersion {

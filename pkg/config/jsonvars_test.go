@@ -6,7 +6,7 @@ const (
 	// the bare minimum fields required to pass GochanConfig.validate.
 	// this doesn't mean that the values are valid, just that they exist
 	bareMinimumJSON = `{
-		"ListenIP": "127.0.0.1",
+		"ListenAddress": "127.0.0.1",
 		"Port": 8080,
 		"Username": "gochan",
 		"UseFastCGI": true,
@@ -15,7 +15,7 @@ const (
 		"DBname": "gochan",
 		"DBusername": "gochan",
 		"DBpassword": "",
-		"SiteDomain": "127.0.0.1",
+		"SiteHost": "127.0.0.1",
 		"SiteWebFolder": "/",
 	
 		"Styles": [
@@ -27,7 +27,7 @@ const (
 		"RandomSeed": "jeiwohaeiogpehwgui"
 	}`
 	validCfgJSON = `{
-		"ListenIP": "127.0.0.1",
+		"ListenAddress": "127.0.0.1",
 		"Port": 8080,
 		"FirstPage": ["index.html","firstrun.html","1.html"],
 		"Username": "gochan",
@@ -53,7 +53,7 @@ const (
 	
 		"SiteName": "Gochan",
 		"SiteSlogan": "",
-		"SiteDomain": "127.0.0.1",
+		"SiteHost": "127.0.0.1",
 		"SiteWebFolder": "/",
 	
 		"Styles": [
