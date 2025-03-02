@@ -45,11 +45,13 @@ func (gcfg *GochanConfig) ValidateValues() error {
 
 	if gcfg.ListenIP != "" && gcfg.ListenAddress == "" {
 		gcfg.ListenAddress = gcfg.ListenIP
+		gcfg.ListenIP = ""
 		changed = true
 	}
 
 	if gcfg.SiteDomain != "" && gcfg.SiteHost == "" {
 		gcfg.SiteHost = gcfg.SiteDomain
+		gcfg.SiteDomain = ""
 		changed = true
 	}
 
@@ -185,8 +187,9 @@ type SystemCriticalConfig struct {
 	ListenAddress string
 
 	// ListenIP is an alias for the ListenAddress field.
+	//
 	// Deprecated: Use ListenAddress instead
-	ListenIP string
+	ListenIP string `json:",omitempty"`
 
 	// Port is the port that the server will listen on
 	Port int
@@ -217,7 +220,7 @@ type SystemCriticalConfig struct {
 	// SiteDomain is an alias for the the SiteHost field.
 	//
 	// Deprecated: Use SiteHost instead
-	SiteDomain string
+	SiteDomain string `json:",omitempty"`
 
 	SQLConfig
 
