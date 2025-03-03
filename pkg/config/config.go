@@ -147,7 +147,12 @@ type SQLConfig struct {
 	// DBtype is the type of SQL database to use. Currently supported values are "mysql", "postgres", and "sqlite3"
 	DBtype string
 
-	// DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file
+	// DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file.
+	// To connect to a MySQL database, set `DBhost` to "x.x.x.x:3306" (replacing x.x.x.x with your database server's
+	// IP or domain) or a different port, if necessary. You can also use a UNIX socket if you have it set up, like
+	// "unix(/var/run/mysqld/mysqld.sock)".
+	// To connect to a PostgreSQL database, set `DBhost` to the IP address or hostname. Using a UNIX socket may work
+	// as well, but it is currently untested.
 	DBhost string
 
 	// DBname is the name of the SQL database to connect to
@@ -160,6 +165,7 @@ type SQLConfig struct {
 	DBpassword string
 
 	// DBprefix is the prefix to add to table names in the database. It is not requried but may be useful if you need to share a database.
+	// Once you set it and do the initial setup, do not change it, as gochan will think the tables are missing and try to recreate them.
 	DBprefix string
 
 	// DBTimeoutSeconds sets the timeout for SQL queries in seconds, 0 means no timeout.
@@ -379,18 +385,45 @@ type BoardConfig struct {
 	PostConfig
 	UploadConfig
 
-	// DateTimeFormat is the human readable format to use for showing post timestamps
-	DateTimeFormat         string
-	ShowPosterID           bool
-	EnableSpoileredImages  bool
+	// DateTimeFormat is the human readable format to use for showing post timestamps. See [the official documentation](https://pkg.go.dev/time#Time.Format) for more information.
+	// Default: Mon, January 02, 2006 3:04:05 PM
+	DateTimeFormat string
+
+	// ShowPosterID determines whether to show the generated thread-unique poster ID in the post header (not yet implemented)
+	// Default: false
+	ShowPosterID bool
+
+	// EnableSpoileredImages determines whether to allow users to spoiler images (not yet implemented)
+	// Default: true
+	EnableSpoileredImages bool
+
+	// EnableSpoileredThreads determines whether to allow users to spoiler threads (not yet implemented)
+	// Default: true
 	EnableSpoileredThreads bool
-	Worksafe               bool
-	ThreadPage             int
-	Cooldowns              BoardCooldowns
-	RenderURLsAsLinks      bool
-	ThreadsPerPage         int
-	EnableGeoIP            bool
-	EnableNoFlag           bool
+
+	// Worksafe determines whether the board is worksafe or not. If it is set to true, threads cannot be marked NSFW
+	// Default: true
+	Worksafe bool
+
+	// Cooldowns is used to prevent spamming by setting the number of seconds the user must wait before creating new threads or replies
+	Cooldowns BoardCooldowns
+
+	// RenderURLsAsLinks determines whether to render URLs as clickable links in posts
+	// Default: true
+	RenderURLsAsLinks bool
+
+	// ThreadsPerPage is the number of threads to display per page
+	// Default: 20
+	ThreadsPerPage int
+
+	// EnableGeoIP shows a dropdown box allowing the user to set their post flag as their country
+	// Default: false
+	EnableGeoIP bool
+
+	// EnableNoFlag allows the user to post without a flag. It is only used if EnableGeoIP or CustomFlags is true
+	// Default: false
+	EnableNoFlag bool
+
 	// CustomFlags is a list of non-geoip flags with Name (viewable to the user) and Flag (flag image filename) fields
 	CustomFlags []geoip.Country
 	isGlobal    bool
@@ -420,14 +453,36 @@ type Style struct {
 }
 
 type UploadConfig struct {
+	// RejectDuplicateImages determines whether to reject images that have already been uploaded
+	// Default: false
 	RejectDuplicateImages bool
-	ThumbWidth            int
-	ThumbHeight           int
-	ThumbWidthReply       int
-	ThumbHeightReply      int
-	ThumbWidthCatalog     int
-	ThumbHeightCatalog    int
 
+	// ThumbWidth is the maximum width that thumbnails in the top thread post will be scaled down to
+	// Default: 200
+	ThumbWidth int
+
+	// ThumbHeight is the maximum height that thumbnails in the top thread post will be scaled down to
+	// Default: 200
+	ThumbHeight int
+
+	// ThumbWidthReply is the maximum width that thumbnails in thread replies will be scaled down to
+	// Default: 125
+	ThumbWidthReply int
+
+	// ThumbHeightReply is the maximum height that thumbnails in thread replies will be scaled down to
+	// Default: 125
+	ThumbHeightReply int
+
+	// ThumbWidthCatalog is the maximum width that thumbnails on the board catalog page will be scaled down to
+	// Default: 50
+	ThumbWidthCatalog int
+
+	// ThumbHeightCatalog is the maximum height that thumbnails on the board catalog page will be scaled down to
+	// Default: 50
+	ThumbHeightCatalog int
+
+	// AllowOtherExtensions is a map of file extensions to use for uploads that are not images or videos
+	// The key is the extension (e.g. ".pdf") and the value is the filename of the thumbnail to use in /static
 	AllowOtherExtensions map[string]string
 
 	// StripImageMetadata sets what (if any) metadata to remove from uploaded images using exiftool.

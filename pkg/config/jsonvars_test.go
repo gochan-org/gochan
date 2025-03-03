@@ -68,10 +68,10 @@ const (
 		"NewThreadDelay": 30,
 		"ReplyDelay": 7,
 		"MaxLineLength": 150,
-		"ReservedTrips": [
-			"thischangesto##this",
-			"andthischangesto##this"
-		],
+		"ReservedTrips": {
+			"thischangesto": "this",
+			"andthischangesto": "this"
+		},
 	
 		"ThumbWidth": 200,
 		"ThumbHeight": 200,
