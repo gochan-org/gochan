@@ -27,8 +27,10 @@ jobs:
         echo "Modified files: $FILES_CHANGED"
 
         if echo "$FILES_CHANGED" | grep -qE "pkg/config/config.go|pkg/posting/geoip/geoip.go"; then
+          echo "Files changed: $FILES_CHANGED"
           echo "update_docs=true" >> $GITHUB_ENV
         else
+          echo "Watched files not modified"
           echo "update_docs=false" >> $GITHUB_ENV
         fi
 
