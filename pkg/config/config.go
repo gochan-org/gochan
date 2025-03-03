@@ -466,25 +466,71 @@ func (uc *UploadConfig) AcceptedExtension(filename string) bool {
 }
 
 type PostConfig struct {
-	MaxLineLength int
-	ReservedTrips []string
+	// MaxPostLength is the maximum number of characters allowed in a post
+	// Default: 2000
+	MaxPostLength int
 
-	ThreadsPerPage           int
-	RepliesOnBoardPage       int
+	// ReservedTrips is used for reserving secure tripcodes. It should be a map of input strings to output tripcode strings. For example, if you have `{"abcd":"WXYZ"}` and someone posts with the name Name##abcd, their name will instead show up as Name!!WXYZ on the site.
+	ReservedTrips map[string]string
+
+	// ThreadsPerPage is the number of threads to display per page
+	// Default: 20
+	ThreadsPerPage int
+
+	// RepliesOnBoardPage is the number of replies to display on the board page
+	// Default: 3
+	RepliesOnBoardPage int
+
+	// StickyRepliesOnBoardPage is the number of replies to display on the board page for sticky threads
+	// Default: 1
 	StickyRepliesOnBoardPage int
-	NewThreadsRequireUpload  bool
-	EnableCyclicThreads      bool
-	CyclicThreadNumPosts     int
 
-	BanColors             map[string]string
-	BanMessage            string
-	EmbedWidth            int
-	EmbedHeight           int
-	EnableEmbeds          bool
-	ImagesOpenNewTab      bool
+	// NewThreadsRequireUpload determines whether to require an upload to create a new thread
+	// Default: false
+	NewThreadsRequireUpload bool
+
+	// EnableCyclicThreads allows users to create threads that have a maximum number of replies before the oldest reply is deleted
+	// Default: true
+	EnableCyclicThreads bool
+
+	// CyclicThreadNumPost determines the number of posts a cyclic thread can have before the oldest post is deleted
+	// Default: 500
+	CyclicThreadNumPosts int
+
+	// BanColors is a list of colors to use for the ban message with the staff name as the key. If the staff name is not found in the list, the default style color will be used.
+	BanColors map[string]string
+
+	// BanMessage is the default message shown on a post that a user was banned for
+	// Default: USER WAS BANNED FOR THIS POST
+	BanMessage string
+
+	// EmbedWidth is the width of embedded external videos
+	// Default: 200
+	EmbedWidth int
+
+	// EmbedHeight is the height of embedded external videos
+	// Default: 164
+	EmbedHeight int
+
+	// EnableEmbeds determines whether to allow embedding of external videos. It is not yet implemented
+	// Default: false
+	EnableEmbeds bool
+
+	// ImagesOpenNewTab determines whether to open images in a new tab when an image link is clicked
+	// Default: true
+	ImagesOpenNewTab bool
+
+	// NewTabOnExternalLinks determines whether to open external links in a new tab
+	// Default: true
 	NewTabOnExternalLinks bool `json:"NewTabOnOutlinks"`
-	DisableBBcode         bool
-	AllowDiceRerolls      bool
+
+	// DisableBBcode will disable BBCode to HTML conversion if true
+	// Default: false
+	DisableBBcode bool
+
+	// AllowDiceRerolls determines whether to allow users to edit posts to reroll dice
+	// Default: false
+	AllowDiceRerolls bool
 }
 
 func WriteConfig() error {
