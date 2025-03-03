@@ -42,13 +42,14 @@ jobs:
     - name: Get gochan-cfgdoc
       if: env.update_docs == 'true'
       run: |
+        cd $HOME
         git clone https://github.com/gochan-org/gochan-cfgdoc.git
         cd gochan-cfgdoc
         go build
 
     - name: Update config.md
       if: env.update_docs == 'true'
-      run: ./gochan-cfgdoc "$(pwd)" > config.md
+      run: $HOME/gochan-cfgdoc/gochan-cfgdoc "$(pwd)" > config.md
 
     - name: Create pull request
       if: env.update_docs == 'true'
