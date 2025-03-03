@@ -91,6 +91,7 @@ ThumbHeightCatalog         |int               |50                               
 AllowOtherExtensions       |map[string]string |                                                                                       |AllowOtherExtensions is a map of file extensions to use for uploads that are not images or videos The key is the extension (e.g. ".pdf") and the value is the filename of the thumbnail to use in /static 
 StripImageMetadata         |string            |                                                                                       |StripImageMetadata sets what (if any) metadata to remove from uploaded images using exiftool. Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata) 
 ExiftoolPath               |string            |                                                                                       |ExiftoolPath is the path to the exiftool command. If unset or empty, the system path will be used to find it 
+
 Example options for `GeoIPOptions`:
 ```JSONC
 "GeoIPType": "mmdb",
@@ -100,7 +101,7 @@ Example options for `GeoIPOptions`:
 }
 ```
 
-CustomFlags` is an array with custom flags, selectable via dropdown. The `Flag` value is assumed to be in /static/flags/. Example:
+`CustomFlags` is an array with custom post flags, selectable via dropdown. The `Flag` value is assumed to be a file in /static/flags/. Example:
 ```JSON
 "CustomFlags": [
 	{"Flag":"california.png", "Name": "California"},
