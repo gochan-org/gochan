@@ -192,9 +192,11 @@ type SystemCriticalConfig struct {
 	ListenIP string `json:",omitempty"`
 
 	// Port is the port that the server will listen on
+	// Default: 80
 	Port int
 
 	// UseFastCGI tells the server to listen on FastCGI instead of HTTP if true
+	// Default: false
 	UseFastCGI bool
 
 	// DocumentRoot is the path to the directory that contains the served static files
@@ -291,14 +293,19 @@ type SiteConfig struct {
 	// MinifyHTML tells the server to minify HTML output before sending it to the client
 	// Default: true
 	MinifyHTML bool
+
 	// MinifyJS tells the server to minify JavaScript and JSON output before sending it to the client
 	// Default: true
 	MinifyJS bool
+
 	// GeoIPType is the type of GeoIP database to use. Currently only "mmdb" is supported, though other types may be provided by plugins
 	GeoIPType string
+
 	// GeoIPOptions is a map of options to pass to the GeoIP plugin
 	GeoIPOptions map[string]any
-	Captcha      CaptchaConfig
+
+	// Captcha options for spam prevention. Currently only hcaptcha is supported
+	Captcha CaptchaConfig
 
 	// FingerprintVideoThumbnails determines whether to use video thumbnails for image fingerprinting. If false, the video file will not be checked by fingerprinting filters
 	// Default: false
@@ -331,9 +338,11 @@ type BoardCooldowns struct {
 	// NewThread is the number of seconds the user must wait before creating new threads.
 	// Default: 30
 	NewThread int `json:"threads"`
+
 	// NewReply is the number of seconds the user must wait after replying to a thread before they can create another reply.
 	// Default: 7
 	Reply int `json:"replies"`
+
 	// NewImageReply is the number of seconds the user must wait after replying to a thread with an upload before they can create another reply.
 	// Default: 7
 	ImageReply int `json:"images"`
@@ -354,12 +363,16 @@ type PageBanner struct {
 // the site's default board config (with values set in gochan.json) will be used
 type BoardConfig struct {
 	// InheritGlobalStyles determines whether to use the global styles in addition to the board's styles, as opposed to only the board's styles
+	// Default: true
 	InheritGlobalStyles bool
+
 	// Styles is a list of Gochan themes with Name and Filename fields, choosable by the user
 	Styles []Style
-	// DefaultStyle is the filename of the default style to use for the board or the site.
+
+	// DefaultStyle is the filename of the default style to use for the board or the site. If it is not set, the first style in the Styles list will be used
 	// Default: pipes.css
 	DefaultStyle string
+
 	// Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields
 	Banners []PageBanner
 
@@ -417,10 +430,11 @@ type UploadConfig struct {
 
 	AllowOtherExtensions map[string]string
 
-	// Sets what (if any) metadata to remove from uploaded images using exiftool.
+	// StripImageMetadata sets what (if any) metadata to remove from uploaded images using exiftool.
 	// Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata)
 	StripImageMetadata string
-	// The path to the exiftool command. If unset or empty, the system path will be used to find it
+
+	// ExiftoolPath is the path to the exiftool command. If unset or empty, the system path will be used to find it
 	ExiftoolPath string
 }
 
@@ -462,15 +476,15 @@ type PostConfig struct {
 	EnableCyclicThreads      bool
 	CyclicThreadNumPosts     int
 
-	BanColors        []string
-	BanMessage       string
-	EmbedWidth       int
-	EmbedHeight      int
-	EnableEmbeds     bool
-	ImagesOpenNewTab bool
-	NewTabOnOutlinks bool
-	DisableBBcode    bool
-	AllowDiceRerolls bool
+	BanColors             map[string]string
+	BanMessage            string
+	EmbedWidth            int
+	EmbedHeight           int
+	EnableEmbeds          bool
+	ImagesOpenNewTab      bool
+	NewTabOnExternalLinks bool `json:"NewTabOnOutlinks"`
+	DisableBBcode         bool
+	AllowDiceRerolls      bool
 }
 
 func WriteConfig() error {

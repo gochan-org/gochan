@@ -25,8 +25,9 @@ var (
 			FingerprintHashLength: 16,
 		},
 		BoardConfig: BoardConfig{
-			isGlobal:       true,
-			DateTimeFormat: "Mon, January 02, 2006 3:04:05 PM",
+			isGlobal:            true,
+			InheritGlobalStyles: true,
+			DateTimeFormat:      "Mon, January 02, 2006 3:04:05 PM",
 			Banners: []PageBanner{
 				{Filename: "gochan_go-parody.png", Width: 300, Height: 100},
 			},
@@ -56,7 +57,7 @@ var (
 				EmbedWidth:               200,
 				EmbedHeight:              164,
 				ImagesOpenNewTab:         true,
-				NewTabOnOutlinks:         true,
+				NewTabOnExternalLinks:    true,
 			},
 			UploadConfig: UploadConfig{
 				ThumbWidth:         200,

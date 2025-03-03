@@ -93,9 +93,9 @@ func InitConfig(versionStr string) {
 		cfg.Verbose = true
 		cfg.Captcha.OnlyNeededForThreads = true
 		cfg.Cooldowns = BoardCooldowns{0, 0, 0}
-		cfg.BanColors = []string{
-			"admin:#0000A0",
-			"somemod:blue",
+		cfg.BanColors = map[string]string{
+			"admin":   "#0000A0",
+			"somemod": "blue",
 		}
 		return
 	}
