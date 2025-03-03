@@ -1,7 +1,9 @@
 # Configuration
 See [gochan.example.json](examples/configs/gochan.example.json) for an example gochan.json.
 
-**Make sure gochan has read-write permission for `DocumentRoot` and `LogDir` and read permission for `TemplateDir`**Field                      |Type              |Default                                                                                |Info
+**Make sure gochan has read-write permission for `DocumentRoot` and `LogDir` and read permission for `TemplateDir`**
+
+Field                      |Type              |Default                                                                                |Info
 ---------------------------|------------------|---------------------------------------------------------------------------------------|--------------
 ListenAddress              |string            |                                                                                       |ListenAddress is the IP address or domain name that the server will listen on 
 Port                       |int               |80                                                                                     |Port is the port that the server will listen on Default: 80 
@@ -16,11 +18,11 @@ CheckRequestReferer        |bool              |true                             
 Verbose                    |bool              |                                                                                       |Verbose currently is not used and may be removed, to be replaced with more granular logging options 
 RandomSeed                 |string            |                                                                                       |RandomSeed is a random string used for generating secure tokens. It will be generated if not set and must not be changed 
 DBtype                     |string            |                                                                                       |DBtype is the type of SQL database to use. Currently supported values are "mysql", "postgres", and "sqlite3" 
-DBhost                     |string            |                                                                                       |DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file 
+DBhost                     |string            |                                                                                       |DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file. To connect to a MySQL database, set `DBhost` to "x.x.x.x:3306" (replacing x.x.x.x with your database server's IP or domain) or a different port, if necessary. You can also use a UNIX socket if you have it set up, like "unix(/var/run/mysqld/mysqld.sock)". To connect to a PostgreSQL database, set `DBhost` to the IP address or hostname. Using a UNIX socket may work as well, but it is currently untested. 
 DBname                     |string            |                                                                                       |DBname is the name of the SQL database to connect to 
 DBusername                 |string            |                                                                                       |DBusername is the username to use when authenticating with the SQL server 
 DBpassword                 |string            |                                                                                       |DBpassword is the password to use when authenticating with the SQL server 
-DBprefix                   |string            |                                                                                       |DBprefix is the prefix to add to table names in the database. It is not requried but may be useful if you need to share a database. 
+DBprefix                   |string            |                                                                                       |DBprefix is the prefix to add to table names in the database. It is not requried but may be useful if you need to share a database. Once you set it and do the initial setup, do not change it, as gochan will think the tables are missing and try to recreate them. 
 DBTimeoutSeconds           |int               |15                                                                                     |DBTimeoutSeconds sets the timeout for SQL queries in seconds, 0 means no timeout. Default: 15 
 DBMaxOpenConnections       |int               |10                                                                                     |DBMaxOpenConnections is the maximum number of open connections to the database connection pool. Default: 10 
 DBMaxIdleConnections       |int               |10                                                                                     |DBMaxIdleConnections is the maximum number of idle connections to the database connection pool. Default: 10 
@@ -51,7 +53,16 @@ InheritGlobalStyles        |bool              |true                             
 Styles                     |[]Style           |                                                                                       |Styles is a list of Gochan themes with Name and Filename fields, choosable by the user 
 DefaultStyle               |string            |pipes.css                                                                              |DefaultStyle is the filename of the default style to use for the board or the site. If it is not set, the first style in the Styles list will be used Default: pipes.css 
 Banners                    |[]PageBanner      |                                                                                       |Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields 
-DateTimeFormat             |string            |                                                                                       |DateTimeFormat is the human readable format to use for showing post timestamps 
+DateTimeFormat             |string            |Mon, January 02, 2006 3:04:05 PM                                                       |DateTimeFormat is the human readable format to use for showing post timestamps. See [the official documentation](https://pkg.go.dev/time#Time.Format) for more information. Default: Mon, January 02, 2006 3:04:05 PM 
+ShowPosterID               |bool              |false                                                                                  |ShowPosterID determines whether to show the generated thread-unique poster ID in the post header (not yet implemented) Default: false 
+EnableSpoileredImages      |bool              |true                                                                                   |EnableSpoileredImages determines whether to allow users to spoiler images (not yet implemented) Default: true 
+EnableSpoileredThreads     |bool              |true                                                                                   |EnableSpoileredThreads determines whether to allow users to spoiler threads (not yet implemented) Default: true 
+Worksafe                   |bool              |true                                                                                   |Worksafe determines whether the board is worksafe or not. If it is set to true, threads cannot be marked NSFW Default: true 
+Cooldowns                  |BoardCooldowns    |                                                                                       |Cooldowns is used to prevent spamming by setting the number of seconds the user must wait before creating new threads or replies 
+RenderURLsAsLinks          |bool              |true                                                                                   |RenderURLsAsLinks determines whether to render URLs as clickable links in posts Default: true 
+ThreadsPerPage             |int               |20                                                                                     |ThreadsPerPage is the number of threads to display per page Default: 20 
+EnableGeoIP                |bool              |false                                                                                  |EnableGeoIP shows a dropdown box allowing the user to set their post flag as their country Default: false 
+EnableNoFlag               |bool              |false                                                                                  |EnableNoFlag allows the user to post without a flag. It is only used if EnableGeoIP or CustomFlags is true Default: false 
 CustomFlags                |[]geoip.Country   |                                                                                       |CustomFlags is a list of non-geoip flags with Name (viewable to the user) and Flag (flag image filename) fields 
 MaxPostLength              |int               |2000                                                                                   |MaxPostLength is the maximum number of characters allowed in a post Default: 2000 
 ReservedTrips              |map[string]string |                                                                                       |ReservedTrips is used for reserving secure tripcodes. It should be a map of input strings to output tripcode strings. For example, if you have `{"abcd":"WXYZ"}` and someone posts with the name Name##abcd, their name will instead show up as Name!!WXYZ on the site. 
@@ -70,8 +81,38 @@ ImagesOpenNewTab           |bool              |true                             
 NewTabOnExternalLinks      |bool              |true                                                                                   |NewTabOnExternalLinks determines whether to open external links in a new tab Default: true 
 DisableBBcode              |bool              |false                                                                                  |DisableBBcode will disable BBCode to HTML conversion if true Default: false 
 AllowDiceRerolls           |bool              |false                                                                                  |AllowDiceRerolls determines whether to allow users to edit posts to reroll dice Default: false 
+RejectDuplicateImages      |bool              |false                                                                                  |RejectDuplicateImages determines whether to reject images that have already been uploaded Default: false 
+ThumbWidth                 |int               |200                                                                                    |ThumbWidth is the maximum width that thumbnails in the top thread post will be scaled down to Default: 200 
+ThumbHeight                |int               |200                                                                                    |ThumbHeight is the maximum height that thumbnails in the top thread post will be scaled down to Default: 200 
+ThumbWidthReply            |int               |125                                                                                    |ThumbWidthReply is the maximum width that thumbnails in thread replies will be scaled down to Default: 125 
+ThumbHeightReply           |int               |125                                                                                    |ThumbHeightReply is the maximum height that thumbnails in thread replies will be scaled down to Default: 125 
+ThumbWidthCatalog          |int               |50                                                                                     |ThumbWidthCatalog is the maximum width that thumbnails on the board catalog page will be scaled down to Default: 50 
+ThumbHeightCatalog         |int               |50                                                                                     |ThumbHeightCatalog is the maximum height that thumbnails on the board catalog page will be scaled down to Default: 50 
+AllowOtherExtensions       |map[string]string |                                                                                       |AllowOtherExtensions is a map of file extensions to use for uploads that are not images or videos The key is the extension (e.g. ".pdf") and the value is the filename of the thumbnail to use in /static 
 StripImageMetadata         |string            |                                                                                       |StripImageMetadata sets what (if any) metadata to remove from uploaded images using exiftool. Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata) 
 ExiftoolPath               |string            |                                                                                       |ExiftoolPath is the path to the exiftool command. If unset or empty, the system path will be used to find it 
+Example options for `GeoIPOptions`:
+```JSONC
+"GeoIPType": "mmdb",
+"GeoIPOptions": {
+	"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
+	"isoCode": "en" // optional
+}
+```
+
+CustomFlags` is an array with custom flags, selectable via dropdown. The `Flag` value is assumed to be in /static/flags/. Example:
+```JSON
+"CustomFlags": [
+	{"Flag":"california.png", "Name": "California"},
+	{"Flag":"cia.png", "Name": "CIA"},
+	{"Flag":"lgbtq.png", "Name": "LGBTQ"},
+	{"Flag":"ms-dos.png", "Name": "MS-DOS"},
+	{"Flag":"stallman.png", "Name": "Stallman"},
+	{"Flag":"templeos.png", "Name": "TempleOS"},
+	{"Flag":"tux.png", "Name": "Linux"},
+	{"Flag":"windows9x.png", "Name": "Windows 9x"}
+]
+```
 
 ## PageBanner
 PageBanner represents the filename and dimensions of a banner image to display on board and thread pages
