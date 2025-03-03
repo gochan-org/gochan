@@ -1,0 +1,60 @@
+name: Update Config Docs
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Get list of modified files
+      id: changed-files
+      uses: tj-actions/changed-files@v45
+
+    - name: Check if watched files were modified
+      id: check-files
+      run: |
+        FILES_CHANGED=$(echo "${{ steps.changed-files.outputs.all_changed_files }}" | tr '\n' ' ')
+        echo "Modified files: $FILES_CHANGED"
+
+        if echo "$FILES_CHANGED" | grep -qE "pkg/config/config.go|pkg/posting/geoip/geoip.go"; then
+          echo "update_docs=true" >> $GITHUB_ENV
+        else
+          echo "update_docs=false" >> $GITHUB_ENV
+        fi
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22'
+
+    - name: Get gochan-cfgdoc
+      if: env.update_docs == 'true'
+      run: |
+        git clone https://github.com/gochan-org/gochan-cfgdoc.git
+        cd gochan-cfgdoc
+        go build
+
+    - name: Update config.md
+      if: env.update_docs == 'true'
+      run: ./gochan-cfgdoc "$(pwd)" > config.md
+
+    - name: Create pull request
+      if: env.update_docs == 'true'
+      uses: peter-evans/create-pull-request@v7
+      with:
+        branch: "update-config-docs"
+        title: "Auto-update config.md"
+        commit-message: "Automatically update configuration documentation"
+        body: "This PR updates the config.md file based on changes to pkg/config/config.go and pkg/posting/geoip/geoip.go."
+        base: "master"
+        labels: "documentation"
