@@ -1,66 +1,97 @@
-# gochan configuration
+# Configuration
 See [gochan.example.json](examples/configs/gochan.example.json) for an example gochan.json.
 
-## Server-critical stuff
-* You'll need to edit some of the values like `ListenAddress` and `UseFastCGI` based on your system's setup. For an example nginx configuration, see [gochan-fastcgi.nginx](examples/configs/gochan-fastcgi.nginx) for FastCGI and [gochan-http.nginx](examples/configs/gochan-http.nginx) for passing through HTTP.
-* `DocumentRoot` refers to the root directory on your filesystem where gochan will look for requested files.
-* `TemplateDir` refers to the directory where gochan will load the templates from.
-* `LogDir` refers to the directory where gochan will write the logs to.
+**Make sure gochan has read-write permission for `DocumentRoot` and `LogDir` and read permission for `TemplateDir`**Field                      |Type              |Default                                                                                |Info
+---------------------------|------------------|---------------------------------------------------------------------------------------|--------------
+ListenAddress              |string            |                                                                                       |ListenAddress is the IP address or domain name that the server will listen on 
+Port                       |int               |80                                                                                     |Port is the port that the server will listen on Default: 80 
+UseFastCGI                 |bool              |false                                                                                  |UseFastCGI tells the server to listen on FastCGI instead of HTTP if true Default: false 
+DocumentRoot               |string            |                                                                                       |DocumentRoot is the path to the directory that contains the served static files 
+TemplateDir                |string            |                                                                                       |TemplateDir is the path to the directory that contains the template files 
+LogDir                     |string            |                                                                                       |LogDir is the path to the directory that contains the log files. It must be writable by the server and will be created if it doesn't exist 
+Plugins                    |[]string          |                                                                                       |Plugins is a list of paths to plugins to be loaded on startup. In Windows, only .lua plugins are supported. In Unix, .so plugins are also supported, but they must be compiled with the same Go version as the server and must be compiled in plugin mode 
+WebRoot                    |string            |/                                                                                      |WebRoot is the base URL path that the server will serve files and generated pages from. Default: / 
+SiteHost                   |string            |                                                                                       |SiteHost is the publicly accessible domain name or IP address of the site, e.g. "example.com" used for anti-spam checking 
+CheckRequestReferer        |bool              |true                                                                                   |CheckRequestReferer tells the server to validate the Referer header from requests to prevent CSRF attacks. Default: true 
+Verbose                    |bool              |                                                                                       |Verbose currently is not used and may be removed, to be replaced with more granular logging options 
+RandomSeed                 |string            |                                                                                       |RandomSeed is a random string used for generating secure tokens. It will be generated if not set and must not be changed 
+DBtype                     |string            |                                                                                       |DBtype is the type of SQL database to use. Currently supported values are "mysql", "postgres", and "sqlite3" 
+DBhost                     |string            |                                                                                       |DBhost is the hostname or IP address of the SQL server, or the path to the SQLite database file 
+DBname                     |string            |                                                                                       |DBname is the name of the SQL database to connect to 
+DBusername                 |string            |                                                                                       |DBusername is the username to use when authenticating with the SQL server 
+DBpassword                 |string            |                                                                                       |DBpassword is the password to use when authenticating with the SQL server 
+DBprefix                   |string            |                                                                                       |DBprefix is the prefix to add to table names in the database. It is not requried but may be useful if you need to share a database. 
+DBTimeoutSeconds           |int               |15                                                                                     |DBTimeoutSeconds sets the timeout for SQL queries in seconds, 0 means no timeout. Default: 15 
+DBMaxOpenConnections       |int               |10                                                                                     |DBMaxOpenConnections is the maximum number of open connections to the database connection pool. Default: 10 
+DBMaxIdleConnections       |int               |10                                                                                     |DBMaxIdleConnections is the maximum number of idle connections to the database connection pool. Default: 10 
+DBConnMaxLifetimeMin       |int               |3                                                                                      |DBConnMaxLifetimeMin is the maximum lifetime of a connection in minutes. Default: 3 
+FirstPage                  |[]string          |["index.html", "firstrun.html", "1.html"]                                              |FirstPage is a list of possible filenames to look for if a directory is requested Default: ["index.html", "firstrun.html", "1.html"] 
+Username                   |string            |                                                                                       |Username is the name of the user that the server will run as, if set, or the current user if empty or unset. It must be a valid user on the system if it is set 
+CookieMaxAge               |string            |1y                                                                                     |CookieMaxAge is the parsed max age duration of cookies, e.g. "1 year 2 months 3 days 4 hours" or "1y2mo3d4h". Default: 1y 
+StaffSessionDuration       |string            |3mo                                                                                    |StaffSessionDuration is the parsed max age duration of staff session cookies, e.g. "1 year 2 months 3 days 4 hours" or "1y2mo3d4h". Default: 3mo 
+Lockdown                   |bool              |false                                                                                  |Lockdown prevents users from posting if true Default: false 
+LockdownMessage            |string            |This imageboard has temporarily disabled posting. We apologize for the inconvenience   |LockdownMessage is the message displayed to users if they try to cretae a post when the site is in lockdown Default: This imageboard has temporarily disabled posting. We apologize for the inconvenience 
+SiteName                   |string            |Gochan                                                                                 |SiteName is the name of the site, displayed in the title and front page header Default: Gochan 
+SiteSlogan                 |string            |                                                                                       |SiteSlogan is the community slogan displayed on the front page below the site name 
+MaxRecentPosts             |int               |15                                                                                     |MaxRecentPosts is the number of recent posts to display on the front page Default: 15 
+RecentPostsWithNoFile      |bool              |false                                                                                  |RecentPostsWithNoFile determines whether to include posts with no file in the recent posts list Default: false 
+EnableAppeals              |bool              |true                                                                                   |EnableAppeals determines whether to allow users to appeal bans Default: true 
+MinifyHTML                 |bool              |true                                                                                   |MinifyHTML tells the server to minify HTML output before sending it to the client Default: true 
+MinifyJS                   |bool              |true                                                                                   |MinifyJS tells the server to minify JavaScript and JSON output before sending it to the client Default: true 
+GeoIPType                  |string            |                                                                                       |GeoIPType is the type of GeoIP database to use. Currently only "mmdb" is supported, though other types may be provided by plugins 
+GeoIPOptions               |map[string]any    |                                                                                       |GeoIPOptions is a map of options to pass to the GeoIP plugin 
+Captcha                    |CaptchaConfig     |                                                                                       |Captcha options for spam prevention. Currently only hcaptcha is supported 
+FingerprintVideoThumbnails |bool              |false                                                                                  |FingerprintVideoThumbnails determines whether to use video thumbnails for image fingerprinting. If false, the video file will not be checked by fingerprinting filters Default: false 
+FingerprintHashLength      |int               |16                                                                                     |FingerprintHashLength is the length of the hash used for image fingerprinting Default: 16 
+Type                       |string            |                                                                                       |Type is the type of captcha to use. Currently only "hcaptcha" is supported 
+OnlyNeededForThreads       |bool              |                                                                                       |OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts 
+SiteKey                    |string            |                                                                                       |SiteKey is the public key for the captcha service. Usage depends on the captcha service 
+AccountSecret              |string            |                                                                                       |AccountSecret is the secret key for the captcha service. Usage depends on the captcha service 
+InheritGlobalStyles        |bool              |true                                                                                   |InheritGlobalStyles determines whether to use the global styles in addition to the board's styles, as opposed to only the board's styles Default: true 
+Styles                     |[]Style           |                                                                                       |Styles is a list of Gochan themes with Name and Filename fields, choosable by the user 
+DefaultStyle               |string            |pipes.css                                                                              |DefaultStyle is the filename of the default style to use for the board or the site. If it is not set, the first style in the Styles list will be used Default: pipes.css 
+Banners                    |[]PageBanner      |                                                                                       |Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields 
+DateTimeFormat             |string            |                                                                                       |DateTimeFormat is the human readable format to use for showing post timestamps 
+CustomFlags                |[]geoip.Country   |                                                                                       |CustomFlags is a list of non-geoip flags with Name (viewable to the user) and Flag (flag image filename) fields 
+MaxPostLength              |int               |2000                                                                                   |MaxPostLength is the maximum number of characters allowed in a post Default: 2000 
+ReservedTrips              |map[string]string |                                                                                       |ReservedTrips is used for reserving secure tripcodes. It should be a map of input strings to output tripcode strings. For example, if you have `{"abcd":"WXYZ"}` and someone posts with the name Name##abcd, their name will instead show up as Name!!WXYZ on the site. 
+ThreadsPerPage             |int               |20                                                                                     |ThreadsPerPage is the number of threads to display per page Default: 20 
+RepliesOnBoardPage         |int               |3                                                                                      |RepliesOnBoardPage is the number of replies to display on the board page Default: 3 
+StickyRepliesOnBoardPage   |int               |1                                                                                      |StickyRepliesOnBoardPage is the number of replies to display on the board page for sticky threads Default: 1 
+NewThreadsRequireUpload    |bool              |false                                                                                  |NewThreadsRequireUpload determines whether to require an upload to create a new thread Default: false 
+EnableCyclicThreads        |bool              |true                                                                                   |EnableCyclicThreads allows users to create threads that have a maximum number of replies before the oldest reply is deleted Default: true 
+CyclicThreadNumPosts       |int               |500                                                                                    |CyclicThreadNumPost determines the number of posts a cyclic thread can have before the oldest post is deleted Default: 500 
+BanColors                  |map[string]string |                                                                                       |BanColors is a list of colors to use for the ban message with the staff name as the key. If the staff name is not found in the list, the default style color will be used. 
+BanMessage                 |string            |USER WAS BANNED FOR THIS POST                                                          |BanMessage is the default message shown on a post that a user was banned for Default: USER WAS BANNED FOR THIS POST 
+EmbedWidth                 |int               |200                                                                                    |EmbedWidth is the width of embedded external videos Default: 200 
+EmbedHeight                |int               |164                                                                                    |EmbedHeight is the height of embedded external videos Default: 164 
+EnableEmbeds               |bool              |false                                                                                  |EnableEmbeds determines whether to allow embedding of external videos. It is not yet implemented Default: false 
+ImagesOpenNewTab           |bool              |true                                                                                   |ImagesOpenNewTab determines whether to open images in a new tab when an image link is clicked Default: true 
+NewTabOnExternalLinks      |bool              |true                                                                                   |NewTabOnExternalLinks determines whether to open external links in a new tab Default: true 
+DisableBBcode              |bool              |false                                                                                  |DisableBBcode will disable BBCode to HTML conversion if true Default: false 
+AllowDiceRerolls           |bool              |false                                                                                  |AllowDiceRerolls determines whether to allow users to edit posts to reroll dice Default: false 
+StripImageMetadata         |string            |                                                                                       |StripImageMetadata sets what (if any) metadata to remove from uploaded images using exiftool. Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata) 
+ExiftoolPath               |string            |                                                                                       |ExiftoolPath is the path to the exiftool command. If unset or empty, the system path will be used to find it 
 
-**Make sure gochan has read-write permission for `DocumentRoot` and `LogDir` and read permission for `TemplateDir`**
+## PageBanner
+PageBanner represents the filename and dimensions of a banner image to display on board and thread pages
+Field    |Type   |Info
+---------|-------|--------------
+Filename |string |Filename is the name of the image file to display as seen by the browser 
+Width    |int    |Width is the width of the image in pixels 
+Height   |int    |Height is the height of the image in pixels 
 
-## Database configuration
-Valid `DBtype` values are "mysql" and "postgres" (sqlite3 is no longer supported for stability reasons, though that may or may not come back).
-1. To connect to a MySQL database, set `DBhost` to "x.x.x.x:3306" (replacing x.x.x.x with your database server's IP or domain) or a different port, if necessary. You can also use a UNIX socket if you have it set up, like "unix(/var/run/mysqld/mysqld.sock)".
-2. To connect to a PostgreSQL database, set `DBhost` to the IP address or hostname. Using a UNIX socket may work as well, but it is currently untested.
-3. Set `SiteHost`, since these are necessary in order to post and log in as a staff member.
-3. If you want to see debugging info/noncritical warnings, set verbosity to 1.
-4. If `DBprefix` is set (not required), all gochan table names will be prefixed with the `DBprefix` value. Once you run gochan for the first time, you really shouldn't edit this value, since gochan will assume the tables are missing.
+## BoardCooldowns
+Field      |Type  |Default    |Info
+-----------|------|-----------|--------------
+NewThread  |int   |30         |NewThread is the number of seconds the user must wait before creating new threads. Default: 30 
+Reply      |int   |7          |NewReply is the number of seconds the user must wait after replying to a thread before they can create another reply. Default: 7 
+ImageReply |int   |7          |NewImageReply is the number of seconds the user must wait after replying to a thread with an upload before they can create another reply. Default: 7 
 
-## Website configuration
-* `SiteName` is used for the name displayed on the home page.
-* `SiteSlogan` is used for the slogan (if set) on the home page.
-* `SiteHost` is used for links throughout the site.
-* `WebRoot` is used as the prefix for boards, files, and pretty much everything on the site. If it isn't set, "/" will be used.
+## geoip.Country
+Country represents the country data (or custom flag data) used by gochan.
+Field  |Type   |Info
+-------|-------|--------------
+Flag   |string |Flag is the country abbreviation for standard geoip countries, or the filename accessible in /static/flags/{flag} for custom flags 
+Name   |string |Name is the configured flag name that shows up in the dropdown box and the image alt text 
 
-## GeoIP/Flag configuration
-* `EnableGeoIP` specifies whether or not GeoIP will be used. It can be set in the global configuration file or in a board configuration.
-* `GeoIPType` specifies the GeoIP handler. If it is blank or unset, GeoIP will not be used. Gochan has built-in support for MaxMind GeoIP2/GeoLite2 databases by setting the value to "mmdb", "geoip2", or "geolite2".
-* `GeoIPOptions` is an object with keys and values for configuring the specified GeoIP handler. Not all GeoIP receivers may need it. Example:
-```JSONC
-"GeoIPType": "mmdb",
-"GeoIPOptions": {
-	"dbLocation": "/usr/share/geoip/GeoIP2.mmdb",
-	"isoCode": "en" // optional
-}
-```
-* `CustomFlags` is an array with custom flags, selectable via dropdown. The `Flag` value is assumed to be in /static/flags/. Example:
-```JSON
-"CustomFlags": [
-	{"Flag":"california.png", "Name": "California"},
-	{"Flag":"cia.png", "Name": "CIA"},
-	{"Flag":"lgbtq.png", "Name": "LGBTQ"},
-	{"Flag":"ms-dos.png", "Name": "MS-DOS"},
-	{"Flag":"stallman.png", "Name": "Stallman"},
-	{"Flag":"templeos.png", "Name": "TempleOS"},
-	{"Flag":"tux.png", "Name": "Linux"},
-	{"Flag":"windows9x.png", "Name": "Windows 9x"}
-]
-```
-* `EnableNoFlag` is only relevant if another flag option is used, and allows the user to not have a flag shown on their post on a flag board.
-
-## Fingerprinting configuration
-By default, only images are fingerprinted, but if `FingerprintVideoThumbnails` is set to true, the thumbnails of videos will also be checked.
-
-## Styles
-* `Styles` is an array, with each element representing a theme selectable by the user from the frontend settings screen. Each element should have `Name` string value and a `Filename` string value. Example:
-```JSON
-"Styles": [
-	{ "Name": "Pipes", "Filename": "pipes.css" }
-]
-```
-* If `DefaultStyle` is not set, the first element in `Styles` will be used.
-
-## Misc
-* `ReservedTrips` is used for reserving secure tripcodes. It should be an array of strings. For example, if you have `abcd##ABCD` and someone posts with the name ##abcd, their name will instead show up as !!ABCD on the site.
-* `BanColors` is used for the color of the text set by `BanMessage`, and can be used for setting per-user colors, if desired. It should be a string array, with each element being of the form `"username:color"`, where color is a valid HTML color (#000A0, green, etc) and username is the staff member who set the ban. If a color isn't set for the user, the style will be used to set the color.
