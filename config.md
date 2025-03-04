@@ -114,32 +114,32 @@ Example options for `GeoIPOptions`:
 ```
 
 ## CaptchaConfig
-Field                |Type   |Board option |Info
+Field                |Type   |Info
 ---------------------|-------|--------------
-Type                 |string |No           |Type is the type of captcha to use. Currently only "hcaptcha" is supported 
-OnlyNeededForThreads |bool   |No           |OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts 
-SiteKey              |string |No           |SiteKey is the public key for the captcha service. Usage depends on the captcha service 
-AccountSecret        |string |No           |AccountSecret is the secret key for the captcha service. Usage depends on the captcha service 
+Type                 |string |Type is the type of captcha to use. Currently only "hcaptcha" is supported 
+OnlyNeededForThreads |bool   |OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts 
+SiteKey              |string |SiteKey is the public key for the captcha service. Usage depends on the captcha service 
+AccountSecret        |string |AccountSecret is the secret key for the captcha service. Usage depends on the captcha service 
 
 ## PageBanner
 PageBanner represents the filename and dimensions of a banner image to display on board and thread pages
-Field    |Type   |Board option |Info
+Field    |Type   |Info
 ---------|-------|--------------
-Filename |string |No           |Filename is the name of the image file to display as seen by the browser 
-Width    |int    |No           |Width is the width of the image in pixels 
-Height   |int    |No           |Height is the height of the image in pixels 
+Filename |string |Filename is the name of the image file to display as seen by the browser 
+Width    |int    |Width is the width of the image in pixels 
+Height   |int    |Height is the height of the image in pixels 
 
 ## BoardCooldowns
-Field      |Type  |Board option |Default    |Info
+Field      |Type  |Default    |Info
 -----------|------|-----------|--------------
-NewThread  |int   |No           |30         |NewThread is the number of seconds the user must wait before creating new threads. Default: 30 
-Reply      |int   |No           |7          |NewReply is the number of seconds the user must wait after replying to a thread before they can create another reply. Default: 7 
-ImageReply |int   |No           |7          |NewImageReply is the number of seconds the user must wait after replying to a thread with an upload before they can create another reply. Default: 7 
+NewThread  |int   |30         |NewThread is the number of seconds the user must wait before creating new threads. Default: 30 
+Reply      |int   |7          |NewReply is the number of seconds the user must wait after replying to a thread before they can create another reply. Default: 7 
+ImageReply |int   |7          |NewImageReply is the number of seconds the user must wait after replying to a thread with an upload before they can create another reply. Default: 7 
 
 ## geoip.Country
 Country represents the country data (or custom flag data) used by gochan.
-Field  |Type   |Board option |Info
+Field  |Type   |Info
 -------|-------|--------------
-Flag   |string |No           |Flag is the country abbreviation for standard geoip countries, or the filename accessible in /static/flags/{flag} for custom flags 
-Name   |string |No           |Name is the configured flag name that shows up in the dropdown box and the image alt text 
+Flag   |string |Flag is the country abbreviation for standard geoip countries, or the filename accessible in /static/flags/{flag} for custom flags 
+Name   |string |Name is the configured flag name that shows up in the dropdown box and the image alt text 
 
