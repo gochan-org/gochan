@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -335,6 +336,16 @@ type SiteConfig struct {
 	// FingerprintHashLength is the length of the hash used for image fingerprinting
 	// Default: 16
 	FingerprintHashLength int
+
+	cookieMaxAgeDuration time.Duration
+}
+
+func (sc *SiteConfig) CookieMaxAgeDuration() (time.Duration, error) {
+	var err error
+	if sc.cookieMaxAgeDuration == 0 {
+		sc.cookieMaxAgeDuration, err = durationutil.ParseLongerDuration(sc.CookieMaxAge)
+	}
+	return sc.cookieMaxAgeDuration, err
 }
 
 type CaptchaConfig struct {
@@ -468,9 +479,9 @@ type Style struct {
 }
 
 type UploadConfig struct {
-	// RejectDuplicateImages determines whether to reject images that have already been uploaded
+	// RejectDuplicateUploads determines whether to reject images and videos that have already been uploaded
 	// Default: false
-	RejectDuplicateImages bool
+	RejectDuplicateUploads bool
 
 	// ThumbWidth is the maximum width that thumbnails in the top thread post will be scaled down to
 	// Default: 200

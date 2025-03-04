@@ -221,15 +221,6 @@ func NewBoardSimple(dir string, title string, subtitle string, description strin
 		RequireFile:      false,
 		EnableCatalog:    true,
 	}
-	// board.ShowID = false
-	// board.EnableSpoileredImages = true
-	// board.Worksafe = true
-	// board.ThreadsPerPage = 20
-	// board.Cooldowns = BoardCooldowns{
-	// 	NewThread:  30,
-	// 	Reply:      7,
-	// 	ImageReply: 7,
-	// }
 	return board, CreateBoard(board, appendToAllBoards)
 }
 

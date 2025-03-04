@@ -131,20 +131,30 @@ func HandleFilterAction(filter *gcsql.Filter, post *gcsql.Post, upload *gcsql.Up
 }
 
 func setCookies(writer http.ResponseWriter, request *http.Request) {
+	maxAge, err := config.GetSiteConfig().CookieMaxAgeDuration()
+	if err != nil {
+		gcutil.LogError(err).Caller().
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("userAgent", request.UserAgent()).
+			Str("cookieMaxAge", config.GetSiteConfig().CookieMaxAge).
+			Msg("Unable to parse configured cookie max age duration")
+		maxAge = yearInSeconds
+	}
+
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "email",
 		Value:  url.QueryEscape(request.PostFormValue("postemail")),
-		MaxAge: yearInSeconds,
+		MaxAge: int(maxAge),
 	})
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "name",
 		Value:  url.QueryEscape(request.PostFormValue("postname")),
-		MaxAge: yearInSeconds,
+		MaxAge: int(maxAge),
 	})
 	http.SetCookie(writer, &http.Cookie{
 		Name:   "password",
 		Value:  url.QueryEscape(request.PostFormValue("postpassword")),
-		MaxAge: yearInSeconds,
+		MaxAge: int(maxAge),
 	})
 }
 
@@ -248,10 +258,15 @@ func getRedirectURL(post *gcsql.Post, board *gcsql.Board, request *http.Request)
 
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
-	request.ParseMultipartForm(maxFormBytes)
-	wantsJSON := serverutil.IsRequestingJSON(request)
-
 	infoEv, errEv := gcutil.LogRequest(request)
+	err := request.ParseMultipartForm(maxFormBytes)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Error parsing form data")
+		server.ServeError(writer, "Error parsing form data", serverutil.IsRequestingJSON(request), nil)
+		return
+	}
+	defer request.MultipartForm.RemoveAll()
+	wantsJSON := serverutil.IsRequestingJSON(request)
 
 	refererResult, err := serverutil.CheckReferer(request)
 	if err != nil {
