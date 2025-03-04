@@ -45,10 +45,6 @@ GeoIPOptions               |map[string]any    |                                 
 Captcha                    |CaptchaConfig     |                                                                                       |Captcha options for spam prevention. Currently only hcaptcha is supported 
 FingerprintVideoThumbnails |bool              |false                                                                                  |FingerprintVideoThumbnails determines whether to use video thumbnails for image fingerprinting. If false, the video file will not be checked by fingerprinting filters Default: false 
 FingerprintHashLength      |int               |16                                                                                     |FingerprintHashLength is the length of the hash used for image fingerprinting Default: 16 
-Type                       |string            |                                                                                       |Type is the type of captcha to use. Currently only "hcaptcha" is supported 
-OnlyNeededForThreads       |bool              |                                                                                       |OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts 
-SiteKey                    |string            |                                                                                       |SiteKey is the public key for the captcha service. Usage depends on the captcha service 
-AccountSecret              |string            |                                                                                       |AccountSecret is the secret key for the captcha service. Usage depends on the captcha service 
 InheritGlobalStyles        |bool              |true                                                                                   |InheritGlobalStyles determines whether to use the global styles in addition to the board's styles, as opposed to only the board's styles Default: true 
 Styles                     |[]Style           |                                                                                       |Styles is a list of Gochan themes with Name and Filename fields, choosable by the user 
 DefaultStyle               |string            |pipes.css                                                                              |DefaultStyle is the filename of the default style to use for the board or the site. If it is not set, the first style in the Styles list will be used Default: pipes.css 
@@ -114,6 +110,14 @@ Example options for `GeoIPOptions`:
 	{"Flag":"windows9x.png", "Name": "Windows 9x"}
 ]
 ```
+
+## CaptchaConfig
+Field                |Type   |Info
+---------------------|-------|--------------
+Type                 |string |Type is the type of captcha to use. Currently only "hcaptcha" is supported 
+OnlyNeededForThreads |bool   |OnlyNeededForThreads determines whether to require a captcha only when creating a new thread, or for all posts 
+SiteKey              |string |SiteKey is the public key for the captcha service. Usage depends on the captcha service 
+AccountSecret        |string |AccountSecret is the secret key for the captcha service. Usage depends on the captcha service 
 
 ## PageBanner
 PageBanner represents the filename and dimensions of a banner image to display on board and thread pages
