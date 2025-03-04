@@ -74,7 +74,10 @@ func TestEventModule(t *testing.T) {
 }
 
 func TestConfigModule(t *testing.T) {
-	config.InitConfig(config.GetVersion().String())
+	testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, config.InitConfig("4.1.0")) {
+		t.FailNow()
+	}
 	initPluginTests()
 	err := lState.DoString(configTestingStr)
 	assert.NoError(t, err)

@@ -45,9 +45,11 @@ func main() {
 	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
 	flag.Parse()
 
-	config.InitConfig(versionStr)
-	err := common.InitMigrationLog()
+	err := config.InitConfig(versionStr)
 	if err != nil {
+		log.Fatalln("Unable to initialize configuration:", err.Error())
+	}
+	if err = common.InitMigrationLog(); err != nil {
 		log.Fatalln("Unable to initialize migration log:", err.Error())
 	}
 	fatalEv := common.LogFatal()
@@ -94,7 +96,9 @@ func main() {
 		Bool("migratingInPlace", migratingInPlace).
 		Msg("Starting database migration")
 
-	config.InitConfig(versionStr)
+	if err = config.InitConfig(versionStr); err != nil {
+		fatalEv.Err(err).Caller().Msg("Unable to reload configuration")
+	}
 	sqlCfg := config.GetSQLConfig()
 	if migratingInPlace && sqlCfg.DBtype == "sqlite3" && !updateDB {
 		common.LogWarning().

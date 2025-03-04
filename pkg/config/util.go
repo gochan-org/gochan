@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -9,7 +10,7 @@ import (
 	"path"
 	"runtime"
 	"strconv"
-	"strings"
+	"testing"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -71,18 +72,18 @@ func TakeOwnershipOfFile(f *os.File) error {
 	return f.Chown(uid, gid)
 }
 
-// InitConfig loads and parses gochan.json on startup and verifies its contents
-func InitConfig(versionStr string) {
+func loadConfig(versionStr string, searchPaths ...string) (err error) {
 	cfg = defaultGochanConfig
-	if strings.HasSuffix(os.Args[0], ".test") {
+	if testing.Testing() {
 		// create a dummy config for testing if we're using go test
 		cfg = defaultGochanConfig
 		cfg.ListenAddress = "127.0.0.1"
 		cfg.Port = 8080
 		cfg.UseFastCGI = true
-		cfg.testing = true
 		cfg.TemplateDir = "templates"
+		cfg.LogDir = "log"
 		cfg.DBtype = "sqlite3"
+		cfg.DocumentRoot = "html"
 		cfg.DBhost = "./testdata/gochantest.db"
 		cfg.DBname = "gochan"
 		cfg.DBusername = "gochan"
@@ -99,30 +100,40 @@ func InitConfig(versionStr string) {
 		}
 		return
 	}
-	cfgPath = gcutil.FindResource(
-		"gochan.json",
-		"/usr/local/etc/gochan/gochan.json",
-		"/etc/gochan/gochan.json")
+	cfgPath = gcutil.FindResource(searchPaths...)
 	if cfgPath == "" {
-		fmt.Println("gochan.json not found")
-		os.Exit(1)
+		return errors.New("gochan.json not found")
 	}
 
 	cfgBytes, err := os.ReadFile(cfgPath)
 	if err != nil {
-		fmt.Printf("Error reading %s: %s\n", cfgPath, err.Error())
-		os.Exit(1)
+		return fmt.Errorf("error reading %s: %w", cfgPath, err)
 	}
 
 	if err = json.Unmarshal(cfgBytes, cfg); err != nil {
-		fmt.Printf("Error parsing %s: %s", cfgPath, err.Error())
-		os.Exit(1)
+		var unmarshalTypeError *json.UnmarshalTypeError
+		if errors.As(err, &unmarshalTypeError) {
+			return fmt.Errorf("invalid field type %s in %s: expected %s, found %s",
+				unmarshalTypeError.Field, cfgPath, unmarshalTypeError.Type, unmarshalTypeError.Value)
+		}
+		return fmt.Errorf("error parsing %s: %w", cfgPath, err)
 	}
 	cfg.jsonLocation = cfgPath
+	return nil
+}
+
+// InitConfig loads and parses gochan.json on startup and verifies its contents
+func InitConfig(versionStr string) (err error) {
+	var searchPaths []string
+	if !testing.Testing() {
+		searchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
+	}
+	if err = loadConfig(versionStr, searchPaths...); err != nil {
+		return err
+	}
 
 	if err = cfg.ValidateValues(); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	if runtime.GOOS != "windows" {
@@ -133,34 +144,28 @@ func InitConfig(versionStr string) {
 			gcUser, err = user.Current()
 		}
 		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
 		if uid, err = strconv.Atoi(gcUser.Uid); err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
 
 		if gid, err = strconv.Atoi(gcUser.Gid); err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
 	}
 
 	if _, err = os.Stat(cfg.DocumentRoot); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
 	if _, err = os.Stat(cfg.TemplateDir); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
 	if _, err = os.Stat(cfg.LogDir); os.IsNotExist(err) {
 		err = os.MkdirAll(cfg.LogDir, DirFileMode)
 	}
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return err
 	}
 
 	cfg.LogDir = gcutil.FindResource(cfg.LogDir, "log", "/var/log/gochan/")
@@ -189,6 +194,7 @@ func InitConfig(versionStr string) {
 
 	cfg.Version = ParseVersion(versionStr)
 	cfg.Version.Normalize()
+	return nil
 }
 
 // WebPath returns an absolute path, starting at the web root (which is "/" by default)

@@ -3,6 +3,7 @@ package config
 import (
 	"testing"
 
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -29,7 +30,10 @@ func (tC *preloadTest) run(t *testing.T) {
 }
 
 func TestPreload(t *testing.T) {
-	InitConfig("4.0.0")
+	testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, InitConfig("4.1.0")) {
+		t.FailNow()
+	}
 	testCases := []preloadTest{
 		{
 			desc: "access system critical config from lua",

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"testing"
 
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -35,25 +36,38 @@ type GochanConfig struct {
 	SiteConfig
 	BoardConfig
 	jsonLocation string
-	testing      bool
 }
 
-// ValidateValues checks to make sure that the configuration options are usable
-// (e.g., ListenAddress is a valid IP address, Port isn't a negative number, etc)
-func (gcfg *GochanConfig) ValidateValues() error {
-	changed := false
+// JSONLocation returns the path to the configuration file, if loaded
+func JSONLocation() string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.jsonLocation
+}
 
+func (gcfg *GochanConfig) updateDeprecatedFields() (changed bool) {
 	if gcfg.ListenIP != "" && gcfg.ListenAddress == "" {
 		gcfg.ListenAddress = gcfg.ListenIP
 		gcfg.ListenIP = ""
 		changed = true
 	}
-
 	if gcfg.SiteDomain != "" && gcfg.SiteHost == "" {
 		gcfg.SiteHost = gcfg.SiteDomain
 		gcfg.SiteDomain = ""
 		changed = true
 	}
+	if gcfg.NewTabOnOutlinks && !gcfg.NewTabOnExternalLinks {
+		gcfg.NewTabOnExternalLinks = true
+		changed = true
+	}
+	return changed
+}
+
+// ValidateValues checks to make sure that the configuration options are usable
+// (e.g., ListenAddress is a valid IP address, Port isn't a negative number, etc)
+func (gcfg *GochanConfig) ValidateValues() error {
+	changed := gcfg.updateDeprecatedFields()
 
 	if gcfg.SiteHost == "" {
 		return &InvalidValueError{Field: "SiteHost", Value: gcfg.SiteHost, Details: "must be set"}
@@ -78,6 +92,7 @@ func (gcfg *GochanConfig) ValidateValues() error {
 
 	if gcfg.DBtype == "postgresql" {
 		gcfg.DBtype = "postgres"
+		changed = true
 	}
 	found := false
 	drivers := sql.Drivers()
@@ -136,7 +151,7 @@ func (gcfg *GochanConfig) Write() error {
 	if err != nil {
 		return err
 	}
-	if gcfg.testing {
+	if testing.Testing() {
 		// don't try to write anything if we're doing a test
 		return nil
 	}
@@ -577,7 +592,12 @@ type PostConfig struct {
 
 	// NewTabOnExternalLinks determines whether to open external links in a new tab
 	// Default: true
-	NewTabOnExternalLinks bool `json:"NewTabOnOutlinks"`
+	NewTabOnExternalLinks bool
+
+	// NewTabOnOutlinks is an alias for the NewTabOnExternalLinks field.
+	//
+	// Deprecated: Use NewTabOnExternalLinks instead
+	NewTabOnOutlinks bool `json:",omitempty"`
 
 	// DisableBBcode will disable BBCode to HTML conversion if true
 	// Default: false

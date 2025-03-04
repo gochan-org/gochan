@@ -4,7 +4,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -14,7 +13,7 @@ const (
 
 // PanicIfNotTest panics if the function was called directly or indirectly by a test function via go test
 func PanicIfNotTest() {
-	if !strings.HasSuffix(os.Args[0], ".test") && !strings.HasSuffix(os.Args[0], ".test.exe") && os.Args[1] != "-test.run" {
+	if !testing.Testing() {
 		panic("the testutil package should only be used in tests")
 	}
 }

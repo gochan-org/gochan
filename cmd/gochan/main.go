@@ -37,12 +37,21 @@ func cleanup() {
 
 func main() {
 	fmt.Printf("Starting gochan v%s\n", versionStr)
-	config.InitConfig(versionStr)
+	err := config.InitConfig(versionStr)
+	if err != nil {
+		jsonLocation := config.JSONLocation()
+		if jsonLocation != "" {
+			fmt.Printf("Failed to load configuration from %q: %s\n", jsonLocation, err.Error())
+		} else {
+			fmt.Printf("Failed to load configuration: %s\n", err.Error())
+		}
+		cleanup()
+		os.Exit(1)
+	}
 
 	uid, gid := config.GetUser()
 	systemCritical := config.GetSystemCriticalConfig()
-	err := gcutil.InitLogs(systemCritical.LogDir, true, uid, gid)
-	if err != nil {
+	if err = gcutil.InitLogs(systemCritical.LogDir, true, uid, gid); err != nil {
 		fmt.Println("Error opening logs:", err.Error())
 		cleanup()
 		os.Exit(1)
