@@ -547,9 +547,9 @@ func (uc *UploadConfig) AcceptedExtension(filename string) bool {
 }
 
 type PostConfig struct {
-	// MaxPostLength is the maximum number of characters allowed in a post
+	// MaxMessageLength is the maximum number of characters allowed in a post
 	// Default: 2000
-	MaxPostLength int
+	MaxMessageLength int
 
 	// ReservedTrips is used for reserving secure tripcodes. It should be a map of input strings to output tripcode strings. For example, if you have `{"abcd":"WXYZ"}` and someone posts with the name Name##abcd, their name will instead show up as Name!!WXYZ on the site.
 	ReservedTrips map[string]string

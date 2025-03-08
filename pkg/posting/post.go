@@ -330,10 +330,21 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardConfig := config.GetBoardConfig(board.Dir)
 
 	if boardConfig.Lockdown {
-
+		warnEv.Msg("Rejected post, board is in lockdown")
+		server.ServeError(writer, server.NewServerError(boardConfig.LockdownMessage, http.StatusBadRequest), wantsJSON, nil)
+		return
 	}
 
-	// do length-check, formatting, and wordfilters
+	if boardConfig.MaxMessageLength > 0 && len(post.MessageRaw) > boardConfig.MaxMessageLength {
+		warnEv.
+			Int("messageLength", len(post.MessageRaw)).
+			Int("maxMessageLength", boardConfig.MaxMessageLength).
+			Msg("Rejected post, message is too long")
+		server.ServeError(writer, server.NewServerError("Message is too long", http.StatusBadRequest), wantsJSON, nil)
+		return
+	}
+
+	// do formatting and apply wordfilters
 	if err = doFormatting(post, board, request, errEv); err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
