@@ -16,7 +16,6 @@ var (
 			FirstPage:             []string{"index.html", "firstrun.html", "1.html"},
 			CookieMaxAge:          "1y",
 			StaffSessionDuration:  "3mo",
-			LockdownMessage:       "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
 			SiteName:              "Gochan",
 			MinifyHTML:            true,
 			MinifyJS:              true,
@@ -42,7 +41,8 @@ var (
 				{Name: "Yotsuba B", Filename: "yotsubab.css"},
 				{Name: "Windows 9x", Filename: "win9x.css"},
 			},
-			DefaultStyle: "pipes.css",
+			DefaultStyle:    "pipes.css",
+			LockdownMessage: "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
 
 			EnableSpoileredImages:  true,
 			EnableSpoileredThreads: true,

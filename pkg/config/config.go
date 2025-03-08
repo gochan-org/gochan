@@ -281,14 +281,6 @@ type SiteConfig struct {
 	// Default: 3mo
 	StaffSessionDuration string
 
-	// Lockdown prevents users from posting if true
-	// Default: false
-	Lockdown bool
-
-	// LockdownMessage is the message displayed to users if they try to cretae a post when the site is in lockdown
-	// Default: This imageboard has temporarily disabled posting. We apologize for the inconvenience
-	LockdownMessage string
-
 	// SiteName is the name of the site, displayed in the title and front page header
 	// Default: Gochan
 	SiteName string
@@ -407,6 +399,14 @@ type BoardConfig struct {
 
 	// Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields
 	Banners []PageBanner
+
+	// Lockdown prevents users from posting if true
+	// Default: false
+	Lockdown bool
+
+	// LockdownMessage is the message displayed to users if they try to cretae a post when the site is in lockdown
+	// Default: This imageboard has temporarily disabled posting. We apologize for the inconvenience
+	LockdownMessage string
 
 	PostConfig
 	UploadConfig
