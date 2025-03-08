@@ -36,34 +36,30 @@ var (
 
 func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) error {
 	domain := request.Host
-	infoEv, errEv := gcutil.LogRequest(request)
-	defer func() {
-		infoEv.Discard()
-		errEv.Discard()
-	}()
+	infoEv, warnEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
+	gcutil.LogStr("staff", username, infoEv, warnEv, errEv)
 
 	if strings.Contains(domain, ":") {
 		domain, _, err := net.SplitHostPort(domain)
 		if err != nil {
-			errEv.Err(err).Caller().Str("host", domain).Send()
+			warnEv.Err(err).Caller().Str("host", domain).Send()
 			return server.NewServerError("Invalid request host", http.StatusBadRequest)
 		}
 	}
 
 	refererResult, err := serverutil.CheckReferer(request)
 	if err != nil {
-		errEv.Err(err).Caller().
-			Str("staff", username).
+		warnEv.Err(err).Caller().
 			Str("referer", request.Referer()).
-			Msg("Error checking referer")
+			Msg("Invalid referer")
 		return err
 	}
 	if refererResult != serverutil.InternalReferer {
-		gcutil.LogWarning().
+		warnEv.
 			Int("refererResult", int(refererResult)).
 			Str("referer", request.Referer()).
 			Str("SiteHost", config.GetSystemCriticalConfig().SiteHost).
-			Str("staff", username).
 			Msg("Rejected login from possible spambot")
 		return serverutil.ErrSpambot
 	}
@@ -80,7 +76,7 @@ func createSession(key, username, password string, request *http.Request, writer
 	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
 	if err == bcrypt.ErrMismatchedHashAndPassword {
 		// password mismatch
-		errEv.Caller().Msg("Invalid password")
+		warnEv.Caller().Msg("Invalid password")
 		return ErrBadCredentials
 	}
 

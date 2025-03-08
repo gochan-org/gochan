@@ -26,17 +26,15 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		passwordMD5 = gcutil.Md5Sum(password)
 	}
 	wantsJSON := serverutil.IsRequestingJSON(request)
-	infoEv, errEv := gcutil.LogRequest(request)
-	defer func() {
-		errEv.Discard()
-		infoEv.Discard()
-	}()
+	infoEv, warnEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
 	rank := manage.GetStaffRank(request)
 
 	if password == "" && rank == 0 {
-		errEv.Msg("Thread move request rejected, non-staff didn't provide a password")
-		writer.WriteHeader(http.StatusBadRequest)
-		server.ServeError(writer, "Password required for post moving", wantsJSON, nil)
+		warnEv.Msg("Thread move request rejected, non-staff didn't provide a password")
+		server.ServeError(writer,
+			server.NewServerError("Password required for post moving", http.StatusBadRequest),
+			wantsJSON, nil)
 		return
 	}
 
@@ -44,32 +42,37 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		// user clicked on move thread button on board or thread page
 
 		if len(checkedPosts) == 0 {
-			server.ServeError(writer, "You need to select one thread to move.", wantsJSON, nil)
+			warnEv.Msg("Thread move request rejected, no posts selected")
+			server.ServeError(writer,
+				server.NewServerError("You need to select one thread to move.", http.StatusBadRequest),
+				wantsJSON, nil)
 			return
 		} else if len(checkedPosts) > 1 {
-			server.ServeError(writer, "You can only move one thread at a time.", wantsJSON, nil)
+			warnEv.Msg("Thread move request rejected, more than one post selected")
+			server.ServeError(writer, server.NewServerError("You can only move one thread at a time.", http.StatusBadRequest), wantsJSON, nil)
 			return
 		}
 		post, err := gcsql.GetPostFromID(checkedPosts[0], true)
-		gcutil.LogInt("postid", checkedPosts[0], errEv, infoEv)
+		gcutil.LogInt("postid", checkedPosts[0], errEv, warnEv, infoEv)
 
 		if err != nil {
 			errEv.Err(err).Caller().Msg("Error getting post from ID")
-			server.ServeError(writer, err.Error(), wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError(err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 		if !post.IsTopPost {
-			server.ServeError(writer, "You appear to be trying to move a post that is not the top post in the thread", wantsJSON, map[string]any{
-				"postid": checkedPosts[0],
-			})
+			warnEv.Msg("Thread move request rejected, selected post is not top post")
+			server.ServeError(writer,
+				server.NewServerError("You appear to be trying to move a post that is not the top post in the thread", http.StatusBadRequest),
+				wantsJSON, map[string]any{"postid": checkedPosts[0]})
 			return
 		}
 
 		srcBoardID, err := strconv.Atoi(request.PostFormValue("boardid"))
 		if err != nil {
-			errEv.Err(err).Caller().
+			warnEv.Err(err).Caller().
 				Str("srcBoardIDstr", request.PostFormValue("boardid")).Send()
-			server.ServeError(writer, fmt.Sprintf("Invalid or missing boarid: %q", request.PostFormValue("boardid")), wantsJSON, map[string]any{
+			server.ServeError(writer, server.NewServerError("Invalid or missing boarid", http.StatusBadRequest), wantsJSON, map[string]any{
 				"boardid": srcBoardID,
 			})
 			return
@@ -94,7 +97,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 			"srcBoard":    srcBoard,
 		}, buf, "text/html"); err != nil {
 			errEv.Err(err).Caller().Send()
-			server.ServeError(writer, err.Error(), wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError(err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
 		writer.Write(buf.Bytes())
@@ -152,8 +155,7 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		if err != nil {
 			errEv.Err(err).Caller().
 				Int("destBoardID", destBoardID).Send()
-			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
+			server.ServeError(writer, server.NewServerError(err.Error(), http.StatusInternalServerError), wantsJSON, map[string]any{
 				"destboardid": destBoardID,
 			})
 			return
@@ -163,16 +165,15 @@ func moveThread(checkedPosts []int, moveBtn string, doMove string, writer http.R
 		post, err := gcsql.GetPostFromID(postID, true)
 		if err != nil {
 			errEv.Err(err).Caller().Send()
-			writer.WriteHeader(http.StatusInternalServerError)
-			server.ServeError(writer, err.Error(), wantsJSON, map[string]any{
+			server.ServeError(writer, server.NewServerError(err.Error(), http.StatusInternalServerError), wantsJSON, map[string]any{
 				"postid": postID,
 			})
 			return
 		}
 
 		if passwordMD5 != post.Password && rank == 0 {
-			errEv.Msg("Wrong password")
-			server.ServeError(writer, "Wrong password", wantsJSON, nil)
+			warnEv.Msg("Wrong password")
+			server.ServeError(writer, server.NewServerError("Wrong password", http.StatusUnauthorized), wantsJSON, nil)
 			return
 		}
 

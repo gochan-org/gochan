@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -146,18 +145,10 @@ func getAllPostsToDelete(postIDs []any, fileOnly bool) ([]delPost, []any, error)
 	return posts, postIDsAny, rows.Close()
 }
 
-func serveError(writer http.ResponseWriter, errStr string, statusCode int, wantsJSON bool, errEv *zerolog.Event) {
-	if errEv != nil {
-		errEv.Msg(errStr)
-	}
-	writer.WriteHeader(statusCode)
-	server.ServeError(writer, errStr, wantsJSON, nil)
-}
-
 func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.Request) {
 	// Delete post(s) or thread(s)
-	infoEv, errEv := gcutil.LogRequest(request)
-	defer gcutil.LogDiscard(infoEv, errEv)
+	infoEv, warnEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
 
 	password := request.FormValue("password")
 	passwordMD5 := gcutil.Md5Sum(password)
@@ -167,59 +158,71 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		contentType = "application/json"
 	}
 	writer.Header().Set("Content-Type", contentType)
-	gcutil.LogBool("wantsJSON", wantsJSON, infoEv, errEv)
+	gcutil.LogBool("wantsJSON", wantsJSON, infoEv, warnEv, errEv)
 
 	if len(checkedPosts) < 1 {
-		serveError(writer, "No posts selected", http.StatusBadRequest, wantsJSON, errEv.Err(nil).Caller())
+		warnEv.Msg("No posts selected")
+		server.ServeError(writer, server.NewServerError("No posts selected", http.StatusBadRequest), wantsJSON, nil)
 		return
 	}
 
 	staff, err := gcsql.GetStaffFromRequest(request)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		serveError(writer, "Unable to get staff info", http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+		errEv.Err(err).Caller().Msg("Unable to get staff info")
+		server.ServeError(writer, server.NewServerError("Unable to get staff info", http.StatusInternalServerError), wantsJSON, nil)
 		return
 	}
+
 	posts := make([]any, len(checkedPosts))
 	for i, p := range checkedPosts {
 		posts[i] = p
 	}
 	fileOnly := request.FormValue("fileonly") == "on"
-	gcutil.LogBool("fileOnly", fileOnly, infoEv, errEv)
-	gcutil.LogInt("affectedPosts", len(posts), infoEv, errEv)
+	gcutil.LogBool("fileOnly", fileOnly, infoEv, warnEv, errEv)
+	gcutil.LogInt("affectedPosts", len(posts), infoEv, warnEv, errEv)
 
 	if staff.Rank > 0 {
 		gcutil.LogStr("staff", staff.Username, infoEv, errEv)
 	} else {
 		sumsMatch, err := validatePostPasswords(posts, passwordMD5)
 		if err != nil {
-			serveError(writer, "Unable to validate post password checksums",
-				http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+			errEv.Err(err).Caller().Msg("Unable to validate post password checksums")
+			server.ServeError(writer,
+				server.NewServerError("Unable to validate post password checksums", http.StatusInternalServerError),
+				wantsJSON, nil)
 			return
 		}
 		if !sumsMatch {
-			serveError(writer, "One or more post passwords do not match", http.StatusUnauthorized, wantsJSON, errEv.Caller())
+			warnEv.Msg("One or more post passwords do not match")
+			server.ServeError(writer,
+				server.NewServerError("One or more post passwords do not match", http.StatusUnauthorized),
+				wantsJSON, nil)
 			return
 		}
 	}
 
 	delPosts, affectedPostIDs, err := getAllPostsToDelete(posts, fileOnly)
 	if err != nil {
-		serveError(writer, "Unable to get post info for one or more checked posts",
-			http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+		errEv.Err(err).Caller().Msg("Unable to get post info for one or more checked posts")
+		server.ServeError(writer,
+			server.NewServerError("Unable to get post info for one or more checked posts", http.StatusInternalServerError),
+			wantsJSON, nil)
 		return
 	}
 
-	boardid, err := strconv.Atoi(request.FormValue("boardid"))
+	boardid, err := strconv.Atoi(request.PostFormValue("boardid"))
 	if err != nil {
-		serveError(writer, "Invalid boardid value", http.StatusBadRequest, wantsJSON, errEv.Err(err).Caller().
-			Str("boardid", request.FormValue("boardid")))
+		warnEv.Str("boardid", request.PostFormValue("boardid")).Msg("Invalid boardid value")
+		server.ServeError(writer, server.NewServerError("Invalid boardid value", http.StatusBadRequest), wantsJSON, nil)
 		return
 	}
 	errEv.Int("boardid", boardid)
 	board, err := gcsql.GetBoardDir(boardid)
 	if err != nil {
-		serveError(writer, "Unable to get board from boardid", http.StatusInternalServerError,
-			wantsJSON, errEv.Err(err).Caller())
+		errEv.Err(err).Caller().Msg("Unable to get board from boardid")
+		server.ServeError(writer,
+			server.NewServerError("Unable to get board from boardid", http.StatusInternalServerError),
+			wantsJSON, nil)
 		return
 	}
 
@@ -228,13 +231,14 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		return
 	}
 	if !fileOnly && !markPostsAsDeleted(affectedPostIDs, request, writer, errEv) {
+		// markPostsAsDeleted logs any errors
 		return
 	}
 
 	if err = building.BuildBoards(false, boardid); err != nil {
 		// BuildBoards logs any errors
-		serveError(writer, fmt.Sprintf("Unable to rebuild /%s/", board),
-			http.StatusInternalServerError, wantsJSON, nil)
+		server.ServeError(writer, server.NewServerError("Unable to rebuild /"+board+"/", http.StatusInternalServerError), wantsJSON, nil)
+		return
 	}
 	if fileOnly {
 		infoEv.Msg("file(s) deleted")
@@ -289,26 +293,27 @@ func markPostsAsDeleted(posts []any, request *http.Request, writer http.Response
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to start deletion transaction")
-		serveError(writer, "Unable to delete posts", http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+		server.ServeError(writer, server.NewServerError("Unable to start deletion transaction", http.StatusInternalServerError), wantsJSON, nil)
 		return false
 	}
 	defer tx.Rollback()
 	const postsError = "Unable to delete post(s)"
 	const threadsError = "Unable to delete thread(s)"
 	if _, err = gcsql.Exec(opts, deletePostsSQL, posts...); err != nil {
-		serveError(writer, postsError, http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+		errEv.Err(err).Caller().Msg("Unable to mark post(s) as deleted")
+		server.ServeError(writer, server.NewServerError(postsError, http.StatusInternalServerError), wantsJSON, nil)
 		return false
 	}
 
 	if _, err = gcsql.Exec(opts, deleteThreadSQL, posts...); err != nil {
 		errEv.Err(err).Caller().Msg("Unable to mark thread(s) as deleted")
-		serveError(writer, threadsError, http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+		server.ServeError(writer, server.NewServerError(threadsError, http.StatusInternalServerError), wantsJSON, nil)
 		return false
 	}
 
 	if err = tx.Commit(); err != nil {
 		errEv.Err(err).Caller().Msg("Unable to commit deletion transaction")
-		serveError(writer, "Unable to finalize deletion", http.StatusInternalServerError, wantsJSON, nil)
+		server.ServeError(writer, server.NewServerError("Unable to finalize deletion", http.StatusInternalServerError), wantsJSON, nil)
 		return false
 	}
 
@@ -336,7 +341,7 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 	var tmpErr error
 	for _, post := range posts {
 		if tmpErr = post.deleteFile(permDelete); tmpErr != nil {
-			gcutil.LogWarning().Err(tmpErr).Caller().
+			gcutil.LogError(tmpErr).Err(tmpErr).Caller().
 				Int("postID", post.postID).
 				Int("opID", post.opID).
 				Str("filename", post.filename).
@@ -353,14 +358,18 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 		}
 	}
 	if err != nil {
-		serveError(writer, "Received 1 or more errors while trying to delete post files",
-			http.StatusInternalServerError, wantsJSON, errEv.Array("errors", errArr))
+		errEv.Array("errors", errArr).Caller().Msg("Received 1 or more errors while trying to delete post files")
+		server.ServeError(writer,
+			server.NewServerError("Received 1 or more errors while trying to delete post files", http.StatusInternalServerError),
+			wantsJSON, nil)
 		return false
 	}
 	_, err = gcsql.ExecTimeoutSQL(nil, deleteFilesSQL, deleteIDs...)
 	if err != nil {
-		serveError(writer, "Unable to delete file entries from database",
-			http.StatusInternalServerError, wantsJSON, errEv.Err(err).Caller())
+		errEv.Err(err).Caller().Msg("Unable to delete file entries from database")
+		server.ServeError(writer,
+			server.NewServerError("Unable to delete file entries from database", http.StatusInternalServerError),
+			wantsJSON, nil)
 		return false
 	}
 	return true

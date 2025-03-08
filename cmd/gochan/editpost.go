@@ -24,21 +24,24 @@ import (
 func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.ResponseWriter, request *http.Request) {
 	password := request.PostFormValue("password")
 	wantsJSON := serverutil.IsRequestingJSON(request)
-	infoEv, errEv := gcutil.LogRequest(request)
-	defer gcutil.LogDiscard(infoEv, errEv)
+	infoEv, warnEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
 
 	if editBtn == "Edit post" {
 		var err error
 		if len(checkedPosts) == 0 {
+			warnEv.Msg("No post selected")
 			server.ServeError(writer, server.NewServerError("You need to select one post to edit", http.StatusBadRequest), wantsJSON, nil)
 			return
 		} else if len(checkedPosts) > 1 {
+			warnEv.Msg("Multiple posts selected")
 			server.ServeError(writer, server.NewServerError("You can only edit one post at a time", http.StatusBadRequest), wantsJSON, nil)
 			return
 		}
 
 		rank := manage.GetStaffRank(request)
 		if password == "" && rank == 0 {
+			warnEv.Msg("No password provided for post editing")
 			server.ServeError(writer, server.NewServerError("Password required for post editing", http.StatusUnauthorized), wantsJSON, nil)
 			return
 		}
@@ -54,6 +57,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		errEv.Int("postID", post.ID)
 
 		if post.Password != passwordMD5 && rank == 0 {
+			errEv.Msg("Wrong password")
 			server.ServeError(writer, server.NewServerError("Wrong password", http.StatusUnauthorized), wantsJSON, nil)
 			return
 		}
@@ -65,6 +69,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 		if strings.Contains(string(post.Message), `<span class="dice-roll">`) && !config.GetBoardConfig(board.Dir).AllowDiceRerolls {
+			warnEv.Msg("Dice rerolls are not allowed on this board")
 			server.ServeError(writer, server.NewServerError("Unable to edit post, dice rerolls are not allowed on this board", http.StatusForbidden), wantsJSON, nil)
 			return
 		}

@@ -258,7 +258,9 @@ func getRedirectURL(post *gcsql.Post, board *gcsql.Board, request *http.Request)
 
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
-	infoEv, errEv := gcutil.LogRequest(request)
+	infoEv, warnEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
+
 	err := request.ParseMultipartForm(maxFormBytes)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Error parsing form data")
@@ -307,7 +309,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardidStr := request.PostFormValue("boardid")
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
-		errEv.Str("boardid", boardidStr).Caller().Msg("Invalid boardid value")
+		errEv.Caller().
+			Str("boardid", boardidStr).
+			Msg("Invalid boardid value")
 		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]any{
 			"boardid": boardidStr,
 		})
@@ -324,6 +328,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	boardConfig := config.GetBoardConfig(board.Dir)
+
+	if boardConfig.Lockdown {
+
+	}
 
 	// do length-check, formatting, and wordfilters
 	if err = doFormatting(post, board, request, errEv); err != nil {
