@@ -258,7 +258,9 @@ func getRedirectURL(post *gcsql.Post, board *gcsql.Board, request *http.Request)
 
 // MakePost is called when a user accesses /post. Parse form data, then insert and build
 func MakePost(writer http.ResponseWriter, request *http.Request) {
-	infoEv, errEv := gcutil.LogRequest(request)
+	infoEv, warnEv, errEv := gcutil.LogRequest(request)
+	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
+
 	err := request.ParseMultipartForm(maxFormBytes)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Error parsing form data")
@@ -307,7 +309,9 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	boardidStr := request.PostFormValue("boardid")
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
-		errEv.Str("boardid", boardidStr).Caller().Msg("Invalid boardid value")
+		errEv.Caller().
+			Str("boardid", boardidStr).
+			Msg("Invalid boardid value")
 		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]any{
 			"boardid": boardidStr,
 		})
@@ -325,7 +329,22 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 	boardConfig := config.GetBoardConfig(board.Dir)
 
-	// do length-check, formatting, and wordfilters
+	if boardConfig.Lockdown {
+		warnEv.Msg("Rejected post, board is in lockdown")
+		server.ServeError(writer, server.NewServerError(boardConfig.LockdownMessage, http.StatusBadRequest), wantsJSON, nil)
+		return
+	}
+
+	if boardConfig.MaxMessageLength > 0 && len(post.MessageRaw) > boardConfig.MaxMessageLength {
+		warnEv.
+			Int("messageLength", len(post.MessageRaw)).
+			Int("maxMessageLength", boardConfig.MaxMessageLength).
+			Msg("Rejected post, message is too long")
+		server.ServeError(writer, server.NewServerError("Message is too long", http.StatusBadRequest), wantsJSON, nil)
+		return
+	}
+
+	// do formatting and apply wordfilters
 	if err = doFormatting(post, board, request, errEv); err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return

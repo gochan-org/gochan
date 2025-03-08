@@ -42,13 +42,13 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		request := req.Request
 		wantsJSON := serverutil.IsRequestingJSON(request)
 		accessEv := gcutil.LogAccess(request)
-		infoEv, errEv := gcutil.LogRequest(request)
-		defer gcutil.LogDiscard(infoEv, accessEv, errEv)
+		infoEv, warnEv, errEv := gcutil.LogRequest(request)
+		defer gcutil.LogDiscard(infoEv, accessEv, warnEv, errEv)
 
 		gcutil.LogStr("action", action.ID, infoEv, accessEv, errEv)
 		if err = req.Request.ParseForm(); err != nil {
 			errEv.Err(err).Caller().Msg("Error parsing form data")
-			server.ServeError(writer, "Error parsing form data: "+err.Error(), wantsJSON, map[string]any{
+			server.ServeError(writer, server.NewServerError("Error parsing form data: "+err.Error(), http.StatusBadRequest), wantsJSON, map[string]any{
 				"action": action.ID,
 			})
 			return
@@ -62,6 +62,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			return
 		}
 		gcutil.LogStr("staff", staff.Username, infoEv, accessEv, errEv)
+		gcutil.LogInt("rank", staff.Rank, infoEv, accessEv, errEv)
 
 		actionCB := action.Callback
 		pageTitle := getPageTitle(action.ID, staff)
@@ -72,10 +73,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			request = request.WithContext(context.WithValue(request.Context(), loginRedirectAction("redirect"), action.ID))
 		} else if staff.Rank < action.Permissions {
 			writer.WriteHeader(http.StatusForbidden)
-			gcutil.LogWarning().
-				Str("ip", gcutil.GetRealIP(request)).
-				Str("userAgent", request.UserAgent()).
-				Int("rank", staff.Rank).
+			warnEv.
 				Str("action", action.ID).
 				Int("requiredRank", action.Permissions).
 				Msg("Staff requested page with insufficient permissions")
