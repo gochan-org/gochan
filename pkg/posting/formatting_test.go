@@ -204,7 +204,7 @@ func TestDiceRoll(t *testing.T) {
 	msgfmtr.Init()
 	for _, tC := range diceTestCases {
 		t.Run(tC.desc, func(t *testing.T) {
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				// Run the test case multiple times to account for randomness
 				diceRollRunner(t, &tC)
 			}
@@ -221,6 +221,8 @@ func TestHashTags(t *testing.T) {
 [#tag ]
 [# tag]
 >greentext [#tag]
+[#line
+test]
 [#js<script>alert("lol")</script>injection]`
 	msgHTML, err := FormatMessage(msg, "test")
 	if !assert.NoError(t, err) {
@@ -233,6 +235,8 @@ func TestHashTags(t *testing.T) {
 			`<span class="hashtag">#tag </span><br />`+
 			`<span class="hashtag"># tag</span><br />`+
 			`<span class="greentext">&gt;greentext <span class="hashtag">#tag</span></span><br />`+
+			`[#line<br />`+
+			`test]<br />`+
 			`<span class="hashtag">#js&lt;script&gt;alert(&#34;lol&#34;)&lt;/script&gt;injection</span>`,
 	), msgHTML)
 }

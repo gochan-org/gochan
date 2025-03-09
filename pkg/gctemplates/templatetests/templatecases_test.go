@@ -56,6 +56,8 @@ var (
 			{Filename: "banner2.png", Width: 300, Height: 100},
 			{Filename: "banner3.png", Width: 300, Height: 100},
 		},
+		EnableSpoileredImages:  true,
+		EnableSpoileredThreads: true,
 	}
 
 	simpleBoard1 = &gcsql.Board{
@@ -471,7 +473,7 @@ const (
 		`<tr><th class="postblock">Subject</th><td><input type="text"name="postsubject"size="25"maxlength="100"><input type="text"name="username"style="display:none"/><input type="submit"value="Post"/></td></tr>` +
 		`<tr><th class="postblock">Message</th><td><textarea rows="5" cols="35" name="postmsg" id="postmsg"></textarea></td></tr>` +
 		`<tr><th class="postblock">File</th><td><input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4">` +
-		`<input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label></td></tr>` +
+		`<label for="spoiler"><input type="checkbox" id="spoiler" name="spoiler"/>Spoiler</label></td></tr>` +
 		`<tr id="threadoptions"style="display: none;"><th class="postblock">Options</th><td></td></tr>` +
 		`<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" />(for post/file deletion)</td></tr></table>` +
 		`<input type="password" name="dummy2" style="display:none"/></form></div><hr />`

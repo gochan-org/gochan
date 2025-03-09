@@ -12,7 +12,7 @@
 			<tr><th class="postblock">Message</th><td><textarea rows="5" cols="35" name="postmsg" id="postmsg"></textarea></td></tr>
 			<tr><th class="postblock">File</th><td><input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4">
 				{{- if $.boardConfig.EnableSpoileredImages -}}
-					<input type="checkbox" id="spoiler" name="spoiler"/><label for="spoiler">Spoiler</label>
+					<label for="spoiler"><input type="checkbox" id="spoiler" name="spoiler"/>Spoiler</label>
 				{{- end}}</td></tr>
 			{{- if or (customFlagsEnabled $.board.Dir) $.boardConfig.EnableGeoIP -}}
 			<tr>
