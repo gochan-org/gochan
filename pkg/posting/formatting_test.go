@@ -7,6 +7,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	"github.com/stretchr/testify/assert"
 	lua "github.com/yuin/gopher-lua"
 )
@@ -164,7 +165,8 @@ func TestLinks(t *testing.T) {
 func TestNoDoubleTags(t *testing.T) {
 	config.SetVersion(versionStr)
 	msgfmtr.Init()
-	rendered, err := FormatMessage(doubleTagPreRender, "")
+	_, warnEv, errEv := testutil.GetTestLogs(t)
+	rendered, err := FormatMessage(doubleTagPreRender, "", warnEv, errEv)
 	assert.NoError(t, err)
 	assert.EqualValues(t, doubleTagExpected, rendered)
 }
@@ -185,7 +187,8 @@ func TestLuaBBCode(t *testing.T) {
 
 func diceRollRunner(t *testing.T, tC *diceRollerTestCase) {
 	var err error
-	tC.post.Message, err = FormatMessage(tC.post.MessageRaw, "")
+	_, warnEv, errEv := testutil.GetTestLogs(t)
+	tC.post.Message, err = FormatMessage(tC.post.MessageRaw, "", warnEv, errEv)
 	assert.NoError(t, err)
 	err = ApplyDiceRoll(&tC.post)
 	if tC.expectError {
@@ -215,6 +218,7 @@ func TestDiceRoll(t *testing.T) {
 func TestHashTags(t *testing.T) {
 	config.SetVersion(versionStr)
 	msgfmtr.Init()
+	_, warnEv, errEv := testutil.GetTestLogs(t)
 	msg := `[#tag]
 [#t a g]
 [ #tag]
@@ -223,8 +227,9 @@ func TestHashTags(t *testing.T) {
 >greentext [#tag]
 [#line
 test]
+[#single] [#line] [#tags]
 [#js<script>alert("lol")</script>injection]`
-	msgHTML, err := FormatMessage(msg, "test")
+	msgHTML, err := FormatMessage(msg, "test", warnEv, errEv)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -237,6 +242,25 @@ test]
 			`<span class="greentext">&gt;greentext <span class="hashtag">#tag</span></span><br />`+
 			`[#line<br />`+
 			`test]<br />`+
+			`<span class="hashtag">#single</span> <span class="hashtag">#line</span> <span class="hashtag">#tags</span><br />`+
 			`<span class="hashtag">#js&lt;script&gt;alert(&#34;lol&#34;)&lt;/script&gt;injection</span>`,
 	), msgHTML)
+}
+
+func TestWorksafe(t *testing.T) {
+	config.SetVersion(versionStr)
+	msgfmtr.Init()
+	_, warnEv, errEv := testutil.GetTestLogs(t)
+	boardConfig := config.GetBoardConfig("test")
+	boardConfig.Worksafe = true
+	config.SetBoardConfig("test", boardConfig)
+	_, err := FormatMessage("[#nsfw] [#tag2]", "test", warnEv, errEv)
+	if !assert.ErrorIs(t, err, ErrWorksafeBoard) {
+		t.FailNow()
+	}
+	boardConfig.Worksafe = false
+	config.SetBoardConfig("test", boardConfig)
+	msgHTML, err := FormatMessage("[#nsfw]", "test", warnEv, errEv)
+	assert.NoError(t, err)
+	assert.Equal(t, template.HTML(`<span class="hashtag nsfw">#nsfw</span>`), msgHTML)
 }

@@ -249,7 +249,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 
-		formatted, err := posting.FormatMessage(formattedStr, board.Dir)
+		formatted, err := posting.FormatMessage(formattedStr, board.Dir, warnEv, errEv)
 		if err != nil {
 			errEv.Err(err).Caller().Send()
 			server.ServeError(writer, err.Error(), wantsJSON, nil)

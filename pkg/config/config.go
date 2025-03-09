@@ -428,6 +428,7 @@ type BoardConfig struct {
 	EnableSpoileredThreads bool
 
 	// Worksafe determines whether the board is worksafe or not. If it is set to true, threads cannot be marked NSFW
+	// (given a hashtag with the text NSFW, case insensitive).
 	// Default: true
 	Worksafe bool
 

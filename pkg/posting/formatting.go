@@ -12,15 +12,17 @@ import (
 	"github.com/frustra/bbcode"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
-	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/rs/zerolog"
 )
 
 var (
-	msgfmtr         MessageFormatter
-	urlRE           = regexp.MustCompile(`https?://(\S+)`)
-	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
-	diceRollRE      = regexp.MustCompile(`\[(\d*)d(\d+)(?:([+-])(\d+))?\]`)
-	hashTagRE       = regexp.MustCompile(`\[#(.+)\]`)
+	msgfmtr          MessageFormatter
+	urlRE            = regexp.MustCompile(`https?://(\S+)`)
+	unsetBBcodeTags  = []string{"center", "color", "img", "quote", "size"}
+	diceRollRE       = regexp.MustCompile(`\[(\d*)d(\d+)(?:([+-])(\d+))?\]`)
+	hashTagRE        = regexp.MustCompile(`\[#([^\]]+)\]`)
+	brRE             = regexp.MustCompile(`<br\s*/?>`)
+	ErrWorksafeBoard = errors.New("this board does not allow NSFW content")
 )
 
 // InitPosting prepares the formatter and the temp post pruner
@@ -89,14 +91,16 @@ func wrapLinksInURL(urlStr string) string {
 	return "[url]" + urlStr + "[/url]"
 }
 
-func FormatMessage(message string, boardDir string) (template.HTML, error) {
+func FormatMessage(message string, boardDir string, warnEv, errEv *zerolog.Event) (template.HTML, error) {
 	if config.GetBoardConfig(boardDir).RenderURLsAsLinks {
 		message = urlRE.ReplaceAllStringFunc(message, wrapLinksInURL)
 		message = msgfmtr.linkFixer.Replace(message)
 	}
 	message = msgfmtr.Compile(message, boardDir)
 	// prepare each line to be formatted
-	postLines := strings.Split(message, "<br>")
+	postLines := brRE.Split(message, -1)
+	boardConfig := config.GetBoardConfig(boardDir)
+	var err error
 	for i, line := range postLines {
 		trimmedLine := strings.TrimSpace(line)
 		lineWords := strings.Split(trimmedLine, " ")
@@ -110,7 +114,7 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 					var boardDir string
 					var linkParent int
 					if linkParent, boardDir, err = gcsql.GetTopPostAndBoardDirFromPostID(postID); err != nil {
-						gcutil.LogError(err).Caller().Int("childPostID", postID).Msg("Unable to get top post and board")
+						errEv.Caller().Int("childPostID", postID).Msg("Unable to get top post and board")
 						return "", fmt.Errorf("unable to get top post and board for post #%d", postID)
 					}
 
@@ -131,9 +135,28 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 		if isGreentext {
 			line += "</span>"
 		}
+
+		err = nil
+		var classList string
 		line = hashTagRE.ReplaceAllStringFunc(line, func(tag string) string {
-			return fmt.Sprintf(`<span class="hashtag">%s</span>`, tag[1:len(tag)-1])
+			if err != nil {
+				return tag // don't bother processing if there's already an error
+			}
+			tagNoBrackets := tag[1 : len(tag)-1]
+			classList = "hashtag"
+			if strings.ToLower(tagNoBrackets) == "#nsfw" {
+				if boardConfig.Worksafe {
+					err = ErrWorksafeBoard
+					return ""
+				}
+				classList += " nsfw"
+			}
+			return fmt.Sprintf(`<span class="%s">%s</span>`, classList, tagNoBrackets)
 		})
+		if err != nil {
+			warnEv.Str("board", boardDir).Msg("NSFW tag found on worksafe board")
+			return "", err
+		}
 		postLines[i] = line
 	}
 	return template.HTML(strings.Join(postLines, "<br />")), nil // skipcq: GSC-G203

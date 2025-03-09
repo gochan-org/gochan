@@ -208,11 +208,9 @@ func getPostFromRequest(request *http.Request, infoEv, errEv *zerolog.Event) (po
 	return
 }
 
-func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, errEv *zerolog.Event) (err error) {
+func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, warnEv, errEv *zerolog.Event) (err error) {
 	if len(post.MessageRaw) > board.MaxMessageLength {
-		errEv.Caller().
-			Int("messageLength", len(post.MessageRaw)).
-			Int("maxMessageLength", board.MaxMessageLength).Send()
+		warnEv.Int("messageLength", len(post.MessageRaw)).Int("maxMessageLength", board.MaxMessageLength).Send()
 		return errors.New("message is too long")
 	}
 
@@ -232,8 +230,10 @@ func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, e
 		return err
 	}
 
-	if post.Message, err = FormatMessage(post.MessageRaw, board.Dir); err != nil {
-		errEv.Err(err).Caller().Msg("Unable to format message")
+	post.Message, err = FormatMessage(post.MessageRaw, board.Dir, warnEv, errEv)
+	if errors.Is(err, ErrWorksafeBoard) {
+		return err
+	} else if err != nil {
 		return errors.New("unable to format message")
 	}
 	if err = ApplyDiceRoll(post); err != nil {
@@ -345,7 +345,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	// do formatting and apply wordfilters
-	if err = doFormatting(post, board, request, errEv); err != nil {
+	if err = doFormatting(post, board, request, warnEv, errEv); err != nil {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}

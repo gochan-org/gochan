@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -37,4 +39,10 @@ func GoToGochanRoot(t *testing.T) (string, error) {
 		}
 	}
 	return dir, errors.New("test running from unexpected dir, should be in gochan root or the current testing dir")
+}
+
+// GetTestLogs returns logs with info, warn, and error levels respectively for testing
+func GetTestLogs(t *testing.T) (*zerolog.Event, *zerolog.Event, *zerolog.Event) {
+	logger := zerolog.New(zerolog.NewTestWriter(t))
+	return logger.Info(), logger.Warn(), logger.Error()
 }

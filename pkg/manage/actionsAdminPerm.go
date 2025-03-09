@@ -600,8 +600,10 @@ func rebuildBoardsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staf
 	return "Boards built successfully", nil
 }
 
-func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func reparseHTMLCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	var outputStr string
+	_, warnEv, _ := gcutil.LogRequest(request)
+	defer warnEv.Discard()
 	tx, err := gcsql.BeginTx()
 	if err != nil {
 		errEv.Err(err).Msg("Unable to begin transaction")
@@ -635,7 +637,7 @@ func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff,
 			errEv.Err(err).Caller().Msg("Unable to scan SQL row")
 			return "", err
 		}
-		if formatted, err := posting.FormatMessage(messageRaw, boardDir); err != nil {
+		if formatted, err := posting.FormatMessage(messageRaw, boardDir, warnEv, errEv); err != nil {
 			errEv.Err(err).Caller().Msg("Unable to format message")
 			return "", err
 		} else {
