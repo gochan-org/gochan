@@ -1,4 +1,5 @@
 @use 'animations';
+@use 'colors';
 
 #boardmenu-bottom {
 	margin-top: 16px;
@@ -224,7 +225,7 @@ div.inlinepostprev {
 
 .hideblock {
 	border: 1px solid black;
-	background: rgba(0, 0, 0, 0.1);
+	background: colors.$hideblock;
 }
 
 .hideblock.open {
@@ -246,4 +247,13 @@ div.inlinepostprev {
 .dice-roll {
 	border: 1px dashed #aaa;
 	font-weight: bold;
+}
+
+.hashtag {
+	border: 1px solid #000;
+	border-radius: 4px;
+	margin: 2px;
+	padding: 4px;
+	display: inline-block;
+	background: colors.$hashtagbg;
 }

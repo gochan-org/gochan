@@ -30,6 +30,10 @@ div#staffmenu, div#watchermenu {
   border: 1px solid #ACACAC;
 }
 
+.hashtag {
+  background: rgba(255, 255, 255, 0.1019607843);
+}
+
 body {
   background: #1d1f21;
   color: #ACACAC;

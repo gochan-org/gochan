@@ -20,6 +20,7 @@ var (
 	urlRE           = regexp.MustCompile(`https?://(\S+)`)
 	unsetBBcodeTags = []string{"center", "color", "img", "quote", "size"}
 	diceRollRE      = regexp.MustCompile(`\[(\d*)d(\d+)(?:([+-])(\d+))?\]`)
+	hashTagRE       = regexp.MustCompile(`\[#(.+)\]`)
 )
 
 // InitPosting prepares the formatter and the temp post pruner
@@ -130,6 +131,9 @@ func FormatMessage(message string, boardDir string) (template.HTML, error) {
 		if isGreentext {
 			line += "</span>"
 		}
+		line = hashTagRE.ReplaceAllStringFunc(line, func(tag string) string {
+			return fmt.Sprintf(`<span class="hashtag">%s</span>`, tag[1:len(tag)-1])
+		})
 		postLines[i] = line
 	}
 	return template.HTML(strings.Join(postLines, "<br />")), nil // skipcq: GSC-G203

@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"html/template"
 	"regexp"
 	"testing"
 
@@ -209,4 +210,29 @@ func TestDiceRoll(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHashTags(t *testing.T) {
+	config.SetVersion(versionStr)
+	msgfmtr.Init()
+	msg := `[#tag]
+[#t a g]
+[ #tag]
+[#tag ]
+[# tag]
+>greentext [#tag]
+[#js<script>alert("lol")</script>injection]`
+	msgHTML, err := FormatMessage(msg, "test")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, template.HTML(
+		`<span class="hashtag">#tag</span><br />`+
+			`<span class="hashtag">#t a g</span><br />`+
+			`[ #tag]<br />`+
+			`<span class="hashtag">#tag </span><br />`+
+			`<span class="hashtag"># tag</span><br />`+
+			`<span class="greentext">&gt;greentext <span class="hashtag">#tag</span></span><br />`+
+			`<span class="hashtag">#js&lt;script&gt;alert(&#34;lol&#34;)&lt;/script&gt;injection</span>`,
+	), msgHTML)
 }
