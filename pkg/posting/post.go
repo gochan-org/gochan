@@ -420,7 +420,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	}
 	if !captchaSuccess {
 		server.ServeError(writer, "Missing or invalid captcha response", wantsJSON, nil)
-		errEv.Msg("Missing or invalid captcha response")
+		warnEv.Msg("Missing or invalid captcha response")
 		return
 	}
 
@@ -434,12 +434,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	_, _, err = request.FormFile("imagefile")
 	noFile := errors.Is(err, http.ErrMissingFile)
 	if noFile && post.ThreadID == 0 && boardConfig.NewThreadsRequireUpload {
-		errEv.Caller().Msg("New thread rejected (NewThreadsRequireUpload set in config)")
+		warnEv.Caller().Msg("New thread rejected (NewThreadsRequireUpload set in config)")
 		server.ServeError(writer, "Upload required for new threads", wantsJSON, nil)
 		return
 	}
 	if post.MessageRaw == "" && noFile {
-		errEv.Caller().Msg("New post rejected (no file and message is blank)")
+		warnEv.Caller().Msg("New post rejected (no file and message is blank)")
 		server.ServeError(writer, "Your post must have an upload or a comment", wantsJSON, nil)
 		return
 	}
@@ -455,7 +455,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 	upload, err := uploads.AttachUploadFromRequest(request, writer, post, board, infoEv, errEv)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
 		// got an error receiving the upload or the upload was rejected
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return

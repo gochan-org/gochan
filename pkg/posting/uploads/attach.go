@@ -30,6 +30,7 @@ var (
 	VideoExtensions = []string{
 		".mp4", ".webm",
 	}
+	ErrSpoileredImagesNotAllowed = errors.New("spoilered images are not allowed on this board")
 )
 
 type UploadHandler func(upload *gcsql.Upload, post *gcsql.Post, board string, filePath string, thumbPath string, catalogThumbPath string, infoEv *zerolog.Event, accessEv *zerolog.Event, errEv *zerolog.Event) error
@@ -142,6 +143,14 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 
 	upload.IsSpoilered = request.FormValue("spoiler") == "on"
 	gcutil.LogBool("isSpoiler", upload.IsSpoilered, infoEv, accessEv, errEv)
+	if upload.IsSpoilered && !boardConfig.EnableSpoileredImages {
+		gcutil.LogWarning().
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("userAgent", request.UserAgent()).
+			Str("board", postBoard.Dir).
+			Msg("User attempted to post a spoilered file on a board that doesn't allow it")
+		return nil, ErrSpoileredImagesNotAllowed
+	}
 
 	uploadHandler, ok := uploadHandlers[ext]
 	if !ok {
