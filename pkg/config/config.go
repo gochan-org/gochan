@@ -4,9 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"html/template"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -138,6 +141,39 @@ func (gcfg *GochanConfig) ValidateValues() error {
 			Field:   "StripImageMetadata",
 			Value:   gcfg.StripImageMetadata,
 			Details: `valid values are "","none","exif", or "all"`,
+		}
+	}
+
+	for m, matcher := range gcfg.EmbedMatchers {
+		if _, err = regexp.Compile(matcher.URLRegex); err != nil {
+			return &InvalidValueError{
+				Field:   "EmbedMatchers[" + m + "].URLRegex",
+				Value:   matcher.URLRegex,
+				Details: "invalid regular expression",
+			}
+		}
+		if _, err = template.New(m + "framevalidate").Parse(matcher.EmbedTemplate); err != nil {
+			return &InvalidValueError{
+				Field:   "EmbedMatchers[" + m + "].EmbedTemplate",
+				Value:   matcher.EmbedTemplate,
+				Details: "invalid template",
+			}
+		}
+		if matcher.ThumbnailURLTemplate != "" {
+			if _, err = url.Parse(matcher.ThumbnailURLTemplate); err != nil {
+				return &InvalidValueError{
+					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
+					Value:   matcher.ThumbnailURLTemplate,
+					Details: "invalid URL",
+				}
+			}
+			if _, err = template.New(m + "thumbvalidate").Parse(matcher.ThumbnailURLTemplate); err != nil {
+				return &InvalidValueError{
+					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
+					Value:   matcher.ThumbnailURLTemplate,
+					Details: "invalid template",
+				}
+			}
 		}
 	}
 
@@ -594,9 +630,10 @@ type PostConfig struct {
 	// Default: 164
 	EmbedHeight int
 
-	// EnableEmbeds determines whether to allow embedding of external videos. It is not yet implemented
-	// Default: false
-	EnableEmbeds bool
+	// EmbedMatchers is a map of site ID keys to objects used to match (via regular expression) URLs and embed them in posts via templates,
+	// with an optional image thumbnail if supported. If a URL template is not provided, the video/frame will be embedded directly.
+	// If EmbedMatchers is nil, embedding is disabled for the board, or globally if it is in the global configuration.
+	EmbedMatchers map[string]EmbedMatcher
 
 	// ImagesOpenNewTab determines whether to open images in a new tab when an image link is clicked
 	// Default: true
@@ -618,6 +655,19 @@ type PostConfig struct {
 	// AllowDiceRerolls determines whether to allow users to edit posts to reroll dice
 	// Default: false
 	AllowDiceRerolls bool
+}
+
+type EmbedMatcher struct {
+	// URLRegex checks the incoming embed and determines if it should be embedded with the EmbedTemplate
+	URLRegex string
+	// EmbedTemplate is the template for embedding the video in place of an upload
+	EmbedTemplate string
+	// ImageURLSubmatchIndex is the index of the submatch in the URLRegex that contains the image URL
+	// Default: 1
+	VideoIDSubmatchIndex *int
+	// ThumbnailURLTemplate is the template for embedding the video thumbnail in place of the EmbedTemplate
+	// HTML. If it is not set, the video will be embedded directly
+	ThumbnailURLTemplate string
 }
 
 func WriteConfig() error {
