@@ -19,16 +19,22 @@ const (
 	loginTitle = "Login"
 )
 
-func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output any, err error) {
+type loginRedirectAction string
+
+func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if staff.Rank > 0 {
 		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
 	}
-	username := request.FormValue("username")
-	password := request.FormValue("password")
-	redirectAction := request.FormValue("action")
-	if redirectAction == "" || redirectAction == "logout" {
-		redirectAction = "dashboard"
+	username := request.PostFormValue("username")
+	password := request.PostFormValue("password")
+	redirectAction := request.PostFormValue("redirect")
+	if redirectAction == "" {
+		loginRefererAny := request.Context().Value(loginRedirectAction("redirect"))
+
+		if loginRefererAny != nil {
+			redirectAction = loginRefererAny.(string)
+		}
 	}
 
 	if username == "" || password == "" {
@@ -53,7 +59,11 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			}
 			return "", err
 		}
-		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage/"+request.FormValue("redirect")), http.StatusFound)
+		infoEv.
+			Str("redirectAction", redirectAction).
+			Str("username", username).
+			Msg("Logged in, redirecting to manage page")
+		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage/"+redirectAction), http.StatusFound)
 	}
 	return
 }
