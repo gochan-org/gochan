@@ -32,7 +32,8 @@ var (
 	cfg     *GochanConfig
 	cfgPath string
 
-	boardConfigs = map[string]BoardConfig{}
+	boardConfigs              = map[string]BoardConfig{}
+	ErrNoMatchingEmbedHandler = errors.New("no matching handler for the embed URL")
 )
 
 type GochanConfig struct {
@@ -144,21 +145,25 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		}
 	}
 
+	var re *regexp.Regexp
+	var tmpl *template.Template
 	for m, matcher := range gcfg.EmbedMatchers {
-		if _, err = regexp.Compile(matcher.URLRegex); err != nil {
+		if re, err = regexp.Compile(matcher.URLRegex); err != nil {
 			return &InvalidValueError{
 				Field:   "EmbedMatchers[" + m + "].URLRegex",
 				Value:   matcher.URLRegex,
 				Details: "invalid regular expression",
 			}
 		}
-		if _, err = template.New(m + "framevalidate").Parse(matcher.EmbedTemplate); err != nil {
+		gcfg.embedMatchersRegex[m] = re
+		if tmpl, err = template.New(m + "framevalidate").Parse(matcher.EmbedTemplate); err != nil {
 			return &InvalidValueError{
 				Field:   "EmbedMatchers[" + m + "].EmbedTemplate",
 				Value:   matcher.EmbedTemplate,
 				Details: "invalid template",
 			}
 		}
+		gcfg.embedMatchersEmbedTemplate[m] = tmpl
 		if matcher.ThumbnailURLTemplate != "" {
 			if _, err = url.Parse(matcher.ThumbnailURLTemplate); err != nil {
 				return &InvalidValueError{
@@ -167,13 +172,14 @@ func (gcfg *GochanConfig) ValidateValues() error {
 					Details: "invalid URL",
 				}
 			}
-			if _, err = template.New(m + "thumbvalidate").Parse(matcher.ThumbnailURLTemplate); err != nil {
+			if tmpl, err = template.New(m + "thumbvalidate").Parse(matcher.ThumbnailURLTemplate); err != nil {
 				return &InvalidValueError{
 					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
 					Value:   matcher.ThumbnailURLTemplate,
 					Details: "invalid template",
 				}
 			}
+			gcfg.embedMatchersThumbnailURLTemplate[m] = tmpl
 		}
 	}
 
@@ -633,7 +639,10 @@ type PostConfig struct {
 	// EmbedMatchers is a map of site ID keys to objects used to match (via regular expression) URLs and embed them in posts via templates,
 	// with an optional image thumbnail if supported. If a URL template is not provided, the video/frame will be embedded directly.
 	// If EmbedMatchers is nil, embedding is disabled for the board, or globally if it is in the global configuration.
-	EmbedMatchers map[string]EmbedMatcher
+	EmbedMatchers                     map[string]EmbedMatcher
+	embedMatchersRegex                map[string]*regexp.Regexp
+	embedMatchersEmbedTemplate        map[string]*template.Template
+	embedMatchersThumbnailURLTemplate map[string]*template.Template
 
 	// ImagesOpenNewTab determines whether to open images in a new tab when an image link is clicked
 	// Default: true
@@ -655,6 +664,19 @@ type PostConfig struct {
 	// AllowDiceRerolls determines whether to allow users to edit posts to reroll dice
 	// Default: false
 	AllowDiceRerolls bool
+}
+
+// GetMatchingEmbedHandler returns the site ID, handler, and submatches for the given URL if
+// it is compatible with any configured embed handlers. It returns an error if none are found
+func (pc *PostConfig) GetMatchingEmbedHandler(url string) (string, *EmbedMatcher, [][]string, error) {
+	for m, matcher := range pc.EmbedMatchers {
+		re := pc.embedMatchersRegex[m]
+		matches := re.FindAllStringSubmatch(url, -1)
+		if len(matches) == 1 {
+			return m, &matcher, matches, nil
+		}
+	}
+	return "", nil, nil, ErrNoMatchingEmbedHandler
 }
 
 type EmbedMatcher struct {

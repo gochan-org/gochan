@@ -3,7 +3,6 @@ package posting
 import (
 	"errors"
 	"net/http"
-	"regexp"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -11,9 +10,8 @@ import (
 )
 
 var (
-	ErrNoMatchingEmbedHandler = errors.New("no matching handler for the embed URL")
-	ErrNoEmbedding            = errors.New("embedding is disabled on this board")
-	ErrUnrecognizedEmbed      = errors.New("unrecognized embed URL")
+	ErrNoEmbedding       = errors.New("embedding is disabled on this board")
+	ErrUnrecognizedEmbed = errors.New("unrecognized embed URL")
 )
 
 type EmbedVideo struct {
@@ -37,23 +35,19 @@ func CheckEmbed(request *http.Request, post *gcsql.Post, boardCfg *config.BoardC
 		warnEv.Msg("Rejected a post with an embed URL on a board that doesn't allow it")
 		return nil, ErrNoEmbedding
 	}
-	var re *regexp.Regexp
 	submatchIndex := 1
 	var filename string
-	for m, matcher := range boardCfg.EmbedMatchers {
-		re = regexp.MustCompile(matcher.URLRegex) // already checked in config
-		matches := re.FindAllStringSubmatch(url, -1)
-		if len(matches) == 1 {
-			if matcher.VideoIDSubmatchIndex != nil {
-				submatchIndex = *matcher.VideoIDSubmatchIndex
-			}
-			filename = "embed:" + m + ":" + matches[0][submatchIndex]
-			return &gcsql.Upload{
-				Filename: filename,
-				PostID:   post.ID,
-			}, nil
-		}
-	}
 
-	return nil, ErrUnrecognizedEmbed
+	handlerID, handler, matches, err := boardCfg.GetMatchingEmbedHandler(url)
+	if err != nil {
+		return nil, err
+	}
+	if handler.VideoIDSubmatchIndex != nil {
+		submatchIndex = *handler.VideoIDSubmatchIndex
+	}
+	filename = "embed:" + handlerID + ":" + matches[0][submatchIndex]
+	return &gcsql.Upload{
+		Filename: filename,
+		PostID:   post.ID,
+	}, nil
 }
