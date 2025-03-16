@@ -113,7 +113,7 @@
 		},
 		"rawvideo": {
 			"URLRegex":             "^https?://\\S+\\.\\S+/\\S+/(\\S+\\.(?:mp4|webm))$",
-			"EmbedTemplate":        "<video class=\"embed\" src=\"{{.MediaID}}\"></video>",
+			"EmbedTemplate":        "<video class=\"embed embed-{{.HandlerID}}\" src=\"{{.MediaID}}\" style=\"max-width:{{.ThumbWidth}}px; max-height:{{.ThumbHeight}}px\"></video>",
 			"MediaIDSubmatchIndex": 0,
 			"MediaURLTemplate": "{{.MediaID}}"
 		}
