@@ -28,7 +28,7 @@ func AttachEmbedFromRequest(request *http.Request, boardCfg *config.BoardConfig,
 		warnEv.Msg("Rejected a post with an embed URL on a board that doesn't allow it")
 		return nil, ErrNoEmbedding
 	}
-	handlerID, videoID, err := boardCfg.GetEmbedVideoID(url)
+	handlerID, videoID, err := boardCfg.GetEmbedMediaID(url)
 	if err != nil {
 		return nil, err
 	}

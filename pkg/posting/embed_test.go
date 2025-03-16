@@ -84,19 +84,22 @@ var (
 	testEmbedMatchers = map[string]config.EmbedMatcher{
 		"youtube": {
 			URLRegex:             `^https?://(?:(?:(?:www\.)?youtube\.com/watch\?v=)|(?:youtu\.be/))([^&]+)`,
-			EmbedTemplate:        `<iframe class="embed" width={{.ThumbWidth}} height={{.ThumbHeight}} src="https://www.youtube-nocookie.com/embed/{{.VideoID}}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`,
-			ThumbnailURLTemplate: "https://img.youtube.com/vi/{{.VideoID}}/0.jpg",
+			EmbedTemplate:        `<iframe class="embed" width={{.ThumbWidth}} height={{.ThumbHeight}} src="https://www.youtube-nocookie.com/embed/{{.MediaID}}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`,
+			ThumbnailURLTemplate: "https://img.youtube.com/vi/{{.MediaID}}/0.jpg",
+			MediaURLTemplate:     "https://www.youtube.com/watch?v={{.MediaID}}",
 		},
 		"vimeo": {
 			URLRegex:             `^https?://(?:\w+\.)?vimeo\.com/(\d{2,10})`,
-			EmbedTemplate:        `<iframe src="https://player.vimeo.com/video/{{.VideoID}}" class="embed" width="{{.ThumbWidth}}" height="{{.ThumbHeight}}" allow="autoplay; fullscreen; picture-in-picture; clipboard-write" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`,
-			VideoIDSubmatchIndex: intPointer(1),
-			ThumbnailURLTemplate: "https://vumbnail.com/{{.VideoID}}.jpg",
+			EmbedTemplate:        `<iframe src="https://player.vimeo.com/video/{{.MediaID}}" class="embed" width="{{.ThumbWidth}}" height="{{.ThumbHeight}}" allow="autoplay; fullscreen; picture-in-picture; clipboard-write" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`,
+			MediaIDSubmatchIndex: intPointer(1),
+			ThumbnailURLTemplate: "https://vumbnail.com/{{.MediaID}}.jpg",
+			MediaURLTemplate:     "https://vimeo.com/{{.MediaID}}",
 		},
 		"rawvideo": {
 			URLRegex:             `^https?://\S+\.\S+/\S+/(\S+\.(?:mp4|webm))$`,
-			EmbedTemplate:        `<video class="embed" controls><source src="{{.VideoID}}" type="video/mp4"></video>`,
-			VideoIDSubmatchIndex: intPointer(0),
+			EmbedTemplate:        `<video class="embed" controls><source src="{{.MediaID}}" type="video/mp4"></video>`,
+			MediaIDSubmatchIndex: intPointer(0),
+			MediaURLTemplate:     "{{.MediaID}}",
 		},
 	}
 )

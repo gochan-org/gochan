@@ -24,13 +24,6 @@ var (
 	ErrInvalidMap = errors.New("invalid template map call")
 )
 
-type EmbedVideo struct {
-	VideoID     string
-	Handler     string
-	ThumbWidth  int
-	ThumbHeight int
-}
-
 var funcMap = template.FuncMap{
 	// Arithmetic functions
 	"add": func(a, b int) int {
@@ -173,7 +166,7 @@ var funcMap = template.FuncMap{
 		}
 		return dir
 	},
-	"embedVideo": func(filename string, videoID string, board string) template.HTML {
+	"embedMedia": func(filename string, mediaID string, board string) template.HTML {
 		filenameParts := strings.SplitN(filename, ":", 2)
 		if len(filenameParts) != 2 {
 			return "invalid embed ID"
@@ -184,9 +177,9 @@ var funcMap = template.FuncMap{
 		if err != nil {
 			return template.HTML(err.Error())
 		}
-		templateData := EmbedVideo{
-			VideoID:     videoID,
-			Handler:     filenameParts[1],
+		templateData := config.EmbedTemplateData{
+			MediaID:     mediaID,
+			HandlerID:   filenameParts[1],
 			ThumbWidth:  boardCfg.EmbedWidth,
 			ThumbHeight: boardCfg.EmbedHeight,
 		}
@@ -196,7 +189,10 @@ var funcMap = template.FuncMap{
 			if err := thumbTmpl.Execute(&buf, templateData); err != nil {
 				return template.HTML(err.Error())
 			}
-			return template.HTML(`<img src="` + buf.String() + `" alt="Video thumbnail" class="embed thumb">`)
+
+			return template.HTML(fmt.Sprintf(
+				`<img src=%q alt="Embedded video" class="embed thumb embed-%s" style="max-width: %dpx; max-height: %dpx;">`,
+				buf.String(), filenameParts[1], boardCfg.EmbedWidth, boardCfg.EmbedHeight))
 		}
 
 		if err = embedTmpl.Execute(&buf, templateData); err != nil {

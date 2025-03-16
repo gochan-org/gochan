@@ -593,11 +593,11 @@ type PostConfig struct {
 	// Default: USER WAS BANNED FOR THIS POST
 	BanMessage string
 
-	// EmbedWidth is the width of embedded external videos
+	// EmbedWidth is the width of embedded external media files
 	// Default: 200
 	EmbedWidth int
 
-	// EmbedHeight is the height of embedded external videos
+	// EmbedHeight is the height of embedded external media files
 	// Default: 164
 	EmbedHeight int
 
@@ -608,6 +608,7 @@ type PostConfig struct {
 	embedMatchersRegex                map[string]*regexp.Regexp
 	embedMatchersEmbedTemplate        map[string]*template.Template
 	embedMatchersThumbnailURLTemplate map[string]*template.Template
+	embedMatchersMediaURLTemplate     map[string]*template.Template
 
 	// ImagesOpenNewTab determines whether to open images in a new tab when an image link is clicked
 	// Default: true
@@ -636,9 +637,9 @@ func (pc *PostConfig) HasEmbedMatchers() bool {
 	return len(pc.EmbedMatchers) > 0
 }
 
-// GetEmbedVideoID returns the site ID, and video ID for the given URL if it is compatible with any
+// GetEmbedMediaID returns the site ID, and media ID for the given URL if it is compatible with any
 // configured embed handlers. It returns an error if none are found
-func (pc *PostConfig) GetEmbedVideoID(url string) (string, string, error) {
+func (pc *PostConfig) GetEmbedMediaID(url string) (string, string, error) {
 	if pc.embedMatchersRegex == nil {
 		pc.embedMatchersRegex = make(map[string]*regexp.Regexp)
 	}
@@ -655,8 +656,8 @@ func (pc *PostConfig) GetEmbedVideoID(url string) (string, string, error) {
 		if len(matches) == 1 {
 			pc.embedMatchersRegex[m] = re
 			submatchIndex := 1
-			if matcher.VideoIDSubmatchIndex != nil {
-				submatchIndex = *matcher.VideoIDSubmatchIndex
+			if matcher.MediaIDSubmatchIndex != nil {
+				submatchIndex = *matcher.MediaIDSubmatchIndex
 			}
 			return m, matches[0][submatchIndex], nil
 		}
@@ -666,15 +667,46 @@ func (pc *PostConfig) GetEmbedVideoID(url string) (string, string, error) {
 
 // GetEmbedTemplates returns the embed and (if it has one) thumbnail URL templates for the given embed ID
 func (pc *PostConfig) GetEmbedTemplates(embedID string) (*template.Template, *template.Template, error) {
-	embedTmpl, ok := pc.embedMatchersEmbedTemplate[embedID]
+	matcher, ok := pc.EmbedMatchers[embedID]
 	if !ok {
 		return nil, nil, ErrNoMatchingEmbedHandler
 	}
+	embedTmpl, ok := pc.embedMatchersEmbedTemplate[embedID]
+	var err error
+	if !ok {
+		pc.embedMatchersEmbedTemplate[embedID], err = template.New(embedID + "frame").Parse(matcher.EmbedTemplate)
+		if err != nil {
+			return nil, nil, err
+		}
+		embedTmpl = pc.embedMatchersEmbedTemplate[embedID]
+	}
 	thumbTmpl, ok := pc.embedMatchersThumbnailURLTemplate[embedID]
 	if !ok {
-		thumbTmpl = nil
+		if matcher.ThumbnailURLTemplate != "" {
+			pc.embedMatchersThumbnailURLTemplate[embedID], err = template.New(embedID + "thumb").Parse(matcher.ThumbnailURLTemplate)
+			if err != nil {
+				return nil, nil, err
+			}
+			thumbTmpl = pc.embedMatchersThumbnailURLTemplate[embedID]
+		} else {
+			pc.embedMatchersThumbnailURLTemplate[embedID] = nil
+		}
 	}
 	return embedTmpl, thumbTmpl, nil
+}
+
+func (pc *PostConfig) GetLinkTemplate(embedID string) (*template.Template, error) {
+	_, ok := pc.embedMatchersMediaURLTemplate[embedID]
+	if !ok {
+		matcher, ok := pc.EmbedMatchers[embedID]
+		if !ok {
+			return nil, ErrNoMatchingEmbedHandler
+		}
+		var err error
+		pc.embedMatchersMediaURLTemplate[embedID], err = template.New(embedID + "url").Parse(matcher.MediaURLTemplate)
+		return nil, err
+	}
+	return pc.embedMatchersMediaURLTemplate[embedID], nil
 }
 
 func (pc *PostConfig) validateEmbedMatchers() error {
@@ -689,6 +721,9 @@ func (pc *PostConfig) validateEmbedMatchers() error {
 	}
 	if pc.embedMatchersThumbnailURLTemplate == nil {
 		pc.embedMatchersThumbnailURLTemplate = map[string]*template.Template{}
+	}
+	if pc.embedMatchersMediaURLTemplate == nil {
+		pc.embedMatchersMediaURLTemplate = map[string]*template.Template{}
 	}
 
 	for m, matcher := range pc.EmbedMatchers {
@@ -732,21 +767,50 @@ func (pc *PostConfig) validateEmbedMatchers() error {
 			}
 			pc.embedMatchersThumbnailURLTemplate[m] = tmpl
 		}
+		if matcher.MediaURLTemplate == "" {
+			return &InvalidValueError{
+				Field:   "EmbedMatchers[" + m + "].MediaURLTemplate",
+				Value:   "",
+				Details: "must be set",
+			}
+		}
+		if pc.embedMatchersMediaURLTemplate[m], err = template.New(m + "url").Parse(matcher.MediaURLTemplate); err != nil {
+			return &InvalidValueError{
+				Field:   "EmbedMatchers[" + m + "].MediaURLTemplate",
+				Value:   matcher.MediaURLTemplate,
+				Details: err.Error(),
+			}
+		}
 	}
 	return nil
+}
+
+type EmbedTemplateData struct {
+	MediaID     string
+	HandlerID   string
+	ThumbWidth  int
+	ThumbHeight int
+	MediaURL    string
 }
 
 type EmbedMatcher struct {
 	// URLRegex checks the incoming embed and determines if it should be embedded with the EmbedTemplate
 	URLRegex string
-	// EmbedTemplate is the template for embedding the video in place of an upload
+
+	// EmbedTemplate is the template for embedding the media in place of an upload. It uses the MediaID, HandlerID,
+	// ThumbWidth, ThumbHeight fields of EmbedMediaData
 	EmbedTemplate string
-	// ImageURLSubmatchIndex is the index of the submatch in the URLRegex that contains the image URL
+
+	// MediaIDSubmatchIndex is the index of the submatch in the URLRegex that contains the media ID
 	// Default: 1
-	VideoIDSubmatchIndex *int
-	// ThumbnailURLTemplate is the template for embedding the video thumbnail in place of the EmbedTemplate
-	// HTML. If it is not set, the video will be embedded directly
+	MediaIDSubmatchIndex *int
+
+	// ThumbnailURLTemplate is the template for embedding the media thumbnail in place of the EmbedTemplate
+	// HTML. If it is not set, the media will be embedded directly. It uses the MediaID field of EmbedMediaData
 	ThumbnailURLTemplate string
+
+	// MediaURLTemplate is used to construct the media URL from the media ID. It uses the MediaID field of EmbedMediaData
+	MediaURLTemplate string
 }
 
 func (em *EmbedMatcher) HasThumbnail() bool {

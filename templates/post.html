@@ -1,6 +1,8 @@
 {{define "uploadinfo" -}}
 <div class="file-info">
-	File: <a href="{{.post.UploadPath}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}}{{if and (gt $.post.UploadHeight 0) (gt $.post.UploadWidth 0)}}, {{$.post.UploadWidth}}x{{$.post.UploadHeight}}{{end}}, <a href="{{.post.UploadPath}}" class="file-orig" download="{{.post.OriginalFilename}}">{{.post.OriginalFilename}}</a>)
+	{{- if not $.post.HasEmbed -}}
+		File: <a href="{{.post.UploadPath}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}}{{if and (gt $.post.UploadHeight 0) (gt $.post.UploadWidth 0)}}, {{$.post.UploadWidth}}x{{$.post.UploadHeight}}{{end}}, <a href="{{.post.UploadPath}}" class="file-orig" download="{{.post.OriginalFilename}}">{{.post.OriginalFilename}}</a>)
+	{{- end -}}
 </div>
 {{- end -}}
 {{define "nameline"}}
@@ -39,9 +41,9 @@
 	<div class="file-deleted-box" style="text-align:center;">File removed</div>
 {{- else if ne $.post.Filename "" -}}
 	{{- template "uploadinfo" . -}}
-	<a class="upload-container" href="{{.post.UploadPath}}">
+	<a class="upload-container" href="{{.post.UploadPath}}"></a>
 		{{- if $.post.HasEmbed -}}
-			{{embedVideo .post.Filename .post.OriginalFilename $.board.Dir}}
+			{{embedMedia .post.Filename .post.OriginalFilename $.board.Dir}}
 		{{- else -}}
 			<img src="{{getThumbnailWebPath .post.ID}}" alt="{{.post.UploadPath}}" width="{{.post.ThumbnailWidth}}" height="{{.post.ThumbnailHeight}}" class="upload thumb" />
 		{{- end -}}

@@ -40,11 +40,11 @@ const (
 )
 
 var (
-	testingSiteConfig = config.SiteConfig{
+	testingSiteConfig = &config.SiteConfig{
 		SiteName:   "Gochan",
 		SiteSlogan: "Gochan test",
 	}
-	simpleBoardConfig = config.BoardConfig{
+	simpleBoardConfig = &config.BoardConfig{
 		DefaultStyle: "pipes.css",
 		Styles: []config.Style{
 			{Name: "Pipes", Filename: "pipes.css"},

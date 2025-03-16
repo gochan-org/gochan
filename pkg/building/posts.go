@@ -1,6 +1,7 @@
 package building
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -44,6 +45,7 @@ type Post struct {
 	LastModified     string        `json:"last_modified"`
 	Country          geoip.Country `json:"-"`
 	thread           gcsql.Thread
+	uploadPath       string
 }
 
 // TitleText returns the text to be used for the title of the page
@@ -90,10 +92,33 @@ func (p *Post) ThumbnailPath() string {
 }
 
 func (p *Post) UploadPath() string {
-	if p.Filename == "" || p.HasEmbed() {
+	if p.Filename == "" {
 		return ""
 	}
-	return config.WebPath(p.BoardDir, "src", p.Filename)
+	if p.uploadPath != "" {
+		return p.uploadPath
+	}
+	if p.HasEmbed() {
+		filenameParts := strings.SplitN(p.Filename, ":", 2)
+		if len(filenameParts) != 2 {
+			p.uploadPath = "#invalid-embed-ID"
+			return p.uploadPath
+		}
+		linkTmpl, err := config.GetBoardConfig(p.BoardDir).GetLinkTemplate(filenameParts[1])
+		if err != nil {
+			p.uploadPath = "#invalid-template"
+			return p.uploadPath
+		}
+		var buf bytes.Buffer
+		if err = linkTmpl.Execute(&buf, &config.EmbedTemplateData{MediaID: p.OriginalFilename}); err != nil {
+			p.uploadPath = "#template-error"
+			return p.uploadPath
+		}
+		p.uploadPath = buf.String()
+	} else {
+		p.uploadPath = config.WebPath(p.BoardDir, "src", p.Filename)
+	}
+	return p.uploadPath
 }
 
 func (p *Post) Locked() bool {
