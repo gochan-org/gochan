@@ -94,7 +94,7 @@ var (
 			ThumbnailURLTemplate: "https://vumbnail.com/{{.VideoID}}.jpg",
 		},
 		"rawvideo": {
-			URLRegex:             `^https?://\S+\.\S+/\S+/(\S+\.(?:mp4|webm))`,
+			URLRegex:             `^https?://\S+\.\S+/\S+/(\S+\.(?:mp4|webm))$`,
 			EmbedTemplate:        `<video class="embed" controls><source src="{{.VideoID}}" type="video/mp4"></video>`,
 			VideoIDSubmatchIndex: intPointer(0),
 		},
@@ -151,7 +151,8 @@ func embedTestRunner(t *testing.T, tc *embedTestCase, boardCfg *config.BoardConf
 		t.FailNow()
 	}
 
-	embedUpload, err := AttachEmbed(generateEmbedRequest(tc.url), &gcsql.Post{ID: 1}, boardCfg, warnEv, errEv)
+	post := &gcsql.Post{ID: 1}
+	embedUpload, err := AttachEmbedFromRequest(generateEmbedRequest(tc.url), boardCfg, warnEv, errEv)
 	if tc.expectError {
 		assert.Error(t, err)
 		return
@@ -166,8 +167,10 @@ func embedTestRunner(t *testing.T, tc *embedTestCase, boardCfg *config.BoardConf
 	if !assert.NotNil(t, embedUpload) {
 		t.FailNow()
 	}
+
 	assert.Equal(t, tc.expectUpload.Filename, embedUpload.Filename)
 	assert.Equal(t, tc.expectUpload.OriginalFilename, embedUpload.OriginalFilename)
+	assert.NoError(t, post.AddAttachment(embedUpload))
 	assert.Equal(t, embedUpload.ID, 99)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
@@ -226,9 +229,12 @@ func TestOnlyAllowOneEmbed(t *testing.T) {
 	mock.ExpectPrepare(prepStr).
 		ExpectQuery().WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"filename", "dir"}).AddRow("file.png", "test"))
-	_, err = AttachEmbed(generateEmbedRequest("https://www.youtube.com/watch?v=123456"),
-		&gcsql.Post{ID: 1}, boardCfg, warnEv, errEv)
-	assert.ErrorIs(t, err, gcsql.ErrUploadAlreadyAttached)
+	embed, err := AttachEmbedFromRequest(generateEmbedRequest("https://www.youtube.com/watch?v=123456"), boardCfg, warnEv, errEv)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	post := &gcsql.Post{ID: 1}
+	assert.ErrorIs(t, post.AddAttachment(embed), gcsql.ErrUploadAlreadyAttached)
 	if !assert.NoError(t, mock.ExpectationsWereMet()) {
 		t.FailNow()
 	}
@@ -237,8 +243,10 @@ func TestOnlyAllowOneEmbed(t *testing.T) {
 	mock.ExpectPrepare(prepStr).
 		ExpectQuery().WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"filename", "dir"}).AddRow("embed:youtube", "test"))
-	_, err = AttachEmbed(generateEmbedRequest("https://www.youtube.com/watch?v=123456"),
-		&gcsql.Post{ID: 1}, boardCfg, warnEv, errEv)
-	assert.ErrorIs(t, err, gcsql.ErrEmbedAlreadyAttached)
+	embed, err = AttachEmbedFromRequest(generateEmbedRequest("https://www.youtube.com/watch?v=123456"), boardCfg, warnEv, errEv)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.ErrorIs(t, post.AddAttachment(embed), gcsql.ErrEmbedAlreadyAttached)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

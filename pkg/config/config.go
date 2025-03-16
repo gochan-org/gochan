@@ -631,6 +631,11 @@ type PostConfig struct {
 	AllowDiceRerolls bool
 }
 
+// HasEmbedMatchers returns true if the board has embed handlers configured
+func (pc *PostConfig) HasEmbedMatchers() bool {
+	return len(pc.EmbedMatchers) > 0
+}
+
 // GetEmbedVideoID returns the site ID, and video ID for the given URL if it is compatible with any
 // configured embed handlers. It returns an error if none are found
 func (pc *PostConfig) GetEmbedVideoID(url string) (string, string, error) {
