@@ -190,10 +190,14 @@ a.upload-container {
   outline: none;
 }
 
-.upload, div.file-deleted-box {
+.upload, .embed, div.file-deleted-box {
   margin: 5px 10px 5px 0px;
   float: left;
   max-width: 100%;
+}
+
+.embed {
+  background: black;
 }
 
 div.file-deleted-box {

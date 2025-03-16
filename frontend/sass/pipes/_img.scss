@@ -5,12 +5,6 @@
 	background: colors.$bglight;
 }
 
-img.thumbnail {
-	float: left;
-	max-width: 100%;
-	margin: 5px 10px 10px 0px;
-}
-
 .reply, .inlinepostprev, .postprev {
 	background: colors.$postblock;
 	border: 1px solid colors.$postblockcol;

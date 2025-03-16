@@ -47,12 +47,6 @@ div#recent-posts-header {
   background: #404040;
 }
 
-img.thumbnail {
-  float: left;
-  max-width: 100%;
-  margin: 5px 10px 10px 0px;
-}
-
 .reply, .inlinepostprev, .postprev {
   background: #25272D;
   border: 1px solid #8C94AB;

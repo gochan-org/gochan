@@ -41,7 +41,7 @@
 	<div class="file-deleted-box" style="text-align:center;">File removed</div>
 {{- else if ne $.post.Filename "" -}}
 	{{- template "uploadinfo" . -}}
-	<a class="upload-container" href="{{.post.UploadPath}}"></a>
+	<a class="upload-container" href="{{.post.UploadPath}}">
 		{{- if $.post.HasEmbed -}}
 			{{embedMedia .post.Filename .post.OriginalFilename $.board.Dir}}
 		{{- else -}}
