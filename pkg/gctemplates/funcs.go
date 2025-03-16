@@ -1,6 +1,7 @@
 package gctemplates
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"html"
@@ -22,6 +23,13 @@ var (
 	ErrInvalidKey = errors.New("template map expects string keys")
 	ErrInvalidMap = errors.New("invalid template map call")
 )
+
+type EmbedVideo struct {
+	VideoID     string
+	Handler     string
+	ThumbWidth  int
+	ThumbHeight int
+}
 
 var funcMap = template.FuncMap{
 	// Arithmetic functions
@@ -165,6 +173,38 @@ var funcMap = template.FuncMap{
 		}
 		return dir
 	},
+	"embedVideo": func(filename string, videoID string, board string) template.HTML {
+		filenameParts := strings.SplitN(filename, ":", 2)
+		if len(filenameParts) != 2 {
+			return "invalid embed ID"
+		}
+
+		boardCfg := config.GetBoardConfig(board)
+		embedTmpl, thumbTmpl, err := boardCfg.GetEmbedTemplates(filenameParts[1])
+		if err != nil {
+			return template.HTML(err.Error())
+		}
+		templateData := EmbedVideo{
+			VideoID:     videoID,
+			Handler:     filenameParts[1],
+			ThumbWidth:  boardCfg.EmbedWidth,
+			ThumbHeight: boardCfg.EmbedHeight,
+		}
+
+		var buf bytes.Buffer
+		if thumbTmpl != nil {
+			if err := thumbTmpl.Execute(&buf, templateData); err != nil {
+				return template.HTML(err.Error())
+			}
+			return template.HTML(`<img src="` + buf.String() + `" alt="Video thumbnail" class="embed thumb">`)
+		}
+
+		if err = embedTmpl.Execute(&buf, templateData); err != nil {
+			return template.HTML(err.Error())
+		}
+		return template.HTML(buf.String())
+	},
+
 	// Template convenience functions
 	"makeLoop": func(n int, offset int) []int {
 		loopArr := make([]int, n)

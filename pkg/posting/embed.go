@@ -14,13 +14,6 @@ var (
 	ErrUnrecognizedEmbed = errors.New("unrecognized embed URL")
 )
 
-type EmbedVideo struct {
-	VideoID     string
-	Handler     string
-	ThumbWidth  int
-	ThumbHeight int
-}
-
 // AttachEmbedFromRequest checks if the post contains an embedded media URL from the form (if applicable) and if it is valid.
 // It returns true if the post contains an embedded media URL, an error if the URL is invalid or some other error occurred.
 // It attaches the embed as a pseudo-upload in the database if the URL is valid.

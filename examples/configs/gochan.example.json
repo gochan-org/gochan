@@ -95,10 +95,26 @@
 
 	"EnableCyclicThreads": true,
 	"CyclicThreadNumPosts": 500,
-	"EnableEmbeds": true,
 	"EnableNoFlag": true,
 	"EmbedWidth": 200,
-	"EmbedHeight": 164,
+	"EmbedHeight": 200,
+	"EmbedMatchers": {
+		"youtube": {
+			"URLRegex": "^https?://(?:(?:(?:www\\.)?youtube\\.com/watch\\?v=)|(?:youtu\\.be/))([^&]+)",
+			"EmbedTemplate": "<iframe class=\"embed\" width={{.ThumbWidth}} height={{.ThumbHeight}} src=\"https://www.youtube-nocookie.com/embed/{{.VideoID}}\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>",
+			"ThumbnailURLTemplate": "https://img.youtube.com/vi/{{.VideoID}}/0.jpg"
+		},
+		"vimeo": {
+			"URLRegex":             "^https?://(?:\\w+\\.)?vimeo\\.com/(\\d{2,10})",
+			"EmbedTemplate":        "<iframe src=\"https://player.vimeo.com/video/{{.VideoID}}\" class=\"embed\" width={{.ThumbWidth}} height={{.ThumbHeight}} allow=\"autoplay; fullscreen; picture-in-picture; clipboard-write\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>",
+			"ThumbnailURLTemplate": "https://vumbnail.com/{{.VideoID}}.jpg"
+		},
+		"rawvideo": {
+			"URLRegex":             "^https?://\\S+\\.\\S+/\\S+/(\\S+\\.(?:mp4|webm))$",
+			"EmbedTemplate":        "<video class=\"embed\" src=\"{{.VideoID}}\"></video>",
+			"VideoIDSubmatchIndex": 0
+		}
+	},
 	"ImagesOpenNewTab": true,
 	"NewTabOnOutlinks": true,
 	"DisableBBcode": false,

@@ -6,6 +6,7 @@ import (
 	"net"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -76,8 +77,12 @@ func (p *Post) WebPath() string {
 	return p.ThreadPath() + "#" + strconv.Itoa(p.ID)
 }
 
+func (p *Post) HasEmbed() bool {
+	return strings.HasPrefix(p.Filename, "embed:")
+}
+
 func (p *Post) ThumbnailPath() string {
-	if p.Filename == "" {
+	if p.Filename == "" || p.HasEmbed() {
 		return ""
 	}
 	thumbnail, _ := uploads.GetThumbnailFilenames(p.Filename)
@@ -85,7 +90,7 @@ func (p *Post) ThumbnailPath() string {
 }
 
 func (p *Post) UploadPath() string {
-	if p.Filename == "" {
+	if p.Filename == "" || p.HasEmbed() {
 		return ""
 	}
 	return config.WebPath(p.BoardDir, "src", p.Filename)

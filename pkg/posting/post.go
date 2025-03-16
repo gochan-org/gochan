@@ -459,6 +459,18 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
+
+	embed, err := AttachEmbedFromRequest(request, boardConfig, warnEv, errEv)
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
+	}
+	if embed != nil {
+		// CheckAndAttachEmbed verifies that the post does not already have an embed or an upload, so upload
+		// is guaranteed to be nil here
+		upload = embed
+	}
+
 	var filePath, thumbPath, catalogThumbPath string
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 	if upload != nil {
@@ -478,7 +490,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")
-		if upload != nil {
+		if upload != nil && !upload.IsEmbed() {
 			os.Remove(filePath)
 			os.Remove(thumbPath)
 			os.Remove(catalogThumbPath)

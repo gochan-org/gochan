@@ -14,6 +14,9 @@
 				{{- if $.boardConfig.EnableSpoileredImages -}}
 					<label for="spoiler"><input type="checkbox" id="spoiler" name="spoiler"/>Spoiler</label>
 				{{- end}}</td></tr>
+			{{- if $.boardConfig.HasEmbedMatchers -}}
+				<tr><th class="postblock">Embed</th><td><input type="text" name="embed" size="25" /></td></tr>
+			{{- end -}}
 			{{- if or (customFlagsEnabled $.board.Dir) $.boardConfig.EnableGeoIP -}}
 			<tr>
 				<th class="postblock">Flag</th>

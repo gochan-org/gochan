@@ -664,6 +664,19 @@ func (pc *PostConfig) GetEmbedVideoID(url string) (string, string, error) {
 	return "", "", ErrNoMatchingEmbedHandler
 }
 
+// GetEmbedTemplates returns the embed and (if it has one) thumbnail URL templates for the given embed ID
+func (pc *PostConfig) GetEmbedTemplates(embedID string) (*template.Template, *template.Template, error) {
+	embedTmpl, ok := pc.embedMatchersEmbedTemplate[embedID]
+	if !ok {
+		return nil, nil, ErrNoMatchingEmbedHandler
+	}
+	thumbTmpl, ok := pc.embedMatchersThumbnailURLTemplate[embedID]
+	if !ok {
+		thumbTmpl = nil
+	}
+	return embedTmpl, thumbTmpl, nil
+}
+
 func (pc *PostConfig) validateEmbedMatchers() error {
 	if pc.EmbedMatchers == nil {
 		return nil
