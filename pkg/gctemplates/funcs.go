@@ -1,7 +1,6 @@
 package gctemplates
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"html"
@@ -165,40 +164,6 @@ var funcMap = template.FuncMap{
 			dir += "/"
 		}
 		return dir
-	},
-	"embedMedia": func(filename string, mediaID string, board string) (template.HTML, error) {
-		filenameParts := strings.SplitN(filename, ":", 2)
-		if len(filenameParts) != 2 {
-			return "", errors.New("invalid embed ID")
-		}
-
-		boardCfg := config.GetBoardConfig(board)
-		embedTmpl, thumbTmpl, err := boardCfg.GetEmbedTemplates(filenameParts[1])
-		if err != nil {
-			return "", err
-		}
-		templateData := config.EmbedTemplateData{
-			MediaID:     mediaID,
-			HandlerID:   filenameParts[1],
-			ThumbWidth:  boardCfg.EmbedWidth,
-			ThumbHeight: boardCfg.EmbedHeight,
-		}
-
-		var buf bytes.Buffer
-		if thumbTmpl != nil {
-			if err := thumbTmpl.Execute(&buf, templateData); err != nil {
-				return "", err
-			}
-
-			return template.HTML(fmt.Sprintf(
-				`<img src=%q alt="Embedded video" class="embed thumb embed-%s" style="max-width: %dpx; max-height: %dpx;">`,
-				buf.String(), filenameParts[1], boardCfg.EmbedWidth, boardCfg.EmbedHeight)), nil
-		}
-
-		if err = embedTmpl.Execute(&buf, templateData); err != nil {
-			return "", err
-		}
-		return template.HTML(buf.String()), nil
 	},
 
 	// Template convenience functions

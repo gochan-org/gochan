@@ -594,11 +594,11 @@ type PostConfig struct {
 	BanMessage string
 
 	// EmbedWidth is the width of embedded external media files
-	// Default: 200
+	// Default: 400
 	EmbedWidth int
 
 	// EmbedHeight is the height of embedded external media files
-	// Default: 164
+	// Default: 300
 	EmbedHeight int
 
 	// EmbedMatchers is a map of site ID keys to objects used to match (via regular expression) URLs and embed them in posts via templates,

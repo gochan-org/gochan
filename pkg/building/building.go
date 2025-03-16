@@ -1,12 +1,16 @@
 package building
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"os"
 	"path"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -177,4 +181,50 @@ func BuildJS() error {
 		return fmt.Errorf("failed building consts.js: %w", err)
 	}
 	return constsJSFile.Close()
+}
+
+func embedMedia(post *Post) (template.HTML, error) {
+	filenameParts := strings.SplitN(post.Filename, ":", 2)
+	if len(filenameParts) != 2 {
+		return "", errors.New("invalid embed ID")
+	}
+
+	boardCfg := config.GetBoardConfig(post.BoardDir)
+	embedTmpl, thumbTmpl, err := boardCfg.GetEmbedTemplates(filenameParts[1])
+	if err != nil {
+		return "", err
+	}
+
+	templateData := config.EmbedTemplateData{
+		MediaID:     post.OriginalFilename,
+		HandlerID:   filenameParts[1],
+		ThumbWidth:  boardCfg.ThumbWidth,
+		ThumbHeight: boardCfg.ThumbHeight,
+	}
+	if !post.IsTopPost {
+		templateData.ThumbWidth = boardCfg.ThumbWidthReply
+		templateData.ThumbHeight = boardCfg.ThumbHeightReply
+	}
+
+	var buf bytes.Buffer
+	if thumbTmpl != nil {
+		if err := thumbTmpl.Execute(&buf, templateData); err != nil {
+			return "", err
+		}
+
+		return template.HTML(fmt.Sprintf(
+			`<img src=%q alt="Embedded video" class="embed thumb embed-%s" style="max-width: %dpx; max-height: %dpx;" embed-width="%d" embed-height="%d">`,
+			buf.String(), filenameParts[1], templateData.ThumbWidth, templateData.ThumbHeight, boardCfg.EmbedWidth, boardCfg.EmbedHeight)), nil
+	}
+
+	if err = embedTmpl.Execute(&buf, templateData); err != nil {
+		return "", err
+	}
+	return template.HTML(buf.String()), nil
+}
+
+func init() {
+	gctemplates.AddTemplateFuncs(template.FuncMap{
+		"embedMedia": embedMedia,
+	})
 }
