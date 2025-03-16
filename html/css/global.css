@@ -198,6 +198,7 @@ a.upload-container {
 
 .embed {
   background: black;
+  border: none;
 }
 
 div.file-deleted-box {
