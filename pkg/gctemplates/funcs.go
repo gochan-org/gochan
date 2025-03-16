@@ -166,16 +166,16 @@ var funcMap = template.FuncMap{
 		}
 		return dir
 	},
-	"embedMedia": func(filename string, mediaID string, board string) template.HTML {
+	"embedMedia": func(filename string, mediaID string, board string) (template.HTML, error) {
 		filenameParts := strings.SplitN(filename, ":", 2)
 		if len(filenameParts) != 2 {
-			return "invalid embed ID"
+			return "", errors.New("invalid embed ID")
 		}
 
 		boardCfg := config.GetBoardConfig(board)
 		embedTmpl, thumbTmpl, err := boardCfg.GetEmbedTemplates(filenameParts[1])
 		if err != nil {
-			return template.HTML(err.Error())
+			return "", err
 		}
 		templateData := config.EmbedTemplateData{
 			MediaID:     mediaID,
@@ -187,18 +187,18 @@ var funcMap = template.FuncMap{
 		var buf bytes.Buffer
 		if thumbTmpl != nil {
 			if err := thumbTmpl.Execute(&buf, templateData); err != nil {
-				return template.HTML(err.Error())
+				return "", err
 			}
 
 			return template.HTML(fmt.Sprintf(
 				`<img src=%q alt="Embedded video" class="embed thumb embed-%s" style="max-width: %dpx; max-height: %dpx;">`,
-				buf.String(), filenameParts[1], boardCfg.EmbedWidth, boardCfg.EmbedHeight))
+				buf.String(), filenameParts[1], boardCfg.EmbedWidth, boardCfg.EmbedHeight)), nil
 		}
 
 		if err = embedTmpl.Execute(&buf, templateData); err != nil {
-			return template.HTML(err.Error())
+			return "", err
 		}
-		return template.HTML(buf.String())
+		return template.HTML(buf.String()), nil
 	},
 
 	// Template convenience functions

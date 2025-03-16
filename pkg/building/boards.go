@@ -327,7 +327,6 @@ func BuildBoards(verbose bool, which ...int) error {
 					Msg("Built board successfully")
 			}
 			if err == nil && tmpErr != nil {
-				gcutil.LogError(err).Caller().Str("board", board.Dir).Msg("Unable to build board")
 				err = tmpErr
 			}
 			wg.Done()
