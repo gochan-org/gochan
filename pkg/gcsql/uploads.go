@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/gochan-org/gochan/pkg/events"
 )
@@ -16,7 +17,8 @@ const (
 )
 
 var (
-	ErrAlreadyAttached = errors.New("upload already processed")
+	ErrUploadAlreadyAttached = errors.New("upload already processed")
+	ErrEmbedAlreadyAttached  = errors.New("embed already processed")
 )
 
 // GetThreadFiles gets a list of the files owned by posts in the thread, including thumbnails for convenience.
@@ -52,9 +54,20 @@ func (p *Post) NextFileOrder(requestOpts ...*RequestOptions) (int, error) {
 	return next, err
 }
 
-func (p *Post) AttachFile(upload *Upload, requestOpts ...*RequestOptions) error {
+// AddAttachment attaches an upload or an embed to a post, returning an error if the post already has an attachment
+func (p *Post) AddAttachment(upload *Upload, requestOpts ...*RequestOptions) error {
 	if upload == nil {
 		return nil // no upload to attach, so no error
+	}
+	if upload.ID > 0 {
+		if upload.IsEmbed() {
+			return ErrEmbedAlreadyAttached
+		}
+		return ErrUploadAlreadyAttached
+	}
+	uploadOrEmbed := "upload"
+	if upload.IsEmbed() {
+		uploadOrEmbed = "embed"
 	}
 	opts := setupOptions(requestOpts...)
 	shouldCommit := opts.Tx == nil
@@ -67,21 +80,30 @@ func (p *Post) AttachFile(upload *Upload, requestOpts ...*RequestOptions) error 
 		defer opts.Tx.Rollback()
 	}
 
-	_, err, recovered := events.TriggerEvent("incoming-upload", upload)
+	filename, _, err := GetUploadFilenameAndBoard(p.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check for existing %s: %w", uploadOrEmbed, err)
+	}
+	if strings.HasPrefix(filename, "embed:") {
+		return ErrEmbedAlreadyAttached
+	}
+	if filename != "" {
+		return ErrUploadAlreadyAttached
+	}
+
+	var recovered bool
+	_, err, recovered = events.TriggerEvent("incoming-"+uploadOrEmbed, upload)
 	if recovered {
-		return errors.New("recovered from a panic in an event handler (incoming-upload)")
+		return errors.New("recovered from a panic in an event handler (incoming-" + uploadOrEmbed + ")")
 	}
 	if err != nil {
-		return fmt.Errorf("unable to attach upload to post: %w", err)
+		return fmt.Errorf("unable to attach %s to post: %w", uploadOrEmbed, err)
 	}
 
 	const insertSQL = `INSERT INTO DBPREFIXfiles (
 		post_id, file_order, original_filename, filename, checksum, file_size,
 		is_spoilered, thumbnail_width, thumbnail_height, width, height)
 	VALUES(?,?,?,?,?,?,?,?,?,?,?)`
-	if upload.ID > 0 {
-		return ErrAlreadyAttached
-	}
 	if upload.FileOrder < 1 {
 		upload.FileOrder, err = p.NextFileOrder(opts)
 		if err != nil {
@@ -106,6 +128,11 @@ func (p *Post) AttachFile(upload *Upload, requestOpts ...*RequestOptions) error 
 		}
 	}
 	return nil
+}
+
+// AttachFile is an alias for AddAttachment
+func (p *Post) AttachFile(upload *Upload, requestOpts ...*RequestOptions) error {
+	return p.AddAttachment(upload, requestOpts...)
 }
 
 // GetUploadFilenameAndBoard returns the filename (or an empty string) and

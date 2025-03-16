@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"slices"
+
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting/geoip"
@@ -101,11 +103,8 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 	found := false
 	drivers := sql.Drivers()
-	for _, driver := range drivers {
-		if gcfg.DBtype == driver {
-			found = true
-			break
-		}
+	if slices.Contains(drivers, gcfg.DBtype) {
+		found = true
 	}
 	if !found {
 		return &InvalidValueError{
@@ -145,42 +144,8 @@ func (gcfg *GochanConfig) ValidateValues() error {
 		}
 	}
 
-	var re *regexp.Regexp
-	var tmpl *template.Template
-	for m, matcher := range gcfg.EmbedMatchers {
-		if re, err = regexp.Compile(matcher.URLRegex); err != nil {
-			return &InvalidValueError{
-				Field:   "EmbedMatchers[" + m + "].URLRegex",
-				Value:   matcher.URLRegex,
-				Details: "invalid regular expression",
-			}
-		}
-		gcfg.embedMatchersRegex[m] = re
-		if tmpl, err = template.New(m + "framevalidate").Parse(matcher.EmbedTemplate); err != nil {
-			return &InvalidValueError{
-				Field:   "EmbedMatchers[" + m + "].EmbedTemplate",
-				Value:   matcher.EmbedTemplate,
-				Details: "invalid template",
-			}
-		}
-		gcfg.embedMatchersEmbedTemplate[m] = tmpl
-		if matcher.ThumbnailURLTemplate != "" {
-			if _, err = url.Parse(matcher.ThumbnailURLTemplate); err != nil {
-				return &InvalidValueError{
-					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
-					Value:   matcher.ThumbnailURLTemplate,
-					Details: "invalid URL",
-				}
-			}
-			if tmpl, err = template.New(m + "thumbvalidate").Parse(matcher.ThumbnailURLTemplate); err != nil {
-				return &InvalidValueError{
-					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
-					Value:   matcher.ThumbnailURLTemplate,
-					Details: "invalid template",
-				}
-			}
-			gcfg.embedMatchersThumbnailURLTemplate[m] = tmpl
-		}
+	if err = gcfg.validateEmbedMatchers(); err != nil {
+		return err
 	}
 
 	if !changed {
@@ -666,17 +631,91 @@ type PostConfig struct {
 	AllowDiceRerolls bool
 }
 
-// GetMatchingEmbedHandler returns the site ID, handler, and submatches for the given URL if
-// it is compatible with any configured embed handlers. It returns an error if none are found
-func (pc *PostConfig) GetMatchingEmbedHandler(url string) (string, *EmbedMatcher, [][]string, error) {
+// GetEmbedVideoID returns the site ID, and video ID for the given URL if it is compatible with any
+// configured embed handlers. It returns an error if none are found
+func (pc *PostConfig) GetEmbedVideoID(url string) (string, string, error) {
+	if pc.embedMatchersRegex == nil {
+		pc.embedMatchersRegex = make(map[string]*regexp.Regexp)
+	}
+	var err error
 	for m, matcher := range pc.EmbedMatchers {
-		re := pc.embedMatchersRegex[m]
+		re, ok := pc.embedMatchersRegex[m]
+		if !ok {
+			re, err = regexp.Compile(matcher.URLRegex)
+			if err != nil {
+				return "", "", err
+			}
+		}
 		matches := re.FindAllStringSubmatch(url, -1)
 		if len(matches) == 1 {
-			return m, &matcher, matches, nil
+			pc.embedMatchersRegex[m] = re
+			submatchIndex := 1
+			if matcher.VideoIDSubmatchIndex != nil {
+				submatchIndex = *matcher.VideoIDSubmatchIndex
+			}
+			return m, matches[0][submatchIndex], nil
 		}
 	}
-	return "", nil, nil, ErrNoMatchingEmbedHandler
+	return "", "", ErrNoMatchingEmbedHandler
+}
+
+func (pc *PostConfig) validateEmbedMatchers() error {
+	if pc.EmbedMatchers == nil {
+		return nil
+	}
+	if pc.embedMatchersRegex == nil {
+		pc.embedMatchersRegex = map[string]*regexp.Regexp{}
+	}
+	if pc.embedMatchersEmbedTemplate == nil {
+		pc.embedMatchersEmbedTemplate = map[string]*template.Template{}
+	}
+	if pc.embedMatchersThumbnailURLTemplate == nil {
+		pc.embedMatchersThumbnailURLTemplate = map[string]*template.Template{}
+	}
+
+	for m, matcher := range pc.EmbedMatchers {
+		if _, exists := pc.embedMatchersRegex[m]; exists {
+			// already registered and validated
+			continue
+		}
+		re, err := regexp.Compile(matcher.URLRegex)
+		if err != nil {
+			return &InvalidValueError{
+				Field:   "EmbedMatchers[" + m + "].URLRegex",
+				Value:   matcher.URLRegex,
+				Details: err.Error(),
+			}
+		}
+		pc.embedMatchersRegex[m] = re
+		tmpl, err := template.New(m + "frame").Parse(matcher.EmbedTemplate)
+		if err != nil {
+			return &InvalidValueError{
+				Field:   "EmbedMatchers[" + m + "].EmbedTemplate",
+				Value:   matcher.EmbedTemplate,
+				Details: err.Error(),
+			}
+		}
+		pc.embedMatchersEmbedTemplate[m] = tmpl
+		if matcher.ThumbnailURLTemplate != "" {
+			if _, err = url.Parse(matcher.ThumbnailURLTemplate); err != nil {
+				return &InvalidValueError{
+					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
+					Value:   matcher.ThumbnailURLTemplate,
+					Details: err.Error(),
+				}
+			}
+			tmpl, err = template.New(m + "thumb").Parse(matcher.ThumbnailURLTemplate)
+			if err != nil {
+				return &InvalidValueError{
+					Field:   "EmbedMatchers[" + m + "].ThumbnailURLTemplate",
+					Value:   matcher.ThumbnailURLTemplate,
+					Details: err.Error(),
+				}
+			}
+			pc.embedMatchersThumbnailURLTemplate[m] = tmpl
+		}
+	}
+	return nil
 }
 
 type EmbedMatcher struct {
@@ -690,6 +729,10 @@ type EmbedMatcher struct {
 	// ThumbnailURLTemplate is the template for embedding the video thumbnail in place of the EmbedTemplate
 	// HTML. If it is not set, the video will be embedded directly
 	ThumbnailURLTemplate string
+}
+
+func (em *EmbedMatcher) HasThumbnail() bool {
+	return em.ThumbnailURLTemplate != ""
 }
 
 func WriteConfig() error {
@@ -735,6 +778,9 @@ func UpdateBoardConfig(dir string) error {
 	}
 	boardcfg := cfg.BoardConfig
 	if err = json.Unmarshal(ba, &boardcfg); err != nil {
+		return err
+	}
+	if err = boardcfg.validateEmbedMatchers(); err != nil {
 		return err
 	}
 	boardcfg.isGlobal = false

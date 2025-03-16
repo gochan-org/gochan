@@ -60,13 +60,17 @@ func SetSiteConfig(siteConfig *SiteConfig) {
 }
 
 // SetBoardConfig applies the configuration to the given board. It will panic if it is not run in a test environment
-func SetBoardConfig(board string, boardCfg *BoardConfig) {
+func SetBoardConfig(board string, boardCfg *BoardConfig) error {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
 
+	if err := boardCfg.validateEmbedMatchers(); err != nil {
+		return err
+	}
 	if board == "" {
 		cfg.BoardConfig = *boardCfg
 	} else {
 		boardConfigs[board] = *boardCfg
 	}
+	return nil
 }

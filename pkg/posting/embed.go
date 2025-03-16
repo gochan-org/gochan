@@ -21,10 +21,10 @@ type EmbedVideo struct {
 	ThumbHeight int
 }
 
-// CheckEmbed checks if the post contains an embedded media URL from the form (if applicable) and if it is valid.
+// AttachEmbed checks if the post contains an embedded media URL from the form (if applicable) and if it is valid.
 // It returns true if the post contains an embedded media URL, an error if the URL is invalid or some other error occurred.
 // It attaches the embed as a pseudo-upload in the database if the URL is valid.
-func CheckEmbed(request *http.Request, post *gcsql.Post, boardCfg *config.BoardConfig, warnEv, errEv *zerolog.Event) (*gcsql.Upload, error) {
+func AttachEmbed(request *http.Request, post *gcsql.Post, boardCfg *config.BoardConfig, warnEv, errEv *zerolog.Event, requestOpts ...*gcsql.RequestOptions) (*gcsql.Upload, error) {
 	url := request.PostFormValue("embed")
 	if url == "" {
 		return nil, nil
@@ -35,19 +35,22 @@ func CheckEmbed(request *http.Request, post *gcsql.Post, boardCfg *config.BoardC
 		warnEv.Msg("Rejected a post with an embed URL on a board that doesn't allow it")
 		return nil, ErrNoEmbedding
 	}
-	submatchIndex := 1
-	var filename string
-
-	handlerID, handler, matches, err := boardCfg.GetMatchingEmbedHandler(url)
+	handlerID, videoID, err := boardCfg.GetEmbedVideoID(url)
 	if err != nil {
 		return nil, err
 	}
-	if handler.VideoIDSubmatchIndex != nil {
-		submatchIndex = *handler.VideoIDSubmatchIndex
+
+	upload := &gcsql.Upload{
+		Filename:         "embed:" + handlerID,
+		OriginalFilename: videoID,
+		PostID:           post.ID,
+		ThumbnailWidth:   boardCfg.ThumbWidth,
+		ThumbnailHeight:  boardCfg.ThumbHeight,
 	}
-	filename = "embed:" + handlerID + ":" + matches[0][submatchIndex]
-	return &gcsql.Upload{
-		Filename: filename,
-		PostID:   post.ID,
-	}, nil
+	if err = post.AddAttachment(upload, requestOpts...); err != nil {
+		errEv.Err(err).Caller().Msg("Failed to attach embed")
+		return nil, err
+	}
+
+	return upload, nil
 }

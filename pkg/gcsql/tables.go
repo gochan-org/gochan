@@ -6,6 +6,7 @@ import (
 	"errors"
 	"html/template"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -110,6 +111,11 @@ type Upload struct {
 	ThumbnailHeight  int    // sql: thumbnail_height
 	Width            int    // sql: width
 	Height           int    // sql: height
+}
+
+// IsEmbed returns true if the upload is an embed
+func (u *Upload) IsEmbed() bool {
+	return strings.HasPrefix(u.Filename, "embed:")
 }
 
 // IPBanBase used to composition IPBan and IPBanAudit. It does not represent a SQL table by itself
