@@ -16,25 +16,31 @@
 			{{- end -}}
 		{{- end -}}
 	{{- end}}</title>
-	<link rel="stylesheet" href="{{webPath "/css/global.css"}}" />
+	<link rel="stylesheet" href="{{webPath `/css/global.css`}}" />
+	{{range $_, $style := $.boardConfig.IncludeGlobalStyles -}}
+		<link rel="stylesheet" href="{{webPath `/css/` $style}}" />
+	{{- end -}}
 	{{with .board -}}
-		<link id="theme" rel="stylesheet" href="{{webPath "/css/" (getBoardDefaultStyle $.board.Dir)}}" />
+		<link id="theme" rel="stylesheet" href="{{webPath `/css/` (getBoardDefaultStyle $.board.Dir)}}" />
 	{{- else -}}
-		<link id="theme" rel="stylesheet" href="{{webPath "/css/" .boardConfig.DefaultStyle}}" />
+		<link id="theme" rel="stylesheet" href="{{webPath `/css/` .boardConfig.DefaultStyle}}" />
 	{{- end}}
-	<link rel="shortcut icon" href="{{webPath "/favicon.png"}}">
+	<link rel="shortcut icon" href="{{webPath `/favicon.png`}}">
 	{{- if .boardConfig.EnableGeoIP -}}
 		<link id="flags" rel="stylesheet" href="{{webPath `/css/flags.css`}}"/>
 	{{- end -}}
-	<script type="text/javascript" src="{{webPath "/js/consts.js"}}"></script>
-	<script type="text/javascript" src="{{webPath "/js/gochan.js"}}" defer></script>
+	<script type="text/javascript" src="{{webPath `/js/consts.js`}}"></script>
+	<script type="text/javascript" src="{{webPath `/js/gochan.js`}}" defer></script>
+	{{- range $_, $script := $.boardConfig.IncludeScripts -}}
+		<script src="{{$script.Location}}" {{if $script.Defer}}defer{{end}}></script>
+	{{- end -}}
 </head>
 <body>
 {{template "topbar" .}}
 {{with $.pageTitle -}}<header>
 	<h1 id="board-title">{{$.pageTitle}}</h1>
 	{{with $.includeDashboardLink -}}
-		<a href="{{webPath "/manage"}}" class="board-subtitle">Return to dashboard</a><br/>
+		<a href="{{webPath `/manage`}}" class="board-subtitle">Return to dashboard</a><br/>
 	{{- end}}
 </header>{{end}}
 <div id="content">

@@ -404,6 +404,12 @@ type BoardConfig struct {
 	// Default: pipes.css
 	DefaultStyle string
 
+	// IncludeGlobalStyles is a list of additional CSS files to be loaded on the board pages, or all pages if this is the global configuration.
+	IncludeGlobalStyles []string
+
+	// IncludeScripts is a list of additional scripts to be loaded on the board pages, or all pages if this is the global configuration.
+	IncludeScripts []IncludeScript
+
 	// Banners is a list of banners to display on the board's front page, with Filename, Width, and Height fields
 	Banners []PageBanner
 
@@ -460,7 +466,8 @@ type BoardConfig struct {
 
 	// CustomFlags is a list of non-geoip flags with Name (viewable to the user) and Flag (flag image filename) fields
 	CustomFlags []geoip.Country
-	isGlobal    bool
+
+	isGlobal bool
 }
 
 // CheckCustomFlag returns true if the given flag and name are configured for
@@ -482,8 +489,19 @@ func (bc *BoardConfig) IsGlobal() bool {
 
 // Style represents a theme (Pipes, Dark, etc)
 type Style struct {
-	Name     string
+	// Name is the display name of the style
+	Name string
+
+	// Filename is the name of the CSS file in /static to use for the style
 	Filename string
+}
+
+type IncludeScript struct {
+	// Location is the path or URL to the script to include
+	Location string
+
+	// Defer tells the browser to load the script after the page has loaded if it is true
+	Defer bool
 }
 
 type UploadConfig struct {

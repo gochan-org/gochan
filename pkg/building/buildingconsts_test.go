@@ -17,8 +17,7 @@ const fileTypes = [];`
 	<link rel="stylesheet" href="/chan/css/global.css" />
 	<link id="theme" rel="stylesheet" href="/chan/css/test1.css" />
 	<link rel="shortcut icon" href="/chan/favicon.png"><script type="text/javascript" src="/chan/js/consts.js"></script>
-	<script type="text/javascript" src="/chan/js/gochan.js" defer></script>
-</head>
+	<script type="text/javascript" src="/chan/js/gochan.js" defer></script></head>
 <body>
 <div id="topbar">
 	<div class="topbar-section"><a href="/chan/" class="topbar-item">home</a></div><div class="topbar-section"><a href="/chan/test/" class="topbar-item" title="Testing board">/test/</a><a href="/chan/test2/" class="topbar-item" title="Testing board 2">/test2/</a></div></div>

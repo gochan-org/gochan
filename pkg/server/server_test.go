@@ -6,11 +6,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	_ "github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 	_ "github.com/gochan-org/gochan/pkg/posting/uploads/inituploads"
+
 	"github.com/stretchr/testify/assert"
 )
 

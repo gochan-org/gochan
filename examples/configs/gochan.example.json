@@ -43,6 +43,11 @@
 		{ "Name": "Windows 9x", "Filename": "win9x.css"}
 	],
 	"DefaultStyle": "pipes.css",
+	"_IncludeGlobalStyles": ["http://example.com/use.css"],
+	"_IncludeScripts": [
+		{"Location": "http://example.com/load.js"},
+		{"Location": "http://example.com/loadDefer.js", "Defer": true}
+	],
 
 	"CustomFlags": [
 		{"Flag":"california.png", "Name": "California"},
