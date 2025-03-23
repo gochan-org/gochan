@@ -1,6 +1,10 @@
 {{define "uploadinfo" -}}
 <div class="file-info">
-	File: <a href="../{{.BoardDir}}/src/{{.Filename}}" target="_blank">{{.Filename}}</a> - ({{formatFilesize .Filesize}}{{if and (gt .UploadHeight 0) (gt .UploadWidth 0)}}, {{.UploadWidth}}x{{.UploadHeight}}{{end}}, <a href="../{{.BoardDir}}/src/{{.Filename}}" class="file-orig" download="{{.OriginalFilename}}">{{.OriginalFilename}}</a>)
+	{{- if .HasEmbed -}}
+		Embed: <a href="{{.UploadPath}}" target="_blank" class="embed-orig">{{.UploadPath}}</a>
+	{{- else -}}
+		File: <a href="{{.UploadPath}}" target="_blank">{{.Filename}}</a> - ({{formatFilesize .Filesize}}{{if and (gt .UploadHeight 0) (gt .UploadWidth 0)}}, {{.UploadWidth}}x{{.UploadHeight}}{{end}}, <a href="{{.UploadPath}}" class="file-orig" download="{{.OriginalFilename}}">{{.OriginalFilename}}</a>)
+	{{- end -}}
 </div>
 {{- end -}}
 <fieldset>
@@ -44,7 +48,13 @@
 			<div class="file-deleted-box" style="text-align:center;">File removed</div>
 		{{- else if ne .Filename "" -}}
 			{{- template "uploadinfo" . -}}
-			<a class="upload-container" href="{{.UploadPath}}"><img src="{{.ThumbnailPath}}" alt="{{.UploadPath}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload" /></a>
+			<a class="upload-container" href="{{.UploadPath}}">
+				{{- if .HasEmbed -}}
+					{{embedMedia .}}
+				{{- else -}}
+					<img src="{{getThumbnailWebPath .ID}}" alt="{{.UploadPath}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload thumb" />
+				{{- end -}}
+			</a>
 		{{- end -}}
 		{{.Message}}
 	

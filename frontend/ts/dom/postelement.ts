@@ -104,7 +104,6 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 export function shrinkOriginalFilenames(elem = $(document.body)) {
 	elem.find<HTMLAnchorElement>("a.file-orig").each((i, el) => {
 		const isEmbed = el.getAttribute("download") === null;
-		console.log(el, isEmbed);
 		const ext = extname(el.innerText);
 		const noExt = el.innerText.slice(0,el.innerText.lastIndexOf("."));
 		const filenameMaxLength = isEmbed ? 32 : 16;
