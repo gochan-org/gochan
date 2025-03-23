@@ -1,7 +1,9 @@
 {{define "uploadinfo" -}}
 <div class="file-info">
-	{{- if not $.post.HasEmbed -}}
-		File: <a href="{{.post.UploadPath}}" target="_blank">{{$.post.Filename}}</a> - ({{formatFilesize $.post.Filesize}}{{if and (gt $.post.UploadHeight 0) (gt $.post.UploadWidth 0)}}, {{$.post.UploadWidth}}x{{$.post.UploadHeight}}{{end}}, <a href="{{.post.UploadPath}}" class="file-orig" download="{{.post.OriginalFilename}}">{{.post.OriginalFilename}}</a>)
+	{{- if .HasEmbed -}}
+		Embed: <a href="{{.UploadPath}}" target="_blank" class="embed-orig">{{.UploadPath}}</a>
+	{{- else -}}
+		File: <a href="{{.UploadPath}}" target="_blank">{{.Filename}}</a> - ({{formatFilesize .Filesize}}{{if and (gt .UploadHeight 0) (gt .UploadWidth 0)}}, {{.UploadWidth}}x{{.UploadHeight}}{{end}}, <a href="{{.UploadPath}}" class="file-orig" download="{{.OriginalFilename}}">{{.OriginalFilename}}</a>)
 	{{- end -}}
 </div>
 {{- end -}}
@@ -40,7 +42,7 @@
 {{- if eq $.post.Filename "deleted" -}}
 	<div class="file-deleted-box" style="text-align:center;">File removed</div>
 {{- else if ne $.post.Filename "" -}}
-	{{- template "uploadinfo" . -}}
+	{{- template "uploadinfo" .post -}}
 	<a class="upload-container" href="{{.post.UploadPath}}">
 		{{- if $.post.HasEmbed -}}
 			{{embedMedia .post}}

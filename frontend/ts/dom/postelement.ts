@@ -103,14 +103,19 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 
 export function shrinkOriginalFilenames(elem = $(document.body)) {
 	elem.find<HTMLAnchorElement>("a.file-orig").each((i, el) => {
+		const isEmbed = el.getAttribute("download") === null;
+		console.log(el, isEmbed);
 		const ext = extname(el.innerText);
 		const noExt = el.innerText.slice(0,el.innerText.lastIndexOf("."));
-		if(noExt.length > 16) {
-			const trimmed = noExt.slice(0, 15).trim() + "…" + ext;
+		const filenameMaxLength = isEmbed ? 32 : 16;
+		if(noExt.length > filenameMaxLength) {
+			const trimmed = noExt.slice(0, filenameMaxLength - 1).trim() + "…" + ext;
+			const untrimmed = el.innerText;
 			el.setAttribute("trimmed", trimmed);
+			el.setAttribute("untrimmed", untrimmed);
 			el.text = el.getAttribute("trimmed");
 			$(el).on("mouseover", () => {
-				el.text = el.getAttribute("download");
+				el.text = el.getAttribute(isEmbed?"untrimmed":"download");
 			}).on("mouseout", () => {
 				el.text = el.getAttribute("trimmed");
 			});

@@ -156,7 +156,8 @@ export function initPostPreviews($post: JQuery<HTMLElement> = null) {
  * @param $post the post (if set) to prepare the thumbnails for
  */
 export function prepareThumbnails($parent: JQuery<HTMLElement> = null) {
-	const $container = $parent === null ? $("a.upload-container") : $parent.find("a");
+	const $container = ($parent ?? $(document.body)).find("a.upload-container")
+		.filter((i, el) => $(el).find("img.upload").length > 0);
 	$container.on("click", function(e) {
 		const $a = $(this);
 		const uploadHref = $a.siblings("div.file-info").children("a.file-orig").attr("href");
