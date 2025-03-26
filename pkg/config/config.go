@@ -19,6 +19,7 @@ import (
 	"github.com/Eggbertx/durationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting/geoip"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -111,6 +112,19 @@ func (gcfg *GochanConfig) ValidateValues() error {
 			Field:   "DBtype",
 			Value:   gcfg.DBtype,
 			Details: "currently supported values: " + strings.Join(drivers, ",")}
+	}
+
+	if gcfg.LogLevelStr == "" {
+		gcfg.LogLevelStr = "info"
+		gcfg.logLevelParsed = true
+		changed = true
+	}
+	if gcfg.logLevel, err = zerolog.ParseLevel(gcfg.LogLevelStr); err != nil {
+		return &InvalidValueError{
+			Field:   "LogLevel",
+			Value:   gcfg.LogLevelStr,
+			Details: "valid values are trace, debug, info, warn, error, fatal, and panic, or empty string for info level",
+		}
 	}
 
 	if gcfg.RandomSeed == "" {
@@ -259,14 +273,31 @@ type SystemCriticalConfig struct {
 	// Default: true
 	CheckRequestReferer bool
 
-	// Verbose currently is not used and may be removed, to be replaced with more granular logging options
-	Verbose bool `json:"DebugMode"`
+	// LogLevel determines the minimum level of log event to output. Any events lower than this level will be ignored.
+	// Valid values are "trace", "debug", "info", "warn", "error", "fatal", and "panic".
+	// Default: info
+	LogLevelStr string `json:"LogLevel"`
 
 	// RandomSeed is a random string used for generating secure tokens. It will be generated if not set and must not be changed
 	RandomSeed string
 
 	Version  *GochanVersion `json:"-"`
 	TimeZone int            `json:"-"`
+
+	logLevel       zerolog.Level
+	logLevelParsed bool
+}
+
+// LogLevel returns the minimum log event level to write to the log file
+func (scc *SystemCriticalConfig) LogLevel() zerolog.Level {
+	if !scc.logLevelParsed {
+		scc.logLevel = zerolog.InfoLevel
+		if scc.LogLevelStr != "" {
+			scc.logLevel, _ = zerolog.ParseLevel(scc.LogLevelStr)
+		}
+		scc.logLevelParsed = true
+	}
+	return scc.logLevel
 }
 
 // SiteConfig contains information about the site/community, e.g. the name of the site, the slogan (if set),

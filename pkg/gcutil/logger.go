@@ -1,7 +1,6 @@
 package gcutil
 
 import (
-	"io"
 	"io/fs"
 	"net/http"
 	"os"
@@ -76,27 +75,32 @@ func RunningInTerminal() bool {
 	return (fi.Mode() & os.ModeCharDevice) == os.ModeCharDevice
 }
 
-func initLog(logPath string, logToConsole bool) (err error) {
+func init() {
+	// guarantee that the logger is always available, even before the configuration is loaded
+	logger = zerolog.New(zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+		w.NoColor = !RunningInTerminal()
+	})).With().Timestamp().Logger()
+}
+
+func initLog(logPath string, level zerolog.Level) (err error) {
 	if logFile != nil {
 		// log already initialized
 		if err = logFile.Close(); err != nil {
+			logger.Err(err).Msg("Unable to close log file")
 			return err
 		}
 	}
 	logFile, err = os.OpenFile(logPath, logFlags, logFileMode) // skipcq: GSC-G302
 	if err != nil {
+		logger.Err(err).Msg("Unable to open log file")
 		return err
 	}
 
-	var writer io.Writer
-	if logToConsole {
-		cw := zerolog.NewConsoleWriter()
-		cw.NoColor = !RunningInTerminal()
-		writer = zerolog.MultiLevelWriter(logFile, cw)
-	} else {
-		writer = logFile
-	}
-	logger = zerolog.New(writer).With().Timestamp().Logger()
+	writer := zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+		w.NoColor = !RunningInTerminal()
+	}))
+
+	logger = zerolog.New(writer).With().Timestamp().Logger().Level(level)
 
 	return nil
 }
@@ -116,8 +120,8 @@ func initAccessLog(logPath string) (err error) {
 	return nil
 }
 
-func InitLogs(logDir string, verbose bool, uid int, gid int) (err error) {
-	if err = initLog(path.Join(logDir, "gochan.log"), verbose); err != nil {
+func InitLogs(logDir string, level zerolog.Level, uid int, gid int) (err error) {
+	if err = initLog(path.Join(logDir, "gochan.log"), level); err != nil {
 		return err
 	}
 	if err = logFile.Chown(uid, gid); err != nil {

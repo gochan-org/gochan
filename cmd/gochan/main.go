@@ -11,6 +11,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/manage"
+	"github.com/rs/zerolog"
 
 	"github.com/gochan-org/gochan/pkg/gcutil"
 
@@ -51,7 +52,7 @@ func main() {
 
 	uid, gid := config.GetUser()
 	systemCritical := config.GetSystemCriticalConfig()
-	if err = gcutil.InitLogs(systemCritical.LogDir, true, uid, gid); err != nil {
+	if err = gcutil.InitLogs(systemCritical.LogDir, zerolog.InfoLevel, uid, gid); err != nil {
 		fmt.Println("Error opening logs:", err.Error())
 		cleanup()
 		os.Exit(1)
@@ -121,7 +122,7 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	posting.InitPosting()
-	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.Verbose, uid, gid); err != nil {
+	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.LogLevel(), uid, gid); err != nil {
 		fmt.Println("Error opening logs:", err.Error())
 		cleanup()
 		os.Exit(1) // skipcq: CRT-D0011

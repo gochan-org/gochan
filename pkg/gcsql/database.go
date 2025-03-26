@@ -112,10 +112,7 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 	} else {
 		stmt, err = db.db.PrepareContext(ctx, prepared)
 	}
-	if err != nil {
-		return stmt, err
-	}
-	return stmt, sqlVersionError(err, db.driver, &prepared)
+	return stmt, err
 }
 
 // Exec executes the given SQL statement with the given parameters, optionally with the given RequestOptions struct
@@ -471,25 +468,4 @@ func OptimizeDatabase() error {
 		// this shouldn't happen under normal circumstances since this is assumed to have already been checked
 		return ErrUnsupportedDB
 	}
-}
-
-func sqlVersionError(err error, dbDriver string, query *string) error {
-	if err == nil {
-		return nil
-	}
-	errText := err.Error()
-	switch dbDriver {
-	case "mysql":
-		if !strings.Contains(errText, "You have an error in your SQL syntax") {
-			return err
-		}
-	case "postgres":
-		if !strings.Contains(errText, "syntax error at or near") {
-			return err
-		}
-	}
-	if config.GetSystemCriticalConfig().Verbose {
-		return fmt.Errorf(UnsupportedSQLVersionMsg+"\nQuery: "+*query, errText)
-	}
-	return fmt.Errorf(UnsupportedSQLVersionMsg, errText)
 }

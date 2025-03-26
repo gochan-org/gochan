@@ -1,5 +1,7 @@
 package config
 
+import "github.com/rs/zerolog"
+
 var (
 	defaultGochanConfig = &GochanConfig{
 		SystemCriticalConfig: SystemCriticalConfig{
@@ -11,6 +13,7 @@ var (
 				DBConnMaxLifetimeMin: DefaultSQLConnMaxLifetimeMin,
 			},
 			CheckRequestReferer: true,
+			logLevel:            zerolog.InfoLevel,
 		},
 		SiteConfig: SiteConfig{
 			FirstPage:             []string{"index.html", "firstrun.html", "1.html"},
