@@ -553,7 +553,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 
 		// prune posts from cyclic thread
 		for _, prunePost := range toBePruned {
-			fmt.Printf("%#v\n", prunePost)
 			p := &gcsql.Post{ID: prunePost.PostID, ThreadID: prunePost.ThreadID}
 
 			if err = p.Delete(); err != nil {

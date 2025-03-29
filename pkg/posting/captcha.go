@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -105,19 +106,24 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 	if request.Method == "POST" {
 		result, err := submitCaptchaResponse(request)
 		if err != nil {
-			errEv.Err(err).Caller().Send()
+			errEv.Err(err).Caller().Msg("Error submitting CAPTCHA")
 			server.ServeError(writer, "Error checking CAPTCHA results: "+err.Error(), wantsJSON, nil)
 			return
 		}
-		fmt.Println("Success:", result)
+		gcutil.LogInfo().
+			Bool("result", result).
+			Str("IP", gcutil.GetRealIP(request)).
+			Msg("Got CAPTCHA result")
 	}
+	var buf bytes.Buffer
 	err := serverutil.MinifyTemplate(gctemplates.Captcha, map[string]any{
 		"boardConfig": config.GetBoardConfig(""),
 		"boards":      gcsql.AllBoards,
 		"siteKey":     captchaCfg.SiteKey,
-	}, writer, "text/html")
+	}, &buf, "text/html")
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		errEv.Err(err).Caller().Msg("Unable to build CAPTCHA template")
 		server.ServeError(writer, "Error serving CAPTCHA: "+err.Error(), wantsJSON, nil)
 	}
+	buf.WriteTo(writer)
 }

@@ -37,26 +37,30 @@ func cleanup() {
 }
 
 func main() {
-	fmt.Printf("Starting gochan v%s\n", versionStr)
+	gcutil.LogInfo().Str("version", versionStr).Msg("Starting gochan")
+	fatalEv := gcutil.LogFatal()
+	defer func() {
+		fatalEv.Discard()
+		cleanup()
+	}()
 	err := config.InitConfig(versionStr)
 	if err != nil {
-		jsonLocation := config.JSONLocation()
-		if jsonLocation != "" {
-			fmt.Printf("Failed to load configuration from %q: %s\n", jsonLocation, err.Error())
-		} else {
-			fmt.Printf("Failed to load configuration: %s\n", err.Error())
-		}
-		cleanup()
-		os.Exit(1)
+		fatalEv.Err(err).Caller().
+			Str("jsonLocation", config.JSONLocation()).
+			Msg("Unable to load configuration")
 	}
 
 	uid, gid := config.GetUser()
 	systemCritical := config.GetSystemCriticalConfig()
-	if err = gcutil.InitLogs(systemCritical.LogDir, zerolog.InfoLevel, uid, gid); err != nil {
-		fmt.Println("Error opening logs:", err.Error())
-		cleanup()
-		os.Exit(1)
+	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.LogLevel(), uid, gid); err != nil {
+		fatalEv.Err(err).Caller().
+			Str("logDir", systemCritical.LogDir).
+			Int("uid", uid).
+			Int("gid", gid).
+			Msg("Unable to open logs")
 	}
+	fatalEv.Discard()
+	fatalEv = gcutil.LogFatal() // reset fatalEv to use log file
 
 	testIP := os.Getenv("GC_TESTIP")
 	if testIP != "" {
@@ -65,16 +69,13 @@ func main() {
 	}
 
 	if err = gcplugin.LoadPlugins(systemCritical.Plugins); err != nil {
-		cleanup()
-		gcutil.LogFatal().Err(err).Msg("failed loading plugins")
+		fatalEv.Err(err).Msg("Failed loading plugins")
 	}
 
 	events.TriggerEvent("startup")
 
 	if err = gcsql.ConnectToDB(&systemCritical.SQLConfig); err != nil {
-		fmt.Println("Failed to connect to the database:", err.Error())
-		cleanup()
-		gcutil.LogFatal().Err(err).Msg("Failed to connect to the database")
+		fatalEv.Err(err).Msg("Failed to connect to the database")
 	}
 	events.TriggerEvent("db-connected")
 	gcutil.LogInfo().
@@ -87,33 +88,25 @@ func main() {
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
-	events.RegisterEvent([]string{"db-views-reset"}, func(_ string, _ ...any) error {
-		gcutil.LogInfo().Msg("SQL views reset")
-		return nil
-	})
 	if err = gcsql.ResetViews(); err != nil {
-		gcutil.LogFatal().Err(err).Caller().Msg("Failed resetting SQL views")
+		fatalEv.Err(err).Caller().Msg("Failed resetting SQL views")
 	}
 
-	parseCommandLine()
+	parseCommandLine(fatalEv)
 	serverutil.InitMinifier()
 	siteCfg := config.GetSiteConfig()
 	if err = geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions); err != nil {
-		cleanup()
-		gcutil.LogFatal().Err(err).Msg("Unable to initialize GeoIP")
+		fatalEv.Err(err).Caller().Msg("Unable to initialize GeoIP")
 	}
 	posting.InitCaptcha()
 
 	if err = gctemplates.InitTemplates(); err != nil {
-		fmt.Println("Failed initializing templates:", err.Error())
-		cleanup()
-		gcutil.LogFatal().Err(err).Send()
+		fatalEv.Err(err).Caller().Msg("Unable to initialize templates")
 	}
 
 	for _, board := range gcsql.AllBoards {
 		if _, err = board.DeleteOldThreads(); err != nil {
-			cleanup()
-			gcutil.LogFatal().Err(err).Caller().
+			fatalEv.Err(err).Caller().
 				Str("board", board.Dir).
 				Msg("Failed deleting old threads")
 		}
@@ -122,18 +115,13 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	posting.InitPosting()
-	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.LogLevel(), uid, gid); err != nil {
-		fmt.Println("Error opening logs:", err.Error())
-		cleanup()
-		os.Exit(1) // skipcq: CRT-D0011
-	}
 	defer events.TriggerEvent("shutdown")
 	manage.InitManagePages()
 	go initServer()
 	<-sc
 }
 
-func parseCommandLine() {
+func parseCommandLine(fatalEv *zerolog.Event) {
 	var newstaff string
 	var delstaff string
 	var rebuild string
@@ -157,7 +145,7 @@ func parseCommandLine() {
 		rebuildFlag = buildAll
 	}
 	if rebuildFlag > 0 {
-		startupRebuild(rebuildFlag)
+		startupRebuild(rebuildFlag, fatalEv)
 	}
 
 	if newstaff != "" {
@@ -166,21 +154,16 @@ func parseCommandLine() {
 			flag.Usage()
 			os.Exit(1)
 		}
-		fmt.Printf("Creating new staff: %q, with password: %q and rank: %d from command line", arr[0], arr[1], rank)
 		if _, err = gcsql.NewStaff(arr[0], arr[1], rank); err != nil {
-			fmt.Printf("Failed creating new staff account for %q: %s\n", arr[0], err.Error())
-			gcutil.LogFatal().Err(err).Caller().
-				Str("staff", "add").
+			fatalEv.Err(err).Caller().
 				Str("source", "commandLine").
 				Str("username", arr[0]).
 				Msg("Failed creating new staff account")
 		}
 		gcutil.LogInfo().
-			Str("staff", "add").
 			Str("source", "commandLine").
 			Str("username", arr[0]).
 			Msg("New staff account created")
-		fmt.Printf("New staff account created: %s\n", arr[0])
 		os.Exit(0)
 	}
 	if delstaff != "" {
@@ -195,10 +178,12 @@ func parseCommandLine() {
 		answer = strings.ToLower(answer)
 		if answer == "y" || answer == "yes" {
 			if err = gcsql.DeactivateStaff(delstaff); err != nil {
-				fmt.Printf("Error deleting %q: %s", delstaff, err.Error())
-				gcutil.LogFatal().Str("staff", "delete").Err(err).Send()
+				fatalEv.Err(err).Caller().
+					Str("source", "commandLine").
+					Str("username", delstaff).
+					Msg("Unable to delete staff account")
 			}
-			gcutil.LogInfo().Str("newStaff", delstaff).Send()
+			gcutil.LogInfo().Str("newStaff", delstaff).Msg("Staff account deleted")
 		} else {
 			fmt.Println("Not deleting.")
 		}

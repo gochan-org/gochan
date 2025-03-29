@@ -84,7 +84,9 @@ func updateAnnouncementsCallback(_ http.ResponseWriter, request *http.Request, s
 					Msg("Unable to update announcement")
 				return "", errors.New("unable to update announcement")
 			}
-			fmt.Printf("Updated announcement #%d, message = %s\n", announcement.ID, announcement.Message)
+			gcutil.LogInfo().
+				Int("announcementID", int(announcement.ID)).
+				Msg("Updated announcement")
 		}
 	} else if deleteIdStr != "" {
 		if deleteID, err = strconv.Atoi(deleteIdStr); err != nil {

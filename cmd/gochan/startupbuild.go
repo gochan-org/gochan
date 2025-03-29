@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -9,6 +8,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -19,53 +19,48 @@ const (
 	buildAll = buildBoards | buildFront | buildJS
 )
 
-func startupRebuild(buildFlag int) {
+func startupRebuild(buildFlag int, fatalEv *zerolog.Event) {
 	var err error
 	serverutil.InitMinifier()
 	if err = gctemplates.InitTemplates(); err != nil {
-		fmt.Println("Error initializing templates:", err.Error())
-		gcutil.Logger().Fatal().
+		fatalEv.Err(err).Caller().
 			Str("building", "initialization").
-			Err(err).Send()
+			Msg("Unable to initialize templates")
 	}
 
 	if buildFlag&buildBoards > 0 {
 		gcsql.ResetBoardSectionArrays()
 		if err = building.BuildBoardListJSON(); err != nil {
-			fmt.Println("Error building section array:", err.Error())
-			gcutil.Logger().Fatal().
+			fatalEv.Err(err).Caller().
 				Str("building", "sections").
-				Err(err).Send()
+				Msg("Unable to build section array")
 		}
 
 		if err = building.BuildBoards(true); err != nil {
-			fmt.Println("Error building boards:", err.Error())
-			gcutil.Logger().Fatal().
+			fatalEv.Err(err).Caller().
 				Str("building", "boards").
-				Err(err).Send()
+				Msg("Unable to build boards")
 		}
-		fmt.Println("Boards built successfully")
+		gcutil.LogInfo().Msg("Boards built successfully")
 	}
 
 	if buildFlag&buildJS > 0 {
 		if err = building.BuildJS(); err != nil {
-			fmt.Println("Error building JS:", err.Error())
-			gcutil.Logger().Fatal().
+			fatalEv.Err(err).Caller().
 				Str("building", "js").
-				Err(err).Send()
+				Msg("Unable to build consts.js")
 		}
-		fmt.Println("JavaScript built successfully")
+		gcutil.LogInfo().Msg("consts.js built successfully")
 	}
 
 	if buildFlag&buildFront > 0 {
 		if err = building.BuildFrontPage(); err != nil {
-			fmt.Println("Error building front page:", err.Error())
-			gcutil.Logger().Fatal().
+			fatalEv.Err(err).Caller().
 				Str("building", "front").
-				Err(err).Send()
+				Msg("Unable to build front page")
 		}
-		fmt.Println("Front page built successfully")
+		gcutil.LogInfo().Msg("Front page built successfully")
 	}
-	fmt.Println("Finished building without errors, exiting.")
+	gcutil.LogInfo().Msg("Finished building without errors, exiting.")
 	os.Exit(0)
 }
