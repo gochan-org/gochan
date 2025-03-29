@@ -68,10 +68,12 @@ func getFrontPagePosts() ([]frontPagePost, error) {
 		post = frontPagePost{
 			Board:         boardDir,
 			URL:           config.WebPath(boardDir, "res", topPostID+".html") + "#" + id,
-			ThumbURL:      config.WebPath(boardDir, "thumb", thumbnail),
-			Filename:      filename,
 			FileDeleted:   filename == "deleted",
 			MessageSample: message,
+		}
+		if thumbnail != "" && !strings.HasPrefix(thumbnail, "embed:") {
+			post.ThumbURL = config.WebPath(boardDir, "thumb", thumbnail)
+			post.Filename = filename
 		}
 
 		recentPosts = append(recentPosts, post)

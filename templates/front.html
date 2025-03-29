@@ -36,7 +36,7 @@
 						{{if and (not $post.FileDeleted) (ne $post.Filename "") -}}
 							<a href="{{$post.URL}}" class="front-reply" target="_blank"><img src="{{$post.ThumbURL}}" alt="post thumbnail"/></a><br />
 						{{else}}
-							<div class="file-deleted-box" style="text-align:center; float:none;"><a href="{{$post.URL}}" class="front-reply" target="_blank">No file</a></div>
+							<div class="file-deleted-box"><a href="{{$post.URL}}" class="front-reply" target="_blank">No file</a></div>
 						{{- end}}<br />
 						<a href="{{webPathDir $post.Board}}">/{{$post.Board}}/</a><hr />
 						{{$post.MessageSample}}

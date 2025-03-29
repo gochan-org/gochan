@@ -50,8 +50,12 @@ func SetThumbnailExtension(fileExt, thumbExt string) {
 }
 
 // GetThumbnailFilenames returns the regular thumbnail and the catalog thumbnail filenames of the given upload
-// filename. It does not check if the catalog actually exists (for example, if it's a reply)
+// filename. It does not check if the catalog actually exists (for example, if it's a reply). If the post
+// has an embed instead of an upload, it returns empty strings.
 func GetThumbnailFilenames(img string) (string, string) {
+	if strings.HasPrefix(img, "embed:") {
+		return "", ""
+	}
 	ext := GetThumbnailExtension(path.Ext(img))
 	index := strings.LastIndex(img, ".")
 	if index < 0 || index > len(img) {

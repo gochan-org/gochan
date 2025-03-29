@@ -76,7 +76,7 @@ WHERE DBPREFIXposts.is_deleted = FALSE;
 
 CREATE VIEW DBPREFIXv_front_page_posts_with_file AS
 SELECT * FROM DBPREFIXv_front_page_posts
-WHERE filename IS NOT NULL AND filename <> '' AND filename <> 'deleted';
+WHERE filename IS NOT NULL AND filename <> '' AND filename <> 'deleted' and filename not like 'embed:%';
 
 CREATE VIEW DBPREFIXv_upload_info AS
 SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,

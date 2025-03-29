@@ -46,7 +46,7 @@ col#recent {
 }
 
 div#recent-posts {
-	margin:auto;
+	margin: auto;
 	display: block;
 	width:90%;
 }
@@ -63,12 +63,17 @@ div.recent-post {
 	max-height: 320px;
 	margin-bottom: 10px;
 	text-align:center;
+
+	.file-deleted-box {
+		margin: auto;
+		float: none;
+	}
 }
 
 div#frontpage {
 	overflow: hidden;
 	width: 80%;
-	margin:auto;
+	margin: auto;
 }
 
 a.permalink {
