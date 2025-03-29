@@ -2,7 +2,6 @@ package manage
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -13,7 +12,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -389,106 +387,6 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 		return "", errors.New("unable to render IP search page template")
 	}
 	return manageIpBuffer.String(), nil
-}
-
-func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
-	dismissIDstr := request.FormValue("dismiss")
-	if dismissIDstr != "" {
-		// staff is dismissing a report
-		dismissID := gcutil.HackyStringToInt(dismissIDstr)
-		block := request.FormValue("block")
-		if block != "" && staff.Rank != 3 {
-			errEv.Caller().
-				Int("postID", dismissID).
-				Str("rejected", "not an admin").Send()
-			return "", errors.New("only the administrator can block reports")
-		}
-		found, err := gcsql.ClearReport(dismissID, staff.ID, block != "" && staff.Rank == 3)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Int("postID", dismissID).Send()
-			return nil, err
-		}
-		if !found {
-			return nil, errors.New("no matching reports")
-		}
-		infoEv.
-			Int("reportID", dismissID).
-			Bool("blocked", block != "").
-			Msg("Report cleared")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultSQLTimeout*time.Second)
-	defer cancel()
-
-	requestOptions := &gcsql.RequestOptions{
-		Context: ctx,
-		Cancel:  cancel,
-	}
-
-	if err = gcsql.DeleteReportsOfDeletedPosts(requestOptions); err != nil {
-		errEv.Err(err).Caller().Send()
-		return nil, server.NewServerError("failed to clean up reports of deleted posts", http.StatusInternalServerError)
-	}
-
-	rows, err := gcsql.Query(requestOptions, `SELECT id, staff_id, staff_user, post_id, ip, reason, is_cleared FROM DBPREFIXv_post_reports`)
-	if err != nil {
-		errEv.Err(err).Caller().Send()
-		return nil, err
-	}
-	defer rows.Close()
-	reports := make([]map[string]any, 0)
-	for rows.Next() {
-		var id int
-		var staffID any
-		var staffUser []byte
-		var postID int
-		var ip string
-		var reason string
-		var isCleared int
-		err = rows.Scan(&id, &staffID, &staffUser, &postID, &ip, &reason, &isCleared)
-		if err != nil {
-			errEv.Err(err).Caller().Send()
-			return nil, server.NewServerError("failed to scan report row", http.StatusInternalServerError)
-		}
-
-		post, err := gcsql.GetPostFromID(postID, true, requestOptions)
-		if err != nil {
-			errEv.Err(err).Caller().Msg("failed to get post from ID")
-			return nil, server.NewServerError("failed to get post from ID", http.StatusInternalServerError)
-		}
-
-		staffIDint, _ := staffID.(int64)
-		reports = append(reports, map[string]any{
-			"id":         id,
-			"staff_id":   int(staffIDint),
-			"staff_user": string(staffUser),
-			"post_link":  post.WebPath(),
-			"ip":         ip,
-			"reason":     reason,
-			"is_cleared": isCleared,
-		})
-	}
-	if err = rows.Close(); err != nil {
-		errEv.Err(err).Caller().Send()
-		return nil, err
-	}
-	if wantsJSON {
-		return reports, nil
-	}
-
-	reportsBuffer := bytes.NewBufferString("")
-	err = serverutil.MinifyTemplate(gctemplates.ManageReports,
-		map[string]any{
-			"reports": reports,
-			"staff":   staff,
-		}, reportsBuffer, "text/html")
-	if err != nil {
-		errEv.Err(err).Caller().Send()
-		return "", err
-	}
-	output = reportsBuffer.String()
-	return
 }
 
 func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {

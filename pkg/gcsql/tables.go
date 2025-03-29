@@ -227,12 +227,12 @@ type Post struct {
 
 // table: DBPREFIXreports
 type Report struct {
-	ID               int    // sql: id
-	HandledByStaffID int    // sql: handled_by_staff_id
-	PostID           int    // sql: post_id
-	IP               string // sql: ip
-	Reason           string // sql: reason
-	IsCleared        bool   // sql: is_cleared
+	ID               int    `json:"id"`         // sql: id
+	HandledByStaffID *int   `json:"staff_id"`   // sql: handled_by_staff_id
+	PostID           int    `json:"post_id"`    // sql: post_id
+	IP               string `json:"ip"`         // sql: ip
+	Reason           string `json:"reason"`     // sql: reason
+	IsCleared        bool   `json:"is_cleared"` // sql: is_cleared
 }
 
 // table: DBPREFIXreports_audit

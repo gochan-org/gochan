@@ -1,20 +1,29 @@
 {{if eq 0 (len .reports)}}<i>No reports</i>{{else -}}
-<table id="reportstable" class="mgmt-table">
-<tr><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Staff assigned</th><th>Actions</th></tr>
-{{range $r,$report := .reports}}
-<tr><td><a href="{{$report.post_link}}">Link</a></td><td>{{$report.reason}}</td><td>{{$report.ip}}</td><td>
-	{{- if (lt $report.staff_id 1) -}}
-		<i>unassigned</i>
-	{{- else -}}
-		{{$report.staff_user}}
-	{{- end -}}
-</td><td class="table-actions">
-	<a href="{{webPath "manage/reports?dismiss="}}{{$report.id}}">Dismiss</a>
+
+<form action="{{webPath `/manage/reports`}}" method="POST" onsubmit="return confirm('Are you sure you want to continue?');">
+	<input type="submit" name="dismiss-all" value="Dismiss All">
+	<input type="submit" name="dismiss-sel" value="Dismiss Selected">
 	{{if eq $.staff.Rank 3 -}}
-	|
-	<a href="{{webPath "manage/reports?dismiss="}}{{$report.id}}&block=1" title="Prevent future reports of this post, regardless of report reason">Make post unreportable</a>
-	{{- end}}
-</td></tr>
-{{end}}
-</table>
-{{end}}
+	<input type="submit" name="block-sel" value="Make Selected Unreportable">
+	{{- end -}}
+	<table id="reportstable" class="mgmt-table">
+		<colgroup>
+			<col style="width: 5%;">
+			<col style="width: 5%;">
+			<col style="width: 55%;">
+			<col style="width: 20%;">
+			<col style="width: 15%;">
+		</colgroup>
+		<tr><th></th><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Staff assigned</th></tr>
+		{{range $r,$report := .reports}}
+		<tr>
+			<td class="text-center"><input type="checkbox" name="report{{$report.ID}}"></td>
+			<td class="text-center"><a href="{{$report.PostLink}}">Link</a></td>
+			<td>{{$report.Reason}}</td>
+			<td class="text-center">{{$report.IP}}</td>
+			<td class="text-center {{if eq $report.HandledByStaffID nil}}text-italic{{end}}">
+				{{$report.StaffUser}}
+			</td>
+		</tr>{{end}}
+	</table>
+</form>{{end}}

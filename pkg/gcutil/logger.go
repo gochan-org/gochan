@@ -23,6 +23,7 @@ var (
 	accessLogger zerolog.Logger
 )
 
+// LogStr logs a string to the given zerolog events.
 func LogStr(key, val string, events ...*zerolog.Event) {
 	for e := range events {
 		if events[e] != nil {
@@ -31,6 +32,7 @@ func LogStr(key, val string, events ...*zerolog.Event) {
 	}
 }
 
+// LogInt logs an integer to the given zerolog events.
 func LogInt(key string, i int, events ...*zerolog.Event) {
 	for e := range events {
 		if events[e] != nil {
@@ -39,6 +41,7 @@ func LogInt(key string, i int, events ...*zerolog.Event) {
 	}
 }
 
+// LogBool logs a boolean value to the given zerolog events.
 func LogBool(key string, b bool, events ...*zerolog.Event) {
 	for e := range events {
 		if events[e] != nil {
@@ -47,11 +50,24 @@ func LogBool(key string, b bool, events ...*zerolog.Event) {
 	}
 }
 
+// LogTime logs a time value to the given zerolog events.
 func LogTime(key string, t time.Time, events ...*zerolog.Event) {
 	for e := range events {
 		if events[e] != nil {
 			events[e] = events[e].Time(key, t)
 		}
+	}
+}
+
+// LogArray logs a slice of any type as an array in the zerolog event.
+func LogArray[T any](key string, arr []T, events ...*zerolog.Event) {
+	zlArr := zerolog.Arr()
+	for _, v := range arr {
+		zlArr.Interface(v)
+	}
+
+	for e := range events {
+		events[e].Array(key, zlArr)
 	}
 }
 

@@ -37,12 +37,11 @@ func CreateReport(postID int, ip string, reason string) (*Report, error) {
 		return nil, err
 	}
 	return &Report{
-		ID:               int(reportID),
-		HandledByStaffID: -1,
-		PostID:           postID,
-		IP:               ip,
-		Reason:           reason,
-		IsCleared:        false,
+		ID:        int(reportID),
+		PostID:    postID,
+		IP:        ip,
+		Reason:    reason,
+		IsCleared: false,
 	}, nil
 }
 
@@ -111,14 +110,10 @@ func GetReports(includeCleared bool) ([]Report, error) {
 	var reports []Report
 	for rows.Next() {
 		var report Report
-		var staffID any
-		err = rows.Scan(&report.ID, &staffID, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
+		err = rows.Scan(&report.ID, &report.HandledByStaffID, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
 		if err != nil {
 			return nil, err
 		}
-
-		staffID64, _ := (staffID.(int64))
-		report.HandledByStaffID = int(staffID64)
 		reports = append(reports, report)
 	}
 	return reports, rows.Close()
