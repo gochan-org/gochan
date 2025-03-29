@@ -1,6 +1,7 @@
 -- SQL views for simplifying queries in gochan
 
 -- First drop views if they exist in reverse order to avoid dependency issues
+DROP VIEW IF EXISTS DBPREFIXv_post_reports;
 DROP VIEW IF EXISTS DBPREFIXv_post_with_board;
 DROP VIEW IF EXISTS DBPREFIXv_top_post_board_dir;
 DROP VIEW IF EXISTS DBPREFIXv_upload_info;
@@ -99,3 +100,8 @@ banned_message, ip, flag, country, dir, board_id
 FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
 LEFT JOIN DBPREFIXboards b ON b.id = t.board_id;
+
+CREATE VIEW DBPREFIXv_post_reports AS
+SELECT r.id, handled_by_staff_id AS staff_id, username AS staff_user, post_id, IP_NTOA as ip, reason, is_cleared
+FROM DBPREFIXreports r LEFT JOIN DBPREFIXstaff s ON handled_by_staff_id = s.id
+WHERE is_cleared = FALSE;

@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/fcgi"
-	"path"
 	"strconv"
 	"time"
 
@@ -89,7 +88,6 @@ func randomBanner(writer http.ResponseWriter, request *http.Request) {
 
 // handles requests to /util
 func utilHandler(writer http.ResponseWriter, request *http.Request) {
-	action := request.FormValue("action")
 	board := request.FormValue("board")
 	deleteBtn := request.PostFormValue("delete_btn")
 	reportBtn := request.PostFormValue("report_btn")
@@ -97,28 +95,30 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 	doEdit := request.PostFormValue("doedit")
 	moveBtn := request.PostFormValue("move_btn")
 	doMove := request.PostFormValue("domove")
-	systemCritical := config.GetSystemCriticalConfig()
 	wantsJSON := serverutil.IsRequestingJSON(request)
+	redirectTo := request.Referer()
 	if wantsJSON {
 		writer.Header().Set("Content-Type", "application/json")
 	}
-	if action == "" && deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit post" && doEdit != "post" && doEdit != "upload" && moveBtn != "Move thread" && doMove != "1" {
-		gcutil.LogAccess(request).
+	if redirectTo == "" || (deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit post" && doEdit != "post" && doEdit != "upload" && moveBtn != "Move thread" && doMove != "1") {
+		accessEv := gcutil.LogAccess(request).
 			Int("status", http.StatusBadRequest).
-			Msg("received invalid /util request")
-		if wantsJSON {
-			writer.WriteHeader(http.StatusBadRequest)
-			server.ServeJSON(writer, map[string]any{"error": "Invalid /util request"})
+			Str("redirect", redirectTo)
+
+		if redirectTo == "" {
+			accessEv.Msg("received /util request with no referer")
 		} else {
-			http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "/"), http.StatusBadRequest)
+			accessEv.Msg("received invalid /util request")
 		}
+		accessEv.Discard()
+		server.ServeError(writer, server.NewServerError("bad /util request", http.StatusBadRequest), wantsJSON, nil)
 		return
 	}
 
 	var err error
 	var id int
 	var checkedPosts []int
-	for key, val := range request.Form {
+	for key, val := range request.PostForm {
 		// get checked posts into an array
 		if _, err = fmt.Sscanf(key, "check%d", &id); err != nil || val[0] != "on" {
 			err = nil
@@ -146,11 +146,6 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			Str("board", board).
 			Str("IP", gcutil.GetRealIP(request)).Send()
 
-		redirectTo := request.Referer()
-		if redirectTo == "" {
-			// request doesn't have a referer for some reason, redirect to board
-			redirectTo = config.WebPath(board)
-		}
 		http.Redirect(writer, request, redirectTo, http.StatusFound)
 		return
 	}

@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/go-sql-driver/mysql"
+
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
 const (
@@ -352,6 +354,7 @@ func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	case "mysql":
 		db.connStr = fmt.Sprintf(mysqlConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, mysqlReplacerArr...)
+		mysql.SetLogger(gcutil.Logger())
 	case "postgres":
 		db.connStr = fmt.Sprintf(postgresConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, postgresReplacerArr...)

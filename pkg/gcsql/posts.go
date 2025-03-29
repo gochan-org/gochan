@@ -33,13 +33,14 @@ var (
 	TempPosts []Post
 )
 
-func GetPostFromID(id int, onlyNotDeleted bool) (*Post, error) {
+func GetPostFromID(id int, onlyNotDeleted bool, requestOptions ...*RequestOptions) (*Post, error) {
 	query := selectPostsBaseSQL + "WHERE id = ?"
 	if onlyNotDeleted {
 		query += " AND is_deleted = FALSE"
 	}
 	post := new(Post)
-	err := QueryRow(nil, query, []any{id}, []any{
+	opts := setupOptions(requestOptions...)
+	err := QueryRow(opts, query, []any{id}, []any{
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
 		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
 		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,

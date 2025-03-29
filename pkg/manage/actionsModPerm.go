@@ -2,6 +2,7 @@ package manage
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -415,46 +417,66 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 			Bool("blocked", block != "").
 			Msg("Report cleared")
 	}
-	rows, err := gcsql.Query(nil, `SELECT id, handled_by_staff_id as staff_id,
-		(SELECT username FROM DBPREFIXstaff WHERE id = DBPREFIXreports.handled_by_staff_id) as staff_user,
-		post_id, IP_NTOA, reason, is_cleared from DBPREFIXreports WHERE is_cleared = FALSE`)
+
+	ctx, cancel := context.WithTimeout(context.Background(), config.DefaultSQLTimeout*time.Second)
+	defer cancel()
+
+	requestOptions := &gcsql.RequestOptions{
+		Context: ctx,
+		Cancel:  cancel,
+	}
+
+	if err = gcsql.DeleteReportsOfDeletedPosts(requestOptions); err != nil {
+		errEv.Err(err).Caller().Send()
+		return nil, server.NewServerError("failed to clean up reports of deleted posts", http.StatusInternalServerError)
+	}
+
+	rows, err := gcsql.Query(requestOptions, `SELECT id, staff_id, staff_user, post_id, ip, reason, is_cleared FROM DBPREFIXv_post_reports`)
 	if err != nil {
+		errEv.Err(err).Caller().Send()
 		return nil, err
 	}
 	defer rows.Close()
 	reports := make([]map[string]any, 0)
 	for rows.Next() {
 		var id int
-		var staff_id any
-		var staff_user []byte
-		var post_id int
+		var staffID any
+		var staffUser []byte
+		var postID int
 		var ip string
 		var reason string
-		var is_cleared int
-		err = rows.Scan(&id, &staff_id, &staff_user, &post_id, &ip, &reason, &is_cleared)
+		var isCleared int
+		err = rows.Scan(&id, &staffID, &staffUser, &postID, &ip, &reason, &isCleared)
 		if err != nil {
-			return nil, err
+			errEv.Err(err).Caller().Send()
+			return nil, server.NewServerError("failed to scan report row", http.StatusInternalServerError)
 		}
 
-		post, err := gcsql.GetPostFromID(post_id, true)
+		post, err := gcsql.GetPostFromID(postID, true, requestOptions)
 		if err != nil {
-			return nil, err
+			errEv.Err(err).Caller().Msg("failed to get post from ID")
+			return nil, server.NewServerError("failed to get post from ID", http.StatusInternalServerError)
 		}
 
-		staff_id_int, _ := staff_id.(int64)
+		staffIDint, _ := staffID.(int64)
 		reports = append(reports, map[string]any{
 			"id":         id,
-			"staff_id":   int(staff_id_int),
-			"staff_user": string(staff_user),
+			"staff_id":   int(staffIDint),
+			"staff_user": string(staffUser),
 			"post_link":  post.WebPath(),
 			"ip":         ip,
 			"reason":     reason,
-			"is_cleared": is_cleared,
+			"is_cleared": isCleared,
 		})
 	}
-	if wantsJSON {
-		return reports, err
+	if err = rows.Close(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return nil, err
 	}
+	if wantsJSON {
+		return reports, nil
+	}
+
 	reportsBuffer := bytes.NewBufferString("")
 	err = serverutil.MinifyTemplate(gctemplates.ManageReports,
 		map[string]any{
@@ -561,7 +583,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 			if err = building.BuildThreadPages(post); err != nil {
 				return "", err
 			}
-			fmt.Println("Done rebuilding", board.Dir)
+			gcutil.LogInfo().Msg("Done rebuilding")
 		}
 		data["thread"] = thread
 	}

@@ -34,8 +34,8 @@
 				<img src="{{getThumbnailWebPath $.post.ID}}" alt="{{webPath $.board.Dir "src" .Filename}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload" />
 			</td></tr>
 			{{- end -}}
-			<tr><th>Spoiler</th><td><input type="checkbox" name="spoiler" id="spoiler" {{with .upload}}{{if .IsSpoilered}}checked{{end}}{{end}}></td></tr>
-			<tr><th>Replace</th><td>
+			<tr><th class="postblock">Spoiler</th><td><input type="checkbox" name="spoiler" id="spoiler" {{with .upload}}{{if .IsSpoilered}}checked{{end}}{{end}}></td></tr>
+			<tr><th class="postblock">Replace</th><td>
 				<input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4" onchange="var sub = document.getElementById('update-file'); if(this.value != '') { sub.disabled = false; sub.value = 'Update file'; } else { sub.disabled = true; sub.value = 'No file selected'}"/>
 			</td></tr>
 		</table>

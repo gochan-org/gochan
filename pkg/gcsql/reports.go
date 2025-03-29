@@ -123,3 +123,37 @@ func GetReports(includeCleared bool) ([]Report, error) {
 	}
 	return reports, rows.Close()
 }
+
+// DeleteReportsOfDeletedPosts removes reports and report audits of posts that have been deleted
+func DeleteReportsOfDeletedPosts(requestOptions ...*RequestOptions) error {
+	opts := setupOptionsWithTimeout(requestOptions...)
+
+	shouldCommit := opts.Tx == nil
+
+	var err error
+	if shouldCommit {
+		opts.Tx, err = BeginTx()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			opts.Tx.Rollback()
+			opts.Tx = nil
+		}()
+	}
+
+	sql := `DELETE FROM DBPREFIXreports WHERE post_id IN (SELECT id FROM DBPREFIXposts WHERE is_deleted = TRUE)`
+	if _, err = ExecTimeoutSQL(opts.Tx, sql); err != nil {
+		return err
+	}
+	sql = `DELETE FROM DBPREFIXreports_audit WHERE report_id IN (SELECT id FROM DBPREFIXposts WHERE is_deleted = TRUE)`
+	if _, err = ExecTimeoutSQL(opts.Tx, sql); err != nil {
+		return err
+	}
+
+	if shouldCommit {
+		return opts.Tx.Commit()
+	}
+
+	return nil
+}
