@@ -420,6 +420,14 @@ table#recentposts td, table.filterhitslist td {
   border: 1px solid;
 }
 
+table#recentposts td.post-upload {
+  text-align: center;
+}
+table#recentposts td.post-upload * {
+  display: inline-block;
+  float: none;
+}
+
 input.config-text {
   -moz-box-sizing: border-box;
   box-sizing: border-box;

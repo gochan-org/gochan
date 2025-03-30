@@ -48,6 +48,16 @@ table#recentposts, table.filterhitslist {
 	}
 }
 
+table#recentposts {
+	td.post-upload {
+		text-align: center;
+		* {
+			display: inline-block;
+			float: none;
+		}
+	}
+}
+
 input.config-text {
 	-moz-box-sizing: border-box;
 	box-sizing: border-box;

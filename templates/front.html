@@ -33,9 +33,11 @@
 				<div id="recent-posts">
 				{{- range $i, $post := $.recentPosts}}
 					<div class="recent-post">
-						{{if and (not $post.FileDeleted) (ne $post.Filename "") -}}
-							<a href="{{$post.URL}}" class="front-reply" target="_blank"><img src="{{$post.ThumbURL}}" alt="post thumbnail"/></a><br />
-						{{else}}
+						{{if $post.HasEmbed -}}
+							<div class="file-deleted-box"><a href="{{$post.URL}}" class="front-reply" target="_blank">Post Embed</a></div>
+						{{- else if and (not $post.FileDeleted) (ne $post.Filename "") -}}
+							<a href="{{$post.URL}}" class="front-reply" target="_blank"><img src="{{$post.ThumbURL}}" alt="post thumbnail" {{if gt $post.ThumbnailWidth 0}}width="{{$post.ThumbnailWidth}}" height="{{$post.ThumbnailHeight}}"{{end}}/></a><br />
+						{{- else -}}
 							<div class="file-deleted-box"><a href="{{$post.URL}}" class="front-reply" target="_blank">No file</a></div>
 						{{- end}}<br />
 						<a href="{{webPathDir $post.Board}}">/{{$post.Board}}/</a><hr />

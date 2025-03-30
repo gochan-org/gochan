@@ -18,8 +18,8 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
-	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -30,57 +30,108 @@ type frontPagePost struct {
 	Board         string
 	URL           string
 	ThumbURL      string
-	Filename      string
 	FileDeleted   bool
 	MessageSample string
+	PostUploadBase
 }
 
-func getFrontPagePosts() ([]frontPagePost, error) {
+func (fp *frontPagePost) HasEmbed() bool {
+	return strings.HasPrefix(fp.Filename, "embed:")
+}
+
+func (p *frontPagePost) GetEmbedThumbURL(board string) error {
+	if !p.HasEmbed() {
+		return nil
+	}
+	filenameParts := strings.SplitN(p.Filename, ":", 2)
+	if len(filenameParts) != 2 {
+		return fmt.Errorf("invalid embed filename: %s", p.Filename)
+	}
+
+	boardConfig := config.GetBoardConfig(board)
+
+	_, thumbURLTmpl, err := boardConfig.GetEmbedTemplates(filenameParts[1])
+	if err != nil {
+		return err
+	}
+	if thumbURLTmpl == nil {
+		return nil
+	}
+
+	templateData := config.EmbedTemplateData{
+		MediaID: p.OriginalFilename,
+	}
+	var buf bytes.Buffer
+	if err = thumbURLTmpl.Execute(&buf, templateData); err != nil {
+		return err
+	}
+	p.ThumbURL = buf.String()
+
+	return nil
+}
+
+func getFrontPagePosts(errEv *zerolog.Event) ([]frontPagePost, error) {
 	siteCfg := config.GetSiteConfig()
 	var query string
 
 	if siteCfg.RecentPostsWithNoFile {
 		// get recent posts, including those with no file
-		query = "SELECT id, message_raw, dir, filename, op_id FROM DBPREFIXv_front_page_posts"
+		query = "SELECT id, message_raw, dir, filename, original_filename, op_id FROM DBPREFIXv_front_page_posts"
 	} else {
-		query = "SELECT id, message_raw, dir, filename, op_id FROM DBPREFIXv_front_page_posts_with_file"
+		query = "SELECT id, message_raw, dir, filename, original_filename, op_id FROM DBPREFIXv_front_page_posts_with_file"
 	}
 	query += " ORDER BY id DESC LIMIT " + strconv.Itoa(siteCfg.MaxRecentPosts)
 
 	rows, cancel, err := gcsql.QueryTimeoutSQL(nil, query)
 	defer cancel()
 	if err != nil {
+		errEv.Err(err).Caller().Send()
 		return nil, err
 	}
 	defer rows.Close()
 	var recentPosts []frontPagePost
+	boardConfig := config.GetBoardConfig("")
 	for rows.Next() {
 		var post frontPagePost
 		var id, topPostID string
-		var message, boardDir, filename string
-		err = rows.Scan(&id, &message, &boardDir, &filename, &topPostID)
+		var message, boardDir, filename, originalFilename string
+		err = rows.Scan(&id, &message, &boardDir, &filename, &originalFilename, &topPostID)
 		if err != nil {
+			errEv.Err(err).Caller().Send()
 			return nil, err
 		}
 		message = bbcodeTagRE.ReplaceAllString(message, "")
 		if len(message) > 40 {
 			message = message[:37] + "..."
 		}
-		thumbnail, _ := uploads.GetThumbnailFilenames(filename)
+
 		post = frontPagePost{
 			Board:         boardDir,
 			URL:           config.WebPath(boardDir, "res", topPostID+".html") + "#" + id,
 			FileDeleted:   filename == "deleted",
 			MessageSample: message,
-		}
-		if thumbnail != "" && !strings.HasPrefix(thumbnail, "embed:") {
-			post.ThumbURL = config.WebPath(boardDir, "thumb", thumbnail)
-			post.Filename = filename
+			PostUploadBase: PostUploadBase{
+				Filename:         filename,
+				OriginalFilename: originalFilename,
+				ThumbnailWidth:   boardConfig.ThumbWidthReply,
+				ThumbnailHeight:  boardConfig.ThumbHeightReply,
+			},
 		}
 
+		if post.HasEmbed() {
+			if err = post.GetEmbedThumbURL(boardDir); err != nil {
+				errEv.Err(err).Caller().Send()
+				return nil, err
+			}
+			post.Filename = post.ThumbURL
+		}
 		recentPosts = append(recentPosts, post)
 	}
-	return recentPosts, rows.Close()
+	if err = rows.Close(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return nil, err
+	}
+	return recentPosts, nil
 }
 
 // BuildFrontPage builds the front page using templates/front.html
@@ -107,7 +158,7 @@ func BuildFrontPage() error {
 
 	var recentPostsArr []frontPagePost
 	siteCfg := config.GetSiteConfig()
-	recentPostsArr, err = getFrontPagePosts()
+	recentPostsArr, err = getFrontPagePosts(errEv)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed loading recent posts: %w", err)

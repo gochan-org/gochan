@@ -80,7 +80,9 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil {
-			errEv.Err(err).Caller().Send()
+			errEv.Err(err).Caller().
+				Str("limit", limitStr).
+				Msg("Invalid limit value")
 			return "", err
 		}
 	}
@@ -89,7 +91,9 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	var boardid int
 	if boardidStr != "" {
 		if boardid, err = strconv.Atoi(boardidStr); err != nil {
-			errEv.Err(err).Caller().Send()
+			errEv.Err(err).Caller().
+				Str("boardid", boardidStr).
+				Msg("Invalid boardid value")
 			return "", err
 		}
 	}
@@ -101,17 +105,17 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	if wantsJSON {
 		return recentposts, nil
 	}
-	manageRecentsBuffer := bytes.NewBufferString("")
+	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageRecentPosts, map[string]any{
 		"recentposts": recentposts,
 		"allBoards":   gcsql.AllBoards,
 		"boardid":     boardid,
 		"limit":       limit,
-	}, manageRecentsBuffer, "text/html"); err != nil {
+	}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()
 		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
-	return manageRecentsBuffer.String(), nil
+	return buf.String(), nil
 }
 
 func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {

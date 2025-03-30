@@ -26,26 +26,59 @@ func truncateString(msg string, limit int, ellipsis bool) string {
 	return msg
 }
 
+type PostUploadBase struct {
+	Filename         string `json:"tim"`
+	OriginalFilename string `json:"filename"`
+	ThumbnailWidth   int    `json:"tn_w"`
+	ThumbnailHeight  int    `json:"tn_h"`
+
+	uploadPath string
+}
+
+func (p *PostUploadBase) HasEmbed() bool {
+	return strings.HasPrefix(p.Filename, "embed:")
+}
+
+func (p *PostUploadBase) GetEmbedURL(boardDir string) string {
+	if !p.HasEmbed() {
+		return ""
+	}
+	filenameParts := strings.SplitN(p.Filename, ":", 2)
+	if len(filenameParts) != 2 {
+		p.uploadPath = "#invalid-embed-ID"
+		return p.uploadPath
+	}
+	linkTmpl, err := config.GetBoardConfig(boardDir).GetLinkTemplate(filenameParts[1])
+	if err != nil {
+		p.uploadPath = "#invalid-template"
+		return p.uploadPath
+	}
+	var buf bytes.Buffer
+	if err = linkTmpl.Execute(&buf, &config.EmbedTemplateData{MediaID: p.OriginalFilename}); err != nil {
+		p.uploadPath = "#template-error"
+		return p.uploadPath
+	}
+	p.uploadPath = buf.String()
+	return p.uploadPath
+}
+
 // Post represents a post in a thread for building (hence why ParentID is used instead of ThreadID)
 type Post struct {
 	gcsql.Post
-	ParentID         int           `json:"resto"`
-	BoardID          int           `json:"-"`
-	BoardDir         string        `json:"-"`
-	IP               net.IP        `json:"-"`
-	Filename         string        `json:"tim"`
-	OriginalFilename string        `json:"filename"`
-	Checksum         string        `json:"md5"`
-	Extension        string        `json:"extension"`
-	Filesize         int           `json:"fsize"`
-	UploadWidth      int           `json:"w"`
-	UploadHeight     int           `json:"h"`
-	ThumbnailWidth   int           `json:"tn_w"`
-	ThumbnailHeight  int           `json:"tn_h"`
-	LastModified     string        `json:"last_modified"`
-	Country          geoip.Country `json:"-"`
-	thread           gcsql.Thread
-	uploadPath       string
+	ParentID int    `json:"resto"`
+	BoardID  int    `json:"-"`
+	BoardDir string `json:"-"`
+	IP       net.IP `json:"-"`
+	PostUploadBase
+	Checksum     string        `json:"md5"`
+	Extension    string        `json:"extension"`
+	Filesize     int           `json:"fsize"`
+	UploadWidth  int           `json:"w"`
+	UploadHeight int           `json:"h"`
+	LastModified string        `json:"last_modified"`
+	Country      geoip.Country `json:"-"`
+	thread       gcsql.Thread
+	uploadPath   string
 }
 
 // TitleText returns the text to be used for the title of the page
@@ -79,10 +112,6 @@ func (p *Post) WebPath() string {
 	return p.ThreadPath() + "#" + strconv.Itoa(p.ID)
 }
 
-func (p *Post) HasEmbed() bool {
-	return strings.HasPrefix(p.Filename, "embed:")
-}
-
 func (p *Post) ThumbnailPath() string {
 	if p.Filename == "" || p.HasEmbed() {
 		return ""
@@ -99,22 +128,7 @@ func (p *Post) UploadPath() string {
 		return p.uploadPath
 	}
 	if p.HasEmbed() {
-		filenameParts := strings.SplitN(p.Filename, ":", 2)
-		if len(filenameParts) != 2 {
-			p.uploadPath = "#invalid-embed-ID"
-			return p.uploadPath
-		}
-		linkTmpl, err := config.GetBoardConfig(p.BoardDir).GetLinkTemplate(filenameParts[1])
-		if err != nil {
-			p.uploadPath = "#invalid-template"
-			return p.uploadPath
-		}
-		var buf bytes.Buffer
-		if err = linkTmpl.Execute(&buf, &config.EmbedTemplateData{MediaID: p.OriginalFilename}); err != nil {
-			p.uploadPath = "#template-error"
-			return p.uploadPath
-		}
-		p.uploadPath = buf.String()
+		return p.GetEmbedURL(p.BoardDir)
 	} else {
 		p.uploadPath = config.WebPath(p.BoardDir, "src", p.Filename)
 	}

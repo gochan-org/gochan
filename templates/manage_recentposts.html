@@ -22,10 +22,13 @@
 	<b>Board: </b>/{{$post.BoardDir}}/
 </td>
 <td>{{$post.Message}}</td>
-<td>
+<td class="post-upload">
 	{{- if eq $post.Filename "deleted" -}}
-	<div class="file-deleted-box centered" style="text-align:center;">File removed</div>
+		<div class="file-deleted-box" style="float:none;">File removed</div>
+	{{- else if $post.HasEmbed -}}
+		<div class="file-deleted-box"><a href="{{$post.UploadPath}}" target="_blank">Embed</a></div>
 	{{- else if ne $post.Filename "" -}}
-	<a href="{{$post.UploadPath}}" target="_blank" class="centered"><img src="{{$post.ThumbnailPath}}"></a>
-{{end}}</td></tr>{{end}}
+		<a href="{{$post.UploadPath}}" target="_blank" class="centered"><img src="{{$post.ThumbnailPath}}"></a>
+	{{- end -}}
+</td></tr>{{end}}
 </table>

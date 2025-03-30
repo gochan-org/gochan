@@ -67,16 +67,17 @@ WHERE p.is_deleted = 0 AND d.is_top_post = 0 and t.cyclical = 1;
 CREATE VIEW DBPREFIXv_front_page_posts AS
 SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) as dir,
-COALESCE(f.filename, '') as filename, op.id as op_id
+COALESCE(f.filename, '') as filename, op.id as op_id,
+COALESCE(f.original_filename, '') as original_filename
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
-LEFT JOIN (SELECT post_id, filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id
+LEFT JOIN (SELECT post_id, filename, original_filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = DBPREFIXposts.thread_id
 WHERE DBPREFIXposts.is_deleted = FALSE;
 
 CREATE VIEW DBPREFIXv_front_page_posts_with_file AS
 SELECT * FROM DBPREFIXv_front_page_posts
-WHERE filename IS NOT NULL AND filename <> '' AND filename <> 'deleted' and filename not like 'embed:%';
+WHERE filename IS NOT NULL AND filename <> '' AND filename <> 'deleted';
 
 CREATE VIEW DBPREFIXv_upload_info AS
 SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,
