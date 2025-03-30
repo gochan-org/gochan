@@ -27,7 +27,7 @@ var (
 		{
 			desc:            "Front page with includes",
 			pageTitle:       "Gochan",
-			includeJS:       []config.IncludeScript{config.IncludeScript{Location: "test.js", Defer: true}},
+			includeJS:       []config.IncludeScript{{Location: "test.js", Defer: true}, {Location: "test2.js", Defer: false}},
 			includeCSS:      []string{"test.css"},
 			expectTitleText: "Gochan",
 			misc: map[string]any{
@@ -173,8 +173,9 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "op.id"}).
 			AddRows(
-				[]driver.Value{1, "message_raw", "test", "filename", 1},
-				[]driver.Value{2, "message_raw", "test", "filename", 1},
+				[]driver.Value{1, "message_raw 1", "test", "filename.png", 1},
+				[]driver.Value{2, "message_raw 2", "test", "", 1},
+				[]driver.Value{3, "message_raw 3", "test", "deleted", 1},
 			))
 
 	err := BuildFrontPage()
@@ -204,11 +205,29 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	}
 	li := sectionUl.Find("li")
 	assert.Equal(t, 3, li.Length())
+	assert.Equal(t, config.GetSiteConfig().SiteName, doc.Find("title").Text())
+	assert.Equal(t, config.GetSiteConfig().SiteName, doc.Find("div#top-pane h1").Text())
+	assert.Equal(t, config.GetSiteConfig().SiteSlogan, doc.Find("div#top-pane span#site-slogan").Text())
 	assert.Equal(t, "Main", li.Eq(0).Text())
 	assert.Equal(t, "/test/ — Testing board", li.Eq(1).Text())
 	assert.Equal(t, "/test2/ — Testing board 2", li.Eq(2).Text())
 	assert.Equal(t, "/chan/test/", li.Eq(1).Find("a").AttrOr("href", ""))
 	assert.Equal(t, "/chan/test2/", li.Eq(2).Find("a").AttrOr("href", ""))
+
+	recentPostsContainer := doc.Find("div#frontpage div.section-block:nth-of-type(3)")
+	if !assert.Equal(t, 1, recentPostsContainer.Length()) {
+		t.FailNow()
+	}
+	assert.Equal(t, "Recent Posts", recentPostsContainer.Find("div.section-title-block").Text())
+	recentPosts := recentPostsContainer.Find("div.section-body div.recent-post")
+	if !assert.Equal(t, 3, recentPosts.Length()) {
+		t.FailNow()
+	}
+
+	assert.Regexp(t, `/test/\s*message_raw 1`, recentPosts.Eq(0).Text())
+	assert.Equal(t, 1, recentPosts.Eq(0).Find(`img[src="/chan/test/thumb/filenamet.png"]`).Length())
+	assert.Equal(t, 1, recentPosts.Eq(1).Find("div.file-deleted-box").Length())
+	assert.Equal(t, 1, recentPosts.Eq(2).Find("div.file-deleted-box").Length())
 
 	assert.NoError(t, frontFile.Close())
 }
@@ -233,6 +252,11 @@ func TestBuildFrontPage(t *testing.T) {
 			systemCriticalCfg.WebRoot = "/chan"
 			systemCriticalCfg.TimeZone = 8
 			config.SetSystemCriticalConfig(systemCriticalCfg)
+
+			siteConfig := config.GetSiteConfig()
+			siteConfig.SiteName = "Gochan"
+			siteConfig.SiteSlogan = "Gochan description"
+			config.SetSiteConfig(siteConfig)
 
 			boardCfg := config.GetBoardConfig("")
 			boardCfg.Styles = []config.Style{{Name: "test1", Filename: "test1.css"}}
@@ -303,6 +327,14 @@ func (p *pageHeaderTestCase) runTest(t *testing.T, driver string) {
 		t.FailNow()
 	}
 	assert.Equal(t, len(p.includeJS)+2, doc.Find("script").Length())
+
+	for i, js := range p.includeJS {
+		script := doc.Find("script").Eq(i + 2)
+		assert.Equal(t, js.Location, script.AttrOr("src", ""))
+		_, hasDefer := script.Attr("defer")
+		assert.Equal(t, js.Defer, hasDefer)
+	}
+
 	assert.Equal(t, len(p.includeCSS)+2, doc.Find(`link[rel="stylesheet"]`).Length())
 	assert.Equal(t, p.expectTitleText, doc.Find("title").Text())
 	if _, ok := p.misc["ban"]; !ok {
