@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 
+	"maps"
+
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
@@ -134,9 +136,7 @@ func BuildPageHeader(writer io.Writer, pageTitle string, board string, misc map[
 		"boards":        gcsql.AllBoards,
 		"boardConfig":   config.GetBoardConfig(board),
 	}
-	for k, val := range misc {
-		phMap[k] = val
-	}
+	maps.Copy(phMap, misc)
 	return serverutil.MinifyTemplate(gctemplates.PageHeader, phMap, writer, "text/html")
 }
 

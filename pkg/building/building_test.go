@@ -1,6 +1,7 @@
 package building
 
 import (
+	"bytes"
 	"database/sql"
 	"database/sql/driver"
 	"io"
@@ -14,9 +15,64 @@ import (
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
+	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
+	_ "github.com/gochan-org/gochan/pkg/posting/uploads/inituploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	pageHeaderTestCases = []pageHeaderTestCase{
+		{
+			desc:            "Front page with includes",
+			pageTitle:       "Gochan",
+			includeJS:       []config.IncludeScript{config.IncludeScript{Location: "test.js", Defer: true}},
+			includeCSS:      []string{"test.css"},
+			expectTitleText: "Gochan",
+			misc: map[string]any{
+				"documentTitle": "Gochan",
+			},
+		},
+		{
+			desc:            "Front page without includes",
+			pageTitle:       "Gochan",
+			board:           "",
+			expectTitleText: "Gochan",
+			misc: map[string]any{
+				"documentTitle": "Gochan",
+			},
+		},
+		{
+			desc: "Regular ban page",
+			misc: map[string]any{
+				"ban": gcsql.IPBan{},
+			},
+			expectTitleText: "YOU ARE BANNED :(",
+		},
+		{
+			desc: "Unappealable permaban",
+			misc: map[string]any{
+				"ban": gcsql.IPBan{
+					IPBanBase: gcsql.IPBanBase{
+						CanAppeal: false,
+						Permanent: true,
+						IsActive:  true,
+					},
+				},
+			},
+			expectTitleText: "YOU'RE PERMABANNED,\u00a0IDIOT!",
+		},
+		{
+			desc:      "Board page",
+			pageTitle: "Gochan",
+			board:     "test",
+			misc: map[string]any{
+				"documentTitle": "/test/ - Testing board",
+			},
+			expectTitleText: "/test/ - Testing board",
+		},
+	}
 )
 
 func TestBuildJS(t *testing.T) {
@@ -74,9 +130,7 @@ func TestBuildJS(t *testing.T) {
 	assert.Equal(t, expectedUnminifiedJS, string(ba))
 }
 
-func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
-	serverutil.InitMinifier()
-
+func mockSetupBoards(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT\s*` +
 		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
 		`max_file_size, max_threads, default_style, locked, created_at, anonymous_name, force_anonymous,\s*` +
@@ -109,6 +163,12 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	).ExpectQuery().
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
+}
+
+func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
+	serverutil.InitMinifier()
+
+	mockSetupBoards(mock)
 
 	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "op.id"}).
@@ -193,4 +253,114 @@ func TestBuildFrontPage(t *testing.T) {
 			doFrontBuildingTest(t, mock)
 		})
 	}
+}
+
+type pageHeaderTestCase struct {
+	desc            string
+	pageTitle       string
+	board           string
+	misc            map[string]any
+	includeJS       []config.IncludeScript
+	includeCSS      []string
+	expectError     bool
+	expectTitleText string
+}
+
+func (p *pageHeaderTestCase) runTest(t *testing.T, driver string) {
+	mock, err := gcsql.SetupMockDB(driver)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	boardCfg := config.GetBoardConfig(p.board)
+	boardCfg.IncludeGlobalStyles = p.includeCSS
+	boardCfg.IncludeScripts = p.includeJS
+	config.SetBoardConfig(p.board, boardCfg)
+
+	mockSetupBoards(mock)
+
+	err = gctemplates.InitTemplates()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	var buf bytes.Buffer
+	err = BuildPageHeader(&buf, p.pageTitle, p.board, p.misc)
+	if p.expectError {
+		assert.Error(t, err)
+	} else {
+		if !assert.NoError(t, err) {
+			t.FailNow()
+		}
+	}
+
+	if !assert.NoError(t, mock.ExpectationsWereMet()) {
+		t.FailNow()
+	}
+
+	doc, err := goquery.NewDocumentFromReader(&buf)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, len(p.includeJS)+2, doc.Find("script").Length())
+	assert.Equal(t, len(p.includeCSS)+2, doc.Find(`link[rel="stylesheet"]`).Length())
+	assert.Equal(t, p.expectTitleText, doc.Find("title").Text())
+	if _, ok := p.misc["ban"]; !ok {
+		topbarItems := doc.Find("a.topbar-item")
+		assert.Equal(t, 3, topbarItems.Length())
+		assert.Equal(t, "home", topbarItems.Eq(0).Text())
+		assert.Equal(t, "/test/", topbarItems.Eq(1).Text())
+		assert.Equal(t, "/test2/", topbarItems.Eq(2).Text())
+	}
+}
+
+func TestBuildPageHeader(t *testing.T) {
+	config.SetVersion("4.0.2")
+	_, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	systemCriticalConfig := config.GetSystemCriticalConfig()
+	systemCriticalConfig.TemplateDir = "templates"
+	config.SetSystemCriticalConfig(systemCriticalConfig)
+
+	for _, tc := range pageHeaderTestCases {
+		for _, driver := range sql.Drivers() {
+			if driver == "sqlmock" {
+				continue
+			}
+			t.Run(tc.desc+" - "+driver, func(t *testing.T) {
+				tc.runTest(t, driver)
+			})
+		}
+	}
+}
+
+func TestBuildPageFooter(t *testing.T) {
+	config.SetVersion("4.0.2")
+	_, err := testutil.GoToGochanRoot(t)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	systemCriticalConfig := config.GetSystemCriticalConfig()
+	systemCriticalConfig.TemplateDir = "templates"
+	config.SetSystemCriticalConfig(systemCriticalConfig)
+
+	mock, err := gcsql.SetupMockDB("sqlite3")
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	var buf bytes.Buffer
+	if !assert.NoError(t, BuildPageFooter(&buf)) {
+		t.FailNow()
+	}
+	if !assert.NoError(t, mock.ExpectationsWereMet()) {
+		t.FailNow()
+	}
+	doc, err := goquery.NewDocumentFromReader(&buf)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Regexp(t, `Powered by Gochan \d+\.\d+\.\d+`, doc.Find("footer").Text())
 }
