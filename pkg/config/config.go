@@ -357,7 +357,7 @@ type SiteConfig struct {
 	GeoIPOptions map[string]any
 
 	// Captcha options for spam prevention. Currently only hcaptcha is supported
-	Captcha CaptchaConfig
+	Captcha *CaptchaConfig
 
 	// FingerprintVideoThumbnails determines whether to use video thumbnails for image fingerprinting. If false, the video file will not be checked by fingerprinting filters
 	// Default: false
@@ -390,10 +390,6 @@ type CaptchaConfig struct {
 
 	// AccountSecret is the secret key for the captcha service. Usage depends on the captcha service
 	AccountSecret string
-}
-
-func (cc *CaptchaConfig) UseCaptcha() bool {
-	return cc.SiteKey != "" && cc.AccountSecret != ""
 }
 
 type BoardCooldowns struct {

@@ -103,7 +103,7 @@ func BuildThreadPages(op *gcsql.Post) error {
 		"posts":       posts[1:],
 		"op":          posts[0],
 		"thread":      thread,
-		"useCaptcha":  captchaCfg.UseCaptcha() && !captchaCfg.OnlyNeededForThreads,
+		"useCaptcha":  captchaCfg != nil && !captchaCfg.OnlyNeededForThreads,
 		"captcha":     captchaCfg,
 	}, threadPageFile, "text/html"); err != nil {
 		errEv.Err(err).Caller().Send()

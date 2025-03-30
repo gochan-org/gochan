@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
@@ -73,7 +74,7 @@ func TestBuildJS(t *testing.T) {
 	assert.Equal(t, expectedUnminifiedJS, string(ba))
 }
 
-func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
+func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	serverutil.InitMinifier()
 
 	mock.ExpectPrepare(`SELECT\s*` +
@@ -118,31 +119,48 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock, expectOut string) {
 
 	err := BuildFrontPage()
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
 	assert.NoError(t, mock.ExpectationsWereMet())
 
 	frontFile, err := os.Open(path.Join(config.GetSystemCriticalConfig().DocumentRoot, "index.html"))
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
 	defer frontFile.Close()
-	ba, err := io.ReadAll(frontFile)
+
+	doc, err := goquery.NewDocumentFromReader(frontFile)
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
-	assert.Equal(t, expectOut, string(ba))
+	boardsDiv := doc.Find("div#frontpage div.section-block:nth-of-type(2)")
+	if !assert.Equal(t, 1, boardsDiv.Length()) {
+		t.FailNow()
+	}
+	assert.Equal(t, "Boards", boardsDiv.Find("div.section-title-block").Text())
+	sectionUl := boardsDiv.Find("div.section-body ul")
+	if !assert.Equal(t, 1, sectionUl.Length()) {
+		t.FailNow()
+	}
+	li := sectionUl.Find("li")
+	assert.Equal(t, 3, li.Length())
+	assert.Equal(t, "Main", li.Eq(0).Text())
+	assert.Equal(t, "/test/ — Testing board", li.Eq(1).Text())
+	assert.Equal(t, "/test2/ — Testing board 2", li.Eq(2).Text())
+	assert.Equal(t, "/chan/test/", li.Eq(1).Find("a").AttrOr("href", ""))
+	assert.Equal(t, "/chan/test2/", li.Eq(2).Find("a").AttrOr("href", ""))
+
 	assert.NoError(t, frontFile.Close())
 }
 
 func TestBuildFrontPage(t *testing.T) {
 	testRoot, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
 
 	for _, driver := range sql.Drivers() {
-		if driver == "sqlmock" || t.Failed() {
+		if driver == "sqlmock" {
 			continue
 		}
 		t.Run(driver, func(t *testing.T) {
@@ -164,15 +182,15 @@ func TestBuildFrontPage(t *testing.T) {
 
 			mock, err := gcsql.SetupMockDB(driver)
 			if !assert.NoError(t, err) {
-				return
+				t.FailNow()
 			}
 			siteCfg := config.GetSiteConfig()
 			siteCfg.MinifyHTML = true
 			config.SetSiteConfig(siteCfg)
-			doFrontBuildingTest(t, mock, expectedMinifiedFront)
+			doFrontBuildingTest(t, mock)
 			siteCfg.MinifyHTML = false
 			config.SetSiteConfig(siteCfg)
-			doFrontBuildingTest(t, mock, expectedUnminifiedFront)
+			doFrontBuildingTest(t, mock)
 		})
 	}
 }

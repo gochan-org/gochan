@@ -177,7 +177,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 			"currentPage": 1,
 			"board":       board,
 			"boardConfig": boardConfig,
-			"useCaptcha":  captchaCfg.UseCaptcha(),
+			"useCaptcha":  captchaCfg != nil,
 			"captcha":     captchaCfg,
 		}, boardPageFile, "text/html"); err != nil {
 			errEv.Err(err).Caller().
@@ -251,7 +251,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 			"currentPage": catalog.currentPage,
 			"board":       board,
 			"boardConfig": boardConfig,
-			"useCaptcha":  captchaCfg.UseCaptcha(),
+			"useCaptcha":  captchaCfg != nil,
 			"captcha":     captchaCfg,
 		}
 		if catalog.currentPage > 1 {

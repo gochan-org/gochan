@@ -91,7 +91,6 @@ func loadConfig(versionStr string, searchPaths ...string) (err error) {
 		cfg.RandomSeed = "test"
 		cfg.Version = ParseVersion(versionStr)
 		cfg.SiteSlogan = "Gochan testing"
-		cfg.Captcha.OnlyNeededForThreads = true
 		cfg.Cooldowns = BoardCooldowns{0, 0, 0}
 		cfg.BanColors = map[string]string{
 			"admin":   "#0000A0",

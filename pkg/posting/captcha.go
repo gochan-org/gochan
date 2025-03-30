@@ -34,7 +34,7 @@ type CaptchaResult struct {
 func InitCaptcha() {
 	var typeIsValid bool
 	captchaCfg := config.GetSiteConfig().Captcha
-	if !captchaCfg.UseCaptcha() {
+	if captchaCfg == nil {
 		return
 	}
 	for _, vType := range validCaptchaTypes {
@@ -52,7 +52,7 @@ func InitCaptcha() {
 // submitCaptchaResponse parses the incoming captcha form values, submits them, and returns the results
 func submitCaptchaResponse(request *http.Request) (bool, error) {
 	captchaCfg := config.GetSiteConfig().Captcha
-	if !captchaCfg.UseCaptcha() {
+	if captchaCfg == nil {
 		return true, nil // captcha isn't required, skip the test
 	}
 	threadid, _ := strconv.Atoi(request.PostFormValue("threadid"))
@@ -90,7 +90,7 @@ func submitCaptchaResponse(request *http.Request) (bool, error) {
 func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 	captchaCfg := config.GetSiteConfig().Captcha
 	if request.Method == "GET" && request.FormValue("needcaptcha") != "" {
-		fmt.Fprint(writer, captchaCfg.UseCaptcha())
+		fmt.Fprint(writer, captchaCfg != nil)
 		return
 	}
 	errEv := gcutil.LogError(nil).
@@ -99,7 +99,7 @@ func ServeCaptcha(writer http.ResponseWriter, request *http.Request) {
 		errEv.Discard()
 	}()
 	wantsJSON := serverutil.IsRequestingJSON(request)
-	if !captchaCfg.UseCaptcha() {
+	if captchaCfg == nil {
 		server.ServeError(writer, "This site is not set up to require a CAPTCHA test", wantsJSON, nil)
 		return
 	}

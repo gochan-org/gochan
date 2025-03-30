@@ -8,6 +8,7 @@ require (
 	github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d
 	github.com/Eggbertx/durationutil v1.0.0
 	github.com/Eggbertx/geoip-legacy v1.1.0
+	github.com/PuerkitoBio/goquery v1.10.2
 	github.com/aquilax/tripcode v1.0.1
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
 	github.com/devedge/imagehash v0.0.0-20180324030135-7061aa3b4066
@@ -18,7 +19,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/oschwald/maxminddb-golang v1.13.1
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/stretchr/testify v1.10.0
 	github.com/tdewolff/minify v2.3.6+incompatible
 	github.com/uptrace/bunrouter v1.0.22
@@ -29,6 +30,11 @@ require (
 	golang.org/x/net v0.37.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	layeh.com/gopher-luar v1.0.11
+)
+
+require (
+	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 )
 
 require (

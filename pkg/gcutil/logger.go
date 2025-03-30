@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/pkgerrors"
 )
 
 const (
@@ -92,6 +93,7 @@ func RunningInTerminal() bool {
 }
 
 func init() {
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 	// guarantee that the logger is always available, even before the configuration is loaded
 	logger = zerolog.New(zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
 		w.NoColor = !RunningInTerminal()

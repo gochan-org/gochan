@@ -4,23 +4,23 @@
 		<span id="site-slogan">{{.siteConfig.SiteSlogan}}</span>
 	</div><br />
 	<div id="frontpage">
-		<div class="section-block" style="margin: 16px 64px 16px 64px;">
+		<div class="section-block front-intro-container">
 			<div class="section-body front-intro">
-				{{template "front_intro.html" .}}
+				{{- template "front_intro.html" . -}}
 			</div>
 		</div>
 		<div class="section-block">
-			<div class="section-title-block"><b>Boards</b></div>
+			<div class="section-title-block text-bold">Boards</div>
 			<div class="section-body">
 				{{- range $_, $section := .sections -}}
 					{{if not $section.Hidden}}
 						<ul style="float:left; list-style: none">
-						<li style="text-align: center; font-weight: bold"><b><u>{{$section.Name}}</u></b></li>
-						{{range $_, $board := $.boards}}
-							{{if and (eq $board.SectionID $section.ID) (ne $board.Dir $.siteConfig.Modboard)}}
+						<li class="text-bold text-underline text-center">{{$section.Name}}</li>
+						{{range $_, $board := $.boards -}}
+							{{- if and (eq $board.SectionID $section.ID) (ne $board.Dir $.siteConfig.Modboard) -}}
 								<li><a href="{{webPathDir $board.Dir}}" title="{{$board.Description}}">/{{$board.Dir}}/</a> — {{$board.Title}}</li>
-							{{end}}
-						{{end}}
+							{{- end -}}
+						{{- end}}
 						</ul>
 					{{end}}
 				{{end}}
@@ -28,7 +28,7 @@
 		</div>
 		{{- if gt .siteConfig.MaxRecentPosts 0}}
 		<div class="section-block">
-			<div class="section-title-block"><b>Recent Posts</b></div>
+			<div class="section-title-block text-bold">Recent Posts</div>
 			<div class="section-body">
 				<div id="recent-posts">
 				{{- range $i, $post := $.recentPosts}}

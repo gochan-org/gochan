@@ -28,7 +28,8 @@ func TriggerEvent(trigger string, data ...any) (handled bool, err error, recover
 	errEv := gcutil.LogError(nil).Caller(1)
 	defer func() {
 		if a := recover(); a != nil {
-			errEv.Err(fmt.Errorf("%v", a)).
+			errEv.Stack().
+				Err(fmt.Errorf("%v", a)).
 				Str("event", trigger).
 				Msg("Recovered from panic while handling event")
 			handled = true
