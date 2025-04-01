@@ -103,7 +103,7 @@ func HandleFilterAction(filter *gcsql.Filter, post *gcsql.Post, upload *gcsql.Up
 	}
 	wantsJSON := serverutil.IsRequestingJSON(request)
 	documentRoot := config.GetSystemCriticalConfig().DocumentRoot
-	if upload != nil {
+	if upload != nil && !upload.IsEmbed() {
 		filePath := path.Join(documentRoot, board.Dir, "thumb", upload.Filename)
 		thumbPath, catalogThumbPath := uploads.GetThumbnailFilenames(
 			path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
@@ -503,16 +503,18 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to attach upload to post")
-		os.Remove(filePath)
-		os.Remove(thumbPath)
-		os.Remove(catalogThumbPath)
+		if upload != nil && !upload.IsEmbed() {
+			os.Remove(filePath)
+			os.Remove(thumbPath)
+			os.Remove(catalogThumbPath)
+		}
 		post.Delete()
 		server.ServeError(writer, "Unable to attach upload", wantsJSON, map[string]any{
 			"filename": upload.OriginalFilename,
 		})
 		return
 	}
-	if upload != nil {
+	if upload != nil && !upload.IsEmbed() {
 		if err = config.TakeOwnership(filePath); err != nil {
 			errEv.Err(err).Caller().
 				Str("file", filePath).Send()
@@ -562,7 +564,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 				server.ServeError(writer, "Unable to prune post from cyclic thread", wantsJSON, nil)
 				return
 			}
-			if prunePost.Filename != "" && prunePost.Filename != "deleted" {
+			if prunePost.Filename != "" && prunePost.Filename != "deleted" && !strings.HasPrefix(prunePost.Filename, "embed:") {
 				prunePostFile := path.Join(documentRoot, prunePost.Dir, "src", prunePost.Filename)
 				prunePostThumbName, _ := uploads.GetThumbnailFilenames(prunePost.Filename)
 				prunePostThumb := path.Join(documentRoot, prunePost.Dir, "thumb", prunePostThumbName)

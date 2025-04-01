@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -58,6 +59,10 @@ func coalesceErrors(errs ...error) error {
 // deleteFile asynchronously deletes the post's file and thumb (if it has one, it returns nil if not) and
 // thread HTML file if it is an OP and "File only" is unchecked, returning an error if one occcured for any file
 func (u *delPost) deleteFile(delThread bool) error {
+	if u.filename == "" || u.filename == "deleted" || strings.HasPrefix(u.filename, "embed:") {
+		// no file to delete
+		return nil
+	}
 	var errCatalog, errThumb, errFile, errThread, errJSON error
 	var wg sync.WaitGroup
 	wg.Add(2)

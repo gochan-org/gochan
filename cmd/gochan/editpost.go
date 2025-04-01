@@ -182,7 +182,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				server.ServeError(writer, server.NewServerError("Error unlinking old upload from post: "+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 				return
 			}
-			if oldUpload.Filename != "deleted" {
+			if oldUpload.Filename != "deleted" && !oldUpload.IsEmbed() {
 				os.Remove(filePath)
 				os.Remove(thumbPath)
 				if post.IsTopPost {
@@ -202,10 +202,12 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
 			thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
 				path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
-			os.Remove(filePath)
-			os.Remove(thumbPath)
-			if post.IsTopPost {
-				os.Remove(catalogThumbPath)
+			if !upload.IsEmbed() {
+				os.Remove(filePath)
+				os.Remove(thumbPath)
+				if post.IsTopPost {
+					os.Remove(catalogThumbPath)
+				}
 			}
 		}
 	} else {

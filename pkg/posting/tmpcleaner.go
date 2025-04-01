@@ -26,7 +26,7 @@ func tempCleaner() {
 			if err != nil {
 				continue
 			}
-			if upload.OriginalFilename == "" {
+			if upload.OriginalFilename == "" || upload.Filename == "deleted" || upload.IsEmbed() {
 				continue
 			}
 			board, err := post.GetBoard()

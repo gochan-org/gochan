@@ -381,7 +381,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 			return err
 		}
 		var filePath string
-		if upload != nil {
+		if upload != nil && !upload.IsEmbed() {
 			filePath = path.Join(boardDir, "src", upload.Filename)
 			if err = os.Remove(filePath); err != nil {
 				errEv.Err(err).Caller().
