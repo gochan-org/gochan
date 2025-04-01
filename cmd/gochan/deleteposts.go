@@ -329,11 +329,6 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 			params += "?)"
 		}
 	}
-	deleteFilesSQL := `UPDATE DBPREFIXfiles SET filename = 'deleted', original_filename = 'deleted' WHERE post_id in `
-	if permDelete {
-		deleteFilesSQL = `DELETE FROM DBPREFIXfiles WHERE post_id IN `
-	}
-	deleteFilesSQL += params
 	wantsJSON := serverutil.IsRequestingJSON(request)
 
 	errArr := zerolog.Arr()
@@ -364,7 +359,15 @@ func deletePostFiles(posts []delPost, deleteIDs []any, permDelete bool, request 
 			wantsJSON, nil)
 		return false
 	}
-	_, err = gcsql.ExecTimeoutSQL(nil, deleteFilesSQL, deleteIDs...)
+
+	if permDelete {
+		_, err = gcsql.ExecTimeoutSQL(nil, "DELETE FROM DBPREFIXfiles WHERE post_id IN "+params, deleteIDs...)
+	} else {
+		_, err = gcsql.ExecTimeoutSQL(nil, "DELETE FROM DBPREFIXfiles WHERE post_id IN "+params+" AND filename like 'embed:%'", deleteIDs...)
+		if err == nil {
+			_, err = gcsql.ExecTimeoutSQL(nil, "UPDATE DBPREFIXfiles SET filename = 'deleted', original_filename = 'deleted' WHERE post_id in "+params, deleteIDs...)
+		}
+	}
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to delete file entries from database")
 		server.ServeError(writer,
