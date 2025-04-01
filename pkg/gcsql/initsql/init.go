@@ -31,17 +31,6 @@ func getBoardDirFromIDTmplFunc(id int) string {
 	return dir
 }
 
-func intPtrToBoardDirTmplFunc(id *int, ifNil string, ifErr string) string {
-	if id == nil {
-		return ifNil
-	}
-	dir, err := gcsql.GetBoardDir(*id)
-	if err != nil {
-		return ifErr
-	}
-	return dir
-}
-
 func getStaffNameFromIDTmplFunc(id int) string {
 	username, err := gcsql.GetStaffUsernameFromID(id)
 	if err != nil {
@@ -125,7 +114,6 @@ func init() {
 	gctemplates.AddTemplateFuncs(template.FuncMap{
 		"banMask":              banMaskTmplFunc,
 		"getBoardDirFromID":    getBoardDirFromIDTmplFunc,
-		"intPtrToBoardDir":     intPtrToBoardDirTmplFunc,
 		"getStaffNameFromID":   getStaffNameFromIDTmplFunc,
 		"getAppealBanIP":       getAppealBanIPTmplFunc,
 		"getTopPostID":         getTopPostIDTmplFunc,
