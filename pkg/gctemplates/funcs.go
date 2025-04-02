@@ -1,6 +1,7 @@
 package gctemplates
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"html"
@@ -164,6 +165,26 @@ var funcMap = template.FuncMap{
 			dir += "/"
 		}
 		return dir
+	},
+
+	// Embed functions
+	"embedURL": func(filename, originalFilename string, boardDir string) (string, error) {
+		if strings.HasPrefix(filename, "embed:") {
+			boardCfg := config.GetBoardConfig(boardDir)
+			tmpl, err := boardCfg.GetLinkTemplate(filename[6:])
+			if err != nil {
+				return "", err
+			}
+			var buf bytes.Buffer
+			err = tmpl.Execute(&buf, config.EmbedTemplateData{
+				MediaID: originalFilename,
+			})
+			if err != nil {
+				return "", err
+			}
+			return buf.String(), nil
+		}
+		return "", errors.New("not an embed")
 	},
 
 	// Template convenience functions
