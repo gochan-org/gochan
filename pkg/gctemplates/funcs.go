@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"maps"
+
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
@@ -206,7 +208,5 @@ var funcMap = template.FuncMap{
 // AddTemplateFuncs adds the functions in the given FuncMap (map[string]any, with "any" expected to be a function)
 // to the map of functions available to templates
 func AddTemplateFuncs(funcs template.FuncMap) {
-	for key, tFunc := range funcs {
-		funcMap[key] = tFunc
-	}
+	maps.Copy(funcMap, funcs)
 }

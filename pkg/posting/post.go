@@ -453,6 +453,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	embed, err := AttachEmbedFromRequest(request, boardConfig, warnEv, errEv)
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
+		return
+	}
+
 	upload, err := uploads.AttachUploadFromRequest(request, writer, post, board, infoEv, errEv)
 	if err != nil {
 		// got an error receiving the upload or the upload was rejected
@@ -460,11 +466,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	embed, err := AttachEmbedFromRequest(request, boardConfig, warnEv, errEv)
-	if err != nil {
-		server.ServeError(writer, err.Error(), wantsJSON, nil)
-		return
-	}
 	if embed != nil {
 		// CheckAndAttachEmbed verifies that the post does not already have an embed or an upload, so upload
 		// is guaranteed to be nil here

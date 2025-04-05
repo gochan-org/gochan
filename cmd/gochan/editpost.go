@@ -108,22 +108,22 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 		return
 	}
 	postIDstr := request.PostFormValue("postid")
-	postid, err := strconv.Atoi(postIDstr)
+	postID, err := strconv.Atoi(postIDstr)
 	if err != nil {
 		errEv.Err(err).Caller().
-			Str("postid", postIDstr).
+			Str("postID", postIDstr).
 			Msg("Invalid form data")
 		server.ServeError(writer, server.NewServerError("Invalid form data: "+err.Error(), http.StatusBadRequest), wantsJSON, map[string]any{
-			"postid": postid,
+			"postID": postID,
 		})
 		return
 	}
-	gcutil.LogInt("postID", postid, infoEv, errEv)
-	post, err := gcsql.GetPostFromID(postid, true)
+	gcutil.LogInt("postID", postID, infoEv, errEv)
+	post, err := gcsql.GetPostFromID(postID, true)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to find post")
 		server.ServeError(writer, server.NewServerError("Unable to find post", http.StatusBadRequest), wantsJSON, map[string]any{
-			"postid": postid,
+			"postID": postID,
 		})
 		return
 	}
@@ -162,15 +162,31 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			return
 		}
 
+		embed, err := posting.AttachEmbedFromRequest(request, config.GetBoardConfig(board.Dir), warnEv, errEv)
+		if err != nil {
+			errEv.Err(err).Caller().Msg("Error attaching embed from request")
+			server.ServeError(writer, server.NewServerError("Unable to attach embed from request", http.StatusInternalServerError), wantsJSON, nil)
+			return
+		}
+
 		upload, err := uploads.AttachUploadFromRequest(request, writer, post, board, gcutil.LogInfo(), errEv)
 		if err != nil {
 			server.ServeError(writer, server.NewServerError("Unable to attach upload:"+err.Error(), http.StatusInternalServerError), wantsJSON, nil)
 			return
 		}
+
+		if embed != nil {
+			upload = embed
+		}
+
 		if upload == nil {
-			server.ServeError(writer, server.NewServerError("Missing upload replacement", http.StatusBadRequest), wantsJSON, nil)
+			server.ServeError(writer, server.NewServerError("Missing upload/embed replacement", http.StatusBadRequest), wantsJSON, nil)
 			return
 		}
+
+		gcutil.LogStr("OriginalFilename", upload.OriginalFilename, infoEv, warnEv, errEv)
+		gcutil.LogStr("Filename", upload.Filename, infoEv, warnEv, errEv)
+
 		documentRoot := config.GetSystemCriticalConfig().DocumentRoot
 		var filePath, thumbPath, catalogThumbPath string
 		if oldUpload != nil {
@@ -199,10 +215,10 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			server.ServeError(writer, server.NewServerError("Error attaching new upload: "+err.Error(), http.StatusInternalServerError), wantsJSON, map[string]any{
 				"filename": upload.OriginalFilename,
 			})
-			filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
-			thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
-				path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
 			if !upload.IsEmbed() {
+				filePath = path.Join(documentRoot, board.Dir, "src", upload.Filename)
+				thumbPath, catalogThumbPath = uploads.GetThumbnailFilenames(
+					path.Join(documentRoot, board.Dir, "thumb", upload.Filename))
 				os.Remove(filePath)
 				os.Remove(thumbPath)
 				if post.IsTopPost {
@@ -223,7 +239,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 				Str("triggeredEvent", "message-pre-format").
 				Send()
 			server.ServeError(writer, server.NewServerError(err.Error(), http.StatusInternalServerError), wantsJSON, map[string]any{
-				"postid": post.ID,
+				"postID": post.ID,
 			})
 			return
 		}
@@ -271,7 +287,7 @@ func editPost(checkedPosts []int, editBtn string, doEdit string, writer http.Res
 			errEv.Err(err).Caller().
 				Msg("Unable to edit post")
 			server.ServeError(writer, "Unable to edit post: "+err.Error(), wantsJSON, map[string]any{
-				"postid": post.ID,
+				"postID": post.ID,
 			})
 			return
 		}

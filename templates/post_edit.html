@@ -52,14 +52,14 @@ function uploadThumbnailChanged(browseEl) {
 					<img src="{{getThumbnailWebPath $.post.ID}}" alt="{{webPath $.board.Dir `src` .Filename}}" width="{{.ThumbnailWidth}}" height="{{.ThumbnailHeight}}" class="upload" />
 				</td></tr>
 			{{- end -}}
-			<tr><th class="postblock">New File</th><td>
-				<input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4" onchange="uploadThumbnailChanged(this)"/>
-				<label for="spoiler"><input type="checkbox" name="spoiler" id="spoiler" {{if .IsSpoilered}}checked{{end}}> Spoiler</label>
-			</td></tr>
-			<tr><th class="postblock">New Embed</th><td>
-				<input type="text" name="embedurl" id="embedurl" value="{{if .IsEmbed}}{{.OriginalFilename}}{{end}}" placeholder="Embed URL" />
-			</td></tr>
 		{{- end -}}
+		<tr><th class="postblock">New File</th><td>
+			<input name="imagefile" type="file" accept="image/jpeg,image/png,image/gif,video/webm,video/mp4" onchange="uploadThumbnailChanged(this)"/>
+			<label for="spoiler"><input type="checkbox" name="spoiler" id="spoiler" {{with .upload}}{{if .IsSpoilered}}checked{{end}}{{end}}> Spoiler</label>
+		</td></tr>
+		<tr><th class="postblock">New Embed</th><td>
+			<input type="text" name="embed" id="embed" value="{{with .upload}}{{if .IsEmbed}}{{embedURL .Filename .OriginalFilename $.board.Dir}}{{end}}{{end}}" placeholder="Embed URL" />
+		</td></tr>
 	</table>
 	<div class="text-center">
 		<input type="submit" value="Update" onclick="return confirm('Press OK to confirm.')"/>

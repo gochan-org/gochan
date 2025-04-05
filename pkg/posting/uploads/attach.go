@@ -72,7 +72,8 @@ func init() {
 
 // AttachUploadFromRequest reads an incoming HTTP request and processes any incoming files.
 // It returns the upload (if there was one) and whether or not any errors were served (meaning
-// that it should stop processing the post
+// that it should stop processing the post. If the request also has an embed, it will return
+// an error.
 func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, post *gcsql.Post, postBoard *gcsql.Board, infoEv *zerolog.Event, errEv *zerolog.Event) (*gcsql.Upload, error) {
 	file, handler, err := request.FormFile("imagefile")
 	if errors.Is(err, http.ErrMissingFile) {
@@ -83,6 +84,12 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 		errEv.Err(err).Caller().Send()
 		return nil, err
 	}
+
+	url := request.PostFormValue("embed")
+	if url != "" {
+		return nil, errors.New("post cannot have both an embed and an upload")
+	}
+
 	upload := &gcsql.Upload{
 		OriginalFilename: html.EscapeString(handler.Filename),
 		FileSize:         int(handler.Size),
