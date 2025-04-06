@@ -173,12 +173,12 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, original_filename, op_id FROM v_front_page_posts ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "original_filename", "op.id"}).
 			AddRows(
-				[]driver.Value{1, "message_raw 1", "test", "filename.png", "12345.png", 1},
-				[]driver.Value{2, "message_raw 2", "test", "", "", 1},
-				[]driver.Value{3, "message_raw 3", "test", "deleted", "deleted", 1},
-				[]driver.Value{4, "message_raw 4", "test2", "embed:rawvideo", "http://example.com/video.webm", 1},
-				[]driver.Value{5, "message_raw 5", "test2", "embed:youtube", "abcd", 1},
-				[]driver.Value{6, "message_raw 6", "test2", "embed:youtube", "wxyz", 1},
+				[]driver.Value{6, "message_raw 6", "test", "filename.png", "12345.png", 1},
+				[]driver.Value{5, "message_raw 5", "test", "", "", 1},
+				[]driver.Value{4, "message_raw 4", "test", "deleted", "deleted", 1},
+				[]driver.Value{3, "message_raw 3", "test2", "embed:rawvideo", "http://example.com/video.webm", 1},
+				[]driver.Value{2, "message_raw 2", "test2", "embed:youtube", "abcd", 1},
+				[]driver.Value{1, "message_raw 1", "test2", "embed:youtube", "wxyz", 1},
 			))
 
 	err := BuildFrontPage()
@@ -227,7 +227,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 		t.FailNow()
 	}
 
-	assert.Regexp(t, `/test/\s*message_raw 1`, recentPosts.Eq(0).Text())
+	assert.Regexp(t, `/test/\s*message_raw 6`, recentPosts.Eq(0).Text())
 	assert.Equal(t, 1, recentPosts.Eq(0).Find(`img[src="/chan/test/thumb/filenamet.png"]`).Length())
 	assert.Equal(t, 1, recentPosts.Eq(1).Find("div.file-deleted-box").Length())
 	assert.Equal(t, 1, recentPosts.Eq(2).Find("div.file-deleted-box").Length())
