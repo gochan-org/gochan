@@ -22,10 +22,12 @@ var (
 )
 
 // GetThreadFiles gets a list of the files owned by posts in the thread, including thumbnails for convenience.
+// It does not include deleted file entries or embeds
 func GetThreadFiles(post *Post) ([]Upload, error) {
 	query := selectFilesBaseSQL + `WHERE post_id IN (
 		SELECT id FROM DBPREFIXposts WHERE thread_id = (
-			SELECT thread_id FROM DBPREFIXposts WHERE id = ?)) AND filename != 'deleted'`
+			SELECT thread_id FROM DBPREFIXposts WHERE id = ?)) AND filename != 'deleted' AND filename NOT LIKE 'embed:%'`
+
 	rows, err := Query(nil, query, post.ID)
 	if err != nil {
 		return nil, err
