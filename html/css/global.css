@@ -280,6 +280,12 @@ div.inlinepostprev {
   background: rgba(0, 0, 0, 0.1019607843);
 }
 
+.poster-id {
+  font-size: 0.8em;
+  padding: 0 5px;
+  border-radius: 1em;
+}
+
 div.section-block {
   margin-bottom: 8px;
 }

@@ -3,6 +3,7 @@ package building
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"net"
 	"path"
@@ -79,6 +80,7 @@ type Post struct {
 	Country      geoip.Country `json:"-"`
 	thread       gcsql.Thread
 	uploadPath   string
+	uniqueID     string
 }
 
 // TitleText returns the text to be used for the title of the page
@@ -100,6 +102,29 @@ func (p *Post) ThreadPath() string {
 		threadID = p.ID
 	}
 	return config.WebPath(p.BoardDir, "res", strconv.Itoa(threadID)+".html")
+}
+
+// ThreadUniqueID returns a 6-character hexidecimal ID for the user in a thread, allowing anonymity while discouraging sockpuppetting
+func (p *Post) ThreadUniqueID() string {
+	if p.uniqueID != "" {
+		return p.uniqueID
+	}
+	hash := sha256.New()
+	hash.Write(p.IP)
+	hash.Write([]byte(p.BoardDir))
+	hash.Write([]byte(strconv.Itoa(p.ParentID)))
+	p.uniqueID = fmt.Sprintf("%02x", hash.Sum(nil)[:3])
+	return p.uniqueID
+}
+
+// ThreadUniqueIDColorIsDark returns true if the color represented by the thread unique ID has a dark luminance
+func (p *Post) ThreadUniqueIDColorIsDark() bool {
+	id := p.ThreadUniqueID()
+	red, _ := strconv.ParseInt(id[0:2], 16, 0)
+	green, _ := strconv.ParseInt(id[2:4], 16, 0)
+	blue, _ := strconv.ParseInt(id[4:6], 16, 0)
+	luminance := 0.299*float32(red) + 0.587*float32(green) + 0.114*float32(blue)
+	return luminance < 128
 }
 
 // Timestamp returns the time the post was created.

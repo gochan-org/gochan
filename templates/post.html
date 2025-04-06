@@ -18,6 +18,10 @@
 	{{- end -}}
 	{{- if ne .post.Email ""}}</a>{{end}}</span>
 	{{- if ne .post.Tripcode ""}}<span class="tripcode">!{{.post.Tripcode}}</span>{{end -}}
+	{{- if .global.boardConfig.ShowPosterID -}}
+		{{$uniqueID := .post.ThreadUniqueID}}
+		<span class="poster-id-container">(ID: <span class="poster-id" style="background: #{{$uniqueID}}; color: {{if .post.ThreadUniqueIDColorIsDark}}white{{else}}black{{end}}">{{$uniqueID}}</span>)</span>
+	{{- end -}}
 	{{- if ne .post.Country.Flag ""}}{{template "post_flag" .post.Country}}{{end}}
 	<time datetime="{{formatTimestampAttribute .post.Timestamp}}">{{formatTimestamp .post.Timestamp}}</time>
 </label> <a href="{{.post.WebPath}}">No.</a> <a href="javascript:quote({{.post.ID}})" class="backlink-click">{{.post.ID}}</a>
