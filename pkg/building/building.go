@@ -128,7 +128,16 @@ func getFrontPagePosts(errEv *zerolog.Event) ([]frontPagePost, error) {
 				errEv.Err(err).Caller().Send()
 				return nil, err
 			}
-			post.Filename = post.ThumbURL
+			mediaID, _ := strings.CutPrefix(post.Filename, "embed:")
+			_, thumbTmpl, _ := boardConfig.GetEmbedTemplates(mediaID)
+			if thumbTmpl != nil {
+				var buf bytes.Buffer
+				if err = thumbTmpl.Execute(&buf, config.EmbedTemplateData{MediaID: post.OriginalFilename}); err != nil {
+					errEv.Err(err).Caller().Send()
+					return nil, err
+				}
+				post.ThumbURL = buf.String()
+			}
 		}
 		recentPosts = append(recentPosts, post)
 	}

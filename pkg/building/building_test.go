@@ -170,12 +170,15 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 
 	mockSetupBoards(mock)
 
-	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, original_filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
+	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, original_filename, op_id FROM v_front_page_posts ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "original_filename", "op.id"}).
 			AddRows(
 				[]driver.Value{1, "message_raw 1", "test", "filename.png", "12345.png", 1},
 				[]driver.Value{2, "message_raw 2", "test", "", "", 1},
-				[]driver.Value{3, "message_raw 4", "test", "deleted", "deleted", 1},
+				[]driver.Value{3, "message_raw 3", "test", "deleted", "deleted", 1},
+				[]driver.Value{4, "message_raw 4", "test2", "embed:rawvideo", "http://example.com/video.webm", 1},
+				[]driver.Value{5, "message_raw 5", "test2", "embed:youtube", "abcd", 1},
+				[]driver.Value{6, "message_raw 6", "test2", "embed:youtube", "wxyz", 1},
 			))
 
 	err := BuildFrontPage()
@@ -220,7 +223,7 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	}
 	assert.Equal(t, "Recent Posts", recentPostsContainer.Find("div.section-title-block").Text())
 	recentPosts := recentPostsContainer.Find("div.section-body div.recent-post")
-	if !assert.Equal(t, 3, recentPosts.Length()) {
+	if !assert.Equal(t, 6, recentPosts.Length()) {
 		t.FailNow()
 	}
 
@@ -228,6 +231,10 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 	assert.Equal(t, 1, recentPosts.Eq(0).Find(`img[src="/chan/test/thumb/filenamet.png"]`).Length())
 	assert.Equal(t, 1, recentPosts.Eq(1).Find("div.file-deleted-box").Length())
 	assert.Equal(t, 1, recentPosts.Eq(2).Find("div.file-deleted-box").Length())
+	assert.Equal(t, 1, recentPosts.Eq(3).Find("div.file-deleted-box").Length())
+	assert.Equal(t, "Post embed", recentPosts.Eq(3).Find("div.file-deleted-box").Text())
+	assert.Equal(t, 1, recentPosts.Eq(4).Find("img").Length())
+	assert.Equal(t, 1, recentPosts.Eq(5).Find("img").Length())
 
 	assert.NoError(t, frontFile.Close())
 }
@@ -256,11 +263,26 @@ func TestBuildFrontPage(t *testing.T) {
 			siteConfig := config.GetSiteConfig()
 			siteConfig.SiteName = "Gochan"
 			siteConfig.SiteSlogan = "Gochan description"
+			siteConfig.RecentPostsWithNoFile = true
 			config.SetSiteConfig(siteConfig)
 
 			boardCfg := config.GetBoardConfig("")
 			boardCfg.Styles = []config.Style{{Name: "test1", Filename: "test1.css"}}
 			boardCfg.DefaultStyle = "test1.css"
+			rawVideoSubmatchIndex := 0
+			boardCfg.EmbedMatchers = map[string]config.EmbedMatcher{
+				"rawvideo": {
+					URLRegex:             "^https?://.*\\.(?:webm|mp4)$",
+					EmbedTemplate:        `<video class="embed embed-{{.HandlerID}}" src="{{.MediaID}}" style="max-width:{{.ThumbWidth}}px; max-height:{{.ThumbHeight}}px"></video>`,
+					MediaIDSubmatchIndex: &rawVideoSubmatchIndex,
+				},
+				"youtube": {
+					URLRegex:             `^https?://(?:(?:(?:www\.)?youtube\.com/watch\?v=)|(?:youtu\.be/))([^&]+)`,
+					EmbedTemplate:        `<iframe class="embed embed-{{.HandlerID}}" width={{.ThumbWidth}} height={{.ThumbHeight}} src="{{.MediaID}}" </iframe>`,
+					ThumbnailURLTemplate: "{{.MediaID}}",
+				},
+			}
+			config.SetBoardConfig("", boardCfg)
 
 			os.MkdirAll(systemCriticalCfg.DocumentRoot, config.DirFileMode)
 
