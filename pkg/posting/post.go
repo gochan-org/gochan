@@ -1,6 +1,7 @@
 package posting
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aquilax/tripcode"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
@@ -170,7 +172,43 @@ func getEmailAndCommand(request *http.Request) (string, string) {
 	return formEmail[:sepIndex], formEmail[sepIndex+1:]
 }
 
-func getPostFromRequest(request *http.Request, infoEv, errEv *zerolog.Event) (post *gcsql.Post, err error) {
+// ParseName takes a name and board string and returns the name and tripcode parts,
+// using the board's reserved tripcodes if applicable.
+func ParseName(name string, boardConfig *config.BoardConfig) (string, string) {
+	var namePart string
+	var tripcodePart string
+	var secure bool
+	if strings.Contains(name, "##") {
+		parts := strings.SplitN(name, "##", 2)
+		namePart = parts[0]
+		tripcodePart = parts[1]
+		secure = true
+	} else if strings.Contains(name, "#") {
+		parts := strings.SplitN(name, "#", 2)
+		namePart = parts[0]
+		tripcodePart = parts[1]
+	} else {
+		namePart = name
+	}
+
+	if tripcodePart != "" {
+		reservedTrip, reserved := boardConfig.ReservedTrips[tripcodePart]
+		if secure && reserved {
+			tripcodePart = reservedTrip
+		} else if secure {
+			hash := gcutil.Md5Sum(tripcodePart + config.GetSystemCriticalConfig().RandomSeed)
+			for range 64 {
+				hash = gcutil.Md5Sum(hash + name)
+			}
+			tripcodePart = base64.StdEncoding.EncodeToString([]byte(hash))[:10]
+		} else {
+			tripcodePart = tripcode.Tripcode(tripcodePart)
+		}
+	}
+	return namePart, tripcodePart
+}
+
+func getPostFromRequest(request *http.Request, boardConfig *config.BoardConfig, infoEv, errEv *zerolog.Event) (post *gcsql.Post, err error) {
 	post = &gcsql.Post{
 		IP:         gcutil.GetRealIP(request),
 		Subject:    request.PostFormValue("postsubject"),
@@ -197,7 +235,8 @@ func getPostFromRequest(request *http.Request, infoEv, errEv *zerolog.Event) (po
 			}
 		}
 	}
-	post.Name, post.Tripcode = gcutil.ParseName(request.PostFormValue("postname"))
+	post.Name, post.Tripcode = ParseName(request.PostFormValue("postname"), boardConfig)
+	post.IsSecureTripcode = strings.Contains(post.Tripcode, "##")
 	post.Email, _ = getEmailAndCommand(request)
 
 	password := request.PostFormValue("postpassword")
@@ -300,12 +339,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	post, err := getPostFromRequest(request, infoEv, errEv)
-	if err != nil {
-		server.ServeError(writer, err.Error(), wantsJSON, nil)
-		return
-	}
-
 	boardidStr := request.PostFormValue("boardid")
 	boardID, err := strconv.Atoi(boardidStr)
 	if err != nil {
@@ -332,6 +365,12 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	if boardConfig.Lockdown {
 		warnEv.Msg("Rejected post, board is in lockdown")
 		server.ServeError(writer, server.NewServerError(boardConfig.LockdownMessage, http.StatusBadRequest), wantsJSON, nil)
+		return
+	}
+
+	post, err := getPostFromRequest(request, boardConfig, infoEv, errEv)
+	if err != nil {
+		server.ServeError(writer, err.Error(), wantsJSON, nil)
 		return
 	}
 

@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aquilax/tripcode"
 	"golang.org/x/crypto/bcrypt"
 	x_html "golang.org/x/net/html"
 )
@@ -145,22 +144,6 @@ func MarshalJSON(data any, indent bool) (string, error) {
 		jsonBytes, _ = json.Marshal(map[string]string{"error": err.Error()})
 	}
 	return string(jsonBytes), err
-}
-
-// ParseName takes a name string from a request object and returns the name and tripcode parts
-func ParseName(name string) (string, string) {
-	var namePart string
-	var tripcodePart string
-	if !strings.Contains(name, "#") {
-		namePart = name
-	} else if strings.Index(name, "#") == 0 {
-		tripcodePart = tripcode.Tripcode(name[1:])
-	} else if strings.Index(name, "#") > 0 {
-		postNameArr := strings.SplitN(name, "#", 2)
-		namePart = postNameArr[0]
-		tripcodePart = tripcode.Tripcode(postNameArr[1])
-	}
-	return namePart, tripcodePart
 }
 
 // RandomString returns a randomly generated string of the given length

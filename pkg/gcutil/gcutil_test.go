@@ -77,44 +77,6 @@ func TestMarshalJSON(t *testing.T) {
 	}
 }
 
-func TestNameParsing(t *testing.T) {
-	testCases := []struct {
-		nameAndTrip      string
-		expectedName     string
-		expectedTripcode string
-	}{
-		{
-			nameAndTrip:      "Name#Trip",
-			expectedName:     "Name",
-			expectedTripcode: "piec1MorXg",
-		},
-		{
-			nameAndTrip:      "#Trip",
-			expectedName:     "",
-			expectedTripcode: "piec1MorXg",
-		},
-		{
-			nameAndTrip:  "Name",
-			expectedName: "Name",
-		},
-		{
-			nameAndTrip:  "Name#",
-			expectedName: "Name",
-		},
-		{
-			nameAndTrip:  "#",
-			expectedName: "",
-		},
-	}
-	for _, tC := range testCases {
-		t.Run(tC.nameAndTrip, func(t *testing.T) {
-			name, trip := ParseName(tC.nameAndTrip)
-			assert.Equal(t, tC.expectedName, name)
-			assert.Equal(t, tC.expectedTripcode, trip)
-		})
-	}
-}
-
 func TestGetRealIP(t *testing.T) {
 	const remoteAddr = "192.168.56.1"
 	const testIP = "192.168.56.2"

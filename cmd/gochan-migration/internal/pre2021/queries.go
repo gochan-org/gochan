@@ -8,7 +8,7 @@ default_style, locked, created_on, anonymous, forced_anon, autosage_after, no_im
 redirect_to_thread, require_file, enable_catalog
 FROM DBPREFIXboards`
 
-	postsQuery = `SELECT id, boardid, parentid, name, tripcode, email, subject, message, message_raw, password, filename,
+	postsQuery = `SELECT id, boardid, parentid, name, tripcode, is_secure_tripcode, email, subject, message, message_raw, password, filename,
 filename_original, file_checksum, filesize, image_w, image_h, thumb_w, thumb_h, ip, timestamp, autosage,
 bumped, stickied, locked FROM DBPREFIXposts WHERE deleted_timestamp IS NULL`
 

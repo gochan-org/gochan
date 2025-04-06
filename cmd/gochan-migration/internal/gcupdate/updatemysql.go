@@ -32,7 +32,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	var rows *sql.Rows
-	query = `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?`
+	query = `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_TYPE = 'BASE TABLE'`
 	rows, err = db.QueryContextSQL(ctx, nil, query, dbName)
 	if err != nil {
 		return err
@@ -176,6 +176,18 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 	if dataType == "" {
 		query = `ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''`
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+			return err
+		}
+	}
+
+	// add is_secure_tripcode column to DBPREFIXposts
+	dataType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXposts ADD COLUMN is_secure_tripcode BOOL NOT NULL DEFAULT FALSE`
 		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}

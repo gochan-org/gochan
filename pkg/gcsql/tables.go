@@ -201,24 +201,25 @@ type IPBanAppealAudit struct {
 
 // table: DBPREFIXposts
 type Post struct {
-	ID              int           `json:"no"`    // sql: id
-	ThreadID        int           `json:"-"`     // sql: thread_id
-	IsTopPost       bool          `json:"-"`     // sql: is_top_post
-	IP              string        `json:"-"`     // sql: ip
-	CreatedOn       time.Time     `json:"time"`  // sql: created_on
-	Name            string        `json:"name"`  // sql: name
-	Tripcode        string        `json:"trip"`  // sql: tripcode
-	IsRoleSignature bool          `json:"-"`     // sql: is_role_signature
-	Email           string        `json:"email"` // sql: email
-	Subject         string        `json:"sub"`   // sql: subject
-	Message         template.HTML `json:"-"`     // sql: message
-	MessageRaw      string        `json:"com"`   // sql: message_raw
-	Password        string        `json:"-"`     // sql: `password`
-	DeletedAt       time.Time     `json:"-"`     // sql: deleted_at
-	IsDeleted       bool          `json:"-"`     // sql: is_deleted
-	BannedMessage   string        `json:"-"`     // sql: banned_message
-	Flag            string        `json:"-"`     // sql: flag
-	Country         string        `json:"-"`     // sql: country
+	ID               int           `json:"no"`    // sql: id
+	ThreadID         int           `json:"-"`     // sql: thread_id
+	IsTopPost        bool          `json:"-"`     // sql: is_top_post
+	IP               string        `json:"-"`     // sql: ip
+	CreatedOn        time.Time     `json:"time"`  // sql: created_on
+	Name             string        `json:"name"`  // sql: name
+	Tripcode         string        `json:"trip"`  // sql: tripcode
+	IsSecureTripcode bool          `json:"-"`     // sql: is_secure_tripcode
+	IsRoleSignature  bool          `json:"-"`     // sql: is_role_signature
+	Email            string        `json:"email"` // sql: email
+	Subject          string        `json:"sub"`   // sql: subject
+	Message          template.HTML `json:"-"`     // sql: message
+	MessageRaw       string        `json:"com"`   // sql: message_raw
+	Password         string        `json:"-"`     // sql: `password`
+	DeletedAt        time.Time     `json:"-"`     // sql: deleted_at
+	IsDeleted        bool          `json:"-"`     // sql: is_deleted
+	BannedMessage    string        `json:"-"`     // sql: banned_message
+	Flag             string        `json:"-"`     // sql: flag
+	Country          string        `json:"-"`     // sql: country
 
 	// used for convenience to avoid needing to do multiple queries
 	opID     int

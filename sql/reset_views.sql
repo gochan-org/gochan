@@ -24,7 +24,7 @@ CREATE VIEW DBPREFIXv_top_post_thread_ids AS
 SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post;
 
 CREATE VIEW DBPREFIXv_building_posts AS
-SELECT p.id AS id, p.thread_id AS thread_id, ip, name, tripcode,
+SELECT p.id AS id, p.thread_id AS thread_id, ip, name, tripcode, is_secure_tripcode,
 email, subject, created_on, created_on as last_modified, op.id AS parent_id, t.last_bump as last_bump,
 message, message_raw, t.board_id,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
@@ -95,7 +95,7 @@ LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op on op.thread_id = DBPREFIXposts.thread_id;
 
 CREATE VIEW DBPREFIXv_post_with_board AS
-SELECT p.id, thread_id, is_top_post, created_on, name, tripcode, is_role_signature, email,
+SELECT p.id, thread_id, is_top_post, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email,
 subject, message, message_raw, password, p.deleted_at AS deleted_at, p.is_deleted AS is_deleted,
 banned_message, ip, flag, country, dir, board_id
 FROM DBPREFIXposts p

@@ -93,5 +93,17 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 		}
 	}
 
+	// add is_secure_tripcode column to DBPREFIXposts
+	dataType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
+	if err != nil {
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXposts ADD COLUMN is_secure_tripcode BOOL NOT NULL DEFAULT FALSE`
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
