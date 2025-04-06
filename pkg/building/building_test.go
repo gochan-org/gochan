@@ -170,12 +170,12 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 
 	mockSetupBoards(mock)
 
-	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
-		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "op.id"}).
+	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, original_filename, op_id FROM v_front_page_posts_with_file ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
+		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "original_filename", "op.id"}).
 			AddRows(
-				[]driver.Value{1, "message_raw 1", "test", "filename.png", 1},
-				[]driver.Value{2, "message_raw 2", "test", "", 1},
-				[]driver.Value{3, "message_raw 3", "test", "deleted", 1},
+				[]driver.Value{1, "message_raw 1", "test", "filename.png", "12345.png", 1},
+				[]driver.Value{2, "message_raw 2", "test", "", "", 1},
+				[]driver.Value{3, "message_raw 4", "test", "deleted", "deleted", 1},
 			))
 
 	err := BuildFrontPage()

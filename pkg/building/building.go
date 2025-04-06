@@ -18,6 +18,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/posting/uploads"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
@@ -116,6 +117,10 @@ func getFrontPagePosts(errEv *zerolog.Event) ([]frontPagePost, error) {
 				ThumbnailWidth:   boardConfig.ThumbWidthReply,
 				ThumbnailHeight:  boardConfig.ThumbHeightReply,
 			},
+		}
+		if !strings.HasPrefix(post.Filename, "embed:") {
+			thumbnailFilename, _ := uploads.GetThumbnailFilenames(post.Filename)
+			post.ThumbURL = config.WebPath(post.Board, "thumb", thumbnailFilename)
 		}
 
 		if post.HasEmbed() {
