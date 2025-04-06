@@ -97,8 +97,8 @@ func (m *Pre2021Migrator) MigratePosts() error {
 	for rows.Next() {
 		var thread migrationPost
 		if err = rows.Scan(
-			&thread.oldID, &thread.oldBoardID, &thread.oldParentID, &thread.Name, &thread.Tripcode, &thread.IsSecureTripcode,
-			&thread.Email, &thread.Subject, &thread.Message, &thread.MessageRaw, &thread.Password, &thread.filename,
+			&thread.oldID, &thread.oldBoardID, &thread.oldParentID, &thread.Name, &thread.Tripcode, &thread.Email,
+			&thread.Subject, &thread.Message, &thread.MessageRaw, &thread.Password, &thread.filename,
 			&thread.filenameOriginal, &thread.fileChecksum, &thread.filesize, &thread.imageW, &thread.imageH,
 			&thread.thumbW, &thread.thumbH, &thread.IP, &thread.CreatedOn, &thread.autosage,
 			&thread.bumped, &thread.stickied, &thread.locked,
@@ -137,7 +137,7 @@ func (m *Pre2021Migrator) MigratePosts() error {
 		for replyRows.Next() {
 			var reply migrationPost
 			if err = replyRows.Scan(
-				&reply.oldID, &reply.oldBoardID, &reply.oldParentID, &reply.Name, &reply.Tripcode, &reply.IsSecureTripcode,
+				&reply.oldID, &reply.oldBoardID, &reply.oldParentID, &reply.Name, &reply.Tripcode,
 				&reply.Email, &reply.Subject, &reply.Message, &reply.MessageRaw, &reply.Password, &reply.filename,
 				&reply.filenameOriginal, &reply.fileChecksum, &reply.filesize, &reply.imageW, &reply.imageH,
 				&reply.thumbW, &reply.thumbH, &reply.IP, &reply.CreatedOn, &reply.autosage,

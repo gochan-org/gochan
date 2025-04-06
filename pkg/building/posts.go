@@ -196,7 +196,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 		}
 		var lastBump time.Time
 		dest = append(dest,
-			&post.Name, &post.Tripcode, &post.Email, &post.Subject, &post.CreatedOn,
+			&post.Name, &post.Tripcode, &post.IsSecureTripcode, &post.Email, &post.Subject, &post.CreatedOn,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
 			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
@@ -224,9 +224,9 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 }
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
-	query := `SELECT id, thread_id, ip, name, tripcode, email, subject, created_on, last_modified, parent_id,
-		last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize, tw, th,
-		width, height, locked, stickied, cyclical, flag, country, is_deleted
+	query := `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on, last_modified,
+		parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize,
+		tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
 		FROM DBPREFIXv_building_posts WHERE ip = PARAM_ATON ORDER BY id DESC`
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
@@ -241,9 +241,9 @@ func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
 }
 
 func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
-	const query = `SELECT id, thread_id, ip, name, tripcode, email, subject, created_on, last_modified, parent_id,
-		last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize, tw, th,
-		width, height, locked, stickied, cyclical, flag, country, is_deleted
+	const query = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
+		last_modified, parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename,
+		checksum, filesize, tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
 		FROM DBPREFIXv_building_posts WHERE thread_id = ? ORDER BY id ASC`
 	var posts []*Post
 	err := QueryPosts(query, []any{thread.ID}, func(p *Post) error {
@@ -254,9 +254,9 @@ func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
-	query := `SELECT id, thread_id, ip, name, tripcode, email, subject, created_on, last_modified, parent_id,
-		last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize, tw, th,
-		width, height, locked, stickied, cyclical, flag, country, is_deleted
+	query := `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on, last_modified,
+		parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize,
+		tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
 		FROM DBPREFIXv_building_posts`
 	var args []any
 

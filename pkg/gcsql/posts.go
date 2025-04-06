@@ -18,8 +18,8 @@ const (
 			SELECT thread_id FROM DBPREFIXposts WHERE id = ?))`
 
 	selectPostsBaseSQL = `SELECT 
-	id, thread_id, is_top_post, IP_NTOA, created_on, name, tripcode, is_role_signature,
-	email, subject, message, message_raw, password, deleted_at, is_deleted,
+	id, thread_id, is_top_post, IP_NTOA, created_on, name, tripcode, is_secure_tripcode,
+	is_role_signature, email, subject, message, message_raw, password, deleted_at, is_deleted,
 	COALESCE(banned_message,'') AS banned_message, flag, country
 	FROM DBPREFIXposts `
 )
@@ -42,9 +42,9 @@ func GetPostFromID(id int, onlyNotDeleted bool, requestOptions ...*RequestOption
 	opts := setupOptions(requestOptions...)
 	err := QueryRow(opts, query, []any{id}, []any{
 		&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
-		&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-		&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
-		&post.BannedMessage, &post.Flag, &post.Country,
+		&post.Tripcode, &post.IsSecureTripcode, &post.IsRoleSignature, &post.Email,
+		&post.Subject, &post.Message, &post.MessageRaw, &post.Password, &post.DeletedAt,
+		&post.IsDeleted, &post.BannedMessage, &post.Flag, &post.Country,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrPostDoesNotExist
@@ -412,9 +412,9 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		return ErrorPostAlreadySent
 	}
 	insertSQL := `INSERT INTO DBPREFIXposts
-	(thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject,
+	(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,
 		message, message_raw, password, flag, country) 
-	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?)`
+	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?,?)`
 	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
 	if p.ThreadID == 0 {
@@ -438,7 +438,7 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 	}
 
 	if _, err = Exec(opts, insertSQL,
-		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsRoleSignature, p.Email, p.Subject,
+		p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsSecureTripcode, p.IsRoleSignature, p.Email, p.Subject,
 		p.Message, p.MessageRaw, p.Password, p.Flag, p.Country,
 	); err != nil {
 		return err

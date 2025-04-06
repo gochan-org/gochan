@@ -236,7 +236,7 @@ func getPostFromRequest(request *http.Request, boardConfig *config.BoardConfig, 
 		}
 	}
 	post.Name, post.Tripcode = ParseName(request.PostFormValue("postname"), boardConfig)
-	post.IsSecureTripcode = strings.Contains(post.Tripcode, "##")
+	post.IsSecureTripcode = strings.Contains(request.PostFormValue("postname"), "##")
 	post.Email, _ = getEmailAndCommand(request)
 
 	password := request.PostFormValue("postpassword")

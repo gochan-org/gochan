@@ -2,6 +2,7 @@ package gcsql
 
 import (
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gochan-org/gochan/pkg/config"
@@ -15,14 +16,13 @@ var (
 	insertIntoThreadsPostgres = insertIntoThreadsBase + `\(\$1,\$2,\$3,\$4,\$5\)`
 
 	insertIntoPostsBase = `INSERT INTO posts\s*` +
-		`\(thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature, email, subject,\s+` +
+		`\(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,\s+` +
 		`message, message_raw, password, flag, country\)\s+VALUES`
-	insertIntoPostsMySQL    = insertIntoPostsBase + `\(\?,\?,INET6_ATON\(\?\),CURRENT_TIMESTAMP,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
-	insertIntoPostsPostgres = insertIntoPostsBase + `\(\$1,\$2,\$3,CURRENT_TIMESTAMP,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13\)`
+	insertIntoPostsMySQL    = insertIntoPostsBase + `\(\?,\?,INET6_ATON\(\?\),CURRENT_TIMESTAMP,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
+	insertIntoPostsPostgres = insertIntoPostsBase + `\(\$1,\$2,\$3,CURRENT_TIMESTAMP,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13,\$14\)`
 )
 
 func setupPostTest(t *testing.T, driver string) sqlmock.Sqlmock {
-	t.Helper()
 	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		t.FailNow()
@@ -84,16 +84,17 @@ func createThreadTestRun(t *testing.T, driver string) {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	p := Post{ThreadID: threadID, Message: "test", IP: "192.168.56.1", IsTopPost: true}
+	p := Post{ThreadID: threadID, Message: "test", MessageRaw: "test", IP: "192.168.56.1", IsTopPost: true, CreatedOn: time.Now()}
 
 	if driver == "mysql" {
 		query = insertIntoPostsMySQL
 	} else {
 		query = insertIntoPostsPostgres
 	}
-	mock.ExpectPrepare(query).
-		ExpectExec().WithArgs(p.ThreadID, p.IsTopPost, p.IP, "", p.Name, false, "", "", "test", "",
-		"", "", "").WillReturnResult(sqlmock.NewResult(1, 1))
+	mock.ExpectPrepare(query).ExpectExec().
+		WithArgs(p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsSecureTripcode, p.IsRoleSignature, p.Email,
+			p.Subject, p.Message, p.MessageRaw, p.Password, p.Flag, p.Country).
+		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectPrepare(`SELECT MAX\(id\) FROM posts`).ExpectQuery().WithoutArgs().
 		WillReturnRows(mock.NewRows([]string{"MAX(id)"}).AddRow(1))
 	if driver == "mysql" {

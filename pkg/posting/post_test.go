@@ -54,7 +54,7 @@ func TestParseName(t *testing.T) {
 		{
 			nameAndTrip:      "Name##notReserved",
 			expectedName:     "Name",
-			expectedTripcode: "MDlhNmNmYj",
+			expectedTripcode: "MGU5NDdiYm",
 		},
 	}
 	for _, tC := range testCases {

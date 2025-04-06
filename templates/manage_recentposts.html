@@ -17,7 +17,7 @@
 <tr><td><a href="{{$post.WebPath}}" class="centered">Post</a></td>
 <td><b>Name: </b> {{- if and (eq $post.Name "") (eq $post.Tripcode "")}}<span class="postername">Anonymous</span>{{end}}
 	{{- if ne $post.Name ""}}<span class="postername">{{$post.Name}}</span>{{end -}}
-	{{- if ne $post.Tripcode ""}}!<span class="tripcode">{{$post.Tripcode}}</span>{{end -}}<br />
+	{{- if ne $post.Tripcode ""}}<span class="tripcode">{{if $post.IsSecureTripcode}}!{{end}}!{{$post.Tripcode}}</span>{{end -}}<br />
 	<b>IP: </b> {{$post.IP}}<br />
 	<b>Board: </b>/{{$post.BoardDir}}/
 </td>

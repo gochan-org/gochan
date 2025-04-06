@@ -63,9 +63,9 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 }
 
 func getBoardTopPosts(board string) ([]*Post, error) {
-	const query = `SELECT id, thread_id, ip, name, tripcode, email, subject, created_on, last_modified, parent_id,
-		last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize, tw, th,
-		width, height, locked, stickied, cyclical, flag, country, is_deleted
+	const query = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
+		last_modified, parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename,
+		checksum, filesize, tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
 		FROM DBPREFIXv_building_posts WHERE id = parent_id AND dir = ?`
 	var posts []*Post
 

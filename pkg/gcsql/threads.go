@@ -173,8 +173,8 @@ func (t *Thread) GetPosts(repliesOnly bool, boardPage bool, limit int) ([]Post, 
 		var post Post
 		if err = rows.Scan(
 			&post.ID, &post.ThreadID, &post.IsTopPost, &post.IP, &post.CreatedOn, &post.Name,
-			&post.Tripcode, &post.IsRoleSignature, &post.Email, &post.Subject, &post.Message,
-			&post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
+			&post.Tripcode, &post.IsSecureTripcode, &post.IsRoleSignature, &post.Email, &post.Subject,
+			&post.Message, &post.MessageRaw, &post.Password, &post.DeletedAt, &post.IsDeleted,
 			&post.BannedMessage, &post.Flag, &post.Country,
 		); err != nil {
 			return posts, err

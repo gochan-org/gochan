@@ -25,7 +25,7 @@ function uploadThumbnailChanged(browseEl) {
 	<input name="password" type="hidden" value="{{.password}}" />
 	<input name="doedit" type="hidden" value="post" />
 	<table id="postbox-static">
-		<tr><th class="postblock">Name</th><td>{{stringAppend .post.Name "!" .post.Tripcode}}</td></tr>
+		<tr><th class="postblock">Name</th><td>{{.post.Name}}{{if ne .post.Tripcode ""}}{{if .post.IsSecureTripcode}}!{{end}}!{{.post.Tripcode}}{{end}}</td></tr>
 		<tr><th class="postblock">Email</th><td><input type="email" name="editemail" maxlength="100" size="28" autocomplete="off" value="{{.post.Email}}"/></td></tr>
 		<tr><th class="postblock">Subject</th><td><input type="text" name="editsubject" maxlength="100" size="28" autocomplete="off" value="{{.post.Subject}}"/>
 			<input type="submit" value="Update"/></td></tr>
