@@ -4,7 +4,6 @@
 -- Versioning numbering goes by whole numbers. Upgrade script migrate existing databases between versions
 -- Foreign and unique constraints must be named so they can be dropped. 
 -- MySQL requires constraint names to be unique globally, hence the long constraint names.
--- Database version: 1
 
 CREATE TABLE DBPREFIXdatabase_version(
 	component VARCHAR(40) NOT NULL PRIMARY KEY,
@@ -56,6 +55,7 @@ CREATE TABLE DBPREFIXthreads(
 	stickied BOOL NOT NULL DEFAULT FALSE,
 	anchored BOOL NOT NULL DEFAULT FALSE,
 	cyclical BOOL NOT NULL DEFAULT FALSE,
+	spoilered BOOL NOT NULL DEFAULT FALSE,
 	last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_deleted BOOL NOT NULL DEFAULT FALSE,

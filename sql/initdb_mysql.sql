@@ -1,11 +1,3 @@
--- Gochan master template for new database script
--- Contains macros in the form [curlybrace open]macro text[curlybrace close]
--- Macros are substituted by build_initdb.py to the supported database files. Must not contain extra spaces
--- Versioning numbering goes by whole numbers. Upgrade script migrate existing databases between versions
--- Foreign and unique constraints must be named so they can be dropped. 
--- MySQL requires constraint names to be unique globally, hence the long constraint names.
--- Database version: 1
-
 CREATE TABLE DBPREFIXdatabase_version(
 	component VARCHAR(40) NOT NULL PRIMARY KEY,
 	version INT NOT NULL
@@ -56,6 +48,7 @@ CREATE TABLE DBPREFIXthreads(
 	stickied BOOL NOT NULL DEFAULT FALSE,
 	anchored BOOL NOT NULL DEFAULT FALSE,
 	cyclical BOOL NOT NULL DEFAULT FALSE,
+	spoilered BOOL NOT NULL DEFAULT FALSE,
 	last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_deleted BOOL NOT NULL DEFAULT FALSE,
@@ -292,7 +285,6 @@ CREATE TABLE DBPREFIXfilter_hits(
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE
 );
-
 
 INSERT INTO DBPREFIXdatabase_version(component, version)
 	VALUES('gochan', 4);
