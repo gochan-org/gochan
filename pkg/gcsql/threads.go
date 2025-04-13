@@ -20,23 +20,20 @@ var (
 )
 
 // CreateThread creates a new thread in the database with the given board ID and statuses
-func CreateThread(requestOptions *RequestOptions, boardID int, locked bool, stickied bool, anchored bool, cyclic bool) (threadID int, err error) {
+func CreateThread(requestOptions *RequestOptions, thread *Thread) (err error) {
 	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
 	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical) VALUES (?,?,?,?,?)`
 	var boardIsLocked bool
-	if err = QueryRow(requestOptions, lockedQuery, []any{boardID}, []any{&boardIsLocked}); err != nil {
-		return 0, err
+	if err = QueryRow(requestOptions, lockedQuery, []any{&thread.BoardID}, []any{&boardIsLocked}); err != nil {
+		return err
 	}
 	if boardIsLocked {
-		return 0, ErrBoardIsLocked
+		return ErrBoardIsLocked
 	}
-	if _, err = Exec(requestOptions, insertQuery, boardID, locked, stickied, anchored, cyclic); err != nil {
-		return 0, err
+	if _, err = Exec(requestOptions, insertQuery, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic); err != nil {
+		return err
 	}
-	if err = QueryRow(requestOptions, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&threadID}); err != nil {
-		return 0, err
-	}
-	return threadID, nil
+	return QueryRow(requestOptions, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&thread.ID})
 }
 
 // GetThread returns a a thread object from the database, given its ID

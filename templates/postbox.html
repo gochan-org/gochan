@@ -41,9 +41,12 @@
 			<tr id="threadoptions" {{if $noCyclicThreads}}style="display: none;"{{end}}>
 				<th class="postblock">Options</th>
 				<td>
-					{{if not $noCyclicThreads}}
-					<label for="cyclic"><input type="checkbox" name="cyclic" id="cyclic"> Cyclic thread</label>
-					{{end}}
+					{{- if not $noCyclicThreads -}}
+						<label for="cyclic"><input type="checkbox" name="cyclic" id="cyclic"> Cyclic thread</label>
+					{{- end -}}
+					{{- if $.boardConfig.EnableSpoileredThreads -}}
+						<label for="spoilerthread"><input type="checkbox" name="spoilerthread" id="spoilerthread"> Spoiler thread</label>
+					{{- end -}}
 				</td>
 			</tr>{{end}}
 			<tr><th class="postblock">Password</th><td><input type="password" id="postpassword" name="postpassword" size="14" /> (for post/file deletion)</td></tr>

@@ -35,21 +35,31 @@ type migrationPost struct {
 func (*Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zerolog.Event) error {
 	var err error
 	opts := &gcsql.RequestOptions{Tx: tx}
+	thread := &gcsql.Thread{
+		ID:       post.ThreadID,
+		BoardID:  post.boardID,
+		Locked:   post.locked,
+		Stickied: post.stickied,
+		Anchored: post.autosage,
+		Cyclic:   false,
+	}
 	if post.oldParentID == 0 {
 		// migrating post was a thread OP, create the row in the threads table
-		if post.ThreadID, err = gcsql.CreateThread(opts, post.boardID, false, post.stickied, post.autosage, false); err != nil {
+		if err = gcsql.CreateThread(opts, thread); err != nil {
 			errEv.Err(err).Caller().
 				Int("boardID", post.boardID).
 				Msg("Failed to create thread")
 		}
+		post.ThreadID = thread.ID
 	}
 
 	// insert thread top post
-	if err = post.Insert(true, post.boardID, false, post.stickied, post.autosage, false, opts); err != nil {
+	if err = post.Insert(true, thread, true, opts); err != nil {
 		errEv.Err(err).Caller().
 			Int("boardID", post.boardID).
 			Int("threadID", post.ThreadID).
 			Msg("Failed to insert thread OP")
+		return err
 	}
 
 	if post.filename != "" {

@@ -80,11 +80,11 @@ func createThreadTestRun(t *testing.T, driver string) {
 	mock.ExpectPrepare(query).ExpectQuery().
 		WithArgs(1).WillReturnRows(mock.NewRows([]string{"locked"}).AddRow(false))
 
-	threadID, err := CreateThread(nil, 1, false, false, false, false)
-	if !assert.NoError(t, err) {
+	thread := &Thread{BoardID: 1}
+	if !assert.NoError(t, CreateThread(nil, thread)) {
 		t.FailNow()
 	}
-	p := Post{ThreadID: threadID, Message: "test", MessageRaw: "test", IP: "192.168.56.1", IsTopPost: true, CreatedOn: time.Now()}
+	p := Post{ThreadID: thread.ID, Message: "test", MessageRaw: "test", IP: "192.168.56.1", IsTopPost: true, CreatedOn: time.Now()}
 
 	if driver == "mysql" {
 		query = insertIntoPostsMySQL
@@ -103,9 +103,9 @@ func createThreadTestRun(t *testing.T, driver string) {
 		query = `UPDATE threads SET last_bump = CURRENT_TIMESTAMP WHERE id = \$1`
 	}
 	mock.ExpectPrepare(query).ExpectExec().
-		WithArgs(threadID).WillReturnResult(sqlmock.NewResult(1, 1))
+		WithArgs(thread.ID).WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
-	if !assert.NoError(t, p.Insert(true, 1, false, false, false, false)) {
+	if !assert.NoError(t, p.Insert(true, thread, false)) {
 		t.FailNow()
 	}
 	assert.NoError(t, mock.ExpectationsWereMet())

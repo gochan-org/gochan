@@ -36,7 +36,7 @@ coalesce(f.thumbnail_width, 0) AS tw,
 coalesce(f.thumbnail_height, 0) AS th,
 coalesce(f.width, 0) AS width,
 coalesce(f.height, 0) AS height,
-t.locked, t.stickied, t.cyclical, flag, country, p.is_deleted
+t.locked, t.stickied, t.cyclical, t.spoilered, flag, country, p.is_deleted
 FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id

@@ -423,6 +423,13 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	isSpoileredThread := request.PostFormValue("spoilerthread") == "on"
+	if isSpoileredThread && !boardConfig.EnableSpoileredThreads {
+		writer.WriteHeader(http.StatusBadRequest)
+		server.ServeError(writer, "Board does not support spoilered threads", wantsJSON, nil)
+		return
+	}
+
 	var delay int
 	var tooSoon bool
 	if post.ThreadID == 0 {
@@ -433,6 +440,10 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		// replying to a thread
 		delay, err = gcsql.SinceLastPost(post.IP)
 		tooSoon = delay < boardConfig.Cooldowns.Reply
+		if isSpoileredThread {
+			warnEv.Msg("User submitted a form with spoilered thread enabled while replying to a thread")
+			server.ServeError(writer, server.NewServerError("Invalid request", http.StatusBadRequest), wantsJSON, nil)
+		}
 	}
 	if err != nil {
 		errEv.Err(err).Caller().Str("boardDir", board.Dir).Msg("Unable to check post cooldown")
@@ -526,7 +537,15 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 	_, emailCommand := getEmailAndCommand(request)
-	if err = post.Insert(emailCommand != "sage", board.ID, isLocked, isSticky, false, isCyclic); err != nil {
+
+	thread := &gcsql.Thread{
+		BoardID:  board.ID,
+		Locked:   isLocked,
+		Stickied: isSticky,
+		Anchored: emailCommand == "sage" && post.ThreadID == 0,
+	}
+
+	if err = post.Insert(emailCommand != "sage", thread, false); err != nil {
 		errEv.Err(err).Caller().
 			Str("sql", "postInsertion").
 			Msg("Unable to insert post")

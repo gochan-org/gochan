@@ -28,11 +28,10 @@ const (
 		`ORDER BY\s+position ASC,\s*name ASC`
 )
 
-func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) bool {
-	t.Helper()
+func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) {
 	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
-		return false
+		t.FailNow()
 	}
 
 	rows := sqlmock.NewRows([]string{"boards.id", "section_id", "uri", "dir", "navbar_position", "title",
@@ -55,14 +54,17 @@ func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) bool
 
 	config.SetTestTemplateDir("templates")
 
-	if !assert.NoError(t, gctemplates.InitTemplates(which...)) {
-		return false
+	if !assert.NoError(t, gctemplates.InitTemplates()) {
+		t.FailNow()
 	}
-	return assert.NoError(t, mock.ExpectationsWereMet())
+
+	if !assert.NoError(t, mock.ExpectationsWereMet()) {
+		t.FailNow()
+	}
+
 }
 
 func runTemplateTestCases(t *testing.T, templateName string, testCases []templateTestCase) {
-	t.Helper()
 	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
 		return
@@ -73,12 +75,14 @@ func runTemplateTestCases(t *testing.T, templateName string, testCases []templat
 		return
 	}
 
-	if !initTemplatesMock(t, mock) {
-		return
-	}
+	initTemplatesMock(t, mock, templateName)
 
 	serverutil.InitMinifier()
 	for _, tC := range testCases {
+		if tC.getDefaultStyle {
+			mock.ExpectPrepare(`SELECT default_style FROM boards WHERE dir = \?`).ExpectQuery().
+				WithArgs("test").WillReturnRows(sqlmock.NewRows([]string{"default_style"}).AddRow("pipes.css"))
+		}
 		t.Run(tC.desc, func(t *testing.T) {
 			tC.Run(t, templateName)
 		})
@@ -98,16 +102,7 @@ func TestJsConstsTemplate(t *testing.T) {
 }
 
 func TestTemplateBase(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if !assert.NoError(t, err) {
-		return
-	}
-	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "gochan", "")
-	if !assert.NoError(t, gcsql.SetTestingDB("mysql", "gochan", "", db)) {
-		return
-	}
-
-	initTemplatesMock(t, mock)
+	runTemplateTestCases(t, "", nil)
 }
 
 func TestBaseFooter(t *testing.T) {

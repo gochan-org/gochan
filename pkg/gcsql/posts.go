@@ -353,6 +353,16 @@ func (p *Post) InCyclicThread() (bool, error) {
 	return cyclic, err
 }
 
+// InSpoileredThread returns true if the post is in a spoilered thread
+func (p *Post) InSpoileredThread() (bool, error) {
+	var spoilered bool
+	err := QueryRowTimeoutSQL(nil, "SELECT spoilered FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&spoilered})
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrThreadDoesNotExist
+	}
+	return spoilered, err
+}
+
 // Delete sets the post as deleted and sets the deleted_at timestamp to the current time
 func (p *Post) Delete(requestOptions ...*RequestOptions) error {
 	shouldCommit := len(requestOptions) == 0
@@ -391,8 +401,9 @@ func (p *Post) Delete(requestOptions ...*RequestOptions) error {
 	return nil
 }
 
-// Insert inserts the post into the database with the optional given options
-func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, anchored bool, cyclical bool, requestOptions ...*RequestOptions) error {
+// Insert inserts the post into the database with the optional given options. If force is not true and
+// the thread is locked, it will return an error. Force should only be used for special cases (ex: migration)
+func (p *Post) Insert(bumpThread bool, thread *Thread, force bool, requestOptions ...*RequestOptions) error {
 	opts := setupOptions(requestOptions...)
 	if len(requestOptions) == 0 {
 		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
@@ -421,19 +432,20 @@ func (p *Post) Insert(bumpThread bool, boardID int, locked bool, stickied bool, 
 		// thread doesn't exist yet, this is a new post
 		p.IsTopPost = true
 		var threadID int
-		threadID, err = CreateThread(opts, boardID, locked, stickied, anchored, cyclical)
-		if err != nil {
+		if err = CreateThread(opts, thread); err != nil {
 			return err
 		}
 		p.ThreadID = threadID
 	} else {
-		var threadIsLocked bool
-		if err = QueryRow(opts, "SELECT locked FROM DBPREFIXthreads WHERE id = ?",
-			[]any{p.ThreadID}, []any{&threadIsLocked}); err != nil {
-			return err
-		}
-		if threadIsLocked {
-			return ErrThreadLocked
+		if !force {
+			var threadIsLocked bool
+			if err = QueryRow(opts, "SELECT locked FROM DBPREFIXthreads WHERE id = ?",
+				[]any{p.ThreadID}, []any{&threadIsLocked}); err != nil {
+				return err
+			}
+			if threadIsLocked {
+				return ErrThreadLocked
+			}
 		}
 	}
 
