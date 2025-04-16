@@ -18,7 +18,7 @@ DROP VIEW IF EXISTS DBPREFIXv_thread_board_ids;
 
 -- create views
 CREATE VIEW DBPREFIXv_thread_board_ids AS
-SELECT id, board_id from DBPREFIXthreads;
+SELECT id, board_id, is_spoilered from DBPREFIXthreads;
 
 CREATE VIEW DBPREFIXv_top_post_thread_ids AS
 SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post;
@@ -28,15 +28,16 @@ SELECT p.id AS id, p.thread_id AS thread_id, ip, name, tripcode, is_secure_tripc
 email, subject, created_on, created_on as last_modified, op.id AS parent_id, t.last_bump as last_bump,
 message, message_raw, t.board_id,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
-coalesce(f.original_filename, '') as original_filename,
-coalesce(f.filename, '') AS filename,
-coalesce(f.checksum, '') AS checksum,
-coalesce(f.file_size, 0) AS filesize,
-coalesce(f.thumbnail_width, 0) AS tw,
-coalesce(f.thumbnail_height, 0) AS th,
-coalesce(f.width, 0) AS width,
-coalesce(f.height, 0) AS height,
-t.locked, t.stickied, t.cyclical, t.spoilered, flag, country, p.is_deleted
+COALESCE(f.original_filename, '') as original_filename,
+COALESCE(f.filename, '') AS filename,
+COALESCE(f.checksum, '') AS checksum,
+COALESCE(f.file_size, 0) AS filesize,
+COALESCE(f.thumbnail_width, 0) AS tw,
+COALESCE(f.thumbnail_height, 0) AS th,
+COALESCE(f.width, 0) AS width,
+COALESCE(f.height, 0) AS height,
+COALESCE(f.is_spoilered) AS spoiler_file,
+t.locked, t.stickied, t.cyclical, t.is_spoilered as spoiler_thread, flag, country, p.is_deleted
 FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
@@ -68,12 +69,13 @@ CREATE VIEW DBPREFIXv_front_page_posts AS
 SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) as dir,
 COALESCE(f.filename, '') as filename, op.id as op_id,
-COALESCE(f.original_filename, '') as original_filename
+COALESCE(f.original_filename, '') as original_filename,
+COALESCE(f.is_spoilered) AS spoiler_file
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
-LEFT JOIN (SELECT post_id, filename, original_filename FROM DBPREFIXfiles) f on f.post_id = DBPREFIXposts.id
+LEFT JOIN DBPREFIXfiles f on f.post_id = DBPREFIXposts.id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = DBPREFIXposts.thread_id
-WHERE DBPREFIXposts.is_deleted = FALSE;
+WHERE DBPREFIXposts.is_deleted = FALSE AND t.is_spoilered = FALSE;
 
 CREATE VIEW DBPREFIXv_front_page_posts_with_file AS
 SELECT * FROM DBPREFIXv_front_page_posts
@@ -81,7 +83,7 @@ WHERE filename IS NOT NULL AND filename <> '' AND filename <> 'deleted';
 
 CREATE VIEW DBPREFIXv_upload_info AS
 SELECT p1.id as id, (SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p1.thread_id = p2.thread_id LIMIT 1) AS op,
-filename, is_spoilered, width, height, thumbnail_width, thumbnail_height
+filename, f.is_spoilered, width, height, thumbnail_width, thumbnail_height
 FROM DBPREFIXposts p1
 JOIN DBPREFIXthreads t ON t.id = p1.thread_id
 JOIN DBPREFIXboards b ON b.id = t.board_id

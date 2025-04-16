@@ -274,16 +274,16 @@ type Staff struct {
 
 // table: DBPREFIXthreads
 type Thread struct {
-	ID        int       // sql: id
-	BoardID   int       // sql: board_id
-	Locked    bool      // sql: locked
-	Stickied  bool      // sql: stickied
-	Anchored  bool      // sql: anchored
-	Cyclic    bool      // sql: cyclical
-	Spoilered bool      // sql: spoilered
-	LastBump  time.Time // sql: last_bump
-	DeletedAt time.Time // sql: deleted_at
-	IsDeleted bool      // sql: is_deleted
+	ID          int       // sql: id
+	BoardID     int       // sql: board_id
+	Locked      bool      // sql: locked
+	Stickied    bool      // sql: stickied
+	Anchored    bool      // sql: anchored
+	Cyclic      bool      // sql: cyclical
+	IsSpoilered bool      // sql: is_spoilered
+	LastBump    time.Time // sql: last_bump
+	DeletedAt   time.Time // sql: deleted_at
+	IsDeleted   bool      // sql: is_deleted
 }
 
 // Wordfilter is used for filters that are expected to have a single FilterCondition and a "replace" MatchAction

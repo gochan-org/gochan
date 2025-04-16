@@ -194,12 +194,12 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// add spoilered column to DBPREFIXthreads
-	dataType, err = common.ColumnType(ctx, db, nil, "spoilered", "DBPREFIXthreads", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXthreads ADD COLUMN spoilered BOOL NOT NULL DEFAULT FALSE`
+		query = `ALTER TABLE DBPREFIXthreads ADD COLUMN is_spoilered BOOL NOT NULL DEFAULT FALSE`
 		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
 			return err
 		}
