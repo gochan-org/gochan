@@ -1,7 +1,6 @@
 module github.com/gochan-org/gochan
 
 go 1.23.0
-
 toolchain go1.23.7
 
 require (
@@ -26,8 +25,8 @@ require (
 	github.com/vadv/gopher-lua-libs v0.5.0
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/crypto v0.36.0
-	golang.org/x/image v0.25.0
-	golang.org/x/net v0.37.0
+	golang.org/x/image v0.23.0
+	golang.org/x/net v0.38.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	layeh.com/gopher-luar v1.0.11
 )
