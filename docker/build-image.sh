@@ -2,8 +2,7 @@
 
 set -euo pipefail
 
-apk add ffmpeg python3 git gcc openssl exiftool musl-dev
-
+apk add ffmpeg python3 git gcc openssl exiftool musl-dev nodejs npm
 CFG_DBTYPE=$DBTYPE
 
 if [ "$DBTYPE" = "mariadb" ]; then
@@ -28,6 +27,8 @@ sed -i /etc/gochan/gochan.json \
 	-e 's/"DBtype": .*/"DBtype": "'$CFG_DBTYPE'",/'
 
 mkdir -p /var/www/gochan
+npm --prefix frontend/ install
+npm --prefix frontend/ run build-ts
 echo "Building gochan executable"
 go mod tidy
 ./build.py && ./build.py install --symlinks
