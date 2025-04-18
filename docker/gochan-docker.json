@@ -98,18 +98,18 @@
 		}
 	],
 	"MaxLineLength": 150,
-	"ReservedTrips": [
-		"thischangesto##this",
-		"andthischangesto##this"
-	],
+	"ReservedTrips": {
+		"thischangesto": "this",
+		"andthischangesto": "this"
+	},
 	"RepliesOnBoardPage": 3,
 	"StickyRepliesOnBoardPage": 1,
 	"NewThreadsRequireUpload": false,
 	"CyclicalThreadNumPosts": 500,
-	"BanColors": [
-		"admin:#0000A0",
-		"somemod:blue"
-	],
+	"BanColors": {
+		"admin": "#0000A0",
+		"somemod": "blue"
+	},
 	"BanMessage": "USER WAS BANNED FOR THIS POST",
 	"EmbedWidth": 200,
 	"EmbedHeight": 164,

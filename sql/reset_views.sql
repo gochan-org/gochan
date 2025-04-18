@@ -63,7 +63,7 @@ SELECT post_id, d.thread_id, op_id, d.is_top_post, filename, dir
 FROM DBPREFIXv_posts_to_delete d
 INNER JOIN DBPREFIXposts p ON p.id = post_id
 INNER JOIN DBPREFIXthreads t ON d.thread_id = t.id
-WHERE p.is_deleted = 0 AND d.is_top_post = 0 and t.cyclical = 1;
+WHERE p.is_deleted = FALSE AND d.is_top_post = FALSE and t.cyclical = TRUE;
 
 CREATE VIEW DBPREFIXv_front_page_posts AS
 SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,

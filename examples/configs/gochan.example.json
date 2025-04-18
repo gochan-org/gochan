@@ -69,10 +69,10 @@
 	"NewThreadDelay": 30,
 	"ReplyDelay": 7,
 	"MaxLineLength": 150,
-	"ReservedTrips": [
-		"thischangesto##this",
-		"andthischangesto##this"
-	],
+	"ReservedTrips": {
+		"thischangesto": "this",
+		"andthischangesto": "this"
+	},
 
 	"ThumbWidth": 200,
 	"ThumbHeight": 200,
@@ -92,10 +92,10 @@
 	"ThreadsPerPage": 15,
 	"RepliesOnBoardPage": 3,
 	"StickyRepliesOnBoardPage": 1,
-	"BanColors": [
-		"admin:#0000A0",
-		"somemod:blue"
-	],
+	"BanColors": {
+		"admin": "#0000A0",
+		"somemod": "blue"
+	},
 	"BanMessage": "USER WAS BANNED FOR THIS POST",
 
 	"EnableCyclicThreads": true,

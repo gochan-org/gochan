@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine3.19
+FROM golang:1.23-alpine3.19
 
 WORKDIR /opt/gochan
 
