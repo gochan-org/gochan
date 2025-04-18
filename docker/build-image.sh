@@ -29,4 +29,5 @@ sed -i /etc/gochan/gochan.json \
 
 mkdir -p /var/www/gochan
 echo "Building gochan executable"
+go mod tidy
 ./build.py && ./build.py install --symlinks
