@@ -20,7 +20,8 @@
             "mode": "auto",
             "cwd":"${workspaceFolder}",
             "program": "${workspaceFolder}/cmd/gochan-migration/",
-            "showGlobalVariables": true
+            "showGlobalVariables": true,
+            "args": ["-updatedb"] 
         }
     ]
 }

@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine3.19
+FROM golang:1.24-alpine
 
 WORKDIR /opt/gochan
 
@@ -13,6 +13,9 @@ ENV DBHOST=${GOCHAN_DBHOST}
 
 COPY docker/build-image.sh .
 
+RUN apk update && apk add --no-cache python3 nodejs npm
+RUN npm --prefix frontend/ install
+RUN ["python3", "build.py", "js"]
 RUN ["./build-image.sh"]
 
 CMD ["/opt/gochan/docker/startup.sh"]

@@ -7,8 +7,8 @@ DROP VIEW IF EXISTS DBPREFIXv_upload_info;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts_with_file;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts;
 DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete_file_only;
-DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete;
 DROP VIEW IF EXISTS DBPREFIXv_posts_cyclical_check;
+DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete;
 DROP VIEW IF EXISTS DBPREFIXv_recent_posts;
 DROP VIEW IF EXISTS DBPREFIXv_building_posts;
 DROP VIEW IF EXISTS DBPREFIXv_top_post_thread_ids;
@@ -61,7 +61,7 @@ SELECT post_id, d.thread_id, op_id, d.is_top_post, filename, dir
 FROM DBPREFIXv_posts_to_delete d
 INNER JOIN DBPREFIXposts p ON p.id = post_id
 INNER JOIN DBPREFIXthreads t ON d.thread_id = t.id
-WHERE p.is_deleted = 0 AND d.is_top_post = 0 and t.cyclical = 1;
+WHERE p.is_deleted = FALSE AND d.is_top_post = FALSE and t.cyclical = TRUE;
 
 CREATE VIEW DBPREFIXv_front_page_posts AS
 SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,
