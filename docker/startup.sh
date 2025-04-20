@@ -15,8 +15,15 @@ linkwww static
 linkwww favicon.png
 linkwww firstrun.html
 
-if [ "$DBTYPE" != "sqlite3" ]; then
-    echo "pinging database $DBHOST, DBTYPE: '$DBTYPE'"
-    ./docker/wait-for.sh "$DBHOST" -t 30
+mkdir -p /etc/gochan
+if [ ! -e "/etc/gochan/gochan.json" ]; then
+    echo "gochan.json not found in /etc/gochan/, moving /opt/gochan/gochan-init.json to /etc/gochan/gochan.json"
+    mv /opt/gochan/gochan-init.json /etc/gochan/gochan.json
 fi
+
+if [ "$DB_TYPE" != "sqlite3" ]; then
+    echo "pinging database $DB_HOST, DBTYPE: '$DB_TYPE'"
+    ./docker/wait-for.sh "$DB_HOST" -t 30
+fi
+
 gochan

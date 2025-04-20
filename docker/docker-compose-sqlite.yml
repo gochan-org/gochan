@@ -4,8 +4,10 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        - GOCHAN_DBTYPE=sqlite3
-        - GOCHAN_DBHOST=\/var\/lib\/gochan\/gochan.db
+        - GOCHAN_PORT=80
+        - GOCHAN_SITE_HOST=127.0.0.1
+        - GOCHAN_DB_TYPE=sqlite3
+        - GOCHAN_DB_HOST=\/var\/lib\/gochan\/gochan.db
     container_name: gochan-server
     ports:
       - "80:80"
@@ -13,3 +15,4 @@ services:
       - ./volumes/gochan/log:/var/log/gochan
       - ./volumes/gochan/www:/var/www/gochan
       - ./volumes/gochan/db:/var/lib/gochan
+      - ./volumes/gochan/config:/etc/gochan
