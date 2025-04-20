@@ -3,7 +3,7 @@
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
-export GO_VERSION=1.23
+export GO_VERSION=1.24.2
 
 if [ -z "$DBTYPE" ]; then
 	echo "DBTYPE environment variable not set, must be 'mysql', 'postgresql', or 'sqlite3'"
@@ -43,7 +43,7 @@ if [ "$DBTYPE" == "mysql" ]; then
 	fi
 elif [ "$DBTYPE" == "postgresql" ]; then
 	# using PostgreSQL (mostly stable)
-	apt-get -y install postgresql postgresql-contrib sudo
+	apt-get -y install postgresql postgresql-contrib
 
 	systemctl start postgresql
 	sudo -u postgres psql -f - <<- EOF
@@ -73,9 +73,12 @@ else
 	exit 1
 fi
 
-apt-get -y install git subversion mercurial nginx ffmpeg golang-${GO_VERSION}
+apt-get -y install git subversion mercurial nginx ffmpeg nodejs npm
 
-ln -sf /usr/lib/go-${GO_VERSION}/bin/* /usr/local/bin/
+wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz
+tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+rm go${GO_VERSION}.linux-amd64.tar.gz
+ln -sf /usr/local/go/bin/* /usr/local/bin/
 
 rm -f /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*
 ln -sf /vagrant/examples/configs/gochan-fastcgi.nginx /etc/nginx/sites-available/gochan.nginx
@@ -136,6 +139,11 @@ export DBTYPE=$DBTYPE
 export GOPATH=/home/vagrant/go
 EOF
 
+npm install -g n
+n latest
+hash -r
+npm install -g npm@latest
+
 su - vagrant <<EOF
 echo 'alias bbig="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan"' >> /home/vagrant/.bash_aliases
 mkdir -p /home/vagrant/go
@@ -146,6 +154,7 @@ cd ..
 mkdir -p $GOPATH/src/github.com/gochan-org/gochan
 cp -r pkg $GOPATH/src/github.com/gochan-org/gochan
 ./build.py
+npm --prefix frontend run-script build-ts
 EOF
 
 cd /vagrant

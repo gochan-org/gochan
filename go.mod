@@ -2,7 +2,7 @@ module github.com/gochan-org/gochan
 
 go 1.23.0
 
-toolchain go1.23.7
+toolchain go1.24.1
 
 require (
 	github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d

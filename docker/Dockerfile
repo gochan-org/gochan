@@ -1,15 +1,19 @@
-FROM golang:1.23-alpine3.19
+FROM golang:1.24-alpine3.20
 
 WORKDIR /opt/gochan
 
 COPY . .
-COPY docker/gochan-docker.json /etc/gochan/gochan.json
+COPY examples/configs/gochan.example.json /opt/gochan/gochan-init.json
 
-ARG GOCHAN_DBTYPE
-ARG GOCHAN_DBHOST
+ARG GOCHAN_PORT="80"
+ARG GOCHAN_SITE_HOST="127.0.0.1"
+ARG GOCHAN_DB_TYPE
+ARG GOCHAN_DB_HOST
 
-ENV DBTYPE=${GOCHAN_DBTYPE}
-ENV DBHOST=${GOCHAN_DBHOST}
+ENV GOCHAN_PORT=${GOCHAN_PORT}
+ENV SITE_HOST=${GOCHAN_SITE_HOST}
+ENV DB_TYPE=${GOCHAN_DB_TYPE}
+ENV DB_HOST=${GOCHAN_DB_HOST}
 
 COPY docker/build-image.sh .
 

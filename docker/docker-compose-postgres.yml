@@ -4,14 +4,17 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        - GOCHAN_DBTYPE=postgres
-        - GOCHAN_DBHOST=gochan-postgres:5432
+        - GOCHAN_PORT=80
+        - GOCHAN_SITE_HOST=127.0.0.1
+        - GOCHAN_DB_TYPE=postgres
+        - GOCHAN_DB_HOST=gochan-postgres:5432
     container_name: gochan-server
     ports:
       - "80:80"
     volumes:
       - ./volumes/gochan/log:/var/log/gochan
       - ./volumes/gochan/www:/var/www/gochan
+      - ./volumes/gochan/config:/etc/gochan
     networks:
       - gochan-bridge
     depends_on:
