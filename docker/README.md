@@ -1,9 +1,14 @@
 # Docker usage info
 To start gochan using Docker with one of the .yml files, run `docker compose -f docker-compose-<dbtype>.yml up`. It will build and spin up a container for the gochan server and a container for the database, with the exception of SQLite, which is loaded from a file.
 
-When the containers are started, they will mount volumes in the volumes directory for access to gochan logs, the document root, and database data files.
+When the containers are started, they will mount volumes in the volumes directory for access to gochan logs, the document root, the configuration, and database data files.
 
-## Boring stuff
-Previously, gochan's default docker-compose.yml was divided into two services, gochan+nginx and db, which mainly supported MariaDB. Now, there are four options for docker-compose, one for each database provider (with MariaDB and MySQL separated). The SyncForMac container file appears to have been incomplete so it has been removed since I am unable to test its usefulness.
+See docker-compose-*.yml files for example usage
 
-Nginx has also been removed, as it is not really necessary to run a gochan server. It is only really necessary if you want to serve HTTPS (which you should). For a dev environment, you can just use any of the provided docker-compose files. For a production server, you can run nginx outside Docker (or in a separate container) and just forward ports accordingly.
+## Dockerfile args
+Arg              | Default value | Description
+-----------------|---------------|-----------------
+GOCHAN_PORT      | 80            | The port that the server will listen on. You will want to expose the same port to the host.
+GOCHAN_SITE_HOST | 127.0.0.1     | The host that the server will expect incoming requests to be for. for example, if your server is at 1.2.3.4 but is behind Cloudflare using domain example.com, you will need to set this to example.com
+GOCHAN_DB_TYPE   | *none*        | This mostly corresponds to the DBtype config value, the SQL driver name to be used. The exception being "mariadb", which should be "mysql" in gochan.json. Here, "mysql" refers specifically to the mainline MySQL implementation.
+GOCHAN_DB_HOST   | *none*        | The host and port to connect to the database for MySQL/MariaDB, Postgresql, or the path to the SQLite database file.
