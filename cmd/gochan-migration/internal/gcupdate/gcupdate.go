@@ -59,22 +59,11 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 	gcsql.SetDB(dbu.db)
 
 	sqlConfig := config.GetSQLConfig()
-	var tableCountQuery string
-	var tableCount int
-	switch sqlConfig.DBtype {
-	case "mysql":
-		tableCountQuery = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE ?`
-	case "postgres", "postgresql":
-		tableCountQuery = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = CURRENT_DATABASE() AND table_name LIKE ?`
-	case "sqlite3":
-		tableCountQuery = `SELECT COUNT(*) FROM sqlite_master WHERE name LIKE ? AND type = 'table'`
-	default:
-		return false, gcsql.ErrUnsupportedDB
-	}
-	if err = dbu.db.QueryRow(nil, tableCountQuery, []any{sqlConfig.DBprefix + "%"}, []any{&tableCount}); err != nil {
+	prefixedTablesExist, err := gcsql.DoesGochanPrefixTableExist()
+	if err != nil {
 		return false, err
 	}
-	if tableCount == 0 {
+	if !prefixedTablesExist {
 		return false, common.ErrNotInstalled
 	}
 

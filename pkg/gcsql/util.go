@@ -455,9 +455,9 @@ func RegisterComponent(tx *sql.Tx, component string, version int) error {
 	return err
 }
 
-// doesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
+// DoesGochanPrefixTableExist returns true if any table with a gochan prefix was found.
 // Returns false if the prefix is an empty string
-func doesGochanPrefixTableExist() (bool, error) {
+func DoesGochanPrefixTableExist() (bool, error) {
 	sqlConfig := config.GetSQLConfig()
 	if sqlConfig.DBprefix == "" {
 		return false, nil
@@ -465,13 +465,12 @@ func doesGochanPrefixTableExist() (bool, error) {
 	var prefixTableExist string
 	switch sqlConfig.DBtype {
 	case "mysql":
-		fallthrough
-	case "postgresql":
-		prefixTableExist = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME LIKE 'DBPREFIX%'`
+		prefixTableExist = `SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'DBPREFIX%'`
+	case "postgres", "postgresql":
+		prefixTableExist = `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'DBPREFIX%'`
 	case "sqlite3":
 		prefixTableExist = `SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name LIKE 'DBPREFIX%'`
 	}
-
 	var count int
 	err := QueryRow(nil, prefixTableExist, []any{}, []any{&count})
 	if err != nil && err != sql.ErrNoRows {

@@ -127,7 +127,7 @@ func main() {
 		common.LogWarning().Msg(err.Error())
 		return
 	} else if err != nil {
-		fatalEv.Err(err).Msg("Unable to migrate database")
+		fatalEv.Msg("Unable to migrate database")
 	}
 	if migrated {
 		common.LogWarning().Msg("Database is already migrated")

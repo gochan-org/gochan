@@ -1,6 +1,7 @@
 package gcsql
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"path"
@@ -55,6 +56,10 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 	}
 	if versionTableExists {
 		databaseVersion, versionError := GetComponentVersion(gochanVersionKeyConstant)
+		if errors.Is(versionError, sql.ErrNoRows) {
+			// table exists but is doeson't have version
+			return 0, 0, ErrInvalidVersion
+		}
 		if versionError != nil {
 			return 0, 0, versionError
 		}
@@ -76,7 +81,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 	//No old or current database versioning tables found.
 	if config.GetSystemCriticalConfig().DBprefix != "" {
 		//Check if any gochan tables exist
-		gochanTableExists, err := doesGochanPrefixTableExist()
+		gochanTableExists, err := DoesGochanPrefixTableExist()
 		if err != nil {
 			return 0, 0, err
 		}
