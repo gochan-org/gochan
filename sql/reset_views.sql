@@ -107,4 +107,4 @@ LEFT JOIN DBPREFIXboards b ON b.id = t.board_id;
 CREATE VIEW DBPREFIXv_post_reports AS
 SELECT r.id, handled_by_staff_id AS staff_id, username AS staff_user, post_id, IP_NTOA as ip, reason, is_cleared
 FROM DBPREFIXreports r LEFT JOIN DBPREFIXstaff s ON handled_by_staff_id = s.id
-WHERE is_cleared = 0;
+WHERE is_cleared = FALSE;

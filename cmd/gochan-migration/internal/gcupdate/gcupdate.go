@@ -2,6 +2,8 @@ package gcupdate
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -55,6 +57,27 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 	errEv := common.LogError()
 
 	gcsql.SetDB(dbu.db)
+
+	sqlConfig := config.GetSQLConfig()
+	var tableCountQuery string
+	var tableCount int
+	switch sqlConfig.DBtype {
+	case "mysql":
+		tableCountQuery = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE ?`
+	case "postgres", "postgresql":
+		tableCountQuery = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = CURRENT_DATABASE() AND table_name LIKE ?`
+	case "sqlite3":
+		tableCountQuery = `SELECT COUNT(*) FROM sqlite_master WHERE name LIKE ? AND type = 'table'`
+	default:
+		return false, gcsql.ErrUnsupportedDB
+	}
+	if err = dbu.db.QueryRow(nil, tableCountQuery, []any{sqlConfig.DBprefix + "%"}, []any{&tableCount}); err != nil {
+		return false, err
+	}
+	if tableCount == 0 {
+		return false, common.ErrNotInstalled
+	}
+
 	migrated, err = dbu.IsMigrated()
 	defer func() {
 		if a := recover(); a != nil {
@@ -65,6 +88,9 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 			errEv.Discard()
 		}
 	}()
+	if errors.Is(err, sql.ErrNoRows) {
+		return migrated, gcsql.ErrInvalidVersion
+	}
 	if err != nil {
 		return migrated, err
 	}
@@ -72,7 +98,6 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 		return migrated, nil
 	}
 
-	sqlConfig := config.GetSQLConfig()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 

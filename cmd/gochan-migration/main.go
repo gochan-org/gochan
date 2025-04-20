@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -121,8 +122,12 @@ func main() {
 	}
 
 	var migrated bool
-	if migrated, err = migrator.MigrateDB(); err != nil {
-		fatalEv.Msg("Unable to migrate database")
+	migrated, err = migrator.MigrateDB()
+	if errors.Is(err, common.ErrNotInstalled) {
+		common.LogWarning().Msg(err.Error())
+		return
+	} else if err != nil {
+		fatalEv.Err(err).Msg("Unable to migrate database")
 	}
 	if migrated {
 		common.LogWarning().Msg("Database is already migrated")

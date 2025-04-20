@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	CommentRemover = regexp.MustCompile("--.*\n?")
+	CommentRemover  = regexp.MustCompile("--.*\n?")
+	ErrNotInstalled = errors.New("database is empty, run gochan to install and initialize it")
 )
 
 // ColumnType returns a string representation of the column's data type. It does not return an error
