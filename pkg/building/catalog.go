@@ -20,6 +20,7 @@ type catalogThreadData struct {
 	OmittedImages int     `json:"omitted_images"` // uploads in the thread but not shown on the board page
 	Stickied      int     `json:"sticky"`
 	IsSpoilered   int     `json:"spoilered"`
+	Cyclical      int     `json:"cyclical"`
 	Locked        int     `json:"closed"`
 	Posts         []*Post `json:"-"`
 	uploads       []gcsql.Upload

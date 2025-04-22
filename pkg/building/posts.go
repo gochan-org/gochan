@@ -207,16 +207,22 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 			dest = append(dest, &ip)
 		}
 		var lastBump time.Time
+		var spoilerFile bool
 		dest = append(dest,
 			&post.Name, &post.Tripcode, &post.IsSecureTripcode, &post.Email, &post.Subject, &post.CreatedOn,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
 			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight, &post.SpoilerFile,
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight, &spoilerFile,
 			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.thread.IsSpoilered,
 			&post.Country.Flag, &post.Country.Name, &post.IsDeleted)
 
 		if err = rows.Scan(dest...); err != nil {
 			return err
+		}
+		if spoilerFile {
+			post.SpoilerFile = 1
+		} else {
+			post.SpoilerFile = 0
 		}
 		if sqlCfg.DBtype != "mysql" {
 			post.IP = net.ParseIP(ip)
