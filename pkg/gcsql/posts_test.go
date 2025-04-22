@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	insertIntoThreadsBase     = `INSERT INTO threads \(board_id, locked, stickied, anchored, cyclical\) VALUES `
-	insertIntoThreadsMySQL    = insertIntoThreadsBase + `\(\?,\?,\?,\?,\?\)`
-	insertIntoThreadsPostgres = insertIntoThreadsBase + `\(\$1,\$2,\$3,\$4,\$5\)`
+	insertIntoThreadsBase     = `INSERT INTO threads \(board_id, locked, stickied, anchored, cyclical, is_spoilered\) VALUES `
+	insertIntoThreadsMySQL    = insertIntoThreadsBase + `\(\?,\?,\?,\?,\?,\?\)`
+	insertIntoThreadsPostgres = insertIntoThreadsBase + `\(\$1,\$2,\$3,\$4,\$5,\$6\)`
 
 	insertIntoPostsBase = `INSERT INTO posts\s*` +
 		`\(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,\s+` +
@@ -66,7 +66,7 @@ func createThreadTestRun(t *testing.T, driver string) {
 		query = insertIntoThreadsPostgres
 	}
 	mock.ExpectPrepare(query).
-		ExpectExec().WithArgs(1, false, false, false, false).WillReturnResult(sqlmock.NewResult(1, 1))
+		ExpectExec().WithArgs(1, false, false, false, false, false).WillReturnResult(sqlmock.NewResult(1, 1))
 
 	mock.ExpectPrepare(`SELECT MAX\(id\) FROM threads`).ExpectQuery().
 		WillReturnRows(mock.NewRows([]string{"MAX(id)"}).AddRow(1))
