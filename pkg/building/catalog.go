@@ -19,6 +19,7 @@ type catalogThreadData struct {
 	OmittedPosts  int     `json:"omitted_posts"`  // posts in the thread but not shown on the board page
 	OmittedImages int     `json:"omitted_images"` // uploads in the thread but not shown on the board page
 	Stickied      int     `json:"sticky"`
+	IsSpoilered   int     `json:"spoilered"`
 	Locked        int     `json:"closed"`
 	Posts         []*Post `json:"-"`
 	uploads       []gcsql.Upload
@@ -43,7 +44,7 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 	remainder := len(threads) % threadsPerPage
 	currentThreadIndex := 0
 	var i int
-	for i = 0; i < catalog.numPages; i++ {
+	for i = range catalog.numPages {
 		catalog.pages = append(catalog.pages,
 			catalogPage{
 				PageNum: i + 1,
@@ -63,10 +64,7 @@ func (catalog *boardCatalog) fillPages(threadsPerPage int, threads []catalogThre
 }
 
 func getBoardTopPosts(board string) ([]*Post, error) {
-	const query = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
-		last_modified, parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename,
-		checksum, filesize, tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
-		FROM DBPREFIXv_building_posts WHERE id = parent_id AND dir = ?`
+	const query = buildingPostsBaseQuery + "WHERE id = parent_id AND dir = ?"
 	var posts []*Post
 
 	err := QueryPosts(query, []any{board}, func(p *Post) error {

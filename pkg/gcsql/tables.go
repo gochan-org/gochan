@@ -279,7 +279,7 @@ type Thread struct {
 	Locked      bool      // sql: locked
 	Stickied    bool      // sql: stickied
 	Anchored    bool      // sql: anchored
-	Cyclic      bool      // sql: cyclical
+	Cyclical    bool      // sql: cyclical
 	IsSpoilered bool      // sql: is_spoilered
 	LastBump    time.Time // sql: last_bump
 	DeletedAt   time.Time // sql: deleted_at

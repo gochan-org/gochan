@@ -104,17 +104,17 @@ systemctl restart nginx &
 wait
 
 mkdir -p /etc/gochan
-cp /vagrant/examples/configs/gochan.example.json /etc/gochan/gochan.json
-
-sed -i /etc/gochan/gochan.json \
+cp /vagrant/examples/configs/gochan.example.json /vagrant/gochan.json
+ln -s /vagrant/gochan.json /etc/gochan/gochan.json
+sed -i /vagrant/gochan.json \
 	-e 's/"Port": 8080/"Port": 9000/' \
 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
 	-e "s/\"DBtype\": .*/\"DBtype\": \"$DBTYPE\",/" \
-	-e 's/"DebugMode": false/"DebugMode": true/' \
-	-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
+	-e 's/"SiteHost": .*/"SiteHost": "192.168.56.3",/' \
+	-e 's/"DBpassword": .*/"DBpassword": "gochan",/' \
 	-e 's/"Verbosity": 0/"Verbosity": 1/'
 
 if [ "$DBTYPE" = "postgresql" ]; then

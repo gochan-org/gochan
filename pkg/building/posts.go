@@ -17,6 +17,13 @@ import (
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
 )
 
+const (
+	buildingPostsBaseQuery = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
+		last_modified, parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename,
+		checksum, filesize, tw, th, width, height, spoiler_file, locked, stickied, cyclical, spoiler_thread, flag, country, is_deleted
+		FROM DBPREFIXv_building_posts `
+)
+
 func truncateString(msg string, limit int, ellipsis bool) string {
 	if len(msg) > limit {
 		if ellipsis {
@@ -32,8 +39,8 @@ type PostUploadBase struct {
 	OriginalFilename string `json:"filename"`
 	ThumbnailWidth   int    `json:"tn_w"`
 	ThumbnailHeight  int    `json:"tn_h"`
-
-	uploadPath string
+	SpoilerFile      int    `json:"spoiler"`
+	uploadPath       string
 }
 
 func (p *PostUploadBase) HasEmbed() bool {
@@ -71,11 +78,12 @@ type Post struct {
 	BoardDir string `json:"-"`
 	IP       net.IP `json:"-"`
 	PostUploadBase
-	Checksum     string        `json:"md5"`
-	Extension    string        `json:"extension"`
-	Filesize     int           `json:"fsize"`
-	UploadWidth  int           `json:"w"`
-	UploadHeight int           `json:"h"`
+	Checksum     string `json:"md5"`
+	Extension    string `json:"extension"`
+	Filesize     int    `json:"fsize"`
+	UploadWidth  int    `json:"w"`
+	UploadHeight int    `json:"h"`
+
 	LastModified string        `json:"last_modified"`
 	Country      geoip.Country `json:"-"`
 	thread       gcsql.Thread
@@ -169,7 +177,11 @@ func (p *Post) Stickied() bool {
 }
 
 func (p *Post) Cyclic() bool {
-	return p.thread.Cyclic
+	return p.thread.Cyclical
+}
+
+func (p *Post) SpoilerThread() bool {
+	return p.thread.IsSpoilered
 }
 
 // Select all from v_building_posts (and queries with the same columns) and call the callback function on each Post
@@ -199,9 +211,9 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 			&post.Name, &post.Tripcode, &post.IsSecureTripcode, &post.Email, &post.Subject, &post.CreatedOn,
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
 			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
-			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight,
-			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclic, &post.Country.Flag, &post.Country.Name,
-			&post.IsDeleted)
+			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight, &post.SpoilerFile,
+			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.thread.IsSpoilered,
+			&post.Country.Flag, &post.Country.Name, &post.IsDeleted)
 
 		if err = rows.Scan(dest...); err != nil {
 			return err
@@ -224,10 +236,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 }
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
-	query := `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on, last_modified,
-		parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize,
-		tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
-		FROM DBPREFIXv_building_posts WHERE ip = PARAM_ATON ORDER BY id DESC`
+	query := buildingPostsBaseQuery + "WHERE ip = PARAM_ATON ORDER BY id DESC"
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
@@ -241,10 +250,7 @@ func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
 }
 
 func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
-	const query = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
-		last_modified, parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename,
-		checksum, filesize, tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
-		FROM DBPREFIXv_building_posts WHERE thread_id = ? ORDER BY id ASC`
+	const query = buildingPostsBaseQuery + "WHERE thread_id = ? ORDER BY id ASC"
 	var posts []*Post
 	err := QueryPosts(query, []any{thread.ID}, func(p *Post) error {
 		posts = append(posts, p)
@@ -254,10 +260,7 @@ func getThreadPosts(thread *gcsql.Thread) ([]*Post, error) {
 }
 
 func GetRecentPosts(boardid int, limit int) ([]*Post, error) {
-	query := `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on, last_modified,
-		parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename, checksum, filesize,
-		tw, th, width, height, locked, stickied, cyclical, flag, country, is_deleted
-		FROM DBPREFIXv_building_posts`
+	query := buildingPostsBaseQuery
 	var args []any
 
 	if boardid > 0 {

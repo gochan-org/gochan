@@ -36,7 +36,7 @@ COALESCE(f.thumbnail_width, 0) AS tw,
 COALESCE(f.thumbnail_height, 0) AS th,
 COALESCE(f.width, 0) AS width,
 COALESCE(f.height, 0) AS height,
-COALESCE(f.is_spoilered) AS spoiler_file,
+COALESCE(f.is_spoilered, FALSE) AS spoiler_file,
 t.locked, t.stickied, t.cyclical, t.is_spoilered as spoiler_thread, flag, country, p.is_deleted
 FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
@@ -70,7 +70,7 @@ SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) as dir,
 COALESCE(f.filename, '') as filename, op.id as op_id,
 COALESCE(f.original_filename, '') as original_filename,
-COALESCE(f.is_spoilered) AS spoiler_file
+COALESCE(f.is_spoilered, FALSE) AS spoiler_file
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 LEFT JOIN DBPREFIXfiles f on f.post_id = DBPREFIXposts.id

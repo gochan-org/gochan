@@ -10,7 +10,7 @@
 <form action="{{webPath "/util"}}" method="POST" id="main-form">
 {{$global := .}}
 {{- range $t, $thread := .threads}}{{$op := index $thread.Posts 0}}
-	<div class="thread">
+	<div class="thread {{if $thread.IsSpoilered}}spoiler-thread{{end}}">
 		{{- template "post.html" map "global" $global "board" $.board "post" $op "is_board_page" true "thread" $thread -}}
 	{{- if gt $thread.OmittedPosts 0 -}}
 		<b>{{$thread.OmittedPosts}} repl{{if gt $thread.OmittedPosts 1}}ies{{else}}y{{end}}{{if gt $thread.OmittedImages 0}} and {{$thread.OmittedImages}} upload{{if gt $thread.OmittedImages 1}}s{{end}}{{end}} omitted</b><br />

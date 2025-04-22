@@ -4,7 +4,7 @@
 	"FirstPage": ["index.html","firstrun.html","1.html"],
 	"Username": "",
 	"UseFastCGI": false,
-	"DebugMode": false,
+	"LogLevel": "debug",
 
 	"DocumentRoot": "html",
 	"TemplateDir": "templates",

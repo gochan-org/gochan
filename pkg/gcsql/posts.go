@@ -422,20 +422,19 @@ func (p *Post) Insert(bumpThread bool, thread *Thread, force bool, requestOption
 		// already inserted
 		return ErrorPostAlreadySent
 	}
-	insertSQL := `INSERT INTO DBPREFIXposts
+	const insertSQL = `INSERT INTO DBPREFIXposts
 	(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,
 		message, message_raw, password, flag, country) 
 	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?,?)`
-	bumpSQL := `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
+	const bumpSQL = `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
 	if p.ThreadID == 0 {
 		// thread doesn't exist yet, this is a new post
 		p.IsTopPost = true
-		var threadID int
 		if err = CreateThread(opts, thread); err != nil {
 			return err
 		}
-		p.ThreadID = threadID
+		p.ThreadID = thread.ID
 	} else {
 		if !force {
 			var threadIsLocked bool

@@ -79,9 +79,10 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 	postCfg := config.GetBoardConfig(board.Dir).PostConfig
 	for _, thread := range threads {
 		catalogThread := catalogThreadData{
-			Post:     opMap[thread.ID],
-			Locked:   boolToInt(thread.Locked),
-			Stickied: boolToInt(thread.Stickied),
+			Post:        opMap[thread.ID],
+			Locked:      boolToInt(thread.Locked),
+			Stickied:    boolToInt(thread.Stickied),
+			IsSpoilered: boolToInt(thread.IsSpoilered),
 		}
 		errEv.Int("threadID", thread.ID)
 		if catalogThread.Images, err = thread.GetReplyFileCount(); err != nil {

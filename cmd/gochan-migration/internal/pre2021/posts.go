@@ -41,7 +41,7 @@ func (*Pre2021Migrator) migratePost(tx *sql.Tx, post *migrationPost, errEv *zero
 		Locked:   post.locked,
 		Stickied: post.stickied,
 		Anchored: post.autosage,
-		Cyclic:   false,
+		Cyclical: false,
 	}
 	if post.oldParentID == 0 {
 		// migrating post was a thread OP, create the row in the threads table

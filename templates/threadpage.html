@@ -8,7 +8,7 @@
 	</header><hr />
 	{{template "postbox.html" .}}<hr />
 		<form action="{{webPath "/util"}}" method="POST" id="main-form">
-		<div class="thread" id="{{$.op.ID}}">
+		<div class="thread {{if $.op.SpoilerThread}}spoiler-thread{{end}}" id="{{$.op.ID}}">
 			{{$global := .}}
 			{{- template "post.html" map "global" $global "board" .board "post" .op "thread" $.thread -}}
 			{{range $reply_num,$reply := .posts -}}
