@@ -407,11 +407,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		}
 		if staff.Rank < 2 {
 			// must be at least a moderator in order to make a sticky or locked thread
-			writer.WriteHeader(http.StatusForbidden)
-			server.ServeError(writer, "You do not have permission to lock or sticky threads", wantsJSON, map[string]any{
-				"username": staff.Username,
-				"rank":     staff.Rank,
-			})
+			server.ServeError(writer, server.NewServerError("You do not have permission to lock or sticky threads", http.StatusForbidden), wantsJSON, nil)
 			return
 		}
 	}
@@ -539,10 +535,11 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	_, emailCommand := getEmailAndCommand(request)
 
 	thread := &gcsql.Thread{
-		BoardID:  board.ID,
-		Locked:   isLocked,
-		Stickied: isSticky,
-		Anchored: emailCommand == "sage" && post.ThreadID == 0,
+		BoardID:     board.ID,
+		Locked:      isLocked,
+		Stickied:    isSticky,
+		IsSpoilered: isSpoileredThread,
+		Anchored:    emailCommand == "sage" && post.ThreadID == 0,
 	}
 
 	if err = post.Insert(emailCommand != "sage", thread, false); err != nil {
