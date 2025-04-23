@@ -8,6 +8,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/manage"
@@ -105,6 +106,11 @@ func main() {
 				Str("board", board.Dir).
 				Msg("Failed deleting old threads")
 		}
+	}
+
+	gcutil.LogInfo().Msg("Building consts.js")
+	if err = building.BuildJS(); err != nil {
+		fatalEv.Err(err).Caller().Msg("Failed building consts.js")
 	}
 
 	sc := make(chan os.Signal, 1)
