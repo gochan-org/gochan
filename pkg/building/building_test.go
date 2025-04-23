@@ -82,7 +82,7 @@ func TestBuildJS(t *testing.T) {
 	}
 
 	outDir := t.TempDir()
-	config.SetVersion("4.0.2")
+	config.InitTestConfig()
 	systemCriticalCfg := config.GetSystemCriticalConfig()
 	systemCriticalCfg.DocumentRoot = path.Join(outDir, "html")
 	systemCriticalCfg.TemplateDir = path.Join(testRoot, "templates")
@@ -251,7 +251,7 @@ func TestBuildFrontPage(t *testing.T) {
 		}
 		t.Run(driver, func(t *testing.T) {
 			outDir := t.TempDir()
-			config.SetVersion("4.0.2")
+			config.InitTestConfig()
 			systemCriticalCfg := config.GetSystemCriticalConfig()
 			systemCriticalCfg.DocumentRoot = path.Join(outDir, "html")
 			systemCriticalCfg.TemplateDir = path.Join(testRoot, "templates")
@@ -369,7 +369,7 @@ func (p *pageHeaderTestCase) runTest(t *testing.T, driver string) {
 }
 
 func TestBuildPageHeader(t *testing.T) {
-	config.SetVersion("4.0.2")
+	config.InitTestConfig()
 	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		return
@@ -392,7 +392,7 @@ func TestBuildPageHeader(t *testing.T) {
 }
 
 func TestBuildPageFooter(t *testing.T) {
-	config.SetVersion("4.0.2")
+	config.InitTestConfig()
 	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		t.FailNow()

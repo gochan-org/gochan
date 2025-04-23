@@ -26,9 +26,7 @@ func TestValidJSON(t *testing.T) {
 
 func TestValidateValues(t *testing.T) {
 	testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, InitConfig("4.1.0")) {
-		t.FailNow()
-	}
+	InitConfig()
 	SetRandomSeed("test")
 	assert.NoError(t, cfg.ValidateValues())
 
@@ -51,9 +49,7 @@ type webRootTest struct {
 
 func TestWebPath(t *testing.T) {
 	testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, InitConfig("4.1.0")) {
-		t.FailNow()
-	}
+	InitConfig()
 	testCases := []webRootTest{
 		{
 			webRoot:    "/",

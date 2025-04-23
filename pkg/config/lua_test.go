@@ -31,9 +31,7 @@ func (tC *preloadTest) run(t *testing.T) {
 
 func TestPreload(t *testing.T) {
 	testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, InitConfig("4.1.0")) {
-		t.FailNow()
-	}
+	InitTestConfig()
 	testCases := []preloadTest{
 		{
 			desc: "access system critical config from lua",

@@ -26,7 +26,7 @@ func InitPlugin() error {
 	manage.RegisterManagePage("gochaninfo", "Gochan info", manage.AdminPerms, manage.NoJSON,
 		func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output interface{}, err error) {
 			return fmt.Sprintf(infoPage,
-					config.GetVersion().String(),
+					config.GochanVersion,
 					runtime.Version(),
 					runtime.GOOS,
 					config.GetSystemCriticalConfig().DBtype,

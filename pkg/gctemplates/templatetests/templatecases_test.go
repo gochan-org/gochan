@@ -378,7 +378,7 @@ var (
 			validationFunc: func(t *testing.T, reader io.Reader) {
 				ba, err := io.ReadAll(reader)
 				if assert.NoError(t, err) {
-					assert.Equal(t, `<footer>Powered by<a href="http://github.com/gochan-org/gochan/">Gochan 4.0</a><br /></footer></div></body></html>`, string(ba))
+					assert.Equal(t, `<footer>Powered by<a href="http://github.com/gochan-org/gochan/">Gochan `+config.GochanVersion+`</a><br /></footer></div></body></html>`, string(ba))
 				}
 			},
 		},

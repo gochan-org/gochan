@@ -17,14 +17,13 @@ import (
 )
 
 func TestServeJSON(t *testing.T) {
-
 	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
 		t.Fatalf("Failed to get current working directory: %v", err)
 		return
 	}
 
-	config.SetVersion("4.0.1")
+	config.InitTestConfig()
 	config.SetRandomSeed("test")
 
 	writer := httptest.NewRecorder()
@@ -73,7 +72,7 @@ func TestServeErrorPage(t *testing.T) {
 	if !assert.NoError(t, err, "Unable to switch to gochan root directory") {
 		return
 	}
-	config.SetVersion("4.0.1")
+	config.InitTestConfig()
 	config.SetTestTemplateDir("templates")
 	if !assert.NoError(t, gctemplates.InitTemplates()) {
 		return
@@ -100,8 +99,7 @@ func TestServeErrorPage(t *testing.T) {
 }
 
 func TestServeError(t *testing.T) {
-
-	config.SetVersion("4.0.1")
+	config.InitTestConfig()
 
 	tests := []struct {
 		name      string
@@ -129,7 +127,7 @@ func TestServeError(t *testing.T) {
 			err:       "page not found",
 			wantsJSON: false,
 			data:      nil,
-			expected:  "<!doctype html><meta charset=utf-8><title>Error :c</title><h1>Error</h1><p>page not found<hr><address>Site powered by Gochan 4.0.1</address>",
+			expected:  "<!doctype html><meta charset=utf-8><title>Error :c</title><h1>Error</h1><p>page not found<hr><address>Site powered by Gochan " + config.GochanVersion + "</address>",
 		},
 	}
 

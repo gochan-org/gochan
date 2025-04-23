@@ -25,11 +25,6 @@ import (
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 )
 
-var (
-	versionStr   string
-	dbVersionStr string
-)
-
 func cleanup() {
 	gcsql.Close()
 	geoip.Close()
@@ -37,13 +32,13 @@ func cleanup() {
 }
 
 func main() {
-	gcutil.LogInfo().Str("version", versionStr).Msg("Starting gochan")
+	gcutil.LogInfo().Str("version", config.GochanVersion).Msg("Starting gochan")
 	fatalEv := gcutil.LogFatal()
 	defer func() {
 		fatalEv.Discard()
 		cleanup()
 	}()
-	err := config.InitConfig(versionStr)
+	err := config.InitConfig()
 	if err != nil {
 		fatalEv.Err(err).Caller().
 			Str("jsonLocation", config.JSONLocation()).
@@ -83,7 +78,7 @@ func main() {
 		Str("DBhost", systemCritical.DBhost).
 		Msg("Connected to database")
 
-	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, dbVersionStr); err != nil {
+	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
 		cleanup()
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}

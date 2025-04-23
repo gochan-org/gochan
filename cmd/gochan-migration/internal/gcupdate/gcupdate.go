@@ -18,9 +18,6 @@ import (
 type GCDatabaseUpdater struct {
 	options *common.MigrationOptions
 	db      *gcsql.GCDB
-	// if the database version is less than TargetDBVer, it is assumed to be out of date, and the schema needs to be adjusted.
-	// It is expected to be set by the build script
-	TargetDBVer int
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
@@ -43,12 +40,12 @@ func (dbu *GCDatabaseUpdater) IsMigrated() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if currentDatabaseVersion == dbu.TargetDBVer {
+	if currentDatabaseVersion == gcsql.DatabaseVersion {
 		return true, nil
 	}
-	if currentDatabaseVersion > dbu.TargetDBVer {
+	if currentDatabaseVersion > gcsql.DatabaseVersion {
 		return false, fmt.Errorf("database layout is ahead of current version (%d), target version: %d",
-			currentDatabaseVersion, dbu.TargetDBVer)
+			currentDatabaseVersion, gcsql.DatabaseVersion)
 	}
 	return false, nil
 }
@@ -124,7 +121,7 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 	}
 
 	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
-	_, err = dbu.db.ExecContextSQL(ctx, nil, query, dbu.TargetDBVer)
+	_, err = dbu.db.ExecContextSQL(ctx, nil, query, gcsql.DatabaseVersion)
 	if err != nil {
 		return false, err
 	}

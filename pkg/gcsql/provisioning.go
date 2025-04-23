@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"path"
-	"strconv"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -23,11 +22,10 @@ const (
 var (
 	// ErrInvalidVersion is used when the db contains a database_version table
 	// but zero or more than one versions were found
-	ErrInvalidVersion     = errors.New("database contains database_version table but zero or more than one versions were found")
-	ErrCorruptedDB        = errors.New("database contains gochan prefixed tables but is missing versioning tables (possibly corrupted)")
-	ErrDeprecatedDB       = errors.New("database layout is deprecated, please run gochan-migration -updatedb")
-	ErrInvalidDBVersion   = errors.New("invalid version flag returned by GetCompleteDatabaseVersion()")
-	targetDatabaseVersion = -1
+	ErrInvalidVersion   = errors.New("database contains database_version table but zero or more than one versions were found")
+	ErrCorruptedDB      = errors.New("database contains gochan prefixed tables but is missing versioning tables (possibly corrupted)")
+	ErrDeprecatedDB     = errors.New("database layout is deprecated, please run gochan-migration -updatedb")
+	ErrInvalidDBVersion = errors.New("invalid version flag returned by GetCompleteDatabaseVersion()")
 )
 
 func findSQLFile(filename string) string {
@@ -63,10 +61,10 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 		if versionError != nil {
 			return 0, 0, versionError
 		}
-		if databaseVersion < targetDatabaseVersion {
+		if databaseVersion < DatabaseVersion {
 			return databaseVersion, DBModernButBehind, nil
 		}
-		if databaseVersion > targetDatabaseVersion {
+		if databaseVersion > DatabaseVersion {
 			return databaseVersion, DBModernButAhead, nil
 		}
 		return databaseVersion, DBUpToDate, nil
@@ -93,14 +91,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 }
 
 // CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
-func CheckAndInitializeDatabase(dbType string, targetDbVersionStr string) (err error) {
-	if targetDatabaseVersion == -1 {
-		targetDatabaseVersion, err = strconv.Atoi(targetDbVersionStr)
-		if err != nil {
-			return err
-		}
-	}
-
+func CheckAndInitializeDatabase(dbType string) (err error) {
 	dbVersion, versionFlag, err := GetCompleteDatabaseVersion()
 	if err != nil {
 		return err
@@ -118,7 +109,7 @@ func CheckAndInitializeDatabase(dbType string, targetDbVersionStr string) (err e
 		err = ErrCorruptedDB
 	case DBModernButAhead:
 		// Uer might be running an old gochan version
-		err = fmt.Errorf("database layout is ahead of current version (%d), target version: %d", dbVersion, targetDatabaseVersion)
+		err = fmt.Errorf("database layout is ahead of current version (%d), target version: %d", dbVersion, DatabaseVersion)
 	default:
 		err = ErrInvalidDBVersion
 	}

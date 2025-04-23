@@ -18,7 +18,7 @@ func TestProvision(t *testing.T) {
 	if !assert.NoError(t, err) {
 		return
 	}
-	config.SetVersion("4.0.0")
+	config.InitTestConfig()
 	config.SetRandomSeed("test")
 
 	for _, driver := range testingDBDrivers {

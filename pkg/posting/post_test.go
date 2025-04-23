@@ -14,7 +14,7 @@ type parseNameTestCase struct {
 }
 
 func TestParseName(t *testing.T) {
-	config.SetVersion("4.1")
+	config.InitTestConfig()
 	boardConfig := config.GetBoardConfig("test")
 	boardConfig.ReservedTrips = map[string]string{
 		"reserved": "TripOut",

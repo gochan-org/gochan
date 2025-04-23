@@ -13,8 +13,7 @@ import (
 )
 
 func TestServeFile(t *testing.T) {
-
-	config.SetVersion("4.0.1")
+	config.InitTestConfig()
 
 	tempDir, err := os.MkdirTemp("", "testservefile")
 	if err != nil {
@@ -51,8 +50,7 @@ func TestServeFile(t *testing.T) {
 }
 
 func TestServeFile_NotFound(t *testing.T) {
-
-	config.SetVersion("4.0.1")
+	config.InitTestConfig()
 
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "testservefile")
