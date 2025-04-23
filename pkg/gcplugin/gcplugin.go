@@ -109,7 +109,8 @@ func preloadLua() {
 	lState.PreloadModule("serverutil", serverutil.PreloadModule)
 	lState.PreloadModule("bbcode", posting.PreloadBBCodeModule)
 
-	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GetVersion().String()))
+	lState.SetGlobal("_GOCHAN_VERSION", lua.LString(config.GochanVersion))
+	lState.SetGlobal("_DATABASE_VERSION", lua.LNumber(gcsql.DatabaseVersion))
 }
 
 func LoadPlugins(paths []string) error {

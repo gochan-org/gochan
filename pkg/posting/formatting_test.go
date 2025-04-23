@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	versionStr         = "4.0.0"
 	bbcodeMsgPreRender = `[b]Bold[/b] [i]Italics[/i] [u]Underline[/u] [url=https://gochan.org]URL[/url] [?]Spoiler[/?]
 [code]Code[/code]
 [hide]Hidden[/hide]`
@@ -146,7 +145,7 @@ type diceRollerTestCase struct {
 }
 
 func TestBBCode(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	var testFmtr MessageFormatter
 	testFmtr.Init()
 	rendered := testFmtr.Compile(bbcodeMsgPreRender, "")
@@ -154,7 +153,7 @@ func TestBBCode(t *testing.T) {
 }
 
 func TestLinks(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	var testFmtr MessageFormatter
 	testFmtr.Init()
 	rendered := urlRE.ReplaceAllStringFunc(linkTestPreRender, wrapLinksInURL)
@@ -163,7 +162,7 @@ func TestLinks(t *testing.T) {
 }
 
 func TestNoDoubleTags(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	msgfmtr.Init()
 	_, warnEv, errEv := testutil.GetTestLogs(t)
 	rendered, err := FormatMessage(doubleTagPreRender, "", warnEv, errEv)
@@ -172,7 +171,7 @@ func TestNoDoubleTags(t *testing.T) {
 }
 
 func TestLuaBBCode(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	msgfmtr.Init()
 	l := lua.NewState()
 	defer l.Close()
@@ -203,7 +202,7 @@ func diceRollRunner(t *testing.T, tC *diceRollerTestCase) {
 }
 
 func TestDiceRoll(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	msgfmtr.Init()
 	for _, tC := range diceTestCases {
 		t.Run(tC.desc, func(t *testing.T) {
@@ -216,7 +215,7 @@ func TestDiceRoll(t *testing.T) {
 }
 
 func TestHashTags(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	msgfmtr.Init()
 	_, warnEv, errEv := testutil.GetTestLogs(t)
 	msg := `[#tag]
@@ -248,7 +247,7 @@ test]
 }
 
 func TestWorksafe(t *testing.T) {
-	config.SetVersion(versionStr)
+	config.InitTestConfig()
 	msgfmtr.Init()
 	_, warnEv, errEv := testutil.GetTestLogs(t)
 	boardConfig := config.GetBoardConfig("test")

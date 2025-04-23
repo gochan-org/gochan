@@ -50,7 +50,7 @@ type checkRefererTestCase struct {
 }
 
 func TestCheckReferer(t *testing.T) {
-	config.SetVersion("4.0.0")
+	config.InitTestConfig()
 	systemCriticalConfig := config.GetSystemCriticalConfig()
 	req, err := http.NewRequest("GET", "https://gochan.org", nil)
 	if !assert.NoError(t, err) {

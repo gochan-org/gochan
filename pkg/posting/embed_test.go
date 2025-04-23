@@ -179,7 +179,7 @@ func embedTestRunner(t *testing.T, tc *embedTestCase, boardCfg *config.BoardConf
 }
 
 func TestAttachEmbed(t *testing.T) {
-	config.InitConfig("4.1.0")
+	config.InitTestConfig()
 	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "", "")
 
 	// Set up a board config with some embed matchers
@@ -202,7 +202,7 @@ func TestAttachEmbed(t *testing.T) {
 func TestOnlyAllowOneEmbed(t *testing.T) {
 	// verify that only one embed or file upload is allowed. Multiple files/uploading is on my to-do list,
 	// but for now, single upload/embedding is enforced.
-	config.InitConfig("4.1.0")
+	config.InitTestConfig()
 	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "", "")
 	boardCfg := &config.BoardConfig{
 		PostConfig: config.PostConfig{

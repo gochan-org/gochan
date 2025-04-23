@@ -181,7 +181,7 @@ func TestFormatFilesizeTmplFunc(t *testing.T) {
 }
 
 func TestFormatTimestampTmplFunc(t *testing.T) {
-	config.SetVersion("4.0.0")
+	config.InitTestConfig()
 
 	tmpl := template.Must(template.New("name").Funcs(funcMap).Parse("{{formatTimestamp .Time}}"))
 	buf := bytes.NewBuffer(nil)
@@ -474,7 +474,7 @@ func TestMapTmplFunc(t *testing.T) {
 }
 
 func TestWebPathDirTmplFunc(t *testing.T) {
-	config.SetVersion("4.0.0")
+	config.InitTestConfig()
 	testCases := []struct {
 		desc     string
 		tmplStr  string
@@ -524,7 +524,7 @@ func TestWebPathDirTmplFunc(t *testing.T) {
 }
 
 func TestMakeLoopTmplFunc(t *testing.T) {
-	config.SetVersion("4.0.0")
+	config.InitTestConfig()
 	testCases := []struct {
 		desc     string
 		tmplStr  string

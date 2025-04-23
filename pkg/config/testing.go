@@ -1,6 +1,8 @@
 package config
 
-import "github.com/gochan-org/gochan/pkg/gcutil/testutil"
+import (
+	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
+)
 
 func setDefaultCfgIfNotSet() {
 	if cfg == nil {
@@ -8,12 +10,10 @@ func setDefaultCfgIfNotSet() {
 	}
 }
 
-// SetVersion should only be used for tests, where a config file wouldn't be loaded
-func SetVersion(version string) {
+// InitTestConfig should only be used for tests, where a config file wouldn't be loaded
+func InitTestConfig() {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
-
-	cfg.Version = ParseVersion(version)
 }
 
 // SetTestTemplateDir sets the directory for templates, used only in testing. If it is not run via `go test`, it will panic.

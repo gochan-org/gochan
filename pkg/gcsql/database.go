@@ -21,6 +21,7 @@ import (
 const (
 	// GochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
 	gochanVersionKeyConstant = "gochan"
+	DatabaseVersion          = 5
 	UnsupportedSQLVersionMsg = `syntax error in SQL query, confirm you are using a supported driver and SQL server (error text: %s)`
 	mysqlConnStr             = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
 	postgresConnStr          = "postgres://%s:%s@%s/%s?sslmode=disable"

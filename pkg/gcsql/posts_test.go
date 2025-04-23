@@ -27,7 +27,7 @@ func setupPostTest(t *testing.T, driver string) sqlmock.Sqlmock {
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	config.SetVersion("4.0.0")
+	config.InitTestConfig()
 	config.SetTestDBConfig(driver, "localhost", "gochan", "gochan", "gochan", "")
 
 	gcdb, err := setupDBConn(setupSqlTestConfig(driver, "gochan", ""))

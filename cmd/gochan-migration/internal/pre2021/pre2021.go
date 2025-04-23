@@ -85,7 +85,7 @@ func (m *Pre2021Migrator) renameTablesForInPlace() error {
 		}
 	}
 
-	if err = gcsql.CheckAndInitializeDatabase(m.config.DBtype, "4"); err != nil {
+	if err = gcsql.CheckAndInitializeDatabase(m.config.DBtype); err != nil {
 		errEv.Caller().Err(err).Msg("Error checking and initializing database")
 		return err
 	}

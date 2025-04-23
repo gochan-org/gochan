@@ -72,7 +72,7 @@ func TakeOwnershipOfFile(f *os.File) error {
 	return f.Chown(uid, gid)
 }
 
-func loadConfig(versionStr string, searchPaths ...string) (err error) {
+func loadConfig(searchPaths ...string) (err error) {
 	cfg = defaultGochanConfig
 	if testing.Testing() {
 		// create a dummy config for testing if we're using go test
@@ -89,7 +89,6 @@ func loadConfig(versionStr string, searchPaths ...string) (err error) {
 		cfg.DBusername = "gochan"
 		cfg.SiteHost = "127.0.0.1"
 		cfg.RandomSeed = "test"
-		cfg.Version = ParseVersion(versionStr)
 		cfg.SiteSlogan = "Gochan testing"
 		cfg.Cooldowns = BoardCooldowns{0, 0, 0}
 		cfg.BanColors = map[string]string{
@@ -121,12 +120,12 @@ func loadConfig(versionStr string, searchPaths ...string) (err error) {
 }
 
 // InitConfig loads and parses gochan.json on startup and verifies its contents
-func InitConfig(versionStr string) (err error) {
+func InitConfig() (err error) {
 	var searchPaths []string
 	if !testing.Testing() {
 		searchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
 	}
-	if err = loadConfig(versionStr, searchPaths...); err != nil {
+	if err = loadConfig(searchPaths...); err != nil {
 		return err
 	}
 
@@ -190,8 +189,6 @@ func InitConfig(versionStr string) (err error) {
 	_, zoneOffset := time.Now().Zone()
 	cfg.TimeZone = zoneOffset / 60 / 60
 
-	cfg.Version = ParseVersion(versionStr)
-	cfg.Version.Normalize()
 	return nil
 }
 

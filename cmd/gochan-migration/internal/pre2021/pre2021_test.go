@@ -82,7 +82,7 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		t.FailNow()
 	}
 	if !migrateInPlace {
-		if !assert.NoError(t, gcsql.CheckAndInitializeDatabase("sqlite3", "4")) {
+		if !assert.NoError(t, gcsql.CheckAndInitializeDatabase("sqlite3")) {
 			t.FailNow()
 		}
 	}

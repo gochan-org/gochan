@@ -39,7 +39,7 @@ return { ListenAddress = system_critical_cfg.ListenAddress, SiteSlogan = site_cf
 )
 
 func initPluginTests() {
-	config.SetVersion("4.0.2")
+	config.InitTestConfig()
 	initLua()
 }
 
@@ -48,7 +48,7 @@ func TestVersionFunction(t *testing.T) {
 	err := lState.DoString(versionStr)
 	assert.NoError(t, err)
 	testingVersionStr := lState.Get(-1).(lua.LString)
-	assert.EqualValues(t, config.GetVersion().String(), testingVersionStr)
+	assert.EqualValues(t, config.GochanVersion, testingVersionStr)
 }
 
 func TestStructPassing(t *testing.T) {
@@ -75,9 +75,7 @@ func TestEventModule(t *testing.T) {
 
 func TestConfigModule(t *testing.T) {
 	testutil.GoToGochanRoot(t)
-	if !assert.NoError(t, config.InitConfig("4.1.0")) {
-		t.FailNow()
-	}
+	config.InitConfig()
 	initPluginTests()
 	err := lState.DoString(configTestingStr)
 	assert.NoError(t, err)

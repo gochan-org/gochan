@@ -5,7 +5,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"strconv"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/gcupdate"
@@ -16,9 +15,7 @@ import (
 )
 
 var (
-	versionStr   string
-	migrator     common.DBMigrator
-	dbVersionStr string
+	migrator common.DBMigrator
 )
 
 func cleanup() {
@@ -46,7 +43,7 @@ func main() {
 	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
 	flag.Parse()
 
-	err := config.InitConfig(versionStr)
+	err := config.InitConfig()
 	if err != nil {
 		log.Fatalln("Unable to initialize configuration:", err.Error())
 	}
@@ -74,13 +71,7 @@ func main() {
 
 	switch options.ChanType {
 	case "gcupdate":
-		targetDBVer, err := strconv.Atoi(dbVersionStr)
-		if err != nil {
-			fatalEv.Err(err).Caller().Msg("Invalid database version string, unable to parse as integer")
-		}
-		migrator = &gcupdate.GCDatabaseUpdater{
-			TargetDBVer: targetDBVer,
-		}
+		migrator = &gcupdate.GCDatabaseUpdater{}
 	case "pre2021":
 		migrator = &pre2021.Pre2021Migrator{}
 	case "kusabax":
@@ -97,7 +88,7 @@ func main() {
 		Bool("migratingInPlace", migratingInPlace).
 		Msg("Starting database migration")
 
-	if err = config.InitConfig(versionStr); err != nil {
+	if err = config.InitConfig(); err != nil {
 		fatalEv.Err(err).Caller().Msg("Unable to reload configuration")
 	}
 	sqlCfg := config.GetSQLConfig()
@@ -112,7 +103,7 @@ func main() {
 		if err != nil {
 			fatalEv.Err(err).Caller().Msg("Failed to connect to the database")
 		}
-		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype, dbVersionStr); err != nil {
+		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype); err != nil {
 			fatalEv.Err(err).Caller().Msg("Unable to initialize the database")
 		}
 	}

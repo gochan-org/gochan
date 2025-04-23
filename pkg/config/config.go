@@ -29,6 +29,8 @@ const (
 	DefaultSQLTimeout            = 15
 	DefaultSQLMaxConns           = 10
 	DefaultSQLConnMaxLifetimeMin = 3
+
+	GochanVersion = "4.1.0"
 )
 
 var (
@@ -281,8 +283,7 @@ type SystemCriticalConfig struct {
 	// RandomSeed is a random string used for generating secure tokens. It will be generated if not set and must not be changed
 	RandomSeed string
 
-	Version  *GochanVersion `json:"-"`
-	TimeZone int            `json:"-"`
+	TimeZone int `json:"-"`
 
 	logLevel       zerolog.Level
 	logLevelParsed bool
@@ -919,8 +920,4 @@ func UpdateBoardConfig(dir string) error {
 // when a board is deleted
 func DeleteBoardConfig(dir string) {
 	delete(boardConfigs, dir)
-}
-
-func GetVersion() *GochanVersion {
-	return cfg.Version
 }

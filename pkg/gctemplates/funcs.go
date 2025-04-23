@@ -201,7 +201,7 @@ var funcMap = template.FuncMap{
 		return style == config.GetBoardConfig("").DefaultStyle
 	},
 	"version": func() string {
-		return config.GetVersion().String()
+		return config.GochanVersion
 	},
 }
 
