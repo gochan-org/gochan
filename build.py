@@ -14,6 +14,7 @@ import errno
 import os
 from os import path
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -39,8 +40,6 @@ release_files = (
 	"README.md",
 )
 
-GOCHAN_VERSION = "4.1.0"
-DATABASE_VERSION = "5"  # stored in DBNAME.DBPREFIXdatabase_version
 
 PATH_NOTHING = -1
 PATH_UNKNOWN = 0
@@ -49,6 +48,7 @@ PATH_DIR = 2
 PATH_LINK = 4
 
 
+gochan_version = "unknown"
 gcos = ""
 gcos_name = ""  # used for release, since macOS GOOS is "darwin"
 exe = ""
@@ -57,8 +57,7 @@ gochan_exe = ""
 migration_bin = ""
 migration_exe = ""
 
-
-def pathinfo(loc):
+def path_info(loc):
 	i = PATH_UNKNOWN
 	if not path.exists(loc):
 		return PATH_NOTHING
@@ -72,13 +71,23 @@ def pathinfo(loc):
 		i = PATH_UNKNOWN
 	return i
 
+def update_gochan_version():
+	global gochan_version
+	with open("pkg/config/config.go", "r") as config:
+		# 	GochanVersion = "4.1.0"
+		config_str = config.read()
+		matches = re.findall(r"\bGochanVersion\s*=\s*\"(\S+)\"", config_str)
+		if len(matches) > 0:
+			gochan_version = matches[0].strip()
+		else:
+			raise Exception("Failed to find GochanVersion constant in pkg/config/config.go")
 
 def delete(delpath):
 	"""
 	Deletes the given file, link, or directory and silently fails if nothing exists.
 	Returns the path info as well
 	"""
-	pinfo = pathinfo(delpath)
+	pinfo = path_info(delpath)
 	if pinfo == PATH_NOTHING:
 		return PATH_NOTHING
 	if pinfo & PATH_FILE > 0 or pinfo & PATH_LINK > 0:
@@ -105,8 +114,8 @@ def copy(source, dest):
 	them if source is a directory and dest is a directory that already exists, overwriting
 	any conflicting files
 	"""
-	srcinfo = pathinfo(source)
-	destinfo = pathinfo(dest)
+	srcinfo = path_info(source)
+	destinfo = path_info(dest)
 	if srcinfo == PATH_NOTHING:
 		raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), source)
 	if srcinfo & PATH_FILE > 0 or srcinfo & PATH_LINK > 0:
@@ -126,8 +135,8 @@ def copy(source, dest):
 
 def symlink(target, link):
 	"""Create symbolic link at `link` that points to `target`"""
-	targetinfo = pathinfo(target)
-	linkinfo = pathinfo(link)
+	targetinfo = path_info(target)
+	linkinfo = path_info(link)
 	if target == PATH_NOTHING:
 		raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), target)
 	if linkinfo != PATH_NOTHING:
@@ -196,9 +205,9 @@ def set_vars(goos=""):
 		gcos_name = "macos"
 
 	gochan_bin = "gochan"
-	gochan_exe = "gochan" + exe
+	gochan_exe = gochan_bin + exe
 	migration_bin = "gochan-migration"
-	migration_exe = "gochan-migration" + exe
+	migration_exe = migration_bin + exe
 
 
 def build(debugging=False, plugin_path="", static_templates=False):
@@ -209,7 +218,7 @@ def build(debugging=False, plugin_path="", static_templates=False):
 	gcflags_debug = " -l -N" if debugging else ""
 	gcflags = f"-gcflags={trimpath}{gcflags_debug}"
 	ldflags_debug = "" if debugging else " -w -s"
-	ldflags = f"-ldflags=-X main.versionStr={GOCHAN_VERSION} -X main.dbVersionStr={DATABASE_VERSION} {ldflags_debug}"
+	ldflags = f"-ldflags={ldflags_debug}"
 	build_cmd_base = ["go", "build", "-v", "-trimpath", gcflags, ldflags]
 
 	if static_templates:
@@ -217,13 +226,13 @@ def build(debugging=False, plugin_path="", static_templates=False):
 		with open("templates/404.html", "r") as tmpl404:
 			tmpl404str = tmpl404.read().strip()
 			with open("html/error/404.html", "w") as page404:
-				page404.write(tmpl404str.format(GOCHAN_VERSION))
+				page404.write(tmpl404str.format(gochan_version))
 		with open("templates/5xx.html", "r") as tmpl5xx:
 			tmpl5xxStr = tmpl5xx.read().strip()
 			with open("html/error/500.html", "w") as page500:
-				page500.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 500: Internal Server error"))
+				page500.write(tmpl5xxStr.format(version=gochan_version, title="Error 500: Internal Server error"))
 			with open("html/error/502.html", "w") as page502:
-				page502.write(tmpl5xxStr.format(version=GOCHAN_VERSION, title="Error 502: Bad gateway"))
+				page502.write(tmpl5xxStr.format(version=gochan_version, title="Error 502: Bad gateway"))
 
 	if debugging:
 		print(f"Building for {gcos} with debugging symbols")
@@ -394,7 +403,7 @@ def eslint(fix=False):
 def release(goos):
 	set_vars(goos)
 	build(False, static_templates=True)
-	release_name = gochan_bin + "-v" + GOCHAN_VERSION + "_" + gcos_name
+	release_name = gochan_bin + f"-v{gochan_version}_{gcos_name}"
 	release_dir = path.join("releases", release_name)
 	delete(release_dir)
 	print("Creating release for", gcos_name, "\n")
@@ -403,7 +412,7 @@ def release(goos):
 	mkdir(path.join(release_dir, "html"))
 	mkdir(path.join(release_dir, "sql"))
 	for file in release_files:
-		srcinfo = pathinfo(file)
+		srcinfo = path_info(file)
 		if srcinfo == PATH_NOTHING:
 			raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file)
 		if srcinfo & PATH_FILE > 0:
@@ -435,6 +444,7 @@ def test(verbose=False, coverage=False):
 
 
 if __name__ == "__main__":
+	update_gochan_version()
 	action = "build"
 	try:
 		action = sys.argv.pop(1)
@@ -447,7 +457,7 @@ if __name__ == "__main__":
 	valid_actions = (
 		"build", "clean", "install", "js", "release", "sass", "test", "selenium"
 	)
-	parser = argparse.ArgumentParser(description="gochan build script")
+	parser = argparse.ArgumentParser(description=f"gochan v{gochan_version} build script")
 	parser.add_argument("action", nargs=1, default="build", choices=valid_actions)
 	if action in ('--help', '-h'):
 		parser.print_help()
