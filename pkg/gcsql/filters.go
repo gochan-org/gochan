@@ -74,11 +74,15 @@ func GetFilterByID(id int) (*Filter, error) {
 
 // GetAllFilters returns an array of all post filters, and an error if one occured. It can optionally return only the active or
 // only the inactive filters (or return all)
-func GetAllFilters(activeFilter BooleanFilter) ([]Filter, error) {
-	return queryFilters(` WHERE match_action <> 'replace'` + activeFilter.whereClause("is_active", true))
+func GetAllFilters(activeFilter BooleanFilter, desc ...bool) ([]Filter, error) {
+	queryAdd := " WHERE match_action <> 'replace' " + activeFilter.whereClause("is_active", true)
+	if len(desc) > 0 && desc[0] {
+		queryAdd += " ORDER BY id DESC"
+	}
+	return queryFilters(queryAdd)
 }
 
-func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool) ([]Filter, error) {
+func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter BooleanFilter, useWordFilters bool, desc bool) ([]Filter, error) {
 	query := `LEFT JOIN DBPREFIXfilter_boards ON filter_id = f.id
 		LEFT JOIN DBPREFIXboards ON DBPREFIXboards.id = board_id`
 
@@ -101,14 +105,21 @@ func getFiltersByBoardDirHelper(dir string, includeAllBoards bool, activeFilter 
 		query += activeFilter.whereClause("is_active", true)
 		params = []any{dir}
 	}
+	if desc {
+		query += " ORDER BY id DESC"
+	}
 	return queryFilters(query, params...)
 }
 
 // GetFiltersByBoardDir returns the filters associated with the given board dir, optionally including filters
 // not associated with a specific board. It can optionally return only the active or only the inactive filters
 // (or return all)
-func GetFiltersByBoardDir(dir string, includeAllBoards bool, show BooleanFilter) ([]Filter, error) {
-	return getFiltersByBoardDirHelper(dir, includeAllBoards, show, false)
+func GetFiltersByBoardDir(dir string, includeAllBoards bool, show BooleanFilter, desc ...bool) ([]Filter, error) {
+	descParam := false
+	if len(desc) > 0 {
+		descParam = desc[0]
+	}
+	return getFiltersByBoardDirHelper(dir, includeAllBoards, show, false, descParam)
 }
 
 // GetFiltersByBoardID returns an array of post filters associated to the given board ID, including

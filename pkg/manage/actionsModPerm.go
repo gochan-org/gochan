@@ -267,9 +267,9 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	var filters []gcsql.Filter
 	boardSearch := request.FormValue("boardsearch")
 	if boardSearch == "" {
-		filters, err = gcsql.GetAllFilters(show)
+		filters, err = gcsql.GetAllFilters(show, true)
 	} else {
-		filters, err = gcsql.GetFiltersByBoardDir(boardSearch, false, show)
+		filters, err = gcsql.GetFiltersByBoardDir(boardSearch, false, show, true)
 	}
 
 	if err != nil {
