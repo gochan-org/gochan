@@ -12,6 +12,9 @@ import { updateBrowseButton } from "./dom/uploaddata";
 let $settingsButton: TopBarButton = null;
 
 const settings: Map<string, Setting<boolean|number|string,HTMLElement>> = new Map();
+const spoilerThreadNotice = "This thread contains spoilers<br/>";
+const spoilerImage = "/static/spoiler.png";
+
 
 type ElementValue = string|number|string[];
 
@@ -256,6 +259,80 @@ export function setCustomCSS() {
 		.appendTo(document.head);
 }
 
+export function updateSpoilerTextReveal() {
+	const revealSpoilerText = getBooleanStorageVal("revealspoilertext", false);
+	if(revealSpoilerText) {
+		$(".spoiler").removeClass("spoiler").addClass("spoiler-reveal");
+	} else {
+		$(".spoiler").addClass("spoiler").removeClass("spoiler-reveal");
+	}
+}
+
+function revealSpoilerImage(el:HTMLImageElement) {
+	if(el.hasAttribute("spoiler-src")) {
+		el.setAttribute("src", el.getAttribute("spoiler-src"));
+		el.removeAttribute("spoiler-src");
+	}
+	if(el.hasAttribute("spoiler-width")) {
+		el.setAttribute("width", el.getAttribute("spoiler-width"));
+		el.removeAttribute("spoiler-width");
+	}
+	if(el.hasAttribute("spoiler-height")) {
+		el.setAttribute("height", el.getAttribute("spoiler-height"));
+		el.removeAttribute("spoiler-height");
+	}
+}
+
+export function updateSpoilerThreadReveal() {
+	const revealSpoilerThreads = getBooleanStorageVal("revealspoilerthreads", false);
+	const $spoilerThreads = $<HTMLDivElement>(".spoiler-thread");
+	const $spoilerThreadThumbs = $spoilerThreads.find<HTMLImageElement>(".op-post .thumb")
+		.filter((_i, el) => !el.classList.contains("spoiler-thumb"));
+
+	// first reveal (or hide) the spoiler thumbs according to the setting value
+	$spoilerThreadThumbs.each((i, el) => {
+		if(revealSpoilerThreads) {
+			revealSpoilerImage(el);
+		} else {
+			if(!el.hasAttribute("spoiler-src")) {
+				el.setAttribute("spoiler-src", el.getAttribute("src"));
+			}
+			if(!el.hasAttribute("spoiler-width") && el.hasAttribute("width")) {
+				el.setAttribute("spoiler-width", el.getAttribute("width"));
+				el.setAttribute("width", "125px");
+			}
+			if(!el.hasAttribute("spoiler-height") && el.hasAttribute("height")) {
+				el.setAttribute("spoiler-height", el.getAttribute("height"));
+				el.setAttribute("height", "125px");
+			}
+			
+			el.setAttribute("src", path.join(webroot ?? "/", spoilerImage));
+		}
+	});
+	if(revealSpoilerThreads) {
+		$(".spoiler-notice").remove();
+		$(".spoiler-thread .reply-container").show();
+		$(".spoiler-thread .op-post .post-text").show();
+	} else {
+		$(".spoiler-thread .reply-container").hide();
+		$(".spoiler-thread .op-post .post-text").hide();
+		$("<div/>").addClass("spoiler-notice").append(
+			spoilerThreadNotice,
+			$("<button/>").text("Reveal").on("click", ev => {
+				ev.stopPropagation();
+				const $thread = $(ev.target).parents(".spoiler-thread");
+				$thread.find(".op-post .post-text").show();
+				$thread.find(".reply-container").show();
+				$thread.find(".spoiler-notice").remove();
+				$thread.find<HTMLImageElement>(".thumb").each((i, el) => {
+					revealSpoilerImage(el);
+				});
+				return false;
+			})
+		).insertAfter($spoilerThreads.find(".op-post .post-text"));
+	}
+}
+
 $(() => {
 	const styleOptions = [];
 	for(const style of styles) {
@@ -268,7 +345,7 @@ $(() => {
 		if(val === "" && themeElem.hasAttribute("default-href")) {
 			themeElem.setAttribute("href", themeElem.getAttribute("default-href"));
 		} else if(val !== "") {
-			themeElem.setAttribute("href", `${webroot}css/${val}`);
+			themeElem.setAttribute("href", `${webroot ?? "/"}css/${val}`);
 		}
 	}) as Setting);
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
@@ -279,6 +356,8 @@ $(() => {
 		if(getBooleanStorageVal("useqr", true)) initQR();
 		else closeQR();
 	}));
+	settings.set("revealspoilertext", new BooleanSetting("revealspoilertext", "Show spoiler text", false, updateSpoilerTextReveal));
+	settings.set("revealspoilerthreads", new BooleanSetting("revealspoilerthreads", "Reveal spoiler threads", false, updateSpoilerThreadReveal));
 	settings.set("extlinksnewtab", new BooleanSetting("extlinksnewtab", "Open external links in new tab", true, updateExternalLinks));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
 	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 15, {

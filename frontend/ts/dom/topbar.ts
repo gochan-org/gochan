@@ -2,8 +2,8 @@ import $, { noop } from "jquery";
 
 import { getBooleanStorageVal } from "../storage";
 
-export let $topbar:JQuery<HTMLElement> = null;
-export let topbarHeight = 32;
+export const $topbar = $("div#topbar");
+export let topbarHeight = $topbar.height() + 4;
 
 interface BeforeAfter {
 	before?: any;
@@ -51,7 +51,6 @@ export class TopBarButton {
  * Initialize the bar at the top of the page with board links and buttons
  */
 export function initTopBar() {
-	$topbar = $("div#topbar");
 	if(getBooleanStorageVal("pintopbar", true)) {
 		$topbar.css({
 			"z-index": "10",

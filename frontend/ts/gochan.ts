@@ -4,7 +4,7 @@ import "./vars";
 import "./cookies";
 import "./notifications";
 import { setPageBanner } from "./dom/banners";
-import { setCustomCSS, setCustomJS, setTheme, updateExternalLinks } from "./settings";
+import { setCustomCSS, setCustomJS, setTheme, updateExternalLinks, updateSpoilerTextReveal, updateSpoilerThreadReveal } from "./settings";
 import { handleKeydown } from "./boardevents";
 import { initStaff, createStaffMenu, addStaffThreadOptions } from "./management/manage";
 import { getPageThread } from "./postinfo";
@@ -26,10 +26,23 @@ export function toBottom() {
 }
 window.toBottom = toBottom;
 
-$(() => {
-	setTheme();
+const pageThread = getPageThread();
+if(pageThread.board !== "") {
+	prepareThumbnails();
+	if(pageThread.op < 1) {
+		updateSpoilerThreadReveal();
+		updateSpoilerTextReveal();
+	}
+	
+	updateBrowseButton();
+}
 
-	const pageThread = getPageThread();
+setTheme();
+setCustomCSS();
+setCustomJS();
+setPageBanner();
+
+$(() => {
 	initStaff()
 		.then((staff) => {
 			if(staff?.rank < 1)
@@ -44,13 +57,8 @@ $(() => {
 	const passwordText = $("input#postpassword").val();
 	$("input#delete-password").val(passwordText);
 
-	setPageBanner();
 	if(pageThread.board !== "") {
-		prepareThumbnails();
-		if(getBooleanStorageVal("useqr", true))
-			initQR();
 		initPostPreviews();
-		updateBrowseButton();
 	}
 	$("div.post, div.reply").each((i, elem) => {
 		addPostDropdown($(elem));
@@ -58,6 +66,4 @@ $(() => {
 	$(document).on("keydown", handleKeydown);
 	initFlags();
 	updateExternalLinks();
-	setCustomCSS();
-	setCustomJS();
 });

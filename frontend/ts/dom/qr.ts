@@ -306,9 +306,10 @@ export function closeQR() {
 }
 window.closeQR = closeQR;
 
-$(() => {
-	const board = currentBoard();
-	if(board === "") return; // not on a board
+const board = currentBoard();
+if(board !== "") {
+	if(getBooleanStorageVal("useqr", true))
+		initQR();
 	getThreadCooldown(board).then(cd => threadCooldown = cd);
 	getReplyCooldown(board).then(cd => replyCooldown = cd);
-});
+}

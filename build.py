@@ -74,7 +74,6 @@ def path_info(loc):
 def update_gochan_version():
 	global gochan_version
 	with open("pkg/config/config.go", "r") as config:
-		# 	GochanVersion = "4.1.0"
 		config_str = config.read()
 		matches = re.findall(r"\bGochanVersion\s*=\s*\"(\S+)\"", config_str)
 		if len(matches) > 0:
