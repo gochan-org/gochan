@@ -89,8 +89,12 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 
 // GetWordfilters gets a list of wordfilters from the database and returns an array of them and any errors
 // encountered
-func GetWordfilters(active BooleanFilter) ([]Wordfilter, error) {
-	filters, err := getFiltersByBoardDirHelper("", true, active, true)
+func GetWordfilters(active BooleanFilter, desc ...bool) ([]Wordfilter, error) {
+	descParam := false
+	if len(desc) > 0 {
+		descParam = desc[0]
+	}
+	filters, err := getFiltersByBoardDirHelper("", true, active, true, descParam)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +125,12 @@ func GetWordfilterByID(id int) (*Wordfilter, error) {
 }
 
 // GetBoardWordfilters gets an array of wordfilters associated with the given board directory
-func GetBoardWordfilters(board string) ([]Wordfilter, error) {
-	filters, err := getFiltersByBoardDirHelper(board, true, OnlyTrue, true)
+func GetBoardWordfilters(board string, desc ...bool) ([]Wordfilter, error) {
+	descParam := false
+	if len(desc) > 0 {
+		descParam = desc[0]
+	}
+	filters, err := getFiltersByBoardDirHelper(board, true, OnlyTrue, true, descParam)
 	if err != nil {
 		return nil, err
 	}
