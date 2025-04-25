@@ -58,17 +58,16 @@ func (f FuzzyTime) Match(val driver.Value) bool {
 	var t time.Time
 	switch timeVal := val.(type) {
 	case time.Time:
-		t = timeVal.Truncate(time.Minute)
+		t = timeVal
 	case string:
 		var err error
 		t, err = time.Parse(time.RFC3339, timeVal)
 		if err != nil {
 			return false
 		}
-		t = t.Truncate(time.Minute)
 	default:
 		return false
 	}
 
-	return t.After(ft.Add(-10*time.Minute)) && t.Before(ft.Add(10*time.Minute))
+	return t.Truncate(10 * time.Minute).Equal(ft.Truncate(10 * time.Minute))
 }
