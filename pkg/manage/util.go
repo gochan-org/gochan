@@ -65,19 +65,27 @@ func createSession(key, username, password string, request *http.Request, writer
 	}
 
 	staff, err := gcsql.GetStaffByUsername(username, true)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			errEv.Err(err).Caller().
-				Msg("Unrecognized username")
-		}
+	if errors.Is(err, sql.ErrNoRows) {
+		warnEv.Caller().
+			Msg("Invalid username")
 		return ErrBadCredentials
+	}
+	if err != nil {
+		errEv.Err(err).Caller().
+			Msg("Error getting staff by username")
+		return errors.New("unable to get staff info")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(staff.PasswordChecksum), []byte(password))
-	if err == bcrypt.ErrMismatchedHashAndPassword {
+	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 		// password mismatch
 		warnEv.Caller().Msg("Invalid password")
 		return ErrBadCredentials
+	} else if err != nil {
+		errEv.Err(err).Caller().
+			Str("staff", username).
+			Msg("Error comparing password")
+		return errors.New("unable to compare credentials")
 	}
 
 	// successful login, add cookie that expires in one month
