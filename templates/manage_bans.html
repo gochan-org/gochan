@@ -1,14 +1,16 @@
-<form method="POST" action="{{webPath "manage/bans"}}">
+<form method="POST" action="{{webPath `manage/bans`}}" class="banform">
+{{if gt .ban.ID 0}}
+<input type="hidden" name="do" value="edit" />
+{{- else -}}
 <input type="hidden" name="do" value="add" />
+{{- end -}}
 <h2>Add IP ban</h2>
 <table>
-	<tr><th>IP/Mask</th><td><input type="text" name="ip" value="{{banMask .ban}}" style="width: 100%;"/></td></tr>
-	<tr><th>Duration</th><td><input type="text" name="duration" style="width: 100%;" {{if gt .ban.ID 0}}value="{{until .ban.ExpiresAt}}"{{end}}/></td></tr>
-	<tr><th></th><td>e.g. '1y2mo3w4d5h6m7s',<br />'1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds'<br/>Optional if "Permanent" is checked, required otherwise</td></tr>
-	<tr><th>Permanent</th><td><input type="checkbox" name="permanent" id="permanent" {{if .ban.Permanent}}checked{{end}}> (overrides the duration)</td></tr>
-	<tr><th>Appeal wait time</th><td><input type="text" name="appealwait" id="appealwait" style="width: 100%;"></td></tr>
-	<tr><th></th><td>Same syntax as above, but optional.<br />If left blank, they can appeal immediately</td></tr>
-	<tr><th>No appeals</th><td><input type="checkbox" name="noappeals" /></td> (if checked, Appeal wait time field is ignored)</tr>
+	<tr><th>IP/Mask</th><td><input type="text" name="ip" size="45" value="{{banMask .ban}}" length="30"/></td></tr>
+	<tr><th>Duration</th><td><input type="text" name="duration" size="45" {{if gt .ban.ID 0}}value="{{until .ban.ExpiresAt}}"{{end}}/></td></tr>
+	<tr><th></th><td>Example: '1 year 2 months 3 weeks 4 days 5 hours 6 minutes 7 seconds', '1y2mo3w4d5h6m7s', etc<br/>If blank, this is a permanent ban</td></tr>
+	<tr><th>Appeal wait time</th><td><input type="text" name="appealwait" id="appealwait" size="45"> <label><input type="checkbox" name="noappeals"/>No appeals</label></td></tr>
+	<tr><th></th><td>Same syntax as above, but optional. If left blank, they can appeal immediately</td></tr>
 	<tr><th>Thread starting ban</th><td><input type="checkbox" name="threadban" /> (user can reply to threads but can't make new threads)</td></tr>
 		{{with $.bannedForPostID}}<tr><th>Banned for post ID</th><td>{{$.bannedForPostID}}</td></tr>{{end}}
 	<tr><th>Board</th><td><select name="boardid" id="boardid">
@@ -17,15 +19,15 @@
 		<option value="{{$board.ID}}" {{if eq (dereference $.ban.BoardID) $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>
 	{{- end -}}
 	</select></td></tr>
-	<tr><th>Reason</th><td><textarea name="reason" style="width: 100%;" rows="6" placeholder="Message to be displayed to the banned user"></textarea></td></tr>
-	<tr><th>Staff note</th><td><textarea name="staffnote" style="width: 100%;" rows="6" placeholder="Private note that only staff can see"></textarea></td></tr>
+	<tr><th>Reason</th><td><textarea name="reason" rows="6" cols="40" placeholder="Message to be displayed to the banned user"></textarea></td></tr>
+	<tr><th>Staff note</th><td><textarea name="staffnote" rows="6" cols="40" placeholder="Private note that only staff can see"></textarea></td></tr>
 </table>
 <input type="submit" value="Ban user" /> <input type="button" name="docancel" value="Cancel" onclick="window.location = './manage/bans'; return false"/>
 </form>
 
 <h2 id="banlist">Banlist</h2>
-<form action="{{webPath "manage/bans"}}" method="get">
-Filter board: <select name="filterboardid" id="filterboardid" onchange="window.location = '{{webPath "manage/bans?filterboardid="}}' + this.value + '#banlist'">
+<form action="{{webPath `manage/bans`}}" method="get">
+Filter board: <select name="filterboardid" id="filterboardid" onchange="window.location = '{{webPath `manage/bans?filterboardid=`}}' + this.value + '#banlist'">
 	<option value="0">All boards</option>
 {{- range $b, $board := $.allBoards -}}
 	<option value="{{$board.ID}}" {{if eq $.filterboardid $board.ID}}selected{{end}}>/{{$board.Dir}}/ - {{$board.Title}}</option>

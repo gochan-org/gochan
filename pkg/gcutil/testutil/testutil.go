@@ -1,10 +1,12 @@
 package testutil
 
 import (
+	"database/sql/driver"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -45,4 +47,28 @@ func GoToGochanRoot(t *testing.T) (string, error) {
 func GetTestLogs(t *testing.T) (*zerolog.Event, *zerolog.Event, *zerolog.Event) {
 	logger := zerolog.New(zerolog.NewTestWriter(t))
 	return logger.Info(), logger.Warn(), logger.Error()
+}
+
+// FuzzyTime is a wrapper around time.Time that allows for fuzzy matching of time values within a 10-minute window
+// to be used in SQL query tests
+type FuzzyTime time.Time
+
+func (f FuzzyTime) Match(val driver.Value) bool {
+	ft := time.Time(f).Truncate(time.Minute)
+	var t time.Time
+	switch timeVal := val.(type) {
+	case time.Time:
+		t = timeVal.Truncate(time.Minute)
+	case string:
+		var err error
+		t, err = time.Parse(time.RFC3339, timeVal)
+		if err != nil {
+			return false
+		}
+		t = t.Truncate(time.Minute)
+	default:
+		return false
+	}
+
+	return t.After(ft.Add(-10*time.Minute)) && t.Before(ft.Add(10*time.Minute))
 }
