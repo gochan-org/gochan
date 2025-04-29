@@ -757,7 +757,16 @@ func registerModeratorPages() {
 	RegisterManagePage("appeals", "Ban appeals", ModPerms, OptionalJSON, appealsCallback)
 	RegisterManagePage("filters", "Post filters", ModPerms, NoJSON, filtersCallback)
 
-	hitsFunc := setupManageFunction(&Action{ID: "filters/hits", Title: "Filter hits", Callback: filterHitsCallback})
+	hitsAction := Action{
+		ID:          "filters/hits",
+		Title:       "Filter hits",
+		Hidden:      true,
+		Permissions: ModPerms,
+		JSONoutput:  NoJSON,
+		Callback:    filterHitsCallback,
+	}
+	actions = append(actions, hitsAction)
+	hitsFunc := setupManageFunction(&hitsAction)
 	server.GetRouter().GET(config.WebPath("/manage/filters/hits/:filterID"), hitsFunc)
 	server.GetRouter().POST(config.WebPath("/manage/filters/hits/:filterID"), hitsFunc)
 	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)

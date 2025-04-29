@@ -35,16 +35,19 @@ type CallbackFunction func(writer http.ResponseWriter, request *http.Request, st
 
 // Action represents the functions accessed by staff members at /manage/<functionname>.
 type Action struct {
-	// the string used when the user requests /manage/<ID>
+	// ID is the string used when the user requests /manage/<ID>
 	ID string `json:"id"`
 
-	// The text shown in the staff menu and the window title
+	// Title is used for the text shown in the staff menu and the window title
 	Title string `json:"title"`
 
 	// Permissions represent who can access the page. 0 for anyone,
 	// 1 requires the user to have a janitor, mod, or admin account. 2 requires mod or admin,
 	// and 3 is only accessible by admins
 	Permissions int `json:"perms"`
+
+	// Hidden is used to hide the action from the staff menu
+	Hidden bool `json:"-"`
 
 	// JSONoutput sets what the action can output. If it is 0, it will throw an error if
 	// JSON is requested. If it is 1, it can output JSON if requested, and if 2, it always
@@ -81,11 +84,9 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	var available []Action
 
 	for _, action := range actions {
-		if (rank < action.Permissions || action.Permissions == NoPerms) ||
-			(noJSON && action.JSONoutput == AlwaysJSON) {
-			continue
+		if rank >= action.Permissions && action.Permissions != NoPerms && (action.JSONoutput != NoJSON || !noJSON) && !action.Hidden {
+			available = append(available, action)
 		}
-		available = append(available, action)
 	}
 	return available
 }
@@ -99,6 +100,7 @@ func getPageTitle(actionID string, staff *gcsql.Staff) string {
 			break
 		}
 	}
+
 	if notLoggedIn && useAction.Permissions > NoPerms {
 		return loginTitle
 	}
