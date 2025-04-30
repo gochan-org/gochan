@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Eggbertx/go-forms"
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
@@ -185,19 +187,52 @@ var (
 			},
 			boardID: 1,
 		},
+		{
+			desc: "IP range ban, 1 hour total ban, no appeals, show ban message",
+			expectBan: gcsql.IPBan{
+				IPBanBase: gcsql.IPBanBase{
+					ExpiresAt: time.Now().Add(time.Hour),
+					AppealAt:  time.Now(),
+					Message:   "reason",
+					CanAppeal: true,
+				},
+				BannedForPostID: new(int),
+				RangeStart:      "192.168.56.0",
+				RangeEnd:        "192.168.56.255",
+			},
+			form: url.Values{
+				"do":               {"add"},
+				"ip":               {"192.168.56.0/24"},
+				"duration":         {"1h"},
+				"reason":           {"reason"},
+				"usebannedmessage": {"on"},
+				"bannedmessage":    {"Banned message"},
+				"boardid":          {"1"},
+			},
+			boardID:             1,
+			bannedMessageInput:  "Banned message",
+			expectBannedMessage: `<span style="color:red">(Banned message)</span>`,
+		},
 	}
 )
 
 type banTestCase struct {
-	desc      string
-	expectBan gcsql.IPBan
-	exptError bool
-	method    string
-	form      url.Values
-	boardID   int
+	desc                string
+	expectBan           gcsql.IPBan
+	exptError           bool
+	method              string
+	form                url.Values
+	boardID             int
+	bannedMessageInput  string
+	expectBannedMessage string
 }
 
 func TestIPBanFromRequest(t *testing.T) {
+	config.InitConfig()
+	boardConfig := config.GetBoardConfig("test")
+	boardConfig.BanColors = map[string]string{"admin": "red"}
+	config.SetBoardConfig("test", boardConfig)
+
 	mock, err := gcsql.SetupMockDB("mysql")
 	if err != nil {
 		t.Fatalf("Failed to setup mock DB: %v", err)
@@ -219,21 +254,46 @@ func TestIPBanFromRequest(t *testing.T) {
 			}
 			ban.IssuedAt = time.Now()
 			tc.expectBan.IssuedAt = ban.IssuedAt
+			if tc.expectBan.BannedForPostID != nil {
+				ban.BannedForPostID = new(int)
+				*ban.BannedForPostID = 1
+				*tc.expectBan.BannedForPostID = 1
+			}
 
 			mock.ExpectBegin()
 			mock.ExpectPrepare(ipBanInsertRE).ExpectExec().
-				WithArgs(1, tc.expectBan.BoardID, nil, "", tc.expectBan.IsThreadBan, true,
+				WithArgs(1, tc.expectBan.BoardID, tc.expectBan.BannedForPostID, "", tc.expectBan.IsThreadBan, true,
 					tc.expectBan.RangeStart, tc.expectBan.RangeEnd,
 					testutil.FuzzyTime(tc.expectBan.AppealAt), testutil.FuzzyTime(tc.expectBan.ExpiresAt),
 					tc.expectBan.Permanent, tc.expectBan.StaffNote, tc.expectBan.Message, tc.expectBan.CanAppeal,
 				).WillReturnResult(driver.ResultNoRows)
 			mock.ExpectCommit()
 
-			err := ipBanFromRequest(&ban, request, infoEv, errEv)
+			if tc.bannedMessageInput != "" {
+				mock.ExpectPrepare(`UPDATE posts SET banned_message = \? WHERE id = \?`).ExpectExec().
+					WithArgs(tc.expectBannedMessage, 1).WillReturnResult(driver.ResultNoRows)
+			}
+
+			var form banPageFields
+			if !assert.NoError(t, forms.FillStructFromForm(request, &form)) {
+				t.FailNow()
+			}
+
+			err := form.fillBanFields(&ban, infoEv, errEv)
+			if !assert.NoError(t, err) {
+				t.FailNow()
+			}
+			err = gcsql.NewIPBan(&ban)
+			if tc.bannedMessageInput != "" {
+				gcsql.SetPostBannedMessage(1, tc.bannedMessageInput, "admin")
+			}
 			if tc.exptError {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				if !assert.NoError(t, err) {
+					t.FailNow()
+				}
+				assert.NoError(t, mock.ExpectationsWereMet())
 				assert.Equal(t, tc.expectBan.Permanent, ban.Permanent)
 				assert.Equal(t, tc.expectBan.CanAppeal, ban.CanAppeal)
 				assert.Equal(t, tc.expectBan.RangeStart, ban.RangeStart)

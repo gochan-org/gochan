@@ -23,8 +23,8 @@ type Announcement struct {
 
 // table: DBPREFIXboard_staff
 type BoardStaff struct {
-	BoardID uint // sql: board_id
-	StaffID uint // sql: staff_id
+	BoardID int // sql: board_id
+	StaffID int // sql: staff_id
 }
 
 // table: DBPREFIXboards

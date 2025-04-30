@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"html/template"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -546,4 +548,23 @@ func (p *Post) WebPath() string {
 		return webRoot
 	}
 	return config.WebPath(p.boardDir, "res/", strconv.Itoa(p.opID)+".html#"+strconv.Itoa(p.ID))
+}
+
+// SetPostBannedMessage sets the publicly-displayed message on a post receiving a ban
+func SetPostBannedMessage(postID int, bannedMessage string, staff string) error {
+	banColors := config.GetBoardConfig("").BanColors
+	staffBanColor, ok := banColors[staff]
+
+	if ok && staffBanColor != "" && !strings.HasPrefix(staffBanColor, "#") {
+		_, err := strconv.ParseInt(staffBanColor, 16, 32)
+		if err == nil {
+			staffBanColor = "#" + staffBanColor
+		}
+	} else if !ok {
+		staffBanColor = "red"
+	}
+	bannedMessageHTML := fmt.Sprintf(`<span style="color:%s">(%s)</span>`, staffBanColor, bannedMessage)
+	const sql = `UPDATE DBPREFIXposts SET banned_message = ? WHERE id = ?`
+	_, err := ExecTimeoutSQL(nil, sql, bannedMessageHTML, postID)
+	return err
 }

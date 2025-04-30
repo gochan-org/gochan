@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Eggbertx/go-forms"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -31,89 +32,79 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	var outputStr string
 	var ban gcsql.IPBan
 	ban.StaffID = staff.ID
-	deleteIDStr := request.FormValue("delete")
-	postIDstr := request.FormValue("postid")
-	if deleteIDStr != "" {
+
+	var banForm banPageFields
+	if err = forms.FillStructFromForm(request, &banForm); err != nil {
+		errEv.Err(err).Caller().
+			Msg("Unable to fill struct from form")
+		return "", server.NewServerError("received invalid form data", http.StatusBadRequest)
+	}
+	fmt.Printf("%#v\n", banForm)
+
+	if banForm.PostID > 0 {
+		ban.BannedForPostID = new(int)
+		*ban.BannedForPostID = banForm.PostID
+		gcutil.LogInt("postID", banForm.PostID, infoEv, errEv)
+	}
+
+	if banForm.DeleteID > 0 {
 		// deleting a ban
-		ban.ID, err = strconv.Atoi(deleteIDStr)
-		if err != nil {
-			errEv.Err(err).Caller().
-				Str("deleteBan", deleteIDStr).
-				Send()
-			return "", err
-		}
+		ban.ID = banForm.DeleteID
 		if err = ban.Deactivate(staff.ID); err != nil {
 			errEv.Err(err).Caller().
 				Int("deleteBan", ban.ID).
 				Send()
 			return "", err
 		}
-
-	} else if request.FormValue("do") == "add" {
-		ip := request.PostFormValue("ip")
-		ban.RangeStart, ban.RangeEnd, err = gcutil.ParseIPRange(ip)
+	} else if banForm.Do == "add" {
+		err := banForm.fillBanFields(&ban, infoEv, errEv)
 		if err != nil {
-			errEv.Err(err).Caller().
-				Str("ip", ip)
 			return "", err
 		}
-		gcutil.LogStr("rangeStart", ban.RangeStart, infoEv, errEv)
-		gcutil.LogStr("rangeEnd", ban.RangeEnd, infoEv, errEv)
-		gcutil.LogStr("reason", ban.Message, infoEv, errEv)
-		gcutil.LogBool("appealable", ban.CanAppeal, infoEv, errEv)
-		err := ipBanFromRequest(&ban, request, infoEv, errEv)
-		if err != nil {
+		if err = gcsql.NewIPBan(&ban); err != nil {
 			errEv.Err(err).Caller().
-				Msg("unable to submit ban")
-			return "", err
+				Msg("Unable to create new IP ban")
+			return "", server.NewServerError("failed to create new IP ban", http.StatusInternalServerError)
+		}
+		gcutil.LogInt("banID", ban.ID, infoEv, errEv)
+
+		if banForm.UseBannedMessage && banForm.BannedMessage != "" {
+			if err = gcsql.SetPostBannedMessage(banForm.PostID, banForm.BannedMessage, staff.Username); err != nil {
+				errEv.Err(err).Caller().
+					Str("bannedMessage", banForm.BannedMessage).
+					Msg("Unable to set banned message")
+				return "", server.NewServerError("failed to set banned message", http.StatusInternalServerError)
+			}
 		}
 		infoEv.Msg("Added IP ban")
-	} else if postIDstr != "" {
-		postID, err := strconv.Atoi(postIDstr)
-		if err != nil {
-			errEv.Err(err).Caller().Send()
-			return "", err
-		}
-		if ban.RangeStart, err = gcsql.GetPostIP(postID); err != nil {
+	} else if banForm.PostID > 0 {
+		if ban.RangeStart, err = gcsql.GetPostIP(banForm.PostID); err != nil {
 			errEv.Err(err).Caller().
-				Int("postID", postID).Send()
+				Int("postID", banForm.PostID).Send()
 			return "", err
 		}
 		ban.RangeEnd = ban.RangeStart
 	}
 
-	filterBoardIDstr := request.FormValue("filterboardid")
-	var filterBoardID int
-	if filterBoardIDstr != "" {
-		if filterBoardID, err = strconv.Atoi(filterBoardIDstr); err != nil {
-			errEv.Err(err).Caller().
-				Str("filterboardid", filterBoardIDstr).Send()
-			return "", err
-		}
-	}
-	limitStr := request.FormValue("limit")
-	limit := 200
-	if limitStr != "" {
-		if limit, err = strconv.Atoi(limitStr); err != nil {
-			errEv.Err(err).Caller().
-				Str("limit", limitStr).Send()
-			return "", err
-		}
-	}
-	banlist, err := gcsql.GetIPBans(filterBoardID, limit, true)
+	banlist, err := gcsql.GetIPBans(banForm.BoardID, banForm.Limit, true)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Error getting ban list")
 		err = fmt.Errorf("failed getting ban list: %w", err)
 		return "", err
 	}
 	manageBansBuffer := bytes.NewBufferString("")
-
-	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, map[string]any{
+	data := map[string]any{
 		"banlist":       banlist,
 		"allBoards":     gcsql.AllBoards,
 		"ban":           ban,
-		"filterboardid": filterBoardID,
-	}, manageBansBuffer, "text/html"); err != nil {
+		"filterboardid": banForm.FilterBoardID,
+		"boardConfig":   config.GetBoardConfig(""),
+	}
+	if ban.BannedForPostID != nil {
+		data["postID"] = banForm.PostID
+	}
+
+	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, data, manageBansBuffer, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
 		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}

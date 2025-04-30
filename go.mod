@@ -8,6 +8,7 @@ require (
 	github.com/CuberL/glua-async v0.0.0-20190614102843-43f22221106d
 	github.com/Eggbertx/durationutil v1.0.0
 	github.com/Eggbertx/geoip-legacy v1.1.0
+	github.com/Eggbertx/go-forms v0.0.0-20250119220903-24b81ab7d076
 	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/aquilax/tripcode v1.0.1
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9

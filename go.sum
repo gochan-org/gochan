@@ -9,6 +9,8 @@ github.com/Eggbertx/durationutil v1.0.0 h1:/DJo6z/9tac/1KTwa/RGjpg5Q8Rrnx3p5w4Ox
 github.com/Eggbertx/durationutil v1.0.0/go.mod h1:eOfcV0W5B4qoKsEtjhOYUTsTm6KnrWVkfgOmMTC4XnY=
 github.com/Eggbertx/geoip-legacy v1.1.0 h1:TBwvJln6UBlJ1n7XslhlWzw2pwPNU1UmdKl41AHODlw=
 github.com/Eggbertx/geoip-legacy v1.1.0/go.mod h1:oZq7nJGTv0mnScoQolQ7YXUA4hF0hydk+lKnYTCb0U0=
+github.com/Eggbertx/go-forms v0.0.0-20250119220903-24b81ab7d076 h1:kmk9YoJw70RG30CDpwwMfrJZIhX0HAAWdVesOLDciPo=
+github.com/Eggbertx/go-forms v0.0.0-20250119220903-24b81ab7d076/go.mod h1:hpiKM6mlep4GEHVeUTUkjq4Eh6RMuarK7iDBf5Dt6JM=
 github.com/PuerkitoBio/goquery v1.10.3 h1:pFYcNSqHxBD06Fpj/KsbStFRsgRATgnf3LeXiUkhzPo=
 github.com/PuerkitoBio/goquery v1.10.3/go.mod h1:tMUX0zDMHXYlAQk6p35XxQMqMweEKB7iK7iLNd4RH4Y=
 github.com/VividCortex/ewma v1.1.1/go.mod h1:2Tkkvm3sRDVXaiyucHiACn4cqf7DpdyLvmxzcbUokwA=

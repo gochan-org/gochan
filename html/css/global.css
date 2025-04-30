@@ -142,8 +142,13 @@ div#upload-box .upload-x, div#upload-box .upload-filename {
   width: 100px;
 }
 
-.post-text {
+.post-text, .banned-message {
   padding: 8px;
+}
+
+.banned-message {
+  color: red;
+  font-weight: bold;
 }
 
 .setting-name {
