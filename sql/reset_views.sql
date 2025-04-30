@@ -26,7 +26,7 @@ SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post;
 CREATE VIEW DBPREFIXv_building_posts AS
 SELECT p.id AS id, p.thread_id AS thread_id, ip, name, tripcode, is_secure_tripcode,
 email, subject, created_on, created_on as last_modified, op.id AS parent_id, t.last_bump as last_bump,
-message, message_raw, t.board_id,
+message, message_raw, COALESCE(banned_message, '') AS banned_message, t.board_id,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
 COALESCE(f.original_filename, '') as original_filename,
 COALESCE(f.filename, '') AS filename,

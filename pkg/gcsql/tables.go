@@ -217,7 +217,7 @@ type Post struct {
 	Password         string        `json:"-"`     // sql: `password`
 	DeletedAt        time.Time     `json:"-"`     // sql: deleted_at
 	IsDeleted        bool          `json:"-"`     // sql: is_deleted
-	BannedMessage    string        `json:"-"`     // sql: banned_message
+	BannedMessage    template.HTML `json:"-"`     // sql: banned_message
 	Flag             string        `json:"-"`     // sql: flag
 	Country          string        `json:"-"`     // sql: country
 

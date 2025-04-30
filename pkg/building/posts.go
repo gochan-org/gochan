@@ -19,7 +19,7 @@ import (
 
 const (
 	buildingPostsBaseQuery = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
-		last_modified, parent_id, last_bump, message, message_raw, board_id, dir, original_filename, filename,
+		last_modified, parent_id, last_bump, message, message_raw, banned_message, board_id, dir, original_filename, filename,
 		checksum, filesize, tw, th, width, height, spoiler_file, locked, stickied, cyclical, spoiler_thread, flag, country, is_deleted
 		FROM DBPREFIXv_building_posts `
 )
@@ -210,8 +210,8 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 		var spoilerFile bool
 		dest = append(dest,
 			&post.Name, &post.Tripcode, &post.IsSecureTripcode, &post.Email, &post.Subject, &post.CreatedOn,
-			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BoardID,
-			&post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
+			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BannedMessage,
+			&post.BoardID, &post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight, &spoilerFile,
 			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.thread.IsSpoilered,
 			&post.Country.Flag, &post.Country.Name, &post.IsDeleted)

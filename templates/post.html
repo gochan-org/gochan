@@ -57,5 +57,10 @@
 {{- end -}}
 {{- if $.post.IsTopPost}}{{template "nameline" .}}{{end -}}
 	<div class="post-text">{{.post.Message}}</div>
-	</div>{{if not $.post.IsTopPost}}
-{{if not $.post.IsTopPost}}</div>{{end}}{{end}}
+	{{- if ne $.post.BannedMessage "" -}}
+		<div class="banned">
+			{{$.post.BannedMessage}}
+		</div>
+	{{- end -}}
+	</div>
+{{if not $.post.IsTopPost}}</div>{{end}}
