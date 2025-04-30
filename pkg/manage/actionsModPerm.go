@@ -39,7 +39,6 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 			Msg("Unable to fill struct from form")
 		return "", server.NewServerError("received invalid form data", http.StatusBadRequest)
 	}
-	fmt.Printf("%#v\n", banForm)
 
 	if banForm.PostID > 0 {
 		ban.BannedForPostID = new(int)
