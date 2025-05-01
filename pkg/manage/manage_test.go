@@ -188,15 +188,7 @@ var (
 			path:         "/manage/staff?changepass=janitor",
 			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
 			expectStatus: http.StatusForbidden,
-			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
-				mock.ExpectPrepare(`SELECT id, username, password_checksum, global_rank, added_on, last_login, is_active FROM staff WHERE username = \? AND is_active = TRUE`).
-					ExpectQuery().WithArgs("janitor").WillReturnRows(
-					sqlmock.NewRows([]string{"id", "username", "password_checksum", "global_rank", "added_on", "last_login", "is_active"}).
-						AddRow(3, "janitor", gcutil.BcryptSum("password"), 1, time.Now(), time.Now(), true),
-				)
-				getStaffMockHelper(t, mock)
-			},
-			expectError: true,
+			expectError:  true,
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
 				assert.Equal(t, http.StatusForbidden, writer.Code)
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
@@ -209,15 +201,7 @@ var (
 			path:         "/manage/staff?changerank=mod",
 			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
 			expectStatus: http.StatusForbidden,
-			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
-				mock.ExpectPrepare(`SELECT id, username, password_checksum, global_rank, added_on, last_login, is_active FROM staff WHERE username = \? AND is_active = TRUE`).
-					ExpectQuery().WithArgs("mod").WillReturnRows(
-					sqlmock.NewRows([]string{"id", "username", "password_checksum", "global_rank", "added_on", "last_login", "is_active"}).
-						AddRow(2, "mod", gcutil.BcryptSum("password"), 2, time.Now(), time.Now(), true),
-				)
-				getStaffMockHelper(t, mock)
-			},
-			expectError: true,
+			expectError:  true,
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
 				assert.Equal(t, http.StatusForbidden, writer.Code)
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
@@ -250,6 +234,114 @@ var (
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
 				expectedStaff := append(genericStaffList, gcsql.Staff{Username: "newuser", Rank: 1})
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm, expectedStaff...)
+			},
+		},
+		{
+			desc:         "Change password as admin",
+			method:       "POST",
+			path:         "/manage/staff",
+			staff:        &gcsql.Staff{Username: "admin", Rank: 3},
+			expectStatus: http.StatusOK,
+			form: url.Values{
+				"do":              {"changepass"},
+				"username":        {"mod"},
+				"password":        {"newpassword"},
+				"passwordconfirm": {"newpassword"},
+			},
+			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+				mock.ExpectPrepare(`SELECT id FROM staff WHERE username = \?`).ExpectQuery().WithArgs("mod").
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
+				mock.ExpectPrepare(`UPDATE staff SET password_checksum = \? WHERE id = \?`).ExpectExec().
+					WithArgs(sqlmock.AnyArg(), 2).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				getStaffMockHelper(t, mock)
+			},
+			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm)
+			},
+		},
+		{
+			desc:         "Change own password as mod",
+			method:       "POST",
+			path:         "/manage/staff",
+			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
+			expectStatus: http.StatusOK,
+			form: url.Values{
+				"do":              {"changepass"},
+				"username":        {"mod"},
+				"password":        {"newpassword"},
+				"passwordconfirm": {"newpassword"},
+			},
+			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+				mock.ExpectPrepare(`SELECT id FROM staff WHERE username = \?`).ExpectQuery().WithArgs("mod").
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(2))
+				mock.ExpectPrepare(`UPDATE staff SET password_checksum = \? WHERE id = \?`).ExpectExec().
+					WithArgs(sqlmock.AnyArg(), 2).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				getStaffMockHelper(t, mock)
+			},
+			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+				validateStaffOutput(t, &gcsql.Staff{Username: "mod", Rank: 2}, output, noForm)
+			},
+		},
+		{
+			desc:         "Try to change password as mod for another account",
+			method:       "POST",
+			path:         "/manage/staff",
+			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
+			expectStatus: http.StatusForbidden,
+			form: url.Values{
+				"do":              {"changepass"},
+				"username":        {"janitor"},
+				"password":        {"newpassword"},
+				"passwordconfirm": {"newpassword"},
+			},
+			expectError: true,
+			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+				assert.Equal(t, http.StatusForbidden, writer.Code)
+				assert.ErrorIs(t, err, ErrInsufficientPermission)
+				assert.Empty(t, output)
+			},
+		},
+		{
+			desc:         "Change rank as admin",
+			method:       "POST",
+			path:         "/manage/staff",
+			staff:        &gcsql.Staff{Username: "admin", Rank: 3},
+			expectStatus: http.StatusOK,
+			form: url.Values{
+				"do":       {"changerank"},
+				"username": {"janitor"},
+				"rank":     {"2"},
+			},
+			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+				mock.ExpectPrepare(`SELECT id FROM staff WHERE username = \?`).ExpectQuery().WithArgs("janitor").
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(3))
+				mock.ExpectPrepare(`UPDATE staff SET global_rank = \? WHERE id = \?`).ExpectExec().
+					WithArgs(2, 3).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				getStaffMockHelper(t, mock)
+			},
+			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm, genericStaffList...)
+			},
+		},
+		{
+			desc:         "Try to change rank as mod",
+			method:       "POST",
+			path:         "/manage/staff",
+			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
+			expectStatus: http.StatusForbidden,
+			form: url.Values{
+				"do":       {"changerank"},
+				"username": {"janitor"},
+				"rank":     {"2"},
+			},
+			expectError: true,
+			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+				assert.Equal(t, http.StatusForbidden, writer.Code)
+				assert.ErrorIs(t, err, ErrInsufficientPermission)
+				assert.Empty(t, output)
 			},
 		},
 	}
@@ -384,9 +476,15 @@ func (tc *manageCallbackTestCase) runTest(t *testing.T, manageCallbackFunc Callb
 
 	writer := httptest.NewRecorder()
 	output, err := manageCallbackFunc(writer, request, tc.staff, tc.wantsJSON, infoEv, errEv)
+	if tc.expectStatus == 0 {
+		tc.expectStatus = http.StatusOK
+	}
 	assert.Equal(t, tc.expectStatus, writer.Code)
 	if tc.expectError {
 		assert.Error(t, err)
+		if !assert.NoError(t, mock.ExpectationsWereMet()) {
+			t.FailNow()
+		}
 		if tc.validateOutput != nil {
 			tc.validateOutput(t, output, writer, err)
 		}
