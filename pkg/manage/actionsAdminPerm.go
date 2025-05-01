@@ -16,12 +16,13 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting"
+	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
 
 var (
-	ErrInsufficientPermission = errors.New("insufficient account permission")
+	ErrInsufficientPermission = server.NewServerError("insufficient account permission", http.StatusForbidden)
 )
 
 type uploadInfo struct {

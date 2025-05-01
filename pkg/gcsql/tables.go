@@ -118,46 +118,47 @@ func (u *Upload) IsEmbed() bool {
 	return strings.HasPrefix(u.Filename, "embed:")
 }
 
-// IPBanBase used to composition IPBan and IPBanAudit. It does not represent a SQL table by itself
+// IPBanBase is used by IPBan and IPBanAudit. It does not represent a SQL table by itself
 type IPBanBase struct {
-	IsActive    bool
-	IsThreadBan bool
-	ExpiresAt   time.Time
-	StaffID     int
-	AppealAt    time.Time
-	Permanent   bool
-	StaffNote   string
-	Message     string
-	CanAppeal   bool
+	IsActive    bool      // sql: is_active
+	IsThreadBan bool      // sql: is_thread_ban
+	ExpiresAt   time.Time // sql: expires_at
+	StaffID     int       // sql: staff_id
+	AppealAt    time.Time // sql: appeal_at
+	Permanent   bool      // sql: permanent
+	StaffNote   string    // sql: staff_note
+	Message     string    // sql: message
+	CanAppeal   bool      // sql: can_appeal
 }
 
 // IPBan contains the information association with a specific ip ban.
 // table: DBPREFIXip_ban
 type IPBan struct {
-	ID              int
-	BoardID         *int
-	BannedForPostID *int
-	CopyPostText    template.HTML
-	RangeStart      string
-	RangeEnd        string
-	IssuedAt        time.Time
+	ID              int           // sql: id
+	BoardID         *int          // sql: board_id
+	BannedForPostID *int          // sql: banned_for_post_id
+	CopyPostText    template.HTML // sql: copy_post_text
+	RangeStart      string        // sql: range_start
+	RangeEnd        string        // sql: range_end
+	IssuedAt        time.Time     // sql: issued_at
 	IPBanBase
 }
 
 // Deprecated: Use the RangeStart and RangeEnd fields or gcutil.GetIPRangeSubnet.
 // IP was previously a field in the IPBan struct before range bans were
 // implemented. This is here as a fallback for templates
-func (ipb *IPBan) IP() string {
+func (ipb *IPBan) IP() (string, error) {
 	if ipb.RangeStart == ipb.RangeEnd {
-		return ipb.RangeStart
+		return ipb.RangeStart, nil
 	}
 	inet, err := gcutil.GetIPRangeSubnet(ipb.RangeStart, ipb.RangeEnd)
 	if err != nil {
-		return "?"
+		return "", err
 	}
-	return inet.String()
+	return inet.String(), nil
 }
 
+// IsBanned returns true if the given IP is banned
 func (ipb *IPBan) IsBanned(ipStr string) (bool, error) {
 	ipn, err := gcutil.GetIPRangeSubnet(ipb.RangeStart, ipb.RangeEnd)
 	if err != nil {

@@ -16,24 +16,24 @@ var (
 	router *bunrouter.Router
 )
 
-type serverError struct {
-	err        any
-	statusCode int
+type ServerError struct {
+	Err        any
+	StatusCode int
 }
 
-func (e *serverError) Error() string {
-	return fmt.Sprint(e.err)
+func (e *ServerError) Error() string {
+	return fmt.Sprint(e.Err)
 }
 
-func (e *serverError) Unwrap() error {
-	if err, ok := e.err.(error); ok {
+func (e *ServerError) Unwrap() error {
+	if err, ok := e.Err.(error); ok {
 		return err
 	}
 	return nil
 }
 
 func NewServerError(message any, statusCode int) error {
-	return &serverError{err: message, statusCode: statusCode}
+	return &ServerError{Err: message, StatusCode: statusCode}
 }
 
 // ServeJSON serves data as a JSON string
@@ -45,8 +45,8 @@ func ServeJSON(writer http.ResponseWriter, data map[string]any) {
 
 // ServeErrorPage shows a general error page if something goes wrong
 func ServeErrorPage(writer http.ResponseWriter, err any) {
-	if se, ok := err.(*serverError); ok {
-		writer.WriteHeader(se.statusCode)
+	if se, ok := err.(*ServerError); ok {
+		writer.WriteHeader(se.StatusCode)
 	}
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	serverutil.MinifyTemplate(gctemplates.ErrorPage, map[string]any{
@@ -68,8 +68,8 @@ func ServeError(writer http.ResponseWriter, err any, wantsJSON bool, data map[st
 			servedMap = make(map[string]any)
 		}
 		servedMap["error"] = err
-		if se, ok := err.(*serverError); ok {
-			writer.WriteHeader(se.statusCode)
+		if se, ok := err.(*ServerError); ok {
+			writer.WriteHeader(se.StatusCode)
 		}
 		ServeJSON(writer, servedMap)
 	} else {

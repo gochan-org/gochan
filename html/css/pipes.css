@@ -53,7 +53,7 @@ div#recent-posts-header {
 }
 
 .postblock,
-table.mgmt-table tr:first-of-type th {
+table.mgmt-table th {
   background: #25272D;
   font-weight: 700;
 }

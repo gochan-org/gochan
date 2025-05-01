@@ -107,8 +107,16 @@ func (s *Staff) UpdateRank(rank int) error {
 	if rank < 0 || rank > 3 {
 		return ErrInvalidStaffRank
 	}
-	_, err := ExecTimeoutSQL(nil, "UPDATE DBPREFIXstaff SET global_rank = ? WHERE id = ?", rank, s.ID)
-	if err != nil {
+	var err error
+	if s.ID == 0 {
+		// ID field not set yet, get it from the DB
+		s.ID, err = GetStaffID(s.Username)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, err = ExecTimeoutSQL(nil, "UPDATE DBPREFIXstaff SET global_rank = ? WHERE id = ?", rank, s.ID); err != nil {
 		return err
 	}
 	s.Rank = rank
@@ -120,8 +128,17 @@ func (s *Staff) UpdatePassword(password string) error {
 	if password == "" {
 		return ErrInvalidStaffPassword
 	}
+	var err error
+	if s.ID == 0 {
+		// ID field not set yet, get it from the DB
+		s.ID, err = GetStaffID(s.Username)
+		if err != nil {
+			return err
+		}
+	}
+
 	checksum := gcutil.BcryptSum(password)
-	_, err := ExecTimeoutSQL(nil, "UPDATE DBPREFIXstaff SET password_checksum = ? WHERE id = ?", checksum, s.ID)
+	_, err = ExecTimeoutSQL(nil, "UPDATE DBPREFIXstaff SET password_checksum = ? WHERE id = ?", checksum, s.ID)
 	if err != nil {
 		return err
 	}
@@ -129,38 +146,10 @@ func (s *Staff) UpdatePassword(password string) error {
 	return nil
 }
 
-// UpdateStaff sets the rank and/or password of the staff account with the given username. If password
-// is blank, only the rank will be updated
-func UpdateStaff(username string, rank int, password string) error {
-	// first check if it's a recognized username
-	id, err := GetStaffID(username)
-	if err != nil {
-		return err
-	}
-	sqlUpdate := "UPDATE DBPREFIXstaff SET global_rank = ?"
-	args := []any{rank}
-	if password != "" {
-		sqlUpdate += ", password_checksum = ?"
-		args = append(args, gcutil.BcryptSum(password))
-	}
-	sqlUpdate += " WHERE id = ?"
-	args = append(args, id)
-
-	_, err = ExecTimeoutSQL(nil, sqlUpdate, args...)
-	return err
-}
-
-// UpdateStaff sets the password of the staff account with the given username
-func UpdatePassword(username string, newPassword string) error {
-	const sqlUPDATE = `UPDATE DBPREFIXstaff SET password_checksum = ? WHERE id = ?`
-	id, err := GetStaffID(username)
-	if err != nil {
-		return err
-	}
-	checksum := gcutil.BcryptSum(newPassword)
-
-	_, err = ExecTimeoutSQL(nil, sqlUPDATE, checksum, id)
-	return err
+// UpdateStaffPassword sets the password of the staff account with the given username
+func UpdateStaffPassword(username string, newPassword string) error {
+	staff := Staff{Username: username}
+	return staff.UpdatePassword(newPassword)
 }
 
 // EndStaffSession deletes any session rows associated with the requests session cookie and then

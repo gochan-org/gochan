@@ -3,6 +3,7 @@ package manage
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -111,7 +112,12 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			}
 		}
 		if err != nil {
-			writer.WriteHeader(http.StatusInternalServerError)
+			var serverError *server.ServerError
+			if errors.As(err, &serverError) {
+				writer.WriteHeader(serverError.StatusCode)
+			} else {
+				writer.WriteHeader(http.StatusInternalServerError)
+			}
 			serveError(writer, "actionerror", action.ID, err.Error(), wantsJSON || (action.JSONoutput == AlwaysJSON))
 			return
 		}
