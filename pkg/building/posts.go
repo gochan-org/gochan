@@ -20,7 +20,7 @@ import (
 const (
 	buildingPostsBaseQuery = `SELECT id, thread_id, ip, name, tripcode, is_secure_tripcode, email, subject, created_on,
 		last_modified, parent_id, last_bump, message, message_raw, banned_message, board_id, dir, original_filename, filename,
-		checksum, filesize, tw, th, width, height, spoiler_file, locked, stickied, cyclical, spoiler_thread, flag, country, is_deleted
+		checksum, filesize, tw, th, width, height, spoiler_file, locked, stickied, cyclic, spoiler_thread, flag, country, is_deleted
 		FROM DBPREFIXv_building_posts `
 )
 
@@ -177,7 +177,7 @@ func (p *Post) Stickied() bool {
 }
 
 func (p *Post) Cyclic() bool {
-	return p.thread.Cyclical
+	return p.thread.Cyclic
 }
 
 func (p *Post) SpoilerThread() bool {
@@ -213,7 +213,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 			&post.LastModified, &post.ParentID, &lastBump, &post.Message, &post.MessageRaw, &post.BannedMessage,
 			&post.BoardID, &post.BoardDir, &post.OriginalFilename, &post.Filename, &post.Checksum, &post.Filesize,
 			&post.ThumbnailWidth, &post.ThumbnailHeight, &post.UploadWidth, &post.UploadHeight, &spoilerFile,
-			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclical, &post.thread.IsSpoilered,
+			&post.thread.Locked, &post.thread.Stickied, &post.thread.Cyclic, &post.thread.IsSpoilered,
 			&post.Country.Flag, &post.Country.Name, &post.IsDeleted)
 
 		if err = rows.Scan(dest...); err != nil {

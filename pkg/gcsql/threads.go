@@ -9,7 +9,7 @@ import (
 
 const (
 	selectThreadsBaseSQL = `SELECT
-	id, board_id, locked, stickied, anchored, cyclical, is_spoilered, last_bump, deleted_at, is_deleted
+	id, board_id, locked, stickied, anchored, cyclic, is_spoilered, last_bump, deleted_at, is_deleted
 	FROM DBPREFIXthreads `
 )
 
@@ -22,7 +22,7 @@ var (
 // CreateThread creates a new thread in the database with the given board ID and statuses
 func CreateThread(requestOptions *RequestOptions, thread *Thread) (err error) {
 	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
-	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclical, is_spoilered) VALUES (?,?,?,?,?,?)`
+	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclic, is_spoilered) VALUES (?,?,?,?,?,?)`
 	var boardIsLocked bool
 	if err = QueryRow(requestOptions, lockedQuery, []any{&thread.BoardID}, []any{&boardIsLocked}); err != nil {
 		return err
@@ -30,7 +30,7 @@ func CreateThread(requestOptions *RequestOptions, thread *Thread) (err error) {
 	if boardIsLocked {
 		return ErrBoardIsLocked
 	}
-	if _, err = Exec(requestOptions, insertQuery, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical, &thread.IsSpoilered); err != nil {
+	if _, err = Exec(requestOptions, insertQuery, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic, &thread.IsSpoilered); err != nil {
 		return err
 	}
 	return QueryRow(requestOptions, "SELECT MAX(id) FROM DBPREFIXthreads", nil, []any{&thread.ID})
@@ -41,7 +41,7 @@ func GetThread(threadID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = ?`
 	thread := new(Thread)
 	err := QueryRow(nil, query, []any{threadID}, []any{
-		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
+		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic,
 		&thread.IsSpoilered, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	})
 	return thread, err
@@ -52,7 +52,7 @@ func GetPostThread(opID int) (*Thread, error) {
 	const query = selectThreadsBaseSQL + `WHERE id = (SELECT thread_id FROM DBPREFIXposts WHERE id = ? LIMIT 1)`
 	thread := new(Thread)
 	err := QueryRow(nil, query, []any{opID}, []any{
-		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclical,
+		&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic,
 		&thread.IsSpoilered, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
@@ -90,7 +90,7 @@ func GetThreadsWithBoardID(boardID int, onlyNotDeleted bool) ([]Thread, error) {
 		var thread Thread
 		if err = rows.Scan(
 			&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored,
-			&thread.Cyclical, &thread.IsSpoilered, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
+			&thread.Cyclic, &thread.IsSpoilered, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 		); err != nil {
 			return threads, err
 		}
@@ -217,7 +217,7 @@ func (t *Thread) UpdateAttribute(attribute string, value bool) error {
 	case "anchored":
 		t.Anchored = value
 	case "cyclic":
-		t.Cyclical = value
+		t.Cyclic = value
 	default:
 		return fmt.Errorf("invalid thread attribute %q", attribute)
 	}

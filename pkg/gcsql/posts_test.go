@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	insertIntoThreadsBase     = `INSERT INTO threads \(board_id, locked, stickied, anchored, cyclical, is_spoilered\) VALUES `
+	insertIntoThreadsBase     = `INSERT INTO threads \(board_id, locked, stickied, anchored, cyclic, is_spoilered\) VALUES `
 	insertIntoThreadsMySQL    = insertIntoThreadsBase + `\(\?,\?,\?,\?,\?,\?\)`
 	insertIntoThreadsPostgres = insertIntoThreadsBase + `\(\$1,\$2,\$3,\$4,\$5,\$6\)`
 

@@ -135,5 +135,19 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
+	// rename DBPREFIXposts.cyclical to cyclic
+	dataType, err = common.ColumnType(ctx, db, nil, "cyclic", "DBPREFIXposts", sqlConfig)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return err
+	}
+	if dataType == "" {
+		query = `ALTER TABLE DBPREFIXposts CHANGE cyclical cyclic BOOL NOT NULL DEFAULT FALSE`
+		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+			errEv.Err(err).Caller().Send()
+			return err
+		}
+	}
+
 	return nil
 }

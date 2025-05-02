@@ -28,7 +28,7 @@
 <span class="status-icons">
 	{{- if $.thread.Locked}}<img src="{{webPath `/static/lock.png`}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
 	{{- if $.thread.Stickied}}<img src="{{webPath `/static/sticky.png`}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
-	{{- if $.thread.Cyclical}}<img src="{{webPath `/static/cyclic.png`}}" class="cyclic-icon" alt="Cyclic thread" title="Cyclic thread">{{end -}}
+	{{- if $.thread.Cyclic}}<img src="{{webPath `/static/cyclic.png`}}" class="cyclic-icon" alt="Cyclic thread" title="Cyclic thread">{{end -}}
 </span>
 {{if $.is_board_page -}}
 [<a href="{{.post.ThreadPath}}">View</a>]

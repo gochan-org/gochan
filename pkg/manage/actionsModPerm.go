@@ -446,11 +446,11 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		} else if request.FormValue("uncyclic") != "" {
 			attr = "cyclic"
 			newVal = false
-			doChange = thread.Cyclical != newVal
+			doChange = thread.Cyclic != newVal
 		} else if request.FormValue("cyclic") != "" {
 			attr = "cyclic"
 			newVal = true
-			doChange = thread.Cyclical != newVal
+			doChange = thread.Cyclic != newVal
 		}
 
 		if attr != "" && doChange {

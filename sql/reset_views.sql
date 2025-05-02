@@ -8,7 +8,7 @@ DROP VIEW IF EXISTS DBPREFIXv_upload_info;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts_with_file;
 DROP VIEW IF EXISTS DBPREFIXv_front_page_posts;
 DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete_file_only;
-DROP VIEW IF EXISTS DBPREFIXv_posts_cyclical_check;
+DROP VIEW IF EXISTS DBPREFIXv_posts_cyclic_check;
 DROP VIEW IF EXISTS DBPREFIXv_posts_to_delete;
 DROP VIEW IF EXISTS DBPREFIXv_recent_posts;
 DROP VIEW IF EXISTS DBPREFIXv_building_posts;
@@ -37,7 +37,7 @@ COALESCE(f.thumbnail_height, 0) AS th,
 COALESCE(f.width, 0) AS width,
 COALESCE(f.height, 0) AS height,
 COALESCE(f.is_spoilered, FALSE) AS spoiler_file,
-t.locked, t.stickied, t.cyclical, t.is_spoilered as spoiler_thread, flag, country, p.is_deleted
+t.locked, t.stickied, t.cyclic, t.is_spoilered as spoiler_thread, flag, country, p.is_deleted
 FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
@@ -58,12 +58,12 @@ CREATE VIEW DBPREFIXv_posts_to_delete_file_only AS
 SELECT * FROM DBPREFIXv_posts_to_delete
 WHERE filename IS NOT NULL;
 
-CREATE VIEW DBPREFIXv_posts_cyclical_check AS
+CREATE VIEW DBPREFIXv_posts_cyclic_check AS
 SELECT post_id, d.thread_id, op_id, d.is_top_post, filename, dir
 FROM DBPREFIXv_posts_to_delete d
 INNER JOIN DBPREFIXposts p ON p.id = post_id
 INNER JOIN DBPREFIXthreads t ON d.thread_id = t.id
-WHERE p.is_deleted = FALSE AND d.is_top_post = FALSE and t.cyclical = TRUE;
+WHERE p.is_deleted = FALSE AND d.is_top_post = FALSE and t.cyclic = TRUE;
 
 CREATE VIEW DBPREFIXv_front_page_posts AS
 SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,

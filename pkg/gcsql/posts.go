@@ -348,7 +348,7 @@ func (p *Post) UnlinkUploads(leaveDeletedBox bool, requestOpts ...*RequestOption
 // InCyclicThread returns true if the post is in a cyclic thread
 func (p *Post) InCyclicThread() (bool, error) {
 	var cyclic bool
-	err := QueryRowTimeoutSQL(nil, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclic})
+	err := QueryRowTimeoutSQL(nil, "SELECT cyclic FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclic})
 	if errors.Is(err, sql.ErrNoRows) {
 		return false, ErrThreadDoesNotExist
 	}
@@ -490,7 +490,7 @@ func (p *Post) CyclicPostsToBePruned() ([]CyclicThreadPost, error) {
 	defer cancel()
 
 	var cyclic bool
-	err := QueryRowContextSQL(ctx, nil, "SELECT cyclical FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclic})
+	err := QueryRowContextSQL(ctx, nil, "SELECT cyclic FROM DBPREFIXthreads WHERE id = ?", []any{p.ThreadID}, []any{&cyclic})
 	if errors.Is(err, sql.ErrNoRows) {
 		err = ErrThreadDoesNotExist
 	}
@@ -503,7 +503,7 @@ func (p *Post) CyclicPostsToBePruned() ([]CyclicThreadPost, error) {
 	}
 
 	rows, err := QueryContextSQL(ctx, nil, `SELECT post_id, thread_id, op_id, filename, dir
-		FROM DBPREFIXv_posts_cyclical_check WHERE thread_id = ? AND post_id <> op_id ORDER BY post_id ASC`, p.ThreadID)
+		FROM DBPREFIXv_posts_cyclic_check WHERE thread_id = ? AND post_id <> op_id ORDER BY post_id ASC`, p.ThreadID)
 	if err != nil {
 		return nil, err
 	}

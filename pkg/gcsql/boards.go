@@ -408,7 +408,7 @@ func (board *Board) GetThreads(onlyNotDeleted bool, orderLastByBump bool, sticki
 		var thread Thread
 		err = rows.Scan(
 			&thread.ID, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored,
-			&thread.Cyclical, &thread.IsSpoilered, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
+			&thread.Cyclic, &thread.IsSpoilered, &thread.LastBump, &thread.DeletedAt, &thread.IsDeleted,
 		)
 		if err != nil {
 			return threads, err
