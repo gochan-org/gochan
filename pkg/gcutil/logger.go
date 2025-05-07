@@ -100,7 +100,7 @@ func init() {
 	})).With().Timestamp().Logger()
 }
 
-func initLog(logPath string, level zerolog.Level) (err error) {
+func initLog(logPath string, level zerolog.Level, noConsole bool) (err error) {
 	if logFile != nil {
 		// log already initialized
 		if err = logFile.Close(); err != nil {
@@ -114,10 +114,14 @@ func initLog(logPath string, level zerolog.Level) (err error) {
 		return err
 	}
 
-	writer := zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
-		w.NoColor = !RunningInTerminal()
-	}))
-
+	var writer zerolog.LevelWriter
+	if noConsole {
+		writer = zerolog.MultiLevelWriter(logFile)
+	} else {
+		writer = zerolog.MultiLevelWriter(logFile, zerolog.NewConsoleWriter(func(w *zerolog.ConsoleWriter) {
+			w.NoColor = !RunningInTerminal()
+		}))
+	}
 	logger = zerolog.New(writer).With().Timestamp().Logger().Level(level)
 
 	return nil
@@ -138,18 +142,41 @@ func initAccessLog(logPath string) (err error) {
 	return nil
 }
 
-func InitLogs(logDir string, level zerolog.Level, uid int, gid int) (err error) {
-	if err = initLog(path.Join(logDir, "gochan.log"), level); err != nil {
+type LogOptions struct {
+	// LogLevel is the zerolog level to use for the log file.
+	LogLevel zerolog.Level
+	// UID is the user ID to set for the log file. If not set or 0, the current
+	// user ID will be used.
+	UID int
+	// GID is the group ID to set for the log file. If not set or 0, the current
+	// group ID will be used.
+	GID int
+	// FileOnly is true if the log file should be used only, and not the console
+	FileOnly bool
+}
+
+func InitLogs(logDir string, options *LogOptions) (err error) {
+	if options == nil {
+		options = &LogOptions{}
+	}
+
+	if err = initLog(path.Join(logDir, "gochan.log"), options.LogLevel, options.FileOnly); err != nil {
 		return err
 	}
-	if err = logFile.Chown(uid, gid); err != nil {
-		return err
+	if options.UID > 0 && options.GID > 0 {
+		if err = logFile.Chown(options.UID, options.GID); err != nil {
+			return err
+		}
 	}
 
 	if err = initAccessLog(path.Join(logDir, "gochan_access.log")); err != nil {
 		return err
 	}
-	return accessFile.Chown(uid, gid)
+
+	if options.UID > 0 && options.GID > 0 {
+		return accessFile.Chown(options.UID, options.GID)
+	}
+	return nil
 }
 
 func Logger() *zerolog.Logger {

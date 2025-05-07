@@ -1,12 +1,9 @@
 package main
 
 import (
-	"os"
-
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
-	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
@@ -23,44 +20,37 @@ func startupRebuild(buildFlag int, fatalEv *zerolog.Event) {
 	var err error
 	serverutil.InitMinifier()
 	if err = gctemplates.InitTemplates(); err != nil {
-		fatalEv.Err(err).Caller().
-			Str("building", "initialization").
-			Msg("Unable to initialize templates")
+		fatalAndLog("Unable to initialize templates:", err, fatalEv.Str("building", "initialization"))
 	}
 
 	if buildFlag&buildBoards > 0 {
-		gcsql.ResetBoardSectionArrays()
-		if err = building.BuildBoardListJSON(); err != nil {
-			fatalEv.Err(err).Caller().
-				Str("building", "sections").
-				Msg("Unable to build section array")
+		if err = gcsql.ResetBoardSectionArrays(); err != nil {
+			fatalAndLog("Unable to reset board section arrays:", err, fatalEv.Str("building", "reset"))
 		}
 
-		if err = building.BuildBoards(true); err != nil {
-			fatalEv.Err(err).Caller().
-				Str("building", "boards").
-				Msg("Unable to build boards")
+		if err = building.BuildBoardListJSON(); err != nil {
+			fatalAndLog("Unable to build board list JSON:", err, fatalEv.Str("building", "boardListJSON"))
 		}
-		gcutil.LogInfo().Msg("Boards built successfully")
+		printInfoAndLog("Board list JSON built successfully")
+
+		if err = building.BuildBoards(true); err != nil {
+			fatalAndLog("Unable to build boards:", err, fatalEv.Str("building", "boards"))
+		}
+		printInfoAndLog("Boards built successfully")
 	}
 
 	if buildFlag&buildJS > 0 {
 		if err = building.BuildJS(); err != nil {
-			fatalEv.Err(err).Caller().
-				Str("building", "js").
-				Msg("Unable to build consts.js")
+			fatalAndLog("Unable to build consts.js:", err, fatalEv.Str("building", "js"))
 		}
-		gcutil.LogInfo().Msg("consts.js built successfully")
+		printInfoAndLog("consts.js built successfully")
 	}
 
 	if buildFlag&buildFront > 0 {
 		if err = building.BuildFrontPage(); err != nil {
-			fatalEv.Err(err).Caller().
-				Str("building", "front").
-				Msg("Unable to build front page")
+			fatalAndLog("Unable to build front page:", err, fatalEv.Str("building", "front"))
 		}
-		gcutil.LogInfo().Msg("Front page built successfully")
+		printInfoAndLog("Front page built successfully")
 	}
-	gcutil.LogInfo().Msg("Finished building without errors, exiting.")
-	os.Exit(0)
+	printInfoAndLog("Finished building without errors, exiting.")
 }

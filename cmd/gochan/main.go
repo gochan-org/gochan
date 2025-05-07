@@ -1,11 +1,8 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -33,6 +30,10 @@ func cleanup() {
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		parseCommandLine()
+		return
+	}
 	gcutil.LogInfo().Str("version", config.GochanVersion).Msg("Starting gochan")
 	fatalEv := gcutil.LogFatal()
 	defer func() {
@@ -48,7 +49,11 @@ func main() {
 
 	uid, gid := config.GetUser()
 	systemCritical := config.GetSystemCriticalConfig()
-	if err = gcutil.InitLogs(systemCritical.LogDir, systemCritical.LogLevel(), uid, gid); err != nil {
+	if err = gcutil.InitLogs(systemCritical.LogDir, &gcutil.LogOptions{
+		LogLevel: systemCritical.LogLevel(),
+		UID:      uid,
+		GID:      gid,
+	}); err != nil {
 		fatalEv.Err(err).Caller().
 			Str("logDir", systemCritical.LogDir).
 			Int("uid", uid).
@@ -70,25 +75,8 @@ func main() {
 
 	events.TriggerEvent("startup")
 
-	if err = gcsql.ConnectToDB(&systemCritical.SQLConfig); err != nil {
-		fatalEv.Err(err).Msg("Failed to connect to the database")
-	}
-	events.TriggerEvent("db-connected")
-	gcutil.LogInfo().
-		Str("DBtype", systemCritical.DBtype).
-		Str("DBhost", systemCritical.DBhost).
-		Msg("Connected to database")
+	initDB(fatalEv)
 
-	if err = gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
-		cleanup()
-		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
-	}
-	events.TriggerEvent("db-initialized")
-	if err = gcsql.ResetViews(); err != nil {
-		fatalEv.Err(err).Caller().Msg("Failed resetting SQL views")
-	}
-
-	parseCommandLine(fatalEv)
 	serverutil.InitMinifier()
 	siteCfg := config.GetSiteConfig()
 	if err = geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions); err != nil {
@@ -122,71 +110,24 @@ func main() {
 	<-sc
 }
 
-func parseCommandLine(fatalEv *zerolog.Event) {
-	var newstaff string
-	var delstaff string
-	var rebuild string
-	var rank int
-	var err error
-	flag.StringVar(&newstaff, "newstaff", "", "<newusername>:<newpassword>")
-	flag.StringVar(&delstaff, "delstaff", "", "<username>")
-	flag.StringVar(&rebuild, "rebuild", "", "accepted values are boards,front,js, or all")
-	flag.IntVar(&rank, "rank", 0, "New staff member rank, to be used with -newstaff or -delstaff")
-	flag.Parse()
+func initDB(fatalEv *zerolog.Event) {
+	systemCritical := config.GetSystemCriticalConfig()
+	if err := gcsql.ConnectToDB(&systemCritical.SQLConfig); err != nil {
+		fatalEv.Err(err).Msg("Failed to connect to the database")
+	}
+	events.TriggerEvent("db-connected")
+	gcutil.LogInfo().
+		Str("DBtype", systemCritical.DBtype).
+		Str("DBhost", systemCritical.DBhost).
+		Msg("Connected to database")
 
-	rebuildFlag := buildNone
-	switch rebuild {
-	case "boards":
-		rebuildFlag = buildBoards
-	case "front":
-		rebuildFlag = buildFront
-	case "js":
-		rebuildFlag = buildJS
-	case "all":
-		rebuildFlag = buildAll
+	if err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
+		cleanup()
+		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
-	if rebuildFlag > 0 {
-		startupRebuild(rebuildFlag, fatalEv)
+	events.TriggerEvent("db-initialized")
+	if err := gcsql.ResetViews(); err != nil {
+		fatalEv.Err(err).Caller().Msg("Failed resetting SQL views")
 	}
-
-	if newstaff != "" {
-		arr := strings.Split(newstaff, ":")
-		if len(arr) < 2 || delstaff != "" {
-			flag.Usage()
-			os.Exit(1)
-		}
-		if _, err = gcsql.NewStaff(arr[0], arr[1], rank); err != nil {
-			fatalEv.Err(err).Caller().
-				Str("source", "commandLine").
-				Str("username", arr[0]).
-				Msg("Failed creating new staff account")
-		}
-		gcutil.LogInfo().
-			Str("source", "commandLine").
-			Str("username", arr[0]).
-			Msg("New staff account created")
-		os.Exit(0)
-	}
-	if delstaff != "" {
-		if newstaff != "" {
-			flag.Usage()
-			os.Exit(1)
-		}
-		fmt.Printf("Are you sure you want to delete the staff account %q? [y/N]: ", delstaff)
-
-		var answer string
-		fmt.Scanln(&answer)
-		answer = strings.ToLower(answer)
-		if answer == "y" || answer == "yes" {
-			if err = gcsql.DeactivateStaff(delstaff); err != nil {
-				fatalEv.Err(err).Caller().
-					Str("source", "commandLine").
-					Str("username", delstaff).
-					Msg("Unable to delete staff account")
-			}
-			gcutil.LogInfo().Str("newStaff", delstaff).Msg("Staff account deleted")
-		} else {
-			fmt.Println("Not deleting.")
-		}
-	}
+	events.TriggerEvent("db-views-reset")
 }
