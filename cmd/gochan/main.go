@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -110,9 +111,12 @@ func main() {
 	<-sc
 }
 
-func initDB(fatalEv *zerolog.Event) {
+func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if err := gcsql.ConnectToDB(&systemCritical.SQLConfig); err != nil {
+		if len(commandLine) > 0 && commandLine[0] {
+			fmt.Fprintln(os.Stderr, "Failed to connect to the database:", err)
+		}
 		fatalEv.Err(err).Msg("Failed to connect to the database")
 	}
 	events.TriggerEvent("db-connected")
@@ -123,10 +127,16 @@ func initDB(fatalEv *zerolog.Event) {
 
 	if err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
 		cleanup()
+		if len(commandLine) > 0 && commandLine[0] {
+			fmt.Fprintln(os.Stderr, "Failed to initialize the database:", err)
+		}
 		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
 	if err := gcsql.ResetViews(); err != nil {
+		if len(commandLine) > 0 && commandLine[0] {
+			fmt.Fprintln(os.Stderr, "Failed resetting SQL views:", err)
+		}
 		fatalEv.Err(err).Caller().Msg("Failed resetting SQL views")
 	}
 	events.TriggerEvent("db-views-reset")

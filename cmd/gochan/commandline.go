@@ -60,6 +60,22 @@ func printInfoAndLog(msg string, infoEv ...*zerolog.Event) {
 	}
 }
 
+func initCommandLine() *zerolog.Event {
+	var err error
+	if err = config.InitConfig(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error initializing config:", err)
+		os.Exit(1)
+	}
+	systemCritical := config.GetSystemCriticalConfig()
+	if err = gcutil.InitLogs(systemCritical.LogDir, &gcutil.LogOptions{FileOnly: true}); err != nil {
+		os.Exit(1)
+	}
+	fatalEv := gcutil.LogFatal()
+
+	initDB(fatalEv)
+	return fatalEv
+}
+
 func fatalAndLog(msg string, err error, fatalEv *zerolog.Event) {
 	fmt.Fprintln(os.Stderr, msg, err)
 	fatalEv.Err(err).Caller(1).Msg(msg)
@@ -68,7 +84,6 @@ func fatalAndLog(msg string, err error, fatalEv *zerolog.Event) {
 func parseCommandLine() {
 	var newstaff string
 	var delstaff string
-	// var rebuild string
 	var password string
 	var rank int
 	var err error
@@ -79,28 +94,12 @@ func parseCommandLine() {
 
 	cmd := os.Args[1]
 	var fatalEv *zerolog.Event
-	var systemCritical *config.SystemCriticalConfig
-	if cmd == "newstaff" || cmd == "delstaff" || cmd == "rebuild" {
-		if err = config.InitConfig(); err != nil {
-			fmt.Fprintln(os.Stderr, "Error initializing config:", err)
-			os.Exit(1)
-		}
-		systemCritical = config.GetSystemCriticalConfig()
-		if err = gcutil.InitLogs(systemCritical.LogDir, &gcutil.LogOptions{FileOnly: true}); err != nil {
-			fmt.Fprintln(os.Stderr, "Error initializing logs:", err)
-			os.Exit(1)
-		}
-		fatalEv = gcutil.LogFatal()
-		defer fatalEv.Discard()
-
-		initDB(fatalEv)
-	}
 
 	switch cmd {
-	case "version":
+	case "version", "-v", "-version":
 		fmt.Println(config.GochanVersion)
 		return
-	case "help", "-h", "--help":
+	case "help", "-h", "-help":
 		fmt.Println("Usage: gochan [command] [options]")
 		fmt.Println("Commands:")
 		fmt.Println("  version       Show the version of gochan")
@@ -143,6 +142,7 @@ func parseCommandLine() {
 				os.Exit(1)
 			}
 		}
+		fatalEv = initCommandLine()
 
 		staff, err := gcsql.NewStaff(newstaff, password, rank)
 		if err != nil {
@@ -175,6 +175,7 @@ func parseCommandLine() {
 				return
 			}
 		}
+		fatalEv = initCommandLine()
 		if err = gcsql.DeactivateStaff(delstaff); err != nil {
 			fatalAndLog("Error deleting staff account:", err, fatalEv.Str("source", "commandLine").Str("username", delstaff))
 		}
@@ -208,6 +209,7 @@ func parseCommandLine() {
 			flagSet.Usage()
 			os.Exit(1)
 		}
+		fatalEv = initCommandLine()
 		startupRebuild(rebuildFlag, fatalEv)
 	default:
 		fmt.Fprintln(os.Stderr, "Unknown command:", cmd)

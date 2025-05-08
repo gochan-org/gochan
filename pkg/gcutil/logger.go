@@ -1,6 +1,7 @@
 package gcutil
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -110,7 +111,11 @@ func initLog(logPath string, level zerolog.Level, noConsole bool) (err error) {
 	}
 	logFile, err = os.OpenFile(logPath, logFlags, logFileMode) // skipcq: GSC-G302
 	if err != nil {
-		logger.Err(err).Msg("Unable to open log file")
+		if noConsole {
+			fmt.Fprintln(os.Stderr, "Unable to open log file:", err)
+		} else {
+			logger.Err(err).Msg("Unable to open log file")
+		}
 		return err
 	}
 
