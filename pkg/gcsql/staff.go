@@ -36,12 +36,22 @@ func createDefaultAdminIfNoStaff() error {
 }
 
 func NewStaff(username string, password string, rank int) (*Staff, error) {
+	const sqlSELECT = `SELECT COUNT(*) FROM DBPREFIXstaff WHERE username = ?`
 	const sqlINSERT = `INSERT INTO DBPREFIXstaff
 	(username, password_checksum, global_rank)
 	VALUES(?,?,?)`
+	var count int
+	err := QueryRowTimeoutSQL(nil, sqlSELECT, []any{username}, []any{&count})
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, fmt.Errorf("username %s already exists", username)
+	}
+
 	passwordChecksum := gcutil.BcryptSum(password)
 
-	_, err := ExecTimeoutSQL(nil, sqlINSERT, username, passwordChecksum, rank)
+	_, err = ExecTimeoutSQL(nil, sqlINSERT, username, passwordChecksum, rank)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
