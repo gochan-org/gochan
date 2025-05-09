@@ -84,7 +84,7 @@ func getAvailableActions(rank int, noJSON bool) []Action {
 	var available []Action
 
 	for _, action := range actions {
-		if rank >= action.Permissions && action.Permissions != NoPerms && (action.JSONoutput != NoJSON || !noJSON) && !action.Hidden {
+		if rank >= action.Permissions && action.Permissions != NoPerms && (action.JSONoutput != AlwaysJSON || !noJSON) && !action.Hidden {
 			available = append(available, action)
 		}
 	}
