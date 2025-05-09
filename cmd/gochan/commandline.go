@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -12,6 +13,10 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
 	"golang.org/x/term"
+)
+
+var (
+	errAborted = fmt.Errorf("aborted")
 )
 
 func getPassword() (string, error) {
@@ -41,8 +46,7 @@ func getPassword() (string, error) {
 			}
 		} else if input[0] == 3 {
 			term.Restore(fd, state)
-			fmt.Println("\nAborted.")
-			os.Exit(1)
+			return "", errAborted
 		} else {
 			password += string(input[0])
 			fmt.Print("*")
@@ -124,7 +128,11 @@ func parseCommandLine() {
 			fmt.Print("Enter password for new staff account: ")
 			password, err = getPassword()
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error getting password:", err)
+				if errors.Is(err, errAborted) {
+					fmt.Println("Aborted.")
+				} else {
+					fmt.Fprintln(os.Stderr, "Error getting password:", err)
+				}
 				os.Exit(1)
 			}
 			if password == "" {
@@ -134,7 +142,11 @@ func parseCommandLine() {
 			fmt.Print("Confirm password: ")
 			confirm, err := getPassword()
 			if err != nil {
-				fmt.Fprintln(os.Stderr, "Error getting password confirmation:", err)
+				if errors.Is(err, errAborted) {
+					fmt.Println("Aborted.")
+				} else {
+					fmt.Fprintln(os.Stderr, "Error getting password confirmation:", err)
+				}
 				os.Exit(1)
 			}
 			if password != confirm {
