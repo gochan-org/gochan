@@ -23,7 +23,7 @@
 	<input type="hidden" name="postid" value="{{.}}" />
 	<tr><th>Public ban message</th><td><input type="checkbox" name="usebannedmessage"><input type="text" name="bannedmessage" size="44" value="{{$.boardConfig.BanMessage}}" length="30"/></td></tr>
 	{{- end -}}
-	<tr><th>Reason {{.ban.ID}}</th><td><textarea name="reason" rows="6" cols="40" placeholder="Message to be displayed to the banned user"></textarea></td></tr>
+	<tr><th>Reason</th><td><textarea name="reason" rows="6" cols="40" placeholder="Message to be displayed to the banned user"></textarea></td></tr>
 	<tr><th>Staff note</th><td><textarea name="staffnote" rows="6" cols="40" placeholder="Private note that only staff can see">
 		{{- with $.postID -}}
 			Ban placed for post {{.}}
