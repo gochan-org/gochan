@@ -18,7 +18,7 @@ import (
 
 const (
 	selectBoardsQueryExpectation = `SELECT\s+boards\.id, section_id,\s*uri,\s*dir,\s*navbar_position,\s*title,\s*` +
-		`subtitle,\s*description,\s*max_file_size,\s*max_threads,\s*default_style,\s*locked,\s*created_at,\s*` +
+		`subtitle,\s*description,\s*max_file_size,\s*max_threads,\s*default_style,\s*boards\.locked,\s*created_at,\s*` +
 		`anonymous_name,\s*force_anonymous,\s*autosage_after,\s*no_images_after,\s*max_message_length,\s*` +
 		`min_message_length,\s*allow_embeds,\s*redirect_to_thread,\s*require_file,\s*enable_catalog\s+` +
 		`FROM boards\s+INNER JOIN\s*\(\s*SELECT id,\s*hidden\s+FROM sections\s*\)\s+s\s+ON ` +

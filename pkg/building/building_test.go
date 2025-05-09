@@ -133,7 +133,7 @@ func TestBuildJS(t *testing.T) {
 func mockSetupBoards(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT\s*` +
 		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
-		`max_file_size, max_threads, default_style, locked, created_at, anonymous_name, force_anonymous,\s*` +
+		`max_file_size, max_threads, default_style, boards\.locked, created_at, anonymous_name, force_anonymous,\s*` +
 		`autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,\s*` +
 		`require_file, enable_catalog\s*` +
 		`FROM boards\s*` +
