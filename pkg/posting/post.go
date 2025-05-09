@@ -539,6 +539,7 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		Locked:      isLocked,
 		Stickied:    isSticky,
 		IsSpoilered: isSpoileredThread,
+		Cyclic:      isCyclic,
 		Anchored:    emailCommand == "sage" && post.ThreadID == 0,
 	}
 
