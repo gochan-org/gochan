@@ -190,7 +190,6 @@ var (
 			expectStatus: http.StatusForbidden,
 			expectError:  true,
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
-				assert.Equal(t, http.StatusForbidden, writer.Code)
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},
@@ -203,7 +202,6 @@ var (
 			expectStatus: http.StatusForbidden,
 			expectError:  true,
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
-				assert.Equal(t, http.StatusForbidden, writer.Code)
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},
@@ -222,6 +220,8 @@ var (
 				"rank":            {"1"},
 			},
 			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+				mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM staff WHERE username = \?`).ExpectQuery().WithArgs("newuser").
+					WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(0))
 				mock.ExpectPrepare(`INSERT INTO staff \(username, password_checksum, global_rank\) VALUES\(\?,\?,\?\)`).ExpectExec().
 					WithArgs("newuser", sqlmock.AnyArg(), 1).
 					WillReturnResult(sqlmock.NewResult(1, 1))
@@ -234,6 +234,29 @@ var (
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
 				expectedStaff := append(genericStaffList, gcsql.Staff{Username: "newuser", Rank: 1})
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm, expectedStaff...)
+			},
+		},
+		{
+			desc:         "Try to create existing user as admin",
+			method:       "POST",
+			path:         "/manage/staff",
+			staff:        &gcsql.Staff{Username: "admin", Rank: 3},
+			expectStatus: http.StatusBadRequest,
+			form: url.Values{
+				"do":              {"add"},
+				"username":        {"mod"},
+				"password":        {"newpassword"},
+				"passwordconfirm": {"newpassword"},
+				"rank":            {"1"},
+			},
+			expectError: true,
+			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+				mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM staff WHERE username = \?`).ExpectQuery().WithArgs("mod").
+					WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
+			},
+			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+				assert.ErrorIs(t, err, gcsql.ErrStaffAlreadyExists)
+				assert.Empty(t, output)
 			},
 		},
 		{
@@ -298,7 +321,6 @@ var (
 			},
 			expectError: true,
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
-				assert.Equal(t, http.StatusForbidden, writer.Code)
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},
@@ -339,7 +361,6 @@ var (
 			},
 			expectError: true,
 			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
-				assert.Equal(t, http.StatusForbidden, writer.Code)
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},

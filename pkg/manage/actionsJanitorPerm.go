@@ -278,10 +278,16 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 
 	switch form.Do {
 	case "add":
-		if updateStaff, err = gcsql.NewStaff(form.Username, form.Password, form.Rank); err != nil {
+		updateStaff, err = gcsql.NewStaff(form.Username, form.Password, form.Rank)
+		if err != nil {
 			errEv.Err(err).Caller().
 				Str("username", form.Username).
 				Msg("Error creating new staff account")
+			if errors.Is(err, gcsql.ErrStaffAlreadyExists) {
+				writer.WriteHeader(http.StatusBadRequest)
+			} else {
+				writer.WriteHeader(http.StatusInternalServerError)
+			}
 			return "", fmt.Errorf("unable to create new staff account: %w", err)
 		}
 		infoEv.Str("userRank", updateStaff.RankTitle()).Msg("New staff account created")

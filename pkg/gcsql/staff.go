@@ -17,6 +17,7 @@ var (
 	ErrUnrecognizedUsername = errors.New("invalid username")
 	ErrInvalidStaffRank     = errors.New("invalid staff rank")
 	ErrInvalidStaffPassword = errors.New("blank staff passwords are not allowed")
+	ErrStaffAlreadyExists   = errors.New("staff account already exists")
 )
 
 // createDefaultAdminIfNoStaff creates a new default admin account if no accounts exist
@@ -46,7 +47,7 @@ func NewStaff(username string, password string, rank int) (*Staff, error) {
 		return nil, err
 	}
 	if count > 0 {
-		return nil, fmt.Errorf("username %s already exists", username)
+		return nil, ErrStaffAlreadyExists
 	}
 
 	passwordChecksum := gcutil.BcryptSum(password)

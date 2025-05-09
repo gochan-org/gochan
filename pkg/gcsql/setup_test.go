@@ -98,6 +98,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		ExpectExec().WillReturnResult(driver.ResultNoRows)
 	mock.ExpectBegin()
 	var statements []string
+	staffSelect := `SELECT COUNT\(\*\) FROM staff WHERE username = `
 	staffInsert := `INSERT INTO staff\s+\(username, password_checksum, global_rank\)\s+VALUES\(`
 	sectionsInsert := `INSERT INTO sections \(name, abbreviation, hidden, position\) VALUES \(`
 	boardsInsert := `INSERT INTO boards\s*\(` +
@@ -105,26 +106,22 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		`max_threads,\s*default_style,\s*locked,\s*anonymous_name,\s*force_anonymous,\s*autosage_after,\s*no_images_after,\s*` +
 		`max_message_length,\s*min_message_length,\s*allow_embeds,\s*redirect_to_thread,\s*require_file,\s*enable_catalog\)\s+VALUES\(`
 
-	switch dbType {
-	case "mysql":
+	if dbType == "mysql" {
 		statements = testInitDBMySQLStatements
-	case "postgres":
-		statements = testInitDBPostgresStatements
-	case "sqlite3":
-		statements = testInitDBSQLite3Statements
-	default:
-		return ErrUnsupportedDB
-	}
-
-	// set up parameterized statements, with sqlite3 and postgres both having $# and mysql having ?
-	switch dbType {
-	case "mysql":
+		staffSelect += `\?`
 		staffInsert += `\?,\?,\?\)`
 		sectionsInsert += `\?,\?,\?,\?\)`
 		boardsInsert += `\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
-	case "sqlite3":
-		fallthrough
-	case "postgresql":
+	} else if dbType == "postgres" {
+		statements = testInitDBPostgresStatements
+	} else if dbType == "sqlite3" {
+		statements = testInitDBSQLite3Statements
+	} else {
+		return ErrUnsupportedDB
+	}
+
+	if dbType == "postgres" || dbType == "sqlite3" {
+		staffSelect += `\$1`
 		staffInsert += `\$1,\$2,\$3\)`
 		sectionsInsert += `\$1,\$2,\$3,\$4\)`
 		boardsInsert += `\$1,\$2,\$3,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13,\$14,\$15,\$16,\$17,\$18,\$19,\$20,\$21\)`
@@ -139,7 +136,11 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 	mock.ExpectCommit()
 	mock.ExpectPrepare(`SELECT COUNT\(id\) FROM staff`).
 		ExpectQuery().
-		WillReturnRows(sqlmock.NewRows([]string{}))
+		WillReturnRows(sqlmock.NewRows([]string{"COUNT(id)"}).AddRow(0))
+
+	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM staff`).
+		ExpectQuery().
+		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(0))
 
 	mock.ExpectPrepare(staffInsert).
 		ExpectExec().
