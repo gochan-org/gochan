@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -18,42 +17,6 @@ import (
 var (
 	errAborted = fmt.Errorf("aborted")
 )
-
-func getPassword() (string, error) {
-	var password string
-	fd := int(os.Stdin.Fd())
-	state, err := term.MakeRaw(fd)
-	if err != nil {
-		return "", err
-	}
-	defer term.Restore(fd, state)
-
-	for {
-		input := make([]byte, 1)
-		if _, err := syscall.Read(int(fd), input); err != nil {
-			term.Restore(fd, state)
-			return "", err
-		}
-		if input[0] == '\n' || input[0] == '\r' {
-			term.Restore(fd, state)
-			fmt.Println()
-			break
-		}
-		if input[0] == 127 || input[0] == 8 {
-			if len(password) > 0 {
-				password = password[:len(password)-1]
-				fmt.Print("\b \b")
-			}
-		} else if input[0] == 3 {
-			term.Restore(fd, state)
-			return "", errAborted
-		} else {
-			password += string(input[0])
-			fmt.Print("*")
-		}
-	}
-	return password, nil
-}
 
 func printInfoAndLog(msg string, infoEv ...*zerolog.Event) {
 	fmt.Println(msg)
@@ -124,9 +87,11 @@ func parseCommandLine() {
 			os.Exit(1)
 		}
 
+		var passwordBytes, confirmBytes []byte
+
 		if password == "" {
 			fmt.Print("Enter password for new staff account: ")
-			password, err = getPassword()
+			passwordBytes, err = term.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				if errors.Is(err, errAborted) {
 					fmt.Println("Aborted.")
@@ -135,12 +100,12 @@ func parseCommandLine() {
 				}
 				os.Exit(1)
 			}
-			if password == "" {
+			if len(passwordBytes) == 0 {
 				fmt.Fprintln(os.Stderr, "Error: Password cannot be empty")
 				os.Exit(1)
 			}
-			fmt.Print("Confirm password: ")
-			confirm, err := getPassword()
+			fmt.Print("\nConfirm password: ")
+			confirmBytes, err = term.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				if errors.Is(err, errAborted) {
 					fmt.Println("Aborted.")
@@ -149,6 +114,8 @@ func parseCommandLine() {
 				}
 				os.Exit(1)
 			}
+			password = string(passwordBytes)
+			confirm := string(confirmBytes)
 			if password != confirm {
 				fmt.Fprintln(os.Stderr, "Error: Passwords do not match")
 				os.Exit(1)
@@ -160,7 +127,6 @@ func parseCommandLine() {
 		if err != nil {
 			fatalAndLog("Error creating new staff account:", err, fatalEv.Str("source", "commandLine").Str("username", newstaff))
 		}
-		printInfoAndLog("New staff account created successfully")
 		gcutil.LogInfo().
 			Str("source", "commandLine").
 			Str("username", newstaff).
