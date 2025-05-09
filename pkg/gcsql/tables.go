@@ -142,6 +142,8 @@ type IPBan struct {
 	RangeEnd        string        // sql: range_end
 	IssuedAt        time.Time     // sql: issued_at
 	IPBanBase
+
+	board *Board
 }
 
 // Deprecated: Use the RangeStart and RangeEnd fields or gcutil.GetIPRangeSubnet.
@@ -156,6 +158,26 @@ func (ipb *IPBan) IP() (string, error) {
 		return "", err
 	}
 	return inet.String(), nil
+}
+
+func (ipb *IPBan) BannedPostBoard(requestOptions ...*RequestOptions) (*Board, error) {
+	if ipb.board != nil {
+		return ipb.board, nil
+	}
+	if ipb.BannedForPostID == nil {
+		return nil, nil
+	}
+
+	opts := setupOptionsWithTimeout(requestOptions...)
+	board, err := getBoardBase(opts,
+		`INNER JOIN DBPREFIXthreads t ON t.board_id = DBPREFIXboards.id INNER JOIN DBPREFIXposts p ON p.thread_id = t.id WHERE p.id = ?`,
+		*ipb.BannedForPostID)
+	if err != nil {
+		return nil, err
+	}
+	ipb.board = board
+
+	return ipb.board, nil
 }
 
 // IsBanned returns true if the given IP is banned

@@ -15,7 +15,7 @@ const (
 	// selects all columns from DBPREFIXboards
 	selectBoardsBaseSQL = `SELECT
 	DBPREFIXboards.id, section_id, uri, dir, navbar_position, title, subtitle, description,
-	max_file_size, max_threads, default_style, locked, created_at, anonymous_name, force_anonymous,
+	max_file_size, max_threads, default_style, DBPREFIXboards.locked, created_at, anonymous_name, force_anonymous,
 	autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,
 	require_file, enable_catalog
 	FROM DBPREFIXboards

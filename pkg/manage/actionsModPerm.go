@@ -74,6 +74,27 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 					Msg("Unable to set banned message")
 				return "", server.NewServerError("failed to set banned message", http.StatusInternalServerError)
 			}
+
+			board, err := ban.BannedPostBoard()
+			if err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", *ban.BannedForPostID).
+					Msg("Unable to get board from banned post")
+				return "", server.NewServerError("failed to get board from banned post", http.StatusInternalServerError)
+			}
+			if board == nil {
+				errEv.Caller().
+					Int("postID", *ban.BannedForPostID).
+					Msg("Unable to get board from banned post (ban.BannedPostBoard() returned nil board)")
+				return "", server.NewServerError("failed to get board from banned post", http.StatusInternalServerError)
+			}
+			gcutil.LogStr("rebuildBoard", board.Dir, infoEv, errEv)
+			if err = building.BuildBoards(true, board.ID); err != nil {
+				errEv.Err(err).Caller().
+					Int("postID", *ban.BannedForPostID).
+					Msg("Unable to rebuild board")
+				return "", server.NewServerError("failed to rebuild board", http.StatusInternalServerError)
+			}
 		}
 		infoEv.Msg("Added IP ban")
 	} else if banForm.PostID > 0 {
