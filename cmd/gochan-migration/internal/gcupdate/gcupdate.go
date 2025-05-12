@@ -56,11 +56,16 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 	gcsql.SetDB(dbu.db)
 
 	sqlConfig := config.GetSQLConfig()
-	prefixedTablesExist, err := gcsql.DoesGochanPrefixTableExist()
+	var gochanTablesExist bool
+	if sqlConfig.DBprefix == "" {
+		gochanTablesExist, err = common.TableExists(context.Background(), dbu.db, nil, "database_version", &sqlConfig)
+	} else {
+		gochanTablesExist, err = gcsql.DoesGochanPrefixTableExist()
+	}
 	if err != nil {
 		return false, err
 	}
-	if !prefixedTablesExist {
+	if !gochanTablesExist {
 		return false, common.ErrNotInstalled
 	}
 
