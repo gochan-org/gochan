@@ -109,7 +109,11 @@ func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
 
 func init() {
 	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...any) error {
-		return gcsql.ResetBoardSectionArrays()
+		if config.GetSQLConfig().DBhost != "" {
+			// Only reset if SQL is configured
+			return gcsql.ResetBoardSectionArrays()
+		}
+		return nil
 	})
 	gctemplates.AddTemplateFuncs(template.FuncMap{
 		"banMask":              banMaskTmplFunc,

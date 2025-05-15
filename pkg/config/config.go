@@ -41,6 +41,8 @@ var (
 	ErrNoMatchingEmbedHandler = errors.New("no matching handler for the embed URL")
 )
 
+type InitialSetupStatus int
+
 type GochanConfig struct {
 	SystemCriticalConfig
 	SiteConfig
@@ -861,6 +863,14 @@ type EmbedMatcher struct {
 
 func (em *EmbedMatcher) HasThumbnail() bool {
 	return em.ThumbnailURLTemplate != ""
+}
+
+func GetInitialSetupStatus() InitialSetupStatus {
+	return initialSetupStatus
+}
+
+func GetDefaultConfig() *GochanConfig {
+	return defaultGochanConfig
 }
 
 func WriteConfig() error {

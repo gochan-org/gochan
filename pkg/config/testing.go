@@ -44,21 +44,6 @@ func SetRandomSeed(seed string) {
 	cfg.RandomSeed = seed
 }
 
-// SetSystemCriticalConfig sets system critical configuration values in testing. It will panic if it is not run in a
-// test environment
-func SetSystemCriticalConfig(systemCritical *SystemCriticalConfig) {
-	testutil.PanicIfNotTest()
-	setDefaultCfgIfNotSet()
-	cfg.SystemCriticalConfig = *systemCritical
-}
-
-// SetSiteConfig sets the site configuration values in testing. It will panic if it is not run in a test environment
-func SetSiteConfig(siteConfig *SiteConfig) {
-	testutil.PanicIfNotTest()
-	setDefaultCfgIfNotSet()
-	cfg.SiteConfig = *siteConfig
-}
-
 // SetBoardConfig applies the configuration to the given board. It will panic if it is not run in a test environment
 func SetBoardConfig(board string, boardCfg *BoardConfig) error {
 	testutil.PanicIfNotTest()

@@ -52,10 +52,12 @@ gochan_version = "unknown"
 gcos = ""
 gcos_name = ""  # used for release, since macOS GOOS is "darwin"
 exe = ""
-gochan_bin = ""
-gochan_exe = ""
-migration_bin = ""
-migration_exe = ""
+gochan_bin = "gochan"
+gochan_exe = gochan_bin
+installer_bin = "gochan-installer"
+installer_exe = installer_bin
+migration_bin = "gochan-migration"
+migration_exe = migration_bin
 
 def path_info(loc):
 	i = PATH_UNKNOWN
@@ -186,9 +188,8 @@ def set_vars(goos=""):
 	global gcos
 	global gcos_name  # used for release, since macOS GOOS is "darwin"
 	global exe
-	global gochan_bin
 	global gochan_exe
-	global migration_bin
+	global installer_exe
 	global migration_exe
 
 	if goos != "":
@@ -203,9 +204,8 @@ def set_vars(goos=""):
 	if gcos_name == "darwin":
 		gcos_name = "macos"
 
-	gochan_bin = "gochan"
 	gochan_exe = gochan_bin + exe
-	migration_bin = "gochan-migration"
+	installer_exe = installer_bin + exe
 	migration_exe = migration_bin + exe
 
 
@@ -255,6 +255,14 @@ def build(debugging=False, plugin_path="", static_templates=False):
 		sys.exit(1)
 	print("Built gochan successfully")
 
+	copy("LICENSE", "cmd/gochan-installer/license.txt")
+	gochan_installer_build_cmd = build_cmd_base + ["-o", installer_exe, "./cmd/gochan-installer"]
+	status = run_cmd(gochan_installer_build_cmd, realtime=True, print_command=True)[1]
+	if status != 0:
+		print("Failed building gochan-installer, see command output for details")
+		sys.exit(1)
+	print("Built gochan-installer successfully")
+
 	gochan_migrate_build_cmd = build_cmd_base + ["-o", migration_exe, "./cmd/gochan-migration"]
 	status = run_cmd(gochan_migrate_build_cmd, realtime=True, print_command=True)[1]
 	if status != 0:
@@ -265,9 +273,23 @@ def build(debugging=False, plugin_path="", static_templates=False):
 
 def clean():
 	print("Cleaning up")
-	del_files = ("gochan", "gochan.exe", "gochan-migration", "gochan-migration.exe", "releases/")
+	del_files = ("gochan", "gochan.exe", "gochan-installer", "gochan-installer.exe", "gochan-migration", "gochan-migration.exe", "releases/", "cmd/gochan/license.txt")
 	for del_file in del_files:
 		delete(del_file)
+
+def install_executable(src_file, dest_dir, symlinks=False):
+	if not path.exists(src_file):
+		build()
+	
+	dest_file = path.join(dest_dir, src_file)
+	print(f"Installing {src_file}, to {dest_file}")
+	try:
+		if symlinks:
+			symlink(src_file, dest_file)
+		else:
+			copy(src_file, dest_file)
+	except shutil.SameFileError:
+		print(f"{src_file} and {dest_file} are the same file, skipping")
 
 
 def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=False, css_only=False, templates_only=False):
@@ -339,40 +361,21 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 			sys.exit(1)
 
 
-	if path.exists(gochan_exe) is False:
-		build()
-	print("Installing", gochan_exe, "to", path.join(prefix, "bin", gochan_exe))
-	try:
-		if symlinks:
-			symlink(gochan_exe, path.join(prefix, "bin", gochan_exe))
-		else:
-			copy(gochan_exe, path.join(prefix, "bin", gochan_exe))
-	except shutil.SameFileError:
-		print(gochan_exe, "and", path.join(prefix, "bin", gochan_exe), "are the same file, skipping")
-
-	if path.exists(migration_exe) is False:
-		build()
-	print("Installing ", migration_exe, "to", path.join(prefix, "bin", migration_exe))
-	try:
-		if symlinks:
-			symlink(migration_exe, path.join(prefix, "bin", migration_exe))
-		else:
-			copy(migration_exe, path.join(prefix, "bin", migration_exe))
-	except shutil.SameFileError:
-		print(migration_exe, "and", path.join(prefix, "bin", migration_exe), "are the same file, skipping")
+	bin_dest_dir = path.join(prefix, "bin")
+	install_executable(gochan_exe, bin_dest_dir, symlinks)
+	install_executable(installer_exe, bin_dest_dir, symlinks)
+	install_executable(migration_exe, bin_dest_dir, symlinks)
 
 	print(
 		"gochan was successfully installed. If you haven't already, you should copy\n",
-		"examples/configs/gochan.example.json to /etc/gochan/gochan.json (modify as needed)\n",
-		"You may also need to go to https://yourgochansite/manage/rebuildall to rebuild the javascript config")
+		"examples/configs/gochan.example.json to /etc/gochan/gochan.json (modify as needed)\n")
 	if gcos == "linux":
 		print(
 			"If your Linux distribution has systemd, you will also need to run the following commands:\n",
 			"cp examples/configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service\n",
 			"systemctl daemon-reload\n",
 			"systemctl enable gochan.service\n",
-			"systemctl start gochan.service")
-	print("")
+			"systemctl start gochan.service\n")
 
 
 def js(watch=False):

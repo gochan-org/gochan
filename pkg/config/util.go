@@ -17,13 +17,20 @@ import (
 )
 
 const (
+	InitialSetupStatusUnknown InitialSetupStatus = iota
+	InitialSetupNotStarted
+	InitialSetupComplete
+
 	DirFileMode    fs.FileMode = 0775
 	NormalFileMode fs.FileMode = 0664
 )
 
 var (
-	uid int
-	gid int
+	uid                       int
+	gid                       int
+	standardConfigSearchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
+
+	initialSetupStatus InitialSetupStatus = InitialSetupStatusUnknown
 )
 
 // MissingField represents a field missing from the configuration file
@@ -46,6 +53,15 @@ func (iv *InvalidValueError) Error() string {
 		str += " - " + iv.Details
 	}
 	return str
+}
+
+// GetGochanJSONPath returns the location of gochan.json, searching in the working directory,
+// /usr/local/etc/gochan, and /etc/gochan in that order. If it is not found, it returns an empty string.
+func GetGochanJSONPath() string {
+	if cfgPath != "" {
+		return cfgPath
+	}
+	return gcutil.FindResource(standardConfigSearchPaths...)
 }
 
 // GetUser returns the IDs of the user and group gochan should be acting as
@@ -72,7 +88,19 @@ func TakeOwnershipOfFile(f *os.File) error {
 	return f.Chown(uid, gid)
 }
 
-func loadConfig(searchPaths ...string) (err error) {
+// SetSystemCriticalConfig sets system critical configuration values
+func SetSystemCriticalConfig(systemCritical *SystemCriticalConfig) {
+	setDefaultCfgIfNotSet()
+	cfg.SystemCriticalConfig = *systemCritical
+}
+
+// SetSiteConfig sets the site configuration values
+func SetSiteConfig(siteConfig *SiteConfig) {
+	setDefaultCfgIfNotSet()
+	cfg.SiteConfig = *siteConfig
+}
+
+func loadConfig() (err error) {
 	cfg = defaultGochanConfig
 	if testing.Testing() {
 		// create a dummy config for testing if we're using go test
@@ -97,7 +125,7 @@ func loadConfig(searchPaths ...string) (err error) {
 		}
 		return
 	}
-	cfgPath = gcutil.FindResource(searchPaths...)
+	cfgPath = gcutil.FindResource(standardConfigSearchPaths...)
 	if cfgPath == "" {
 		return errors.New("gochan.json not found")
 	}
@@ -121,11 +149,8 @@ func loadConfig(searchPaths ...string) (err error) {
 
 // InitConfig loads and parses gochan.json on startup and verifies its contents
 func InitConfig() (err error) {
-	var searchPaths []string
-	if !testing.Testing() {
-		searchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
-	}
-	if err = loadConfig(searchPaths...); err != nil {
+	initialSetupStatus = InitialSetupNotStarted
+	if err = loadConfig(); err != nil {
 		return err
 	}
 
@@ -188,7 +213,7 @@ func InitConfig() (err error) {
 
 	_, zoneOffset := time.Now().Zone()
 	cfg.TimeZone = zoneOffset / 60 / 60
-
+	initialSetupStatus = InitialSetupComplete
 	return nil
 }
 
