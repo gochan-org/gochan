@@ -1,5 +1,68 @@
+<form class="install-container" method="POST" action="/install/{{.nextPage}}">
 {{if eq "" .page}}
-Welcome to the Gochan installer! This installer will help you configure Gochan to run on your system, including setting the necessary directories and connecting to the SQL database.
+<p>Welcome to the Gochan installer! This installer will help you configure Gochan, including setting the necessary directories and connecting to the SQL database, in preparation for running a fresh Gochan installation or migrating another imageboard database (if supported) to Gochan.</p>
+<p class="text-bold">This does not install files like templates, or provision the database. It only creates a configuration file for gochan to use.</p>
+
 {{else if eq .page "license"}}
+<p class="text-center">Gochan is licensed under the BSD 3-Clause License, shown below. By using Gochan, you agree to the terms of this license,</p>
+<textarea class="license">{{.license}}</textarea>
+{{else if eq .page "paths"}}
+<table>
+	<tr>
+		<th>Output gochan.json Location</th>
+		<td><input type="text" name="configpath" required/></td>
+	</tr>
+	<tr>
+		<th>Templates Directory</th>
+		<td><input type="text" name="templatedir" value="{{.systemCriticalConfig.TemplateDir}}"/></td>
+	</tr>
+	<tr>
+		<th>Log Directory</th>
+		<td><input type="text" name="logdir"/></td>
+	</tr>
+	<tr>
+		<th>Web Root</th>
+		<td><input type="text" name="webroot" value="{{.systemCriticalConfig.WebRoot}}"/></td>
+	</tr>
+</table>
+{{else if eq .page "database"}}
+<table>
+	<tr>
+		<th>SQL Provider</th>
+		<td><select name="dbtype" required>
+			<option value="" disabled selected>Select a database</option>
+			<option value="mysql">MySQL/MariaDB</option>
+			<option value="postgres">PostgreSQL</option>
+			<option value="sqlite3">SQLite</option>
+		</select></td>
+	</tr>
+	<tr>
+		<th>Database Host</th>
+		<td><input type="text" name="dbhost" required/></td>
+	</tr>
+	<tr>
+		<th>Database Name</th>
+		<td><input type="text" name="dbname" required/></td>
+	</tr>
+	<tr>
+		<th>Database User</th>
+		<td><input type="text" name="dbuser" required/></td>
+	</tr>
+	<tr>
+		<th>Database Password</th>
+		<td><input type="password" name="dbpass"/></td>
+	</tr>
+	<tr>
+		<th>Database Prefix</th>
+		<td><input type="text" name="dbprefix"/></td>
+	</tr>
+</table>
+{{else if eq .page "dbtest"}}
+<p class="text-center">Database connection was successful! Click next to continue.</p>
 {{else}}
+<p class="text-center">Invalid page</p>
 {{end}}
+<section class="buttons">
+	<input type="submit" value="{{if eq `finish` .nextPage}}Finish{{else}}Next{{end}}" />
+</section>
+</form>

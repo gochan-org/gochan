@@ -6,6 +6,7 @@
 @use "global/watcher";
 @use 'global/bans';
 @use 'global/animations';
+@use 'global/installer';
 
 .increase-line-height {
 	header, .post, .reply {

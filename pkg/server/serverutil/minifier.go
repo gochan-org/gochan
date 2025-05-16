@@ -20,12 +20,7 @@ type templateRef interface {
 
 // InitMinifier sets up the HTML/JS/JSON minifier if enabled in gochan.json
 func InitMinifier() {
-	var siteConfig *config.SiteConfig
-	if config.GetInitialSetupStatus() == config.InitialSetupComplete {
-		siteConfig = config.GetSiteConfig()
-	} else {
-		siteConfig = &config.GetDefaultConfig().SiteConfig
-	}
+	siteConfig := config.GetSiteConfig()
 
 	minifier = minify.New()
 	if siteConfig.MinifyHTML {
@@ -43,9 +38,6 @@ func canMinify(mediaType string) (minify bool) {
 			InitMinifier()
 		}
 	}()
-	if config.GetInitialSetupStatus() != config.InitialSetupComplete {
-		return true
-	}
 	siteConfig := config.GetSiteConfig()
 	if mediaType == "text/html" && siteConfig.MinifyHTML {
 		return true

@@ -686,6 +686,26 @@ img#banpage-image {
   margin: 4px 8px 8px 4px;
 }
 
+.install-container {
+  margin: 0 auto;
+  max-width: 80%;
+  padding: 1em 0;
+}
+.install-container textarea.license {
+  width: 50%;
+  height: 16em;
+  margin: 1em auto;
+  display: block;
+}
+.install-container .buttons {
+  display: block;
+  text-align: center;
+  margin-top: 0.5em;
+}
+.install-container table {
+  margin: 0 auto;
+}
+
 .increase-line-height header, .increase-line-height .post, .increase-line-height .reply {
   line-height: 1.5;
 }

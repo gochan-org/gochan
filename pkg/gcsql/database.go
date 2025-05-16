@@ -23,9 +23,9 @@ const (
 	gochanVersionKeyConstant = "gochan"
 	DatabaseVersion          = 6
 	UnsupportedSQLVersionMsg = `syntax error in SQL query, confirm you are using a supported driver and SQL server (error text: %s)`
-	mysqlConnStr             = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
-	postgresConnStr          = "postgres://%s:%s@%s/%s?sslmode=disable"
-	sqlite3ConnStr           = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
+	MySQLConnStr             = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
+	PostgresConnStr          = "postgres://%s:%s@%s/%s?sslmode=disable"
+	SQLite3ConnStr           = "file:%s?_auth&_auth_user=%s&_auth_pass=%s&_auth_crypt=sha1"
 )
 
 var (
@@ -353,14 +353,14 @@ func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	}
 	switch cfg.DBtype {
 	case "mysql":
-		db.connStr = fmt.Sprintf(mysqlConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
+		db.connStr = fmt.Sprintf(MySQLConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, mysqlReplacerArr...)
 		mysql.SetLogger(gcutil.Logger())
 	case "postgres":
-		db.connStr = fmt.Sprintf(postgresConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
+		db.connStr = fmt.Sprintf(PostgresConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, postgresReplacerArr...)
 	case "sqlite3":
-		db.connStr = fmt.Sprintf(sqlite3ConnStr, cfg.DBhost, cfg.DBusername, cfg.DBpassword)
+		db.connStr = fmt.Sprintf(SQLite3ConnStr, cfg.DBhost, cfg.DBusername, cfg.DBpassword)
 		replacerArr = append(replacerArr, sqlite3ReplacerArr...)
 	default:
 		return nil, ErrUnsupportedDB
