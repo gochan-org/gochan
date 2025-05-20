@@ -2,8 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"html/template"
@@ -21,7 +19,6 @@ import (
 	"github.com/Eggbertx/go-forms"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
-	"github.com/gochan-org/gochan/pkg/gcsql"
 	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -37,7 +34,8 @@ var (
 
 	installTemplate      *template.Template
 	installServerStopper chan int
-	// workingConfig        *config.GochanConfig = config.GetDefaultConfig()
+
+	configDir string
 )
 
 func main() {
@@ -148,68 +146,6 @@ func initTemplates() error {
 	return nil
 }
 
-type pathsForm struct {
-	ConfigPath   string `form:"configpath,required,notempty" method:"POST"`
-	TemplateDir  string `form:"templatedir,required,notempty" method:"POST"`
-	DocumentRoot string `form:"documentroot,required,notempty" method:"POST"`
-	LogDir       string `form:"logdir,required,notempty" method:"POST"`
-	WebRoot      string `form:"webroot,required,notempty" method:"POST"`
-}
-
-type dbForm struct {
-	DBtype   string `form:"dbtype,required,notempty" method:"POST"`
-	DBhost   string `form:"dbhost,required,notempty" method:"POST"`
-	DBname   string `form:"dbname,required,notempty" method:"POST"`
-	DBuser   string `form:"dbuser,required,notempty" method:"POST"`
-	DBpass   string `form:"dbpass" method:"POST"`
-	DBprefix string `form:"dbprefix" method:"POST"`
-}
-
-func testDB(form *dbForm) (tablesExist bool, err error) {
-	var connStr string
-	var query string
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	switch form.DBtype {
-	case "mysql":
-		connStr = fmt.Sprintf(gcsql.MySQLConnStr, form.DBuser, form.DBpass, form.DBhost, form.DBname)
-		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`
-	case "postgres":
-		connStr = fmt.Sprintf(gcsql.PostgresConnStr, form.DBuser, form.DBpass, form.DBhost, form.DBname)
-		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = CURRENT_DATABASE() AND table_name = ?`
-	case "sqlite3":
-		connStr = fmt.Sprintf(gcsql.SQLite3ConnStr, form.DBhost, form.DBuser, form.DBpass)
-		query = `SELECT COUNT(*) FROM sqlite_master WHERE name = ? AND type = 'table'`
-	default:
-		return false, gcsql.ErrUnsupportedDB
-	}
-	db, err := sql.Open(form.DBtype, connStr)
-	if err != nil {
-		return false, err
-	}
-	defer db.Close()
-
-	var count int
-	stmt, err := db.PrepareContext(ctx, query)
-	if err != nil {
-		return false, err
-	}
-	defer stmt.Close()
-
-	if err = stmt.QueryRowContext(ctx, form.DBprefix+"database_version").Scan(&count); err != nil {
-		return false, err
-	}
-	tablesExist = count > 0
-	if err = stmt.Close(); err != nil {
-		return
-	}
-	if err = db.Close(); err != nil {
-		return
-	}
-	return
-}
-
 func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err error) {
 	infoEv, warnEv, errEv := gcutil.LogRequest(req.Request)
 	var buf bytes.Buffer
@@ -245,6 +181,22 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		pageTitle = "Paths"
 		data["nextPage"] = "database"
 	case "database":
+		var pathFormData pathsForm
+		if err = forms.FillStructFromForm(req.Request, &pathFormData); err != nil {
+			httpStatus = http.StatusBadRequest
+			errEv.Err(err).Msg("Failed to fill form data")
+			return
+		}
+		if err = pathFormData.validate(warnEv, errEv); err != nil {
+			httpStatus = http.StatusBadRequest
+			return
+		}
+		configDir = pathFormData.ConfigDir
+		systemCriticalConfig.DocumentRoot = pathFormData.DocumentRoot
+		systemCriticalConfig.LogDir = pathFormData.LogDir
+		systemCriticalConfig.TemplateDir = pathFormData.TemplateDir
+		systemCriticalConfig.WebRoot = pathFormData.WebRoot
+		config.SetSystemCriticalConfig(systemCriticalConfig)
 
 		pageTitle = "Database Setup"
 		data["nextPage"] = "dbtest"
@@ -258,7 +210,7 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			return
 		}
 		var tablesExist bool
-		if tablesExist, err = testDB(&dbFormData); err != nil {
+		if tablesExist, err = dbFormData.validate(); err != nil {
 			httpStatus = http.StatusBadRequest
 			errEv.Err(err).Msg("Database test failed")
 			return err
