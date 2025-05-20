@@ -17,6 +17,10 @@
 		<td><input type="text" name="templatedir" value="{{.systemCriticalConfig.TemplateDir}}"/></td>
 	</tr>
 	<tr>
+		<th>Document Root</th>
+		<td><input type="text" name="documentroot" value="{{.systemCriticalConfig.DocumentRoot}}"/></td>
+	</tr>
+	<tr>
 		<th>Log Directory</th>
 		<td><input type="text" name="logdir"/></td>
 	</tr>
@@ -58,11 +62,11 @@
 	</tr>
 </table>
 {{else if eq .page "dbtest"}}
-<p class="text-center">Database connection was successful! Click next to continue.</p>
+<p class="text-center">{{.testResult}}</p>
 {{else}}
 <p class="text-center">Invalid page</p>
 {{end}}
 <section class="buttons">
-	<input type="submit" value="{{if eq `finish` .nextPage}}Finish{{else}}Next{{end}}" />
+	<input type="submit" value="{{.nextButton}}" />
 </section>
 </form>

@@ -148,61 +148,66 @@ func initTemplates() error {
 	return nil
 }
 
-type dbForm struct {
-	DBType   string `form:"dbtype,required,notempty" method:"POST"`
-	DBHost   string `form:"dbhost,required,notempty" method:"POST"`
-	DBName   string `form:"dbname,required,notempty" method:"POST"`
-	DBUser   string `form:"dbuser,required,notempty" method:"POST"`
-	DBPass   string `form:"dbpass,required" method:"POST"`
-	DBPrefix string `form:"dbprefix,required" method:"POST"`
+type pathsForm struct {
+	ConfigPath   string `form:"configpath,required,notempty" method:"POST"`
+	TemplateDir  string `form:"templatedir,required,notempty" method:"POST"`
+	DocumentRoot string `form:"documentroot,required,notempty" method:"POST"`
+	LogDir       string `form:"logdir,required,notempty" method:"POST"`
+	WebRoot      string `form:"webroot,required,notempty" method:"POST"`
 }
 
-func testDB(form *dbForm) (err error) {
+type dbForm struct {
+	DBtype   string `form:"dbtype,required,notempty" method:"POST"`
+	DBhost   string `form:"dbhost,required,notempty" method:"POST"`
+	DBname   string `form:"dbname,required,notempty" method:"POST"`
+	DBuser   string `form:"dbuser,required,notempty" method:"POST"`
+	DBpass   string `form:"dbpass" method:"POST"`
+	DBprefix string `form:"dbprefix" method:"POST"`
+}
+
+func testDB(form *dbForm) (tablesExist bool, err error) {
 	var connStr string
 	var query string
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	switch form.DBType {
+	switch form.DBtype {
 	case "mysql":
-		connStr = fmt.Sprintf(gcsql.MySQLConnStr, form.DBUser, form.DBPass, form.DBHost, form.DBName)
+		connStr = fmt.Sprintf(gcsql.MySQLConnStr, form.DBuser, form.DBpass, form.DBhost, form.DBname)
 		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`
 	case "postgres":
-		connStr = fmt.Sprintf(gcsql.PostgresConnStr, form.DBUser, form.DBPass, form.DBHost, form.DBName)
+		connStr = fmt.Sprintf(gcsql.PostgresConnStr, form.DBuser, form.DBpass, form.DBhost, form.DBname)
 		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = CURRENT_DATABASE() AND table_name = ?`
 	case "sqlite3":
-		connStr = fmt.Sprintf(gcsql.SQLite3ConnStr, form.DBHost, form.DBUser, form.DBPass)
+		connStr = fmt.Sprintf(gcsql.SQLite3ConnStr, form.DBhost, form.DBuser, form.DBpass)
 		query = `SELECT COUNT(*) FROM sqlite_master WHERE name = ? AND type = 'table'`
 	default:
-		return gcsql.ErrUnsupportedDB
+		return false, gcsql.ErrUnsupportedDB
 	}
-	db, err := sql.Open(form.DBType, connStr)
+	db, err := sql.Open(form.DBtype, connStr)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer db.Close()
 
 	var count int
 	stmt, err := db.PrepareContext(ctx, query)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer stmt.Close()
 
-	if err = stmt.QueryRowContext(ctx, form.DBPrefix+"database_version").Scan(&count); err != nil {
-		return err
+	if err = stmt.QueryRowContext(ctx, form.DBprefix+"database_version").Scan(&count); err != nil {
+		return false, err
 	}
-	if count > 0 {
-		return fmt.Errorf("database already appears to have a Gochan installation (%sdatabase_version table already exists)", form.DBName)
-	}
+	tablesExist = count > 0
 	if err = stmt.Close(); err != nil {
-		return err
+		return
 	}
 	if err = db.Close(); err != nil {
-		return err
+		return
 	}
-
-	return nil
+	return
 }
 
 func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err error) {
@@ -225,6 +230,7 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		"page":                 page,
 		"systemCriticalConfig": systemCriticalConfig,
 		"siteConfig":           config.GetSiteConfig(),
+		"nextButton":           "Next",
 	}
 	var stopServer bool
 	switch page {
@@ -239,8 +245,10 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		pageTitle = "Paths"
 		data["nextPage"] = "database"
 	case "database":
+
 		pageTitle = "Database Setup"
 		data["nextPage"] = "dbtest"
+		data["nextButton"] = "Test Connection"
 	case "dbtest":
 		pageTitle = "Database Test"
 		var dbFormData dbForm
@@ -249,17 +257,29 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			errEv.Err(err).Msg("Failed to fill form data")
 			return
 		}
-		if err = testDB(&dbFormData); err != nil {
+		var tablesExist bool
+		if tablesExist, err = testDB(&dbFormData); err != nil {
 			httpStatus = http.StatusBadRequest
 			errEv.Err(err).Msg("Database test failed")
 			return err
 		}
-		systemCriticalConfig.DBtype = dbFormData.DBType
-		systemCriticalConfig.DBhost = dbFormData.DBHost
-		systemCriticalConfig.DBname = dbFormData.DBName
-		systemCriticalConfig.DBusername = dbFormData.DBUser
-		systemCriticalConfig.DBpassword = dbFormData.DBPass
-		systemCriticalConfig.DBprefix = dbFormData.DBPrefix
+		data["tablesExist"] = tablesExist
+		if tablesExist {
+			data["testResult"] = fmt.Sprintf(
+				"Database connection was successful but the database appears to contain Gochan tables (found %sdatabase_version). "+
+					"Press Next to continue to use this database or your browser's back button to change the database settings.",
+				dbFormData.DBprefix)
+			warnEv.Str("dbprefix", dbFormData.DBprefix).Str("dbname", dbFormData.DBname).
+				Msg("Database test successful but tables already exist")
+		} else {
+			data["testResult"] = "Database connection was successful. Press Next to continue."
+		}
+		systemCriticalConfig.DBtype = dbFormData.DBtype
+		systemCriticalConfig.DBhost = dbFormData.DBhost
+		systemCriticalConfig.DBname = dbFormData.DBname
+		systemCriticalConfig.DBusername = dbFormData.DBuser
+		systemCriticalConfig.DBpassword = dbFormData.DBpass
+		systemCriticalConfig.DBprefix = dbFormData.DBprefix
 		config.SetSystemCriticalConfig(systemCriticalConfig)
 		data["nextPage"] = "install"
 	case "stop":
