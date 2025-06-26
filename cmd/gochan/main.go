@@ -64,9 +64,9 @@ func main() {
 	fatalEv.Discard()
 	fatalEv = gcutil.LogFatal() // reset fatalEv to use log file
 
-	testIP := os.Getenv("GC_TESTIP")
+	testIP := os.Getenv(gcutil.TestingIPEnvVar)
 	if testIP != "" {
-		gcutil.LogInfo().Str("GC_TESTIP", testIP).
+		gcutil.LogInfo().Str(gcutil.TestingIPEnvVar, testIP).
 			Msg("Custom testing IP address set from environment variable")
 	}
 

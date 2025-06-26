@@ -94,7 +94,7 @@ func TestGetRealIP(t *testing.T) {
 	req.Header.Set("HTTP_CF_CONNECTING_IP", cfIP)
 	assert.Equal(t, cfIP, GetRealIP(req))
 
-	t.Setenv("GC_TESTIP", testIP)
+	t.Setenv(TestingIPEnvVar, testIP)
 	assert.Equal(t, testIP, GetRealIP(req))
 }
 

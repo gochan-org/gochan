@@ -21,14 +21,19 @@ const (
 	InitialSetupNotStarted
 	InitialSetupComplete
 
-	DirFileMode    fs.FileMode = 0775
+	// DirFileMode is the default file mode for directories created by gochan
+	DirFileMode fs.FileMode = 0775
+	// NormalFileMode is the default file mode for files created by gochan
 	NormalFileMode fs.FileMode = 0664
+
+	// ConfigPathEnvVar is the environment variable used to set the path to gochan.js if it is set
+	ConfigPathEnvVar = "GOCHAN_CONFIG"
 )
 
 var (
 	uid                       int
 	gid                       int
-	standardConfigSearchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
+	standardConfigSearchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/opt/homebrew/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
 
 	initialSetupStatus InitialSetupStatus = InitialSetupStatusUnknown
 )
@@ -55,11 +60,23 @@ func (iv *InvalidValueError) Error() string {
 	return str
 }
 
-// GetGochanJSONPath returns the location of gochan.json, searching in the working directory,
-// /usr/local/etc/gochan, and /etc/gochan in that order. If it is not found, it returns an empty string.
+// GetGochanJSONPath returns the location of gochan.json. If the GOCHAN_CONFIG environment variable is set,
+// it returns the value, whether or not a file exists at that location. Otherwise, it searches for gochan.json
+// in the following locations, returning the first one found:
+//
+//	./gochan.json (working directory)
+//	/usr/local/etc/gochan/gochan.json
+//	/opt/homebrew/etc/gochan/gochan.json
+//	/etc/gochan/gochan.json
+//
+// If gochan.json is not found, it returns an empty string.
 func GetGochanJSONPath() string {
 	if cfgPath != "" {
 		return cfgPath
+	}
+	jsonPath := os.Getenv(ConfigPathEnvVar)
+	if jsonPath != "" {
+		return jsonPath
 	}
 	return gcutil.FindResource(standardConfigSearchPaths...)
 }

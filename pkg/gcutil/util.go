@@ -24,6 +24,9 @@ import (
 const (
 	// DefaultMaxAge is used for cookies that have an invalid or unset max age (default is 1 month)
 	DefaultMaxAge = time.Hour * 24 * 30
+
+	// TestingIPEnvVar is the environment variable used in development for assining to incoming IP addresses if it is set
+	TestingIPEnvVar = "GOCHAN_TESTIP"
 )
 
 var (
@@ -102,11 +105,11 @@ func GetFormattedFilesize(size float64) string {
 	return fmt.Sprintf("%0.2fGB", size/1024.0/1024.0/1024.0)
 }
 
-// GetRealIP checks the GC_TESTIP environment variable as well as HTTP_CF_CONNCTING_IP
+// GetRealIP checks the GOCHAN_TESTIP environment variable as well as HTTP_CF_CONNCTING_IP
 // and X-Forwarded-For HTTP headers to get a potentially obfuscated IP address, before
 // getting the request's reported remote address
 func GetRealIP(request *http.Request) string {
-	ip, ok := os.LookupEnv("GC_TESTIP")
+	ip, ok := os.LookupEnv(TestingIPEnvVar)
 	if ok {
 		return ip
 	}
