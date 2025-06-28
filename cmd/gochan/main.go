@@ -125,7 +125,7 @@ func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 		Str("DBhost", systemCritical.DBhost).
 		Msg("Connected to database")
 
-	if err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype); err != nil {
+	if err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, true); err != nil {
 		cleanup()
 		if len(commandLine) > 0 && commandLine[0] {
 			fmt.Fprintln(os.Stderr, "Failed to initialize the database:", err)

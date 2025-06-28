@@ -691,10 +691,10 @@ img#banpage-image {
   max-width: 80%;
   padding: 1em 0;
 }
-.install-container textarea.license {
+.install-container .center-margin-50 {
+  margin: 0 auto;
   width: 50%;
-  height: 16em;
-  margin: 1em auto;
+  height: 20em;
   display: block;
 }
 .install-container .buttons {
@@ -704,6 +704,9 @@ img#banpage-image {
 }
 .install-container table {
   margin: 0 auto;
+}
+.install-container input.path, .install-container select.path {
+  width: 100%;
 }
 
 .increase-line-height header, .increase-line-height .post, .increase-line-height .reply {

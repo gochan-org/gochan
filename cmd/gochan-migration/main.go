@@ -103,7 +103,7 @@ func main() {
 		if err != nil {
 			fatalEv.Err(err).Caller().Msg("Failed to connect to the database")
 		}
-		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype); err != nil {
+		if err = gcsql.CheckAndInitializeDatabase(sqlCfg.DBtype, true); err != nil {
 			fatalEv.Err(err).Caller().Msg("Unable to initialize the database")
 		}
 	}

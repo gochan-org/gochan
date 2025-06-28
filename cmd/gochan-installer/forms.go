@@ -1,45 +1,44 @@
 package main
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path"
 	"slices"
-	"time"
+	"strings"
 
+	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/rs/zerolog"
 )
 
 type pathsForm struct {
-	ConfigDir    string `form:"configdir,required,notempty" method:"POST"`
+	ConfigPath   string `form:"configdir,required,notempty" method:"POST"`
 	TemplateDir  string `form:"templatedir,required,notempty" method:"POST"`
 	DocumentRoot string `form:"documentroot,required,notempty" method:"POST"`
 	LogDir       string `form:"logdir,required,notempty" method:"POST"`
-	WebRoot      string `form:"webroot,required,notempty" method:"POST"`
+	WebRoot      string `form:"webroot,required" method:"POST"`
 }
 
-func (pf *pathsForm) validateDir(pDir *string, desc string) error {
-	dir := *pDir
-	if dir == "" {
+func (pf *pathsForm) validatePath(targetPath *string, desc string, expectDir bool) error {
+	p := *targetPath
+	if p == "" {
 		return fmt.Errorf("%s is required", desc)
 	}
-	dir = path.Clean(dir)
-	*pDir = dir
+	p = path.Clean(p)
+	*targetPath = p
 
-	fi, err := os.Stat(dir)
+	fi, err := os.Stat(p)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("%s %s does not exist", desc, dir)
+		return fmt.Errorf("%s %s does not exist", desc, p)
 	}
 	if errors.Is(err, fs.ErrPermission) {
-		return fmt.Errorf("permission denied to %s", dir)
+		return fmt.Errorf("permission denied to %s", p)
 	}
-	if !fi.Mode().IsDir() {
-		return fmt.Errorf("%s exists at %s but is not a directory", desc, dir)
+	if expectDir && !fi.Mode().IsDir() {
+		return fmt.Errorf("%s exists at %s but is not a directory", desc, p)
 	}
 	return nil
 }
@@ -48,43 +47,44 @@ func (pf *pathsForm) validate(warnEv, errEv *zerolog.Event) (err error) {
 	pf.DocumentRoot = path.Clean(pf.DocumentRoot)
 	pf.LogDir = path.Clean(pf.LogDir)
 
-	if pf.ConfigDir == "" {
+	if pf.ConfigPath == "" {
 		warnEv.Msg("Required config output directory not set")
 		return errors.New("config output directory is required")
 	}
-	pf.ConfigDir = path.Clean(pf.ConfigDir)
+	pf.ConfigPath = path.Clean(pf.ConfigPath)
 
-	validConfigDirs := []string{".", "/usr/local/etc/gochan", "/etc/gochan"}
-
-	if !slices.Contains(validConfigDirs, pf.ConfigDir) {
-		warnEv.Str("configDir", pf.ConfigDir).
-			Msg("Invalid config output directory")
-		return fmt.Errorf("config output directory %s is not allowed. Valid values are ., /usr/local/etc/gochan, or /etc/gochan", pf.ConfigDir)
+	validConfigPaths := cfgPaths
+	pathsArr := zerolog.Arr()
+	for _, p := range validConfigPaths {
+		pathsArr.Str(p)
 	}
 
-	if err = pf.validateDir(&pf.ConfigDir, "config output directory"); err != nil {
+	if !slices.Contains(validConfigPaths, pf.ConfigPath) {
+		warnEv.Str("configPath", pf.ConfigPath).
+			Array("validConfigPaths", pathsArr).
+			Msg("Invalid config output path")
+		return fmt.Errorf("config output path %s is not allowed. Valid values are %s", strings.Join(cfgPaths, ", "), pf.ConfigPath)
+	}
+
+	configDir := path.Dir(pf.ConfigPath)
+
+	if err = pf.validatePath(&configDir, "config output directory", true); err != nil {
 		warnEv.Err(err).
 			Msg("Invalid config output directory")
 		return err
 	}
 
-	if _, err = os.Stat(path.Join(pf.ConfigDir, "gochan.json")); err == nil {
-		warnEv.Str("configDir", pf.ConfigDir).
-			Msg("Config output directory already exists")
-		return fmt.Errorf("gochan.json already exists in %s", pf.ConfigDir)
-	}
-
-	if err = pf.validateDir(&pf.TemplateDir, "template directory"); err != nil {
+	if err = pf.validatePath(&pf.TemplateDir, "template directory", true); err != nil {
 		warnEv.Err(err).Str("templateDir", pf.TemplateDir).
 			Msg("Invalid template directory")
 		return err
 	}
-	if err = pf.validateDir(&pf.DocumentRoot, "document root"); err != nil {
+	if err = pf.validatePath(&pf.DocumentRoot, "document root", true); err != nil {
 		warnEv.Err(err).Str("documentRoot", pf.DocumentRoot).
 			Msg("Invalid document root")
 		return err
 	}
-	if err = pf.validateDir(&pf.LogDir, "log directory"); err != nil {
+	if err = pf.validatePath(&pf.LogDir, "log directory", true); err != nil {
 		warnEv.Err(err).Str("logDir", pf.LogDir).
 			Msg("Invalid log directory")
 		return err
@@ -103,49 +103,69 @@ type dbForm struct {
 	DBuser   string `form:"dbuser,required,notempty" method:"POST"`
 	DBpass   string `form:"dbpass" method:"POST"`
 	DBprefix string `form:"dbprefix" method:"POST"`
+
+	TimeoutSeconds     int `form:"timeoutseconds,required" method:"POST"`
+	MaxOpenConns       int `form:"maxopenconns,required" method:"POST"`
+	MaxIdleConns       int `form:"maxidleconns,required" method:"POST"`
+	ConnMaxLifetimeMin int `form:"connmaxlifetimemin,required" method:"POST"`
 }
 
-func (dbf *dbForm) validate() (tablesExist bool, err error) {
-	var connStr string
-	var query string
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	switch dbf.DBtype {
-	case "mysql":
-		connStr = fmt.Sprintf(gcsql.MySQLConnStr, dbf.DBuser, dbf.DBpass, dbf.DBhost, dbf.DBname)
-		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?`
-	case "postgres":
-		connStr = fmt.Sprintf(gcsql.PostgresConnStr, dbf.DBuser, dbf.DBpass, dbf.DBhost, dbf.DBname)
-		query = `SELECT COUNT(*) FROM information_schema.TABLES WHERE table_catalog = CURRENT_DATABASE() AND table_name = ?`
-	case "sqlite3":
-		connStr = fmt.Sprintf(gcsql.SQLite3ConnStr, dbf.DBhost, dbf.DBuser, dbf.DBpass)
-		query = `SELECT COUNT(*) FROM sqlite_master WHERE name = ? AND type = 'table'`
-	default:
-		return false, gcsql.ErrUnsupportedDB
+func (dbf *dbForm) validate() (status dbStatus, err error) {
+	if dbf.DBprefix == "" {
+		return dbStatusNoPrefix, nil
 	}
-	db, err := sql.Open(dbf.DBtype, connStr)
+	if dbf.TimeoutSeconds <= 0 {
+		return dbStatusUnknown, errors.New("request timeout must be greater than 0")
+	}
+	if dbf.MaxOpenConns <= 0 {
+		return dbStatusUnknown, errors.New("max open connections must be greater than 0")
+	}
+	if dbf.MaxIdleConns <= 0 {
+		return dbStatusUnknown, errors.New("max idle connections must be greater than 0")
+	}
+	if dbf.ConnMaxLifetimeMin <= 0 {
+		return dbStatusUnknown, errors.New("max lifetime for connections must be greater than 0")
+	}
+
+	if err := gcsql.ConnectToDB(&config.SQLConfig{
+		// using a dummy config to test connection. It will be set as the main config later
+		DBtype:     dbf.DBtype,
+		DBhost:     dbf.DBhost,
+		DBname:     dbf.DBname,
+		DBusername: dbf.DBuser,
+		DBpassword: dbf.DBpass,
+		DBprefix:   dbf.DBprefix,
+
+		DBTimeoutSeconds:     dbf.TimeoutSeconds,
+		DBMaxOpenConnections: dbf.MaxOpenConns,
+		DBMaxIdleConnections: dbf.MaxIdleConns,
+		DBConnMaxLifetimeMin: dbf.ConnMaxLifetimeMin,
+	}); err != nil {
+		return dbStatusUnknown, err
+	}
+	tablesExist, err := gcsql.DoesGochanPrefixTableExist()
 	if err != nil {
-		return false, err
+		return dbStatusUnknown, err
 	}
-	defer db.Close()
-
-	var count int
-	stmt, err := db.PrepareContext(ctx, query)
-	if err != nil {
-		return false, err
-	}
-	defer stmt.Close()
-
-	if err = stmt.QueryRowContext(ctx, dbf.DBprefix+"database_version").Scan(&count); err != nil {
-		return false, err
-	}
-	tablesExist = count > 0
-	if err = stmt.Close(); err != nil {
-		return
-	}
-	if err = db.Close(); err != nil {
-		return
+	if tablesExist {
+		status = dbStatusTablesExist
+	} else {
+		status = dbStatusClean
 	}
 	return
+}
+
+type staffForm struct {
+	Username        string `form:"username,required,notempty" method:"POST"`
+	Password        string `form:"password,required,notempty" method:"POST"`
+	ConfirmPassword string `form:"confirmpassword,required,notempty" method:"POST"`
+	ToMisc          string `form:"to-misc" method:"POST"`
+}
+
+func (sf *staffForm) validate() (err error) {
+	if sf.Password != sf.ConfirmPassword {
+		return errors.New("passwords do not match")
+	}
+
+	return nil
 }

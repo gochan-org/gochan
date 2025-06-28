@@ -1,35 +1,44 @@
 <form class="install-container" method="POST" action="/install/{{.nextPage}}">
-{{if eq "" .page}}
+{{- if eq "" .page -}}
 <p>Welcome to the Gochan installer! This installer will help you configure Gochan, including setting the necessary directories and connecting to the SQL database, in preparation for running a fresh Gochan installation or migrating another imageboard database (if supported) to Gochan.</p>
-<p class="text-bold">This does not install files like templates, or provision the database. It only creates a configuration file for gochan to use.</p>
-
-{{else if eq .page "license"}}
+<p class="text-bold">This does not install files like templates (yet), or provision the database. It only creates a configuration file for gochan to use.</p>
+{{- else if eq .page "license" -}}
 <p class="text-center">Gochan is licensed under the BSD 3-Clause License, shown below. By using Gochan, you agree to the terms of this license,</p>
-<textarea class="license">{{.license}}</textarea>
-{{else if eq .page "paths"}}
+<textarea class="center-margin-50">{{.license}}</textarea>
+{{- else if eq .page "paths" -}}
 <table>
 	<tr>
-		<th>Output gochan.json Directory</th>
-		<td><input type="text" name="configdir" required/></td>
+		<th>Output gochan.json Path</th>
+		<td>{{with .cfgPaths -}}
+			<select name="configdir" required>
+				<option value="" disabled selected>Select a directory</option>
+				{{range . -}}
+					<option value="{{.}}">{{.}}</option>
+				{{- end}}
+			</select>
+		{{- else -}}
+			<input type="hidden" name="configdir" value="gochan.json" />
+			./gochan.json (current directory)
+		{{- end -}}</td>
 	</tr>
 	<tr>
 		<th>Templates Directory</th>
-		<td><input type="text" name="templatedir" value="{{.systemCriticalConfig.TemplateDir}}"/></td>
+		<td><input type="text" name="templatedir" class="path" value="{{.config.TemplateDir}}"/></td>
 	</tr>
 	<tr>
 		<th>Document Root</th>
-		<td><input type="text" name="documentroot" value="{{.systemCriticalConfig.DocumentRoot}}"/></td>
+		<td><input type="text" name="documentroot" class="path" value="{{.config.DocumentRoot}}" required/></td>
 	</tr>
 	<tr>
 		<th>Log Directory</th>
-		<td><input type="text" name="logdir"/></td>
+		<td><input type="text" name="logdir" class="path" required/></td>
 	</tr>
 	<tr>
 		<th>Web Root</th>
-		<td><input type="text" name="webroot" value="{{.systemCriticalConfig.WebRoot}}"/></td>
+		<td><input type="text" name="webroot" class="path" value="{{.config.WebRoot}}" required/></td>
 	</tr>
 </table>
-{{else if eq .page "database"}}
+{{- else if eq .page "database" -}}
 <table>
 	<tr>
 		<th>SQL Provider</th>
@@ -60,12 +69,46 @@
 		<th>Database Prefix</th>
 		<td><input type="text" name="dbprefix"/></td>
 	</tr>
+	<tr>
+		<th>Database Request Timeout (seconds)</th>
+		<td><input type="number" name="timeoutseconds" value="{{.config.DBTimeoutSeconds}}" min="1" required/></td>
+	</tr>
+	<tr>
+		<th>Database Max Open Connections</th>
+		<td><input type="number" name="maxopenconns" value="{{.config.DBMaxOpenConnections}}" min="1" required/></td>
+	</tr>
+	<tr>
+		<th>Max Idle Database Connections</th>
+		<td><input type="number" name="maxidleconns" value="{{.config.DBMaxIdleConnections}}" min="1" required/></td>
+	</tr>
+	<tr>
+		<th>Max DB Connection Lifetime (minutes)</th>
+		<td><input type="number" name="connmaxlifetimemin" value="{{.config.DBConnMaxLifetimeMin}}" min="1" required/></td>
+	</tr>
 </table>
-{{else if eq .page "dbtest"}}
-<p class="text-center">{{.testResult}}</p>
-{{else}}
-<p class="text-center">Invalid page</p>
-{{end}}
+{{- else if eq .page "dbtest" -}}
+	<p class="text-center">{{.testResult}}</p>
+{{- else if eq .page "staff" -}}
+	{{- with .alreadyCreated -}}
+		<p class="text-center">Administrator account already created. Click Next to go to miscellaneous settings (flags and </p>
+	{{- else -}}
+		<p class="text-center">Enter a username and password for an administrator staff acount</p>
+		<input type="hidden" name="newstaff" value="yes" />
+		<table>
+			<tr><th>Username</th><td><input type="text" name="username"></td></tr>
+			<tr><th>Password</th><td><input type="password" name="password"></td></tr>
+			<tr><th>Confirm Password</th><td><input type="password" name="confirmpassword"></td></tr>
+		</table>
+	{{- end -}}
+{{- else if eq .page "pre-save" -}}
+	<p>Initial configuration is complete. In the textbox below, you can see the JSON output that will be saved to {{.configPath}} on the server. After clicking Save, you can then edit it as needed. See config.md for more info</p>
+	<textarea class="center-margin-50" readonly>{{.configJSON}}</textarea>
+{{- else if eq .page "save" -}}
+	<p class="text-center">Gochan has been configured and provisioned successfully. Click Finish to stop the installer server. From there, you can run gochan, log into the staff account you created <a href="{{webPath `/manage`}}">here</a>, and create new boards as desired. Thank you for using Gochan!</p>
+	<p class="text-center">If you experience any bugs, you can report them <a href="https://github.com/gochan-org/gochan/issues">here</a>.</p>
+{{- else -}}
+	<p class="text-center">Invalid page</p>
+{{- end -}}
 <section class="buttons">
 	<input type="submit" value="{{.nextButton}}" />
 </section>

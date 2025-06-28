@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"html/template"
@@ -19,6 +21,7 @@ import (
 	"github.com/Eggbertx/go-forms"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
@@ -35,8 +38,34 @@ var (
 	installTemplate      *template.Template
 	installServerStopper chan int
 
-	configDir string
+	configPath string
+
+	currentDBStatus = dbStatusUnknown
+	adminUser       *gcsql.Staff
+	cfg             *config.GochanConfig = config.GetDefaultConfig()
 )
+
+const (
+	dbStatusUnknown dbStatus = iota
+	dbStatusClean
+	dbStatusNoPrefix
+	dbStatusTablesExist
+)
+
+type dbStatus int
+
+func (dbs dbStatus) String() string {
+	switch dbs {
+	case dbStatusClean:
+		return "The database does not appear to contain any Gochan tables. It will be provisioned in the next step."
+	case dbStatusNoPrefix:
+		return "Since no prefix was specified, the installer will attempt to provision the database in the next step."
+	case dbStatusTablesExist:
+		return fmt.Sprintf("The database appears to contain Gochan tables with the prefix %s. The next step (database provisioning) may return errors", config.GetSystemCriticalConfig().DBprefix)
+	default:
+		return "unknown"
+	}
+}
 
 func main() {
 	var err error
@@ -45,14 +74,12 @@ func main() {
 	infoEv := gcutil.LogInfo()
 	defer gcutil.LogDiscard(infoEv, fatalEv)
 
-	workingConfig := config.GetDefaultConfig()
-
-	flag.StringVar(&workingConfig.SiteHost, "host", "127.0.0.1", "Host to listen on")
-	flag.IntVar(&workingConfig.Port, "port", 0, "Port to bind to (REQUIRED)")
-	flag.BoolVar(&workingConfig.UseFastCGI, "fastcgi", false, "Use FastCGI instead of HTTP")
-	flag.StringVar(&workingConfig.WebRoot, "webroot", "/", "Web root path")
-	flag.StringVar(&workingConfig.TemplateDir, "template-dir", "", "Template directory (REQUIRED)")
-	flag.StringVar(&workingConfig.DocumentRoot, "document-root", "", "Document root directory (REQUIRED)")
+	flag.StringVar(&cfg.ListenAddress, "host", "127.0.0.1", "Host to listen on")
+	flag.IntVar(&cfg.Port, "port", 0, "Port to bind to (REQUIRED)")
+	flag.BoolVar(&cfg.UseFastCGI, "fastcgi", false, "Use FastCGI instead of HTTP")
+	flag.StringVar(&cfg.WebRoot, "webroot", "/", "Web root path")
+	flag.StringVar(&cfg.TemplateDir, "template-dir", "", "Template directory (REQUIRED)")
+	flag.StringVar(&cfg.DocumentRoot, "document-root", "", "Document root directory (REQUIRED)")
 	flag.Parse()
 
 	if jsonPath := config.GetGochanJSONPath(); jsonPath != "" {
@@ -61,8 +88,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	config.SetSiteConfig(&workingConfig.SiteConfig)
-	config.SetSystemCriticalConfig(&workingConfig.SystemCriticalConfig)
+	config.SetSiteConfig(&cfg.SiteConfig)
+	config.SetSystemCriticalConfig(&cfg.SystemCriticalConfig)
 
 	systemCriticalConfig := config.GetSystemCriticalConfig()
 
@@ -75,13 +102,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	listenAddr := net.JoinHostPort(workingConfig.SiteHost, strconv.Itoa(workingConfig.Port))
+	listenAddr := net.JoinHostPort(cfg.ListenAddress, strconv.Itoa(cfg.Port))
 
 	router := server.GetRouter()
-	router.GET(path.Join(workingConfig.WebRoot, "/install"), installHandler)
-	router.POST(path.Join(workingConfig.WebRoot, "/install/:page"), installHandler)
+	router.GET(path.Join(cfg.WebRoot, "/install"), installHandler)
+	router.POST(path.Join(cfg.WebRoot, "/install/:page"), installHandler)
 
-	if workingConfig.DocumentRoot == "" {
+	if cfg.DocumentRoot == "" {
 		fatalEv.Msg("-document-root command line argument is required")
 		os.Exit(1)
 	}
@@ -97,7 +124,7 @@ func main() {
 		}
 	}()
 	infoEv.Str("listenAddr", listenAddr).Msg("Starting installer server")
-	if workingConfig.UseFastCGI {
+	if cfg.UseFastCGI {
 		listener, err = net.Listen("tcp", listenAddr)
 		if err != nil {
 			fatalEv.Err(err).Caller().Msg("Failed listening on address/port")
@@ -161,13 +188,12 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 	}()
 	var pageTitle string
 	page := req.Param("page")
-	systemCriticalConfig := config.GetSystemCriticalConfig()
 	data := map[string]any{
-		"page":                 page,
-		"systemCriticalConfig": systemCriticalConfig,
-		"siteConfig":           config.GetSiteConfig(),
-		"nextButton":           "Next",
+		"page":       page,
+		"config":     cfg,
+		"nextButton": "Next",
 	}
+
 	var stopServer bool
 	switch page {
 	case "":
@@ -179,6 +205,7 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		data["nextPage"] = "paths"
 	case "paths":
 		pageTitle = "Paths"
+		data["cfgPaths"] = cfgPaths
 		data["nextPage"] = "database"
 	case "database":
 		var pathFormData pathsForm
@@ -191,12 +218,12 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			httpStatus = http.StatusBadRequest
 			return
 		}
-		configDir = pathFormData.ConfigDir
-		systemCriticalConfig.DocumentRoot = pathFormData.DocumentRoot
-		systemCriticalConfig.LogDir = pathFormData.LogDir
-		systemCriticalConfig.TemplateDir = pathFormData.TemplateDir
-		systemCriticalConfig.WebRoot = pathFormData.WebRoot
-		config.SetSystemCriticalConfig(systemCriticalConfig)
+		configPath = pathFormData.ConfigPath
+		cfg.DocumentRoot = pathFormData.DocumentRoot
+		cfg.LogDir = pathFormData.LogDir
+		cfg.TemplateDir = pathFormData.TemplateDir
+		cfg.WebRoot = pathFormData.WebRoot
+		config.SetSystemCriticalConfig(&cfg.SystemCriticalConfig)
 
 		pageTitle = "Database Setup"
 		data["nextPage"] = "dbtest"
@@ -209,33 +236,84 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			errEv.Err(err).Msg("Failed to fill form data")
 			return
 		}
-		var tablesExist bool
-		if tablesExist, err = dbFormData.validate(); err != nil {
+		if currentDBStatus, err = dbFormData.validate(); err != nil {
 			httpStatus = http.StatusBadRequest
 			errEv.Err(err).Msg("Database test failed")
 			return err
 		}
-		data["tablesExist"] = tablesExist
-		if tablesExist {
-			data["testResult"] = fmt.Sprintf(
-				"Database connection was successful but the database appears to contain Gochan tables (found %sdatabase_version). "+
-					"Press Next to continue to use this database or your browser's back button to change the database settings.",
-				dbFormData.DBprefix)
-			warnEv.Str("dbprefix", dbFormData.DBprefix).Str("dbname", dbFormData.DBname).
-				Msg("Database test successful but tables already exist")
-		} else {
-			data["testResult"] = "Database connection was successful. Press Next to continue."
+
+		data["testResult"] = currentDBStatus.String()
+		cfg.DBtype = dbFormData.DBtype
+		cfg.DBhost = dbFormData.DBhost
+		cfg.DBname = dbFormData.DBname
+		cfg.DBusername = dbFormData.DBuser
+		cfg.DBpassword = dbFormData.DBpass
+		cfg.DBprefix = dbFormData.DBprefix
+		config.SetSystemCriticalConfig(&cfg.SystemCriticalConfig)
+
+		data["nextPage"] = "staff"
+	case "staff":
+		pageTitle = "Create Administrator Account"
+
+		if adminUser != nil {
+			data["nextButton"] = "Next"
+			data["alreadyCreated"] = true
+			break
 		}
-		systemCriticalConfig.DBtype = dbFormData.DBtype
-		systemCriticalConfig.DBhost = dbFormData.DBhost
-		systemCriticalConfig.DBname = dbFormData.DBname
-		systemCriticalConfig.DBusername = dbFormData.DBuser
-		systemCriticalConfig.DBpassword = dbFormData.DBpass
-		systemCriticalConfig.DBprefix = dbFormData.DBprefix
-		config.SetSystemCriticalConfig(systemCriticalConfig)
-		data["nextPage"] = "install"
-	case "stop":
+
+		// staff not created yet, show new admin form
+		if currentDBStatus == dbStatusUnknown {
+			httpStatus = http.StatusBadRequest
+			errEv.Msg("Database status is unknown, cannot proceed with provisioning")
+			return errors.New("database status is unknown, cannot proceed with provisioning")
+		}
+
+		err := gcsql.CheckAndInitializeDatabase(cfg.DBtype, false)
+		if err != nil {
+			errEv.Err(err).Msg("Failed to initialize database")
+			httpStatus = http.StatusInternalServerError
+			return err
+		}
+
+		data["nextPage"] = "pre-save"
+	case "pre-save":
+		pageTitle = "Configuration Confirmation"
+
+		if configPath == "" {
+			httpStatus = http.StatusBadRequest
+			errEv.Msg("Configuration path is not set")
+			return errors.New("configuration path is not set")
+		}
+
+		var jsonBuf bytes.Buffer
+		encoder := json.NewEncoder(&jsonBuf)
+		encoder.SetIndent("", "   ")
+		if err = encoder.Encode(cfg); err != nil {
+			httpStatus = http.StatusInternalServerError
+			errEv.Err(err).Msg("Failed to encode configuration to JSON")
+			return err
+		}
+		data["configJSON"] = jsonBuf.String()
+		data["configPath"] = configPath
+		data["nextButton"] = "Save"
+		data["nextPage"] = "save"
+	case "save":
+		pageTitle = "Save Configuration"
+		if configPath == "" {
+			httpStatus = http.StatusBadRequest
+			errEv.Msg("Configuration path is not set")
+			return errors.New("configuration path is not set")
+		}
+
+		if err = config.WriteConfig(configPath); err != nil {
+			httpStatus = http.StatusInternalServerError
+			errEv.Err(err).Msg("Failed to write configuration")
+			return err
+		}
+		infoEv.Str("configPath", configPath).Msg("Configuration written successfully")
+
 		stopServer = true
+		data["nextPage"] = "done"
 	default:
 		httpStatus = http.StatusNotFound
 		pageTitle = "Page Not Found"

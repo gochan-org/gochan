@@ -873,7 +873,16 @@ func GetDefaultConfig() *GochanConfig {
 	return defaultGochanConfig
 }
 
-func WriteConfig() error {
+func WriteConfig(path ...string) error {
+	if cfg == nil {
+		return errors.New("configuration not loaded")
+	}
+	if len(path) > 0 {
+		cfg.jsonLocation = path[0]
+	}
+	if cfg.jsonLocation == "" {
+		return errors.New("configuration file path not set")
+	}
 	return cfg.Write()
 }
 

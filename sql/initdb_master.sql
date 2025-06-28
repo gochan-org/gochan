@@ -42,10 +42,10 @@ CREATE TABLE DBPREFIXboards(
 	redirect_to_thread BOOL NOT NULL,
 	require_file BOOL NOT NULL,
 	enable_catalog BOOL NOT NULL,
-	CONSTRAINT boards_section_id_fk
+	CONSTRAINT DBPREFIXboards_section_id_fk
 		FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
-	CONSTRAINT boards_dir_unique UNIQUE(dir),
-	CONSTRAINT boards_uri_unique UNIQUE(uri)
+	CONSTRAINT DBPREFIXboards_dir_unique UNIQUE(dir),
+	CONSTRAINT DBPREFIXboards_uri_unique UNIQUE(uri)
 );
 
 CREATE TABLE DBPREFIXthreads(
@@ -59,7 +59,7 @@ CREATE TABLE DBPREFIXthreads(
 	last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_deleted BOOL NOT NULL DEFAULT FALSE,
-	CONSTRAINT threads_board_id_fk
+	CONSTRAINT DBPREFIXthreads_board_id_fk
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE
 );
 
@@ -85,7 +85,7 @@ CREATE TABLE DBPREFIXposts(
 	banned_message TEXT,
 	flag VARCHAR(45) NOT NULL DEFAULT '',
 	country VARCHAR(80) NOT NULL DEFAULT '',
-	CONSTRAINT posts_thread_id_fk
+	CONSTRAINT DBPREFIXposts_thread_id_fk
 		FOREIGN KEY(thread_id) REFERENCES DBPREFIXthreads(id) ON DELETE CASCADE
 );
 
@@ -104,9 +104,9 @@ CREATE TABLE DBPREFIXfiles(
 	thumbnail_height INT NOT NULL,
 	width INT NOT NULL,
 	height INT NOT NULL,
-	CONSTRAINT files_post_id_fk
+	CONSTRAINT DBPREFIXfiles_post_id_fk
 		FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id) ON DELETE CASCADE,
-	CONSTRAINT files_post_id_file_order_unique UNIQUE(post_id, file_order)
+	CONSTRAINT DBPREFIXfiles_post_id_file_order_unique UNIQUE(post_id, file_order)
 );
 
 CREATE TABLE DBPREFIXstaff(
@@ -117,7 +117,7 @@ CREATE TABLE DBPREFIXstaff(
 	added_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	is_active BOOL NOT NULL DEFAULT TRUE,
-	CONSTRAINT staff_username_unique UNIQUE(username)
+	CONSTRAINT DBPREFIXstaff_username_unique UNIQUE(username)
 );
 
 CREATE TABLE DBPREFIXsessions(
@@ -125,16 +125,16 @@ CREATE TABLE DBPREFIXsessions(
 	staff_id {fk to serial} NOT NULL,
 	expires TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	data VARCHAR(45) NOT NULL,
-	CONSTRAINT sessions_staff_id_fk
+	CONSTRAINT DBPREFIXsessions_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id) ON DELETE CASCADE
 );
 
 CREATE TABLE DBPREFIXboard_staff(
 	board_id {fk to serial} NOT NULL,
 	staff_id {fk to serial} NOT NULL,
-	CONSTRAINT board_staff_board_id_fk
+	CONSTRAINT DBPREFIXboard_staff_board_id_fk
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
-	CONSTRAINT board_staff_staff_id_fk
+	CONSTRAINT DBPREFIXboard_staff_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id) ON DELETE CASCADE,
 	CONSTRAINT board_staff_pk PRIMARY KEY (board_id,staff_id)
 );
@@ -145,7 +145,7 @@ CREATE TABLE DBPREFIXannouncements(
 	subject VARCHAR(45) NOT NULL,
 	message TEXT NOT NULL,
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CONSTRAINT announcements_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
+	CONSTRAINT DBPREFIXannouncements_staff_id_fk FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
 CREATE TABLE DBPREFIXip_ban(
@@ -165,11 +165,11 @@ CREATE TABLE DBPREFIXip_ban(
 	staff_note VARCHAR(255) NOT NULL,
 	message TEXT NOT NULL,
 	can_appeal BOOL NOT NULL,
-	CONSTRAINT ip_ban_board_id_fk
+	CONSTRAINT DBPREFIXip_ban_board_id_fk
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE,
-	CONSTRAINT ip_ban_staff_id_fk
+	CONSTRAINT DBPREFIXip_ban_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT ip_ban_banned_for_post_id_fk
+	CONSTRAINT DBPREFIXip_ban_banned_for_post_id_fk
 		FOREIGN KEY(banned_for_post_id) REFERENCES DBPREFIXposts(id)
 		ON DELETE SET NULL
 );
@@ -187,9 +187,9 @@ CREATE TABLE DBPREFIXip_ban_audit(
 	message TEXT NOT NULL,
 	can_appeal BOOL NOT NULL,
 	PRIMARY KEY(ip_ban_id, timestamp),
-	CONSTRAINT ip_ban_audit_ip_ban_id_fk
+	CONSTRAINT DBPREFIXip_ban_audit_ip_ban_id_fk
 		FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id) ON DELETE CASCADE,
-	CONSTRAINT ip_ban_audit_staff_id_fk
+	CONSTRAINT DBPREFIXip_ban_audit_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 );
 
@@ -200,9 +200,9 @@ CREATE TABLE DBPREFIXip_ban_appeals(
 	appeal_text TEXT NOT NULL,
 	staff_response TEXT,
 	is_denied BOOL NOT NULL,
-	CONSTRAINT ip_ban_appeals_staff_id_fk
+	CONSTRAINT DBPREFIXip_ban_appeals_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT ip_ban_appeals_ip_ban_id_fk
+	CONSTRAINT DBPREFIXip_ban_appeals_ip_ban_id_fk
 		FOREIGN KEY(ip_ban_id) REFERENCES DBPREFIXip_ban(id) ON DELETE CASCADE
 );
 
@@ -214,9 +214,9 @@ CREATE TABLE DBPREFIXip_ban_appeals_audit(
 	staff_response TEXT,
 	is_denied BOOL NOT NULL,
 	PRIMARY KEY(appeal_id, timestamp),
-	CONSTRAINT ip_ban_appeals_audit_staff_id_fk
+	CONSTRAINT DBPREFIXip_ban_appeals_audit_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT ip_ban_appeals_audit_appeal_id_fk
+	CONSTRAINT DBPREFIXip_ban_appeals_audit_appeal_id_fk
 		FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id)
 		ON DELETE CASCADE
 );
@@ -228,9 +228,9 @@ CREATE TABLE DBPREFIXreports(
 	ip {inet} NOT NULL,
 	reason TEXT NOT NULL,
 	is_cleared BOOL NOT NULL,
-	CONSTRAINT reports_handled_by_staff_id_fk
+	CONSTRAINT DBPREFIXreports_handled_by_staff_id_fk
 		FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT reports_post_id_fk
+	CONSTRAINT DBPREFIXreports_post_id_fk
 		FOREIGN KEY(post_id) REFERENCES DBPREFIXposts(id) ON DELETE CASCADE
 );
 
@@ -239,9 +239,9 @@ CREATE TABLE DBPREFIXreports_audit(
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	handled_by_staff_id {fk to serial},
 	is_cleared BOOL NOT NULL,
-	CONSTRAINT reports_audit_handled_by_staff_id_fk
+	CONSTRAINT DBPREFIXreports_audit_handled_by_staff_id_fk
 		FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
-	CONSTRAINT reports_audit_report_id_fk
+	CONSTRAINT DBPREFIXreports_audit_report_id_fk
 		FOREIGN KEY(report_id) REFERENCES DBPREFIXreports(id) ON DELETE CASCADE
 );
 
@@ -254,7 +254,7 @@ CREATE TABLE DBPREFIXfilters(
 	match_detail TEXT NOT NULL,
 	handle_if_any BOOL NOT NULL DEFAULT FALSE,
 	is_active BOOL NOT NULL,
-	CONSTRAINT filters_staff_id_fk
+	CONSTRAINT DBPREFIXfilters_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id)
 		ON DELETE SET NULL
 );
@@ -263,10 +263,10 @@ CREATE TABLE DBPREFIXfilter_boards(
 	id {serial pk},
 	filter_id {fk to serial} NOT NULL,
 	board_id {fk to serial} NOT NULL,
-	CONSTRAINT filter_boards_filter_id_fk
+	CONSTRAINT DBPREFIXfilter_boards_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE,
-	CONSTRAINT filter_boards_board_id_fk
+	CONSTRAINT DBPREFIXfilter_boards_board_id_fk
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id)
 		ON DELETE CASCADE
 );
@@ -277,10 +277,11 @@ CREATE TABLE DBPREFIXfilter_conditions(
 	match_mode SMALLINT NOT NULL,
 	search VARCHAR(75) NOT NULL,
 	field VARCHAR(75) NOT NULL,
-	CONSTRAINT filter_conditions_filter_id_fk
+	CONSTRAINT DBPREFIXfilter_conditions_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE,
-	CONSTRAINT filter_conditions_search_check CHECK (search <> '' OR match_mode = 3)
+	CONSTRAINT DBPREFIXfilter_conditions_search_check
+		CHECK (search <> '' OR match_mode = 3)
 );
 
 CREATE TABLE DBPREFIXfilter_hits(
@@ -288,7 +289,7 @@ CREATE TABLE DBPREFIXfilter_hits(
 	filter_id {fk to serial} NOT NULL,
 	post_data TEXT NOT NULL,
 	match_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	CONSTRAINT filter_hits_filter_id_fk
+	CONSTRAINT DBPREFIXfilter_hits_filter_id_fk
 		FOREIGN KEY(filter_id) REFERENCES DBPREFIXfilters(id)
 		ON DELETE CASCADE
 );

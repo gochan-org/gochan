@@ -91,7 +91,7 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 }
 
 // CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
-func CheckAndInitializeDatabase(dbType string) (err error) {
+func CheckAndInitializeDatabase(dbType string, withAdmin bool) (err error) {
 	dbVersion, versionFlag, err := GetCompleteDatabaseVersion()
 	if err != nil {
 		return err
@@ -102,7 +102,7 @@ func CheckAndInitializeDatabase(dbType string) (err error) {
 	case DBModernButBehind:
 		err = ErrDeprecatedDB
 	case DBClean:
-		err = buildNewDatabase(dbType)
+		err = buildNewDatabase(dbType, withAdmin)
 	case DBUpToDate:
 		err = nil
 	case DBCorrupted:
@@ -116,14 +116,17 @@ func CheckAndInitializeDatabase(dbType string) (err error) {
 	return err
 }
 
-func buildNewDatabase(dbType string) error {
+func buildNewDatabase(dbType string, withAdmin bool) error {
 	var err error
 	if err = initDB("initdb_" + dbType + ".sql"); err != nil {
 		return err
 	}
-	if err = createDefaultAdminIfNoStaff(); err != nil {
-		return fmt.Errorf("failed creating default admin account: %w", err)
+	if withAdmin {
+		if err = createDefaultAdminIfNoStaff(); err != nil {
+			return fmt.Errorf("failed creating default admin account: %w", err)
+		}
 	}
+
 	if err = createDefaultBoardIfNoneExist(); err != nil {
 		return fmt.Errorf("failed creating default board if non already exists: %w", err)
 	}

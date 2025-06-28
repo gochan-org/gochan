@@ -177,7 +177,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		return err
 	}
 
-	if err = buildNewDatabase(dbType); err != nil {
+	if err = buildNewDatabase(dbType, true); err != nil {
 		return err
 	}
 

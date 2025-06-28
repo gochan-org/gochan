@@ -3,12 +3,11 @@
 	max-width: 80%;
 	padding: 1em 0;
 
-	textarea.license {
+	.center-margin-50 {
+		margin: 0 auto;
 		width: 50%;
-		height: 16em;
-		margin: 1em auto;
-		display: block;
-
+		height: 20em;
+		display:block;
 	}
 
 	.buttons {
@@ -18,5 +17,9 @@
 	}
 	table {
 		margin: 0 auto;
+	}
+
+	input.path, select.path {
+		width: 100%;
 	}
 }

@@ -33,7 +33,7 @@ const (
 var (
 	uid                       int
 	gid                       int
-	standardConfigSearchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/opt/homebrew/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
+	StandardConfigSearchPaths = []string{"gochan.json", "/usr/local/etc/gochan/gochan.json", "/opt/homebrew/etc/gochan/gochan.json", "/etc/gochan/gochan.json"}
 
 	initialSetupStatus InitialSetupStatus = InitialSetupStatusUnknown
 )
@@ -78,7 +78,7 @@ func GetGochanJSONPath() string {
 	if jsonPath != "" {
 		return jsonPath
 	}
-	return gcutil.FindResource(standardConfigSearchPaths...)
+	return gcutil.FindResource(StandardConfigSearchPaths...)
 }
 
 // GetUser returns the IDs of the user and group gochan should be acting as
@@ -142,7 +142,7 @@ func loadConfig() (err error) {
 		}
 		return
 	}
-	cfgPath = gcutil.FindResource(standardConfigSearchPaths...)
+	cfgPath = gcutil.FindResource(StandardConfigSearchPaths...)
 	if cfgPath == "" {
 		return errors.New("gochan.json not found")
 	}
