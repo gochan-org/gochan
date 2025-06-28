@@ -80,8 +80,12 @@ func main() {
 	flag.StringVar(&cfg.WebRoot, "webroot", "/", "Web root path")
 	flag.StringVar(&cfg.TemplateDir, "template-dir", "", "Template directory (REQUIRED)")
 	flag.StringVar(&cfg.DocumentRoot, "document-root", "", "Document root directory (REQUIRED)")
+	flag.StringVar(&cfg.SiteHost, "site-host", "", "Site host (e.g. example.com) that will be used for incoming URLs")
 	flag.Parse()
 
+	if cfg.SiteHost == "" {
+		cfg.SiteHost = cfg.ListenAddress
+	}
 	if jsonPath := config.GetGochanJSONPath(); jsonPath != "" {
 		infoEv.Str("jsonPath", jsonPath).
 			Msg("Gochan already installed (found gochan.json)")
@@ -278,6 +282,25 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		data["nextPage"] = "pre-save"
 	case "pre-save":
 		pageTitle = "Configuration Confirmation"
+
+		var staffFormData staffForm
+		if err = forms.FillStructFromForm(req.Request, &staffFormData); err != nil {
+			httpStatus = http.StatusBadRequest
+			errEv.Err(err).Msg("Failed to fill form data")
+			return
+		}
+		if err = staffFormData.validate(); err != nil {
+			httpStatus = http.StatusBadRequest
+			warnEv.Err(err).Msg("Invalid staff form data")
+			return
+		}
+
+		adminUser, err = gcsql.NewStaff(staffFormData.Username, staffFormData.Password, 3)
+		if err != nil {
+			httpStatus = http.StatusInternalServerError
+			errEv.Err(err).Msg("Failed to create administrator account")
+			return err
+		}
 
 		if configPath == "" {
 			httpStatus = http.StatusBadRequest
