@@ -149,7 +149,7 @@ func getFrontPagePosts(errEv *zerolog.Event) ([]frontPagePost, error) {
 }
 
 // BuildFrontPage builds the front page using templates/front.html
-func BuildFrontPage() error {
+func BuildFrontPage(logWhenDone ...bool) error {
 	errEv := gcutil.LogError(nil).
 		Str("template", "front")
 	defer errEv.Discard()
@@ -187,7 +187,14 @@ func BuildFrontPage() error {
 		errEv.Err(err).Caller().Send()
 		return fmt.Errorf("failed executing front page template: %w", err)
 	}
-	return frontFile.Close()
+	if err = frontFile.Close(); err != nil {
+		errEv.Err(err).Caller().Send()
+		return errors.New("failed closing front page file")
+	}
+	if len(logWhenDone) > 0 && logWhenDone[0] {
+		gcutil.LogInfo().Msg("Front page built successfully")
+	}
+	return nil
 }
 
 // BuildPageHeader is a convenience function for automatically generating the top part

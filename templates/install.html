@@ -104,12 +104,14 @@
 	<p>Initial configuration is complete. In the textbox below, you can see the JSON output that will be saved to {{.configPath}} on the server. After clicking Save, you can then edit it as needed. See config.md for more info</p>
 	<textarea class="center-margin-50" readonly>{{.configJSON}}</textarea>
 {{- else if eq .page "save" -}}
-	<p class="text-center">Gochan has been configured and provisioned successfully. Click Finish to stop the installer server. From there, you can run gochan, log into the staff account you created <a href="{{webPath `/manage`}}">here</a>, and create new boards as desired. Thank you for using Gochan!</p>
+	<p class="text-center">Gochan has been configured and provisioned successfully, a board has been created, and the installer server has exited. Now you can run gochan, log into the staff account you created <a href="{{webPath `/manage`}}">here</a>, and create new boards as desired. Thank you for using Gochan!</p>
 	<p class="text-center">If you experience any bugs, you can report them <a href="https://github.com/gochan-org/gochan/issues">here</a>.</p>
 {{- else -}}
 	<p class="text-center">Invalid page</p>
 {{- end -}}
-<section class="buttons">
-	<input type="submit" value="{{.nextButton}}" />
-</section>
+{{- if ne .nextPage "" -}}
+	<section class="buttons">
+		<input type="submit" value="{{.nextButton}}" />
+	</section>
+{{- end -}}
 </form>

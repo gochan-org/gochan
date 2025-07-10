@@ -127,7 +127,7 @@ func main() {
 			}
 		}
 	}()
-	infoEv.Str("listenAddr", listenAddr).Msg("Starting installer server")
+	infoEv.Str("siteHost", cfg.SiteHost).Str("listenAddr", listenAddr).Msg("Starting installer server")
 	if cfg.UseFastCGI {
 		listener, err = net.Listen("tcp", listenAddr)
 		if err != nil {
@@ -181,6 +181,8 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 	infoEv, warnEv, errEv := gcutil.LogRequest(req.Request)
 	var buf bytes.Buffer
 	httpStatus := http.StatusOK
+	page := req.Param("page")
+
 	defer func() {
 		gcutil.LogDiscard(infoEv, warnEv, errEv)
 		writer.WriteHeader(httpStatus)
@@ -189,16 +191,38 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		} else {
 			server.ServeError(writer, err, false, nil)
 		}
+		if page == "save" {
+			installServerStopper <- 1
+		}
 	}()
 	var pageTitle string
-	page := req.Param("page")
 	data := map[string]any{
 		"page":       page,
 		"config":     cfg,
 		"nextButton": "Next",
 	}
 
-	var stopServer bool
+	refererResult, err := serverutil.CheckReferer(req.Request)
+	if err != nil {
+		httpStatus = http.StatusBadRequest
+		warnEv.Err(err).Caller().
+			Str("referer", req.Referer()).
+			Msg("Failed to check referer")
+		return
+	}
+
+	if refererResult == serverutil.NoReferer && req.Method == http.MethodPost {
+		httpStatus = http.StatusBadRequest
+		warnEv.Caller().Msg("No referer present for POST request")
+		return
+	} else if refererResult == serverutil.ExternalReferer {
+		httpStatus = http.StatusForbidden
+		warnEv.Caller().
+			Str("referer", req.Referer()).
+			Msg("Request came from an external referer (not allowed during installation)")
+		return errors.New("your post looks like spam")
+	}
+
 	switch page {
 	case "":
 		pageTitle = "Gochan Installation"
@@ -279,6 +303,12 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			return err
 		}
 
+		if err = gcsql.ResetViews(); err != nil {
+			errEv.Err(err).Msg("Failed to reset database views")
+			httpStatus = http.StatusInternalServerError
+			return err
+		}
+
 		data["nextPage"] = "pre-save"
 	case "pre-save":
 		pageTitle = "Configuration Confirmation"
@@ -333,10 +363,21 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			errEv.Err(err).Msg("Failed to write configuration")
 			return err
 		}
-		infoEv.Str("configPath", configPath).Msg("Configuration written successfully")
 
-		stopServer = true
-		data["nextPage"] = "done"
+		if err = building.BuildFrontPage(); err != nil {
+			httpStatus = http.StatusInternalServerError
+			errEv.Err(err).Msg("Failed to build front page")
+			return err
+		}
+
+		if err = building.BuildBoards(true); err != nil {
+			httpStatus = http.StatusInternalServerError
+			errEv.Err(err).Msg("Failed to build boards")
+			return err
+		}
+
+		infoEv.Str("configPath", configPath).Msg("Configuration written successfully")
+		data["nextPage"] = ""
 	default:
 		httpStatus = http.StatusNotFound
 		pageTitle = "Page Not Found"
@@ -356,9 +397,6 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		httpStatus = http.StatusInternalServerError
 		errEv.Err(err).Msg("Failed to build page footer")
 		return
-	}
-	if stopServer {
-		installServerStopper <- 1
 	}
 
 	return nil

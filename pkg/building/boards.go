@@ -290,7 +290,7 @@ func BuildBoardPages(board *gcsql.Board, errEv *zerolog.Event) error {
 
 // BuildBoards builds the specified board IDs, or all boards if no arguments are passed
 // it returns any errors that were encountered
-func BuildBoards(verbose bool, which ...int) error {
+func BuildBoards(logWhenDone bool, which ...int) error {
 	var boards []gcsql.Board
 	var err error
 	errEv := gcutil.LogError(nil)
@@ -330,7 +330,7 @@ func BuildBoards(verbose bool, which ...int) error {
 				tmpErr = buildBoard(board, true)
 			}
 			mu.Unlock()
-			if tmpErr == nil && verbose {
+			if tmpErr == nil && logWhenDone {
 				gcutil.LogInfo().Str("board", board.Dir).
 					Msg("Built board successfully")
 			}

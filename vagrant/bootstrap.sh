@@ -146,11 +146,11 @@ npm install -g npm@latest
 
 su - vagrant <<EOF
 echo 'alias bbig="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan"' >> /home/vagrant/.bash_aliases
+echo 'alias bbigi="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan-installer -template-dir /usr/share/gochan/templates/ -port 9000 -document-root /srv/gochan -fastcgi"' >> /home/vagrant/.bash_aliases
 mkdir -p /home/vagrant/go
 source /home/vagrant/.bashrc
-cd /vagrant/tools
-./build_initdb.py
-cd ..
+cd /vagrant
+./tools/build_initdb.py
 mkdir -p $GOPATH/src/github.com/gochan-org/gochan
 cp -r pkg $GOPATH/src/github.com/gochan-org/gochan
 ./build.py
@@ -159,7 +159,7 @@ EOF
 
 cd /vagrant
 ./build.py install
-/vagrant/gochan -rebuild all
+# /vagrant/gochan -rebuild all
 
 # if [ -d /lib/systemd ]; then
 # 	systemctl start gochan.service
