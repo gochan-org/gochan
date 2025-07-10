@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	// GochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
+	// gochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
 	gochanVersionKeyConstant = "gochan"
 	DatabaseVersion          = 6
 	UnsupportedSQLVersionMsg = `syntax error in SQL query, confirm you are using a supported driver and SQL server (error text: %s)`
@@ -349,6 +350,7 @@ func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	replacerArr := []string{
 		"DBNAME", cfg.DBname,
 		"DBPREFIX", cfg.DBprefix,
+		"DBVERSION", strconv.Itoa(DatabaseVersion),
 		"\n", " ",
 	}
 	switch cfg.DBtype {

@@ -296,4 +296,4 @@ CREATE TABLE DBPREFIXfilter_hits(
 
 
 INSERT INTO DBPREFIXdatabase_version(component, version)
-	VALUES('gochan', 4);
+	VALUES('gochan', DBVERSION);
