@@ -33,6 +33,7 @@ var (
 			misc: map[string]any{
 				"documentTitle": "Gochan",
 			},
+			hasPosts: true,
 		},
 		{
 			desc:            "Front page without includes",
@@ -42,6 +43,7 @@ var (
 			misc: map[string]any{
 				"documentTitle": "Gochan",
 			},
+			hasPosts: true,
 		},
 		{
 			desc: "Regular ban page",
@@ -71,6 +73,7 @@ var (
 				"documentTitle": "/test/ - Testing board",
 			},
 			expectTitleText: "/test/ - Testing board",
+			hasPosts:        true,
 		},
 	}
 )
@@ -78,7 +81,7 @@ var (
 func TestBuildJS(t *testing.T) {
 	testRoot, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
-		return
+		t.FailNow()
 	}
 
 	outDir := t.TempDir()
@@ -130,7 +133,7 @@ func TestBuildJS(t *testing.T) {
 	assert.Equal(t, expectedUnminifiedJS, string(ba))
 }
 
-func mockSetupBoards(mock sqlmock.Sqlmock) {
+func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool) {
 	mock.ExpectPrepare(`SELECT\s*` +
 		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
 		`max_file_size, max_threads, default_style, boards\.locked, created_at, anonymous_name, force_anonymous,\s*` +
@@ -163,13 +166,18 @@ func mockSetupBoards(mock sqlmock.Sqlmock) {
 	).ExpectQuery().
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
+
+	if expectRecentPosts {
+		mockSetupPosts(mock)
+	}
+
+	err := gcsql.ResetBoardSectionArrays()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
 }
 
-func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
-	serverutil.InitMinifier()
-
-	mockSetupBoards(mock)
-
+func mockSetupPosts(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT id, message_raw, dir, filename, original_filename, op_id FROM v_front_page_posts ORDER BY id DESC LIMIT 15`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{"posts.id", "posts.message_raw", "dir", "filename", "original_filename", "op.id"}).
 			AddRows(
@@ -180,12 +188,21 @@ func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
 				[]driver.Value{2, "message_raw 2", "test2", "embed:youtube", "abcd", 1},
 				[]driver.Value{1, "message_raw 1", "test2", "embed:youtube", "wxyz", 1},
 			))
+}
+
+func doFrontBuildingTest(t *testing.T, mock sqlmock.Sqlmock) {
+	serverutil.InitMinifier()
+
+	mockSetupBoards(t, mock, true)
 
 	err := BuildFrontPage()
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	assert.NoError(t, mock.ExpectationsWereMet())
+
+	if !assert.NoError(t, mock.ExpectationsWereMet()) {
+		t.FailNow()
+	}
 
 	frontFile, err := os.Open(path.Join(config.GetSystemCriticalConfig().DocumentRoot, "index.html"))
 	if !assert.NoError(t, err) {
@@ -275,28 +292,39 @@ func TestBuildFrontPage(t *testing.T) {
 					URLRegex:             "^https?://.*\\.(?:webm|mp4)$",
 					EmbedTemplate:        `<video class="embed embed-{{.HandlerID}}" src="{{.MediaID}}" style="max-width:{{.ThumbWidth}}px; max-height:{{.ThumbHeight}}px"></video>`,
 					MediaIDSubmatchIndex: &rawVideoSubmatchIndex,
+					MediaURLTemplate:     "{{.MediaID}}",
 				},
 				"youtube": {
 					URLRegex:             `^https?://(?:(?:(?:www\.)?youtube\.com/watch\?v=)|(?:youtu\.be/))([^&]+)`,
 					EmbedTemplate:        `<iframe class="embed embed-{{.HandlerID}}" width={{.ThumbWidth}} height={{.ThumbHeight}} src="{{.MediaID}}" </iframe>`,
 					ThumbnailURLTemplate: "{{.MediaID}}",
+					MediaURLTemplate:     "https://www.youtube.com/watch?v={{.MediaID}}",
 				},
 			}
-			config.SetBoardConfig("", boardCfg)
+			if !assert.NoError(t, config.SetBoardConfig("", boardCfg)) {
+				t.FailNow()
+			}
 
-			os.MkdirAll(systemCriticalCfg.DocumentRoot, config.DirFileMode)
+			if !assert.NoError(t, os.MkdirAll(systemCriticalCfg.DocumentRoot, config.DirFileMode)) {
+				t.FailNow()
+			}
 
 			mock, err := gcsql.SetupMockDB(driver)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
 			siteCfg := config.GetSiteConfig()
-			siteCfg.MinifyHTML = true
-			config.SetSiteConfig(siteCfg)
-			doFrontBuildingTest(t, mock)
-			siteCfg.MinifyHTML = false
-			config.SetSiteConfig(siteCfg)
-			doFrontBuildingTest(t, mock)
+
+			t.Run("with minification", func(t *testing.T) {
+				siteCfg.MinifyHTML = true
+				config.SetSiteConfig(siteCfg)
+				doFrontBuildingTest(t, mock)
+			})
+			t.Run("without minification", func(t *testing.T) {
+				siteCfg.MinifyHTML = false
+				config.SetSiteConfig(siteCfg)
+				doFrontBuildingTest(t, mock)
+			})
 		})
 	}
 }
@@ -310,10 +338,11 @@ type pageHeaderTestCase struct {
 	includeCSS      []string
 	expectError     bool
 	expectTitleText string
+	hasPosts        bool
 }
 
-func (p *pageHeaderTestCase) runTest(t *testing.T, driver string) {
-	mock, err := gcsql.SetupMockDB(driver)
+func (p *pageHeaderTestCase) runTest(t *testing.T, sqlDriver string) {
+	mock, err := gcsql.SetupMockDB(sqlDriver)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -323,7 +352,7 @@ func (p *pageHeaderTestCase) runTest(t *testing.T, driver string) {
 	boardCfg.IncludeScripts = p.includeJS
 	config.SetBoardConfig(p.board, boardCfg)
 
-	mockSetupBoards(mock)
+	mockSetupBoards(t, mock, false)
 
 	err = gctemplates.InitTemplates()
 	if !assert.NoError(t, err) {
