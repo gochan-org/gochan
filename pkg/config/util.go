@@ -31,10 +31,10 @@ const (
 )
 
 var (
-	uid int
-	gid int
-
-	initialSetupStatus InitialSetupStatus = InitialSetupStatusUnknown
+	uid                     int
+	gid                     int
+	ErrGochanConfigNotFound                    = errors.New("gochan.json not found")
+	initialSetupStatus      InitialSetupStatus = InitialSetupStatusUnknown
 )
 
 // MissingField represents a field missing from the configuration file
@@ -143,7 +143,7 @@ func loadConfig() (err error) {
 	}
 	cfgPath = gcutil.FindResource(StandardConfigSearchPaths...)
 	if cfgPath == "" {
-		return errors.New("gochan.json not found")
+		return ErrGochanConfigNotFound
 	}
 
 	cfgBytes, err := os.ReadFile(cfgPath)

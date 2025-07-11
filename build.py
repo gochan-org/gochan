@@ -40,6 +40,21 @@ release_files = (
 	"README.md",
 )
 
+INSTALL_SUCCESS_STR = """
+gochan's files were successfully installed. To prepare a configuration file,
+you can run gochan-installer and open the web interface at http://<your_site>/install.
+This will generate a configuration file (which you can then edit) and prepare the database.
+Alternatively, you can copy the example configuration file from examples/configs/gochan.example.json
+to /etc/gochan/gochan.json and modify it as needed.
+"""
+
+SYSTEMD_INSTALL_STR = """
+If your Linux distribution has systemd, you will also need to run the following commands:
+cp examples/configs/gochan-<mysql|postgresql|sqlite3>.service /lib/systemd/system/gochan.service
+systemctl daemon-reload
+systemctl enable gochan.service
+systemctl start gochan.service
+"""
 
 PATH_NOTHING = -1
 PATH_UNKNOWN = 0
@@ -157,7 +172,7 @@ def run_cmd(cmd, print_output=True, realtime=False, print_command=False):
 		stderr=subprocess.STDOUT)
 	output = ""
 	status = 0
-	if realtime:  # print the command's output in real time, ignores print_output
+	if realtime and proc.stdout is not None:  # print the command's output in real time, ignores print_output
 		while True:
 			try:
 				realtime_output = proc.stdout.readline().decode("utf-8")
@@ -292,17 +307,18 @@ def install_executable(src_file, dest_dir, symlinks=False):
 		print(f"{src_file} and {dest_file} are the same file, skipping")
 
 
-def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=False, css_only=False, templates_only=False):
+def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=False, css_only=False, templates_only=False, quiet=False):
 	if gcos == "windows":
 		print("Installation is not currently supported for Windows, use the respective directory created by running `python build.py release`")
 		sys.exit(1)
 	mkdir(document_root)
 	mkdir(path.join(prefix, "share/gochan"))
-	print("Creating symbolic links: ", symlinks)
+	if (not quiet) and symlinks:
+		print("Creating symbolic links: ", symlinks)
 
 	start_dir = path.abspath(path.curdir)
 	done = False
-	if js_only is True:
+	if js_only:
 		# args contains --js, install the JavaScript files
 		os.chdir(path.join(start_dir,"html/"))
 		if symlinks:
@@ -311,9 +327,10 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 			copy("js/", document_root)
 		os.chdir(start_dir)
 		done = True
-		print("JavaScript files installed")
-	if css_only is True:
-		# args contains --js, install the CSS files
+		if not quiet:
+			print("JavaScript files installed")
+	if css_only:
+		# args contains --css, install the CSS files
 		os.chdir(path.join(start_dir,"html/"))
 		if symlinks:
 			symlink("css/", path.join(document_root, "css"))
@@ -321,9 +338,10 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 			copy("css/", document_root)
 		os.chdir(start_dir)
 		done = True
-		print("CSS files installed")
-	if templates_only is True:
-		# args contains --js, install the templates
+		if not quiet:
+			print("CSS files installed")
+	if templates_only:
+		# args contains --templates, install the templates
 		os.chdir(start_dir)
 		if symlinks:
 			symlink("templates/", path.join(prefix, "share/gochan/templates"))
@@ -331,20 +349,18 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 			copy("templates/", path.join(prefix, "share/gochan"))
 		mkdir(path.join(prefix, "share/gochan/templates/override/"))
 		done = True
-		print("Templates installed")
-	if done is True:
-		print("Done installing specific stuff")
+		if not quiet:
+			print("Templates installed")
+	if done:
 		return
-
-	mkdir("/etc/gochan")
-	mkdir("/var/log/gochan")
 
 	for file in release_files:
 		try:
 			if file.startswith("html/"):
 				trimmed = path.relpath(file, "html/")
 				os.chdir(path.join(start_dir, "html/"))
-				print("copying", trimmed,"to", path.join(document_root, trimmed))
+				if not quiet:
+					print("copying", trimmed,"to", path.join(document_root, trimmed))
 				copy(trimmed, document_root)
 				os.chdir(start_dir)
 			else:
@@ -360,22 +376,15 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 				traceback.print_exc()
 			sys.exit(1)
 
-
 	bin_dest_dir = path.join(prefix, "bin")
 	install_executable(gochan_exe, bin_dest_dir, symlinks)
 	install_executable(installer_exe, bin_dest_dir, symlinks)
 	install_executable(migration_exe, bin_dest_dir, symlinks)
 
-	print(
-		"gochan was successfully installed. If you haven't already, you should copy\n",
-		"examples/configs/gochan.example.json to /etc/gochan/gochan.json (modify as needed)\n")
-	if gcos == "linux":
-		print(
-			"If your Linux distribution has systemd, you will also need to run the following commands:\n",
-			"cp examples/configs/gochan-[mysql|postgresql|sqlite3].service /lib/systemd/system/gochan.service\n",
-			"systemctl daemon-reload\n",
-			"systemctl enable gochan.service\n",
-			"systemctl start gochan.service\n")
+	if not quiet:
+		print(INSTALL_SUCCESS_STR)
+		if gcos == "linux":
+			print(SYSTEMD_INSTALL_STR)
 
 
 def js(watch=False):
@@ -488,24 +497,26 @@ if __name__ == "__main__":
 			help="only install CSS")
 		parser.add_argument("--templates",
 			action="store_true",
-			help="install the template files")
+			help="only install the template files")
 		parser.add_argument("--prefix",
 			default="/usr",
 			help="install gochan to this directory and its subdirectories")
-		parser.add_argument("--documentroot",
+		parser.add_argument("--document-root",
 			default="/srv/gochan",
-			help="install files in ./html/ to this directory to be requested by a browser")
+			help="only install files in ./html/ to this directory to be requested by a browser")
 		parser.add_argument("--symlinks",
 			action="store_true",
 			help="create symbolic links instead of copying the files (may require admin/root privileges)")
+		parser.add_argument("--quiet", "-q",
+			action="store_true",
+			help="do not print any messages, only errors")
 		args = parser.parse_args()
-		install(args.prefix, args.documentroot, args.symlinks, args.js, args.css, args.templates)
+		install(args.prefix, args.document_root, args.symlinks, args.js, args.css, args.templates, args.quiet)
 	elif action == "js":
 		parser.add_argument("--watch", "-w",
 			action="store_true",
 			help="automatically rebuild when you change a file (keeps running)")
-		parser.add_argument(
-			"--eslint",
+		parser.add_argument("--eslint",
 			action="store_true",
 			help="Run eslint on the JavaScript code to check for possible problems")
 		parser.add_argument("--eslint-fix",

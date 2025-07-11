@@ -103,27 +103,27 @@ systemctl enable nginx
 systemctl restart nginx &
 wait
 
-mkdir -p /etc/gochan
-cp /vagrant/examples/configs/gochan.example.json /vagrant/gochan.json
-ln -s /vagrant/gochan.json /etc/gochan/gochan.json
-sed -i /vagrant/gochan.json \
-	-e 's/"Port": 8080/"Port": 9000/' \
-	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
-	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
-	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
-	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
-	-e "s/\"DBtype\": .*/\"DBtype\": \"$DBTYPE\",/" \
-	-e 's/"SiteHost": .*/"SiteHost": "192.168.56.3",/' \
-	-e 's/"DBpassword": .*/"DBpassword": "gochan",/' \
-	-e 's/"Verbosity": 0/"Verbosity": 1/'
+# mkdir -p /etc/gochan
+# cp /vagrant/examples/configs/gochan.example.json /vagrant/gochan.json
+# ln -s /vagrant/gochan.json /etc/gochan/gochan.json
+# sed -i /vagrant/gochan.json \
+# 	-e 's/"Port": 8080/"Port": 9000/' \
+# 	-e 's/"UseFastCGI": false/"UseFastCGI": true/' \
+# 	-e 's#"DocumentRoot": "html"#"DocumentRoot": "/srv/gochan"#' \
+# 	-e 's#"TemplateDir": "templates"#"TemplateDir": "/usr/share/gochan/templates"#' \
+# 	-e 's#"LogDir": "log"#"LogDir": "/var/log/gochan"#' \
+# 	-e "s/\"DBtype\": .*/\"DBtype\": \"$DBTYPE\",/" \
+# 	-e 's/"SiteHost": .*/"SiteHost": "192.168.56.3",/' \
+# 	-e 's/"DBpassword": .*/"DBpassword": "gochan",/' \
+# 	-e 's/"Verbosity": 0/"Verbosity": 1/'
 
-if [ "$DBTYPE" = "postgresql" ]; then
-	sed -i /etc/gochan/gochan.json \
-		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
-elif [ "$DBTYPE" = "sqlite3" ]; then
-	sed -i /etc/gochan/gochan.json \
-		-e 's#"DBhost": ".*"#"DBhost": "/etc/gochan/gochan.db"#'
-fi
+# if [ "$DBTYPE" = "postgresql" ]; then
+# 	sed -i /etc/gochan/gochan.json \
+# 		-e 's/"DBhost": ".*"/"DBhost": "127.0.0.1"/'
+# elif [ "$DBTYPE" = "sqlite3" ]; then
+# 	sed -i /etc/gochan/gochan.json \
+# 		-e 's#"DBhost": ".*"#"DBhost": "/etc/gochan/gochan.db"#'
+# fi
 
 # a convenient script for connecting to the db, whichever type we're using
 ln -s {/vagrant/tools,/home/vagrant}/dbconnect.sh
@@ -146,7 +146,7 @@ npm install -g npm@latest
 
 su - vagrant <<EOF
 echo 'alias bbig="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan"' >> /home/vagrant/.bash_aliases
-echo 'alias bbigi="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan-installer -template-dir /usr/share/gochan/templates/ -port 9000 -document-root /srv/gochan -fastcgi"' >> /home/vagrant/.bash_aliases
+echo 'alias bbigi="cd /vagrant && ./build.py && sudo ./build.py install && sudo -E ./gochan-installer -template-dir /usr/share/gochan/templates/ -port 9000 -site-host 192.168.56.3 -document-root /srv/gochan -fastcgi"' >> /home/vagrant/.bash_aliases
 mkdir -p /home/vagrant/go
 source /home/vagrant/.bashrc
 cd /vagrant
@@ -169,8 +169,10 @@ cat - <<EOF
 Server set up. To access the virtual machine, run 'vagrant ssh'.
 To start the gochan server, run 'sudo systemctl start gochan.service'.
 To have gochan run at startup, run 'sudo systemctl enable gochan.service'
+To run the gochan installer, run gochan-installer -template-dir /usr/share/gochan/templates/ -port 9000 -document-root /srv/gochan -fastcgi
+You can access the installer from a browser at http://192.168.56.3/install/
 
-You can access it from a browser at http://192.168.56.3/
+After the installer is done, you can run gochan and access it at http://192.168.56.3/
 The first time gochan is run, it will create a simple /test/ board.
 
 If you want to do frontend development, see frontend/README.md

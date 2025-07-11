@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -43,9 +45,19 @@ func main() {
 	}()
 	err := config.InitConfig()
 	if err != nil {
-		fatalEv.Err(err).Caller().
-			Str("jsonLocation", config.JSONLocation()).
-			Msg("Unable to load configuration")
+		msg := "Unable to load configuration"
+		if errors.Is(err, config.ErrGochanConfigNotFound) {
+			msg += ", run gochan-install to generate a new configuration file, or copy gochan.example.json to "
+			if runtime.GOOS == "windows" {
+				msg += "the current directory"
+			} else {
+				msg += "one of the search paths"
+			}
+			msg += " and rename it to gochan.json"
+		}
+		fatalEv.Err(err).Caller()
+		gcutil.LogArray("searchPaths", config.StandardConfigSearchPaths, fatalEv)
+		fatalEv.Msg(msg)
 	}
 
 	uid, gid := config.GetUser()
