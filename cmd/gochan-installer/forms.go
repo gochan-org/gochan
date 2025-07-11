@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -22,35 +23,34 @@ type pathsForm struct {
 	WebRoot      string `form:"webroot,required" method:"POST"`
 }
 
-func (pf *pathsForm) validatePath(targetPath *string, desc string, expectDir bool) error {
-	p := *targetPath
-	if p == "" {
-		return fmt.Errorf("%s is required", desc)
-	}
-	p = path.Clean(p)
-	*targetPath = p
-
-	fi, err := os.Stat(p)
+func (pf *pathsForm) validateDirectory(dir string, createIfNotExist bool) error {
+	fi, err := os.Stat(dir)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("%s %s does not exist", desc, p)
+		if createIfNotExist {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", dir, err)
+			}
+			return nil
+		}
+		return fmt.Errorf("directory %s does not exist", dir)
 	}
 	if errors.Is(err, fs.ErrPermission) {
-		return fmt.Errorf("permission denied to %s", p)
+		return fmt.Errorf("permission denied to access directory %s", dir)
 	}
-	if expectDir && !fi.Mode().IsDir() {
-		return fmt.Errorf("%s exists at %s but is not a directory", desc, p)
+	if !fi.IsDir() {
+		return fmt.Errorf("%s exists at %s but is not a directory", dir, dir)
 	}
 	return nil
 }
 
-func (pf *pathsForm) validate(warnEv, errEv *zerolog.Event) (err error) {
+func (pf *pathsForm) validate(warnEv, _ *zerolog.Event) (err error) {
+	pf.TemplateDir = path.Clean(pf.TemplateDir)
 	pf.DocumentRoot = path.Clean(pf.DocumentRoot)
 	pf.LogDir = path.Clean(pf.LogDir)
-
-	if pf.ConfigPath == "" {
-		warnEv.Msg("Required config output directory not set")
-		return errors.New("config output directory is required")
+	if pf.WebRoot == "" {
+		pf.WebRoot = "/"
 	}
+	pf.WebRoot = path.Clean(pf.WebRoot)
 	pf.ConfigPath = path.Clean(pf.ConfigPath)
 
 	validConfigPaths := cfgPaths
@@ -66,41 +66,36 @@ func (pf *pathsForm) validate(warnEv, errEv *zerolog.Event) (err error) {
 		return fmt.Errorf("config output path %s is not allowed. Valid values are %s", strings.Join(cfgPaths, ", "), pf.ConfigPath)
 	}
 
-	configDir := path.Dir(pf.ConfigPath)
-
-	if err = pf.validatePath(&configDir, "config output directory", true); err != nil {
+	if err = pf.validateDirectory(path.Dir(pf.ConfigPath), true); err != nil {
 		warnEv.Err(err).
-			Msg("Invalid config output directory")
+			Msg("Invalid config output path")
 		return err
 	}
 
-	if err = pf.validatePath(&pf.TemplateDir, "template directory", true); err != nil {
+	if err = pf.validateDirectory(pf.TemplateDir, true); err != nil {
 		warnEv.Err(err).Str("templateDir", pf.TemplateDir).
 			Msg("Invalid template directory")
 		return err
 	}
-	if err = pf.validatePath(&pf.DocumentRoot, "document root", true); err != nil {
+	if err = pf.validateDirectory(pf.DocumentRoot, true); err != nil {
 		warnEv.Err(err).Str("documentRoot", pf.DocumentRoot).
 			Msg("Invalid document root")
 		return err
 	}
-	if err = pf.validatePath(&pf.LogDir, "log directory", true); err != nil {
+	if err = pf.validateDirectory(pf.LogDir, true); err != nil {
 		warnEv.Err(err).Str("logDir", pf.LogDir).
 			Msg("Invalid log directory")
 		return err
 	}
 
-	if pf.WebRoot == "" {
-		pf.WebRoot = "/"
-	}
 	return nil
 }
 
 type dbForm struct {
 	DBtype   string `form:"dbtype,required,notempty" method:"POST"`
-	DBhost   string `form:"dbhost,required,notempty" method:"POST"`
+	DBhost   string `form:"dbhost,notempty,default=localhost" method:"POST"`
 	DBname   string `form:"dbname,required,notempty" method:"POST"`
-	DBuser   string `form:"dbuser,required,notempty" method:"POST"`
+	DBuser   string `form:"dbuser" method:"POST"`
 	DBpass   string `form:"dbpass" method:"POST"`
 	DBprefix string `form:"dbprefix" method:"POST"`
 
@@ -113,6 +108,10 @@ type dbForm struct {
 func (dbf *dbForm) validate() (status dbStatus, err error) {
 	if dbf.DBprefix == "" {
 		return dbStatusNoPrefix, nil
+	}
+	supportedDrivers := sql.Drivers()
+	if !slices.Contains(supportedDrivers, dbf.DBtype) {
+		return dbStatusUnknown, fmt.Errorf("unsupported database type %s, supported types are %s", dbf.DBtype, strings.Join(supportedDrivers, ", "))
 	}
 	if dbf.TimeoutSeconds <= 0 {
 		return dbStatusUnknown, errors.New("request timeout must be greater than 0")
