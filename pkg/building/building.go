@@ -288,7 +288,7 @@ func embedMedia(post *Post) (template.HTML, error) {
 
 		return template.HTML(fmt.Sprintf(
 			`<img src=%q alt="Embedded video" class="embed thumb embed-%s" style="max-width: %dpx; max-height: %dpx;" embed-width="%d" embed-height="%d">`,
-			buf.String(), filenameParts[1], templateData.ThumbWidth, templateData.ThumbHeight, boardCfg.EmbedWidth, boardCfg.EmbedHeight)), nil
+			buf.String(), filenameParts[1], templateData.ThumbWidth, templateData.ThumbHeight, boardCfg.EmbedWidth, boardCfg.EmbedHeight)), nil // skipcq: GSC-G203
 	}
 
 	if err = embedTmpl.Execute(&buf, templateData); err != nil {
