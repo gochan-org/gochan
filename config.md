@@ -1,3 +1,9 @@
+ValueSpec doc: DirFileMode is the default file mode for directories created by gochan
+
+ValueSpec doc: NormalFileMode is the default file mode for files created by gochan
+
+ValueSpec doc: ConfigPathEnvVar is the environment variable used to set the path to gochan.js if it is set
+
 # Configuration
 See [gochan.example.json](examples/configs/gochan.example.json) for an example gochan.json.
 
