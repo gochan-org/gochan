@@ -294,7 +294,7 @@ func embedMedia(post *Post) (template.HTML, error) {
 	if err = embedTmpl.Execute(&buf, templateData); err != nil {
 		return "", err
 	}
-	return template.HTML(buf.String()), nil
+	return template.HTML(buf.String()), nil // skipcq: GSC-G203
 }
 
 func init() {

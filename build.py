@@ -270,7 +270,6 @@ def build(debugging=False, plugin_path="", static_templates=False):
 		sys.exit(1)
 	print("Built gochan successfully")
 
-	copy("LICENSE", "cmd/gochan-installer/license.txt")
 	gochan_installer_build_cmd = build_cmd_base + ["-o", installer_exe, "./cmd/gochan-installer"]
 	status = run_cmd(gochan_installer_build_cmd, realtime=True, print_command=True)[1]
 	if status != 0:
@@ -288,7 +287,7 @@ def build(debugging=False, plugin_path="", static_templates=False):
 
 def clean():
 	print("Cleaning up")
-	del_files = ("gochan", "gochan.exe", "gochan-installer", "gochan-installer.exe", "gochan-migration", "gochan-migration.exe", "releases/", "cmd/gochan/license.txt")
+	del_files = ("gochan", "gochan.exe", "gochan-installer", "gochan-installer.exe", "gochan-migration", "gochan-migration.exe", "releases/")
 	for del_file in del_files:
 		delete(del_file)
 
@@ -360,7 +359,7 @@ def install(prefix="/usr", document_root="/srv/gochan", symlinks=False, js_only=
 				trimmed = path.relpath(file, "html/")
 				os.chdir(path.join(start_dir, "html/"))
 				if not quiet:
-					print("copying", trimmed,"to", path.join(document_root, trimmed))
+					print("copying", trimmed, "to", path.join(document_root, trimmed))
 				copy(trimmed, document_root)
 				os.chdir(start_dir)
 			else:

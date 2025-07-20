@@ -170,7 +170,7 @@ func StripHTML(htmlIn string) string {
 			continue
 		}
 		txtContent := strings.TrimSpace(x_html.UnescapeString(string(dom.Text())))
-		if len(txtContent) > 0 {
+		if txtContent != "" {
 			return x_html.EscapeString(txtContent)
 		}
 		tokenType = dom.Next()

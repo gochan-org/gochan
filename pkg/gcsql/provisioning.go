@@ -76,9 +76,8 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 	if isOldDesign {
 		return 0, DBIsPreApril, nil
 	}
-	//No old or current database versioning tables found.
+	// No old or current database versioning tables found.
 	if config.GetSystemCriticalConfig().DBprefix != "" {
-		//Check if any gochan tables exist
 		gochanTableExists, err := DoesGochanPrefixTableExist()
 		if err != nil {
 			return 0, 0, err
