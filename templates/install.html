@@ -112,6 +112,9 @@
 {{- if ne .nextPage "" -}}
 	<section class="buttons">
 		<input type="submit" value="{{.nextButton}}" />
+		{{- if .skipButton -}}
+			<input type="submit" name="skip" value="Skip" />
+		{{- end -}}
 	</section>
 {{- end -}}
 </form>

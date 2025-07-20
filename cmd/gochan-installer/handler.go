@@ -45,7 +45,7 @@ func (dbs dbStatus) String() string {
 	case dbStatusNoPrefix:
 		return "Since no prefix was specified, the installer will attempt to provision the database in the next step."
 	case dbStatusTablesExist:
-		return fmt.Sprintf("The database appears to contain Gochan tables with the prefix %s. The next step (database provisioning) may return errors", config.GetSystemCriticalConfig().DBprefix)
+		return fmt.Sprintf("The database appears to contain Gochan tables with the prefix %s. Gochan will attempt to use these tables instead of provisioning the database, and admin account creation may be skipped.", config.GetSystemCriticalConfig().DBprefix)
 	default:
 		return "unknown"
 	}
@@ -74,6 +74,7 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		"page":       page,
 		"config":     cfg,
 		"nextButton": "Next",
+		"skipButton": false,
 	}
 
 	refererResult, err := serverutil.CheckReferer(req.Request)
@@ -162,8 +163,12 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			data["alreadyCreated"] = true
 			break
 		}
+		if currentDBStatus == dbStatusTablesExist {
+			// If the database already has tables, allow the user to skip creating an admin account
+			data["skipButton"] = true
+		}
 
-		// staff not created yet, show new admin form
+		// database not properly initialized
 		if currentDBStatus == dbStatusUnknown {
 			httpStatus = http.StatusBadRequest
 			errEv.Msg("Database status is unknown, cannot proceed with provisioning")
@@ -187,23 +192,25 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 	case "pre-save":
 		pageTitle = "Configuration Confirmation"
 
-		var staffFormData staffForm
-		if err = forms.FillStructFromForm(req.Request, &staffFormData); err != nil {
-			httpStatus = http.StatusBadRequest
-			errEv.Err(err).Msg("Failed to fill form data")
-			return
-		}
-		if err = staffFormData.validate(); err != nil {
-			httpStatus = http.StatusBadRequest
-			warnEv.Err(err).Msg("Invalid staff form data")
-			return
-		}
+		if req.PostFormValue("skip") == "" {
+			var staffFormData staffForm
+			if err = forms.FillStructFromForm(req.Request, &staffFormData); err != nil {
+				httpStatus = http.StatusBadRequest
+				errEv.Err(err).Msg("Failed to fill form data")
+				return
+			}
+			if err = staffFormData.validate(); err != nil {
+				httpStatus = http.StatusBadRequest
+				warnEv.Err(err).Msg("Invalid staff form data")
+				return
+			}
 
-		adminUser, err = gcsql.NewStaff(staffFormData.Username, staffFormData.Password, 3)
-		if err != nil {
-			httpStatus = http.StatusInternalServerError
-			errEv.Err(err).Msg("Failed to create administrator account")
-			return err
+			adminUser, err = gcsql.NewStaff(staffFormData.Username, staffFormData.Password, 3)
+			if err != nil {
+				httpStatus = http.StatusInternalServerError
+				errEv.Err(err).Msg("Failed to create administrator account")
+				return err
+			}
 		}
 
 		if configPath == "" {

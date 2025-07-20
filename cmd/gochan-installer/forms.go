@@ -126,7 +126,7 @@ func (dbf *dbForm) validate() (status dbStatus, err error) {
 		return dbStatusUnknown, errors.New("max lifetime for connections must be greater than 0")
 	}
 
-	if err := gcsql.ConnectToDB(&config.SQLConfig{
+	sqlConfig := config.SQLConfig{
 		// using a dummy config to test connection. It will be set as the main config later
 		DBtype:     dbf.DBtype,
 		DBhost:     dbf.DBhost,
@@ -139,9 +139,15 @@ func (dbf *dbForm) validate() (status dbStatus, err error) {
 		DBMaxOpenConnections: dbf.MaxOpenConns,
 		DBMaxIdleConnections: dbf.MaxIdleConns,
 		DBConnMaxLifetimeMin: dbf.ConnMaxLifetimeMin,
-	}); err != nil {
+	}
+	if err := gcsql.ConnectToDB(&sqlConfig); err != nil {
 		return dbStatusUnknown, err
 	}
+
+	systemCriticalCfg := config.GetSystemCriticalConfig()
+	systemCriticalCfg.SQLConfig = sqlConfig
+	config.SetSystemCriticalConfig(systemCriticalCfg)
+
 	tablesExist, err := gcsql.DoesGochanPrefixTableExist()
 	if err != nil {
 		return dbStatusUnknown, err
