@@ -1,5 +1,5 @@
 # Docker usage info
-To start gochan using Docker with one of the .yml files, run `docker compose -f docker-compose-<dbtype>.yml up`. It will build and spin up a container for the gochan server and a container for the database, with the exception of SQLite, which is loaded from a file.
+To start gochan using Docker with one of the .yml files, run `docker-compose -f docker-compose-<dbtype>.yml up`. It will build and spin up a container for the gochan server and a container for the database, with the exception of SQLite, which is loaded from a file.
 
 When the containers are started, they will mount volumes in the volumes directory for access to gochan logs, the document root, the configuration, and database data files.
 
