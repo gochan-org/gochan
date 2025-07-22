@@ -120,7 +120,10 @@ func main() {
 	defer events.TriggerEvent("shutdown")
 	manage.InitManagePages()
 	go initServer()
-	gcutil.LogInfo().Msg("Listening...")
+	gcutil.LogInfo().
+		Str("listenAddress", systemCritical.ListenAddress).
+		Str("siteHost", systemCritical.SiteHost).
+		Msg("Gochan server started")
 	<-sc
 }
 
