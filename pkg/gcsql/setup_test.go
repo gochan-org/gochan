@@ -114,17 +114,18 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		`max_threads,\s*default_style,\s*locked,\s*anonymous_name,\s*force_anonymous,\s*autosage_after,\s*no_images_after,\s*` +
 		`max_message_length,\s*min_message_length,\s*allow_embeds,\s*redirect_to_thread,\s*require_file,\s*enable_catalog\)\s+VALUES\(`
 
-	if dbType == "mysql" {
+	switch dbType {
+	case "mysql":
 		statements = testInitDBMySQLStatements
 		staffSelect += `\?`
 		staffInsert += `\?,\?,\?\)`
 		sectionsInsert += `\?,\?,\?,\?\)`
 		boardsInsert += `\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
-	} else if dbType == "postgres" {
+	case "postgres":
 		statements = testInitDBPostgresStatements
-	} else if dbType == "sqlite3" {
+	case "sqlite3":
 		statements = testInitDBSQLite3Statements
-	} else {
+	default:
 		return ErrUnsupportedDB
 	}
 

@@ -5,12 +5,12 @@ import (
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/rs/zerolog"
 )
 
 func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
 	db := dbu.db
-	var query string
 
 	_, err = db.ExecContextSQL(ctx, nil, `PRAGMA foreign_keys = ON`)
 	defer func() {
@@ -26,126 +26,137 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		return err
 	}
 
-	var dataType string
-	// Add range_start column to DBPREFIXIp_ban if it doesn't exist
-	dataType, err = common.ColumnType(ctx, db, nil, "DBPREFIXip_ban", "range_start", sqlConfig)
+	opts := &gcsql.RequestOptions{Context: ctx}
+
+	// simple alterations first
+	dataType, err := common.ColumnType(ctx, db, nil, "cyclical", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
+		errEv.Err(err).Caller().Send()
 		return err
 	}
-	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXip_ban ADD COLUMN range_start VARCHAR(45) NOT NULL`
-		if _, err = db.ExecTxSQL(nil, query); err != nil {
+	if dataType != "" {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXthreads RENAME COLUMN cyclical TO cyclic"); err != nil {
 			return err
 		}
 	}
 
-	// Add range_start column if it doesn't exist
-	dataType, err = common.ColumnType(ctx, db, nil, "DBPREFIXip_ban", "range_end", sqlConfig)
-	if err != nil {
+	if dataType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig); err != nil {
+		errEv.Err(err).Caller().Send()
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXip_ban ADD COLUMN range_end VARCHAR(45) NOT NULL`
-		if _, err = db.ExecTxSQL(nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXposts ADD COLUMN is_secure_tripcode BOOL NOT NULL DEFAULT FALSE"); err != nil {
 			return err
 		}
 	}
 
-	// add flag column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig)
-	if err != nil {
+	if dataType, err = common.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXposts ADD COLUMN flag VARCHAR(45) NOT NULL DEFAULT ''`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXposts ADD COLUMN flag VARCHAR(45) NOT NULL DEFAULT ''"); err != nil {
 			return err
 		}
 	}
 
-	// add country column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig)
-	if err != nil {
+	if dataType, err = common.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXposts ADD COLUMN country VARCHAR(80) NOT NULL DEFAULT ''"); err != nil {
 			return err
 		}
 	}
 
-	// add fingerprinter column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(ctx, db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
-	if err != nil {
+	if dataType, err = common.ColumnType(ctx, db, nil, "expires", "DBPREFIXsessions", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN fingerprinter VARCHAR(64)`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXsessions ADD COLUMN expires TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"); err != nil {
 			return err
 		}
 	}
 
-	// add ban_ip column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(ctx, db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
-	if err != nil {
+	if dataType, err = common.ColumnType(ctx, db, nil, "data", "DBPREFIXsessions", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip BOOL NOT NULL`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXsessions ADD COLUMN data VARCHAR(45) NOT NULL DEFAULT ''"); err != nil {
 			return err
 		}
 	}
 
-	// add ban_ip_message column to DBPREFIXfile_ban
-	dataType, err = common.ColumnType(ctx, db, nil, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "range_start", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip_message TEXT`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXip_ban ADD COLUMN range_start VARCHAR(45) NOT NULL DEFAULT ''"); err != nil {
+			return err
+		}
+		if _, err = db.Exec(opts, "UPDATE DBPREFIXip_ban SET range_start = ip"); err != nil {
 			return err
 		}
 	}
 
-	// add is_secure_tripcode column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
+	dataType, err = common.ColumnType(ctx, db, nil, "range_end", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXposts ADD COLUMN is_secure_tripcode BOOL NOT NULL DEFAULT FALSE`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXip_ban ADD COLUMN range_end VARCHAR(45) NOT NULL DEFAULT ''"); err != nil {
+			return err
+		}
+		if _, err = db.Exec(opts, "UPDATE DBPREFIXip_ban SET range_end = ip"); err != nil {
 			return err
 		}
 	}
 
-	// add spoilered column to DBPREFIXthreads
 	dataType, err = common.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXthreads ADD COLUMN is_spoilered BOOL NOT NULL DEFAULT FALSE`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
+		if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXthreads ADD COLUMN is_spoilered BOOL NOT NULL DEFAULT FALSE"); err != nil {
 			return err
 		}
 	}
 
-	// rename DBPREFIXposts.cyclical to cyclic
-	dataType, err = common.ColumnType(ctx, db, nil, "cyclic", "DBPREFIXposts", sqlConfig)
+	filtersExist, err := common.TableExists(ctx, db, nil, "DBPREFIXfilters", sqlConfig)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
 		return err
 	}
-	if dataType == "" {
-		query = `ALTER TABLE DBPREFIXposts CHANGE cyclical cyclic BOOL NOT NULL DEFAULT FALSE`
-		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
-			errEv.Err(err).Caller().Send()
+	if !filtersExist {
+		// update pre-filter tables to make sure they can be migrated to the new filter tables
+
+		dataType, err = common.ColumnType(ctx, db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
+		if err != nil {
 			return err
+		}
+		if dataType == "" {
+			if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXfile_ban ADD COLUMN fingerprinter VARCHAR(64) DEFAULT ''"); err != nil {
+				return err
+			}
+		}
+
+		dataType, err = common.ColumnType(ctx, db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
+		if err != nil {
+			return err
+		}
+		if dataType == "" {
+			if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip BOOL NOT NULL DEFAULT FALSE"); err != nil {
+				return err
+			}
+		}
+
+		dataType, err = common.ColumnType(ctx, db, nil, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
+		if err != nil {
+			return err
+		}
+		if dataType == "" {
+			if _, err = db.Exec(opts, "ALTER TABLE DBPREFIXfile_ban ADD COLUMN ban_ip_message TEXT"); err != nil {
+				return err
+			}
 		}
 	}
 

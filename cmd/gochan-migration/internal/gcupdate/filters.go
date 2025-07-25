@@ -84,7 +84,10 @@ func addFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig 
 		if !strings.HasPrefix(stmtStr, "CREATE TABLE DBPREFIXfilter") {
 			continue
 		}
-		if _, err = db.ExecContextSQL(ctx, tx, stmtStr); err != nil {
+		if _, err = db.Exec(&gcsql.RequestOptions{
+			Context: ctx,
+			Tx:      tx,
+		}, stmtStr); err != nil {
 			return err
 		}
 	}

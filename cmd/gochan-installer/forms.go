@@ -126,6 +126,12 @@ func (dbf *dbForm) validate() (status dbStatus, err error) {
 		return dbStatusUnknown, errors.New("max lifetime for connections must be greater than 0")
 	}
 
+	if dbf.DBtype == "sqlite3" {
+		if err := os.MkdirAll(path.Dir(dbf.DBhost), config.DirFileMode); err != nil && !errors.Is(err, fs.ErrExist) {
+			return dbStatusUnknown, fmt.Errorf("failed to create directory for SQLite database %s: %w", dbf.DBname, err)
+		}
+	}
+
 	sqlConfig := config.SQLConfig{
 		// using a dummy config to test connection. It will be set as the main config later
 		DBtype:     dbf.DBtype,
