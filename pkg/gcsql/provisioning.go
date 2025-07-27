@@ -61,6 +61,9 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 		if versionError != nil {
 			return 0, 0, versionError
 		}
+		gcutil.LogInfo().
+			Int("databaseVersion", databaseVersion).
+			Msg("Found database version")
 		if databaseVersion < DatabaseVersion {
 			return databaseVersion, DBModernButBehind, nil
 		}
