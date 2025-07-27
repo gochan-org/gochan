@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"time"
 
@@ -31,22 +32,16 @@ type CaptchaResult struct {
 	Timestamp time.Time `json:"challenge_ts"`
 }
 
-func InitCaptcha() {
-	var typeIsValid bool
+func InitCaptcha() error {
 	captchaCfg := config.GetSiteConfig().Captcha
 	if captchaCfg == nil {
-		return
+		return nil
 	}
-	for _, vType := range validCaptchaTypes {
-		if captchaCfg.Type == vType {
-			typeIsValid = true
-		}
+
+	if !slices.Contains(validCaptchaTypes, captchaCfg.Type) {
+		return ErrUnsupportedCaptcha
 	}
-	if !typeIsValid {
-		gcutil.LogFatal().
-			Str("captchaType", captchaCfg.Type).
-			Msg("Unsupported captcha type set in configuration")
-	}
+	return nil
 }
 
 // submitCaptchaResponse parses the incoming captcha form values, submits them, and returns the results

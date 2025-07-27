@@ -1,11 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 
 	"github.com/gochan-org/gochan/pkg/building"
@@ -45,19 +43,9 @@ func main() {
 	}()
 	err := config.InitConfig()
 	if err != nil {
-		msg := "Unable to load configuration"
-		if errors.Is(err, config.ErrGochanConfigNotFound) {
-			msg += ", run gochan-install to generate a new configuration file, or copy gochan.example.json to "
-			if runtime.GOOS == "windows" {
-				msg += "the current directory"
-			} else {
-				msg += "one of the search paths"
-			}
-			msg += " and rename it to gochan.json"
-		}
 		fatalEv.Err(err).Caller()
 		gcutil.LogArray("searchPaths", config.StandardConfigSearchPaths, fatalEv)
-		fatalEv.Msg(msg)
+		fatalEv.Msg(config.ConfigNotFoundInPathsMessage)
 	}
 
 	uid, gid := config.GetUser()
@@ -68,7 +56,7 @@ func main() {
 		GID:      gid,
 	}); err != nil {
 		fatalEv.Err(err).Caller().
-			Str("logDir", systemCritical.LogDir).
+			Str("LogDir", systemCritical.LogDir).
 			Int("uid", uid).
 			Int("gid", gid).
 			Msg("Unable to open logs")
@@ -95,7 +83,11 @@ func main() {
 	if err = geoip.SetupGeoIP(siteCfg.GeoIPType, siteCfg.GeoIPOptions); err != nil {
 		fatalEv.Err(err).Caller().Msg("Unable to initialize GeoIP")
 	}
-	posting.InitCaptcha()
+	if err = posting.InitCaptcha(); err != nil {
+		fatalEv.Err(err).Caller().
+			Str("CaptchaType", siteCfg.Captcha.Type).
+			Msg("Unable to initialize CAPTCHA")
+	}
 
 	if err = gctemplates.InitTemplates(); err != nil {
 		fatalEv.Err(err).Caller().Msg("Unable to initialize templates")
@@ -121,8 +113,9 @@ func main() {
 	manage.InitManagePages()
 	go initServer()
 	gcutil.LogInfo().
-		Str("listenAddress", systemCritical.ListenAddress).
-		Str("siteHost", systemCritical.SiteHost).
+		Str("ListenAddress", systemCritical.ListenAddress).
+		Int("Port", systemCritical.Port).
+		Str("SiteHost", systemCritical.SiteHost).
 		Msg("Gochan server started")
 	<-sc
 }
