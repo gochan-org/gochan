@@ -25,7 +25,7 @@ See [config.md](config.md)
 Gochan has a built-in [Lua](https://lua.org) interpreter and an event system to allow for extending your Gochan instance's functionality. See [plugin_api.md](./plugin_api.md) for a list of functions and events, and information about when they are used.
 
 ## Migration
-If you run gochan v3.0 or newer and get a message telling you that your database is out of date, please run gochan-migration -updatedb. If this does not work, please contact the developers.
+If you use a version of gochan older than v3.0, you will need to run the migration tool to update your database to the latest version. The migration tool is included in the gochan release, and can be run with `gochan-migration -pre2021`. This is currently the only available migration option, but more are coming soon.
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Shell script that downloads a previous gochan release for testing gochan-migration -updatedb
+# Shell script that downloads a previous gochan release for testing gochan database updating
 # This should only be used in a development environment
 
 set -euo pipefail
