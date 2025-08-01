@@ -1,16 +1,16 @@
-package gcupdate
+package dbupdate
 
 import (
 	"context"
 
-	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 	"github.com/rs/zerolog"
 )
 
-func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
-	db := dbu.db
+func updateSqliteDB(ctx context.Context, dbu *DatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	db := dbu.DB
 
 	_, err = db.ExecContextSQL(ctx, nil, `PRAGMA foreign_keys = ON`)
 	defer func() {
@@ -29,7 +29,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 	opts := &gcsql.RequestOptions{Context: ctx}
 
 	// simple alterations first
-	dataType, err := common.ColumnType(ctx, db, nil, "cyclical", "DBPREFIXthreads", sqlConfig)
+	dataType, err := migrationutil.ColumnType(ctx, db, nil, "cyclical", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
@@ -40,7 +40,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	if dataType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig); err != nil {
+	if dataType, err = migrationutil.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig); err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
 	}
@@ -50,7 +50,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	if dataType, err = common.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig); err != nil {
+	if dataType, err = migrationutil.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
@@ -59,7 +59,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	if dataType, err = common.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig); err != nil {
+	if dataType, err = migrationutil.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
@@ -68,7 +68,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	if dataType, err = common.ColumnType(ctx, db, nil, "expires", "DBPREFIXsessions", sqlConfig); err != nil {
+	if dataType, err = migrationutil.ColumnType(ctx, db, nil, "expires", "DBPREFIXsessions", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
@@ -77,7 +77,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	if dataType, err = common.ColumnType(ctx, db, nil, "data", "DBPREFIXsessions", sqlConfig); err != nil {
+	if dataType, err = migrationutil.ColumnType(ctx, db, nil, "data", "DBPREFIXsessions", sqlConfig); err != nil {
 		return err
 	}
 	if dataType == "" {
@@ -86,7 +86,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	dataType, err = common.ColumnType(ctx, db, nil, "range_start", "DBPREFIXip_ban", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "range_start", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	dataType, err = common.ColumnType(ctx, db, nil, "range_end", "DBPREFIXip_ban", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "range_end", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	dataType, err = common.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -122,14 +122,14 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 		}
 	}
 
-	filtersExist, err := common.TableExists(ctx, db, nil, "DBPREFIXfilters", sqlConfig)
+	filtersExist, err := migrationutil.TableExists(ctx, db, nil, "DBPREFIXfilters", sqlConfig)
 	if err != nil {
 		return err
 	}
 	if !filtersExist {
 		// update pre-filter tables to make sure they can be migrated to the new filter tables
 
-		dataType, err = common.ColumnType(ctx, db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
+		dataType, err = migrationutil.ColumnType(ctx, db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
 		if err != nil {
 			return err
 		}
@@ -139,7 +139,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 			}
 		}
 
-		dataType, err = common.ColumnType(ctx, db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
+		dataType, err = migrationutil.ColumnType(ctx, db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
 		if err != nil {
 			return err
 		}
@@ -149,7 +149,7 @@ func updateSqliteDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *conf
 			}
 		}
 
-		dataType, err = common.ColumnType(ctx, db, nil, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
+		dataType, err = migrationutil.ColumnType(ctx, db, nil, "ban_ip_message", "DBPREFIXfile_ban", sqlConfig)
 		if err != nil {
 			return err
 		}

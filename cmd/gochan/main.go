@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/gochan-org/gochan/pkg/gcplugin"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcsql/dbupdate"
 	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/posting"
@@ -42,10 +45,12 @@ func main() {
 		cleanup()
 	}()
 	err := config.InitConfig()
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
 		fatalEv.Err(err).Caller()
 		gcutil.LogArray("searchPaths", config.StandardConfigSearchPaths, fatalEv)
 		fatalEv.Msg(config.ConfigNotFoundInPathsMessage)
+	} else if err != nil {
+		fatalEv.Err(err).Caller().Send()
 	}
 
 	uid, gid := config.GetUser()
@@ -134,12 +139,25 @@ func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 		Str("DBhost", systemCritical.DBhost).
 		Msg("Connected to database")
 
-	if err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, true); err != nil {
+	err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, true)
+	var db *gcsql.GCDB
+	if errors.Is(err, gcsql.ErrDeprecatedDB) {
+		db, err = gcsql.GetDatabase()
+		if err == nil {
+			err = dbupdate.UpdateDatabase(db)
+			if err == nil {
+				gcutil.LogInfo().
+					Int("DBVersion", gcsql.DatabaseVersion).
+					Msg("Database updated successfully")
+			}
+		}
+	}
+	if err != nil {
 		cleanup()
 		if len(commandLine) > 0 && commandLine[0] {
 			fmt.Fprintln(os.Stderr, "Failed to initialize the database:", err)
 		}
-		gcutil.LogFatal().Err(err).Msg("Failed to initialize the database")
+		fatalEv.Err(err).Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
 	if err := gcsql.ResetViews(); err != nil {

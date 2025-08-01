@@ -1,4 +1,4 @@
-package gcupdate
+package dbupdate
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 	"github.com/rs/zerolog"
 )
 
@@ -63,7 +63,7 @@ type FileBan struct {
 
 // addFilterTables is used for the db version 4 upgrade to create the filter tables from the respective SQL init file
 func addFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
-	filePath, err := common.GetInitFilePath("initdb_" + sqlConfig.DBtype + ".sql")
+	filePath, err := migrationutil.GetInitFilePath("initdb_" + sqlConfig.DBtype + ".sql")
 	defer func() {
 		if err != nil {
 			errEv.Err(err).Caller(1).Send()
@@ -76,7 +76,7 @@ func addFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig 
 	if err != nil {
 		return err
 	}
-	sqlStr := common.CommentRemover.ReplaceAllString(string(ba), " ")
+	sqlStr := gcsql.CommentRemover.ReplaceAllString(string(ba), " ")
 	sqlArr := strings.Split(sqlStr, ";")
 
 	for _, stmtStr := range sqlArr {

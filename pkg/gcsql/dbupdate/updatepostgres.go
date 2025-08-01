@@ -1,18 +1,18 @@
-package gcupdate
+package dbupdate
 
 import (
 	"context"
 
-	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 	"github.com/rs/zerolog"
 )
 
-func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
-	db := dbu.db
+func updatePostgresDB(ctx context.Context, dbu *DatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	db := dbu.DB
 	var query, dataType string
 
-	dataType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
 	defer func() {
 		if a := recover(); a != nil {
 			errEv.Caller(4).Interface("panic", a).Send()
@@ -25,7 +25,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 	if err != nil {
 		return err
 	}
-	if common.IsStringType(dataType) {
+	if migrationutil.IsStringType(dataType) {
 		// change ip column to temporary ip_str
 		query = `ALTER TABLE DBPREFIXposts RENAME COLUMN ip TO ip_str,`
 		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
@@ -51,7 +51,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 		}
 	}
 
-	dataType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXip_ban", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "ip", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 	}
 
 	// add flag column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 	}
 
 	// add country column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 	}
 
 	// add is_secure_tripcode column to DBPREFIXposts
-	dataType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 	}
 
 	// add spoilered column to DBPREFIXthreads
-	dataType, err = common.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func updatePostgresDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *co
 	}
 
 	// rename DBPREFIXposts.cyclical to cyclic
-	dataType, err = common.ColumnType(ctx, db, nil, "cyclic", "DBPREFIXposts", sqlConfig)
+	dataType, err = migrationutil.ColumnType(ctx, db, nil, "cyclic", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err

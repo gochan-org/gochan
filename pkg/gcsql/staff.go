@@ -103,11 +103,12 @@ func (s *Staff) ClearSessions() error {
 }
 
 func (s *Staff) RankTitle() string {
-	if s.Rank == 3 {
+	switch s.Rank {
+	case 3:
 		return "Administrator"
-	} else if s.Rank == 2 {
+	case 2:
 		return "Moderator"
-	} else if s.Rank == 1 {
+	case 1:
 		return "Janitor"
 	}
 	return ""

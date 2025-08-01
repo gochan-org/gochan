@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,8 +18,6 @@ const (
 	OnlyFalse
 )
 
-const ()
-
 var (
 	dateTimeFormats = []string{
 		"2006-01-02 15:04:05",
@@ -26,7 +25,18 @@ var (
 	}
 	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(sql.Drivers(), ", "))
 	ErrNotConnected  = errors.New("error connecting to database")
+	CommentRemover   = regexp.MustCompile("--.*\n?")
 )
+
+// GetDatabase returns the active database connection. If the database is not connected, it will attempt to connect to
+// the configured database
+func GetDatabase() (*GCDB, error) {
+	if gcdb == nil {
+		sqlCfg := config.GetSQLConfig()
+		return Open(&sqlCfg)
+	}
+	return gcdb, nil
+}
 
 // BooleanFilter is used for optionally limiting results to true, false, or both
 type BooleanFilter int
@@ -37,9 +47,10 @@ func (af BooleanFilter) whereClause(columnName string, and bool) string {
 	if and {
 		out = " AND "
 	}
-	if af == OnlyTrue {
+	switch af {
+	case OnlyTrue:
 		return out + columnName + " = TRUE"
-	} else if af == OnlyFalse {
+	case OnlyFalse:
 		return out + columnName + " = FALSE"
 	}
 	return ""

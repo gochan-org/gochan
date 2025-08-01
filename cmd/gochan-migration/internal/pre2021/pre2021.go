@@ -11,6 +11,7 @@ import (
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 )
 
 type Pre2021Config struct {
@@ -65,7 +66,7 @@ func (m *Pre2021Migrator) IsMigrated() (bool, error) {
 	} else {
 		sqlConfig = m.config.SQLConfig
 	}
-	return common.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &sqlConfig)
+	return migrationutil.TableExists(ctx, m.db, nil, "DBPREFIXdatabase_version", &sqlConfig)
 }
 
 func (m *Pre2021Migrator) renameTablesForInPlace() error {

@@ -22,7 +22,7 @@ const (
 	InitialSetupComplete
 
 	// DirFileMode is the default file mode for directories created by gochan
-	DirFileMode fs.FileMode = 0775
+	DirFileMode fs.FileMode = 0750
 	// NormalFileMode is the default file mode for files created by gochan
 	NormalFileMode fs.FileMode = 0664
 

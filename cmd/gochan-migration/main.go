@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
-	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/gcupdate"
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/pre2021"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
@@ -36,9 +36,7 @@ func cleanup() {
 
 func main() {
 	var options common.MigrationOptions
-	var updateDB bool
 
-	flag.BoolVar(&updateDB, "updatedb", false, "If this is set, gochan-migrate will check, and if needed, update gochan's database schema")
 	flag.StringVar(&options.ChanType, "oldchan", "", "The imageboard we are migrating from (currently only pre2021 is supported, but more are coming")
 	flag.StringVar(&options.OldChanConfig, "oldconfig", "", "The path to the old chan's configuration file")
 	flag.Parse()
@@ -56,22 +54,17 @@ func main() {
 		fatalEv.Discard()
 	}()
 
-	if !updateDB {
-		if options.ChanType == "" {
-			flag.PrintDefaults()
-			fatalEv.Msg("Missing required oldchan value")
-		} else if options.OldChanConfig == "" {
-			flag.PrintDefaults()
-			fatalEv.Msg("Missing required oldconfig value")
-		}
-	} else if updateDB {
-		options.ChanType = "gcupdate"
+	if options.ChanType == "" {
+		flag.PrintDefaults()
+		fatalEv.Msg("Missing required oldchan value")
+	} else if options.OldChanConfig == "" {
+		flag.PrintDefaults()
+		fatalEv.Msg("Missing required oldconfig value")
 	}
+
 	fatalEv.Str("chanType", options.ChanType)
 
 	switch options.ChanType {
-	case "gcupdate":
-		migrator = &gcupdate.GCDatabaseUpdater{}
 	case "pre2021":
 		migrator = &pre2021.Pre2021Migrator{}
 	case "kusabax":
@@ -92,7 +85,7 @@ func main() {
 		fatalEv.Err(err).Caller().Msg("Unable to reload configuration")
 	}
 	sqlCfg := config.GetSQLConfig()
-	if migratingInPlace && sqlCfg.DBtype == "sqlite3" && !updateDB {
+	if migratingInPlace && sqlCfg.DBtype == "sqlite3" {
 		common.LogWarning().
 			Str("dbType", sqlCfg.DBtype).
 			Bool("migrateInPlace", migratingInPlace).
@@ -114,7 +107,7 @@ func main() {
 
 	var migrated bool
 	migrated, err = migrator.MigrateDB()
-	if errors.Is(err, common.ErrNotInstalled) {
+	if errors.Is(err, migrationutil.ErrNotInstalled) {
 		common.LogWarning().Msg(err.Error())
 		return
 	} else if err != nil {

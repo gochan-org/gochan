@@ -1,4 +1,4 @@
-package gcupdate
+package dbupdate
 
 import (
 	"context"
@@ -8,34 +8,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
 )
 
-type GCDatabaseUpdater struct {
-	options *common.MigrationOptions
-	db      *gcsql.GCDB
+var (
+	ErrInvalidVersion = errors.New("database contains database_version table but zero or more than one versions were found")
+)
+
+func UpdateDatabase(db *gcsql.GCDB) error {
+	dbUpdater := &DatabaseUpdater{DB: db}
+	gcutil.LogInfo().Msg("Preparing to update the database")
+	err := dbUpdater.updateDB()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-// IsMigratingInPlace implements common.DBMigrator.
-func (*GCDatabaseUpdater) IsMigratingInPlace() bool {
-	return true
+type DatabaseUpdater struct {
+	DB *gcsql.GCDB
 }
 
-func (dbu *GCDatabaseUpdater) Init(options *common.MigrationOptions) error {
-	dbu.options = options
-	sqlCfg := config.GetSQLConfig()
-	var err error
-	dbu.db, err = gcsql.Open(&sqlCfg)
-	return err
-}
-
-func (dbu *GCDatabaseUpdater) IsMigrated() (bool, error) {
+func (dbu *DatabaseUpdater) isUpdated() (bool, error) {
 	var currentDatabaseVersion int
-	err := dbu.db.QueryRow(nil, "SELECT version FROM DBPREFIXdatabase_version WHERE component = 'gochan'", nil,
+	err := dbu.DB.QueryRow(nil, "SELECT version FROM DBPREFIXdatabase_version WHERE component = 'gochan'", nil,
 		[]any{&currentDatabaseVersion})
 	if err != nil {
 		return false, err
@@ -50,26 +50,26 @@ func (dbu *GCDatabaseUpdater) IsMigrated() (bool, error) {
 	return false, nil
 }
 
-func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
-	errEv := common.LogError()
+func (dbu *DatabaseUpdater) updateDB() (err error) {
+	errEv := gcutil.LogError(nil)
 
-	gcsql.SetDB(dbu.db)
+	gcsql.SetDB(dbu.DB)
 
 	sqlConfig := config.GetSQLConfig()
 	var gochanTablesExist bool
 	if sqlConfig.DBprefix == "" {
-		gochanTablesExist, err = common.TableExists(context.Background(), dbu.db, nil, "database_version", &sqlConfig)
+		gochanTablesExist, err = migrationutil.TableExists(context.Background(), dbu.DB, nil, "database_version", &sqlConfig)
 	} else {
 		gochanTablesExist, err = gcsql.DoesGochanPrefixTableExist()
 	}
 	if err != nil {
-		return false, err
+		return err
 	}
 	if !gochanTablesExist {
-		return false, common.ErrNotInstalled
+		return migrationutil.ErrNotInstalled
 	}
 
-	migrated, err = dbu.IsMigrated()
+	updated, err := dbu.isUpdated()
 	defer func() {
 		if a := recover(); a != nil {
 			errEv.Caller(4).Interface("panic", a).Send()
@@ -80,28 +80,28 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 		}
 	}()
 	if errors.Is(err, sql.ErrNoRows) {
-		return migrated, gcsql.ErrInvalidVersion
+		return gcsql.ErrInvalidVersion
 	}
 	if err != nil {
-		return migrated, err
+		return err
 	}
-	if migrated {
-		return migrated, nil
+	if updated {
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	var filterTableExists bool
-	filterTableExists, err = common.TableExists(ctx, dbu.db, nil, "DBPREFIXfilters", &sqlConfig)
+	filterTableExists, err = migrationutil.TableExists(ctx, dbu.DB, nil, "DBPREFIXfilters", &sqlConfig)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if !filterTableExists {
 		// DBPREFIXfilters not found, create it and migrate data from DBPREFIXfile_ban, DBPREFIXfilename_ban, and DBPREFIXusername_ban,
-		if err = addFilterTables(ctx, dbu.db, nil, &sqlConfig, errEv); err != nil {
-			return false, err
+		if err = addFilterTables(ctx, dbu.DB, nil, &sqlConfig, errEv); err != nil {
+			return err
 		}
 	}
 
@@ -114,30 +114,30 @@ func (dbu *GCDatabaseUpdater) MigrateDB() (migrated bool, err error) {
 		err = updateSqliteDB(ctx, dbu, &sqlConfig, errEv)
 	}
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	if err = ctx.Err(); err != nil {
-		return false, err
+		return err
 	}
 
-	if err = dbu.migrateFilters(ctx, &sqlConfig, errEv); err != nil {
-		return false, err
+	if err = dbu.updateFilters(ctx, &sqlConfig, errEv); err != nil {
+		return err
 	}
 
 	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
-	_, err = dbu.db.ExecContextSQL(ctx, nil, query, gcsql.DatabaseVersion)
+	_, err = dbu.DB.ExecContextSQL(ctx, nil, query, gcsql.DatabaseVersion)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return false, nil
+	return nil
 }
 
-func (dbu *GCDatabaseUpdater) migrateFilters(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+func (dbu *DatabaseUpdater) updateFilters(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
 	var fileBansExist, filenameBansExist, usernameBansExist, wordfiltersExist bool
 
-	fileBansExist, err = common.TableExists(ctx, dbu.db, nil, "DBPREFIXfile_ban", sqlConfig)
+	fileBansExist, err = migrationutil.TableExists(ctx, dbu.DB, nil, "DBPREFIXfile_ban", sqlConfig)
 	defer func() {
 		if err != nil {
 			errEv.Err(err).Caller(1).Send()
@@ -148,41 +148,41 @@ func (dbu *GCDatabaseUpdater) migrateFilters(ctx context.Context, sqlConfig *con
 		return err
 	}
 
-	filenameBansExist, err = common.TableExists(ctx, dbu.db, nil, "DBPREFIXfilename_ban", sqlConfig)
+	filenameBansExist, err = migrationutil.TableExists(ctx, dbu.DB, nil, "DBPREFIXfilename_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
 
-	usernameBansExist, err = common.TableExists(ctx, dbu.db, nil, "DBPREFIXusername_ban", sqlConfig)
+	usernameBansExist, err = migrationutil.TableExists(ctx, dbu.DB, nil, "DBPREFIXusername_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
 
-	wordfiltersExist, err = common.TableExists(ctx, dbu.db, nil, "DBPREFIXwordfilters", sqlConfig)
+	wordfiltersExist, err = migrationutil.TableExists(ctx, dbu.DB, nil, "DBPREFIXwordfilters", sqlConfig)
 	if err != nil {
 		return err
 	}
 
 	if fileBansExist {
-		if err = dbu.migrateFileBans(ctx, sqlConfig, errEv); err != nil {
+		if err = dbu.updateFileBans(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
 
 	if filenameBansExist {
-		if err = dbu.migrateFilenameBans(ctx, sqlConfig, errEv); err != nil {
+		if err = dbu.updateFilenameBans(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
 
 	if usernameBansExist {
-		if err = dbu.migrateUsernameBans(ctx, sqlConfig, errEv); err != nil {
+		if err = dbu.updateUsernameBans(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
 
 	if wordfiltersExist {
-		if err = dbu.migrateWordfilters(ctx, sqlConfig, errEv); err != nil {
+		if err = dbu.updateWordfilters(ctx, sqlConfig, errEv); err != nil {
 			return err
 		}
 	}
@@ -190,8 +190,8 @@ func (dbu *GCDatabaseUpdater) migrateFilters(ctx context.Context, sqlConfig *con
 	return nil
 }
 
-func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
-	tx, err := dbu.db.BeginTx(ctx, nil)
+func (dbu *DatabaseUpdater) updateFileBans(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.DB.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
 			err = fmt.Errorf("recovered: %v", a)
@@ -209,7 +209,7 @@ func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *co
 
 	query := "SELECT board_id, staff_id, staff_note, issued_at, checksum, fingerprinter, ban_ip, ban_ip_message FROM DBPREFIXfile_ban"
 	var fingerprinterCol string
-	fingerprinterCol, err = common.ColumnType(ctx, dbu.db, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
+	fingerprinterCol, err = migrationutil.ColumnType(ctx, dbu.DB, nil, "fingerprinter", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -219,7 +219,7 @@ func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *co
 	}
 
 	var banIPCol string
-	banIPCol, err = common.ColumnType(ctx, dbu.db, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
+	banIPCol, err = migrationutil.ColumnType(ctx, dbu.DB, nil, "ban_ip", "DBPREFIXfile_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *co
 		query = strings.ReplaceAll(query, "ban_ip", "FALSE AS ban_ip")
 	}
 
-	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	rows, err := dbu.DB.QueryContextSQL(ctx, nil, query)
 	if err != nil {
 		return err
 	}
@@ -278,8 +278,8 @@ func (dbu *GCDatabaseUpdater) migrateFileBans(ctx context.Context, sqlConfig *co
 	return tx.Commit()
 }
 
-func (dbu *GCDatabaseUpdater) migrateFilenameBans(ctx context.Context, _ *config.SQLConfig, errEv *zerolog.Event) (err error) {
-	tx, err := dbu.db.BeginTx(ctx, nil)
+func (dbu *DatabaseUpdater) updateFilenameBans(ctx context.Context, _ *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.DB.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
 			err = fmt.Errorf("recovered: %v", a)
@@ -296,7 +296,7 @@ func (dbu *GCDatabaseUpdater) migrateFilenameBans(ctx context.Context, _ *config
 	}
 
 	query := "SELECT board_id, staff_id, staff_note, issued_at, filename, is_regex FROM DBPREFIXfilename_ban"
-	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	rows, err := dbu.DB.QueryContextSQL(ctx, nil, query)
 	if err != nil {
 		return err
 	}
@@ -336,8 +336,8 @@ func (dbu *GCDatabaseUpdater) migrateFilenameBans(ctx context.Context, _ *config
 	return tx.Commit()
 }
 
-func (dbu *GCDatabaseUpdater) migrateUsernameBans(ctx context.Context, _ *config.SQLConfig, errEv *zerolog.Event) (err error) {
-	tx, err := dbu.db.BeginTx(ctx, nil)
+func (dbu *DatabaseUpdater) updateUsernameBans(ctx context.Context, _ *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.DB.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
 			err = fmt.Errorf("recovered: %v", a)
@@ -354,7 +354,7 @@ func (dbu *GCDatabaseUpdater) migrateUsernameBans(ctx context.Context, _ *config
 	}
 
 	query := "SELECT board_id, staff_id, staff_note, issued_at, username FROM DBPREFIXusername_ban"
-	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	rows, err := dbu.DB.QueryContextSQL(ctx, nil, query)
 	if err != nil {
 		return err
 	}
@@ -394,8 +394,8 @@ func (dbu *GCDatabaseUpdater) migrateUsernameBans(ctx context.Context, _ *config
 	return tx.Commit()
 }
 
-func (dbu *GCDatabaseUpdater) migrateWordfilters(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
-	tx, err := dbu.db.BeginTx(ctx, nil)
+func (dbu *DatabaseUpdater) updateWordfilters(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+	tx, err := dbu.DB.BeginTx(ctx, nil)
 	defer func() {
 		if a := recover(); a != nil {
 			err = fmt.Errorf("recovered: %v", a)
@@ -413,7 +413,7 @@ func (dbu *GCDatabaseUpdater) migrateWordfilters(ctx context.Context, sqlConfig 
 
 	query := "SELECT board_dirs, staff_id, staff_note, issued_at, search, is_regex, change_to FROM DBPREFIXwordfilters"
 	var boardIDCol string
-	boardIDCol, err = common.ColumnType(ctx, dbu.db, nil, "board_id", "DBPREFIXwordfilters", sqlConfig)
+	boardIDCol, err = migrationutil.ColumnType(ctx, dbu.DB, nil, "board_id", "DBPREFIXwordfilters", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func (dbu *GCDatabaseUpdater) migrateWordfilters(ctx context.Context, sqlConfig 
 		query = strings.ReplaceAll(query, "board_dirs", "board_id")
 	}
 
-	rows, err := dbu.db.QueryContextSQL(ctx, nil, query)
+	rows, err := dbu.DB.QueryContextSQL(ctx, nil, query)
 	if err != nil {
 		return err
 	}
@@ -481,31 +481,4 @@ func (dbu *GCDatabaseUpdater) migrateWordfilters(ctx context.Context, sqlConfig 
 	}
 
 	return tx.Commit()
-}
-
-func (*GCDatabaseUpdater) MigrateBoards() error {
-	return gcutil.ErrNotImplemented
-}
-
-func (*GCDatabaseUpdater) MigratePosts() error {
-	return gcutil.ErrNotImplemented
-}
-
-func (*GCDatabaseUpdater) MigrateStaff() error {
-	return gcutil.ErrNotImplemented
-}
-
-func (*GCDatabaseUpdater) MigrateBans() error {
-	return gcutil.ErrNotImplemented
-}
-
-func (*GCDatabaseUpdater) MigrateAnnouncements() error {
-	return gcutil.ErrNotImplemented
-}
-
-func (dbu *GCDatabaseUpdater) Close() error {
-	if dbu.db != nil {
-		return dbu.db.Close()
-	}
-	return nil
 }

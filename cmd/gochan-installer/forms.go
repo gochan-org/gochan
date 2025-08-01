@@ -23,11 +23,11 @@ type pathsForm struct {
 	WebRoot      string `form:"webroot,required" method:"POST"`
 }
 
-func (pf *pathsForm) validateDirectory(dir string, createIfNotExist bool) error {
+func (*pathsForm) validateDirectory(dir string, createIfNotExist bool) error {
 	fi, err := os.Stat(dir)
 	if errors.Is(err, fs.ErrNotExist) {
 		if createIfNotExist {
-			if err := os.MkdirAll(dir, 0755); err != nil {
+			if err := os.MkdirAll(dir, config.DirFileMode); err != nil {
 				return fmt.Errorf("failed to create directory %s: %w", dir, err)
 			}
 			return nil

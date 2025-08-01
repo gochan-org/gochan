@@ -20,8 +20,6 @@ const (
 )
 
 var (
-	// ErrInvalidVersion is used when the db contains a database_version table
-	// but zero or more than one versions were found
 	ErrInvalidVersion   = errors.New("database contains database_version table but zero or more than one versions were found")
 	ErrCorruptedDB      = errors.New("database contains gochan prefixed tables but is missing versioning tables (possibly corrupted)")
 	ErrDeprecatedDB     = errors.New("database layout is deprecated, please run gochan-migration -updatedb")

@@ -1,16 +1,16 @@
-package gcupdate
+package dbupdate
 
 import (
 	"context"
 	"database/sql"
 
-	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/gcsql/migrationutil"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
 )
 
-func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
+func updateMysqlDB(ctx context.Context, dbu *DatabaseUpdater, sqlConfig *config.SQLConfig, errEv *zerolog.Event) (err error) {
 	var query string
 	var cyclicalType string
 	defer func() {
@@ -23,7 +23,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 		}
 	}()
 	dbName := sqlConfig.DBname
-	db := dbu.db
+	db := dbu.DB
 
 	// fix default collation
 	query = `ALTER DATABASE ` + dbName + ` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci`
@@ -59,7 +59,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 		return err
 	}
 
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXip_ban", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "ip", "DBPREFIXip_ban", sqlConfig)
 	if err != nil {
 		return err
 	}
@@ -108,12 +108,12 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// Convert DBPREFIXposts.ip to from varchar to varbinary
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "ip", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
 	}
-	if common.IsStringType(cyclicalType) {
+	if migrationutil.IsStringType(cyclicalType) {
 		// rename `ip` to a temporary column to then be removed
 		query = "ALTER TABLE DBPREFIXposts CHANGE ip ip_str varchar(45)"
 		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
@@ -143,12 +143,12 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// Convert DBPREFIXreports.ip to from varchar to varbinary
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "ip", "DBPREFIXreports", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "ip", "DBPREFIXreports", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
 	}
-	if common.IsStringType(cyclicalType) {
+	if migrationutil.IsStringType(cyclicalType) {
 		// rename `ip` to a temporary column to then be removed
 		query = "ALTER TABLE DBPREFIXreports CHANGE ip ip_str varchar(45)"
 		if _, err = db.ExecContextSQL(ctx, nil, query); err != nil {
@@ -178,7 +178,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// add flag column to DBPREFIXposts
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "flag", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
@@ -192,7 +192,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// add country column to DBPREFIXposts
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "country", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
@@ -206,7 +206,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// add is_secure_tripcode column to DBPREFIXposts
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "is_secure_tripcode", "DBPREFIXposts", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
@@ -220,7 +220,7 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// add spoilered column to DBPREFIXthreads
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "is_spoilered", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
@@ -234,12 +234,12 @@ func updateMysqlDB(ctx context.Context, dbu *GCDatabaseUpdater, sqlConfig *confi
 	}
 
 	// rename DBPREFIXposts.cyclical to cyclic
-	cyclicalType, err = common.ColumnType(ctx, db, nil, "cyclical", "DBPREFIXthreads", sqlConfig)
+	cyclicalType, err = migrationutil.ColumnType(ctx, db, nil, "cyclical", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
 	}
-	cyclicType, err := common.ColumnType(ctx, db, nil, "cyclic", "DBPREFIXthreads", sqlConfig)
+	cyclicType, err := migrationutil.ColumnType(ctx, db, nil, "cyclic", "DBPREFIXthreads", sqlConfig)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return err
