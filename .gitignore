@@ -1,6 +1,6 @@
 *.bak
 /html/index.html
-/html/test*
+/html/*test*
 /html/boards.json
 .vscode/settings.json
 .parcel-cache
