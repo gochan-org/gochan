@@ -137,6 +137,7 @@ func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 	gcutil.LogInfo().
 		Str("DBtype", systemCritical.DBtype).
 		Str("DBhost", systemCritical.DBhost).
+		Str("DBname", systemCritical.DBname).
 		Msg("Connected to database")
 
 	err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, true)
@@ -145,11 +146,6 @@ func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 		db, err = gcsql.GetDatabase()
 		if err == nil {
 			err = dbupdate.UpdateDatabase(db)
-			if err == nil {
-				gcutil.LogInfo().
-					Int("DBVersion", gcsql.DatabaseVersion).
-					Msg("Database updated successfully")
-			}
 		}
 	}
 	if err != nil {

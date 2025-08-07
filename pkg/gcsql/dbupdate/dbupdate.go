@@ -26,6 +26,9 @@ func UpdateDatabase(db *gcsql.GCDB) error {
 	if err != nil {
 		return err
 	}
+	gcutil.LogInfo().
+		Int("DBVersion", gcsql.DatabaseVersion).
+		Msg("Database updated successfully")
 	return nil
 }
 
