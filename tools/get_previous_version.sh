@@ -5,7 +5,12 @@
 
 set -euo pipefail
 
-TESTING_VERSION="v3.10.2"
+if [ -z "$TESTING_VERSION" ]; then
+	TESTING_VERSION="v3.10.2"
+fi
+TESTING_VERSION=$(echo $TESTING_VERSION | sed -r 's/^v?(.+)/v\1/')
+echo "Using release $TESTING_VERSION"
+
 RELEASE_DIR="gochan-${TESTING_VERSION}_linux"
 RELEASE_GZ="$RELEASE_DIR.tar.gz"
 RELEASE_URL="https://github.com/gochan-org/gochan/releases/download/$TESTING_VERSION/$RELEASE_GZ"
@@ -16,7 +21,7 @@ if [ "$USER" != "vagrant" ]; then
 fi
 
 cd ~
-if [[ ! -e "$RELEASE_GZ" ]]; then
+if [ ! -e "$RELEASE_GZ" ]; then
 	echo "Downloading $RELEASE_URL"
 	wget -q --show-progress $RELEASE_URL
 fi
@@ -24,9 +29,15 @@ rm -rf $RELEASE_DIR
 echo "Extracting $RELEASE_GZ"
 tar -xf gochan-${TESTING_VERSION}_linux.tar.gz
 cd $RELEASE_DIR
+mkdir -p log
 
-if [[ ! -f gochan.json ]]; then
-	cp -f examples/configs/gochan.example.json gochan.json
+EXAMPLE_CONFIG="examples/configs/gochan.example.json"
+if [[ $TESTING_VERSION =~ ^v3\.[0-8] ]]; then
+	EXAMPLE_CONFIG="sample-configs/gochan.example.json"
+fi
+
+if [ ! -f gochan.json ]; then
+	cp -f $EXAMPLE_CONFIG gochan.json
 	echo "Modifying $PWD/gochan.json for testing migration"
 	sed -i gochan.json \
 		-e 's/"Port": .*/"Port": 9000,/' \
@@ -35,7 +46,7 @@ if [[ ! -f gochan.json ]]; then
 		-e 's/"DBpassword": ""/"DBpassword": "gochan"/' \
 		-e 's/"LogDir": .*/"LogDir": "log",/' \
 		-e 's/"TemplateDir": .*/"TemplateDir": "templates",/' \
-		-e 's/"DocumentRoot": .*/"DocumentRoot": "html",/' \
+		-e 's#"DocumentRoot": .*#"DocumentRoot": "/srv/gochan",#' \
 		-e 's/"DBname": "gochan"/"DBname": "gochan_prev"/' \
 		-e 's/"DBprefix": .*/"DBprefix": "",/' \
 		-e 's/"SiteName": "Gochan"/"SiteName": "Gochan Migration Test"/' \
@@ -74,5 +85,4 @@ else
 	exit 1
 fi
 
-mkdir -p log
 sudo ./gochan
