@@ -20,8 +20,8 @@ var (
 	ErrNotInstalled = errors.New("database is empty or corrupted (missing tables), run gochan to install and initialize it")
 )
 
-// ColumnType returns a string representation of the column's data type. It does not return an error
-// if the column does not exist, instead returning an empty string.
+// ColumnType returns a string representation of the column's data type. It does not return an error if the column
+// does not exist, instead returning an empty string. If db is nil, it will use the currently loaded "default" database
 func ColumnType(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, columnName string, tableName string, sqlConfig *config.SQLConfig) (string, error) {
 	var query string
 	var dataType string
@@ -45,7 +45,11 @@ func ColumnType(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, columnName stri
 	default:
 		return "", gcsql.ErrUnsupportedDB
 	}
-	err = db.QueryRowContextSQL(ctx, tx, query, params, []any{&dataType})
+	if db == nil {
+		err = gcsql.QueryRowContextSQL(ctx, tx, query, params, []any{&dataType})
+	} else {
+		err = db.QueryRowContextSQL(ctx, tx, query, params, []any{&dataType})
+	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", nil
 	}
@@ -53,6 +57,7 @@ func ColumnType(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, columnName stri
 }
 
 // TableExists returns true if the given table exists in the given database, and an error if one occured
+// If db is nil, it will use the currently loaded "default" database
 func TableExists(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, tableName string, sqlConfig *config.SQLConfig) (bool, error) {
 	tableName = strings.ReplaceAll(tableName, "DBPREFIX", sqlConfig.DBprefix)
 	var query string
@@ -67,7 +72,12 @@ func TableExists(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, tableName stri
 		return false, gcsql.ErrUnsupportedDB
 	}
 	var count int
-	err := db.QueryRowContextSQL(ctx, tx, query, []any{tableName}, []any{&count})
+	var err error
+	if db == nil {
+		err = gcsql.QueryRowContextSQL(ctx, tx, query, []any{tableName}, []any{&count})
+	} else {
+		err = db.QueryRowContextSQL(ctx, tx, query, []any{tableName}, []any{&count})
+	}
 	return count == 1, err
 }
 

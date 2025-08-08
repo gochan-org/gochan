@@ -62,7 +62,7 @@ type FileBan struct {
 }
 
 // addFilterTables is used for the db version 4 upgrade to create the filter tables from the respective SQL init file
-func addFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
+func addFilterTables(ctx context.Context, tx *sql.Tx, sqlConfig *config.SQLConfig, errEv *zerolog.Event) error {
 	filePath, err := migrationutil.GetInitFilePath("initdb_" + sqlConfig.DBtype + ".sql")
 	defer func() {
 		if err != nil {
@@ -84,7 +84,7 @@ func addFilterTables(ctx context.Context, db *gcsql.GCDB, tx *sql.Tx, sqlConfig 
 		if !strings.HasPrefix(stmtStr, "CREATE TABLE DBPREFIXfilter") {
 			continue
 		}
-		if _, err = db.Exec(&gcsql.RequestOptions{
+		if _, err = gcsql.Exec(&gcsql.RequestOptions{
 			Context: ctx,
 			Tx:      tx,
 		}, stmtStr); err != nil {

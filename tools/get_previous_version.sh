@@ -50,7 +50,7 @@ if [ ! -f gochan.json ]; then
 		-e 's/"DBname": "gochan"/"DBname": "gochan_prev"/' \
 		-e 's/"DBprefix": .*/"DBprefix": "",/' \
 		-e 's/"SiteName": "Gochan"/"SiteName": "Gochan Migration Test"/' \
-		-e 's/"SiteSlogan": ""/"SiteSlogan": "Gochan instance used for testing gochan-migrate -updatedb"/' \
+		-e 's/"SiteSlogan": ""/"SiteSlogan": "Gochan instance used for testing gochan migration"/' \
 		-e 's/"DebugMode": false/"DebugMode": true/' \
 		-e 's/"Verbosity": 0/"Verbosity": 1/' \
 		-e 's/"GeoIPType": .*/"GeoIPType": "",/' \

@@ -141,12 +141,8 @@ func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 		Msg("Connected to database")
 
 	err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, true)
-	var db *gcsql.GCDB
 	if errors.Is(err, gcsql.ErrDeprecatedDB) {
-		db, err = gcsql.GetDatabase()
-		if err == nil {
-			err = dbupdate.UpdateDatabase(db)
-		}
+		err = dbupdate.UpdateDatabase()
 	}
 	if err != nil {
 		cleanup()
