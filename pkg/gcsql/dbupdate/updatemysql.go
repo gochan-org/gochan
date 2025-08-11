@@ -30,7 +30,7 @@ func updateMysqlDB(ctx context.Context, sqlConfig *config.SQLConfig, errEv *zero
 	}
 	query := `ALTER DATABASE ` + dbName + ` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci`
 	// use the base sql.DB, since our database automatically prepares all queries, and ALTER DATABASE
-	// will cause Error 1295 (HY000): This command is not supported in the prepared statement protocol yet
+	// will cause a "This command is not supported in the prepared statement protocol yet" error
 	if _, err = db.GetBaseDB().ExecContext(ctx, query); err != nil {
 		return err
 	}

@@ -3,11 +3,18 @@
 # Shell script that downloads a previous gochan release for testing gochan database updating
 # This should only be used in a development environment
 
-set -euo pipefail
+set -eo pipefail
+
+TESTING_VERSION=$1
 
 if [ -z "$TESTING_VERSION" ]; then
 	TESTING_VERSION="v3.10.2"
+elif [ "$TESTING_VERSION" = "-h" ] || [ "$TESTING_VERSION" = "--help" ]; then
+	echo "usage: $(basename $0) [version]"
+	echo "If no version is specified, defaults to v3.10.2"
+	exit 0
 fi
+
 TESTING_VERSION=$(echo $TESTING_VERSION | sed -r 's/^v?(.+)/v\1/')
 echo "Using release $TESTING_VERSION"
 
@@ -20,7 +27,7 @@ if [ "$USER" != "vagrant" ]; then
 	exit 1
 fi
 
-cd ~
+cd
 if [ ! -e "$RELEASE_GZ" ]; then
 	echo "Downloading $RELEASE_URL"
 	wget -q --show-progress $RELEASE_URL
@@ -32,10 +39,10 @@ cd $RELEASE_DIR
 mkdir -p log
 
 EXAMPLE_CONFIG="examples/configs/gochan.example.json"
-if [[ $TESTING_VERSION =~ ^v3\.[0-8] ]]; then
+if [[ $TESTING_VERSION =~ ^v3\.[0-8]\. ]]; then
 	EXAMPLE_CONFIG="sample-configs/gochan.example.json"
 fi
-
+echo "Using template config at $EXAMPLE_CONFIG"
 if [ ! -f gochan.json ]; then
 	cp -f $EXAMPLE_CONFIG gochan.json
 	echo "Modifying $PWD/gochan.json for testing migration"

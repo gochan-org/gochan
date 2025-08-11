@@ -75,10 +75,6 @@ func (db *GCDB) ConnectionString() string {
 	return db.connStr
 }
 
-func (db *GCDB) Connection() *sql.DB {
-	return db.db
-}
-
 func (db *GCDB) SQLDriver() string {
 	return db.driver
 }
@@ -90,6 +86,7 @@ func (db *GCDB) Close() error {
 	return nil
 }
 
+// GetBaseDB returns the underlying sql.DB database connection pool
 func (db *GCDB) GetBaseDB() *sql.DB {
 	return db.db
 }
