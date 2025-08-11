@@ -227,9 +227,9 @@ def set_vars(goos=""):
 def build(debugging=False, plugin_path="", static_templates=False):
 	"""Build the gochan executable for the current GOOS"""
 
-	build_cmd_base = ["go", "build", "-v", "-trimpath", "-gcflags", "-l -N"]
+	build_cmd_base = ["go", "build", "-v"]
 	if not debugging:
-		build_cmd_base += ["-ldflags", "-w -s"]
+		build_cmd_base += ["-trimpath", "-gcflags", "-l -N", "-ldflags", "-w -s"]
 
 	if static_templates:
 		print("Building error pages from templates")

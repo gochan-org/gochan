@@ -98,6 +98,12 @@ func (db *GCDB) PrepareSQL(query string, tx *sql.Tx) (*sql.Stmt, error) {
 func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx) (*sql.Stmt, error) {
 	var prepared string
 	var err error
+	if db == nil {
+		return nil, ErrNotConnected
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if prepared, err = SetupSQLString(db.replacer.Replace(query), db); err != nil {
 		return nil, err
 	}
@@ -196,6 +202,9 @@ and transaction options. Note that it doesn't use gochan's database variables, e
 DBNAME, etc so it should be used sparingly or with gcsql.SetupSQLString
 */
 func (db *GCDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	if db == nil {
+		return nil, ErrNotConnected
+	}
 	return db.db.BeginTx(ctx, opts)
 }
 

@@ -92,6 +92,13 @@ func GetCompleteDatabaseVersion() (dbVersion, dbFlag int, err error) {
 
 // CheckAndInitializeDatabase checks the validity of the database and initialises it if it is empty
 func CheckAndInitializeDatabase(dbType string, createAdmin bool) (err error) {
+	if gcdb == nil {
+		sqlConfig := config.GetSQLConfig()
+		gcdb, err = Open(&sqlConfig)
+		if err != nil {
+			return err
+		}
+	}
 	dbVersion, versionFlag, err := GetCompleteDatabaseVersion()
 	if err != nil {
 		return err

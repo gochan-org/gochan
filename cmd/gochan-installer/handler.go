@@ -114,7 +114,7 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		var pathFormData pathsForm
 		if err = forms.FillStructFromForm(req.Request, &pathFormData); err != nil {
 			httpStatus = http.StatusBadRequest
-			errEv.Err(err).Msg("Failed to fill form data")
+			errEv.Err(err).Caller().Msg("Failed to fill form data")
 			return
 		}
 		if err = pathFormData.validate(warnEv, errEv); err != nil {
@@ -171,19 +171,19 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		// database not properly initialized
 		if currentDBStatus == dbStatusUnknown {
 			httpStatus = http.StatusBadRequest
-			errEv.Msg("Database status is unknown, cannot proceed with provisioning")
+			errEv.Caller().Msg("Database status is unknown, cannot proceed with provisioning")
 			return errors.New("database status is unknown, cannot proceed with provisioning")
 		}
 
 		err := gcsql.CheckAndInitializeDatabase(cfg.DBtype, false)
 		if err != nil {
-			errEv.Err(err).Msg("Failed to initialize database")
+			errEv.Err(err).Caller().Msg("Failed to initialize database")
 			httpStatus = http.StatusInternalServerError
 			return err
 		}
 
 		if err = gcsql.ResetViews(); err != nil {
-			errEv.Err(err).Msg("Failed to reset database views")
+			errEv.Err(err).Caller().Msg("Failed to reset database views")
 			httpStatus = http.StatusInternalServerError
 			return err
 		}
@@ -196,26 +196,26 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 			var staffFormData staffForm
 			if err = forms.FillStructFromForm(req.Request, &staffFormData); err != nil {
 				httpStatus = http.StatusBadRequest
-				errEv.Err(err).Msg("Failed to fill form data")
+				errEv.Err(err).Caller().Msg("Failed to fill form data")
 				return
 			}
 			if err = staffFormData.validate(); err != nil {
 				httpStatus = http.StatusBadRequest
-				warnEv.Err(err).Msg("Invalid staff form data")
+				warnEv.Err(err).Caller().Msg("Invalid staff form data")
 				return
 			}
 
 			adminUser, err = gcsql.NewStaff(staffFormData.Username, staffFormData.Password, 3)
 			if err != nil {
 				httpStatus = http.StatusInternalServerError
-				errEv.Err(err).Msg("Failed to create administrator account")
+				errEv.Err(err).Caller().Msg("Failed to create administrator account")
 				return err
 			}
 		}
 
 		if configPath == "" {
 			httpStatus = http.StatusBadRequest
-			errEv.Msg("Configuration path is not set")
+			errEv.Caller().Msg("Configuration path is not set")
 			return errors.New("configuration path is not set")
 		}
 
@@ -224,7 +224,7 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		encoder.SetIndent("", "   ")
 		if err = encoder.Encode(cfg); err != nil {
 			httpStatus = http.StatusInternalServerError
-			errEv.Err(err).Msg("Failed to encode configuration to JSON")
+			errEv.Err(err).Caller().Msg("Failed to encode configuration to JSON")
 			return err
 		}
 		data["configJSON"] = jsonBuf.String()
@@ -235,25 +235,25 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 		pageTitle = "Save Configuration"
 		if configPath == "" {
 			httpStatus = http.StatusBadRequest
-			errEv.Msg("Configuration path is not set")
+			errEv.Caller().Msg("Configuration path is not set")
 			return errors.New("configuration path is not set")
 		}
 
 		if err = config.WriteConfig(configPath); err != nil {
 			httpStatus = http.StatusInternalServerError
-			errEv.Err(err).Msg("Failed to write configuration")
+			errEv.Err(err).Caller().Msg("Failed to write configuration")
 			return err
 		}
 
 		if err = building.BuildFrontPage(); err != nil {
 			httpStatus = http.StatusInternalServerError
-			errEv.Err(err).Msg("Failed to build front page")
+			errEv.Err(err).Caller().Msg("Failed to build front page")
 			return err
 		}
 
 		if err = building.BuildBoards(true); err != nil {
 			httpStatus = http.StatusInternalServerError
-			errEv.Err(err).Msg("Failed to build boards")
+			errEv.Err(err).Caller().Msg("Failed to build boards")
 			return err
 		}
 
@@ -266,17 +266,17 @@ func installHandler(writer http.ResponseWriter, req bunrouter.Request) (err erro
 
 	if err = building.BuildPageHeader(&buf, pageTitle, "", data); err != nil {
 		httpStatus = http.StatusInternalServerError
-		errEv.Err(err).Msg("Failed to build page header")
+		errEv.Err(err).Caller().Msg("Failed to build page header")
 		return
 	}
 	if err = serverutil.MinifyTemplate(installTemplate, data, &buf, "text/html"); err != nil {
 		httpStatus = http.StatusInternalServerError
-		errEv.Err(err).Msg("Failed to minify template")
+		errEv.Err(err).Caller().Msg("Failed to minify template")
 		return
 	}
 	if err = building.BuildPageFooter(&buf); err != nil {
 		httpStatus = http.StatusInternalServerError
-		errEv.Err(err).Msg("Failed to build page footer")
+		errEv.Err(err).Caller().Msg("Failed to build page footer")
 		return
 	}
 

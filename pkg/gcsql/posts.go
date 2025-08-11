@@ -143,7 +143,7 @@ func GetThreadTopPost(threadID int) (*Post, error) {
 	return post, err
 }
 
-// GetBoardTopPosts gets the top posts of the given
+// GetBoardTopPosts gets the thread top posts (OPs) of the given board ID or directory
 func GetBoardTopPosts[B intOrStringConstraint](board B) ([]*Post, error) {
 	query := `SELECT id, thread_id, is_top_post, ip, created_on, name, tripcode, is_role_signature,
 		email, subject, message, message_raw, password, deleted_at, is_deleted, coalesce(banned_message,''),

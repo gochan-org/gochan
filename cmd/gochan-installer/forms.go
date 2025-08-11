@@ -106,9 +106,6 @@ type dbForm struct {
 }
 
 func (dbf *dbForm) validate() (status dbStatus, err error) {
-	if dbf.DBprefix == "" {
-		return dbStatusNoPrefix, nil
-	}
 	supportedDrivers := sql.Drivers()
 	if !slices.Contains(supportedDrivers, dbf.DBtype) {
 		return dbStatusUnknown, fmt.Errorf("unsupported database type %s, supported types are %s", dbf.DBtype, strings.Join(supportedDrivers, ", "))
@@ -153,6 +150,10 @@ func (dbf *dbForm) validate() (status dbStatus, err error) {
 	systemCriticalCfg := config.GetSystemCriticalConfig()
 	systemCriticalCfg.SQLConfig = sqlConfig
 	config.SetSystemCriticalConfig(systemCriticalCfg)
+
+	if dbf.DBprefix == "" {
+		return dbStatusNoPrefix, nil
+	}
 
 	tablesExist, err := gcsql.DoesGochanPrefixTableExist()
 	if err != nil {
