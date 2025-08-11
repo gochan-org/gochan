@@ -13,7 +13,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// WordFilter represents data in the deprecated wordfilters table
+// Wordfilter represents data in the deprecated wordfilters table
 type Wordfilter struct {
 	ID        int       // sql: `id`
 	BoardDirs *string   // sql: `board_dirs`

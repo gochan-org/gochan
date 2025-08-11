@@ -98,7 +98,7 @@ func RunSQLFile(path string, db *gcsql.GCDB) error {
 
 	for _, statement := range sqlArr {
 		statement = strings.TrimSpace(statement)
-		if len(statement) > 0 {
+		if statement != "" {
 			if _, err = db.Exec(nil, statement); err != nil {
 				return err
 			}
