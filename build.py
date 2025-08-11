@@ -226,14 +226,10 @@ def set_vars(goos=""):
 
 def build(debugging=False, plugin_path="", static_templates=False):
 	"""Build the gochan executable for the current GOOS"""
-	pwd = os.getcwd()
-	trimpath = f"-trimpath={pwd}"
 
-	gcflags_debug = " -l -N" if debugging else ""
-	gcflags = f"-gcflags={trimpath}{gcflags_debug}"
-	ldflags_debug = "" if debugging else " -w -s"
-	ldflags = f"-ldflags={ldflags_debug}"
-	build_cmd_base = ["go", "build", "-v", "-trimpath", gcflags, ldflags]
+	build_cmd_base = ["go", "build", "-v", "-trimpath", "-gcflags", "-l -N"]
+	if not debugging:
+		build_cmd_base += ["-ldflags", "-w -s"]
 
 	if static_templates:
 		print("Building error pages from templates")
@@ -457,18 +453,11 @@ def test(verbose=False, coverage=False):
 
 if __name__ == "__main__":
 	update_gochan_version()
-	action = "build"
-	try:
-		action = sys.argv.pop(1)
-	except IndexError:  # no argument was passed
-		pass
+	action = sys.argv.pop(1) if len(sys.argv) > 1 else "build"
 	if action.startswith("-") is False:
 		sys.argv.insert(1, action)
 	set_vars()
-
-	valid_actions = (
-		"build", "clean", "install", "js", "release", "sass", "test", "selenium"
-	)
+	valid_actions = ("build", "clean", "install", "js", "release", "sass", "test", "selenium")
 	parser = argparse.ArgumentParser(description=f"gochan v{gochan_version} build script")
 	parser.add_argument("action", nargs=1, default="build", choices=valid_actions)
 	if action in ('--help', '-h'):
