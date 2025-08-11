@@ -253,6 +253,8 @@ def build(debugging=False, plugin_path="", static_templates=False):
 	else:
 		print(f"Building for {gcos}")
 
+	copy("LICENSE", "cmd/gochan-installer/license.txt")
+
 	status = -1
 	if plugin_path != "" and plugin_path is not None:
 		build_cmd_base += ["-buildmode=plugin", plugin_path]
