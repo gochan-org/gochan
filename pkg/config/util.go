@@ -145,6 +145,7 @@ func loadConfig() (err error) {
 	if cfgPath == "" {
 		return ErrGochanConfigNotFound
 	}
+	gcutil.LogInfo().Str("configPath", cfgPath).Msg("Found configuration file")
 
 	cfgBytes, err := os.ReadFile(cfgPath)
 	if err != nil {
