@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -66,10 +67,22 @@ func parseCommandLine() {
 	case "version", "-v", "-version":
 		fmt.Println(config.GochanVersion)
 		return
+	case "buildinfo":
+		buildInfo, ok := debug.ReadBuildInfo()
+		if !ok {
+			fmt.Fprintln(os.Stderr, "No build info available")
+			os.Exit(1)
+		}
+		fmt.Println("Built with Go version:", buildInfo.GoVersion)
+		fmt.Println("Build information:")
+		for _, setting := range buildInfo.Settings {
+			fmt.Printf("   %s: %s\n", setting.Key, setting.Value)
+		}
 	case "help", "-h", "-help":
 		fmt.Println("Usage: gochan [command] [options]")
 		fmt.Println("Commands:")
 		fmt.Println("  version       Show the version of gochan")
+		fmt.Println("  buildinfo     Show build information")
 		fmt.Println("  help          Show this help message")
 		fmt.Println("  newstaff      Create a new staff account")
 		fmt.Println("  delstaff      Delete a staff account")

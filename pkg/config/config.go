@@ -30,7 +30,7 @@ const (
 	DefaultSQLMaxConns           = 10
 	DefaultSQLConnMaxLifetimeMin = 3
 
-	GochanVersion = "4.2.0"
+	GochanVersion = "4.3.0"
 )
 
 var (
