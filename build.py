@@ -429,6 +429,7 @@ def release(goos):
 			shutil.copytree(file, path.join(release_dir, file))
 	copy(gochan_exe, path.join(release_dir, gochan_exe))
 	copy(migration_exe, path.join(release_dir, migration_exe))
+	copy(installer_exe, path.join(release_dir, installer_exe))
 	delete(path.join(release_dir, "html/js/consts.js"))
 	archive_type = "zip" if goos in ('windows', 'darwin') else "gztar"
 	shutil.make_archive(release_dir, archive_type, root_dir="releases", base_dir=release_name)
