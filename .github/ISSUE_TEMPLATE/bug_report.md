@@ -28,8 +28,9 @@ If applicable, add screenshots to help explain your problem.
 - OS: [e.g. Ubuntu Linux 22.04, Windows Server 2022]
 - Environment: [e.g. Vagrant, Docker, running on host]
 - Browser and version (if applicable): [e.g. Firefox, Chrome, Firefox for Android]
-- Gochan version (if running from a release): [e.g. 4.2.0]
-- Latest commit checksum and branch (if you built the code yourself): [obtained from `git rev-parse --verify HEAD`]
+- Gochan version: [e.g. 4.3.0]
+- Git branch and checksum (if you built from source): [obtained from `git rev-parse --abbrev-ref HEAD` and `git rev-parse --verify HEAD`]
+- The output of `gochan buildinfo`: [insert output here]
 
 **Additional context**
 Add any other context about the problem here.
