@@ -92,10 +92,10 @@ func parseCommandLine() {
 		flagSet := flag.NewFlagSet("newstaff", flag.ExitOnError)
 		flagSet.StringVar(&newstaff, "username", "", "Username for the new staff account")
 		flagSet.StringVar(&password, "password", "", "Password for the new staff account")
-		flagSet.IntVar(&rank, "rank", 0, "Rank for the new staff account")
+		flagSet.IntVar(&rank, "rank", 0, "Rank for the new staff account (1 for janitor, 2 for moderator, 3 for administrator)")
 		flagSet.Parse(os.Args[2:])
 		if newstaff == "" || rank <= 0 {
-			fmt.Fprintln(os.Stderr, "Error: -username and -rank are required")
+			fmt.Fprintln(os.Stderr, "Error: -username and -rank are required and must not be empty or 0")
 			flagSet.Usage()
 			os.Exit(1)
 		}

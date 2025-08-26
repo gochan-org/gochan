@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="32" height="32" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+   <defs>
+      <radialGradient id="radialGradient"><stop offset="10%" stop-color="#6af" /><stop offset="100%" stop-color="#06e" /></radialGradient>
+   </defs>
+   <circle style="fill:url('#radialGradient');stroke:#000;stroke-width:2;" r="15" cy="50%" cx="50%" />
+   <path d="m 13.9,19.4 c 0,-2.2 0.5,-3 1.6,-4 1.2,-1.2 2.9,-1.8 3.6,-3.4 0.4,-0.9 0.3,-2.2 -0.6,-2.8 -1.2,-0.7 -2.8,-0.5 -4.1,-0.2 -1.1,0.3 -2.2,0.7 -3.2,1.3 -0.6,-1.2 -1.1,-2.3 -1.7,-3.5 2.5,-1.4 5.4,-2.1 8.3,-1.9 2.1,0.1 4.3,0.9 5.4,2.8 1,1.7 0.9,3.8 0.2,5.5 -0.9,1.8 -2.6,2.9 -4.2,4 -1.8,1.1 -1,3.1 -1.6,3.4 h -3.7 z" style="fill:white;stroke:black;stroke-width:1.5;" />
+   <circle style="fill:white;stroke:black;stroke-width:1.5;" r="2.8" cx="16" cy="25.7" />
+</svg>

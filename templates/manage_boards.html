@@ -79,7 +79,7 @@
 	<td><input type="checkbox" name="locked" {{if $.board.Locked}}checked="checked"{{end}}/></td>
 </tr>
 <tr>
-	<td>Anonymous name</td>
+	<td>Anonymous name {{infoHover "Name shown if the user does not provide a name"}}</td>
 	<td><input type="text" name="anonname" value="{{$.board.AnonymousName}}"/></td>
 </tr>
 <tr>
@@ -91,8 +91,8 @@
 	<td><input type="number" min="0" name="autosageafter" value="{{$.board.AutosageAfter}}"></td>
 </tr>
 <tr>
-	<td>Don't allow uploads after # replies</td>
-	<td><input type="number" min="0" name="nouploadsafter" value="{{$.board.NoImagesAfter}}"></td>
+	<td>Don't allow uploads after # replies {{infoHover "If greater than -1, thread replies with uploads will be rejected after the thread passes this number"}}</td>
+	<td><input type="number" min="-1" name="nouploadsafter" value="{{$.board.NoImagesAfter}}"></td>
 </tr>
 <tr>
 	<td>Max message length (in characters)</td>
