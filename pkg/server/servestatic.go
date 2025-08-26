@@ -10,6 +10,22 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcutil"
 )
 
+var (
+	knownFileHeaders = map[string]StaticFileHeaders{
+		".png":  {ContentType: "image/png", CacheControl: "max-age=86400"},
+		".gif":  {ContentType: "image/gif", CacheControl: "max-age=86400"},
+		".jpg":  {ContentType: "image/jpeg", CacheControl: "max-age=86400"},
+		".jpeg": {ContentType: "image/jpeg", CacheControl: "max-age=86400"},
+		".svg":  {ContentType: "image/svg+xml", CacheControl: "max-age=86400"},
+		".css":  {ContentType: "text/css", CacheControl: "max-age=43200"},
+		".js":   {ContentType: "text/javascript", CacheControl: "max-age=43200"},
+		".json": {ContentType: "application/json", CacheControl: "max-age=5, must-revalidate"},
+		".webm": {ContentType: "video/webm", CacheControl: "max-age=86400"},
+		".htm":  {ContentType: "text/html", CacheControl: "max-age=5, must-revalidate"},
+		".html": {ContentType: "text/html", CacheControl: "max-age=5, must-revalidate"},
+	}
+)
+
 func serveFile(writer http.ResponseWriter, request *http.Request) {
 	systemCritical := config.GetSystemCriticalConfig()
 	siteConfig := config.GetSiteConfig()
@@ -53,39 +69,23 @@ func serveFile(writer http.ResponseWriter, request *http.Request) {
 	writer.Write(fileBytes)
 }
 
+type StaticFileHeaders struct {
+	ContentType  string
+	CacheControl string
+	Other        map[string]string
+}
+
 // set mime type/cache headers according to the file's extension
 func setFileHeaders(filename string, writer http.ResponseWriter) {
 	extension := strings.ToLower(path.Ext(filename))
-	switch extension {
-	case ".png":
-		writer.Header().Set("Content-Type", "image/png")
-		writer.Header().Set("Cache-Control", "max-age=86400")
-	case ".gif":
-		writer.Header().Set("Content-Type", "image/gif")
-		writer.Header().Set("Cache-Control", "max-age=86400")
-	case ".jpg":
-		fallthrough
-	case ".jpeg":
-		writer.Header().Set("Content-Type", "image/jpeg")
-		writer.Header().Set("Cache-Control", "max-age=86400")
-	case ".css":
-		writer.Header().Set("Content-Type", "text/css")
-		writer.Header().Set("Cache-Control", "max-age=43200")
-	case ".js":
-		writer.Header().Set("Content-Type", "text/javascript")
-		writer.Header().Set("Cache-Control", "max-age=43200")
-	case ".json":
-		writer.Header().Set("Content-Type", "application/json")
-		writer.Header().Set("Cache-Control", "max-age=5, must-revalidate")
-	case ".webm":
-		writer.Header().Set("Content-Type", "video/webm")
-		writer.Header().Set("Cache-Control", "max-age=86400")
-	case ".htm":
-		fallthrough
-	case ".html":
-		writer.Header().Set("Content-Type", "text/html")
-		writer.Header().Set("Cache-Control", "max-age=5, must-revalidate")
-	default:
+	header, ok := knownFileHeaders[extension]
+	if ok {
+		writer.Header().Set("Content-Type", header.ContentType)
+		writer.Header().Set("Cache-Control", header.CacheControl)
+		for key, value := range header.Other {
+			writer.Header().Set(key, value)
+		}
+	} else {
 		writer.Header().Set("Content-Type", "application/octet-stream")
 		writer.Header().Set("Cache-Control", "max-age=86400")
 	}

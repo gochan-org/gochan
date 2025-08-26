@@ -57,28 +57,34 @@ The following are modules that can be loaded via `require("modulename")`. See [.
 - **geoip.register_handler(name string, handler table) error**
 	- Calls [posting.RegisterGeoIPHandler](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/posting/geoip#RegisterGeoIPHandler) with the given handler info and returns an error if any occured. The table is expected to have the following fields/values:
 
-Key | Type | Explanation
----|---|---
-init | func(options map[string]any) error | The function to initialize the GeoIP handler with options. If it needs no initialization, the function can return null
+Key         | Type | Explanation
+------------|------|-------------
+init        | func(options map[string]any) error | The function to initialize the GeoIP handler with options. If it needs no initialization, the function can return null
 get_country | func(request http.Request, board string, errEv zerolog.Event) geoip.Country, error | The function to get the requesting IP's country, returning it and any errors that occured
-close | func() error | The function to close any network or file handles, if any were opened, returning an error if any occured
+close       | func() error | The function to close any network or file handles, if any were opened, returning an error if any occured
 
 
 ## manage
 - **manage.ban_ip(ip string, duration string, reason string, staff string|int, options table)**
   - Bans the given IP for the given duration and gets other optional ban data from the `options` table below
 
-Key | Type | Explanation
----|---|---
-board | string\|int\|nil | The board directory or ID that the IP will be banned from. If this is nil or omitted, it will be a global ban
-post | int | The post ID
-is_thread_ban | bool | If true, the user will be able to post but unable to create threads
-appeal_after | string | User can appeal after this duration. If unset, the user can appeal immediately.
-appealable | bool | Sets whether or not the user can appeal the ban. If unset, the user is able to appeal.
-staff_note | string | A private note attached to the ban that only staff can see
+Key           | Type             | Explanation
+--------------|------------------|--------------
+board         | string\|int\|nil | The board directory or ID that the IP will be banned from. If this is nil or omitted, it will be a global ban
+post          | int              | The post ID
+is_thread_ban | bool             | If true, the user will be able to post but unable to create threads
+appeal_after  | string           | User can appeal after this duration. If unset, the user can appeal immediately.
+appealable    | bool             | Sets whether or not the user can appeal the ban. If unset, the user is able to appeal.
+staff_note    | string           | A private note attached to the ban that only staff can see
 
 - **manage.register_manage_page(action string, title string, perms int, wants_json int, handler func(writer, request, staff, wants_json, info_ev, err_ev))**
 	- Registers the manage page accessible at /manage/`action` to be handled by `handler`. See [manage.RegisterManagePage](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/manage#RegisterManagePage) for info on how `handler` should be used, or [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
+
+## server
+- **server.register_ext_headers(ext string, headers table) error**
+	- Registers the file extension headers, allowing it to be recognized when serving static files. Each key in the table corresponds to the header name, and the values should be strings. The table can have custom/non-standard headers, but a Content-Type header is required.
+	**Note**: If you have it set up so that Gochan is not serving static files (i.e., they are being handled by a reverse proxy or another server), you should not need to call this function.
+
 
 ## serverutil
 - **serverutil.minify_template(template, data_table, writer, media_type)**
