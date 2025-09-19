@@ -1,132 +1,129 @@
-<form action="{{webPath "/manage/boards"}}" method="GET">
-	{{with $.boards}}{{else}}
-	<input type="hidden" name="noboards" value="1">
-	{{end}}
-	{{/* <input type="hidden" name="confirm" value="1"> */}}
-	<select name="board" id="modifyboard">
-	{{range $_, $board := $.boards}}
-		<option value="{{$board.ID}}">/{{$board.Dir}}/ - {{$board.Title}}</option>
-	{{else}}
-		<option value="" selected="true" disabled="disabled">No boards</option>
-	{{end}}
-	</select><br>
-	<input type="submit" name="doedit" value="Edit" >
-	<input type="submit" name="dodelete" value="Delete" onclick="return confirm('Are you sure you want to delete this board? This cannot be undone.');"><br>
-</form>
-<hr />
-{{if $.editing}}
-<h2>Edit board</h2>
-{{else}}
-<h2>Create new board</h2>
-{{end}}
-<form action="{{webPath "manage/boards"}}" method="POST">
-	<input type="hidden" name="board" value="{{$.board.ID}}"/>
-<table>
-<tr>
-	<th>Option</th>
-	<th>Value</th>
-</tr>
-<tr>
-	<td>Directory</td>
-	<td><input type="text" name="dir" {{if $.editing}}disabled="disabled"{{end}} value="{{$.board.Dir}}"/></td>
-</tr>
-<tr>
-	<td>Title</td>
-	<td><input type="text" name="title" value="{{$.board.Title}}"></td>
-</tr>
-<tr>
-	<td>Subtitle</td>
-	<td><input type="text" name="subtitle" value="{{$.board.Subtitle}}"></td>
-</tr>
-<tr>
-	<td>Description</td>
-	<td><input type="text" name="description" value="{{$.board.Description}}"></td>
-</tr>
-<tr>
-	<td>Section</td>
-	<td><select name="section">
+{{if not $.editing -}}
+	<div class="section-fieldsets">
 		{{- range $_, $section := $.sections -}}
-			<option value="{{$section.ID}}" {{if eq $section.ID $.board.SectionID -}}
-				selected="selected"
-			{{- end}}>{{$section.Name}}</option>
+			<fieldset class="inline-block">
+				<legend>{{$section.Name}}</legend>
+				<ul>
+					{{- range $_, $board := $.boards -}}
+						{{- if eq $board.SectionID $section.ID -}}
+							<li><a href="{{webPathDir $board.Dir}}">/{{$board.Dir}}/</a> - {{$board.Title}} &mdash; <a href="{{webPath `/manage/boards/` $board.Dir}}">Edit</a></li>
+						{{- end -}}
+					{{- end -}}
+				</ul>
+			</fieldset>
 		{{- end -}}
-	</select></td>
-</tr>
-<tr>
-	<td>Navbar position</td>
-	<td><input type="number" min="0" name="navbarposition" value="{{$.board.NavbarPosition}}"></td>
-</tr>
-<tr>
-	<td>Max filesize</td>
-	<td><input type="number" min="0" name="maxfilesize" value="{{$.board.MaxFilesize}}"></td>
-</tr>
-<tr>
-	<td>Max number of threads</td>
-	<td><input type="number" min="0" name="maxthreads" value="{{$.board.MaxThreads}}"></td>
-</tr>
-<tr>
-	<td>Default style</td>
-	<td><select name="defaultstyle">
-	{{range $_, $style := $.boardConfig.Styles}}
-		<option value="{{$style.Filename}}" {{if eq $style.Filename $.board.DefaultStyle -}}
-			selected="selected"
-		{{- end}}>{{$style.Name}}</option>
-	{{- end -}}
-	</select></td>
-</tr>
-<tr>
-	<td>Locked board</td>
-	<td><input type="checkbox" name="locked" {{if $.board.Locked}}checked="checked"{{end}}/></td>
-</tr>
-<tr>
-	<td>Anonymous name {{infoHover "Name shown if the user does not provide a name"}}</td>
-	<td><input type="text" name="anonname" value="{{$.board.AnonymousName}}"/></td>
-</tr>
-<tr>
-	<td>Force anonymous</td>
-	<td><input type="checkbox" name="forcedanonymous" {{- if $.board.ForceAnonymous}}checked="checked"{{end}}/></td>
-</tr>
-<tr>
-	<td>Autosage after # replies</td>
-	<td><input type="number" min="0" name="autosageafter" value="{{$.board.AutosageAfter}}"></td>
-</tr>
-<tr>
-	<td>Don't allow uploads after # replies {{infoHover "If greater than -1, thread replies with uploads will be rejected after the thread passes this number"}}</td>
-	<td><input type="number" min="-1" name="nouploadsafter" value="{{$.board.NoImagesAfter}}"></td>
-</tr>
-<tr>
-	<td>Max message length (in characters)</td>
-	<td><input type="number" min="0" name="maxmessagelength" value="{{$.board.MaxMessageLength}}"></td>
-</tr>
-<tr>
-	<td>Min message length (in characters)</td>
-	<td><input type="number" min="0" name="minmessagelength" value="{{$.board.MinMessageLength}}"></td>
-</tr>
-<tr>
-	<td>Allow embeds</td>
-	<td><input type="checkbox" name="embedsallowed" {{if $.board.AllowEmbeds}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>Redirect to thread by default</td>
-	<td><input type="checkbox" name="redirecttothread" {{if $.board.RedirectToThread}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>Require file in OP</td>
-	<td><input type="checkbox" name="requirefile" {{if $.board.RequireFile}}checked="checked"{{end}}/>
-	</td>
-</tr>
-<tr>
-	<td>Create catalog</td>
-	<td><input type="checkbox" name="enablecatalog" {{if $.board.EnableCatalog}}checked="checked"{{end}}/>
-	</td>
-</tr>
-</table>
-{{- if $.editing -}}
-<input type="submit" name="domodify" value="Save changes" onclick="return confirm('Click ok to confirm')"/>
-<input type="submit" name="docancel" value="Cancel" onclick="window.location = './manage/boards'; return false"/>
-{{- else -}}
-<input type="submit" name="docreate" value="Create new board" onclick="return confirm('Click ok to confirm')"/>
+	</div>
 {{- end -}}
+<hr />
+{{- if $.editing -}}
+	<h2 id="edit">Edit /{{$.board.Dir}}/</h2>
+{{- else -}}
+	<h2>Create new board</h2>
+{{- end -}}
+<form action="{{if $.editing}}{{webPath `/manage/boards` $.board.Dir}}{{else}}{{webPath `/manage/boards`}}{{end}}" method="POST">
+	<table>
+		{{- if $.editing -}}
+			<input type="hidden" name="dir" value="{{$.board.Dir}}"/>
+		{{- else -}}
+		<tr>
+			<td>Directory</td>
+			<td><input type="text" name="dir" /></td>
+		</tr>
+		{{- end -}}
+		<tr>
+			<td>Title</td>
+			<td><input type="text" name="title" value="{{$.board.Title}}"></td>
+		</tr>
+		<tr>
+			<td>Subtitle</td>
+			<td><input type="text" name="subtitle" value="{{$.board.Subtitle}}"></td>
+		</tr>
+		<tr>
+			<td>Description</td>
+			<td><input type="text" name="description" value="{{$.board.Description}}"></td>
+		</tr>
+		<tr>
+			<td>Section</td>
+			<td><select name="section">
+				{{- range $_, $section := $.sections -}}
+					<option value="{{$section.ID}}" {{if eq $section.ID $.board.SectionID -}}
+						selected="selected"
+					{{- end}}>{{$section.Name}}</option>
+				{{- end -}}
+			</select></td>
+		</tr>
+		<tr>
+			<td>Navbar position</td>
+			<td><input type="number" min="0" name="navbarposition" value="{{$.board.NavbarPosition}}"></td>
+		</tr>
+		<tr>
+			<td>Max filesize</td>
+			<td><input type="number" min="0" name="maxfilesize" value="{{$.board.MaxFilesize}}"></td>
+		</tr>
+		<tr>
+			<td>Max number of threads</td>
+			<td><input type="number" min="0" name="maxthreads" value="{{$.board.MaxThreads}}"></td>
+		</tr>
+		<tr>
+			<td>Default style</td>
+			<td><select name="defaultstyle">
+			{{- range $_, $style := $.boardConfig.Styles -}}
+				<option value="{{$style.Filename}}" {{if eq $style.Filename $.board.DefaultStyle -}}
+					selected="selected"
+				{{- end}}>{{$style.Name}}</option>
+			{{- end -}}
+			</select></td>
+		</tr>
+		<tr>
+			<td>Locked board</td>
+			<td><input type="checkbox" name="locked" {{if $.board.Locked}}checked="checked"{{end}}/></td>
+		</tr>
+		<tr>
+			<td>Anonymous name {{infoHover "Name shown if the user does not provide a name"}}</td>
+			<td><input type="text" name="anonname" value="{{$.board.AnonymousName}}"/></td>
+		</tr>
+		<tr>
+			<td>Force anonymous</td>
+			<td><input type="checkbox" name="forcedanonymous" {{- if $.board.ForceAnonymous}}checked="checked"{{end}}/></td>
+		</tr>
+		<tr>
+			<td>Autosage after # replies {{infoHover "If greater than -1, threads will not be bumped after they receive this many replies"}}</td>
+			<td><input type="number" min="-1" name="autosageafter" value="{{$.board.AutosageAfter}}"></td>
+		</tr>
+		<tr>
+			<td>Don't allow uploads after # replies {{infoHover "If greater than -1, thread replies with uploads will be rejected after the thread passes this number"}}</td>
+			<td><input type="number" min="-1" name="nouploadsafter" value="{{$.board.NoImagesAfter}}"></td>
+		</tr>
+		<tr>
+			<td>Max message length (in characters)</td>
+			<td><input type="number" min="0" name="maxmessagelength" value="{{$.board.MaxMessageLength}}"></td>
+		</tr>
+		<tr>
+			<td>Min message length (in characters)</td>
+			<td><input type="number" min="0" name="minmessagelength" value="{{$.board.MinMessageLength}}"></td>
+		</tr>
+		<tr>
+			<td>Allow embeds</td>
+			<td><input type="checkbox" name="embedsallowed" {{if $.board.AllowEmbeds}}checked="checked"{{end}}/></td>
+		</tr>
+		<tr>
+			<td>Redirect to thread by default</td>
+			<td><input type="checkbox" name="redirecttothread" {{if $.board.RedirectToThread}}checked="checked"{{end}}/></td>
+		</tr>
+		<tr>
+			<td>Require file in OP</td>
+			<td><input type="checkbox" name="requirefile" {{if $.board.RequireFile}}checked="checked"{{end}}/></td>
+		</tr>
+		<tr>
+			<td>Create catalog</td>
+			<td><input type="checkbox" name="enablecatalog" {{if $.board.EnableCatalog}}checked="checked"{{end}}/></td>
+		</tr>
+	</table>
+	{{- if $.editing -}}
+		<input type="submit" name="domodify" value="Save changes" onclick="return confirm('Click ok to confirm')"/>
+		<input type="submit" name="dodelete" value="Delete board" onclick="return confirm('Are you sure you want to delete this board? This action cannot be undone!')"/>
+		<input type="submit" name="docancel" value="Cancel" onclick="window.location = './'; return false"/>
+	{{- else -}}
+		<input type="submit" name="docreate" value="Create new board" onclick="return confirm('Click ok to confirm')"/>
+	{{- end -}}
 </form>

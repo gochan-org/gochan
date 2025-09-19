@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +32,35 @@ var (
 		Callback:    dashboardCallback,
 	}
 )
+
+const (
+	boardRequestTypeViewBoards boardRequestType = iota
+	boardRequestTypeViewSingleBoard
+	boardRequestTypeCancel
+	boardRequestTypeCreate
+	boardRequestTypeModify
+	boardRequestTypeDelete
+)
+
+type boardRequestType int
+
+func (brt boardRequestType) String() string {
+	switch brt {
+	case boardRequestTypeViewBoards:
+		return "viewBoards"
+	case boardRequestTypeViewSingleBoard:
+		return "viewSingleBoard"
+	case boardRequestTypeCancel:
+		return "cancel"
+	case boardRequestTypeCreate:
+		return "create"
+	case boardRequestTypeModify:
+		return "modify"
+	case boardRequestTypeDelete:
+		return "delete"
+	}
+	return "unknown"
+}
 
 func createSession(key, username, password string, request *http.Request, writer http.ResponseWriter) error {
 	domain := request.Host
@@ -180,34 +208,22 @@ func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staf
 	return dashBuffer.String(), nil
 }
 
-// bordsRequestType takes the request and returns "cancel", "create", "delete",
-// "edit", or "modify" and the board's ID according to the request
-func boardsRequestType(request *http.Request) (string, int, error) {
-	var requestType string
-	var boardID int
-	var err error
-	if request.FormValue("docancel") != "" {
-		requestType = "cancel"
-	} else if request.FormValue("docreate") != "" {
-		requestType = "create"
+func boardsRequestType(request *http.Request) boardRequestType {
+	if request.PostFormValue("docreate") != "" {
+		return boardRequestTypeCreate
 	} else if request.FormValue("dodelete") != "" {
-		requestType = "delete"
-	} else if request.FormValue("doedit") != "" {
-		requestType = "edit"
-	} else if request.FormValue("domodify") != "" {
-		requestType = "modify"
+		return boardRequestTypeDelete
+	} else if request.PostFormValue("domodify") != "" {
+		return boardRequestTypeModify
 	}
-	boardIDstr := request.FormValue("board")
-	if boardIDstr != "" {
-		boardID, err = strconv.Atoi(boardIDstr)
+	if request.URL.Path != config.WebPath("/manage/boards") {
+		return boardRequestTypeViewSingleBoard
 	}
-	return requestType, boardID, err
+	return boardRequestTypeViewBoards
 }
 
 func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
-	query := `SELECT
-	id, username, global_rank, added_on, last_login, is_active
-	FROM DBPREFIXstaff`
+	query := `SELECT id, username, global_rank, added_on, last_login, is_active FROM DBPREFIXstaff`
 	if activeOnly {
 		query += " WHERE is_active"
 	}
@@ -235,80 +251,86 @@ func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
 	return staff, nil
 }
 
-// getBoardDataFromForm parses the relevant form fields into the board and returns any errors for invalid string to int
-// or missing required fields. It should only be used for editing and creating boards
-func getBoardDataFromForm(board *gcsql.Board, request *http.Request) error {
-	requestType, _, _ := boardsRequestType(request)
+type createOrModifyBoardForm struct {
+	Dir              string `form:"dir,notempty" method:"POST"`
+	Title            string `form:"title,required,notempty" method:"POST"`
+	Subtitle         string `form:"subtitle,required" method:"POST"`
+	Description      string `form:"description,required" method:"POST"`
+	Section          int    `form:"section,required" method:"POST"`
+	NavBarPosition   int    `form:"navbarposition,required" method:"POST"`
+	MaxFileSize      int    `form:"maxfilesize,required" method:"POST"`
+	MaxThreads       int    `form:"maxthreads,required" method:"POST"`
+	DefaultStyle     string `form:"defaultstyle,required,notempty" method:"POST"`
+	Locked           bool   `form:"locked" method:"POST"`
+	AnonName         string `form:"anonname" method:"POST"`
+	AutosageAfter    int    `form:"autosageafter,required" method:"POST"`
+	NoUploadsAfter   int    `form:"nouploadsafter,required" method:"POST"`
+	MaxMessageLength int    `form:"maxmessagelength,required" method:"POST"`
+	MinMessageLength int    `form:"minmessagelength,required" method:"POST"`
+	EmbedsAllowed    bool   `form:"embedsallowed" method:"POST"`
+	RedirectToThread bool   `form:"redirecttothread" method:"POST"`
+	RequireFile      bool   `form:"requirefile" method:"POST"`
+	EnableCatalog    bool   `form:"enablecatalog" method:"POST"`
 
-	staff, err := getCurrentStaff(request)
-	if err != nil {
-		return err
-	}
+	// create or modify submit button
+	DoCreate string `form:"docreate" method:"POST"`
+	DoModify string `form:"domodify" method:"POST"`
+	DoDelete string `form:"dodelete" method:"POST"`
+	DoCancel string `form:"docancel" method:"POST"`
+}
 
-	if len(request.Form["domodify"]) > 0 || len(request.Form["doedit"]) > 0 || len(request.Form["dodelete"]) > 0 {
-		if board.ID, err = getIntField("board", staff, request, 1); err != nil {
-			return err
+func (brf *createOrModifyBoardForm) validate(warnEv *zerolog.Event) (err error) {
+	defer func() {
+		if err != nil {
+			warnEv.Err(err).Caller(1).Send()
 		}
+	}()
+	if strings.Contains(brf.Dir, "/") || strings.Contains(brf.Dir, "\\") {
+		warnEv.Str("dir", brf.Dir)
+		return server.NewServerError("board directory field must not contain slashes", http.StatusBadRequest)
 	}
-	if board.SectionID, err = getIntField("section", staff, request, 1); err != nil {
-		return err
+	if brf.MaxMessageLength < brf.MinMessageLength {
+		warnEv.Int("maxMessageLength", brf.MaxMessageLength).Int("minMessageLength", brf.MinMessageLength)
+		return server.NewServerError("maximum message length must be greater than minimum message length", http.StatusBadRequest)
 	}
-	if requestType == "create" {
-		if board.Dir, err = getStringField("dir", staff, request, 1); err != nil {
-			return err
-		}
-	}
-	if board.NavbarPosition, err = getIntField("navbarposition", staff, request, 1); err != nil {
-		return err
-	}
-	if board.Title, err = getStringField("title", staff, request, 1); err != nil {
-		return err
-	}
-	if board.Subtitle, err = getStringField("subtitle", staff, request, 1); err != nil {
-		return err
-	}
-	if board.Description, err = getStringField("description", staff, request, 1); err != nil {
-		return err
-	}
-	if board.MaxFilesize, err = getIntField("maxfilesize", staff, request, 1); err != nil {
-		return err
-	}
-	if board.MaxThreads, err = getIntField("maxthreads", staff, request, 1); err != nil {
-		return err
-	}
-	if board.DefaultStyle, err = getStringField("defaultstyle", staff, request, 1); err != nil {
-		return err
-	}
-	board.Locked = request.FormValue("locked") == "on"
-	if board.AnonymousName, err = getStringField("anonname", staff, request, 1); err != nil {
-		return err
-	}
-	if board.AnonymousName == "" {
-		board.AnonymousName = "Anonymous"
-	}
-	board.ForceAnonymous = request.FormValue("forcedanonymous") == "on"
-	if board.AutosageAfter, err = getIntField("autosageafter", staff, request, 1); err != nil {
-		return err
-	}
-	if board.AutosageAfter < 1 {
-		board.AutosageAfter = 200
-	}
-	if board.NoImagesAfter, err = getIntField("nouploadsafter", staff, request, 1); err != nil {
-		return err
-	}
-	if board.MaxMessageLength, err = getIntField("maxmessagelength", staff, request, 1); err != nil {
-		return err
-	}
-	if board.MaxMessageLength < 1 {
-		board.MaxMessageLength = 1024
-	}
-	if board.MinMessageLength, err = getIntField("minmessagelength", staff, request, 1); err != nil {
-		return err
-	}
-	board.AllowEmbeds = request.FormValue("allowembeds") == "on"
-	board.RedirectToThread = request.FormValue("redirecttothread") == "on"
-	board.RequireFile = request.FormValue("requirefile") == "on"
-	board.EnableCatalog = request.FormValue("enablecatalog") == "on"
 
 	return nil
+}
+
+func (brf *createOrModifyBoardForm) requestType() boardRequestType {
+	if brf.DoCreate != "" {
+		return boardRequestTypeCreate
+	}
+	if brf.DoModify != "" {
+		return boardRequestTypeModify
+	}
+	if brf.DoDelete != "" {
+		return boardRequestTypeDelete
+	}
+	if brf.DoCancel != "" {
+		return boardRequestTypeCancel
+	}
+	return boardRequestTypeViewBoards
+}
+
+func (brf *createOrModifyBoardForm) fillBoard(board *gcsql.Board) {
+	board.Dir = brf.Dir
+	board.Title = brf.Title
+	board.Subtitle = brf.Subtitle
+	board.Description = brf.Description
+	board.SectionID = brf.Section
+	board.NavbarPosition = brf.NavBarPosition
+	board.MaxFilesize = brf.MaxFileSize
+	board.MaxThreads = brf.MaxThreads
+	board.DefaultStyle = brf.DefaultStyle
+	board.Locked = brf.Locked
+	board.AnonymousName = brf.AnonName
+	board.AutosageAfter = brf.AutosageAfter
+	board.NoImagesAfter = brf.NoUploadsAfter
+	board.MaxMessageLength = brf.MaxMessageLength
+	board.MinMessageLength = brf.MinMessageLength
+	board.AllowEmbeds = brf.EmbedsAllowed
+	board.RedirectToThread = brf.RedirectToThread
+	board.RequireFile = brf.RequireFile
+	board.EnableCatalog = brf.EnableCatalog
 }

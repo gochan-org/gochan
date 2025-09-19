@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Eggbertx/go-forms"
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -19,6 +20,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
+	"github.com/uptrace/bunrouter"
 )
 
 var (
@@ -38,6 +40,7 @@ type uploadInfo struct {
 
 // manage actions that require admin-level permission go here
 
+// updateAnnouncementsCallback handles requests to /manage/updateannouncements for creating, editing, and deleting staff announcements
 func updateAnnouncementsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (any, error) {
 	announcements, err := getAllAnnouncements()
 	if err != nil {
@@ -125,111 +128,163 @@ func updateAnnouncementsCallback(_ http.ResponseWriter, request *http.Request, s
 	return pageBuffer.String(), err
 }
 
+// boardsCallback handles calls to /manage/boards, showing boards by section and a form to create a new board
 func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
-	board := &gcsql.Board{
-		MaxFilesize:      1000 * 1000 * 15,
-		AnonymousName:    "Anonymous",
-		EnableCatalog:    true,
-		MaxMessageLength: 1500,
-		AutosageAfter:    200,
-		NoImagesAfter:    0,
-	}
-	requestType, _, _ := boardsRequestType(request)
-	switch requestType {
-	case "create":
-		// create button clicked, create the board with the request fields
-		if err = getBoardDataFromForm(board, request); err != nil {
+	warnEv := gcutil.LogWarning().
+		Str("IP", gcutil.GetRealIP(request)).
+		Str("method", request.Method).
+		Str("path", request.URL.Path).
+		Str("staff", staff.Username).
+		Str("userAgent", request.UserAgent())
+	defer warnEv.Discard()
+	requestType := boardsRequestType(request)
+
+	gcutil.LogStr("requestType", requestType.String(), infoEv, warnEv, errEv)
+
+	if requestType == boardRequestTypeCreate {
+		var board gcsql.Board
+		var form createOrModifyBoardForm
+		if err = forms.FillStructFromForm(request, &form); err != nil {
+			warnEv.Err(err).Caller().Msg("Error parsing board form")
+			return nil, server.NewServerError(err, http.StatusBadRequest)
+		}
+		if err = form.validate(warnEv); err != nil {
+			return nil, err
+		}
+		form.fillBoard(&board)
+		if err = gcsql.CreateBoard(&board, true); err != nil {
 			errEv.Err(err).Caller().Send()
 			return "", err
 		}
-		if err = gcsql.CreateBoard(board, true); err != nil {
-			errEv.Err(err).Caller().Send()
-			return "", err
-		}
-		infoEv.
-			Str("createBoard", board.Dir).
-			Int("boardID", board.ID).
-			Msg("New board created")
-	case "delete":
-		// delete button clicked, delete the board
-		boardID, err := getIntField("board", staff.Username, request, 0)
-		if err != nil {
-			return "", err
-		}
-		// use a temporary variable so that the form values aren't filled
-		var deleteBoard *gcsql.Board
-		if deleteBoard, err = gcsql.GetBoardFromID(boardID); err != nil {
-			errEv.Err(err).Int("deleteBoardID", boardID).Caller().Send()
-			return "", err
-		}
-		if err = deleteBoard.Delete(); err != nil {
-			errEv.Err(err).Str("deleteBoard", deleteBoard.Dir).Caller().Send()
-			return "", err
-		}
-		infoEv.
-			Str("deleteBoard", deleteBoard.Dir).Send()
-		if err = os.RemoveAll(deleteBoard.AbsolutePath()); err != nil {
-			errEv.Err(err).Caller().Send()
-			return "", err
-		}
-	case "edit":
-		// edit button clicked, fill the input fields with board data to be edited
-		boardID, err := getIntField("board", staff.Username, request, 0)
-		if err != nil {
-			return "", err
-		}
-		if board, err = gcsql.GetBoardFromID(boardID); err != nil {
-			errEv.Err(err).Caller().
-				Int("boardID", boardID).
-				Msg("Unable to get board info")
-			return "", err
-		}
-	case "modify":
-		// save changes button clicked, apply changes to the board based on the request fields
-		if err = getBoardDataFromForm(board, request); err != nil {
-			return "", err
-		}
-		if err = board.ModifyInDB(); err != nil {
-			return "", fmt.Errorf("unable to apply changes: %w", err)
-		}
-	case "cancel":
-		// cancel button was clicked
-		fallthrough
-	case "":
-		fallthrough
-	default:
-		// board.SetDefaults("", "", "")
 	}
 
-	if requestType == "create" || requestType == "modify" || requestType == "delete" {
-		if err = gcsql.ResetBoardSectionArrays(); err != nil {
-			errEv.Err(err).Caller().Send()
-			return "", fmt.Errorf("unable to reset board list: %w", err)
-		}
-		if err = building.BuildBoardListJSON(); err != nil {
-			return "", err
-		}
-		if err = building.BuildBoards(false); err != nil {
-			return "", err
-		}
+	sections, err := gcsql.GetAllSections(false)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", server.NewServerError("unable to get board sections", http.StatusInternalServerError)
 	}
-	pageBuffer := bytes.NewBufferString("")
+	boards, err := gcsql.GetAllBoards(false)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", server.NewServerError("unable to get board list", http.StatusInternalServerError)
+	}
+
+	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
 		map[string]any{
-			"siteConfig":  config.GetSiteConfig(),
-			"sections":    gcsql.AllSections,
-			"boards":      gcsql.AllBoards,
+			"siteConfig": config.GetSiteConfig(),
+			"sections":   sections,
+			"boards":     boards,
+			"board": gcsql.Board{
+				AnonymousName:    "Anonymous",
+				MaxFilesize:      1000 * 1000 * 15,
+				EnableCatalog:    true,
+				AutosageAfter:    200,
+				NoImagesAfter:    -1,
+				MaxMessageLength: 1500,
+			},
 			"boardConfig": config.GetBoardConfig(""),
-			"editing":     requestType == "edit",
-			"board":       board,
-		}, pageBuffer, "text/html"); err != nil {
+			"editing":     false,
+		}, &buf, "text/html"); err != nil {
 		errEv.Err(err).Str("template", "manage_boards.html").Caller().Send()
 		return "", err
 	}
 
-	return pageBuffer.String(), nil
+	return buf.String(), nil
 }
 
+// modifyBoardCallback handles requests to /manage/boards/<boardDir> for modifying or deleting a board
+func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
+	boardDir := params.ByName("board")
+	warnEv := gcutil.LogWarning().
+		Str("IP", gcutil.GetRealIP(request)).
+		Str("method", request.Method).
+		Str("path", request.URL.Path).
+		Str("staff", staff.Username).
+		Str("userAgent", request.UserAgent())
+	defer warnEv.Discard()
+
+	var form createOrModifyBoardForm
+	if err = forms.FillStructFromForm(request, &form); err != nil {
+		warnEv.Err(err).Caller().Send()
+		return nil, server.NewServerError(err, http.StatusBadRequest)
+	}
+	var requestType boardRequestType
+	if request.Method == http.MethodGet {
+		requestType = boardRequestTypeViewSingleBoard
+	} else {
+		requestType = form.requestType()
+	}
+	gcutil.LogStr("requestType", requestType.String(), infoEv, warnEv, errEv)
+	if requestType == boardRequestTypeCancel {
+		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
+		return
+	}
+	if err = form.validate(warnEv); err != nil {
+		return nil, err
+	}
+	var board *gcsql.Board
+	switch requestType {
+	case boardRequestTypeViewSingleBoard:
+		if board, err = gcsql.GetBoardFromDir(boardDir); err != nil {
+			errEv.Err(err).Str("boardDir", boardDir).Caller().Send()
+			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
+		}
+	case boardRequestTypeModify:
+		if board, err = gcsql.GetBoardFromDir(boardDir); err != nil {
+			errEv.Err(err).Str("boardDir", boardDir).Caller().Send()
+			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
+		}
+		form.fillBoard(board)
+		if err = board.ModifyInDB(); err != nil {
+			errEv.Err(err).Str("boardDir", boardDir).Caller().Send()
+			return "", server.NewServerError("unable to apply changes", http.StatusInternalServerError)
+		}
+		infoEv.Msg("Modified board")
+		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
+	case boardRequestTypeDelete:
+		board, err = gcsql.GetBoardFromDir(boardDir)
+		if err != nil {
+			errEv.Err(err).Str("boardDir", boardDir).Caller().Send()
+			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
+		}
+		if err = board.Delete(); err != nil {
+			errEv.Err(err).Str("boardDir", boardDir).Caller().Send()
+			return "", server.NewServerError("unable to delete board", http.StatusInternalServerError)
+		}
+		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
+	}
+
+	sections, err := gcsql.GetAllSections(false)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", server.NewServerError("unable to get board sections", http.StatusInternalServerError)
+	}
+	boards, err := gcsql.GetAllBoards(false)
+	if err != nil {
+		errEv.Err(err).Caller().Send()
+		return "", server.NewServerError("unable to get board list", http.StatusInternalServerError)
+	}
+
+	var buf bytes.Buffer
+	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
+		map[string]any{
+			"siteConfig":  config.GetSiteConfig(),
+			"sections":    sections,
+			"boards":      boards,
+			"board":       board,
+			"boardConfig": config.GetBoardConfig(""),
+			"editing":     requestType == boardRequestTypeViewSingleBoard || requestType == boardRequestTypeModify,
+		}, &buf, "text/html"); err != nil {
+		errEv.Err(err).Str("template", "manage_boards.html").Caller().Send()
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+// boardSectionsCallback handles requests to /manage/boardsections for creating, editing, and deleting board sections
 func boardSectionsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	section := &gcsql.Section{}
 	editID := request.Form.Get("edit")
@@ -326,6 +381,7 @@ func boardSectionsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsq
 	return
 }
 
+// cleanupCallback handles requests to /manage/cleanup for performing database cleanup tasks
 func cleanupCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	outputStr := ""
 	if request.FormValue("run") == "Run Cleanup" {
@@ -355,6 +411,8 @@ func cleanupCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staf
 	return outputStr, nil
 }
 
+// fixThumbnailsCallback handles requests to /manage/fixthumbnails for regenerating missing or broken thumbnails
+// TODO: potentially merge this with rebuild callbacks
 func fixThumbnailsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _, errEv *zerolog.Event) (output any, err error) {
 	board := request.FormValue("board")
 	var uploads []uploadInfo
@@ -391,6 +449,7 @@ func fixThumbnailsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsq
 	return buffer.String(), nil
 }
 
+// templatesCallback handles requests to /manage/templates for overriding templates to be applied immediately without needing to restart gochan
 func templatesCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
 	buf := bytes.NewBufferString("")
 
@@ -516,6 +575,8 @@ func templatesCallback(writer http.ResponseWriter, request *http.Request, _ *gcs
 	return buf.String(), nil
 }
 
+// rebuildFrontCallback handles requests to /manage/rebuildfront for rebuilding the front page
+// TODO: merge all rebuild callbacks into one
 func rebuildFrontCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
 	if err = gctemplates.InitTemplates(); err != nil {
 		return "", err
@@ -529,6 +590,8 @@ func rebuildFrontCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff
 	return "Built front page successfully", err
 }
 
+// rebuildAllCallback handles requests to /manage/rebuildall for rebuilding the front page, board list, and all boards
+// TODO: merge all rebuild callbacks into one
 func rebuildAllCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	gctemplates.InitTemplates()
 	if err = gcsql.ResetBoardSectionArrays(); err != nil {
@@ -584,6 +647,8 @@ func rebuildAllCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, 
 	return buildStr, nil
 }
 
+// rebuildBoardsCallback handles requests to /manage/rebuildboards for rebuilding the board pages
+// TODO: merge all rebuild callbacks into one
 func rebuildBoardsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	if err = gctemplates.InitTemplates(); err != nil {
 		errEv.Err(err).Caller().Msg("Unable to initialize templates")
@@ -603,6 +668,8 @@ func rebuildBoardsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staf
 	return "Boards built successfully", nil
 }
 
+// reparseHTMLCallback handles requests to /manage/reparsehtml for reparsing all post text into HTML
+// TODO: merge this and rebuild callbacks into one
 func reparseHTMLCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
 	var outputStr string
 	_, warnEv, _ := gcutil.LogRequest(request)
@@ -666,6 +733,7 @@ func reparseHTMLCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	return outputStr, nil
 }
 
+// viewLogCallback handles requests to /manage/viewlog for viewing the gochan log file
 func viewLogCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event,
 	errEv *zerolog.Event) (output any, err error) {
 	logPath := path.Join(config.GetSystemCriticalConfig().LogDir, "gochan.log")
@@ -683,7 +751,21 @@ func viewLogCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ b
 
 func registerAdminPages() {
 	RegisterManagePage("updateannouncements", "Update staff announcements", AdminPerms, NoJSON, updateAnnouncementsCallback)
+
 	RegisterManagePage("boards", "Boards", AdminPerms, NoJSON, boardsCallback)
+	boardModifyAction := Action{
+		ID:          "boards/:board",
+		Title:       "Modify Board",
+		Hidden:      true,
+		Permissions: AdminPerms,
+		JSONoutput:  NoJSON,
+		Callback:    modifyBoardCallback,
+	}
+	actions = append(actions, boardModifyAction)
+	boardModifyFunc := setupManageFunction(&boardModifyAction)
+	server.GetRouter().GET(config.WebPath("/manage/boards/:board"), boardModifyFunc)
+	server.GetRouter().POST(config.WebPath("/manage/boards/:board"), boardModifyFunc)
+
 	RegisterManagePage("boardsections", "Board sections", AdminPerms, OptionalJSON, boardSectionsCallback)
 	RegisterManagePage("cleanup", "Cleanup", AdminPerms, NoJSON, cleanupCallback)
 	RegisterManagePage("fixthumbnails", "Regenerate thumbnails", AdminPerms, NoJSON, fixThumbnailsCallback)

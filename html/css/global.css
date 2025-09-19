@@ -486,6 +486,12 @@ form#login-box input[type=submit] {
   margin-right: auto;
 }
 
+.section-fieldsets {
+  margin-bottom: 1em;
+  display: flex;
+  flex-wrap: wrap;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;

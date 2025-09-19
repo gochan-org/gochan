@@ -765,12 +765,12 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 
 func registerModeratorPages() {
 	RegisterManagePage("bans", "Bans", ModPerms, NoJSON, bansCallback)
-	RegisterManagePage("appeals", "Ban appeals", ModPerms, OptionalJSON, appealsCallback)
-	RegisterManagePage("filters", "Post filters", ModPerms, NoJSON, filtersCallback)
+	RegisterManagePage("appeals", "Ban Appeals", ModPerms, OptionalJSON, appealsCallback)
 
+	RegisterManagePage("filters", "Post Filters", ModPerms, NoJSON, filtersCallback)
 	hitsAction := Action{
 		ID:          "filters/hits",
-		Title:       "Filter hits",
+		Title:       "Filter Hits",
 		Hidden:      true,
 		Permissions: ModPerms,
 		JSONoutput:  NoJSON,
@@ -783,7 +783,7 @@ func registerModeratorPages() {
 	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)
 	RegisterManagePage("reports", "Reports", ModPerms, OptionalJSON, reportsCallback)
 	RegisterManagePage("threadattrs", "View/Update Thread Attributes", ModPerms, OptionalJSON, threadAttrsCallback)
-	RegisterManagePage("postinfo", "Post info", ModPerms, AlwaysJSON, postInfoCallback)
-	RegisterManagePage("fingerprint", "Get image/thumbnail fingerprint", ModPerms, AlwaysJSON, fingerprintCallback)
+	RegisterManagePage("postinfo", "Post Info", ModPerms, AlwaysJSON, postInfoCallback)
+	RegisterManagePage("fingerprint", "Get Image/Thumbnail Fingerprint", ModPerms, AlwaysJSON, fingerprintCallback)
 	RegisterManagePage("wordfilters", "Wordfilters", ModPerms, NoJSON, wordfiltersCallback)
 }
