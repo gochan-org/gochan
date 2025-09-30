@@ -751,21 +751,8 @@ func viewLogCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ b
 
 func registerAdminPages() {
 	RegisterManagePage("updateannouncements", "Update staff announcements", AdminPerms, NoJSON, updateAnnouncementsCallback)
-
 	RegisterManagePage("boards", "Boards", AdminPerms, NoJSON, boardsCallback)
-	boardModifyAction := Action{
-		ID:          "boards/:board",
-		Title:       "Modify Board",
-		Hidden:      true,
-		Permissions: AdminPerms,
-		JSONoutput:  NoJSON,
-		Callback:    modifyBoardCallback,
-	}
-	actions = append(actions, boardModifyAction)
-	boardModifyFunc := setupManageFunction(&boardModifyAction)
-	server.GetRouter().GET(config.WebPath("/manage/boards/:board"), boardModifyFunc)
-	server.GetRouter().POST(config.WebPath("/manage/boards/:board"), boardModifyFunc)
-
+	RegisterManagePageWithMethods("boards/:board", "Modify Board", AdminPerms, NoJSON, true, modifyBoardCallback, http.MethodGet, http.MethodPost)
 	RegisterManagePage("boardsections", "Board sections", AdminPerms, OptionalJSON, boardSectionsCallback)
 	RegisterManagePage("cleanup", "Cleanup", AdminPerms, NoJSON, cleanupCallback)
 	RegisterManagePage("fixthumbnails", "Regenerate thumbnails", AdminPerms, NoJSON, fixThumbnailsCallback)

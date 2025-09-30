@@ -64,20 +64,50 @@ type Action struct {
 
 var actions []Action
 
+// RegisterManagePage registers a new manage page at /manage/<id> with the given title, accessible by staff
+// who have at least the given permissions level. The page can return JSON if jsonOutput is OptionalJSON or AlwaysJSON.
+// The callback function is called when the page is accessed via both GET and POST.
 func RegisterManagePage(id string, title string, permissions int, jsonOutput int, callback CallbackFunction) {
+	RegisterManagePageWithMethods(id, title, permissions, jsonOutput, false, callback)
+}
+
+// RegisterStaffAction registers a new staff action and its associated HTTP handler(s). The callback is called when
+// the page is accessed at /manage/<action.ID>. If no methods are specified, it defaults to GET and POST.
+func RegisterStaffAction(action Action, methods ...string) {
+	actions = append(actions, action)
+	handlerFunc := setupManageFunction(&action)
+	server.GetRouter().WithGroup(config.WebPath("/manage"), func(g *bunrouter.Group) {
+		groupPath := bunrouter.CleanPath(path.Join("/", action.ID))
+		if len(methods) == 0 {
+			methods = []string{http.MethodGet, http.MethodPost}
+		}
+		for _, method := range methods {
+			switch method {
+			case http.MethodGet:
+				g.GET(groupPath, handlerFunc)
+			case http.MethodPost:
+				g.POST(groupPath, handlerFunc)
+			case http.MethodDelete:
+				g.DELETE(groupPath, handlerFunc)
+			case http.MethodPut:
+				g.PUT(groupPath, handlerFunc)
+			}
+		}
+	})
+}
+
+// RegisterManagePageWithMethods is like RegisterManagePage but allows specifying which HTTP methods to register the page with, and whether
+// the page should be hidden from the staff menu (for example, if it is a sub-page of another page). If no methods are specified, it defaults to GET and POST.
+func RegisterManagePageWithMethods(id string, title string, permissions int, jsonOutput int, hidden bool, callback CallbackFunction, methods ...string) {
 	action := Action{
 		ID:          id,
 		Title:       title,
 		Permissions: permissions,
+		Hidden:      hidden,
 		JSONoutput:  jsonOutput,
 		Callback:    callback,
 	}
-	actions = append(actions, action)
-	server.GetRouter().WithGroup(config.WebPath("/manage"), func(g *bunrouter.Group) {
-		groupPath := bunrouter.CleanPath(path.Join("/", id))
-		g.GET(groupPath, setupManageFunction(&action))
-		g.POST(groupPath, setupManageFunction(&action))
-	})
+	RegisterStaffAction(action, methods...)
 }
 
 func getAvailableActions(rank int, noJSON bool) []Action {

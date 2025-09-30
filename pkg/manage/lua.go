@@ -2,6 +2,7 @@ package manage
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/rs/zerolog"
+	"github.com/uptrace/bunrouter"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 )
@@ -66,8 +68,6 @@ func luaBanIP(l *lua.LState) int {
 
 	if l.GetTop() > 4 {
 		t := l.CheckTable(5)
-		luautil.GetTableValueAliased(t)
-
 		val, key := luautil.GetTableValueAliased(t, "board", "BoardID", "board_id")
 		valType := val.Type()
 		switch valType {
@@ -130,6 +130,31 @@ func luaBanIP(l *lua.LState) int {
 	return 1
 }
 
+func luaHandlerOutputToGo(l *lua.LState) (any, error) {
+	outV := l.Get(-2)
+	errV := l.Get(-1)
+	err := luautil.LValueToError(errV)
+	if err != nil {
+		return nil, err
+	}
+	switch outV.Type() {
+	case lua.LTNil:
+		return nil, nil
+	case lua.LTString:
+		return lua.LVAsString(outV), nil
+	case lua.LTUserData:
+		return outV.(*lua.LUserData).Value, nil
+	case lua.LTTable:
+		tableMap := make(map[string]any)
+		outV.(*lua.LTable).ForEach(func(key lua.LValue, value lua.LValue) {
+			tableMap[lua.LVAsString(key)] = value
+		})
+		return tableMap, nil
+	default:
+		return nil, fmt.Errorf("invalid output return type from handler: %s", outV.Type().String())
+	}
+}
+
 func PreloadModule(l *lua.LState) int {
 	t := l.NewTable()
 	l.SetFuncs(t, map[string]lua.LGFunction{
@@ -148,15 +173,136 @@ func PreloadModule(l *lua.LState) int {
 				}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, infoEv), luar.New(l, errEv)); err != nil {
 					return "", err
 				}
-				out := lua.LVAsString(l.Get(-2))
-				errStr := lua.LVAsString(l.Get(-1))
-				if errStr != "" {
-					err = errors.New(errStr)
-				}
-				return out, err
+				return luaHandlerOutputToGo(l)
 			}
 			RegisterManagePage(actionID, actionTitle, actionPerms, actionJSON, actionHandler)
 			return 0
+		},
+		"register_staff_action": func(l *lua.LState) int {
+			actionTable := l.CheckTable(1)
+			var action Action
+			id, _ := luautil.GetTableValueAliased(actionTable, "id", "ID")
+			if id.Type() != lua.LTString || id.String() == "" {
+				l.ArgError(1, "missing or invalid id field")
+				return 0
+			}
+			action.ID = id.String()
+
+			title, _ := luautil.GetTableValueAliased(actionTable, "title", "Title")
+			if title.Type() != lua.LTString || title.String() == "" {
+				l.ArgError(1, "missing or invalid title field")
+				return 0
+			}
+			action.Title = title.String()
+
+			perms, _ := luautil.GetTableValueAliased(actionTable, "permissions", "perms", "Permissions", "Perms")
+			switch perms.Type() {
+			case lua.LTNumber:
+				action.Permissions = int(lua.LVAsNumber(perms))
+			case lua.LTNil:
+				action.Permissions = NoPerms
+			case lua.LTString:
+				switch perms.String() {
+				case "no_perms", "no_permission", "no_permissions", "none", "public":
+					action.Permissions = NoPerms
+				case "janitor_perms", "janitor_permission", "janitor_permissions", "janitor":
+					action.Permissions = JanitorPerms
+				case "mod_perms", "mod_permission", "mod_permissions", "mod", "moderator":
+					action.Permissions = ModPerms
+				case "admin_perms", "admin_permission", "admin_permissions", "admin", "administrator":
+					action.Permissions = AdminPerms
+				default:
+					l.ArgError(1, "invalid permissions field")
+					return 0
+				}
+			default:
+				l.ArgError(1, "invalid permissions field, expected number or string")
+				return 0
+			}
+			hidden, _ := luautil.GetTableValueAliased(actionTable, "hidden", "Hidden")
+			action.Hidden = lua.LVAsBool(hidden)
+
+			jsonOut, _ := luautil.GetTableValueAliased(actionTable, "json_output", "jsonOutput", "JSONoutput", "json", "JSON")
+			switch jsonOut.Type() {
+			case lua.LTNumber:
+				action.JSONoutput = int(lua.LVAsNumber(jsonOut))
+			case lua.LTBool:
+				if lua.LVAsBool(jsonOut) {
+					action.JSONoutput = AlwaysJSON
+				} else {
+					action.JSONoutput = NoJSON
+				}
+			case lua.LTNil:
+				action.JSONoutput = NoJSON
+			case lua.LTString:
+				switch jsonOut.String() {
+				case "no_json", "nojson", "html":
+					action.JSONoutput = NoJSON
+				case "optional_json", "optionaljson", "optional", "sometimes":
+					action.JSONoutput = OptionalJSON
+				case "always_json", "alwaysjson", "json", "JSON":
+					action.JSONoutput = AlwaysJSON
+				default:
+					l.ArgError(1, "invalid json_output field")
+					return 0
+				}
+			default:
+				l.ArgError(1, "invalid json_output field, expected number or string")
+				return 0
+			}
+
+			fn, _ := luautil.GetTableValueAliased(actionTable, "callback", "Callback", "handler", "Handler", "function", "Function", "run")
+			if fn.Type() != lua.LTFunction {
+				l.ArgError(1, "missing or invalid callback field")
+				return 0
+			}
+			action.Callback = func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+				if err = l.CallByParam(lua.P{
+					Fn:   fn,
+					NRet: 2,
+					// Protect: true,
+				}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, infoEv), luar.New(l, errEv)); err != nil {
+					return "", err
+				}
+				return luaHandlerOutputToGo(l)
+			}
+
+			methodsVal := l.Get(2)
+			var methods []string
+			switch methodsVal.Type() {
+			case lua.LTNil:
+				methods = []string{"GET", "POST"}
+			case lua.LTTable:
+				methodsVal.(*lua.LTable).ForEach(func(_ lua.LValue, value lua.LValue) {
+					if value.Type() != lua.LTString {
+						l.ArgError(1, "invalid methods field, expected table of strings")
+						return
+					}
+					methods = append(methods, value.String())
+				})
+			case lua.LTString:
+				methods = []string{methodsVal.String()}
+			default:
+				l.ArgError(1, "invalid methods field, expected table, string, or nil")
+				return 0
+			}
+			RegisterStaffAction(action, methods...)
+			return 0
+		},
+		"get_action_request_params": func(l *lua.LState) int {
+			reqV := l.CheckUserData(1)
+			if reqV.Type() != lua.LTUserData {
+				l.ArgError(1, "expected http.Request")
+				return 0
+			}
+			req, ok := reqV.Value.(*http.Request)
+			if !ok {
+				l.ArgError(1, "expected http.Request")
+				return 0
+			}
+			params := req.Context().Value(requestContextKey{}).(bunrouter.Params)
+			l.Push(luar.New(l, params))
+			return 1
 		},
 	})
 

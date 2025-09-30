@@ -766,20 +766,8 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 func registerModeratorPages() {
 	RegisterManagePage("bans", "Bans", ModPerms, NoJSON, bansCallback)
 	RegisterManagePage("appeals", "Ban Appeals", ModPerms, OptionalJSON, appealsCallback)
-
 	RegisterManagePage("filters", "Post Filters", ModPerms, NoJSON, filtersCallback)
-	hitsAction := Action{
-		ID:          "filters/hits",
-		Title:       "Filter Hits",
-		Hidden:      true,
-		Permissions: ModPerms,
-		JSONoutput:  NoJSON,
-		Callback:    filterHitsCallback,
-	}
-	actions = append(actions, hitsAction)
-	hitsFunc := setupManageFunction(&hitsAction)
-	server.GetRouter().GET(config.WebPath("/manage/filters/hits/:filterID"), hitsFunc)
-	server.GetRouter().POST(config.WebPath("/manage/filters/hits/:filterID"), hitsFunc)
+	RegisterManagePageWithMethods("filters/hits/:filterID", "Filter Hits", ModPerms, NoJSON, true, filterHitsCallback, http.MethodGet, http.MethodPost)
 	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)
 	RegisterManagePage("reports", "Reports", ModPerms, OptionalJSON, reportsCallback)
 	RegisterManagePage("threadattrs", "View/Update Thread Attributes", ModPerms, OptionalJSON, threadAttrsCallback)

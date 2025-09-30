@@ -66,7 +66,7 @@ close       | func() error | The function to close any network or file handles, 
 
 ## manage
 - **manage.ban_ip(ip string, duration string, reason string, staff string|int, options table)**
-  - Bans the given IP for the given duration and gets other optional ban data from the `options` table below
+	- Bans the given IP for the given duration and gets other optional ban data from the `options` table below
 
 Key           | Type             | Explanation
 --------------|------------------|--------------
@@ -80,11 +80,26 @@ staff_note    | string           | A private note attached to the ban that only 
 - **manage.register_manage_page(action string, title string, perms int, wants_json int, handler func(writer, request, staff, wants_json, info_ev, err_ev))**
 	- Registers the manage page accessible at /manage/`action` to be handled by `handler`. See [manage.RegisterManagePage](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/manage#RegisterManagePage) for info on how `handler` should be used, or [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
 
+- **manage.register_staff_action(action table, methods []string)**
+	- Registers a staff action accessible at /manage/`action["id"]` to be handled by `action["callback"]`. See the table below for field information, and [register_staff_action.lua](./examples/plugins/register_staff_action.lua) for an example. The `methods` table is a list of HTTP methods (e.g., {"GET", "POST"}) that the action will respond to. The action ID can have parameters in it, e.g., `delete_post/:post_id`, and these can be retrieved in the callback function by using `manage.get_action_request_params(request)`.
+
+Key        | Type               | Required                      |Explanation
+-----------|--------------------|-------------------------------|--------------
+id         | string             | yes                           | The action ID, used in the URL path
+title      | string             | yes                           | The action title, used in the page title and header
+perms      | string             | no (defaults to NoPerms)      | The required permission level to access the action
+hidden     | bool               | no                            | If true, the action will not be shown in the manage dashboard or dropdown (useful for subpages)
+json       | string             | no (defaults to NoJSON)       | If "no_json", the action will always return HTML. If "optional_json", the action may return JSON or HTML depending on the request. If "always_json", the action will always return JSON.
+callback   | [CallbackFunction](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/manage#CallbackFunction) | yes                           | The function to call when the action is accessed. If the request is not JSON, the first return value should be a string with the HTML content of the manage page.
+
+
+- **manage.get_action_request_params(request \*http.Request)**
+	- Returns a [bunrouter.Params](https://pkg.go.dev/github.com/uptrace/bunrouter#Params) object containing any parameters in the request URL path. See [register_staff_action.lua](./examples/plugins/register_staff_action.lua) for an example of how to use this function.
+
 ## server
 - **server.register_ext_headers(ext string, headers table) error**
 	- Registers the file extension headers, allowing it to be recognized when serving static files. Each key in the table corresponds to the header name, and the values should be strings. The table can have custom/non-standard headers, but a Content-Type header is required.
 	**Note**: If you have it set up so that Gochan is not serving static files (i.e., they are being handled by a reverse proxy or another server), you should not need to call this function.
-
 
 ## serverutil
 - **serverutil.minify_template(template, data_table, writer, media_type)**
@@ -100,15 +115,19 @@ staff_note    | string           | A private note attached to the ban that only 
 
 ## url
 - **url.join_path(base string, ext...string)**
-  - Returns a string representing a URL-compatible path, with `ext` joined to `base`
+	- Returns a string representing a URL-compatible path, with `ext` joined to `base`
+
 - **path_escape(path string)**
-  - Returns a string with any special characters escaped to be compatible with URL paths
+	- Returns a string with any special characters escaped to be compatible with URL paths
+
 - **path_unescape(escaped string)**
-  - Attempts to unescape the given string, and returns the result and any errors (or nil if it was successful)
+	- Attempts to unescape the given string, and returns the result and any errors (or nil if it was successful)
+
 - **query_escape(query string)**
-  - Escapes the given string so that it can be used in a URL query
+	- Escapes the given string so that it can be used in a URL query
+
 - **query_unescape(escaped string)**
-  - Attempts to unescape the given query-escaped string, and returns the result and any errors (or nil if it was successful)
+	- Attempts to unescape the given query-escaped string, and returns the result and any errors (or nil if it was successful)
 
 
 # Events

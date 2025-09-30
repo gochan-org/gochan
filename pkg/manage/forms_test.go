@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Eggbertx/go-forms"
+	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/stretchr/testify/assert"
 )
@@ -179,6 +180,29 @@ func TestBoardsRequestType(t *testing.T) {
 					t.FailNow()
 				}
 				assert.Equal(t, result, form.requestType())
+				var board gcsql.Board
+				form.fillBoard(&board)
+				assert.Equal(t, form.Dir, board.Dir)
+				assert.Equal(t, form.Title, board.Title)
+				assert.Equal(t, form.Subtitle, board.Subtitle)
+				assert.Equal(t, form.Description, board.Description)
+				assert.Equal(t, form.Section, board.SectionID)
+				assert.Equal(t, form.NavBarPosition, board.NavbarPosition)
+				assert.Equal(t, form.MaxFileSize, board.MaxFilesize)
+				assert.Equal(t, form.MaxThreads, board.MaxThreads)
+				assert.Equal(t, form.DefaultStyle, board.DefaultStyle)
+				assert.Equal(t, form.Locked, board.Locked)
+				assert.Equal(t, form.AnonName, board.AnonymousName)
+				assert.Equal(t, form.AutosageAfter, board.AutosageAfter)
+				assert.Equal(t, form.NoUploadsAfter, board.NoImagesAfter)
+				assert.Equal(t, form.MaxMessageLength, board.MaxMessageLength)
+				assert.Equal(t, form.MinMessageLength, board.MinMessageLength)
+				assert.Equal(t, form.EmbedsAllowed, board.AllowEmbeds)
+				assert.Equal(t, form.RedirectToThread, board.RedirectToThread)
+				assert.Equal(t, form.RequireFile, board.RequireFile)
+				assert.Equal(t, form.EnableCatalog, board.EnableCatalog)
+			default:
+				// No form to test
 			}
 		})
 	}
