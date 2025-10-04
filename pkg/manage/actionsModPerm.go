@@ -28,14 +28,14 @@ import (
 
 // manage actions that require moderator-level permission go here
 
-func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	var outputStr string
 	var ban gcsql.IPBan
 	ban.StaffID = staff.ID
 
 	var banForm banPageFields
 	if err = forms.FillStructFromForm(request, &banForm); err != nil {
-		errEv.Err(err).Caller().
+		logger.Err(err).Caller().
 			Msg("Unable to fill struct from form")
 		return "", server.NewServerError("received invalid form data", http.StatusBadRequest)
 	}
@@ -43,33 +43,33 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	if banForm.PostID > 0 {
 		ban.BannedForPostID = new(int)
 		*ban.BannedForPostID = banForm.PostID
-		gcutil.LogInt("postID", banForm.PostID, infoEv, errEv)
+		logger = logger.With().Int("postID", banForm.PostID).Logger()
 	}
 
 	if banForm.DeleteID > 0 {
 		// deleting a ban
 		ban.ID = banForm.DeleteID
 		if err = ban.Deactivate(staff.ID); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Int("deleteBan", ban.ID).
 				Send()
 			return "", err
 		}
 	} else if banForm.Do == "add" {
-		err := banForm.fillBanFields(&ban, infoEv, errEv)
+		err := banForm.fillBanFields(&ban, logger.Info(), logger.Error())
 		if err != nil {
 			return "", err
 		}
 		if err = gcsql.NewIPBan(&ban); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Msg("Unable to create new IP ban")
 			return "", server.NewServerError("failed to create new IP ban", http.StatusInternalServerError)
 		}
-		gcutil.LogInt("banID", ban.ID, infoEv, errEv)
+		logger = logger.With().Int("banID", ban.ID).Logger()
 
 		if banForm.UseBannedMessage && banForm.BannedMessage != "" {
 			if err = gcsql.SetPostBannedMessage(banForm.PostID, banForm.BannedMessage, staff.Username); err != nil {
-				errEv.Err(err).Caller().
+				logger.Err(err).Caller().
 					Str("bannedMessage", banForm.BannedMessage).
 					Msg("Unable to set banned message")
 				return "", server.NewServerError("failed to set banned message", http.StatusInternalServerError)
@@ -77,29 +77,29 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 
 			board, err := ban.BannedPostBoard()
 			if err != nil {
-				errEv.Err(err).Caller().
+				logger.Err(err).Caller().
 					Int("postID", *ban.BannedForPostID).
 					Msg("Unable to get board from banned post")
 				return "", server.NewServerError("failed to get board from banned post", http.StatusInternalServerError)
 			}
 			if board == nil {
-				errEv.Caller().
+				logger.Warn().Caller().
 					Int("postID", *ban.BannedForPostID).
 					Msg("Unable to get board from banned post (ban.BannedPostBoard() returned nil board)")
 				return "", server.NewServerError("failed to get board from banned post", http.StatusInternalServerError)
 			}
-			gcutil.LogStr("rebuildBoard", board.Dir, infoEv, errEv)
+			logger = logger.With().Str("board", board.Dir).Logger()
 			if err = building.BuildBoards(true, board.ID); err != nil {
-				errEv.Err(err).Caller().
+				logger.Err(err).Caller().
 					Int("postID", *ban.BannedForPostID).
 					Msg("Unable to rebuild board")
 				return "", server.NewServerError("failed to rebuild board", http.StatusInternalServerError)
 			}
 		}
-		infoEv.Msg("Added IP ban")
+		logger.Info().Msg("Added IP ban")
 	} else if banForm.PostID > 0 {
 		if ban.RangeStart, err = gcsql.GetPostIP(banForm.PostID); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Int("postID", banForm.PostID).Send()
 			return "", err
 		}
@@ -108,7 +108,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 
 	banlist, err := gcsql.GetIPBans(banForm.BoardID, banForm.Limit, true)
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Error getting ban list")
+		logger.Err(err).Caller().Msg("Error getting ban list")
 		err = fmt.Errorf("failed getting ban list: %w", err)
 		return "", err
 	}
@@ -125,29 +125,29 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	}
 
 	if err = serverutil.MinifyTemplate(gctemplates.ManageBans, data, manageBansBuffer, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_bans.html").Caller().Send()
+		logger.Err(err).Str("template", gctemplates.ManageBans).Caller().Send()
 		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
 	outputStr += manageBansBuffer.String()
 	return outputStr, nil
 }
 
-func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
 	banIDstr := request.FormValue("banid")
 	var banID int
 	if banIDstr != "" {
 		if banID, err = strconv.Atoi(banIDstr); err != nil {
-			errEv.Err(err).Caller().Send()
+			logger.Err(err).Caller().Send()
 			return "", err
 		}
 	}
-	infoEv.Int("banID", banID)
+	logger = logger.With().Int("banID", banID).Logger()
 
 	limitStr := request.FormValue("limit")
 	limit := 20
 	if limitStr != "" {
 		if limit, err = strconv.Atoi(limitStr); err != nil {
-			errEv.Err(err).Caller().Send()
+			logger.Err(err).Caller().Send()
 			return "", err
 		}
 	}
@@ -156,11 +156,11 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		// approving an appeal
 		approveID, err := strconv.Atoi(approveStr)
 		if err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("approveStr", approveStr).Send()
 		}
 		if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Int("approveAppeal", approveID).Send()
 			return "", err
 		}
@@ -168,7 +168,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 	appeals, err := gcsql.GetAppeals(banID, limit)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", fmt.Errorf("failed to get appeals list: %w", err)
 	}
 
@@ -181,36 +181,36 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		pageData["appeals"] = appeals
 	}
 	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_appeals.html").Caller().Send()
+		logger.Err(err).Str("template", gctemplates.ManageAppeals).Caller().Send()
 		return "", fmt.Errorf("failed executing appeal management page template: %w", err)
 	}
 	return manageAppealsBuffer.String(), err
 }
 
-func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	filterIDStr := params.ByName("filterID")
 	filterID, err := strconv.Atoi(filterIDStr)
 	if err != nil {
-		errEv.Err(err).Caller().Str("filterID", filterIDStr).Msg("Filter ID is not a valid integer")
+		logger.Err(err).Caller().Str("filterID", filterIDStr).Msg("Filter ID is not a valid integer")
 		return nil, err
 	}
-	errEv.Int("filterID", filterID)
+	logger = logger.With().Int("filterID", filterID).Logger()
 	if request.Method == http.MethodPost && request.PostFormValue("clearhits") == "Clear hits" {
 		if staff.Rank < 3 {
 			writer.WriteHeader(http.StatusForbidden)
 			return nil, ErrInsufficientPermission
 		}
 		if err = gcsql.ClearFilterHits(filterID); err != nil {
-			errEv.Err(err).Caller().Send()
+			logger.Err(err).Caller().Send()
 			return nil, errors.New("unable to clear filter hits")
 		}
-		infoEv.Int("filterID", filterID)
+		logger = logger.With().Int("filterID", filterID).Logger()
 	}
 
 	hits, err := gcsql.GetFilterHits(filterID)
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Unable to get filter hits")
+		logger.Err(err).Caller().Msg("Unable to get filter hits")
 		return nil, errors.New("unable to get list of filter hits")
 	}
 	m := make(map[string]any)
@@ -223,11 +223,11 @@ func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff
 		jsonBuf.Reset()
 		// un-minify the JSON data to make it more readable
 		if err = json.Unmarshal([]byte(hit.PostData), &m); err != nil {
-			errEv.Err(err).Caller().Msg("Unable to unmarshal post data for filter hit")
+			logger.Err(err).Caller().Msg("Unable to unmarshal post data for filter hit")
 			return nil, err
 		}
 		if err = encoder.Encode(m); err != nil {
-			errEv.Err(err).Caller().RawJSON("postData", []byte(hit.PostData)).Msg("Unable to marshal un-minified post data")
+			logger.Err(err).Caller().RawJSON("postData", []byte(hit.PostData)).Msg("Unable to marshal un-minified post data")
 			return nil, err
 		}
 		hitsJSON = append(hitsJSON, template.HTML(strings.ReplaceAll(jsonBuf.String(), "\n", "<br>"))) // skipcq: GSC-G203
@@ -239,7 +239,7 @@ func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff
 		"hits":     hits,
 		"hitsJSON": hitsJSON,
 	}, &buf, "text/html"); err != nil {
-		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilterHits).Msg("Unable to render template")
+		logger.Err(err).Caller().Str("template", gctemplates.ManageFilterHits).Msg("Unable to render template")
 		return nil, errors.New("unable to render filter hits page")
 	}
 
@@ -253,13 +253,13 @@ type filterField struct {
 	hasSearchbox bool
 }
 
-func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
-	if err = submitFilterFormData(request, staff, infoEv, errEv); err != nil {
+func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+	if err = submitFilterFormData(request, staff, logger.Info(), logger.Error()); err != nil {
 		// submitFilterFormData logs any errors
 		return nil, err
 	}
 
-	data, err := buildFilterFormData(request, errEv)
+	data, err := buildFilterFormData(request, logger.Error())
 	if err != nil {
 		// buildFilterPageData logs any errors
 		return nil, err
@@ -284,7 +284,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	}
 
 	if err != nil {
-		errEv.Err(err).Caller().
+		logger.Err(err).Caller().
 			Str("boardSearch", boardSearch).
 			Msg("Unable to get filter list")
 		return nil, err
@@ -300,19 +300,19 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 	for f, filter := range filters {
 		if _, ok := filterActionsMap[filter.MatchAction]; !ok {
-			errEv.Err(gcsql.ErrInvalidMatchAction).Caller().Str("filterAction", filter.MatchAction).Send()
+			logger.Err(gcsql.ErrInvalidMatchAction).Caller().Str("filterAction", filter.MatchAction).Send()
 			return nil, gcsql.ErrInvalidMatchAction
 		}
 		conditions, err := filter.Conditions()
 		if err != nil {
-			errEv.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get filter conditions")
+			logger.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get filter conditions")
 			return nil, err
 		}
 
 		for _, condition := range conditions {
 			text, ok := fieldsMap[condition.Field]
 			if !ok {
-				errEv.Err(gcsql.ErrInvalidConditionField).Caller().
+				logger.Warn().Err(gcsql.ErrInvalidConditionField).Caller().
 					Str("conditionField", condition.Field).Send()
 				return nil, gcsql.ErrInvalidConditionField
 			}
@@ -322,7 +322,7 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 		boards, err := filter.BoardDirs()
 		if err != nil {
-			errEv.Err(err).Caller().Int("filterID", filter.ID)
+			logger.Err(err).Caller().Int("filterID", filter.ID)
 			return nil, err
 		}
 		boardsText = append(boardsText, strings.Join(boards, ","))
@@ -331,14 +331,14 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		} else {
 			username, err := gcsql.GetStaffUsernameFromID(*filter.StaffID)
 			if err != nil {
-				errEv.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get staff from filter")
+				logger.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get staff from filter")
 				return nil, err
 			}
 			staffUsernames[f] = username
 		}
 		hits, err := filter.NumHits()
 		if err != nil {
-			errEv.Err(err).Caller().Int("filterID", filter.ID).Send()
+			logger.Err(err).Caller().Int("filterID", filter.ID).Send()
 			return nil, fmt.Errorf("unable to get list of hits for filter %d", filter.ID)
 		}
 		filterHits[f] = hits
@@ -354,13 +354,13 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageFilters, data, &buf, "text/html"); err != nil {
-		errEv.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
+		logger.Err(err).Caller().Str("template", gctemplates.ManageFilters).Send()
 		return "", fmt.Errorf("failed to execute filter management template: %w", err)
 	}
 	return buf.String(), nil
 }
 
-func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	ipQuery := request.FormValue("ip")
 	limitStr := request.FormValue("limit")
 	data := map[string]any{
@@ -382,7 +382,7 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 
 		data["posts"], err = building.GetBuildablePostsByIP(ipQuery, limit)
 		if err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("ipQuery", ipQuery).
 				Int("limit", limit).
 				Bool("onlyNotDeleted", true).
@@ -393,14 +393,14 @@ func ipSearchCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql
 
 	manageIpBuffer := bytes.NewBufferString("")
 	if err = serverutil.MinifyTemplate(gctemplates.ManageIPSearch, data, manageIpBuffer, "text/html"); err != nil {
-		errEv.Err(err).Caller().
-			Str("template", "manage_ipsearch.html").Send()
+		logger.Err(err).Caller().
+			Str("template", gctemplates.ManageIPSearch).Send()
 		return "", errors.New("unable to render IP search page template")
 	}
 	return manageIpBuffer.String(), nil
 }
 
-func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
 	boardDir := request.FormValue("board")
 	attrBuffer := bytes.NewBufferString("")
 	data := map[string]any{
@@ -411,15 +411,15 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 			return nil, errors.New(`missing required field "board"`)
 		}
 		if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, data, attrBuffer, "text/html"); err != nil {
-			errEv.Err(err).Caller().Send()
+			logger.Err(err).Caller().Send()
 			return "", err
 		}
 		return attrBuffer.String(), nil
 	}
-	gcutil.LogStr("board", boardDir, errEv, infoEv)
+	logger = logger.With().Str("board", boardDir).Logger()
 	board, err := gcsql.GetBoardFromDir(boardDir)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	data["board"] = board
@@ -427,17 +427,17 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	if topPostStr != "" {
 		var topPostID int
 		if topPostID, err = strconv.Atoi(topPostStr); err != nil {
-			errEv.Err(err).Str("topPostStr", topPostStr).Caller().Send()
+			logger.Err(err).Str("topPostStr", topPostStr).Caller().Send()
 			return "", err
 		}
-		gcutil.LogInt("topPostID", topPostID, errEv, infoEv)
+		logger = logger.With().Int("topPostID", topPostID).Logger()
 		data["topPostID"] = topPostID
 		var attr string
 		var newVal bool
 		var doChange bool // if false, don't bother executing any SQL since nothing will change
 		thread, err := gcsql.GetPostThread(topPostID)
 		if err != nil {
-			errEv.Err(err).Caller().Send()
+			logger.Err(err).Caller().Send()
 			return "", err
 		}
 		if request.FormValue("unlock") != "" {
@@ -475,18 +475,20 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		}
 
 		if attr != "" && doChange {
-			gcutil.LogStr("attribute", attr, errEv, infoEv)
-			gcutil.LogBool("attrVal", newVal, errEv, infoEv)
+			logger = logger.With().
+				Str("attribute", attr).
+				Bool("newVal", newVal).
+				Logger()
 			if err = thread.UpdateAttribute(attr, newVal); err != nil {
-				errEv.Err(err).Caller().Send()
+				logger.Err(err).Caller().Send()
 				return "", err
 			}
-			if err = building.BuildBoardPages(board, errEv); err != nil {
+			if err = building.BuildBoardPages(board, logger.Error()); err != nil {
 				return "", err
 			}
 			post, err := gcsql.GetPostFromID(topPostID, true)
 			if err != nil {
-				errEv.Err(err).Caller().Send()
+				logger.Err(err).Caller().Send()
 				return "", err
 			}
 			if err = building.BuildThreadPages(post); err != nil {
@@ -499,7 +501,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 
 	threads, err := gcsql.GetThreadsWithBoardID(board.ID, true)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	data["threads"] = threads
@@ -513,7 +515,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 
 	opMap, err := gcsql.GetTopPostIDsInThreadIDs(threadIDs...)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	data["opMap"] = opMap
@@ -527,7 +529,7 @@ func threadAttrsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	formURL.RawQuery = vals.Encode()
 	data["formURL"] = formURL.String()
 	if err = serverutil.MinifyTemplate(gctemplates.ManageThreadAttrs, data, attrBuffer, "text/html"); err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	return attrBuffer.String(), nil
@@ -548,20 +550,20 @@ type postInfoJSON struct {
 	Fingerprint      string `json:"fingerprint,omitempty"`
 }
 
-func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	postIDstr := request.FormValue("postid")
 	if postIDstr == "" {
 		return "", errors.New("invalid request (missing postid)")
 	}
 	var postID int
 	if postID, err = strconv.Atoi(postIDstr); err != nil {
-		errEv.Err(err).Caller().
+		logger.Err(err).Caller().
 			Str("postID", postIDstr).Send()
 		return "", err
 	}
 	post, err := gcsql.GetPostFromID(postID, true)
 	if err != nil {
-		errEv.Err(err).Caller().
+		logger.Err(err).Caller().
 			Int("postID", postID).Send()
 		return "", err
 	}
@@ -580,7 +582,7 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 	}
 	upload, err := post.GetUpload()
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Unable to get upload")
+		logger.Err(err).Caller().Msg("Unable to get upload")
 		return "", err
 	}
 	if upload != nil {
@@ -589,7 +591,7 @@ func postInfoCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Sta
 		if postInfo.OriginalFilename != "deleted" {
 			postInfo.Fingerprint, err = uploads.GetPostImageFingerprint(postID)
 			if err != nil {
-				errEv.Err(err).Caller().Msg("Unable to get image fingerprint")
+				logger.Err(err).Caller().Msg("Unable to get image fingerprint")
 				return "", err
 			}
 		}
@@ -601,21 +603,21 @@ type fingerprintJSON struct {
 	Fingerprint string `json:"fingerprint"`
 }
 
-func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	postIDstr := request.Form.Get("post")
 	if postIDstr == "" {
 		return "", errors.New("missing 'post' field")
 	}
 	postID, err := strconv.Atoi(postIDstr)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	fingerprint, err := uploads.GetPostImageFingerprint(postID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return "", errors.New("post has no files or post doesn't exist")
 	} else if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	return fingerprintJSON{
@@ -623,55 +625,48 @@ func fingerprintCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	}, nil
 }
 
-func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	do := request.PostFormValue("dowordfilter")
 	editIDstr := request.FormValue("edit")
 	disableIDstr := request.FormValue("disable")
 	enableIDstr := request.FormValue("enable")
 
-	defer func() {
-		if err != nil {
-			// prevent repeat logging
-			errEv.Discard()
-		}
-	}()
-
 	if disableIDstr != "" {
 		disableID, err := strconv.Atoi(disableIDstr)
 		if err != nil {
-			errEv.Err(err).Caller().Str("disableID", disableIDstr).Send()
+			logger.Err(err).Caller().Str("disableID", disableIDstr).Send()
 			return nil, err
 		}
 		if err = gcsql.SetFilterActive(disableID, false); err != nil {
-			errEv.Err(err).Caller().Int("disableID", disableID).Msg("Unable to disable filter")
+			logger.Err(err).Caller().Int("disableID", disableID).Msg("Unable to disable filter")
 			return nil, errors.New("unable to disable wordfilter")
 		}
-		infoEv.Int("disableID", disableID)
+		logger = logger.With().Int("disableID", disableID).Logger()
 	} else if enableIDstr != "" {
 		enableID, err := strconv.Atoi(enableIDstr)
 		if err != nil {
-			errEv.Err(err).Caller().Str("enableID", enableIDstr).Send()
+			logger.Err(err).Caller().Str("enableID", enableIDstr).Send()
 			return nil, err
 		}
 		if err = gcsql.SetFilterActive(enableID, true); err != nil {
-			errEv.Err(err).Caller().Int("enableID", enableID).Msg("Unable to enable filter")
+			logger.Err(err).Caller().Int("enableID", enableID).Msg("Unable to enable filter")
 			return nil, errors.New("unable to enable wordfilter")
 		}
-		infoEv.Int("enableID", enableID)
+		logger = logger.With().Int("enableID", enableID).Logger()
 	}
 
 	var filter *gcsql.Wordfilter
 	if editIDstr != "" {
 		editID, err := strconv.Atoi(editIDstr)
 		if err != nil {
-			errEv.Err(err).Str("editID", editIDstr).Send()
+			logger.Err(err).Str("editID", editIDstr).Send()
 			return nil, err
 		}
-		gcutil.LogInt("editID", editID, infoEv, errEv)
+		logger = logger.With().Int("editID", editID).Logger()
 
 		filter, err = gcsql.GetWordfilterByID(editID)
 		if err != nil {
-			errEv.Err(err).Caller().Msg("Unable to get wordfilter")
+			logger.Err(err).Caller().Msg("Unable to get wordfilter")
 			return nil, fmt.Errorf("unable to get wordfilter with id #%d", editID)
 		}
 	}
@@ -694,18 +689,19 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		}
 	}
 	if do != "" {
-		infoEv.Array("boards", boardsLog)
-		errEv.Array("boards", boardsLog)
-		gcutil.LogStr("searchFor", searchFor, infoEv, errEv)
-		gcutil.LogStr("replaceWith", replaceWith, infoEv, errEv)
-		gcutil.LogStr("staffnote", staffNote, infoEv, errEv)
-		gcutil.LogBool("isRegex", isRegex, infoEv, errEv)
+		logger = logger.With().
+			Array("boards", boardsLog).
+			Str("searchFor", searchFor).
+			Str("replaceWith", replaceWith).
+			Str("staffNote", staffNote).
+			Bool("isRegex", isRegex).
+			Logger()
 	}
 
 	switch do {
 	case "Edit wordfilter":
 		if err = filter.UpdateDetails(staffNote, "replace", replaceWith, false); err != nil {
-			errEv.Err(err).Caller().Msg("Unable to update wordfilter details")
+			logger.Err(err).Caller().Msg("Unable to update wordfilter details")
 			return nil, errors.New("unable to update wordfilter details")
 		}
 		if err = filter.SetConditions(gcsql.FilterCondition{
@@ -714,25 +710,25 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 			Search:    searchFor,
 			Field:     "body",
 		}); err != nil {
-			errEv.Err(err).Caller().Msg("Unable to set filter condition")
+			logger.Err(err).Caller().Msg("Unable to set filter condition")
 			return nil, errors.New("unable to set filter conditions")
 		}
 		if err = filter.SetBoardDirs(boards...); err != nil {
-			errEv.Err(err).Caller().Msg("Unable to set board directories")
+			logger.Err(err).Caller().Msg("Unable to set board directories")
 			return nil, errors.New("unable to set board directories")
 		}
-		infoEv.Str("do", "update")
+		logger = logger.With().Str("do", "update").Logger()
 	case "Create wordfilter":
 		if _, err = gcsql.CreateWordFilter(searchFor, replaceWith, isRegex, boards, staff.ID, staffNote); err != nil {
-			errEv.Err(err).Caller().Msg("Unable to create wordfilter")
+			logger.Err(err).Caller().Msg("Unable to create wordfilter")
 			return nil, errors.New("unable to create wordfilter")
 		}
-		infoEv.Str("do", "create")
+		logger = logger.With().Str("do", "create").Logger()
 	}
 
 	wordfilters, err := gcsql.GetWordfilters(gcsql.TrueOrFalse)
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Unable to get wordfilters")
+		logger.Err(err).Caller().Msg("Unable to get wordfilters")
 		return nil, err
 	}
 	var searchFields []string
@@ -754,11 +750,11 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 		"searchFields": searchFields,
 		"allBoards":    gcsql.AllBoards,
 	}, &buf, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
+		logger.Err(err).Str("template", "manage_wordfilters.html").Caller().Send()
 		return nil, err
 	}
 	if do != "" || enableIDstr != "" || disableIDstr != "" {
-		infoEv.Send()
+		logger.Info().Send()
 	}
 	return buf.String(), nil
 }

@@ -5,7 +5,7 @@ manage.register_staff_action({
 	title = "Registered Staff Action (Lua)",
 	permissions = "janitor",
 	json = "sometimes",
-	callback = function(response_writer, request, staff, wants_json, infoEV, errEv)
+	callback = function(writer, request, staff, wants_json, logger)
 		-- access at http://<site>/manage/register-staff-action-lua/<some_param>
 		-- or http://<site>/manage/register-staff-action-lua/<some_param>?json=1
 		local params = manage.get_action_request_params(request)

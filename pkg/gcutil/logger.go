@@ -184,8 +184,8 @@ func InitLogs(logDir string, options *LogOptions) (err error) {
 	return nil
 }
 
-func Logger() *zerolog.Logger {
-	return &logger
+func Logger() zerolog.Logger {
+	return logger
 }
 
 func LogInfo() *zerolog.Event {

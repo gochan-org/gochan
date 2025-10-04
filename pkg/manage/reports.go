@@ -93,9 +93,14 @@ func doReportHandling(request *http.Request, staff *gcsql.Staff, infoEv, errEv *
 	return nil
 }
 
-func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
+	infoEv := logger.Info()
+	errEv := logger.Error()
+	defer func() {
+		gcutil.LogDiscard(infoEv, errEv)
+	}()
 	if err = doReportHandling(request, staff, infoEv, errEv); err != nil {
-		errEv.Discard() // doReportHandling logs errors
+		// doReportHandling logs errors
 		return nil, err
 	}
 

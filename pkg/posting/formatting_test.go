@@ -164,8 +164,8 @@ func TestLinks(t *testing.T) {
 func TestNoDoubleTags(t *testing.T) {
 	config.InitTestConfig()
 	msgfmtr.Init()
-	_, warnEv, errEv := testutil.GetTestLogs(t)
-	rendered, err := FormatMessage(doubleTagPreRender, "", warnEv, errEv)
+	logger := testutil.GetTestLogger(t)
+	rendered, err := FormatMessage(doubleTagPreRender, "", logger.Warn(), logger.Error())
 	assert.NoError(t, err)
 	assert.EqualValues(t, doubleTagExpected, rendered)
 }
@@ -186,8 +186,8 @@ func TestLuaBBCode(t *testing.T) {
 
 func diceRollRunner(t *testing.T, tC *diceRollerTestCase) {
 	var err error
-	_, warnEv, errEv := testutil.GetTestLogs(t)
-	tC.post.Message, err = FormatMessage(tC.post.MessageRaw, "", warnEv, errEv)
+	logger := testutil.GetTestLogger(t)
+	tC.post.Message, err = FormatMessage(tC.post.MessageRaw, "", logger.Warn(), logger.Error())
 	assert.NoError(t, err)
 	err = ApplyDiceRoll(&tC.post)
 	if tC.expectError {
@@ -217,7 +217,7 @@ func TestDiceRoll(t *testing.T) {
 func TestHashTags(t *testing.T) {
 	config.InitTestConfig()
 	msgfmtr.Init()
-	_, warnEv, errEv := testutil.GetTestLogs(t)
+	logger := testutil.GetTestLogger(t)
 	msg := `[#tag]
 [#t a g]
 [ #tag]
@@ -228,7 +228,7 @@ func TestHashTags(t *testing.T) {
 test]
 [#single] [#line] [#tags]
 [#js<script>alert("lol")</script>injection]`
-	msgHTML, err := FormatMessage(msg, "test", warnEv, errEv)
+	msgHTML, err := FormatMessage(msg, "test", logger.Warn(), logger.Error())
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -249,17 +249,17 @@ test]
 func TestWorksafe(t *testing.T) {
 	config.InitTestConfig()
 	msgfmtr.Init()
-	_, warnEv, errEv := testutil.GetTestLogs(t)
+	logger := testutil.GetTestLogger(t)
 	boardConfig := config.GetBoardConfig("test")
 	boardConfig.Worksafe = true
 	config.SetBoardConfig("test", boardConfig)
-	_, err := FormatMessage("[#nsfw] [#tag2]", "test", warnEv, errEv)
+	_, err := FormatMessage("[#nsfw] [#tag2]", "test", logger.Warn(), logger.Error())
 	if !assert.ErrorIs(t, err, ErrWorksafeBoard) {
 		t.FailNow()
 	}
 	boardConfig.Worksafe = false
 	config.SetBoardConfig("test", boardConfig)
-	msgHTML, err := FormatMessage("[#nsfw]", "test", warnEv, errEv)
+	msgHTML, err := FormatMessage("[#nsfw]", "test", logger.Warn(), logger.Error())
 	assert.NoError(t, err)
 	assert.Equal(t, template.HTML(`<span class="hashtag nsfw">#nsfw</span>`), msgHTML)
 }

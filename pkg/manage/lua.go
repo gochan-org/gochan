@@ -20,6 +20,10 @@ const (
 	tableArgFmt = "invalid value for key %q passed to table, expected %s, got %s"
 )
 
+var (
+	errLuaHandler = errors.New("an error occurred in Lua code, check server logs")
+)
+
 func luaBanIP(l *lua.LState) int {
 	ban := &gcsql.IPBan{}
 	ip := l.CheckString(1)
@@ -165,12 +169,19 @@ func PreloadModule(l *lua.LState) int {
 			actionPerms := l.CheckInt(3)
 			actionJSON := l.CheckInt(4)
 			fn := l.CheckFunction(5)
-			actionHandler := func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+			actionHandler := func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
+				logger = logger.With().Str("lua", "register_manage_page").Logger()
 				if err = l.CallByParam(lua.P{
-					Fn:   fn,
-					NRet: 2,
-					// Protect: true,
-				}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, infoEv), luar.New(l, errEv)); err != nil {
+					Fn:      fn,
+					NRet:    2,
+					Protect: true,
+				}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, &logger)); err != nil {
+					var apiError *lua.ApiError
+					logger.Err(err).Caller().Send()
+					if errors.As(err, &apiError) {
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", errLuaHandler
+					}
 					return "", err
 				}
 				return luaHandlerOutputToGo(l)
@@ -256,12 +267,20 @@ func PreloadModule(l *lua.LState) int {
 				l.ArgError(1, "missing or invalid callback field")
 				return 0
 			}
-			action.Callback = func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+
+			action.Callback = func(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
+				logger = logger.With().Str("lua", "register_staff_action").Logger()
 				if err = l.CallByParam(lua.P{
-					Fn:   fn,
-					NRet: 2,
-					// Protect: true,
-				}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, infoEv), luar.New(l, errEv)); err != nil {
+					Fn:      fn,
+					NRet:    2,
+					Protect: true,
+				}, luar.New(l, writer), luar.New(l, request), luar.New(l, staff), lua.LBool(wantsJSON), luar.New(l, &logger)); err != nil {
+					var apiError *lua.ApiError
+					logger.Err(err).Caller().Send()
+					if errors.As(err, &apiError) {
+						writer.WriteHeader(http.StatusInternalServerError)
+						return "", errLuaHandler
+					}
 					return "", err
 				}
 				return luaHandlerOutputToGo(l)

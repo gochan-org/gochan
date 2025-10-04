@@ -43,10 +43,10 @@ func GoToGochanRoot(t *testing.T) (string, error) {
 	return dir, errors.New("test running from unexpected dir, should be in gochan root or the current testing dir")
 }
 
-// GetTestLogs returns logs with info, warn, and error levels respectively for testing
-func GetTestLogs(t *testing.T) (*zerolog.Event, *zerolog.Event, *zerolog.Event) {
+// GetTestLogger returns a logger for testing
+func GetTestLogger(t *testing.T) zerolog.Logger {
 	logger := zerolog.New(zerolog.NewTestWriter(t))
-	return logger.Info(), logger.Warn(), logger.Error()
+	return logger
 }
 
 // FuzzyTime is a wrapper around time.Time that allows for fuzzy matching of time values within a 10-minute window

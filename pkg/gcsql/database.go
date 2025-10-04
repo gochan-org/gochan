@@ -363,7 +363,8 @@ func setupDBConn(cfg *config.SQLConfig) (db *GCDB, err error) {
 	case "mysql":
 		db.connStr = fmt.Sprintf(MySQLConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, mysqlReplacerArr...)
-		mysql.SetLogger(gcutil.Logger())
+		l := gcutil.Logger()
+		mysql.SetLogger(&l)
 	case "postgres":
 		db.connStr = fmt.Sprintf(PostgresConnStr, cfg.DBusername, cfg.DBpassword, cfg.DBhost, cfg.DBname)
 		replacerArr = append(replacerArr, postgresReplacerArr...)

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"runtime/debug"
 
 	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/gcsql"
@@ -21,10 +20,18 @@ type ErrStaffAction struct {
 	ErrorField string `json:"error"`
 	Action     string `json:"action"`
 	Message    string `json:"message"`
+	StatusCode int    `json:"-"`
 }
 
 func (esa *ErrStaffAction) Error() string {
 	return esa.Message
+}
+
+func (esa *ErrStaffAction) HTTPStatusCode() int {
+	if esa.StatusCode != 0 {
+		return esa.StatusCode
+	}
+	return http.StatusInternalServerError
 }
 
 type requestContextKey struct{}
@@ -43,12 +50,20 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		request := req.Request
 		wantsJSON := serverutil.IsRequestingJSON(request)
 		accessEv := gcutil.LogAccess(request)
-		infoEv, warnEv, errEv := gcutil.LogRequest(request)
-		defer gcutil.LogDiscard(infoEv, accessEv, warnEv, errEv)
+		// infoEv, warnEv, errEv := gcutil.LogRequest(request)
 
-		gcutil.LogStr("action", action.ID, infoEv, accessEv, errEv)
+		logger := gcutil.Logger().With().
+			Str("IP", gcutil.GetRealIP(request)).
+			Str("path", request.URL.Path).
+			Str("method", request.Method).
+			Str("userAgent", request.UserAgent()).
+			Str("action", action.ID).
+			Logger()
+
+		defer accessEv.Discard()
+
 		if err = req.Request.ParseForm(); err != nil {
-			errEv.Err(err).Caller().Msg("Error parsing form data")
+			logger.Err(err).Caller().Msg("Error parsing form data")
 			server.ServeError(writer, server.NewServerError("Error parsing form data: "+err.Error(), http.StatusBadRequest), wantsJSON, map[string]any{
 				"action": action.ID,
 			})
@@ -58,12 +73,13 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 		var staff *gcsql.Staff
 		staff, err = gcsql.GetStaffFromRequest(request)
 		if err != nil {
-			errEv.Err(err).Caller().Msg("Unable to get staff from request")
+			logger.Err(err).Caller().Msg("Unable to get staff from request")
 			server.ServeError(writer, "Error getting staff info from request", wantsJSON, nil)
 			return
 		}
-		gcutil.LogStr("staff", staff.Username, infoEv, accessEv, errEv)
-		gcutil.LogInt("rank", staff.Rank, infoEv, accessEv, errEv)
+		logger = logger.With().Str("staff", staff.Username).Int("rank", staff.Rank).Logger()
+		gcutil.LogStr("staff", staff.Username, accessEv)
+		gcutil.LogInt("rank", staff.Rank, accessEv)
 
 		actionCB := action.Callback
 		pageTitle := getPageTitle(action.ID, staff)
@@ -74,7 +90,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			request = request.WithContext(context.WithValue(request.Context(), loginRedirectAction("redirect"), action.ID))
 		} else if staff.Rank < action.Permissions {
 			writer.WriteHeader(http.StatusForbidden)
-			warnEv.
+			logger.Warn().
 				Str("action", action.ID).
 				Int("requiredRank", action.Permissions).
 				Msg("Staff requested page with insufficient permissions")
@@ -94,11 +110,11 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			defer func() {
 				if a := recover(); a != nil {
 					serveError(writer, "actionerror", action.ID, "Internal server error", wantsJSON)
-					gcutil.LogError(nil).
+					logger.Err(fmt.Errorf("%v", a)).
 						Str("ip", gcutil.GetRealIP(request)).
 						Str("userAgent", req.UserAgent()).
-						Interface("recover", a).
-						Bytes("stack", debug.Stack()).
+						Stack().
+						// Bytes("stack", debug.Stack()).
 						Msg("Recovered from panic while calling manage function")
 				}
 			}()
@@ -108,7 +124,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			} else {
 				output, err = actionCB(writer,
 					request.WithContext(context.WithValue(request.Context(), requestContextKey{}, req.Params())),
-					staff, wantsJSON, infoEv, errEv)
+					staff, wantsJSON, logger)
 			}
 		}
 		if err != nil {
@@ -127,7 +143,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			var outputJSON string
 			if outputJSON, err = gcutil.MarshalJSON(output, true); err != nil {
 				serveError(writer, "error", action.ID, err.Error(), true)
-				errEv.Err(err).Caller().Send()
+				logger.Err(err).Caller().Send()
 				return
 			}
 			serverutil.MinifyWriter(writer, []byte(outputJSON), "application/json")

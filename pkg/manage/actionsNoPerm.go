@@ -21,7 +21,7 @@ const (
 
 type loginRedirectAction string
 
-func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, infoEv, errEv *zerolog.Event) (output any, err error) {
+func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if staff.Rank > 0 {
 		http.Redirect(writer, request, path.Join(systemCritical.WebRoot, "manage"), http.StatusFound)
@@ -47,7 +47,7 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			"boardConfig": config.GetBoardConfig(""),
 			"redirect":    redirectAction,
 		}, manageLoginBuffer, "text/html"); err != nil {
-			errEv.Err(err).Str("template", "manage_login.html").Send()
+			logger.Err(err).Str("template", "manage_login.html").Send()
 			return "", fmt.Errorf("failed executing staff login page template: %w", err)
 		}
 		output = manageLoginBuffer.String()
@@ -59,7 +59,7 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			}
 			return "", err
 		}
-		infoEv.
+		logger.Info().
 			Str("redirectAction", redirectAction).
 			Str("username", username).
 			Msg("Logged in, redirecting to manage page")
@@ -74,7 +74,7 @@ type staffInfoJSON struct {
 	Actions  []Action `json:"actions,omitempty"`
 }
 
-func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
+func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,

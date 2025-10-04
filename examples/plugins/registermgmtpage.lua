@@ -7,7 +7,7 @@ local serverutil = require("serverutil")
 manage.register_manage_page("mgmtplugintest",
 	"Staff Plugin Testing",
 	3, 1,
-	function(writer, request, staff, wantsJSON, infoEv, errEv)
+	function(writer, request, staff, wantsJSON, logger)
 		out = string.format("Hello %s from Lua!<br/>'param' url parameter value: %q", staff.Username, request.FormValue(request,"param"))
 		return out, ""
 	end
@@ -18,12 +18,13 @@ manage.register_manage_page("mgmtplugintest",
 manage.register_manage_page("templateplugintest",
 	"Template Plugin Testing",
 	3, 0,
-	function(writer, request, staff, wantsJSON, infoEv, errEv)
+	function(writer, request, staff, wantsJSON, logger)
 		local tmpl, err = gctemplates.parse_template("parse_template_test",
 			[[<b>Staff: </b> {{.staff.Username}}<br/>
 			This manage page rendered from a template provided by a Lua plugin]])
 		if(err ~= nil) then
 			print(err:Error())
+			logger:Err(err):Caller():Send()
 			return "", err:Error()
 		end
 		

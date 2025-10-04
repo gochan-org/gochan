@@ -465,8 +465,7 @@ type manageCallbackTestCase struct {
 }
 
 func (tc *manageCallbackTestCase) runTest(t *testing.T, manageCallbackFunc CallbackFunction) {
-	infoEv := gcutil.LogInfo()
-	errEv := gcutil.LogError(nil)
+	logger := testutil.GetTestLogger(t)
 	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
 		t.FailNow()
@@ -496,7 +495,7 @@ func (tc *manageCallbackTestCase) runTest(t *testing.T, manageCallbackFunc Callb
 	}
 
 	writer := httptest.NewRecorder()
-	output, err := manageCallbackFunc(writer, request, tc.staff, tc.wantsJSON, infoEv, errEv)
+	output, err := manageCallbackFunc(writer, request, tc.staff, tc.wantsJSON, logger)
 	if tc.expectStatus == 0 {
 		tc.expectStatus = http.StatusOK
 	}

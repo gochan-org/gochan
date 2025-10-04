@@ -190,11 +190,10 @@ func TestAttachEmbed(t *testing.T) {
 		},
 	}
 	config.SetBoardConfig("test", boardCfg)
-	_, warnEv, errEv := testutil.GetTestLogs(t)
-	defer gcutil.LogDiscard(warnEv, errEv)
+	logger := testutil.GetTestLogger(t)
 	for _, tc := range embedTestCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			embedTestRunner(t, &tc, boardCfg, warnEv, errEv)
+			embedTestRunner(t, &tc, boardCfg, logger.Warn(), logger.Error())
 		})
 	}
 }
@@ -212,8 +211,8 @@ func TestOnlyAllowOneEmbed(t *testing.T) {
 		},
 	}
 	config.SetBoardConfig("test", boardCfg)
-	_, warnEv, errEv := testutil.GetTestLogs(t)
-	defer gcutil.LogDiscard(warnEv, errEv)
+	logger := testutil.GetTestLogger(t)
+	defer gcutil.LogDiscard(logger.Warn(), logger.Error())
 	db, mock, err := sqlmock.New()
 	if !assert.NoError(t, err) {
 		t.FailNow()
@@ -232,7 +231,7 @@ func TestOnlyAllowOneEmbed(t *testing.T) {
 	mock.ExpectPrepare(prepStr).
 		ExpectQuery().WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"filename", "dir"}).AddRow("file.png", "test"))
-	embed, err := AttachEmbedFromRequest(generateEmbedRequest("https://www.youtube.com/watch?v=123456"), boardCfg, warnEv, errEv)
+	embed, err := AttachEmbedFromRequest(generateEmbedRequest("https://www.youtube.com/watch?v=123456"), boardCfg, logger.Warn(), logger.Error())
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -246,7 +245,7 @@ func TestOnlyAllowOneEmbed(t *testing.T) {
 	mock.ExpectPrepare(prepStr).
 		ExpectQuery().WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"filename", "dir"}).AddRow("embed:youtube", "test"))
-	embed, err = AttachEmbedFromRequest(generateEmbedRequest("https://www.youtube.com/watch?v=123456"), boardCfg, warnEv, errEv)
+	embed, err = AttachEmbedFromRequest(generateEmbedRequest("https://www.youtube.com/watch?v=123456"), boardCfg, logger.Warn(), logger.Error())
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}

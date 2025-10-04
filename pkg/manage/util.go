@@ -141,7 +141,7 @@ func InitManagePages() {
 	registerAdminPages()
 }
 
-func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ *zerolog.Event, errEv *zerolog.Event) (any, error) {
+func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (any, error) {
 	dashBuffer := bytes.NewBufferString("")
 	announcements, err := getAllAnnouncements()
 	if err != nil {
@@ -165,7 +165,7 @@ func dashboardCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staf
 		"announcements": announcements,
 		"boards":        gcsql.AllBoards,
 	}, dashBuffer, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_dashboard.html").Caller().Send()
+		logger.Err(err).Str("template", "manage_dashboard.html").Caller().Send()
 		return "", err
 	}
 	return dashBuffer.String(), nil

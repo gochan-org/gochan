@@ -32,6 +32,14 @@ func (e *ServerError) Unwrap() error {
 	return nil
 }
 
+func (e *ServerError) HTTPStatus() int {
+	return e.StatusCode
+}
+
+type HTTPStatusCoder interface {
+	HTTPStatus() int
+}
+
 func NewServerError(message any, statusCode int) error {
 	return &ServerError{Err: message, StatusCode: statusCode}
 }
@@ -68,8 +76,8 @@ func ServeError(writer http.ResponseWriter, err any, wantsJSON bool, data map[st
 			servedMap = make(map[string]any)
 		}
 		servedMap["error"] = err
-		if se, ok := err.(*ServerError); ok {
-			writer.WriteHeader(se.StatusCode)
+		if se, ok := err.(HTTPStatusCoder); ok {
+			writer.WriteHeader(se.HTTPStatus())
 		}
 		ServeJSON(writer, servedMap)
 	} else {

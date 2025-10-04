@@ -14,6 +14,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
+	"github.com/gochan-org/gochan/pkg/server"
 	"github.com/gochan-org/gochan/pkg/server/serverutil"
 	"github.com/rs/zerolog"
 )
@@ -24,7 +25,7 @@ var (
 
 // manage actions that require at least janitor-level permission go here
 
-func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
+func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, _ zerolog.Logger) (output any, err error) {
 	if err = gcsql.EndStaffSession(writer, request); err != nil {
 		return "", err
 	}
@@ -34,7 +35,7 @@ func logoutCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.
 	return "Logged out successfully", nil
 }
 
-func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
+func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
 	session, err := request.Cookie("sessiondata")
 	if err != nil {
 		// doesn't have a login session cookie, return with no errors
@@ -59,8 +60,9 @@ func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, 
 		return "You are not logged in", err
 	}
 	if err = staff.ClearSessions(); err != nil && err != sql.ErrNoRows {
+		logger.Err(err).Caller().Msg("Unable to clear user login sessions")
 		// something went wrong when trying to clean out sessions for this user
-		return nil, err
+		return nil, server.NewServerError(err, http.StatusInternalServerError)
 	}
 	serverutil.DeleteCookie(writer, request, "sessiondata")
 	gcutil.LogAccess(request).
@@ -75,13 +77,13 @@ func clearMySessionsCallback(writer http.ResponseWriter, request *http.Request, 
 	return "Logged out successfully", nil
 }
 
-func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, _, errEv *zerolog.Event) (output any, err error) {
+func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
 	limit := 20
 	limitStr := request.FormValue("limit")
 	if limitStr != "" {
 		limit, err = strconv.Atoi(limitStr)
 		if err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("limit", limitStr).
 				Msg("Invalid limit value")
 			return "", err
@@ -92,7 +94,7 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	var boardid int
 	if boardidStr != "" {
 		if boardid, err = strconv.Atoi(boardidStr); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("boardid", boardidStr).
 				Msg("Invalid boardid value")
 			return "", err
@@ -100,7 +102,7 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	}
 	recentposts, err = building.GetRecentPosts(boardid, limit)
 	if err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", err
 	}
 	if wantsJSON {
@@ -113,13 +115,13 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 		"boardid":     boardid,
 		"limit":       limit,
 	}, &buf, "text/html"); err != nil {
-		errEv.Err(err).Caller().Send()
+		logger.Err(err).Caller().Send()
 		return "", fmt.Errorf("failed executing ban management page template: %w", err)
 	}
 	return buf.String(), nil
 }
 
-func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ *zerolog.Event, _ *zerolog.Event) (output any, err error) {
+func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	// return an array of announcements (with staff name instead of ID) and any errors
 	return getAllAnnouncements()
 }
@@ -205,39 +207,33 @@ func (s *staffForm) validate(staff *gcsql.Staff, warnEv *zerolog.Event) (formMod
 	return noForm, nil
 }
 
-func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, infoEv *zerolog.Event, errEv *zerolog.Event) (output any, err error) {
+func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
 	var allStaff []gcsql.Staff
 	if wantsJSON {
 		allStaff, err = getAllStaffNopass(true)
 		if err != nil {
-			errEv.Err(err).Caller().Msg("Failed getting staff list")
+			logger.Err(err).Caller().Msg("Failed getting staff list")
 			return nil, errors.New("unable to get staff list")
 		}
 		return allStaff, nil
 	}
 
-	warnEv := gcutil.LogWarning().
-		Str("IP", gcutil.GetRealIP(request)).
-		Str("userAgent", request.UserAgent()).
-		Str("staff", staff.Username)
-	defer warnEv.Discard()
-
 	var form staffForm
 	var numErr *strconv.NumError
 	err = forms.FillStructFromForm(request, &form)
 	if errors.As(err, &numErr) {
-		errEv.Err(err).Caller().
+		logger.Err(err).Caller().
 			Str("value", numErr.Num).
 			Msg("Error parsing form value")
 		writer.WriteHeader(http.StatusBadRequest)
 		return "", err
 	} else if err != nil {
-		errEv.Err(err).Caller().
+		logger.Err(err).Caller().
 			Str("form", "staffForm").
 			Msg("Error filling form struct")
 		return "", err
 	}
-	formMode, err := form.validate(staff, warnEv)
+	formMode, err := form.validate(staff, logger.Warn())
 	if errors.Is(err, ErrInsufficientPermission) {
 		writer.WriteHeader(http.StatusForbidden)
 		return "", err
@@ -248,7 +244,7 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	}
 
 	if form.Username != "" {
-		gcutil.LogStr("username", form.Username, infoEv, errEv, warnEv)
+		logger = logger.With().Str("username", staff.Username).Logger()
 	}
 
 	updateStaff := &gcsql.Staff{
@@ -259,7 +255,7 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	case changePasswordForm:
 		updateStaff, err = gcsql.GetStaffByUsername(form.ChangePasswordForUser, true)
 		if err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("username", form.ChangePasswordForUser).
 				Msg("Error getting staff account")
 			return "", err
@@ -267,7 +263,7 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	case changeRankForm:
 		updateStaff, err = gcsql.GetStaffByUsername(form.ChangeRankForUser, true)
 		if err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("username", form.ChangeRankForUser).
 				Msg("Error getting staff account")
 			return "", err
@@ -280,7 +276,7 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 	case "add":
 		updateStaff, err = gcsql.NewStaff(form.Username, form.Password, form.Rank)
 		if err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("username", form.Username).
 				Msg("Error creating new staff account")
 			if errors.Is(err, gcsql.ErrStaffAlreadyExists) {
@@ -290,36 +286,36 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 			}
 			return "", fmt.Errorf("unable to create new staff account: %w", err)
 		}
-		infoEv.Str("userRank", updateStaff.RankTitle()).Msg("New staff account created")
+		logger.Info().Str("userRank", updateStaff.RankTitle()).Msg("New staff account created")
 	case "changepass":
 		if err = updateStaff.UpdatePassword(form.Password); err != nil {
-			errEv.Err(err).Caller().Msg("Error updating password")
+			logger.Err(err).Caller().Msg("Error updating password")
 			return "", errors.New("unable to change staff account password")
 		}
-		infoEv.Msg("Password updated")
+		logger.Info().Msg("Password updated")
 	case "changerank":
 		if err = updateStaff.UpdateRank(form.Rank); err != nil {
-			errEv.Err(err).Caller().Msg("Error updating rank")
+			logger.Err(err).Caller().Msg("Error updating rank")
 			return "", errors.New("unable to change staff account rank")
 		}
-		infoEv.
+		logger.Info().
 			Int("rank", updateStaff.Rank).
 			Str("rankTitle", updateStaff.RankTitle()).
 			Msg("Staff account rank updated")
 	case "del":
 		if err = updateStaff.ClearSessions(); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("username", form.Username).
 				Msg("Unable to clear user login sessions")
 			return "", errors.New("unable to clear user login sessions")
 		}
 		if err = updateStaff.SetActive(false); err != nil {
-			errEv.Err(err).Caller().
+			logger.Err(err).Caller().
 				Str("username", form.Username).
 				Msg("Unable to deactivate user")
 			return "", errors.New("unable to deactivate user")
 		}
-		infoEv.Str("userRank", updateStaff.RankTitle()).Msg("Account deactivated")
+		logger.Info().Str("userRank", updateStaff.RankTitle()).Msg("Account deactivated")
 	}
 
 	data := map[string]any{
@@ -331,13 +327,13 @@ func staffCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 
 	data["allstaff"], err = getAllStaffNopass(true)
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed getting staff list")
+		logger.Err(err).Caller().Msg("Failed getting staff list")
 		return nil, errors.New("unable to get staff list")
 	}
 
 	buffer := bytes.NewBufferString("")
 	if err = serverutil.MinifyTemplate(gctemplates.ManageStaff, data, buffer, "text/html"); err != nil {
-		errEv.Err(err).Str("template", "manage_staff.html").Send()
+		logger.Err(err).Str("template", "manage_staff.html").Send()
 		writer.WriteHeader(http.StatusInternalServerError)
 		return "", errors.New("unable to execute staff management page template")
 	}

@@ -77,7 +77,7 @@ appeal_after  | string           | User can appeal after this duration. If unset
 appealable    | bool             | Sets whether or not the user can appeal the ban. If unset, the user is able to appeal.
 staff_note    | string           | A private note attached to the ban that only staff can see
 
-- **manage.register_manage_page(action string, title string, perms int, wants_json int, handler func(writer, request, staff, wants_json, info_ev, err_ev))**
+- **manage.register_manage_page(action string, title string, perms int, wants_json int, handler func(writer, request, staff, wants_json, logger zerolog.Logger))**
 	- Registers the manage page accessible at /manage/`action` to be handled by `handler`. See [manage.RegisterManagePage](https://pkg.go.dev/github.com/gochan-org/gochan/pkg/manage#RegisterManagePage) for info on how `handler` should be used, or [registermgmtpage.lua](./examples/plugins/registermgmtpage.lua) for an example
 
 - **manage.register_staff_action(action table, methods []string)**
