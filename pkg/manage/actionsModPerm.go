@@ -308,17 +308,20 @@ func filtersCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 			logger.Err(err).Caller().Int("filterID", filter.ID).Msg("Unable to get filter conditions")
 			return nil, err
 		}
-
+		conditionsMap := make(map[string]int) // used to prevent printing duplicate conditions to make the filter list more readable
 		for _, condition := range conditions {
-			text, ok := fieldsMap[condition.Field]
-			if !ok {
-				logger.Warn().Err(gcsql.ErrInvalidConditionField).Caller().
-					Str("conditionField", condition.Field).Send()
-				return nil, gcsql.ErrInvalidConditionField
-			}
-			conditionsText[f] += text + ","
+			conditionsMap[condition.Field]++
 		}
-		conditionsText[f] = strings.TrimRight(conditionsText[f], ",")
+		var combined []string
+		for conditionField, count := range conditionsMap {
+			if count > 1 {
+				combined = append(combined, fmt.Sprintf("%s (%d)", fieldsMap[conditionField], count))
+			} else {
+				combined = append(combined, fieldsMap[conditionField])
+			}
+		}
+
+		conditionsText[f] = strings.Join(combined, ", ")
 
 		boards, err := filter.BoardDirs()
 		if err != nil {
