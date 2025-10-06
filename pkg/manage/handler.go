@@ -49,8 +49,6 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 	return func(writer http.ResponseWriter, req bunrouter.Request) (err error) {
 		request := req.Request
 		wantsJSON := serverutil.IsRequestingJSON(request)
-		accessEv := gcutil.LogAccess(request)
-		// infoEv, warnEv, errEv := gcutil.LogRequest(request)
 
 		logger := gcutil.Logger().With().
 			Str("IP", gcutil.GetRealIP(request)).
@@ -59,8 +57,6 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			Str("userAgent", request.UserAgent()).
 			Str("action", action.ID).
 			Logger()
-
-		defer accessEv.Discard()
 
 		if err = req.Request.ParseForm(); err != nil {
 			logger.Err(err).Caller().Msg("Error parsing form data")
@@ -77,9 +73,7 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 			server.ServeError(writer, "Error getting staff info from request", wantsJSON, nil)
 			return
 		}
-		logger = logger.With().Str("staff", staff.Username).Int("rank", staff.Rank).Logger()
-		gcutil.LogStr("staff", staff.Username, accessEv)
-		gcutil.LogInt("rank", staff.Rank, accessEv)
+		logger = logger.With().Str("staff", staff.Username).Logger()
 
 		actionCB := action.Callback
 		pageTitle := getPageTitle(action.ID, staff)
