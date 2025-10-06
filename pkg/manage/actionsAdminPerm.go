@@ -149,6 +149,12 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 			logger.Err(err).Caller().Send()
 			return "", err
 		}
+		if form.Rebuild {
+			if err = building.BuildBoards(true, board.ID); err != nil {
+				logger.Err(err).Caller().Send()
+				return "", err
+			}
+		}
 	}
 
 	sections, err := gcsql.GetAllSections(false)
@@ -163,22 +169,21 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 	}
 
 	var buf bytes.Buffer
-	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
-		map[string]any{
-			"siteConfig": config.GetSiteConfig(),
-			"sections":   sections,
-			"boards":     boards,
-			"board": gcsql.Board{
-				AnonymousName:    "Anonymous",
-				MaxFilesize:      1000 * 1000 * 15,
-				EnableCatalog:    true,
-				AutosageAfter:    200,
-				NoImagesAfter:    -1,
-				MaxMessageLength: 1500,
-			},
-			"boardConfig": config.GetBoardConfig(""),
-			"editing":     false,
-		}, &buf, "text/html"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards, map[string]any{
+		"siteConfig": config.GetSiteConfig(),
+		"sections":   sections,
+		"boards":     boards,
+		"board": gcsql.Board{
+			AnonymousName:    "Anonymous",
+			MaxFilesize:      1000 * 1000 * 15,
+			EnableCatalog:    true,
+			AutosageAfter:    200,
+			NoImagesAfter:    -1,
+			MaxMessageLength: 1500,
+		},
+		"boardConfig": config.GetBoardConfig(""),
+		"editing":     false,
+	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err
 	}
@@ -228,6 +233,13 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staf
 			return "", server.NewServerError("unable to apply changes", http.StatusInternalServerError)
 		}
 		logger.Info().Msg("Modified board")
+
+		if form.Rebuild {
+			if err = building.BuildBoards(true, board.ID); err != nil {
+				logger.Err(err).Caller().Send()
+				return "", err
+			}
+		}
 		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
 	case boardRequestTypeDelete:
 		board, err = gcsql.GetBoardFromDir(boardDir)
@@ -254,15 +266,14 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staf
 	}
 
 	var buf bytes.Buffer
-	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards,
-		map[string]any{
-			"siteConfig":  config.GetSiteConfig(),
-			"sections":    sections,
-			"boards":      boards,
-			"board":       board,
-			"boardConfig": config.GetBoardConfig(""),
-			"editing":     requestType == boardRequestTypeViewSingleBoard || requestType == boardRequestTypeModify,
-		}, &buf, "text/html"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards, map[string]any{
+		"siteConfig":  config.GetSiteConfig(),
+		"sections":    sections,
+		"boards":      boards,
+		"board":       board,
+		"boardConfig": config.GetBoardConfig(""),
+		"editing":     requestType == boardRequestTypeViewSingleBoard || requestType == boardRequestTypeModify,
+	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err
 	}

@@ -52,7 +52,6 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 
 		logger := gcutil.Logger().With().
 			Str("IP", gcutil.GetRealIP(request)).
-			Str("path", request.URL.Path).
 			Str("method", request.Method).
 			Str("userAgent", request.UserAgent()).
 			Str("action", action.ID).

@@ -83,6 +83,7 @@ type createOrModifyBoardForm struct {
 	RedirectToThread bool   `form:"redirecttothread" method:"POST"`
 	RequireFile      bool   `form:"requirefile" method:"POST"`
 	EnableCatalog    bool   `form:"enablecatalog" method:"POST"`
+	Rebuild          bool   `form:"rebuild" method:"POST"`
 
 	// create or modify submit button
 	DoCreate string `form:"docreate" method:"POST"`

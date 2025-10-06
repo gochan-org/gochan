@@ -118,6 +118,10 @@
 			<td>Create catalog</td>
 			<td><input type="checkbox" name="enablecatalog" {{if $.board.EnableCatalog}}checked="checked"{{end}}/></td>
 		</tr>
+		<tr>
+			<td>{{if $.editing}}Rebuild{{else}}Build{{end}} board on submit</td>
+			<td><input type="checkbox" name="rebuild" checked></td>
+		</tr>
 	</table>
 	{{- if $.editing -}}
 		<input type="submit" name="domodify" value="Save changes" onclick="return confirm('Click ok to confirm')"/>
