@@ -309,10 +309,7 @@ func TestBuildFrontPage(t *testing.T) {
 				t.FailNow()
 			}
 
-			mock, err := gcsql.SetupMockDB(driver)
-			if !assert.NoError(t, err) {
-				t.FailNow()
-			}
+			mock := gcsql.SetupMockDB(t, driver)
 			siteCfg := config.GetSiteConfig()
 
 			t.Run("with minification", func(t *testing.T) {
@@ -342,10 +339,7 @@ type pageHeaderTestCase struct {
 }
 
 func (p *pageHeaderTestCase) runTest(t *testing.T, sqlDriver string) {
-	mock, err := gcsql.SetupMockDB(sqlDriver)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	mock := gcsql.SetupMockDB(t, sqlDriver)
 
 	boardCfg := config.GetBoardConfig(p.board)
 	boardCfg.IncludeGlobalStyles = p.includeCSS
@@ -354,7 +348,7 @@ func (p *pageHeaderTestCase) runTest(t *testing.T, sqlDriver string) {
 
 	mockSetupBoards(t, mock, false)
 
-	err = gctemplates.InitTemplates()
+	err := gctemplates.InitTemplates()
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -430,10 +424,8 @@ func TestBuildPageFooter(t *testing.T) {
 	systemCriticalConfig.TemplateDir = "templates"
 	config.SetSystemCriticalConfig(systemCriticalConfig)
 
-	mock, err := gcsql.SetupMockDB("sqlite3")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	mock := gcsql.SetupMockDB(t, "sqlite3")
+
 	var buf bytes.Buffer
 	if !assert.NoError(t, BuildPageFooter(&buf)) {
 		t.FailNow()

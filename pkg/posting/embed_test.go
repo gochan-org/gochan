@@ -109,7 +109,7 @@ func intPointer(i int) *int {
 }
 
 func generateEmbedRequest(embedURL string) *http.Request {
-	req, _ := http.NewRequest("POST", "http://example.com", http.NoBody)
+	req, _ := http.NewRequest("POST", "https://example.com", http.NoBody)
 	req.PostForm = url.Values{}
 	if embedURL != "" {
 		req.PostForm.Add("embed", embedURL)

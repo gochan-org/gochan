@@ -129,7 +129,7 @@ func updateAnnouncementsCallback(_ http.ResponseWriter, request *http.Request, s
 }
 
 // boardsCallback handles calls to /manage/boards, showing boards by section and a form to create a new board
-func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func boardsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	requestType := boardsRequestType(request)
 
 	logger = logger.With().Str("requestType", requestType.String()).Logger()
@@ -192,7 +192,7 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 }
 
 // modifyBoardCallback handles requests to /manage/boards/<boardDir> for modifying or deleting a board
-func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	boardDir := params.ByName("board")
 
@@ -675,7 +675,7 @@ func rebuildBoardsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staf
 
 // reparseHTMLCallback handles requests to /manage/reparsehtml for reparsing all post text into HTML
 // TODO: merge this and rebuild callbacks into one
-func reparseHTMLCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	var outputStr string
 	tx, err := gcsql.BeginTx()
 	if err != nil {

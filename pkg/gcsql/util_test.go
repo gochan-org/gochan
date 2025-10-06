@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,20 +17,6 @@ type testCase[T any] struct {
 	shouldFail bool
 	timeout    time.Duration
 	delay      time.Duration
-}
-
-func setupMockDB(t *testing.T) sqlmock.Sqlmock {
-	t.Helper()
-	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "", "")
-	db, mock, err := sqlmock.New()
-	if !assert.NoError(t, err) {
-		return nil
-	}
-	err = SetTestingDB("mysql", "gochan", "", db)
-	if !assert.NoError(t, err) {
-		return nil
-	}
-	return mock
 }
 
 type prepareFunc func(context.Context, string, *sql.Tx) (*sql.Stmt, error)
@@ -85,7 +70,7 @@ func TestPrepareContextSQL(t *testing.T) {
 		}
 	}()
 
-	mock := setupMockDB(t)
+	mock := SetupMockDB(t, "mysql")
 	testCases := []testCase[prepareFunc]{
 		{
 			name: "func",
@@ -163,7 +148,7 @@ func TestExecContextSQL(t *testing.T) {
 		return
 	}
 
-	mock := setupMockDB(t)
+	mock := SetupMockDB(t, "mysql")
 	testCases := []testCase[execFunc]{
 		{
 			name: "func",
@@ -241,7 +226,7 @@ func TestQueryRowContextSQL(t *testing.T) {
 		return
 	}
 
-	mock := setupMockDB(t)
+	mock := SetupMockDB(t, "mysql")
 	testCases := []testCase[funcQueryRowContextSQL]{
 		{
 			name: "func",

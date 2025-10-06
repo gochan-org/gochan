@@ -7,10 +7,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -394,16 +396,20 @@ func setupSqlTestConfig(dbDriver string, dbName string, dbPrefix string) *config
 }
 
 // SetupMockDB sets up a mock database connection for testing
-func SetupMockDB(driver string) (sqlmock.Sqlmock, error) {
+func SetupMockDB(t *testing.T, driver string) sqlmock.Sqlmock {
+	t.Helper()
 	var err error
-	gcdb, err = setupDBConn(setupSqlTestConfig(driver, "gochan", ""))
-	if err != nil {
-		return nil, err
+	config.SetTestDBConfig(driver, "localhost", "gochan", "gochan", "", "")
+	db, mock, err := sqlmock.New()
+	if !assert.NoError(t, err) {
+		return nil
 	}
-	var mock sqlmock.Sqlmock
-	gcdb.db, mock, err = sqlmock.New()
+	err = SetTestingDB(driver, "gochan", "", db)
+	if !assert.NoError(t, err) {
+		return nil
+	}
 
-	return mock, err
+	return mock
 }
 
 // Open opens and returns a new gochan database connection with the provided SQL options
