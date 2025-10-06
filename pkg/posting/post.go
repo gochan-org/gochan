@@ -300,14 +300,32 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 	infoEv, warnEv, errEv := gcutil.LogRequest(request)
 	defer gcutil.LogDiscard(infoEv, warnEv, errEv)
 
-	err := request.ParseMultipartForm(maxFormBytes)
+	wantsJSON := serverutil.IsRequestingJSON(request)
+
+	boardidStr := request.PostFormValue("boardid")
+	boardID, err := strconv.Atoi(boardidStr)
+	if err != nil {
+		errEv.Caller().
+			Str("boardid", boardidStr).
+			Msg("Invalid boardid value")
+		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]any{
+			"boardid": boardidStr,
+		})
+		return
+	}
+
+	if request.PostFormValue("doappeal") != "" {
+		handleAppeal(writer, request, infoEv, errEv)
+		return
+	}
+
+	err = request.ParseMultipartForm(maxFormBytes)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Error parsing form data")
 		server.ServeError(writer, "Error parsing form data", serverutil.IsRequestingJSON(request), nil)
 		return
 	}
 	defer request.MultipartForm.RemoveAll()
-	wantsJSON := serverutil.IsRequestingJSON(request)
 
 	refererResult, err := serverutil.CheckReferer(request)
 	if err != nil {
@@ -334,22 +352,6 @@ func MakePost(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if request.PostFormValue("doappeal") != "" {
-		handleAppeal(writer, request, infoEv, errEv)
-		return
-	}
-
-	boardidStr := request.PostFormValue("boardid")
-	boardID, err := strconv.Atoi(boardidStr)
-	if err != nil {
-		errEv.Caller().
-			Str("boardid", boardidStr).
-			Msg("Invalid boardid value")
-		server.ServeError(writer, "Invalid form data (invalid boardid)", wantsJSON, map[string]any{
-			"boardid": boardidStr,
-		})
-		return
-	}
 	board, err := gcsql.GetBoardFromID(boardID)
 	if err != nil {
 		errEv.Err(err).Caller().

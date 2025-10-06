@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/Eggbertx/go-forms"
+	"github.com/gochan-org/gochan/pkg/building"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 	"github.com/gochan-org/gochan/pkg/gctemplates"
@@ -62,29 +63,38 @@ func checkIpBan(post *gcsql.Post, postBoard *gcsql.Board, writer http.ResponseWr
 	return true
 }
 
+type appealForm struct {
+	BanID         int    `form:"banid,required" method:"POST"`
+	BoardID       int    `form:"boardid,required" method:"POST"`
+	AppealMessage string `form:"appealmsg,required,notempty" method:"POST"`
+	DoAppeal      string `form:"doappeal,required,notempty" method:"POST"`
+}
+
 func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zerolog.Event, errEv *zerolog.Event) {
-	banIDstr := request.FormValue("banid")
-	if banIDstr == "" {
-		errEv.Caller().Msg("Appeal sent without banid field")
-		server.ServeErrorPage(writer, "Missing banid value")
+	var form appealForm
+	err := forms.FillStructFromForm(request, &form)
+	if err != nil {
+		errEv.Err(err).Caller().Msg("Error parsing appeal form data")
+		writer.WriteHeader(http.StatusBadRequest)
+		server.ServeError(writer, "Error parsing form data: "+err.Error(), serverutil.IsRequestingJSON(request), nil)
 		return
 	}
-	appealMsg := request.FormValue("appealmsg")
-	if appealMsg == "" {
-		errEv.Caller().Msg("Missing appealmsg value")
-		server.ServeErrorPage(writer, "Missing or empty appeal")
-		return
-	}
-	banID, err := strconv.Atoi(banIDstr)
+
+	gcutil.LogInt("banID", form.BanID, infoEv, errEv)
+
+	var board *gcsql.Board
+	board, err = gcsql.GetBoardFromID(form.BoardID)
 	if err != nil {
 		errEv.Err(err).Caller().
-			Str("banIDstr", banIDstr).Send()
-		server.ServeErrorPage(writer, fmt.Sprintf("Invalid banid value %q", banIDstr))
+			Int("boardID", form.BoardID).
+			Msg("Error getting board by ID")
+		server.ServeError(writer, "Failed to get board info", serverutil.IsRequestingJSON(request), map[string]any{
+			"boardID": form.BoardID,
+		})
 		return
 	}
-	gcutil.LogInt("banID", banID, infoEv, errEv)
 
-	ban, err := gcsql.GetIPBanByID(banID)
+	ban, err := gcsql.GetIPBanByID(form.BanID)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		server.ServeErrorPage(writer, "Error getting ban info: "+err.Error())
@@ -92,7 +102,7 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 	}
 	if ban == nil {
 		infoEv.Caller().Msg("GetIPBanByID returned a nil ban (presumably not banned)")
-		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban ID %d", banID))
+		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban ID %d", form.BanID))
 		return
 	}
 	gcutil.LogStr("rangeStart", ban.RangeStart, infoEv, errEv)
@@ -106,7 +116,7 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 	if !isCorrectIP {
 		errEv.Caller().
 			Msg("User tried to appeal a ban from a different IP")
-		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban id: %d", banID))
+		server.ServeErrorPage(writer, fmt.Sprintf("Invalid ban id: %d", ban.ID))
 		return
 	}
 	if !ban.IsActive {
@@ -124,14 +134,38 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 			Msg("Rejected appeal submission, can't appeal yet")
 		server.ServeErrorPage(writer, "You are not able to appeal this ban until "+ban.AppealAt.Format(config.GetBoardConfig("").DateTimeFormat))
 	}
-	if err = ban.Appeal(appealMsg); err != nil {
+	if err = ban.Appeal(form.AppealMessage); err != nil {
 		errEv.Err(err).Caller().
-			Str("appealMsg", appealMsg).
+			Str("appealMsg", form.AppealMessage).
 			Msg("Unable to submit appeal")
 		server.ServeErrorPage(writer, "Unable to submit appeal")
 		return
 	}
-	board := request.FormValue("board")
-	infoEv.Str("board", board).Msg("Appeal submitted")
-	http.Redirect(writer, request, config.WebPath(request.FormValue("board")), http.StatusFound)
+
+	infoEv.Msg("Appeal submitted")
+
+	writer.WriteHeader(http.StatusOK)
+
+	var buf bytes.Buffer
+	if err = building.BuildPageHeader(&buf, "Appeal Submitted", board.Dir, map[string]any{
+		"siteConfig":  config.GetSiteConfig(),
+		"boardConfig": config.GetBoardConfig(board.Dir),
+	}); err != nil {
+		err = server.NewServerError(err, http.StatusInternalServerError)
+		errEv.Err(err).Caller().Msg("Error building page header")
+		server.ServeErrorPage(writer, "Error building page header: "+err.Error())
+		return
+	}
+	buf.WriteString(`<br><div class="text-center">Your appeal has been submitted and will be reviewed.</div><br>`)
+
+	if err = building.BuildPageFooter(&buf); err != nil {
+		err = server.NewServerError(err, http.StatusInternalServerError)
+		errEv.Err(err).Caller().Msg("Error building page footer")
+		server.ServeErrorPage(writer, "Error building page footer: "+err.Error())
+		return
+	}
+
+	writer.Write(buf.Bytes())
+
+	// http.Redirect(writer, request, config.WebPath(request.FormValue("board")), http.StatusFound)
 }
