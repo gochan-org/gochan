@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
+	"github.com/rs/zerolog"
 )
 
 func setDefaultCfgIfNotSet() {
@@ -14,6 +15,9 @@ func setDefaultCfgIfNotSet() {
 func InitTestConfig() {
 	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
+	cfg.LogLevelStr = "trace"
+	cfg.logLevelParsed = true
+	cfg.logLevel = zerolog.TraceLevel
 }
 
 // SetTestTemplateDir sets the directory for templates, used only in testing. If it is not run via `go test`, it will panic.

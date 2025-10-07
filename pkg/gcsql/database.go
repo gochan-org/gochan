@@ -127,6 +127,8 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 // Exec executes the given SQL statement with the given parameters, optionally with the given RequestOptions struct
 // or a background context and transaction if nil
 func (db *GCDB) Exec(opts *RequestOptions, query string, values ...any) (sql.Result, error) {
+	logger := gcutil.Logger()
+	logger.Trace().Str("sql", query).Msg("Exec")
 	opts = setupOptions(opts)
 	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
@@ -195,6 +197,8 @@ database variables, e.g. DBPREFIX, DBNAME, etc so it should be used sparingly or
 gcsql.SetupSQLString
 */
 func (db *GCDB) Begin() (*sql.Tx, error) {
+	logger := gcutil.Logger()
+	logger.Trace().Msg("Begin")
 	return db.db.Begin()
 }
 
@@ -207,12 +211,16 @@ func (db *GCDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, erro
 	if db == nil {
 		return nil, ErrNotConnected
 	}
+	logger := gcutil.Logger()
+	logger.Trace().Msg("BeginTx")
 	return db.db.BeginTx(ctx, opts)
 }
 
 // QueryRow gets a row from the db with the values in values[] and fills the respective pointers in out[],
 // with an optional RequestOptions struct for the context and transaction
 func (db *GCDB) QueryRow(opts *RequestOptions, query string, values []any, out []any) error {
+	logger := gcutil.Logger()
+	logger.Trace().Str("sql", query).Msg("QueryRow")
 	opts = setupOptions(opts)
 	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
@@ -281,6 +289,8 @@ func (db *GCDB) QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error
 
 // Query sends the query to the database with the given options (or a background context if nil), and the given parameters
 func (db *GCDB) Query(opts *RequestOptions, query string, a ...any) (*sql.Rows, error) {
+	logger := gcutil.Logger()
+	logger.Trace().Str("sql", query).Msg("Query")
 	opts = setupOptions(opts)
 	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {

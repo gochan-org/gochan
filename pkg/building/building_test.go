@@ -133,7 +133,7 @@ func TestBuildJS(t *testing.T) {
 	assert.Equal(t, expectedUnminifiedJS, string(ba))
 }
 
-func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool) {
+func mockSelectNonHiddenBoardsWithJoins(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT\s*` +
 		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
 		`max_file_size, max_threads, default_style, boards\.locked, created_at, anonymous_name, force_anonymous,\s*` +
@@ -160,12 +160,21 @@ func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool)
 			1500, 2000, 1500, 0, true, false, false, true,
 		}),
 	)
+}
 
+func mockSelectNonHiddenBoardsSimple(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(
 		`SELECT id, name, abbreviation, position, hidden FROM sections WHERE hidden = FALSE ORDER BY position ASC, name ASC`,
 	).ExpectQuery().
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
+}
+
+func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool) {
+	mockSelectNonHiddenBoardsWithJoins(mock) // ResetBoardSectionArrays
+	mockSelectNonHiddenBoardsSimple(mock)
+	mockSelectNonHiddenBoardsWithJoins(mock) // BuildFrontPage
+	mockSelectNonHiddenBoardsSimple(mock)
 
 	if expectRecentPosts {
 		mockSetupPosts(mock)
