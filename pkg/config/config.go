@@ -482,10 +482,6 @@ type BoardConfig struct {
 	// Default: true
 	RenderURLsAsLinks bool
 
-	// ThreadsPerPage is the number of threads to display per page
-	// Default: 20
-	ThreadsPerPage int
-
 	// EnableGeoIP shows a dropdown box allowing the user to set their post flag as their country
 	// Default: false
 	EnableGeoIP bool

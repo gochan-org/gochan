@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -30,6 +31,9 @@ var (
 	ErrInvalidMatchAction     = errors.New("unrecognized filter match action")
 	ErrInvalidFilter          = errors.New("unrecognized filter id")
 	ErrNoConditions           = errors.New("error has no match conditions")
+	fieldsWithoutSearchBox    = []string{
+		"firsttimeboard", "notfirsttimeboard", "firsttimesite", "notfirsttimesite", "isop", "notop", "hasfile", "nofile",
+	}
 )
 
 // StringMatchMode is used when matching a string, determining how it should be checked (substring, regex, or exact match)
@@ -507,6 +511,7 @@ func (fc FilterCondition) testCondition(post *Post, upload *Upload, request *htt
 			Str("field", fc.Field).
 			Int("filterID", fc.FilterID).
 			Int("filterConditionID", fc.ID).Send()
+		errEv.Discard()
 		err = errors.New("unable to check filter condition")
 	}
 	return match, err
@@ -519,17 +524,12 @@ func (fc FilterCondition) ShowStringMatchOptions() bool {
 
 // HasSearchField is a convenience function for templates. It returns true if the filter condition should show a search box
 func (fc FilterCondition) HasSearchField() bool {
-	return fc.Field != "firsttimeboard" && fc.Field != "notfirsttimeboard" && fc.Field != "firsttimesite" &&
-		fc.Field != "notfirsttimesite" && fc.Field != "isop" && fc.Field != "notop" && fc.Field != "hasfile" &&
-		fc.Field != "nofile"
+	return !slices.Contains(fieldsWithoutSearchBox, fc.Field)
 }
 
 func checkFilter(filter *Filter, post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
 	match, err := filter.checkIfMatch(post, upload, request, errEv)
 	if err != nil {
-		errEv.Err(err).Caller().
-			Int("filterID", filter.ID).
-			Msg("Unable to check filter for a match")
 		return false, errors.New("unable to check filter for a match")
 	}
 	if !match {

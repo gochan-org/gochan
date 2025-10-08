@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -74,11 +75,17 @@ func RegisterBooleanConditionHandler(field string, matchFunc ConditionMatchFunc)
 	return nil
 }
 
-func firstPost(post *Post, global bool) (bool, error) {
+func firstPost(req *http.Request, post *Post, global bool) (bool, error) {
 	var board int
 	var err error
 	if !global {
-		board, err = post.GetBoardID()
+		if post.ThreadID == 0 {
+			// OP post, no thread to check against, use the field in the request
+			board, err = strconv.Atoi(req.PostFormValue("boardid"))
+		} else {
+			// Reply to a thread, get the board from the thread
+			board, err = post.GetBoardID()
+		}
 		if err != nil {
 			return false, err
 		}
@@ -86,14 +93,14 @@ func firstPost(post *Post, global bool) (bool, error) {
 	query := `SELECT COUNT(*) FROM DBPREFIXposts `
 	params := []any{post.IP}
 	if board > 0 {
-		query += ` LEFT JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id WHERE ip = ? AND board_id = ?`
+		query += ` LEFT JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id WHERE ip = PARAM_ATON AND board_id = ?`
 		params = append(params, board)
 	} else {
 		query += ` WHERE ip = PARAM_ATON`
 	}
 	var count int
-	err = QueryRowTimeoutSQL(nil, query, params, []any{&count})
-	return count > 0, err
+	err = QueryRowTimeoutSQL(nil, query+" AND DBPREFIXposts.is_deleted = FALSE", params, []any{&count})
+	return count == 0, err
 }
 
 func matchString(fc *FilterCondition, checkStr string) (bool, error) {
@@ -103,11 +110,7 @@ func matchString(fc *FilterCondition, checkStr string) (bool, error) {
 	case SubstrMatchCaseInsensitive:
 		return strings.Contains(strings.ToLower(checkStr), strings.ToLower(fc.Search)), nil
 	case RegexMatch:
-		re, err := regexp.Compile(fc.Search)
-		if err != nil {
-			return false, err
-		}
-		return re.MatchString(checkStr), nil
+		return regexp.MatchString(fc.Search, checkStr)
 	case ExactMatch:
 		return checkStr == fc.Search, nil
 	}
@@ -148,33 +151,33 @@ func init() {
 		},
 		"firsttimeboard": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
-				return firstPost(p, false)
+			matchFunc: func(req *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+				return firstPost(req, p, false)
 			},
 		},
 		"notfirsttimeboard": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
-				first, err := firstPost(p, false)
+			matchFunc: func(req *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+				first, err := firstPost(req, p, false)
 				return !first, err
 			},
 		},
 		"firsttimesite": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
-				return firstPost(p, true)
+			matchFunc: func(req *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+				return firstPost(req, p, true)
 			},
 		},
 		"notfirsttimesite": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
-				first, err := firstPost(p, true)
+			matchFunc: func(req *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+				first, err := firstPost(req, p, true)
 				return !first, err
 			},
 		},
 		"isop": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(req *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				return p.IsTopPost, nil
 			},
 		},
