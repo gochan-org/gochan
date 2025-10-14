@@ -166,7 +166,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		}
 	}
 
-	appeals, err := gcsql.GetAppeals(banID, limit)
+	appeals, err := gcsql.GetAppeals(banID, limit, true)
 	if err != nil {
 		logger.Err(err).Caller().Send()
 		return "", fmt.Errorf("failed to get appeals list: %w", err)

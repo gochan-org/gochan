@@ -6,11 +6,16 @@ import (
 	"strconv"
 )
 
-// GetAppeals returns an array of appeals, optionally limiting them to a specific ban
-func GetAppeals(banID int, limit int) ([]IPBanAppeal, error) {
+// GetAppeals returns an array of appeals, optionally limiting them to a specific ban or ordering them in descending order
+func GetAppeals(banID int, limit int, orderDesc ...bool) ([]IPBanAppeal, error) {
 	query := `SELECT id, staff_id, ip_ban_id, appeal_text, staff_response, is_denied FROM DBPREFIXip_ban_appeals`
 	if banID > 0 {
 		query += " WHERE ip_ban_id = ?"
+	}
+	if len(orderDesc) > 0 && orderDesc[0] {
+		query += " ORDER BY id DESC"
+	} else {
+		query += " ORDER BY id ASC"
 	}
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)

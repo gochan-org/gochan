@@ -69,11 +69,11 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 }
 
 type staffInfoJSON struct {
-	Username string   `json:"username"`
-	Rank     int      `json:"rank"`
-	Actions  []Action `json:"actions,omitempty"`
-	Reports  int      `json:"reports,omitempty"`
-	Appeals  int      `json:"appeals,omitempty"`
+	Username string              `json:"username"`
+	Rank     int                 `json:"rank"`
+	Actions  []Action            `json:"actions,omitempty"`
+	Reports  []gcsql.Report      `json:"reports,omitempty"`
+	Appeals  []gcsql.IPBanAppeal `json:"appeals,omitempty"`
 }
 
 func staffInfoCallback(writer http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ zerolog.Logger) (output any, err error) {
@@ -86,12 +86,12 @@ func staffInfoCallback(writer http.ResponseWriter, _ *http.Request, staff *gcsql
 	}
 	if staff.Rank >= ModPerms {
 		var err error
-		if info.Reports, err = gcsql.GetReportCount(); err != nil {
+		if info.Reports, err = gcsql.GetReports(false); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
-			return nil, fmt.Errorf("unable to get the number of open reports: %w", err)
+			return nil, fmt.Errorf("unable to get open reports: %w", err)
 		}
 
-		if info.Appeals, err = gcsql.GetAppealCount(); err != nil {
+		if info.Appeals, err = gcsql.GetAppeals(0, 4, true); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			return nil, fmt.Errorf("unable to get the number of open appeals: %w", err)
 		}

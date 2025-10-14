@@ -15,31 +15,31 @@ var (
 	testCasesGetAppeals = []testCaseGetAppeals{
 		{
 			name:         "single appeal, no results",
-			args:         argsGetAppeals{1, 1},
+			args:         argsGetAppeals{banID: 1, limit: 1},
 			expectReturn: nil,
 		},
 		{
 			name: "single appeal, with result",
-			args: argsGetAppeals{1, 1},
+			args: argsGetAppeals{banID: 1, limit: 1},
 			expectReturn: []IPBanAppeal{
 				{ID: 1},
 			},
 		},
 		{
 			name:         "all appeals, no results",
-			args:         argsGetAppeals{0, 1},
+			args:         argsGetAppeals{limit: 1},
 			expectReturn: nil,
 		},
 		{
 			name:         "all appeals, with results",
-			args:         argsGetAppeals{0, 10},
+			args:         argsGetAppeals{limit: 10},
 			expectReturn: []IPBanAppeal{{}, {}, {}},
 		},
 	}
 	testCasesApproveAppeals = []testCaseApproveAppeals{
 		{
 			name: "approve nonexistent appeal",
-			args: argsApproveAppeal{1, 1},
+			args: argsApproveAppeal{appealID: 1, staffID: 1},
 		},
 	}
 )
@@ -56,8 +56,9 @@ type testCaseApproveAppeals struct {
 }
 
 type argsGetAppeals struct {
-	banID int
-	limit int
+	banID     int
+	limit     int
+	orderDesc bool
 }
 
 type argsApproveAppeal struct {
@@ -86,6 +87,11 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 			query += ` WHERE ip_ban_id = \$1`
 		}
 	}
+	if tC.args.orderDesc {
+		query += " ORDER BY id DESC"
+	} else {
+		query += " ORDER BY id ASC"
+	}
 	if tC.args.limit > 0 {
 		query += " LIMIT " + strconv.Itoa(tC.args.limit)
 	}
@@ -105,7 +111,7 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 	}
 	expectQuery.WillReturnRows(expectedRows)
 
-	got, err := GetAppeals(tC.args.banID, tC.args.limit)
+	got, err := GetAppeals(tC.args.banID, tC.args.limit, tC.args.orderDesc)
 	if !assert.NoError(t, err) {
 		return
 	}
