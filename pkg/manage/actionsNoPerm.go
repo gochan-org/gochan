@@ -72,15 +72,29 @@ type staffInfoJSON struct {
 	Username string   `json:"username"`
 	Rank     int      `json:"rank"`
 	Actions  []Action `json:"actions,omitempty"`
+	Reports  int      `json:"reports,omitempty"`
+	Appeals  int      `json:"appeals,omitempty"`
 }
 
-func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ zerolog.Logger) (output any, err error) {
+func staffInfoCallback(writer http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, _ zerolog.Logger) (output any, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,
 	}
 	if staff.Rank >= JanitorPerms {
 		info.Actions = getAvailableActions(staff.Rank, false)
+	}
+	if staff.Rank >= ModPerms {
+		var err error
+		if info.Reports, err = gcsql.GetReportCount(); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			return nil, fmt.Errorf("unable to get the number of open reports: %w", err)
+		}
+
+		if info.Appeals, err = gcsql.GetAppealCount(); err != nil {
+			writer.WriteHeader(http.StatusInternalServerError)
+			return nil, fmt.Errorf("unable to get the number of open appeals: %w", err)
+		}
 	}
 	return info, nil
 }

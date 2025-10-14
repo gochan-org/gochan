@@ -119,6 +119,14 @@ func GetReports(includeCleared bool) ([]Report, error) {
 	return reports, rows.Close()
 }
 
+// GetReportCount returns the number of reported posts that have not been handled
+func GetReportCount() (int, error) {
+	sql := `SELECT COUNT(*) FROM DBPREFIXreports WHERE is_cleared = FALSE`
+	var count int
+	err := QueryRowTimeoutSQL(nil, sql, []any{}, []any{&count})
+	return count, err
+}
+
 // DeleteReportsOfDeletedPosts removes reports and report audits of posts that have been deleted
 func DeleteReportsOfDeletedPosts(requestOptions ...*RequestOptions) error {
 	opts := setupOptionsWithTimeout(requestOptions...)

@@ -49,6 +49,14 @@ func GetAppeals(banID int, limit int) ([]IPBanAppeal, error) {
 	return appeals, nil
 }
 
+// GetAppealCount returns the number of pending ban appeals
+func GetAppealCount() (int, error) {
+	query := `SELECT COUNT(*) FROM DBPREFIXip_ban_appeals WHERE is_denied = FALSE`
+	var count int
+	err := QueryRowTimeoutSQL(nil, query, []any{}, []any{&count})
+	return count, err
+}
+
 // ApproveAppeal deactivates the ban that the appeal was submitted for
 func ApproveAppeal(appealID int, staffID int) error {
 	const deactivateQuery = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = (

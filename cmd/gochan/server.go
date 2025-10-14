@@ -103,16 +103,15 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
 	}
 	if redirectTo == "" || (deleteBtn != "Delete" && reportBtn != "Report" && editBtn != "Edit post" && doEdit != "post" && doEdit != "upload" && moveBtn != "Move thread" && doMove != "1") {
-		accessEv := gcutil.LogAccess(request).
-			Int("status", http.StatusBadRequest).
-			Str("redirect", redirectTo)
-
+		warnEv := gcutil.LogWarning().
+			Str("IP", gcutil.GetRealIP(request)).
+			Int("status", http.StatusBadRequest)
 		if redirectTo == "" {
-			accessEv.Msg("received /util request with no referer")
+			warnEv.Msg("received /util request with no referer")
 		} else {
-			accessEv.Msg("received invalid /util request")
+			warnEv.Str("redirect", redirectTo).Msg("received invalid /util request")
 		}
-		accessEv.Discard()
+		warnEv.Discard()
 		server.ServeError(writer, server.NewServerError("bad /util request", http.StatusBadRequest), wantsJSON, nil)
 		return
 	}
@@ -146,7 +145,8 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 		gcutil.LogWarning().
 			Ints("reportedPosts", checkedPosts).
 			Str("board", board).
-			Str("IP", gcutil.GetRealIP(request)).Send()
+			Str("IP", gcutil.GetRealIP(request)).
+			Msg("New post report submitted")
 
 		http.Redirect(writer, request, redirectTo, http.StatusFound)
 		return
