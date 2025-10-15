@@ -734,7 +734,7 @@ div#topbar {
   width: 100%;
   margin-top: 0px;
 }
-div#topbar * {
+div#topbar .topbar-section, div#topbar .topbar-item, div#topbar .dropdown-button {
   padding: 4px;
   margin-left: 4px;
 }
