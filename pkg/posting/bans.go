@@ -94,7 +94,7 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 		return
 	}
 
-	ban, err := gcsql.GetIPBanByID(form.BanID)
+	ban, err := gcsql.GetIPBanByID(nil, form.BanID)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		server.ServeErrorPage(writer, "Error getting ban info: "+err.Error())
@@ -128,11 +128,12 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 		errEv.Caller().Msg("Rejected appeal submission, appeals denied for this ban")
 		server.ServeErrorPage(writer, "You can not appeal this ban")
 	}
+	boardCfg := config.GetBoardConfig(board.Dir)
 	if ban.AppealAt.After(time.Now()) {
 		errEv.Caller().
 			Time("appealAt", ban.AppealAt).
 			Msg("Rejected appeal submission, can't appeal yet")
-		server.ServeErrorPage(writer, "You are not able to appeal this ban until "+ban.AppealAt.Format(config.GetBoardConfig("").DateTimeFormat))
+		server.ServeErrorPage(writer, "You are not able to appeal this ban until "+ban.AppealAt.Format(boardCfg.DateTimeFormat))
 	}
 	if err = ban.Appeal(form.AppealMessage); err != nil {
 		errEv.Err(err).Caller().
@@ -149,7 +150,7 @@ func handleAppeal(writer http.ResponseWriter, request *http.Request, infoEv *zer
 	var buf bytes.Buffer
 	if err = building.BuildPageHeader(&buf, "Appeal Submitted", board.Dir, map[string]any{
 		"siteConfig":  config.GetSiteConfig(),
-		"boardConfig": config.GetBoardConfig(board.Dir),
+		"boardConfig": boardCfg,
 	}); err != nil {
 		err = server.NewServerError(err, http.StatusInternalServerError)
 		errEv.Err(err).Caller().Msg("Error building page header")

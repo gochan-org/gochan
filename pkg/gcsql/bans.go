@@ -91,10 +91,16 @@ func CheckIPBan(ip string, boardID int) (*IPBan, error) {
 	return &ban, nil
 }
 
-func GetIPBanByID(id int) (*IPBan, error) {
+func GetIPBanByID(opts *RequestOptions, id int) (*IPBan, error) {
 	const query = ipBanQueryBase + " WHERE id = ?"
 	var ban IPBan
-	err := QueryRow(nil, query, []any{id}, []any{
+
+	if opts == nil {
+		opts = setupOptionsWithTimeout(opts)
+		defer opts.Cancel()
+	}
+
+	err := QueryRow(opts, query, []any{id}, []any{
 		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,
 		&ban.IsThreadBan, &ban.IsActive, &ban.RangeStart, &ban.RangeEnd, &ban.IssuedAt,
 		&ban.AppealAt, &ban.ExpiresAt, &ban.Permanent, &ban.StaffNote, &ban.Message,
@@ -141,8 +147,20 @@ func GetIPBans(boardID int, limit int, onlyActive bool) ([]IPBan, error) {
 }
 
 func (ipb *IPBan) Appeal(msg string) error {
-	const query = `INSERT INTO DBPREFIXip_ban_appeals (ip_ban_id, appeal_text, is_denied) VALUES(?, ?, FALSE)`
-	_, err := Exec(nil, query, ipb.ID, msg)
+	const insertAppealSQL = "INSERT INTO DBPREFIXip_ban_appeals (ip_ban_id, appeal_text, is_denied) VALUES(?, ?, FALSE)"
+	const getLatestIDSQL = "SELECT MAX(id) FROM DBPREFIXip_ban_appeals"
+	const insertAppealAuditSQL = "INSERT INTO DBPREFIXip_ban_appeals_audit(appeal_id, appeal_text, is_denied) SELECT id, appeal_text, is_denied FROM DBPREFIXip_ban_appeals WHERE id = ?"
+	_, err := Exec(nil, insertAppealSQL, ipb.ID, msg)
+	if err != nil {
+		return err
+	}
+	var appealID int
+	err = QueryRow(nil, getLatestIDSQL, []any{}, []any{&appealID})
+	if err != nil {
+		return err
+	}
+	_, err = Exec(nil, insertAppealAuditSQL, appealID)
+
 	return err
 }
 
@@ -155,23 +173,29 @@ func (ban IPBan) BannedForever() bool {
 	return ban.IsActive && ban.Permanent && !ban.CanAppeal
 }
 
-func (ipb *IPBan) Deactivate(_ int) error {
-	const deactivateQuery = `UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?`
-	const auditInsertQuery = `INSERT INTO DBPREFIXip_ban_audit
-		(ip_ban_id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, staff_note, message, can_appeal)
-		SELECT
-		id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, staff_note, message, can_appeal
-		FROM DBPREFIXip_ban WHERE id = ?`
-	tx, err := BeginTx()
+func DeactivateBan(banID int, staffID int, opts ...*RequestOptions) error {
+	const updateBanSQL = "UPDATE DBPREFIXip_ban SET is_active = FALSE WHERE id = ?"
+	const insertAuditSQL = `INSERT INTO DBPREFIXip_ban_audit
+			(ip_ban_id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, staff_note, message, can_appeal)
+			VALUES(?, ?, FALSE, ?, ?, ?, ?, ?, ?, ?)`
+
+	opt := setupOptionsWithTimeout(opts...)
+	ban, err := GetIPBanByID(opt, banID)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
-	if _, err = Exec(&RequestOptions{Tx: tx}, deactivateQuery, ipb.ID); err != nil {
+	if !ban.IsActive {
+		return ErrBanNotActive
+	}
+
+	if _, err = Exec(opt, updateBanSQL, banID); err != nil {
 		return err
 	}
-	if _, err = Exec(&RequestOptions{Tx: tx}, auditInsertQuery, ipb.ID); err != nil {
+
+	if _, err = Exec(opt, insertAuditSQL, ban.ID, staffID, ban.IsThreadBan, ban.ExpiresAt, ban.AppealAt,
+		ban.Permanent, ban.StaffNote, ban.Message, ban.CanAppeal); err != nil {
 		return err
 	}
-	return tx.Commit()
+	return nil
+
 }

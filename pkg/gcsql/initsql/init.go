@@ -40,7 +40,7 @@ func getStaffNameFromIDTmplFunc(id int) string {
 }
 
 func getAppealBanIPTmplFunc(appealID int) string {
-	ban, err := gcsql.GetIPBanByID(appealID)
+	ban, err := gcsql.GetIPBanByID(nil, appealID)
 	if err != nil || ban == nil {
 		return "?"
 	}

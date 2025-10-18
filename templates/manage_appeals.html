@@ -1,18 +1,23 @@
-<table class="mgmt-table">
-<tr><th>Action</th><th>Appeal Text</th><th>Banned IP</th></tr>
-{{if eq nil $.appeals}}
-</table>
-<i>No appeals</i>
-{{end}}
-{{range $_,$appeal := $.appeals}}
-<tr>
-	<td>
-		<a href="{{webPath "manage/appeals"}}?approve={{$appeal.ID}}">Approve</a> |
-		<a href="{{webPath "manage/appeals"}}?deny={{$appeal.ID}}">Deny</a>
-	</td>
-	<td>{{$appeal.AppealText}}</td>
-	<td>{{getAppealBanIP $appeal.IPBanID}}</td>
-</tr>
-<tr></tr>
-{{end}}
-</table>
+{{if eq nil $.appeals -}}
+	<span class="text-italic">No appeals</span>
+{{- else -}}
+<form action="{{webPath `/manage/appeals`}}" method="POST">
+	<input type="submit" name="doapprove" value="Approve Selected" />
+	<input type="submit" name="dodeny" value="Deny Selected" /><br>
+	<table class="mgmt-table">
+		<tr><th></th><th>Appeal Text</th><th>Banned IP</th><th>Timestamp</th></tr>
+		{{- range $_,$appeal := $.appeals -}}
+			<tr>
+				<td>
+					<input type="checkbox" name="appeal" value="{{$appeal.ID}}" />
+					<!-- <a href="{{webPath "manage/appeals"}}?approve={{$appeal.ID}}">Approve</a> |
+					<a href="{{webPath "manage/appeals"}}?deny={{$appeal.ID}}">Deny</a> -->
+				</td>
+				<td>{{$appeal.AppealText}}</td>
+				<td>{{getAppealBanIP $appeal.IPBanID}}</td>
+				<td><time datetime="{{formatTimestampAttribute $appeal.Timestamp}}">{{formatTimestamp $appeal.Timestamp}}</time></td>
+			</tr>
+		{{- end -}}
+	</table>
+</form>
+{{- end}}

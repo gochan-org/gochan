@@ -147,3 +147,30 @@ func (brf *createOrModifyBoardForm) fillBoard(board *gcsql.Board) {
 	board.RequireFile = brf.RequireFile
 	board.EnableCatalog = brf.EnableCatalog
 }
+
+type appealsForm struct {
+	DoApprove string `form:"doapprove" method:"POST"`
+	DoDeny    string `form:"dodeny" method:"POST"`
+	AppealIDs []int  `form:"appeal,required,notempty" method:"POST"`
+	Limit     int    `form:"limit,default=20"`
+}
+
+func (af *appealsForm) validate() error {
+	if (af.isApprove() && af.isDeny()) || (!af.isApprove() && !af.isDeny()) {
+		return server.NewServerError("no action specified", http.StatusBadRequest)
+	}
+	if len(af.AppealIDs) == 0 {
+		return server.NewServerError("no appeals selected", http.StatusBadRequest)
+	}
+	if af.Limit < 1 {
+		af.Limit = 20
+	}
+	return nil
+}
+
+func (af *appealsForm) isApprove() bool {
+	return af.DoApprove != ""
+}
+func (af *appealsForm) isDeny() bool {
+	return af.DoDeny != ""
+}

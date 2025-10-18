@@ -39,6 +39,7 @@ func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername str
 	cfg.DBusername = dbUsername
 	cfg.DBpassword = dbPassword
 	cfg.DBprefix = dbPrefix
+	cfg.DBTimeoutSeconds = 60
 }
 
 // SetRandomSeed is usd to set a deterministic seed to make testing easier. If it is not run via `go test`, it will panic

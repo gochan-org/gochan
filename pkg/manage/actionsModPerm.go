@@ -49,7 +49,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	if banForm.DeleteID > 0 {
 		// deleting a ban
 		ban.ID = banForm.DeleteID
-		if err = ban.Deactivate(staff.ID); err != nil {
+		if err = gcsql.DeactivateBan(ban.ID, staff.ID); err != nil {
 			logger.Err(err).Caller().
 				Int("deleteBan", ban.ID).
 				Send()
@@ -133,40 +133,53 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 }
 
 func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
-	banIDstr := request.FormValue("banid")
-	var banID int
-	if banIDstr != "" {
-		if banID, err = strconv.Atoi(banIDstr); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", err
-		}
+	var form appealsForm
+	if err = forms.FillStructFromForm(request, &form); err != nil {
+		logger.Err(err).Caller().
+			Msg("Unable to fill struct from form")
+		return "", server.NewServerError(err, http.StatusBadRequest)
 	}
-	logger = logger.With().Int("banID", banID).Logger()
 
-	limitStr := request.FormValue("limit")
-	limit := 20
-	if limitStr != "" {
-		if limit, err = strconv.Atoi(limitStr); err != nil {
-			logger.Err(err).Caller().Send()
+	if request.Method == http.MethodPost {
+		if err = form.validate(); err != nil {
+			logger.Err(err).Caller().
+				Msg("Invalid form data")
 			return "", err
 		}
-	}
-	approveStr := request.FormValue("approve")
-	if approveStr != "" {
-		// approving an appeal
-		approveID, err := strconv.Atoi(approveStr)
-		if err != nil {
-			logger.Err(err).Caller().
-				Str("approveStr", approveStr).Send()
+
+		zlArr := zerolog.Arr()
+		for _, v := range form.AppealIDs {
+			zlArr.Int(v)
 		}
-		if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
-			logger.Err(err).Caller().
-				Int("approveAppeal", approveID).Send()
-			return "", err
+		if form.isApprove() {
+			logger = logger.With().Array("approveAppeals", zlArr).Logger()
+		} else if form.isDeny() {
+			logger = logger.With().Array("denyAppeals", zlArr).Logger()
+		}
+	} else {
+		if form.Limit < 1 {
+			form.Limit = 20
 		}
 	}
 
-	appeals, err := gcsql.GetAppeals(banID, limit, true)
+	if form.isApprove() {
+		for _, approveID := range form.AppealIDs {
+			if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
+				logger.Err(err).Caller().
+					Int("approveAppeal", approveID).Send()
+				return "", err
+			}
+		}
+		logger.Info().Msg("Approved appeal(s)")
+	} else if form.isDeny() {
+		return "", server.NewServerError("deny appeal not yet implemented", http.StatusNotImplemented)
+		// for _, denyID := range form.AppealIDs {
+
+		// }
+		// logger.Info().Msg("Denied appeal(s)")
+	}
+
+	appeals, err := gcsql.GetAppeals(0, form.Limit, true)
 	if err != nil {
 		logger.Err(err).Caller().Send()
 		return "", fmt.Errorf("failed to get appeals list: %w", err)
@@ -175,16 +188,16 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	if wantsJSON {
 		return appeals, nil
 	}
-	manageAppealsBuffer := bytes.NewBufferString("")
+	var buf bytes.Buffer
 	pageData := map[string]any{}
 	if len(appeals) > 0 {
 		pageData["appeals"] = appeals
 	}
-	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
+	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageAppeals).Caller().Send()
 		return "", fmt.Errorf("failed executing appeal management page template: %w", err)
 	}
-	return manageAppealsBuffer.String(), err
+	return buf.String(), err
 }
 
 func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
