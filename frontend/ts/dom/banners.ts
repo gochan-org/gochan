@@ -5,13 +5,14 @@ interface BannerAttributes {
 	alt: string;
 	width?: number;
 	height?: number;
+	title?: string;
 }
 
 export function setPageBanner() {
 	const slashArr = location.pathname.split("/");
 	const board = (slashArr.length >= 2)?slashArr[1]:"";
 	const $bannerImg = $<HTMLImageElement>("<img/>").attr({
-		src: "/static/banners/gochan_go-parody.png", // placeholder, may or may not actually exist
+		src: "",
 		width: 300,
 		height: 100,
 		alt: "Page banner",
@@ -23,7 +24,7 @@ export function setPageBanner() {
 			board: board
 		},
 		dataType: "json"
-	}).then(data => {
+	}).then((data:Banner) => {
 		if((data?.Filename ?? "") === "") {
 			// no banners :(
 			$bannerImg.remove();
@@ -31,7 +32,8 @@ export function setPageBanner() {
 		}
 		const attributes: BannerAttributes = {
 			src: `${webroot}static/banners/${data.Filename}`,
-			alt: "Page banner"
+			alt: "Page banner",
+			title: "Page banner"
 		};
 		if(data.Width > 0 && data.Height > 0) {
 			attributes.width = data.Width;

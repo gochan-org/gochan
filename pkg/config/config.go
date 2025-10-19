@@ -414,9 +414,9 @@ type PageBanner struct {
 	// Filename is the name of the image file to display as seen by the browser
 	Filename string
 	// Width is the width of the image in pixels
-	Width int
+	Width int `json:",omitempty"`
 	// Height is the height of the image in pixels
-	Height int
+	Height int `json:",omitempty"`
 }
 
 // BoardConfig contains information about a specific board to be stored in /path/to/board/board.json

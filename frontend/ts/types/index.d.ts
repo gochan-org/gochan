@@ -31,6 +31,13 @@ declare global {
 		quote: (no: number) => void;
 	}
 
+	// /util/banner
+	interface Banner {
+		Filename: string;
+		Width: number;
+		Height: number;
+	}
+
 	// /boards.json
 	interface BoardsJSON {
 		boards: BoardJSON[];
