@@ -24,15 +24,18 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 	defaultVal: T;
 	onSave: () => any;
 	element: JQuery<E>;
+	category: string;
 	/**
 	 * @param key The name of the setting
 	 * @param title text that gets shown in the Settings lightbox
+	 * @param category category/lightbox tab the setting belongs to
 	 * @param defaultVal the setting's default value
 	 * @param onSave function that gets called when you save the settings
 	 */
-	constructor(key: string, title: string, defaultVal:T, onSave?:()=>any) {
+	constructor(key: string, title: string, category:string,  defaultVal:T, onSave?:()=>any) {
 		this.key = key;
 		this.title = title;
+		this.category = category;
 		this.defaultVal = defaultVal;
 		this.onSave = onSave ?? (()=>true);
 		this.element = null;
@@ -61,8 +64,8 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 }
 
 class TextSetting extends Setting<string, HTMLTextAreaElement> {
-	constructor(key: string, title: string, defaultVal = "", onSave?:()=>any) {
-		super(key, title, defaultVal, onSave);
+	constructor(key: string, title: string, category:string, defaultVal = "", onSave?:()=>any) {
+		super(key, title, defaultVal, category, onSave);
 		this.element = this.createElement("<textarea/>");
 		this.element.text(defaultVal);
 		const val = this.getStorageValue();
@@ -76,8 +79,8 @@ class TextSetting extends Setting<string, HTMLTextAreaElement> {
 }
 
 class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
-	constructor(key: string, title: string, options:any[] = [], defaultVal: ElementValue, onSave?:()=>any) {
-		super(key, title, defaultVal, onSave);
+	constructor(key: string, title: string, category:string, options:any[] = [], defaultVal: ElementValue, onSave?:()=>any) {
+		super(key, title, category, defaultVal, onSave);
 		this.element = this.createElement("<select/>");
 		for(const option of options) {
 			$<HTMLSelectElement>("<option/>").val(option.val).text(option.text).appendTo(this.element);
@@ -87,8 +90,8 @@ class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
 }
 
 class BooleanSetting extends Setting<boolean, HTMLInputElement> {
-	constructor(key: string, title: string, defaultVal = false, onSave?:()=>any) {
-		super(key, title, defaultVal, onSave);
+	constructor(key: string, title: string, category:string, defaultVal = false, onSave?:()=>any) {
+		super(key, title, category, defaultVal, onSave);
 		this.element = this.createElement("<input/>", {
 			type: "checkbox",
 			checked: this.getStorageValue()
@@ -112,8 +115,8 @@ interface MinMax {
 }
 
 class NumberSetting extends Setting<number, HTMLInputElement> {
-	constructor(key: string, title: string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave?:()=>any) {
-		super(key, title, defaultVal, onSave);
+	constructor(key: string, title: string, category:string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave?:()=>any) {
+		super(key, title, category, defaultVal, onSave);
 		const props: MinMax = {
 			type: "number"
 		};
@@ -338,7 +341,7 @@ $(() => {
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
 	}
-	settings.set("style", new DropdownSetting("style", "Style", styleOptions, defaultStyle, function() {
+	settings.set("style", new DropdownSetting("style", "Style", "Appearance", styleOptions, defaultStyle, function() {
 		const val:string = this.getElementValue();
 		const themeElem = document.getElementById("theme");
 		if(!themeElem) return;
@@ -348,26 +351,33 @@ $(() => {
 			themeElem.setAttribute("href", `${webroot ?? "/"}css/${val}`);
 		}
 	}) as Setting);
-	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", true, initTopBar));
-	settings.set("increaselineheight", new BooleanSetting("increaselineheight", "Increase line height", false, setLineHeight));
-	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", true, initPostPreviews));
-	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", true, initPostPreviews));
-	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply box", true, () => {
+	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", "General", true, initTopBar));
+	settings.set("increaselineheight", new BooleanSetting("increaselineheight", "Increase line height", "General", false, setLineHeight));
+	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", "Posting", true, initPostPreviews));
+	settings.set("enablepostclick", new BooleanSetting("enablepostclick", "Preview post on click", "Posting", true, initPostPreviews));
+	settings.set("useqr", new BooleanSetting("useqr", "Use Quick Reply", "Posting", true, () => {
 		if(getBooleanStorageVal("useqr", true)) initQR();
 		else closeQR();
 	}));
-	settings.set("revealspoilertext", new BooleanSetting("revealspoilertext", "Show spoiler text", false, updateSpoilerTextReveal));
-	settings.set("revealspoilerthreads", new BooleanSetting("revealspoilerthreads", "Reveal spoiler threads", false, updateSpoilerThreadReveal));
-	settings.set("extlinksnewtab", new BooleanSetting("extlinksnewtab", "Open external links in new tab", true, updateExternalLinks));
-	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", false));
-	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Check watched threads every # seconds", 15, {
+	settings.set("revealspoilertext", new BooleanSetting("revealspoilertext", "Reveal spoiler text", "Posting", false, updateSpoilerTextReveal));
+	settings.set("revealspoilerthreads", new BooleanSetting("revealspoilerthreads", "Reveal spoiler threads", "Posting", false, updateSpoilerThreadReveal));
+	settings.set("extlinksnewtab", new BooleanSetting("extlinksnewtab", "Open external links in new tab", "General", true, updateExternalLinks));
+	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", "Posting", false));
+	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Watched threads update interval", "Posting", 15, {
 		min: 2
 	}, initWatcher));
-	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", true, updateBrowseButton));
-	settings.set("smoothhidetoggle", new BooleanSetting("smoothhidetoggle", "Smooth hide block toggle", true));
+	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", "Posting", true, updateBrowseButton));
+	settings.set("smoothhidetoggle", new BooleanSetting("smoothhidetoggle", "Smooth hide block toggle", "General", true));
 
-	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", ""));
-	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "", setCustomCSS));
+	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", "General", ""));
+	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "General", "", setCustomCSS));
+	$(document).on("gotStaffRank", (_e, rank:number) => {
+		if(rank >= 2) {
+			settings.set("reportinterval", new NumberSetting("reportinterval", "Reports/Appeals update interval", "Management", 30, {min: 5}, function() {
+				$(document).trigger("reportIntervalChanged");
+			}));
+		}
+	});
 
 	$settingsButton ??= new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
 });

@@ -31,6 +31,15 @@ declare global {
 		quote: (no: number) => void;
 	}
 
+
+	interface Appeal {
+		id: number;
+		ban_id: number;
+		appeal_text: string;
+		staff_response?: string;
+		is_denied: boolean;
+	}
+
 	// /util/banner
 	interface Banner {
 		Filename: string;
@@ -146,6 +155,16 @@ declare global {
 		fingerprint?: string;
 	}
 
+	interface Report {
+		id: number;
+		ip: string;
+		post_id: number;
+		post_link: string;
+		reason: string;
+		staff_id: number;
+		staff_user: string;
+	}
+
 	/**
 	 * An object representing a staff member retreived by requesting /manage/staffinfo
 	 */
@@ -166,6 +185,8 @@ declare global {
 		 * A list of pages that the logged in user has access to
 		 */
 		actions?: StaffAction[]
+		reports?: Report[];
+		appeals?: Appeal[];
 	}
 
 	/**

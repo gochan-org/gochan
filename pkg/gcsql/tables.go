@@ -202,16 +202,16 @@ type IPBanAudit struct {
 
 // used to composition IPBanAppeal and IPBanAppealAudit
 type ipBanAppealBase struct {
-	StaffID       int    // sql: staff_id
-	AppealText    string // sql: appeal_text
-	StaffResponse string // sql: staff_response
-	IsDenied      bool   // sql: is_denied
+	StaffID       int    `json:"-"`                  // sql: staff_id
+	AppealText    string `json:"appeal_text"`        // sql: appeal_text
+	StaffResponse string `json:"response,omitempty"` // sql: staff_response
+	IsDenied      bool   `json:"is_denied"`          // sql: is_denied
 }
 
 // table: DBPREFIXip_ban_appeals
 type IPBanAppeal struct {
-	ID      int // sql: id
-	IPBanID int // sql: ip_ban_id
+	ID      int `json:"id"`     // sql: id
+	IPBanID int `json:"ban_id"` // sql: ip_ban_id
 	ipBanAppealBase
 }
 

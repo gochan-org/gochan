@@ -6,8 +6,10 @@ import "./sections";
 import "./filebans";
 import "./viewlog";
 import { isThreadLocked } from "../api/management";
+import { getNumberStorageVal, setStorageVal } from "../storage";
 
 const reportsTextRE = /^Reports( \(\d+\))?/;
+const appealsTextRE = /^Appeals( \(\d+\))?/;
 
 export let staffActions: StaffAction[] = [];
 let staffInfo: StaffInfo = null;
@@ -21,6 +23,16 @@ let $staffMenu: JQuery<HTMLElement> = null;
  * A button that opens $staffMenu
  */
 let $staffBtn: TopBarButton = null;
+
+let staffNotificationsInterval: number = null;
+let latestReportID: number = getNumberStorageVal("latestreport", -1);
+let latestAppealID: number = getNumberStorageVal("latestappeal", -1);
+$(document).on("gotStaffRank", (_e, rank:number) => {
+	if(rank >= 2 && staffNotificationsInterval === null) {
+		const intervalSeconds = getNumberStorageVal("reportinterval", 30);
+		staffNotificationsInterval = setInterval(updateStaffNotifications, intervalSeconds * 1000) as any as number;
+	}
+});
 
 
 function dropdownHasItem(dropdown: any, item: string) {
@@ -134,18 +146,11 @@ export async function initStaff() {
 		async: true,
 		cache: false,
 		dataType: "json",
-		success: (result:string|StaffInfo) => {
-			if(typeof result === "string") {
-				try {
-					staffInfo = JSON.parse(result);
-				} catch(e) {
-					// presumably not logged in
-					staffActions = [];
-				}
-			} else if(typeof result === "object") {
-				staffInfo = result;
-			}
+		success: (result:StaffInfo) => {
+			staffInfo = result;
+			updateLatestReportAppeal(staffInfo);
 			staffActions = staffInfo?.actions ?? [];
+			$(document).trigger("gotStaffRank", staffInfo.rank);
 			return staffInfo;
 		},
 		error: (e: JQuery.jqXHR) => {
@@ -252,7 +257,7 @@ export function createStaffMenu(staff = staffInfo) {
 		for(const action of modActions) {
 			$staffMenu.append(menuItem(action));
 		}
-		getReports().then(updateReports);
+		// getReports().then(updateReports);
 	}
 	if(rank === 3) {
 		const adminActions = staffActions.filter(val => filterAction(val, 3));
@@ -293,32 +298,62 @@ function createStaffButton() {
 	});
 }
 
-function updateReports(reports: any[]) {
-	// append " (#)" to the Reports link, replacing # with the number of reports
-	$staffMenu.find("a").each((e, elem) => {
-		if(elem.text.search(reportsTextRE) !== 0) return;
-		const $span = $("<span/>").text(` (${reports.length})`).appendTo(elem);
-		if(reports.length > 0) {
-			// make it bold and red if there are reports
-			$span.css({
-				"font-weight": "bold",
-				"color": "red"
-			});
+function updateLatestReportAppeal(info: StaffInfo) {
+	if(info.rank >= 2) {
+		createStaffButton();
+		$staffBtn.button.empty();
+		const elements = ["Staff ("];
+		if(info.reports) {
+			elements.push(`<span class="topbar-reports" title="Reports">R:${info.reports?.length ?? 0}</span>`);
 		}
-	});
+		if(info.appeals) {
+			if(info.reports) {
+				elements.push(", ");
+			}
+			elements.push(`<span class="topbar-appeals" title="Appeals">A:${info.appeals?.length ?? 0}</span>`);
+		}
+		elements.push(") ▼");
+		if(info.reports == null && info.appeals == null) {
+			$staffBtn.button.text("Staff ▼");
+		} else {
+			$staffBtn.button.append(...elements);
+		}
+	}
+
+	if(info.reports?.length > 0) {
+
+		const latestReport = info.reports?.reduce((prev:Report, current:Report) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+		if(latestReport && latestReport.id > latestReportID) {
+			latestReportID = latestReport.id;
+			setStorageVal("latestreport", latestReportID);
+			Notification.requestPermission().then(permission => (permission === "granted")?
+				new Notification("New report", {
+					body: `New report for post ${latestReport.post_link} from ${latestReport.ip}\nReason: ${latestReport.reason}`,
+				}):null
+			);
+			$("div#staffmenu").find("a[href$='manage/reports']").addClass("new-report");
+		}
+	}
+	if(info.appeals?.length > 0) {
+
+		const latestAppeal = info.appeals?.reduce((prev:Appeal, current:Appeal) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+		if(latestAppeal && latestAppeal.id > latestAppealID) {
+			latestAppealID = latestAppeal.id;
+			setStorageVal("latestappeal", latestAppealID);
+			Notification.requestPermission().then(permission => (permission === "granted")?
+				new Notification(`New appeal for ban ${latestAppeal.ban_id}`, {
+					body: latestAppeal.appeal_text,
+				}):null
+			);
+		}
+	}
 }
 
-function getReports() {
-	return $.ajax({
-		method: "GET",
-		url: `${webroot}manage/reports`,
-		data: {
-			json: "1"
-		},
-		async: true,
+async function updateStaffNotifications() {
+	$.get({
+		url: `${webroot}manage/staffinfo`,
+		dataType: "json",
 		cache: false,
-		dataType: "json"
-	}).catch(e => {
-		return e;
+		success: (info: StaffInfo) => updateLatestReportAppeal(info)
 	});
 }

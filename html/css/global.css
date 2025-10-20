@@ -492,6 +492,11 @@ form#login-box input[type=submit] {
   flex-wrap: wrap;
 }
 
+.topbar-reports, .topbar-appeals {
+  color: red;
+  font-weight: bold;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;

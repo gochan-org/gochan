@@ -116,6 +116,6 @@ func ApproveAppeal(appealID int, staffID int) error {
 // view: DBPREFIXv_appeals
 type Appeal struct {
 	IPBanAppeal
-	StaffUsername string
-	Timestamp     time.Time
+	StaffUsername string    `json:"staff,omitempty"`
+	Timestamp     time.Time `json:"timestamp"`
 }
