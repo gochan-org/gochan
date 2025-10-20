@@ -28,3 +28,6 @@ __pycache__
 # SQLite
 *.db
 *.*-journal
+
+# Draw.io backup files
+*.bkp
