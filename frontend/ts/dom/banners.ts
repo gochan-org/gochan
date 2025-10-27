@@ -8,7 +8,7 @@ interface BannerAttributes {
 	title?: string;
 }
 
-export function setPageBanner() {
+export async function setPageBanner() {
 	const slashArr = location.pathname.split("/");
 	const board = (slashArr.length >= 2)?slashArr[1]:"";
 	const $bannerImg = $<HTMLImageElement>("<img/>").attr({
@@ -18,13 +18,7 @@ export function setPageBanner() {
 		alt: "Page banner",
 	}).insertBefore("header h1#board-title");
 
-	$.get({
-		url: `${webroot}util/banner`,
-		data: {
-			board: board
-		},
-		dataType: "json"
-	}).then((data:Banner) => {
+	await fetch(`${webroot}util/banner?board=${board}`).then(response => response.json()).then((data:Banner) => {
 		if((data?.Filename ?? "") === "") {
 			// no banners :(
 			$bannerImg.remove();

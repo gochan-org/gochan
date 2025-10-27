@@ -31,27 +31,33 @@ function moveThread(id: number, _board: string) {
 }
 
 function reportPost(id: number, board: string) {
-	promptLightbox("", false, (_$lb, reason) => {
+	promptLightbox("", false, async (_$lb, reason) => {
 		if(reason === "" || reason === null) return;
-		const xhrFields: {[k: string]: string} = {
-			board: board,
-			report_btn: "Report",
-			reason: reason,
-			json: "1"
-		};
-		xhrFields[`check${id}`] = "on";
-		$.post(webroot + "util", xhrFields).fail((data: any) => {
-			let errStr = data.error;
-			if(errStr === undefined)
-				errStr = data.statusText;
-			alertLightbox(`Report failed: ${errStr}`, "Error");
-		}).done(data => {
+		const searchParams = new URLSearchParams();
+		searchParams.append("board", board);
+		searchParams.append("report_btn", "Report");
+		searchParams.append("reason", reason);
+		searchParams.append(`check${id}`, "on");
+		searchParams.append("json", "1");
+		
+		await fetch(`${webroot}util`, {
+			method: "POST",
+			body: searchParams,
+			credentials: "same-origin"
+		}).then(response => {
+			if(!response.ok) {
+				return Promise.reject(response.statusText);
+			}
+			return response.json();
+		}).then(data => {
 			if(data.error !== undefined && data.error !== null) {
 				alertLightbox(`Report failed: ${data.error.Message}`, "Error");
 			} else {
 				alertLightbox("Report sent", "Success");
 			}
-		}, "json" as any);
+		}).catch(errorText => {
+			alertLightbox(`Report failed: ${errorText}`, "Error");
+		});
 	}, "Report post");
 }
 
@@ -80,22 +86,27 @@ function deletePostElement(id: number) {
 
 function deletePost(id: number, board: string, fileOnly = false) {
 	const cookiePass = getCookie("password");
-	promptLightbox(cookiePass, true, (_lb, password) => {
-		const xhrFields: {[k: string]: any} = {
-			board: board,
-			boardid: $("input[name=boardid]").val(),
-			delete_btn: "Delete",
-			password: password,
-			json: "1"
-		};
-		xhrFields[`check${id}`] = "on";
+	promptLightbox(cookiePass, true, async (_lb, password) => {
+		const searchParams = new URLSearchParams();
+		searchParams.append("board", board);
+		searchParams.append("boardid", $("input[name=boardid]").val() as string);
+		searchParams.append("delete_btn", "Delete");
+		searchParams.append("password", password);
+		searchParams.append("json", "1");
+		searchParams.append(`check${id}`, "on");
 		if(fileOnly) {
-			xhrFields.fileonly = "on";
+			searchParams.append("fileonly", "on");
 		}
-		$.post(webroot + "util", xhrFields).fail((data: any) => {
-			if(data !== "")
-				alertLightbox(`Delete failed: ${data.error}`, "Error");
-		}).done(data => {
+		await fetch(`${webroot}util`, {
+			method: "POST",
+			body: searchParams,
+			credentials: "same-origin"
+		}).then(response => {
+			if(!response.ok) {
+				return Promise.reject(response.statusText);
+			}
+			return response.json();
+		}).then(data => {
 			if(data.error === undefined || data === "") {
 				if(fileOnly) {
 					deletePostFile(id);
@@ -111,7 +122,9 @@ function deletePost(id: number, board: string, fileOnly = false) {
 					alertLightbox(`Error deleting post #${id}`, "Error");
 				}
 			}
-		}, "json" as any);
+		}).catch(errorText => {
+			alertLightbox(`Delete failed: ${errorText}`, "Error");
+		});
 	}, "Password");
 }
 

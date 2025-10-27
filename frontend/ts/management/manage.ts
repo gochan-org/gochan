@@ -3,7 +3,6 @@ import $ from "jquery";
 import { alertLightbox } from "../dom/lightbox";
 import { $topbar, TopBarButton } from "../dom/topbar";
 import "./sections";
-import "./filebans";
 import "./viewlog";
 import { isThreadLocked } from "../api/management";
 import { getNumberStorageVal, setStorageVal } from "../storage";
@@ -93,86 +92,40 @@ interface BanFileJSON {
 	dochecksumban?: string;
 }
 
-export function banFile(banType: string, filename: string, checksum: string, staffNote = "") {
-	const xhrFields: BanFileJSON = {
-		bantype: banType,
-		staffnote: staffNote,
-		json: 1
-	};
-	switch(banType) {
-	case "filename":
-		xhrFields.filename = filename;
-		xhrFields.dofilenameban = "Create";
-		break;
-	case "checksum":
-		xhrFields.checksum = checksum;
-		xhrFields.dochecksumban = "Create";
-		break;
-	default:
-		break;
-	}
-	return $.post({
-		url: `${webroot}manage/filebans`,
-		data: xhrFields
-	});
-}
-
-export function banFileFingerprint(fingerprint: string, ipBan: boolean, reason?: string, staffNote?: string) {
-	const xhrFields: BanFileJSON = {
-		bantype: "checksum",
-		checksum: fingerprint,
-		fingerprinter: "ahash",
-		ban: ipBan?"on":"",
-		banmsg: reason,
-		staffnote: staffNote,
-		json: 1,
-		dochecksumban: "Create"
-	};
-	return $.post({
-		url: `${webroot}manage/filebans`,
-		data: xhrFields
-	});
-}
-
-
 export async function initStaff() {
 	if(staffInfo !== null || staffActions?.length > 0)
 		// don't make multiple unnecessary AJAX requests
 		return staffInfo;
 
-	return $.ajax({
+	return fetch(`${webroot}manage/staffinfo`, {
 		method: "GET",
-		url: `${webroot}manage/staffinfo`,
-		async: true,
-		cache: false,
-		dataType: "json",
-		success: (result:StaffInfo) => {
-			staffInfo = result;
-			updateLatestReportAppeal(staffInfo);
-			staffActions = staffInfo?.actions ?? [];
-			$(document).trigger("gotStaffRank", staffInfo.rank);
-			return staffInfo;
-		},
-		error: (e: JQuery.jqXHR) => {
-			console.error("Error getting actions list:", e);
-		}
-	}).then(() => {
-		if(staffInfo.rank > 0)
-			setupManagementEvents();
+		cache: "no-cache",
+		credentials: "same-origin"
+	}).then(response => {
+		if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+		return response.json();
+	}).then((result:StaffInfo) => {
+		staffInfo = result;
+		updateLatestReportAppeal(staffInfo);
+		staffActions = staffInfo?.actions ?? [];
+		$(document).trigger("gotStaffRank", staffInfo.rank);
+		return staffInfo;
+	}).catch((ee) => {
+		console.log("Error getting staff info:", ee);
 		return staffInfo;
 	});
 }
 
 export async function getPostInfo(id: number):Promise<PostInfo> {
-	return $.ajax({
+	return await fetch(`${webroot}manage/postinfo?postid=${id}`, {
 		method: "GET",
-		url: `${webroot}manage/postinfo`,
-		data: {
-			postid: id
-		},
-		async: true,
-		cache: true,
-		dataType: "json"
+		cache: "no-cache",
+		credentials: "same-origin"
+	}).then(response => {
+		if(!response.ok) {
+			return Promise.reject(`Error fetching post info: ${response.status} ${response.statusText}`);
+		}
+		return response.json() as Promise<PostInfo>;
 	});
 }
 
@@ -322,7 +275,7 @@ function updateLatestReportAppeal(info: StaffInfo) {
 
 	if(info.reports?.length > 0) {
 
-		const latestReport = info.reports?.reduce((prev:Report, current:Report) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+		const latestReport = info.reports?.reduce((prev:PostReport, current:PostReport) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
 		if(latestReport && latestReport.id > latestReportID) {
 			latestReportID = latestReport.id;
 			setStorageVal("latestreport", latestReportID);
@@ -350,10 +303,13 @@ function updateLatestReportAppeal(info: StaffInfo) {
 }
 
 async function updateStaffNotifications() {
-	$.get({
-		url: `${webroot}manage/staffinfo`,
-		dataType: "json",
-		cache: false,
-		success: (info: StaffInfo) => updateLatestReportAppeal(info)
-	});
+	fetch(`${webroot}manage/staffinfo`, {
+		method: "GET",
+		cache: "no-cache",
+		credentials: "same-origin"
+	}).then(response => {
+		if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+		return response.json();
+	}).then((info: StaffInfo) => updateLatestReportAppeal(info))
+	.catch(err => console.log("Error updating staff notifications:", err));
 }

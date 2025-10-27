@@ -11,45 +11,43 @@ let $sectionsTable: JQuery<HTMLTableElement> = null;
 let changesButtonAdded = false;
 const initialOrders: string[] = [];
 
-function applyOrderChanges() {
+async function applyOrderChanges() {
 	const $sections = $sectionsTable.find("tr.sectionrow");
 	let errorShown = false; // only show one error if something goes wrong
-	$sections.each((i, el) => {
+	const sectionsArr = $sections.toArray();
+	for(const el of sectionsArr) {
 		const $el = $(el);
 		const updatesection = /^section(\d+)$/.exec(el.id)[1];
 		const sectionname = $el.find(":nth-child(1)").html();
 		const sectionabbr = $el.find(":nth-child(2)").html();
 		const sectionpos = $el.find(":nth-child(3)").html();
 		const sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() === "yes"?"on":"off";
-		$.ajax({
+		
+		const searchParams = new URLSearchParams();
+		searchParams.append("updatesection", updatesection);
+		searchParams.append("sectionname", sectionname);
+		searchParams.append("sectionabbr", sectionabbr);
+		searchParams.append("sectionpos", sectionpos);
+		searchParams.append("sectionhidden", sectionhidden);
+		searchParams.append("save_section", "Save section");
+		await fetch(`${webroot}manage/boardsections`, {
 			method: "POST",
-			url: webroot + "manage/boardsections",
-			data: {
-				updatesection: updatesection,
-				sectionname: sectionname,
-				sectionabbr: sectionabbr,
-				sectionpos: sectionpos,
-				sectionhidden: sectionhidden,
-				save_section: "Save section"
-			},
-			success: function() {
-				alertLightbox("Section order changes saved successfully!", "Success");
-				changesButtonAdded = false;
-				$("div#save-changes").remove();
-			},
-			error: function(t, xhr, errorText) {
-				if(!errorShown) {
-					alertLightbox(`Received an error when saving changes (only the first one will be shown): ${errorText}`, "Error");
-					errorShown = true;
-				}
+			body: searchParams,
+			credentials: "same-origin"
+		}).then(response => {
+			if(!response.ok) {
+				return Promise.reject(response.statusText);
 			}
-		}).fail((xhr,err,errorText) => {
+			alertLightbox("Section order changes saved successfully!", "Success");
+			changesButtonAdded = false;
+			$("div#save-changes").remove();
+		}).catch(errorText => {
 			if(!errorShown) {
 				alertLightbox(`Received an error when saving changes (only the first one will be shown): ${errorText}`, "Error");
 				errorShown = true;
 			}
 		});
-	});
+	}
 }
 
 function cancelOrderChanges() {

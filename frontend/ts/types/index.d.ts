@@ -155,14 +155,14 @@ declare global {
 		fingerprint?: string;
 	}
 
-	interface Report {
+	interface PostReport {
 		id: number;
 		ip: string;
 		post_id: number;
 		post_link: string;
 		reason: string;
-		staff_id: number;
-		staff_user: string;
+		staff_id?: number;
+		staff_user?: string;
 	}
 
 	/**
@@ -185,7 +185,7 @@ declare global {
 		 * A list of pages that the logged in user has access to
 		 */
 		actions?: StaffAction[]
-		reports?: Report[];
+		reports?: PostReport[];
 		appeals?: Appeal[];
 	}
 
