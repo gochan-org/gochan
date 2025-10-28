@@ -97,7 +97,7 @@ export async function initStaff() {
 		// don't make multiple unnecessary AJAX requests
 		return staffInfo;
 
-	return fetch(`${webroot}manage/staffinfo`, {
+	return await fetch(`${webroot}manage/staffinfo`, {
 		method: "GET",
 		cache: "no-cache",
 		credentials: "same-origin"
@@ -302,7 +302,7 @@ function updateLatestReportAppeal(info: StaffInfo) {
 }
 
 async function updateStaffNotifications() {
-	fetch(`${webroot}manage/staffinfo`, {
+	await fetch(`${webroot}manage/staffinfo`, {
 		method: "GET",
 		cache: "no-cache",
 		credentials: "same-origin"

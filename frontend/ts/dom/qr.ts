@@ -217,19 +217,19 @@ export function initQR() {
 	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
 
-	$postform.on("submit", function(e) {
+	$postform.on("submit", async function(e) {
 		fixFileList();
 		const $form = $<HTMLFormElement>(this);
 		e.preventDefault();
 		copyCaptchaResponse($form);
 		const data = new FormData(this);
 		
-		fetch($form.attr("action"), {
+		await fetch($form.attr("action"), {
 			method: "POST",
 			body: data,
 			credentials: "same-origin"
 		}).then(response => response.json())
-		.then((data: PostSubmitResponse) => {
+		.then(async (data: PostSubmitResponse) => {
 			if(data.error) {
 				alertLightbox(data.error, "Error");
 				return;
@@ -242,7 +242,7 @@ export function initQR() {
 			clearQR();
 			const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
 			setButtonTimeout("", cooldown);
-			fetch(data.thread, {
+			await fetch(data.thread, {
 				credentials: "same-origin"
 			}).then(response => response.text())
 			.then(updateThreadSuccess);

@@ -91,7 +91,7 @@ function previewMoveHandler(e: JQuery.Event) {
 	});
 }
 
-function expandPost(e: JQuery.MouseEventBase) {
+async function expandPost(e: JQuery.MouseEventBase) {
 	e.preventDefault();
 	if($hoverPreview !== null) $hoverPreview.remove();
 	const $next = $(e.target).next();
@@ -115,7 +115,7 @@ function expandPost(e: JQuery.MouseEventBase) {
 		return;
 	}
 	if(e.type === "click") {
-		fetch(href, { credentials: "same-origin" })
+		await fetch(href, { credentials: "same-origin" })
 			.then(response => {
 				if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
 				return response.text();
