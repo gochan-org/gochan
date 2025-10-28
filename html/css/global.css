@@ -743,16 +743,19 @@ div#topbar .topbar-section, div#topbar .topbar-item, div#topbar .dropdown-button
   padding: 4px;
   margin-left: 4px;
 }
-div#topbar a.topbar-item, div#topbar .topbar-section {
+div#topbar a.topbar-item, div#topbar .topbar-section, div#topbar .topbar-left, div#topbar .topbar-boards, div#topbar .topbar-right, div#topbar .topbar-right * {
   display: inline-block;
 }
 div#topbar .topbar-section {
   padding-top: 0px;
   padding-bottom: 0px;
 }
-div#topbar a.dropdown-button {
+div#topbar .topbar-right {
   float: right;
   margin-right: 4px;
+}
+div#topbar .boards-button {
+  display: none;
 }
 
 div.dropdown-menu {
@@ -846,4 +849,13 @@ select.post-actions {
   vertical-align: middle;
   display: inline-block;
   cursor: help;
+}
+
+@media screen and (max-width: 520px) {
+  div#topbar .boards-button {
+    display: inline-block;
+  }
+  div#topbar .topbar-boards {
+    display: none;
+  }
 }

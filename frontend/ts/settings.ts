@@ -379,5 +379,5 @@ $(() => {
 		}
 	});
 
-	$settingsButton ??= new TopBarButton("Settings", createLightbox, {before: "a#watcher"});
+	$settingsButton ??= new TopBarButton("Settings", createLightbox, ".topbar-settings");
 });

@@ -1,0 +1,12 @@
+@mixin responsive-rules() {
+    @media screen and (max-width: 520px) {
+        div#topbar {
+            .boards-button {
+                display: inline-block;
+            }
+            .topbar-boards {
+                display: none;
+            }
+        }
+    }
+}

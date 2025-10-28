@@ -106,9 +106,7 @@ $(() => {
 	if(watcherBtn === null) {
 		watcherBtn = new TopBarButton("Watcher", () => {
 			$topbar.trigger("menuButtonClick", [$watcherMenu, $(document).find($watcherMenu).length === 0]);
-		}, {
-			before: "a#settings.dropdown-button"
-		});
+		}, ".topbar-watcher");
 	}
 	$(document)
 		.on("watchThread", (_e,thread) => addThreadToMenu(thread))

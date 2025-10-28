@@ -1,7 +1,7 @@
 import $ from "jquery";
 
 import { alertLightbox } from "../dom/lightbox";
-import { $topbar, TopBarButton } from "../dom/topbar";
+import { $topbar, TopBarButton, menuItem } from "../dom/topbar";
 import "./sections";
 import "./viewlog";
 import { isThreadLocked } from "../api/management";
@@ -153,17 +153,6 @@ export function banSelectedPost() {
 	window.location.pathname = `${webroot}manage/bans?dir=${boardDir}&postid=${postID}`;
 }
 
-/**
- * A helper function for creating a menu item
- */
-function menuItem(action: StaffAction|string, isCategory = false) {
-	return isCategory ? $("<div/>").append($("<b/>").text(action as string)) : $("<div/>").append(
-		$("<a/>").prop({
-			href: `${webroot}manage/${(action as StaffAction).id}`
-		}).text((action as StaffAction).title)
-	);
-}
-
 function getAction(id: string) {
 	for(const action of staffActions) {
 		if(action.id === id) {
@@ -192,31 +181,32 @@ export function createStaffMenu(staff = staffInfo) {
 		class: "dropdown-menu"
 	});
 
+	const logoutAction = getAction("logout");
+	const dashboardAction = getAction("dashboard");
 	$staffMenu.append(
-		menuItem(getAction("logout")),
-		menuItem(getAction("dashboard")));
+		menuItem(logoutAction.title, `${webroot}manage/${logoutAction.id}`),
+		menuItem(dashboardAction.title, `${webroot}manage/${dashboardAction.id}`),
+	);
 
-	const janitorActions = staffActions.filter(val => filterAction(val, 1));
-	$staffMenu.append(menuItem("Janitorial", true));
-	for(const action of janitorActions) {
-		$staffMenu.append(menuItem(action));
-	}
-
+	$staffMenu.append(menuItem("Janitorial"));
+	staffActions.filter(val => filterAction(val, 1)).map(action => {
+		$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
+	});
+	
 	if(rank >= 2) {
 		const modActions = staffActions.filter(val => filterAction(val, 2));
 		if(modActions.length > 0)
-			$staffMenu.append(menuItem("Moderation", true));
+			$staffMenu.append(menuItem("Moderation"));
 		for(const action of modActions) {
-			$staffMenu.append(menuItem(action));
+			$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
 		}
-		// getReports().then(updateReports);
 	}
-	if(rank === 3) {
+	if(rank >= 3) {
 		const adminActions = staffActions.filter(val => filterAction(val, 3));
 		if(adminActions.length > 0)
-			$staffMenu.append(menuItem("Administration", true));
+			$staffMenu.append(menuItem("Administration"));
 		for(const action of adminActions) {
-			$staffMenu.append(menuItem(action));
+			$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
 		}
 	}
 	createStaffButton();
@@ -245,9 +235,12 @@ export function addStaffThreadOptions() {
 function createStaffButton() {
 	if($staffBtn !== null || staffInfo === null || staffInfo.rank === 0)
 		return;
+	if($topbar.find(".topbar-staff").length === 0) {
+		$(`<div class="topbar-staff"></div>`).insertBefore($topbar.find(".topbar-watcher"));
+	}
 	$staffBtn = new TopBarButton("Staff", () => {
 		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);
-	});
+	}, ".topbar-staff");
 }
 
 function updateLatestReportAppeal(info: StaffInfo) {

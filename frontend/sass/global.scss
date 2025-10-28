@@ -7,6 +7,7 @@
 @use 'global/bans';
 @use 'global/animations';
 @use 'global/installer';
+@use 'global/responsive';
 
 .increase-line-height {
 	header, .post, .reply {
@@ -33,16 +34,19 @@ div#topbar {
 		padding: 4px;
 		margin-left: 4px;
 	}
-	a.topbar-item, .topbar-section {
+	a.topbar-item, .topbar-section, .topbar-left, .topbar-boards, .topbar-right, .topbar-right * {
 		display: inline-block;
 	}
 	.topbar-section {
 		padding-top: 0px;
 		padding-bottom: 0px;
 	}
-	a.dropdown-button {
+	.topbar-right {
 		float: right;
 		margin-right: 4px;
+	}
+	.boards-button {
+		display: none;
 	}
 }
 
@@ -140,3 +144,7 @@ select.post-actions {
 	display: inline-block;
 	cursor: help;
 }
+
+
+
+@include responsive.responsive-rules();
