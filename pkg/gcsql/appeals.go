@@ -29,11 +29,11 @@ type AppealsQueryOptions struct {
 
 // GetAppeals returns an array of appeals, optionally limiting them to a specific ban or ordering them in descending order
 func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
-	var opts *AppealsQueryOptions
+	var opts AppealsQueryOptions
 	if len(options) > 0 {
-		opts = &options[0]
+		opts = options[0]
 	} else {
-		opts = &AppealsQueryOptions{
+		opts = AppealsQueryOptions{
 			Active:          OnlyTrue,
 			Unexpired:       OnlyTrue,
 			OrderDescending: false,
@@ -46,6 +46,14 @@ func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
 		query += " WHERE ip_ban_id = ?"
 	}
 	query += opts.Active.whereClause("is_ban_active", false)
+
+	switch opts.Unexpired {
+	case OnlyTrue:
+		query += " AND ban_expires_at > CURRENT_TIMESTAMP"
+	case OnlyFalse:
+		query += " AND ban_expires_at <= CURRENT_TIMESTAMP"
+	}
+
 	if opts.OrderDescending {
 		query += " ORDER BY id DESC"
 	} else {

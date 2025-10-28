@@ -13,8 +13,11 @@ import (
 )
 
 const (
+	// TrueOrFalse represents a lack of filtering on boolean values
 	TrueOrFalse BooleanFilter = iota
+	// OnlyTrue limits results to only those with true boolean values
 	OnlyTrue
+	// OnlyFalse limits results to only those with false boolean values
 	OnlyFalse
 )
 
