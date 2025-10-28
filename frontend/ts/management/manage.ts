@@ -111,8 +111,7 @@ export async function initStaff() {
 		$(document).trigger("gotStaffRank", staffInfo.rank);
 		return staffInfo;
 	}).catch((ee) => {
-		console.log("Error getting staff info:", ee);
-		return staffInfo;
+		throw new Error(`Error getting staff info: ${ee.statusText}`);
 	});
 }
 
