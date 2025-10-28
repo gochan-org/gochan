@@ -18,24 +18,24 @@ var (
 	testCasesGetAppeals = []testCaseGetAppeals{
 		{
 			name:         "single appeal, no results",
-			args:         argsGetAppeals{banID: 1, limit: 1},
+			args:         AppealsQueryOptions{BanID: 1, Limit: 1},
 			expectReturn: nil,
 		},
 		{
 			name: "single appeal, with result",
-			args: argsGetAppeals{banID: 1, limit: 1},
+			args: AppealsQueryOptions{BanID: 1, Limit: 1},
 			expectReturn: []Appeal{
 				{IPBanAppeal: IPBanAppeal{ID: 1}},
 			},
 		},
 		{
 			name:         "all appeals, no results",
-			args:         argsGetAppeals{limit: 1},
+			args:         AppealsQueryOptions{Limit: 1},
 			expectReturn: nil,
 		},
 		{
 			name:         "all appeals, with results",
-			args:         argsGetAppeals{limit: 10},
+			args:         AppealsQueryOptions{Limit: 10},
 			expectReturn: []Appeal{{}, {}, {}},
 		},
 	}
@@ -71,7 +71,7 @@ var (
 
 type testCaseGetAppeals struct {
 	name         string
-	args         argsGetAppeals
+	args         AppealsQueryOptions
 	expectReturn []Appeal
 }
 
@@ -85,12 +85,6 @@ type testCaseApproveAppeals struct {
 	expectError  bool
 }
 
-type argsGetAppeals struct {
-	banID     int
-	limit     int
-	orderDesc bool
-}
-
 func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 	t.Helper()
 	db, mock, err := sqlmock.New()
@@ -101,8 +95,8 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 		return
 	}
 
-	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, staff_response, is_denied, timestamp FROM v_appeals`
-	if tC.args.banID > 0 {
+	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, staff_response, is_denied, is_ban_active, ban_expires_at, timestamp FROM v_appeals`
+	if tC.args.BanID > 0 {
 		switch driver {
 		case "mysql":
 			query += ` WHERE ip_ban_id = \?`
@@ -112,40 +106,42 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 			query += ` WHERE ip_ban_id = \$1`
 		}
 	}
-	if tC.args.orderDesc {
+	if tC.args.OrderDescending {
 		query += " ORDER BY id DESC"
 	} else {
 		query += " ORDER BY id ASC"
 	}
-	if tC.args.limit > 0 {
-		query += " LIMIT " + strconv.Itoa(tC.args.limit)
+	if tC.args.Limit > 0 {
+		query += " LIMIT " + strconv.Itoa(tC.args.Limit)
 	}
 	expectQuery := mock.ExpectPrepare(query).ExpectQuery()
-	if tC.args.banID > 0 {
-		expectQuery.WithArgs(tC.args.banID)
+	if tC.args.BanID > 0 {
+		expectQuery.WithArgs(tC.args.BanID)
 	}
 
-	expectedRows := sqlmock.NewRows([]string{"id", "staff_id", "staff_username", "ip_ban_id", "appeal_text", "staff_response", "is_denied", "timestamp"})
+	expectedRows := sqlmock.NewRows([]string{"id", "staff_id", "staff_username", "ip_ban_id", "appeal_text", "staff_response", "is_denied", "is_ban_active", "ban_expires_at", "timestamp"})
 	if len(tC.expectReturn) > 0 {
-		for _, expectedBan := range tC.expectReturn {
+		for _, expectedAppeal := range tC.expectReturn {
 			expectedRows.AddRow(
-				expectedBan.ID, expectedBan.StaffID, expectedBan.StaffUsername, expectedBan.IPBanID, expectedBan.AppealText,
-				expectedBan.StaffResponse, expectedBan.IsDenied, expectedBan.Timestamp,
+				expectedAppeal.ID, expectedAppeal.StaffID, expectedAppeal.StaffUsername, expectedAppeal.IPBanID, expectedAppeal.AppealText,
+				expectedAppeal.StaffResponse, expectedAppeal.IsDenied, expectedAppeal.IsBanActive, expectedAppeal.BanExpiresAt, expectedAppeal.Timestamp,
 			)
 		}
 	}
 	expectQuery.WillReturnRows(expectedRows)
 
-	got, err := GetAppeals(tC.args.banID, tC.args.limit, tC.args.orderDesc)
+	got, err := GetAppeals(tC.args)
 	if !assert.NoError(t, err) {
 		return
 	}
 	assert.NoError(t, mock.ExpectationsWereMet())
 
-	assert.LessOrEqual(t, len(got), tC.args.limit)
+	if tC.args.Limit > 0 {
+		assert.LessOrEqual(t, len(got), tC.args.Limit)
+	}
 	assert.Equal(t, tC.expectReturn, got)
-	if tC.args.banID > 0 && tC.expectReturn != nil {
-		assert.Equal(t, tC.args.banID, tC.expectReturn[0].ID)
+	if tC.args.BanID > 0 && tC.expectReturn != nil {
+		assert.Equal(t, tC.args.BanID, tC.expectReturn[0].ID)
 	}
 	assert.NoError(t, mock.ExpectationsWereMet())
 	closeMock(t, mock)

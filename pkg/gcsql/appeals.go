@@ -1,7 +1,6 @@
 package gcsql
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"strconv"
@@ -13,29 +12,55 @@ var (
 	ErrBanNotActive       = errors.New("ban is not active")
 )
 
+// AppealsQueryOptions holds options for getting a list of appeals, including SQL request options
+type AppealsQueryOptions struct {
+	*RequestOptions
+	// BanID limits results to appeals for a specific ban if greater than 0
+	BanID int
+	// Active is used to optionally limit results to only those with active/inactive bans
+	Active BooleanFilter
+	// Unexpired is used to optionally limit results to only those with unexpired/expired bans
+	Unexpired BooleanFilter
+	// OrderDescending specifies whether results should be in descending order
+	OrderDescending bool
+	// Limit specifies the maximum number of results to return if greater than 0, otherwise no limit is applied
+	Limit int
+}
+
 // GetAppeals returns an array of appeals, optionally limiting them to a specific ban or ordering them in descending order
-func GetAppeals(banID int, limit int, orderDesc ...bool) ([]Appeal, error) {
-	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, staff_response, is_denied, timestamp FROM DBPREFIXv_appeals`
-	if banID > 0 {
+func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
+	var opts *AppealsQueryOptions
+	if len(options) > 0 {
+		opts = &options[0]
+	} else {
+		opts = &AppealsQueryOptions{
+			Active:          OnlyTrue,
+			Unexpired:       OnlyTrue,
+			OrderDescending: false,
+		}
+	}
+	opts.RequestOptions = setupOptionsWithTimeout(opts.RequestOptions)
+
+	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, staff_response, is_denied, is_ban_active, ban_expires_at, timestamp FROM DBPREFIXv_appeals`
+	if opts.BanID > 0 {
 		query += " WHERE ip_ban_id = ?"
 	}
-	if len(orderDesc) > 0 && orderDesc[0] {
+	query += opts.Active.whereClause("is_ban_active", false)
+	if opts.OrderDescending {
 		query += " ORDER BY id DESC"
 	} else {
 		query += " ORDER BY id ASC"
 	}
-	if limit > 0 {
-		query += " LIMIT " + strconv.Itoa(limit)
+	if opts.Limit > 0 {
+		query += " LIMIT " + strconv.Itoa(opts.Limit)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
-	defer cancel()
 
 	var rows *sql.Rows
 	var err error
-	if banID > 0 {
-		rows, err = QueryContextSQL(ctx, nil, query, banID)
+	if opts.BanID > 0 {
+		rows, err = Query(opts.RequestOptions, query, opts.BanID)
 	} else {
-		rows, err = QueryContextSQL(ctx, nil, query)
+		rows, err = Query(opts.RequestOptions, query)
 	}
 	if err != nil {
 		return nil, err
@@ -49,7 +74,7 @@ func GetAppeals(banID int, limit int, orderDesc ...bool) ([]Appeal, error) {
 		var staffResponse *string
 		if err = rows.Scan(
 			&appeal.ID, &staffID, &staffUsername, &appeal.IPBanID, &appeal.AppealText, &staffResponse,
-			&appeal.IsDenied, &appeal.Timestamp,
+			&appeal.IsDenied, &appeal.IsBanActive, &appeal.BanExpiresAt, &appeal.Timestamp,
 		); err != nil {
 			return nil, err
 		}
@@ -63,14 +88,6 @@ func GetAppeals(banID int, limit int, orderDesc ...bool) ([]Appeal, error) {
 		appeals = append(appeals, appeal)
 	}
 	return appeals, nil
-}
-
-// GetAppealCount returns the number of pending ban appeals
-func GetAppealCount() (int, error) {
-	query := `SELECT COUNT(*) FROM DBPREFIXip_ban_appeals WHERE is_denied = FALSE`
-	var count int
-	err := QueryRowTimeoutSQL(nil, query, []any{}, []any{&count})
-	return count, err
 }
 
 // ApproveAppeal deactivates the ban that the appeal was submitted for
@@ -117,5 +134,7 @@ func ApproveAppeal(appealID int, staffID int) error {
 type Appeal struct {
 	IPBanAppeal
 	StaffUsername string    `json:"staff,omitempty"`
+	IsBanActive   bool      `json:"-"`
+	BanExpiresAt  time.Time `json:"expires"`
 	Timestamp     time.Time `json:"timestamp"`
 }

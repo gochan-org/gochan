@@ -179,7 +179,12 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		// logger.Info().Msg("Denied appeal(s)")
 	}
 
-	appeals, err := gcsql.GetAppeals(0, form.Limit, true)
+	appeals, err := gcsql.GetAppeals(gcsql.AppealsQueryOptions{
+		Limit:           form.Limit,
+		Active:          gcsql.OnlyTrue,
+		Unexpired:       gcsql.OnlyTrue,
+		OrderDescending: true,
+	})
 	if err != nil {
 		logger.Err(err).Caller().Send()
 		return "", fmt.Errorf("failed to get appeals list: %w", err)
