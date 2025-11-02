@@ -22,7 +22,7 @@ async function applyOrderChanges() {
 		const sectionabbr = $el.find(":nth-child(2)").html();
 		const sectionpos = $el.find(":nth-child(3)").html();
 		const sectionhidden = $el.find(":nth-child(4)").html().toLowerCase() === "yes"?"on":"off";
-		
+
 		const searchParams = new URLSearchParams();
 		searchParams.append("updatesection", updatesection);
 		searchParams.append("sectionname", sectionname);

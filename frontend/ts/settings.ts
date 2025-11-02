@@ -308,7 +308,7 @@ export function updateSpoilerThreadReveal() {
 				el.setAttribute("spoiler-height", el.getAttribute("height"));
 				el.setAttribute("height", "125px");
 			}
-			
+
 			el.setAttribute("src", path.join(webroot ?? "/", spoilerImage));
 		}
 	});

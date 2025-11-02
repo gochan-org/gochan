@@ -11,8 +11,6 @@ import { getPageThread } from "./postinfo";
 import { prepareThumbnails, initPostPreviews } from "./postutil";
 import { addPostDropdown } from "./dom/postdropdown";
 import { initFlags } from "./dom/flags";
-import { initQR } from "./dom/qr";
-import { getBooleanStorageVal } from "./storage";
 import { updateBrowseButton } from "./dom/uploaddata";
 import "./management/filters";
 
@@ -33,7 +31,7 @@ if(pageThread.board !== "") {
 		updateSpoilerThreadReveal();
 		updateSpoilerTextReveal();
 	}
-	
+
 	updateBrowseButton();
 }
 

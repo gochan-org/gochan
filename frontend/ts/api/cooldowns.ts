@@ -1,11 +1,4 @@
-import $ from "jquery";
-
-/**
- * @param {string} board
- * @param {string} type
- * @returns {number}
- */
-function getCooldown(data: BoardsJSON, board: string, type: string) {
+function getCooldown(data: BoardsJSON, board: string, type: string): number {
 	for(const boardData of data.boards) {
 		if(boardData.board !== board) continue;
 		return (boardData.cooldowns as any)[type];

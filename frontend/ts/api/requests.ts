@@ -1,7 +1,3 @@
-/* eslint no-unused-vars: ["warn", {"args":"none"}] */
-
-import $ from "jquery";
-
 import { currentBoard, currentThread } from "../postinfo";
 
 interface BoardsList {

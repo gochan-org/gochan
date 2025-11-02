@@ -223,36 +223,36 @@ export function initQR() {
 		e.preventDefault();
 		copyCaptchaResponse($form);
 		const data = new FormData(this);
-		
+
 		await fetch($form.attr("action"), {
 			method: "POST",
 			body: data,
 			credentials: "same-origin"
 		}).then(response => response.json())
-		.then(async (data: PostSubmitResponse) => {
-			if(data.error) {
-				alertLightbox(data.error, "Error");
-				return;
-			}
-			if(data.thread !== location.pathname) {
+			.then(async (data: PostSubmitResponse) => {
+				if(data.error) {
+					alertLightbox(data.error, "Error");
+					return;
+				}
+				if(data.thread !== location.pathname) {
 				// new thread
-				location.pathname = data.thread;
-				return;
-			}
-			clearQR();
-			const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
-			setButtonTimeout("", cooldown);
-			await fetch(data.thread, {
-				credentials: "same-origin"
-			}).then(response => response.text())
-			.then(updateThreadSuccess);
-			if(!getBooleanStorageVal("persistentqr", false))
-				closeQR();
-			return false;
-		})
-		.catch(error => {
-			alertLightbox(error, "Error");
-		});
+					location.pathname = data.thread;
+					return;
+				}
+				clearQR();
+				const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
+				setButtonTimeout("", cooldown);
+				await fetch(data.thread, {
+					credentials: "same-origin"
+				}).then(response => response.text())
+					.then(updateThreadSuccess);
+				if(!getBooleanStorageVal("persistentqr", false))
+					closeQR();
+				return false;
+			})
+			.catch(error => {
+				alertLightbox(error, "Error");
+			});
 
 		return false;
 	});
