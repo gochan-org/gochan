@@ -148,7 +148,11 @@ func utilHandler(writer http.ResponseWriter, request *http.Request) {
 			Str("IP", gcutil.GetRealIP(request)).
 			Msg("New post report submitted")
 
-		http.Redirect(writer, request, redirectTo, http.StatusFound)
+		if wantsJSON {
+			server.ServeJSON(writer, map[string]any{"error": nil, "msg": "Report submitted"})
+		} else {
+			http.Redirect(writer, request, redirectTo, http.StatusFound)
+		}
 		return
 	}
 

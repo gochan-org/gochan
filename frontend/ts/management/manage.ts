@@ -7,9 +7,6 @@ import "./viewlog";
 import { isThreadLocked } from "../api/management";
 import { getNumberStorageVal, setStorageVal } from "../storage";
 
-const reportsTextRE = /^Reports( \(\d+\))?/;
-const appealsTextRE = /^Appeals( \(\d+\))?/;
-
 export let staffActions: StaffAction[] = [];
 let staffInfo: StaffInfo = null;
 
@@ -30,6 +27,10 @@ $(document).on("gotStaffRank", (_e, rank:number) => {
 	if(rank >= 2 && staffNotificationsInterval === null) {
 		const intervalSeconds = getNumberStorageVal("reportinterval", 30);
 		staffNotificationsInterval = setInterval(updateStaffNotifications, intervalSeconds * 1000) as any as number;
+	}
+	if(rank > 0) {
+		$(".post select.post-actions").each(addManageEvents);
+		setupManagementEvents();
 	}
 });
 
@@ -78,20 +79,6 @@ function setupManagementEvents() {
 	});
 }
 
-interface BanFileJSON {
-	bantype: string;
-	board?: string;
-	fingerprinter?: string;
-	json: number;
-	staffnote: string;
-	ban?: string;
-	banmsg?: string;
-	filename?: string;
-	dofilenameban?: string;
-	checksum?: string;
-	dochecksumban?: string;
-}
-
 export async function initStaff() {
 	if(staffInfo !== null || staffActions?.length > 0)
 		// don't make multiple unnecessary AJAX requests
@@ -102,7 +89,7 @@ export async function initStaff() {
 		cache: "no-cache",
 		credentials: "same-origin"
 	}).then(response => {
-		if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+		if(!response.ok) throw new Error(`Network response was not ok (${response.status})`);
 		return response.json();
 	}).then((result:StaffInfo) => {
 		staffInfo = result;
@@ -192,7 +179,7 @@ export function createStaffMenu(staff = staffInfo) {
 	staffActions.filter(val => filterAction(val, 1)).map(action => {
 		$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
 	});
-	
+
 	if(rank >= 2) {
 		const modActions = staffActions.filter(val => filterAction(val, 2));
 		if(modActions.length > 0)
@@ -247,21 +234,21 @@ function updateLatestReportAppeal(info: StaffInfo) {
 	if(info.rank >= 2) {
 		createStaffButton();
 		$staffBtn.button.empty();
-		const elements = ["Staff ("];
-		if(info.reports) {
-			elements.push(`<span class="topbar-reports" title="Reports">R:${info.reports?.length ?? 0}</span>`);
-		}
-		if(info.appeals) {
+		if(info.reports || info.appeals) {
+			const elements = ["Staff ("];
 			if(info.reports) {
-				elements.push(", ");
+				elements.push(`<span class="topbar-reports" title="Reports">R:${info.reports?.length ?? 0}</span>`);
 			}
-			elements.push(`<span class="topbar-appeals" title="Appeals">A:${info.appeals?.length ?? 0}</span>`);
-		}
-		elements.push(") ▼");
-		if(info.reports == null && info.appeals == null) {
-			$staffBtn.button.text("Staff ▼");
-		} else {
+			if(info.appeals) {
+				if(info.reports) {
+					elements.push(", ");
+				}
+				elements.push(`<span class="topbar-appeals" title="Appeals">A:${info.appeals?.length ?? 0}</span>`);
+			}
+			elements.push(") ▼");
 			$staffBtn.button.append(...elements);
+		} else {
+			$staffBtn.button.text("Staff ▼");
 		}
 	}
 
@@ -273,7 +260,7 @@ function updateLatestReportAppeal(info: StaffInfo) {
 			setStorageVal("latestreport", latestReportID);
 			Notification.requestPermission().then(permission => (permission === "granted")?
 				new Notification("New report", {
-					body: `New report for post ${latestReport.post_link} from ${latestReport.ip}\nReason: ${latestReport.reason}`,
+					body: `New report for post ${latestReport.post_link} from ${latestReport.reporter_ip}\nReason: ${latestReport.reason}`,
 				}):null
 			);
 			$("div#staffmenu").find("a[href$='manage/reports']").addClass("new-report");
@@ -300,8 +287,8 @@ async function updateStaffNotifications() {
 		cache: "no-cache",
 		credentials: "same-origin"
 	}).then(response => {
-		if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+		if(!response.ok) throw new Error(`Network response was not ok (${response.status})`);
 		return response.json();
 	}).then((info: StaffInfo) => updateLatestReportAppeal(info))
-	.catch(err => console.log("Error updating staff notifications:", err));
+		.catch(err => console.log("Error updating staff notifications:", err));
 }

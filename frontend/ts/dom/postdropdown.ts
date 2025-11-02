@@ -39,7 +39,7 @@ function reportPost(id: number, board: string) {
 		searchParams.append("reason", reason);
 		searchParams.append(`check${id}`, "on");
 		searchParams.append("json", "1");
-		
+
 		await fetch(`${webroot}util`, {
 			method: "POST",
 			body: searchParams,
@@ -48,15 +48,20 @@ function reportPost(id: number, board: string) {
 			if(!response.ok) {
 				return Promise.reject(response.statusText);
 			}
+			if(response.status >= 200 && response.status < 400 && response.headers.get("Content-Type") === "text/html") {
+				// report accepted, redirected back to post
+				return Promise.reject(true);
+			}
 			return response.json();
 		}).then(data => {
-			if(data.error !== undefined && data.error !== null) {
+			if((data.error ?? "") !== "") {
 				alertLightbox(`Report failed: ${data.error.Message}`, "Error");
 			} else {
 				alertLightbox("Report sent", "Success");
 			}
-		}).catch(errorText => {
-			alertLightbox(`Report failed: ${errorText}`, "Error");
+		}).catch(reason => {
+			if(reason !== true)
+				alertLightbox(`Report failed: ${reason}`, "Error");
 		});
 	}, "Report post");
 }

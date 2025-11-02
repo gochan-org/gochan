@@ -157,12 +157,12 @@ declare global {
 
 	interface PostReport {
 		id: number;
-		ip: string;
-		post_id: number;
-		post_link: string;
-		reason: string;
-		staff_id?: number;
 		staff_user?: string;
+		post_id: number;
+		reporter_ip: string;
+		poster_ip: string;
+		reason: string;
+		post_link: string;
 	}
 
 	/**
@@ -227,7 +227,4 @@ declare global {
 	 * The menu shown when the Staff button on the top bar is clicked
 	 */
 	let $staffMenu: JQuery<HTMLElement>;
-
-	// used for testing
-	var simpleHTML: string;
 }

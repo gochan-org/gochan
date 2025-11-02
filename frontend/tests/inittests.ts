@@ -1,4 +1,4 @@
-global.simpleHTML = `<!DOCTYPE html>
+(global as any).simpleHTML = `<!DOCTYPE html>
 <html>
 <body>
 <form id="postform">

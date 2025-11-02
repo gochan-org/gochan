@@ -736,7 +736,7 @@ div#topbar {
   left: 0;
   position: fixed;
   top: 0;
-  width: 100%;
+  width: 100vw;
   margin-top: 0px;
 }
 div#topbar .topbar-section, div#topbar .topbar-item, div#topbar .dropdown-button {
@@ -763,15 +763,21 @@ div.dropdown-menu {
   min-width: 300px;
   min-height: 100px;
   top: 28px;
-  right: 8px;
+  right: 0.5em;
   z-index: 500;
-  padding: 4px 8px 4px 8px;
+  padding: 0.25em 0.5em;
   max-height: 85%;
   overflow-y: auto;
   background-color: #999;
 }
 div.dropdown-menu div {
   padding: 2px;
+}
+
+#boards-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 div#staffmenu a {
@@ -855,7 +861,7 @@ select.post-actions {
   div#topbar .boards-button {
     display: inline-block;
   }
-  div#topbar .topbar-boards {
+  div#topbar .topbar-boards, div#topbar .topbar-section {
     display: none;
   }
 }

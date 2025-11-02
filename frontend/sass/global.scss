@@ -27,7 +27,7 @@ div#topbar {
 	left: 0;
 	position: fixed;
 	top: 0;
-	width: 100%;
+	width: 100vw;
 	margin-top: 0px;
 
 	.topbar-section, .topbar-item, .dropdown-button {
@@ -55,15 +55,21 @@ div.dropdown-menu {
 	min-width: 300px;
 	min-height: 100px;
 	top: 28px;
-	right: 8px;
+	right: 0.5em;
 	z-index: 500;
-	padding: 4px 8px 4px 8px;
+	padding: 0.25em 0.5em;
 	max-height: 85%;
 	overflow-y: auto;
 	background-color: #999;
 	div {
 		padding: 2px;
 	}
+}
+
+#boards-menu ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
 }
 
 div#staffmenu {
@@ -144,7 +150,5 @@ select.post-actions {
 	display: inline-block;
 	cursor: help;
 }
-
-
 
 @include responsive.responsive-rules();

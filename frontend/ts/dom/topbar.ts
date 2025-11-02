@@ -1,4 +1,4 @@
-import $, { noop } from "jquery";
+import $ from "jquery";
 
 import { getBooleanStorageVal } from "../storage";
 
@@ -16,7 +16,7 @@ export class TopBarButton {
 	 * @param title The text shown on the button
 	 * @param action The function executed when the button is clicked
 	 */
-	constructor(title: string, action: ()=>any = noop, container: string = ".topbar-right") {
+	constructor(title: string, action: ()=>any = ()=>{}, container: string = ".topbar-right") {
 		this.title = title;
 		this.buttonAction = action;
 		this.button = $<HTMLLinkElement>("<a/>").prop({
@@ -56,29 +56,25 @@ export function initTopBar() {
 		`<div class="topbar-watcher"></div>`,
 		`<div class="topbar-settings"></div>`
 	);
-	const responsiveBoardsBtn = new TopBarButton("Boards", () => {
-		console.log("TODO: Show boards menu");
-	}, null);
-	responsiveBoardsBtn.button.addClass("boards-button").insertBefore($topbar.find("div.topbar-boards"));
 
-	const $responsiveBoardsMenu = $("<div/>").prop({
-		id: "boards-menu",
-		class: "dropdown-menu"
-	});
+	const $responsiveBoardsMenu = $(`<div id="boards-menu" class="dropdown-menu"><nav><ul></ul></nav></div>`);
+	$responsiveBoardsMenu.find("ul").append(
+		`<li><a href="${webroot}">home</a></li>`,
+		`<li><b>Boards</b></li>`
+	);
 	const $boardSections = $topbar.find("div.topbar-boards > div.topbar-section");
 	for(const section of $boardSections) {
 		const $boards = $(section).find<HTMLAnchorElement>("a");
 		for(const board of $boards) {
 			$responsiveBoardsMenu.append(
-				$("<div/>").append(
-					`<a href="${board.href}">${board.innerText}</a> &mdash; ${board.title}`
-				)
+				`<li><a href="${board.href}">${board.innerText}</a> &mdash; ${board.title}</li>`
 			);
 		}
 	}
-	responsiveBoardsBtn.button.on("click", () => {
+	const responsiveBoardsBtn = new TopBarButton("Links", () => {
 		$topbar.trigger("menuButtonClick", [$responsiveBoardsMenu, $(document).find($responsiveBoardsMenu).length === 0]);
-	});
+	}, null);
+	responsiveBoardsBtn.button.addClass("boards-button").insertBefore($topbar.find("div.topbar-boards"));
 
 	if(getBooleanStorageVal("pintopbar", true)) {
 		$topbar.css({
