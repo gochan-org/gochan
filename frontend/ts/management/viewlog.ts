@@ -5,6 +5,8 @@ interface LogFilter {
 	showErrors: boolean;
 	showWarnings: boolean;
 	showInfo: boolean;
+	showDebug: boolean;
+	showTrace: boolean;
 	sortDesc?: boolean;
 }
 
@@ -13,6 +15,8 @@ let originalLog = "";
 function updateLogFilter($log: JQuery<HTMLTextAreaElement>, filter: LogFilter) {
 	const lines = originalLog.split("\n").filter((line) => {
 		try {
+			line = line.trim();
+			if(line === "") return false;
 			const lineObj = JSON.parse(line);
 			switch(lineObj.level) {
 			case "fatal":
@@ -23,6 +27,10 @@ function updateLogFilter($log: JQuery<HTMLTextAreaElement>, filter: LogFilter) {
 				return filter.showWarnings;
 			case "info":
 				return filter.showInfo;
+			case "debug":
+				return filter.showDebug;
+			case "trace":
+				return filter.showTrace;
 			default:
 				console.warn("Unrecognized log level in line:", lineObj);
 			}
@@ -92,6 +100,20 @@ $(() => {
 								checked: true,
 								for: "level-info-lbl"
 							})
+						), " ",
+						$("<label id='level-debug-lbl'>Debug:</label>").append(
+							$("<input/>").attr({
+								id: "level-debug-chk",
+								type: "checkbox",
+								for: "level-debug-lbl"
+							})
+						), " ",
+						$("<label id='level-trace-lbl'>Trace:</label>").append(
+							$("<input/>").attr({
+								id: "level-trace-chk",
+								type: "checkbox",
+								for: "level-trace-lbl"
+							})
 						)
 					)
 				),
@@ -102,8 +124,8 @@ $(() => {
 					$("<select/>")
 						.attr("id", "log-sort")
 						.append(
-							"<option id='sort-asc' value='asc'>Ascending</option>",
-							"<option id='sort-asc' value='desc'>Descending</option>"
+							`<option value="asc">Ascending</option>`,
+							`<option value="desc" selected>Descending</option>`
 						)
 				)
 			)
@@ -115,9 +137,19 @@ $(() => {
 			showErrors: $filters.filter("#level-error-chk").get(0).checked,
 			showWarnings: $filters.filter("#level-warning-chk").get(0).checked,
 			showInfo: $filters.filter("#level-info-chk").get(0).checked,
+			showDebug: $filters.filter("#level-debug-chk").get(0).checked,
+			showTrace: $filters.filter("#level-trace-chk").get(0).checked,
 			sortDesc: $filters.filter("select#log-sort").val() === "desc"
 		};
 		updateLogFilter($log, filter);
 	});
-	updateLogFilter($log, {showFatal: true, showErrors: true, showWarnings: true, showInfo: true});
+	updateLogFilter($log, {
+		showFatal: true,
+		showErrors: true,
+		showWarnings: true,
+		showInfo: true,
+		showDebug: false,
+		showTrace: false,
+		sortDesc: true
+	});
 });
