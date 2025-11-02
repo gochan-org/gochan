@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
-	"time"
 )
 
 var (
@@ -136,13 +135,4 @@ func ApproveAppeal(appealID int, staffID int) error {
 	}
 
 	return opts.Tx.Commit()
-}
-
-// view: DBPREFIXv_appeals
-type Appeal struct {
-	IPBanAppeal
-	StaffUsername string    `json:"staff,omitempty"`
-	IsBanActive   bool      `json:"-"`
-	BanExpiresAt  time.Time `json:"expires"`
-	Timestamp     time.Time `json:"timestamp"`
 }

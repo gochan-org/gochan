@@ -132,18 +132,20 @@ func PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx) (*sql.Stmt
 // SetupSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
 // type (MySQL, Postgres, etc) to be passed to PrepareSQL
 func SetupSQLString(query string, dbConn *GCDB) (string, error) {
-	var prepared string
 	var err error
 	if dbConn == nil {
 		return "", ErrNotConnected
 	}
+
+	prepared := dbConn.replacer.Replace(query)
+
 	switch dbConn.driver {
 	case "mysql":
-		prepared = query
+		// no change needed
 	case "sqlite3":
 		fallthrough
 	case "postgres":
-		arr := strings.Split(query, "?")
+		arr := strings.Split(prepared, "?")
 		for i := range arr {
 			if i == len(arr)-1 {
 				break
@@ -154,6 +156,18 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	default:
 		return "", ErrUnsupportedDB
 	}
+
+	prepared = ipFuncRE.ReplaceAllStringFunc(prepared, func(s string) string {
+		parts := ipFuncRE.FindStringSubmatch(s)
+		var replaced string
+		switch dbConn.driver {
+		case "mysql":
+			replaced = parts[1] + "(" + parts[2] + ")"
+		case "postgres", "sqlite3":
+			replaced = parts[2]
+		}
+		return replaced
+	})
 
 	return prepared, err
 }

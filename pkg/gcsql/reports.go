@@ -93,8 +93,8 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 
 // GetReports returns a Report array and any errors encountered. If `includeCleared` is true,
 // the array will include reports that have already been dismissed
-func GetReports(includeCleared bool) ([]Report, error) {
-	sql := `SELECT id,handled_by_staff_id,post_id,IP_NTOA,reason,is_cleared FROM DBPREFIXreports`
+func GetReports(includeCleared bool) ([]PostReport, error) {
+	sql := `SELECT id, staff_id, staff_user, post_id, reporter_ip, poster_ip, reason, is_cleared FROM DBPREFIXv_post_reports`
 	if !includeCleared {
 		sql += ` WHERE is_cleared = FALSE`
 	}
@@ -107,16 +107,20 @@ func GetReports(includeCleared bool) ([]Report, error) {
 		cancel()
 		rows.Close()
 	}()
-	var reports []Report
+	var reports []PostReport
 	for rows.Next() {
-		var report Report
-		err = rows.Scan(&report.ID, &report.HandledByStaffID, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
+		var report PostReport
+		err = rows.Scan(&report.ID, &report.StaffID, &report.StaffUser, &report.PostID, &report.ReporterIP,
+			&report.PosterIP, &report.Reason, &report.IsCleared)
 		if err != nil {
 			return nil, err
 		}
 		reports = append(reports, report)
 	}
-	return reports, rows.Close()
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	return reports, nil
 }
 
 // GetReportCount returns the number of reported posts that have not been handled

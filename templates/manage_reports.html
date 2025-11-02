@@ -7,21 +7,15 @@
 	<input type="submit" name="block-sel" value="Make Selected Unreportable">
 	{{- end -}}
 	<table id="reportstable" class="mgmt-table">
-		<colgroup>
-			<col style="width: 5%;">
-			<col style="width: 5%;">
-			<col style="width: 55%;">
-			<col style="width: 20%;">
-			<col style="width: 15%;">
-		</colgroup>
-		<tr><th></th><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Staff assigned</th></tr>
+		<tr><th></th><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Poster IP</th><th>Staff assigned</th></tr>
 		{{range $r,$report := .reports}}
 		<tr>
 			<td class="text-center"><input type="checkbox" name="report{{$report.ID}}"></td>
 			<td class="text-center"><a href="{{$report.PostLink}}">Link</a></td>
 			<td>{{$report.Reason}}</td>
-			<td class="text-center">{{$report.IP}}</td>
-			<td class="text-center {{if eq $report.HandledByStaffID nil}}text-italic{{end}}">
+			<td class="text-center"><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.ReporterIP}}">{{$report.ReporterIP}}</a></td>
+			<td class="text-center"><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.PosterIP}}">{{$report.PosterIP}}</a></td>
+			<td class="text-center {{if eq $report.StaffID nil}}text-italic{{end}}">
 				{{$report.StaffUser}}
 			</td>
 		</tr>{{end}}

@@ -69,11 +69,11 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 }
 
 type staffInfoJSON struct {
-	Username string         `json:"username"`
-	Rank     int            `json:"rank"`
-	Actions  []Action       `json:"actions,omitempty"`
-	Reports  []gcsql.Report `json:"reports,omitempty"`
-	Appeals  []gcsql.Appeal `json:"appeals,omitempty"`
+	Username string             `json:"username"`
+	Rank     int                `json:"rank"`
+	Actions  []Action           `json:"actions,omitempty"`
+	Reports  []gcsql.PostReport `json:"reports,omitempty"`
+	Appeals  []gcsql.Appeal     `json:"appeals,omitempty"`
 }
 
 func staffInfoCallback(writer http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {

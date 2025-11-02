@@ -19,9 +19,8 @@ import (
 )
 
 type reportData struct {
-	gcsql.Report
-	StaffUser *string `json:"staff_user"`
-	PostLink  string  `json:"post_link"`
+	gcsql.PostReport
+	PostLink string `json:"post_link"`
 }
 
 func doReportHandling(request *http.Request, staff *gcsql.Staff, infoEv, errEv *zerolog.Event) error {
@@ -117,22 +116,21 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		return nil, server.NewServerError("failed to clean up reports of deleted posts", http.StatusInternalServerError)
 	}
 
-	rows, err := gcsql.Query(requestOptions, `SELECT id, staff_id, staff_user, post_id, ip, reason, is_cleared FROM DBPREFIXv_post_reports`)
+	rows, err := gcsql.Query(requestOptions, `SELECT id, staff_id, staff_user, post_id, reporter_ip, poster_ip, reason, is_cleared FROM DBPREFIXv_post_reports`)
 	if err != nil {
 		errEv.Err(err).Caller().Send()
 		return nil, err
 	}
 	defer rows.Close()
-	// reports := make([]map[string]any, 0)
 	var reports []reportData
 	for rows.Next() {
 		var report reportData
-		err = rows.Scan(&report.ID, &report.HandledByStaffID, &report.StaffUser, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
+		err = rows.Scan(&report.ID, &report.StaffID, &report.StaffUser, &report.PostID, &report.ReporterIP, &report.PosterIP, &report.Reason, &report.IsCleared)
 		if report.StaffUser == nil {
 			user := "unassigned"
 			report.StaffUser = &user
 			handledByStaffID := 0
-			report.HandledByStaffID = &handledByStaffID
+			report.StaffID = &handledByStaffID
 		}
 		if err != nil {
 			errEv.Err(err).Caller().Send()
@@ -165,6 +163,5 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		errEv.Err(err).Caller().Send()
 		return "", err
 	}
-	output = reportsBuffer.String()
-	return
+	return reportsBuffer.String(), nil
 }

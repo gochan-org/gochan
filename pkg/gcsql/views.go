@@ -2,6 +2,7 @@ package gcsql
 
 import (
 	"errors"
+	"time"
 
 	"github.com/gochan-org/gochan/pkg/events"
 )
@@ -9,6 +10,27 @@ import (
 var (
 	errMissingViewFile = errors.New("unable to find reset_views.sql, please reinstall gochan")
 )
+
+// view: DBPREFIXv_appeals
+type Appeal struct {
+	IPBanAppeal
+	StaffUsername string    `json:"staff,omitempty"`
+	IsBanActive   bool      `json:"-"`
+	BanExpiresAt  time.Time `json:"expires"`
+	Timestamp     time.Time `json:"timestamp"`
+}
+
+// view: DBPREFIXv_post_reports
+type PostReport struct {
+	ID         int     `json:"id"`
+	StaffID    *int    `json:"-"`
+	StaffUser  *string `json:"staff_user,omitempty"`
+	PostID     int     `json:"post_id"`
+	ReporterIP string  `json:"reporter_ip"`
+	PosterIP   string  `json:"poster_ip"`
+	Reason     string  `json:"reason"`
+	IsCleared  bool    `json:"is_cleared"`
+}
 
 func ResetViews() error {
 	viewsFile := findSQLFile("reset_views.sql")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -63,6 +64,7 @@ var (
 		"PARAM_ATON", "?",
 		"PARAM_NTOA", "?",
 	}
+	ipFuncRE = regexp.MustCompile(`(INET6_NTOA|INET6_ATON)\(([^)]+)\)`) // used for more flexible replacement based on SQL driver
 )
 
 type GCDB struct {
@@ -106,7 +108,7 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if prepared, err = SetupSQLString(db.replacer.Replace(query), db); err != nil {
+	if prepared, err = SetupSQLString(query, db); err != nil {
 		return nil, err
 	}
 	_, hasDeadline := ctx.Deadline()
