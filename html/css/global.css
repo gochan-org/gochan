@@ -510,11 +510,29 @@ form#login-box input[type=submit] {
   z-index: 9001;
   overflow: auto;
 }
-
 .lightbox * {
   -webkit-filter: drop-shadow(0px 0px 0px #000);
   filter: drop-shadow(0px 0px 0px #000);
   color: #000000;
+}
+.lightbox a {
+  color: #5A5A5A;
+  font-weight: bold;
+}
+.lightbox input[type=text], .lightbox input[type=password], .lightbox input[type=file], .lightbox textarea {
+  background: #FFF;
+  border: 1px solid #000;
+  color: #000;
+}
+.lightbox div.section-body {
+  background: #A0A0A0;
+}
+.lightbox div.section-title-block {
+  border: 1px solid #000;
+  border-radius: 0px;
+  background: #777;
+  -webkit-filter: drop-shadow(0px 0px 0px #000);
+  filter: drop-shadow(0px 0px 0px #000);
 }
 
 .lightbox-bg {
@@ -555,43 +573,21 @@ form#login-box input[type=submit] {
   color: #555;
 }
 
-.lightbox a {
-  color: #5A5A5A;
+#settings-container {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 90%;
+  margin: auto;
+}
+#settings-container span:nth-child(2n+1) {
   font-weight: bold;
 }
-
-.lightbox input[type=text],
-.lightbox input[type=password],
-.lightbox input[type=file],
-.lightbox textarea {
-  background: #FFF;
-  border: 1px solid #000;
-  color: #000;
+#settings-container .span2 {
+  grid-column: span 2;
 }
-
-.lightbox textarea#sql-statement {
-  width: 95%;
-  height: 300px;
-  margin-left: 0px;
-  clear: both;
-  background: #FFF;
-  color: #000;
-}
-
-.lightbox div.section-body {
-  background: #A0A0A0;
-}
-
-.lightbox div.section-title-block {
-  border: 1px solid #000;
-  border-radius: 0px;
-  background: #777;
-  -webkit-filter: drop-shadow(0px 0px 0px #000);
-  filter: drop-shadow(0px 0px 0px #000);
-}
-
-#settings-container table textarea {
-  width: 75%;
+#settings-container textarea {
+  width: 90%;
   height: 6em;
 }
 
@@ -863,5 +859,12 @@ select.post-actions {
   }
   div#topbar .topbar-boards, div#topbar .topbar-section {
     display: none;
+  }
+  .lightbox {
+    left: 0;
+    width: 100vw;
+    right: unset;
+    padding-left: 0;
+    padding-right: 0;
   }
 }

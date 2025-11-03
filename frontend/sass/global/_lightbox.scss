@@ -12,11 +12,33 @@
 	top:5%;
 	z-index:9001;
 	overflow: auto;
-}
 
-.lightbox * {
-	@include util.shadow-filter(0px 0px 0px #000);
-	color:#000000;
+	* {
+		@include util.shadow-filter(0px 0px 0px #000);
+		color:#000000;
+	}
+
+	a {
+		color: #5A5A5A;
+		font-weight: bold;
+	}
+
+	input[type=text], input[type=password], input[type=file], textarea {
+		background: #FFF;
+		border: 1px solid #000;
+		color: #000;
+	}
+
+	div.section-body {
+		background: #A0A0A0;
+	}
+
+	div.section-title-block {
+		border: 1px solid #000;
+		border-radius: 0px;
+		background: #777;
+		@include util.shadow-filter(0px 0px 0px #000);
+	}
 }
 
 .lightbox-bg {
@@ -53,45 +75,24 @@
 	font-size: inherit;
 }
 
-.lightbox-x:hover,.lightbox-x:active {
+.lightbox-x:hover, .lightbox-x:active {
 	color:#555;
 }
 
-.lightbox a {
-	color: #5A5A5A;
-	font-weight: bold;
-}
-
-.lightbox input[type=text],
-.lightbox input[type=password],
-.lightbox input[type=file],
-.lightbox textarea {
-	background: #FFF;
-	border: 1px solid #000;
-	color: #000;
-}
-
-.lightbox textarea#sql-statement {
-	width: 95%;
-	height: 300px;
-	margin-left: 0px;
-	clear: both;
-	background: #FFF;
-	color: #000;
-}
-
-.lightbox div.section-body {
-	background: #A0A0A0;
-}
-
-.lightbox div.section-title-block {
-	border: 1px solid #000;
-	border-radius: 0px;
-	background: #777;
-	@include util.shadow-filter(0px 0px 0px #000);
-}
-
-#settings-container table textarea {
-	width: 75%;
-	height: 6em;
+#settings-container {
+	overflow-y: auto;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	width: 90%;
+	margin: auto;
+	span:nth-child(2n+1) {
+		font-weight: bold;;
+	}
+	.span2 {
+		grid-column: span 2;
+	}
+	textarea {
+		width: 90%;
+		height: 6em;
+	}
 }

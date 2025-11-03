@@ -184,17 +184,18 @@ export function createStaffMenu(staff = staffInfo) {
 		const modActions = staffActions.filter(val => filterAction(val, 2));
 		if(modActions.length > 0)
 			$staffMenu.append(menuItem("Moderation"));
-		for(const action of modActions) {
-			const item = menuItem(action.title, `${webroot}manage/${action.id}`);
-			if(action.id === "reports" && staffInfo.reports?.length > 0 ||
-				action.id === "appeals" && staffInfo.appeals?.length > 0) {
+		const items = modActions.map(action => menuItem(action.title, `${webroot}manage/${action.id}`));
+		for(const item of items) {
+			const text = item.text();
+			if((text === "Reports" && staffInfo.reports) ||
+				(text === "Ban Appeals" && staffInfo.appeals)) {
 				item
-					.find("a").text(`${action.title} (${staffInfo.reports.length} open)`)
+					.find("a").text(`${text} (${(text === "Reports" ? staffInfo.reports.length : staffInfo.appeals.length)} open)`)
 					.addClass("text-bold")
 					.css("color", "red");
 			}
-			$staffMenu.append(item);
 		}
+		$staffMenu.append(...items);
 	}
 	if(rank >= 3) {
 		const adminActions = staffActions.filter(val => filterAction(val, 3));

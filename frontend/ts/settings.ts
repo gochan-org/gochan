@@ -164,35 +164,37 @@ function updateSettingsTextArea(_i: number, el:HTMLTextAreaElement) {
 
 function createLightbox() {
 	const settingsHTML =
-		'<div id="settings-container" style="overflow:auto"><table width="100%"><colgroup><col span="1" width="50%"><col span="1" width="50%"></colgroup></table></div>';
+		'<div id="settings-container"></div>';
 	showLightBox("Settings", settingsHTML);
 
-	const $settingsTable = $("#settings-container table");
+	const $settingsGrid = $("#settings-container");
 	settings.forEach((setting) => {
-		const $tr = $("<tr/>").appendTo($settingsTable);
 		const val = getStorageVal(setting.key, setting.defaultVal as any) as string|boolean|number;
 		if(val === true)
 			setting.element.prop("checked", true);
 		else
 			setting.element.val(val as string|number);
-		$("<td/>").append($("<b/>").text(setting.title)).appendTo($tr);
-		$("<td/>").append(setting.element).appendTo($tr);
+		const $title = $("<span/>").text(setting.title).appendTo($settingsGrid);
+		const $el = $("<div/>").append(setting.element).appendTo($settingsGrid);
+		if(setting.title === "Custom JavaScript" || setting.title === "Custom CSS") {
+			$title.addClass("span2");
+			$el.addClass("span2");
+		}
 	});
 
-	$settingsTable.find<HTMLInputElement>("input,select").on("change", (ev: JQuery.ChangeEvent) => {
+	$settingsGrid.find<HTMLInputElement>("input,select").on("change", (ev: JQuery.ChangeEvent) => {
 		const $el: JQuery<HTMLInputElement> = $(ev.target);
 		const elType = $el.attr("type");
 		const val: string|boolean = (elType === "checkbox")?$el.prop("checked"):$el.val();
 		setStorageVal($el.attr("id"), val);
 		settings.get($el.attr("id"))?.onSave();
 
-
 		if(ev.target.id === "style") {
 			setTheme();
 		}
 	});
 
-	$settingsTable
+	$settingsGrid
 		.find<HTMLTextAreaElement>("textarea")
 		.each(updateSettingsTextArea);
 }

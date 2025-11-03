@@ -8,5 +8,13 @@
                 display: none;
             }
         }
+
+        .lightbox {
+            left: 0;
+            width: 100vw;
+            right: unset;
+            padding-left: 0;
+            padding-right: 0;
+        }
     }
 }
