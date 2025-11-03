@@ -76,12 +76,12 @@ type staffInfoJSON struct {
 	Appeals  []gcsql.Appeal     `json:"appeals,omitempty"`
 }
 
-func staffInfoCallback(writer http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,
 	}
-	if staff.Rank >= JanitorPerms {
+	if staff.Rank >= JanitorPerms && request.FormValue("noactions") != "1" {
 		info.Actions = getAvailableActions(staff.Rank, false)
 	}
 	if staff.Rank >= ModPerms {

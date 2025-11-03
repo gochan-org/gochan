@@ -185,7 +185,15 @@ export function createStaffMenu(staff = staffInfo) {
 		if(modActions.length > 0)
 			$staffMenu.append(menuItem("Moderation"));
 		for(const action of modActions) {
-			$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
+			const item = menuItem(action.title, `${webroot}manage/${action.id}`);
+			if(action.id === "reports" && staffInfo.reports?.length > 0 ||
+				action.id === "appeals" && staffInfo.appeals?.length > 0) {
+				item
+					.find("a").text(`${action.title} (${staffInfo.reports.length} open)`)
+					.addClass("text-bold")
+					.css("color", "red");
+			}
+			$staffMenu.append(item);
 		}
 	}
 	if(rank >= 3) {
@@ -247,13 +255,14 @@ function updateLatestReportAppeal(info: StaffInfo) {
 			}
 			elements.push(") ▼");
 			$staffBtn.button.append(...elements);
+			staffInfo.reports = info.reports;
+			staffInfo.appeals = info.appeals;
 		} else {
 			$staffBtn.button.text("Staff ▼");
 		}
 	}
 
 	if(info.reports?.length > 0) {
-
 		const latestReport = info.reports?.reduce((prev:PostReport, current:PostReport) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
 		if(latestReport && latestReport.id > latestReportID) {
 			latestReportID = latestReport.id;
@@ -263,11 +272,9 @@ function updateLatestReportAppeal(info: StaffInfo) {
 					body: `New report for post ${latestReport.post_link} from ${latestReport.reporter_ip}\nReason: ${latestReport.reason}`,
 				}):null
 			);
-			$("div#staffmenu").find("a[href$='manage/reports']").addClass("new-report");
 		}
 	}
 	if(info.appeals?.length > 0) {
-
 		const latestAppeal = info.appeals?.reduce((prev:Appeal, current:Appeal) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
 		if(latestAppeal && latestAppeal.id > latestAppealID) {
 			latestAppealID = latestAppeal.id;
@@ -282,13 +289,13 @@ function updateLatestReportAppeal(info: StaffInfo) {
 }
 
 async function updateStaffNotifications() {
-	await fetch(`${webroot}manage/staffinfo`, {
+	await fetch(`${webroot}manage/staffinfo?noactions=1`, {
 		method: "GET",
 		cache: "no-cache",
 		credentials: "same-origin"
-	}).then(response => {
+	}).then<StaffInfo>(response => {
 		if(!response.ok) throw new Error(`Network response was not ok (${response.status})`);
 		return response.json();
-	}).then((info: StaffInfo) => updateLatestReportAppeal(info))
+	}).then(info => updateLatestReportAppeal(info))
 		.catch(err => console.log("Error updating staff notifications:", err));
 }

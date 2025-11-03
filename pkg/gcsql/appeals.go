@@ -48,9 +48,9 @@ func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
 
 	switch opts.Unexpired {
 	case OnlyTrue:
-		query += " AND ban_expires_at > CURRENT_TIMESTAMP"
+		query += " AND ban_expires_at > CURRENT_TIMESTAMP OR permanent = TRUE"
 	case OnlyFalse:
-		query += " AND ban_expires_at <= CURRENT_TIMESTAMP"
+		query += " AND ban_expires_at <= CURRENT_TIMESTAMP AND permanent = FALSE"
 	}
 
 	if opts.OrderDescending {

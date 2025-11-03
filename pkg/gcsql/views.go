@@ -17,6 +17,7 @@ type Appeal struct {
 	StaffUsername string    `json:"staff,omitempty"`
 	IsBanActive   bool      `json:"-"`
 	BanExpiresAt  time.Time `json:"expires"`
+	Permanent     bool      `json:"permanent"`
 	Timestamp     time.Time `json:"timestamp"`
 }
 
