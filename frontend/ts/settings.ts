@@ -1,4 +1,5 @@
 import $ from "jquery";
+import "jquery-ui/ui/widgets/tabs";
 import path from "path-browserify";
 
 import { showLightBox } from "./dom/lightbox";
@@ -65,7 +66,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 
 class TextSetting extends Setting<string, HTMLTextAreaElement> {
 	constructor(key: string, title: string, category:string, defaultVal = "", onSave?:()=>any) {
-		super(key, title, defaultVal, category, onSave);
+		super(key, title, category, defaultVal, onSave);
 		this.element = this.createElement("<textarea/>");
 		this.element.text(defaultVal);
 		const val = this.getStorageValue();
@@ -163,26 +164,34 @@ function updateSettingsTextArea(_i: number, el:HTMLTextAreaElement) {
 }
 
 function createLightbox() {
-	const settingsHTML =
-		'<div id="settings-container"></div>';
+	const settingsHTML = '<div id="settings-container"><ul id="settings-tabs"></ul></div>';
 	showLightBox("Settings", settingsHTML);
+	const settingsByCategory = new Map<string, Setting<boolean|number|string,HTMLElement>[]>();
+	const $tabs = $("ul#settings-tabs");
+	const $settingsContainer = $("#settings-container");
 
-	const $settingsGrid = $("#settings-container");
-	settings.forEach((setting) => {
-		const val = getStorageVal(setting.key, setting.defaultVal as any) as string|boolean|number;
+	for(const setting of settings) {
+		const tab = "setting-" + setting[1].category.replace(/\s+/g, "-").toLowerCase();
+		if(!settingsByCategory.has(tab)) {
+			settingsByCategory.set(tab, []);
+			$tabs.append(`<li><a href="#${tab}">${setting[1].category}</a></li>`);
+			$settingsContainer.append(`<div id="${tab}"><h3>${setting[1].category}</h3><div class="settings-grid"></div></div>`);
+		}
+		const val = getStorageVal(setting[1].key, setting[1].defaultVal as any) as string|boolean|number;
 		if(val === true)
-			setting.element.prop("checked", true);
+			setting[1].element.prop("checked", true);
 		else
-			setting.element.val(val as string|number);
-		const $title = $("<span/>").text(setting.title).appendTo($settingsGrid);
-		const $el = $("<div/>").append(setting.element).appendTo($settingsGrid);
-		if(setting.title === "Custom JavaScript" || setting.title === "Custom CSS") {
+			setting[1].element.val(val as string|number);
+		const $grid = $settingsContainer.find<HTMLDivElement>(`#${tab} .settings-grid`);
+		const $title = $("<span/>").text(setting[1].title).appendTo($grid);
+		const $el = $("<div/>").append(setting[1].element).appendTo($grid);
+		if(setting[1].title === "Custom JavaScript" || setting[1].title === "Custom CSS") {
 			$title.addClass("span2");
 			$el.addClass("span2");
 		}
-	});
+	}
 
-	$settingsGrid.find<HTMLInputElement>("input,select").on("change", (ev: JQuery.ChangeEvent) => {
+	$settingsContainer.find<HTMLInputElement>("input,select").on("change", (ev: JQuery.ChangeEvent) => {
 		const $el: JQuery<HTMLInputElement> = $(ev.target);
 		const elType = $el.attr("type");
 		const val: string|boolean = (elType === "checkbox")?$el.prop("checked"):$el.val();
@@ -194,7 +203,8 @@ function createLightbox() {
 		}
 	});
 
-	$settingsGrid
+	$settingsContainer
+		.tabs()
 		.find<HTMLTextAreaElement>("textarea")
 		.each(updateSettingsTextArea);
 }
@@ -343,7 +353,7 @@ $(() => {
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
 	}
-	settings.set("style", new DropdownSetting("style", "Style", "Appearance", styleOptions, defaultStyle, function() {
+	settings.set("style", new DropdownSetting("style", "Style", "General", styleOptions, defaultStyle, function() {
 		const val:string = this.getElementValue();
 		const themeElem = document.getElementById("theme");
 		if(!themeElem) return;

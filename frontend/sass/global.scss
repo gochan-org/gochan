@@ -120,7 +120,10 @@ select.post-actions {
 .ui-tabs-tab {
 	float: left;
 	text-decoration: none;
-	padding: 8px;
+	a {
+		padding: 8px;
+		display: inline-block;
+	}
 }
 
 .ui-tabs-panel {

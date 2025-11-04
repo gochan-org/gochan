@@ -39,6 +39,22 @@
 		background: #777;
 		@include util.shadow-filter(0px 0px 0px #000);
 	}
+
+	.ui-tabs-tab {
+		background-color: #BBB;
+		border: none;
+		a {
+			color: black;
+		}
+	}
+	.ui-tabs-active {
+		background-color: #DDD;
+		border: none;
+	}
+	.ui-tabs-panel {
+		background-color: #DDD;
+		border: none;
+	}
 }
 
 .lightbox-bg {
@@ -79,7 +95,7 @@
 	color:#555;
 }
 
-#settings-container {
+.settings-grid {
 	overflow-y: auto;
 	display: grid;
 	grid-template-columns: 1fr 1fr;

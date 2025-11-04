@@ -534,6 +534,21 @@ form#login-box input[type=submit] {
   -webkit-filter: drop-shadow(0px 0px 0px #000);
   filter: drop-shadow(0px 0px 0px #000);
 }
+.lightbox .ui-tabs-tab {
+  background-color: #BBB;
+  border: none;
+}
+.lightbox .ui-tabs-tab a {
+  color: black;
+}
+.lightbox .ui-tabs-active {
+  background-color: #DDD;
+  border: none;
+}
+.lightbox .ui-tabs-panel {
+  background-color: #DDD;
+  border: none;
+}
 
 .lightbox-bg {
   background-attachment: fixed;
@@ -573,20 +588,20 @@ form#login-box input[type=submit] {
   color: #555;
 }
 
-#settings-container {
+.settings-grid {
   overflow-y: auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: 90%;
   margin: auto;
 }
-#settings-container span:nth-child(2n+1) {
+.settings-grid span:nth-child(2n+1) {
   font-weight: bold;
 }
-#settings-container .span2 {
+.settings-grid .span2 {
   grid-column: span 2;
 }
-#settings-container textarea {
+.settings-grid textarea {
   width: 90%;
   height: 6em;
 }
@@ -822,7 +837,10 @@ select.post-actions {
 .ui-tabs-tab {
   float: left;
   text-decoration: none;
+}
+.ui-tabs-tab a {
   padding: 8px;
+  display: inline-block;
 }
 
 .ui-tabs-panel {
