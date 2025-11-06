@@ -94,7 +94,7 @@ func CheckPostReports(postID int, reason string) (bool, bool, error) {
 // GetReports returns a Report array and any errors encountered. If `includeCleared` is true,
 // the array will include reports that have already been dismissed
 func GetReports(includeCleared bool) ([]PostReport, error) {
-	sql := `SELECT id, staff_id, staff_user, post_id, reporter_ip, poster_ip, reason, is_cleared FROM DBPREFIXv_post_reports`
+	sql := `SELECT id, staff_id, staff_user, post_id, thread_op, board, reporter_ip, poster_ip, reason, is_cleared FROM DBPREFIXv_post_reports`
 	if !includeCleared {
 		sql += ` WHERE is_cleared = FALSE`
 	}
@@ -110,7 +110,7 @@ func GetReports(includeCleared bool) ([]PostReport, error) {
 	var reports []PostReport
 	for rows.Next() {
 		var report PostReport
-		err = rows.Scan(&report.ID, &report.StaffID, &report.StaffUser, &report.PostID, &report.ReporterIP,
+		err = rows.Scan(&report.ID, &report.StaffID, &report.StaffUser, &report.PostID, &report.ThreadOP, &report.Board, &report.ReporterIP,
 			&report.PosterIP, &report.Reason, &report.IsCleared)
 		if err != nil {
 			return nil, err

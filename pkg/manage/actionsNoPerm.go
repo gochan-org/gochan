@@ -69,11 +69,11 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 }
 
 type staffInfoJSON struct {
-	Username string             `json:"username"`
-	Rank     int                `json:"rank"`
-	Actions  []Action           `json:"actions,omitempty"`
-	Reports  []gcsql.PostReport `json:"reports,omitempty"`
-	Appeals  []gcsql.Appeal     `json:"appeals,omitempty"`
+	Username string           `json:"username"`
+	Rank     int              `json:"rank"`
+	Actions  []Action         `json:"actions,omitempty"`
+	Reports  []reportWithLink `json:"reports,omitempty"`
+	Appeals  []gcsql.Appeal   `json:"appeals,omitempty"`
 }
 
 func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
@@ -86,7 +86,7 @@ func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff 
 	}
 	if staff.Rank >= ModPerms {
 		var err error
-		if info.Reports, err = gcsql.GetReports(false); err != nil {
+		if info.Reports, err = getReportsWithLinks(); err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			logger.Err(err).Caller().Send()
 			return nil, fmt.Errorf("unable to get open reports: %w", err)

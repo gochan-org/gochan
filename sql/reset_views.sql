@@ -107,10 +107,14 @@ LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
 LEFT JOIN DBPREFIXboards b ON b.id = t.board_id;
 
 CREATE VIEW DBPREFIXv_post_reports AS
-SELECT r.id, handled_by_staff_id AS staff_id, username AS staff_user, post_id, INET6_NTOA(r.ip) as reporter_ip, INET6_NTOA(p.ip) as poster_ip, reason, is_cleared
+SELECT r.id, handled_by_staff_id AS staff_id, username AS staff_user, post_id, 
+(SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p.thread_id = p2.thread_id LIMIT 1) AS thread_op,
+dir as board, INET6_NTOA(r.ip) as reporter_ip, INET6_NTOA(p.ip) as poster_ip, reason, is_cleared
 FROM DBPREFIXreports r
 LEFT JOIN DBPREFIXstaff s ON handled_by_staff_id = s.id
 INNER JOIN DBPREFIXposts p ON r.post_id = p.id
+INNER JOIN DBPREFIXthreads t ON p.thread_id = t.id
+INNER JOIN DBPREFIXboards b ON t.board_id = b.id
 WHERE is_cleared = FALSE;
 
 CREATE VIEW DBPREFIXv_appeal_messages AS

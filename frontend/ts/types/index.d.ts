@@ -157,11 +157,14 @@ declare global {
 
 	interface PostReport {
 		id: number;
+		post: number;
+		op: number;
+		board: string;
 		staff_user?: string;
-		post_id: number;
 		reporter_ip: string;
 		poster_ip: string;
 		reason: string;
+		is_cleared: boolean;
 		post_link: string;
 	}
 

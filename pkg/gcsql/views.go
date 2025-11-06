@@ -25,8 +25,10 @@ type Appeal struct {
 type PostReport struct {
 	ID         int     `json:"id"`
 	StaffID    *int    `json:"-"`
-	StaffUser  *string `json:"staff_user,omitempty"`
-	PostID     int     `json:"post_id"`
+	StaffUser  *string `json:"staff,omitempty"`
+	PostID     int     `json:"post"`
+	ThreadOP   int     `json:"op"`
+	Board      string  `json:"board"`
 	ReporterIP string  `json:"reporter_ip"`
 	PosterIP   string  `json:"poster_ip"`
 	Reason     string  `json:"reason"`
