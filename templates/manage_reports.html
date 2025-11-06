@@ -10,7 +10,7 @@
 		<tr><th><input type="checkbox" name="" id="check-all"></th><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Poster IP</th><th>Staff assigned</th></tr>
 		{{range $r,$report := .reports}}
 		<tr>
-			<td><input type="checkbox" name="report{{$report.ID}}"></td>
+			<td><input type="checkbox" name="report{{$report.ID}}" class="check-all-group"></td>
 			<td><a href="{{$report.PostLink}}">Link</a> | <a href="{{webPath `/manage/bans`}}?dir={{$report.Board}}&postid={{$report.PostID}}">Ban</a></td>
 			<td class="text-left">{{$report.Reason}}</td>
 			<td><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.ReporterIP}}">{{$report.ReporterIP}}</a></td>

@@ -61,6 +61,12 @@ $(() => {
 	$("div.post, div.reply").each((i, elem) => {
 		addPostDropdown($(elem));
 	});
+
+	$<HTMLInputElement>("input[type='checkbox']#check-all").on("change", function() {
+		const $form = $(this).parents("form");
+		$form.find<HTMLInputElement>("input[type='checkbox'].check-all-group").prop("checked", this.checked);
+	});
+
 	$(document).on("keydown", handleKeydown);
 	initFlags();
 	updateExternalLinks();
