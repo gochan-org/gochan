@@ -12,38 +12,39 @@ import (
 )
 
 const (
-	BanPage             = "banpage.html"
-	BoardPage           = "boardpage.html"
-	Captcha             = "captcha.html"
-	Catalog             = "catalog.html"
-	JsConsts            = "consts.js"
-	ErrorPage           = "error.html"
-	FrontIntro          = "front_intro.html"
-	FrontPage           = "front.html"
-	ManageAnnouncements = "manage_announcements.html"
-	ManageAppeals       = "manage_appeals.html"
-	ManageBans          = "manage_bans.html"
-	ManageBoards        = "manage_boards.html"
-	ManageDashboard     = "manage_dashboard.html"
-	ManageFilters       = "manage_filters.html"
-	ManageFilterHits    = "manage_filter_hits.html"
-	ManageFixThumbnails = "manage_fixthumbnails.html"
-	ManageIPSearch      = "manage_ipsearch.html"
-	ManageLogin         = "manage_login.html"
-	ManageRecentPosts   = "manage_recentposts.html"
-	ManageReports       = "manage_reports.html"
-	ManageSections      = "manage_sections.html"
-	ManageStaff         = "manage_staff.html"
-	ManageTemplates     = "manage_templateoverride.html"
-	ManageThreadAttrs   = "manage_threadattrs.html"
-	ManageViewLog       = "manage_viewlog.html"
-	ManageWordfilters   = "manage_wordfilters.html"
-	MoveThreadPage      = "movethreadpage.html"
-	PageFooter          = "page_footer.html"
-	PageHeader          = "page_header.html"
-	PostEdit            = "post_edit.html"
-	PostFlag            = "flag.html"
-	ThreadPage          = "threadpage.html"
+	BanPage                  = "banpage.html"
+	BoardPage                = "boardpage.html"
+	Captcha                  = "captcha.html"
+	Catalog                  = "catalog.html"
+	JsConsts                 = "consts.js"
+	ErrorPage                = "error.html"
+	FrontIntro               = "front_intro.html"
+	FrontPage                = "front.html"
+	ManageAnnouncements      = "manage_announcements.html"
+	ManageAppeals            = "manage_appeals.html"
+	ManageAppealConversation = "manage_appeal_conversation.html"
+	ManageBans               = "manage_bans.html"
+	ManageBoards             = "manage_boards.html"
+	ManageDashboard          = "manage_dashboard.html"
+	ManageFilters            = "manage_filters.html"
+	ManageFilterHits         = "manage_filter_hits.html"
+	ManageFixThumbnails      = "manage_fixthumbnails.html"
+	ManageIPSearch           = "manage_ipsearch.html"
+	ManageLogin              = "manage_login.html"
+	ManageRecentPosts        = "manage_recentposts.html"
+	ManageReports            = "manage_reports.html"
+	ManageSections           = "manage_sections.html"
+	ManageStaff              = "manage_staff.html"
+	ManageTemplates          = "manage_templateoverride.html"
+	ManageThreadAttrs        = "manage_threadattrs.html"
+	ManageViewLog            = "manage_viewlog.html"
+	ManageWordfilters        = "manage_wordfilters.html"
+	MoveThreadPage           = "movethreadpage.html"
+	PageFooter               = "page_footer.html"
+	PageHeader               = "page_header.html"
+	PostEdit                 = "post_edit.html"
+	PostFlag                 = "flag.html"
+	ThreadPage               = "threadpage.html"
 )
 
 var (
@@ -79,6 +80,9 @@ var (
 		},
 		ManageAppeals: {
 			files: []string{"manage_appeals.html"},
+		},
+		ManageAppealConversation: {
+			files: []string{"manage_appeal_conversation.html", "page_header.html", "topbar.html", "page_footer.html"},
 		},
 		ManageBans: {
 			files: []string{"manage_bans.html"},

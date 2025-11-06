@@ -132,79 +132,6 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	return outputStr, nil
 }
 
-func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
-	var form appealsForm
-	if err = forms.FillStructFromForm(request, &form); err != nil {
-		logger.Err(err).Caller().
-			Msg("Unable to fill struct from form")
-		return "", server.NewServerError(err, http.StatusBadRequest)
-	}
-
-	if request.Method == http.MethodPost {
-		if err = form.validate(); err != nil {
-			logger.Err(err).Caller().
-				Msg("Invalid form data")
-			return "", err
-		}
-
-		zlArr := zerolog.Arr()
-		for _, v := range form.AppealIDs {
-			zlArr.Int(v)
-		}
-		if form.isApprove() {
-			logger = logger.With().Array("approveAppeals", zlArr).Logger()
-		} else if form.isDeny() {
-			logger = logger.With().Array("denyAppeals", zlArr).Logger()
-		}
-	} else {
-		if form.Limit < 1 {
-			form.Limit = 20
-		}
-	}
-
-	if form.isApprove() {
-		for _, approveID := range form.AppealIDs {
-			if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
-				logger.Err(err).Caller().
-					Int("approveAppeal", approveID).Send()
-				return "", err
-			}
-		}
-		logger.Info().Msg("Approved appeal(s)")
-	} else if form.isDeny() {
-		return "", server.NewServerError("deny appeal not yet implemented", http.StatusNotImplemented)
-		// for _, denyID := range form.AppealIDs {
-
-		// }
-		// logger.Info().Msg("Denied appeal(s)")
-	}
-
-	appeals, err := gcsql.GetAppeals(gcsql.AppealsQueryOptions{
-		Limit:           form.Limit,
-		Active:          gcsql.OnlyTrue,
-		Unexpired:       gcsql.OnlyTrue,
-		OrderDescending: true,
-	})
-	if err != nil {
-		logger.Err(err).Caller().Send()
-		return "", fmt.Errorf("failed to get appeals list: %w", err)
-	}
-
-	if wantsJSON {
-		return appeals, nil
-	}
-	var buf bytes.Buffer
-	pageData := map[string]any{}
-	if len(appeals) > 0 {
-		pageData["appeals"] = appeals
-	}
-	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, &buf, "text/html"); err != nil {
-		logger.Err(err).Str("template", gctemplates.ManageAppeals).Caller().Send()
-		return "", fmt.Errorf("failed executing appeal management page template: %w", err)
-	}
-	return buf.String(), err
-}
-
 func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	filterIDStr := params.ByName("filterID")
@@ -783,6 +710,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 func registerModeratorPages() {
 	RegisterManagePage("bans", "Bans", ModPerms, NoJSON, bansCallback)
 	RegisterManagePage("appeals", "Ban Appeals", ModPerms, OptionalJSON, appealsCallback)
+	RegisterManagePageWithMethods("appeals/:appealID", "Appeal Conversation", ModPerms, NoJSON, true, appealConversationCallback, http.MethodGet, http.MethodPost)
 	RegisterManagePage("filters", "Post Filters", ModPerms, NoJSON, filtersCallback)
 	RegisterManagePageWithMethods("filters/hits/:filterID", "Filter Hits", ModPerms, NoJSON, true, filterHitsCallback, http.MethodGet, http.MethodPost)
 	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)

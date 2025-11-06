@@ -5,14 +5,11 @@
 	<input type="submit" name="doapprove" value="Approve Selected" />
 	<input type="submit" name="dodeny" value="Deny Selected" /><br>
 	<table class="mgmt-table text-center">
-		<tr><th><input type="checkbox" name="" id="check-all"></th><th>Appeal Text</th><th>Banned IP</th><th>Timestamp</th></tr>
+		<tr><th><input type="checkbox" id="check-all"></th><th>Messages</th><th>Last Message</th><th>Banned IP</th><th>Timestamp</th></tr>
 		{{- range $_,$appeal := $.appeals -}}
 			<tr>
-				<td>
-					<input type="checkbox" name="appeal" value="{{$appeal.ID}}" class="check-all-group" />
-					<!-- <a href="{{webPath "manage/appeals"}}?approve={{$appeal.ID}}">Approve</a> |
-					<a href="{{webPath "manage/appeals"}}?deny={{$appeal.ID}}">Deny</a> -->
-				</td>
+				<td><input type="checkbox" name="appeal" value="{{$appeal.ID}}" class="check-all-group" /></td>
+				<td><a href="{{webPath `/manage/appeals/` (print $appeal.ID)}}">Conversation</a></td>
 				<td>{{$appeal.AppealText}}</td>
 				<td>{{getAppealBanIP $appeal.IPBanID}}</td>
 				<td><time datetime="{{formatTimestampAttribute $appeal.Timestamp}}">{{formatTimestamp $appeal.Timestamp}}</time></td>
