@@ -6,17 +6,17 @@
 	{{if eq $.staff.Rank 3 -}}
 	<input type="submit" name="block-sel" value="Make Selected Unreportable">
 	{{- end -}}
-	<table id="reportstable" class="mgmt-table">
-		<tr><th></th><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Poster IP</th><th>Staff assigned</th></tr>
+	<table id="reportstable" class="mgmt-table text-center">
+		<tr><th><input type="checkbox" name="" id="check-all"></th><th>Post</th><th>Reason</th><th>Reporter IP</th><th>Poster IP</th><th>Staff assigned</th></tr>
 		{{range $r,$report := .reports}}
 		<tr>
-			<td class="text-center"><input type="checkbox" name="report{{$report.ID}}"></td>
-			<td class="text-center"><a href="{{$report.PostLink}}">Link</a></td>
-			<td>{{$report.Reason}}</td>
-			<td class="text-center"><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.ReporterIP}}">{{$report.ReporterIP}}</a></td>
-			<td class="text-center"><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.PosterIP}}">{{$report.PosterIP}}</a></td>
-			<td class="text-center {{if eq $report.StaffID nil}}text-italic{{end}}">
-				{{$report.StaffUser}}
+			<td><input type="checkbox" name="report{{$report.ID}}"></td>
+			<td><a href="{{$report.PostLink}}">Link</a> | <a href="{{webPath `/manage/bans`}}?dir={{$report.Board}}&postid={{$report.PostID}}">Ban</a></td>
+			<td class="text-left">{{$report.Reason}}</td>
+			<td><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.ReporterIP}}">{{$report.ReporterIP}}</a></td>
+			<td><a href="{{webPath `/manage/ipsearch?ip=`}}{{$report.PosterIP}}">{{$report.PosterIP}}</a></td>
+			<td class="{{if eq $report.StaffID nil}}text-italic{{end}}">
+				{{if eq $report.StaffID nil}}unassigned{{else}}{{$report.StaffName}}{{end}}
 			</td>
 		</tr>{{end}}
 	</table>
