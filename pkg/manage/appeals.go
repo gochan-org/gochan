@@ -95,7 +95,7 @@ func appealConversationCallback(_ http.ResponseWriter, request *http.Request, st
 		"appealID": appealID,
 	}
 
-	setCustomTitle(request, fmt.Sprintf("Appeal %d Conversation", appealID))
+	SetCustomPageTitle(request, fmt.Sprintf("Appeal %d Conversation", appealID))
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageAppealConversation, data, &buf, "text/html"); err != nil {

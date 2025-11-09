@@ -522,21 +522,25 @@ func (tc *manageCallbackTestCase) runTest(t *testing.T, manageCallbackFunc Callb
 	}
 }
 
-func setupManageTestSuite(t *testing.T) {
-	config.InitConfig()
-
+func setupManageTestSuite(t *testing.T, sqlConfig ...config.SQLConfig) {
 	_, err := testutil.GoToGochanRoot(t)
 	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+
+	if !assert.NoError(t, config.InitConfig()) {
 		t.FailNow()
 	}
 
 	systemCriticalConfig := config.GetSystemCriticalConfig()
 	systemCriticalConfig.TemplateDir = "templates"
 	systemCriticalConfig.SiteHost = "localhost"
+	if len(sqlConfig) > 0 {
+		systemCriticalConfig.SQLConfig = sqlConfig[0]
+	}
 	config.SetSystemCriticalConfig(systemCriticalConfig)
 
 	gctemplates.InitTemplates()
-
 }
 
 func TestLoginCallback(t *testing.T) {

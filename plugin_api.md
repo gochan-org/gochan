@@ -83,6 +83,9 @@ staff_note    | string           | A private note attached to the ban that only 
 - **manage.register_staff_action(action table, methods []string)**
 	- Registers a staff action accessible at /manage/`action["id"]` to be handled by `action["callback"]`. See the table below for field information, and [register_staff_action.lua](./examples/plugins/register_staff_action.lua) for an example. The `methods` table is a list of HTTP methods (e.g., {"GET", "POST"}) that the action will respond to. The action ID can have parameters in it, e.g., `delete_post/:post_id`, and these can be retrieved in the callback function by using `manage.get_action_request_params(request)`.
 
+- **manage.set_custom_page_title(request *http.Request, title string)**
+	- Changes the displayed page title for HTML responses for the given request (instead of using the title set during action registration).
+
 Key        | Type               | Required                      |Explanation
 -----------|--------------------|-------------------------------|--------------
 id         | string             | yes                           | The action ID, used in the URL path

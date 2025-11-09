@@ -45,7 +45,9 @@ func serveError(writer http.ResponseWriter, field string, action string, message
 	})
 }
 
-func setCustomTitle(request *http.Request, title string) {
+// SetCustomPageTitle sets a custom page title for the calling manage action, instead of the one set when it is
+// registered
+func SetCustomPageTitle(request *http.Request, title string) {
 	customTitlePtr, ok := request.Context().Value(customTitleContextKey{}).(*string)
 	if !ok || customTitlePtr == nil {
 		return
