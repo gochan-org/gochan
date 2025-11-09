@@ -112,11 +112,12 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 		return nil, err
 	}
 	_, hasDeadline := ctx.Deadline()
-	if !hasDeadline {
+	if !hasDeadline && db.defaultTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), db.defaultTimeout)
 		defer cancel()
 	}
+
 	var stmt *sql.Stmt
 	if tx != nil {
 		stmt, err = tx.PrepareContext(ctx, prepared)
@@ -440,7 +441,7 @@ func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
 }
 
 func optimizeMySQL() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	var wg sync.WaitGroup
 	rows, err := QueryContextSQL(ctx, nil, "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()")
@@ -471,7 +472,7 @@ func optimizeMySQL() error {
 }
 
 func optimizePostgres() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, "REINDEX DATABASE "+config.GetSQLConfig().DBname)
@@ -479,7 +480,7 @@ func optimizePostgres() error {
 }
 
 func optimizeSqlite3() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, "VACUUM")

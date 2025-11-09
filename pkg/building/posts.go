@@ -188,7 +188,14 @@ func (p *Post) SpoilerThread() bool {
 // returned
 func QueryPosts(query string, params []any, cb func(*Post) error) error {
 	sqlCfg := config.GetSQLConfig()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds)*time.Second)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	ctxTimeout := time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second
+	if ctxTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), ctxTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	defer cancel()
 
 	rows, err := gcsql.QueryContextSQL(ctx, nil, query, params...)

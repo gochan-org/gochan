@@ -58,7 +58,14 @@ func (m *Pre2021Migrator) Init(options *common.MigrationOptions) error {
 }
 
 func (m *Pre2021Migrator) IsMigrated() (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(m.config.DBTimeoutSeconds)*time.Second)
+	ctxTimeout := time.Duration(m.config.DBTimeoutSeconds) * time.Second
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if ctxTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), ctxTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	defer cancel()
 	var sqlConfig config.SQLConfig
 	if m.IsMigratingInPlace() {

@@ -85,7 +85,7 @@ func (s *Staff) ClearSessions() error {
 	const deleteSessions = `DELETE FROM DBPREFIXsessions WHERE staff_id = ?`
 	var err error
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	if s.ID == 0 {
@@ -177,7 +177,7 @@ func EndStaffSession(writer http.ResponseWriter, request *http.Request) error {
 	session.MaxAge = -1
 	http.SetCookie(writer, session)
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	staffID := 0
@@ -272,7 +272,7 @@ func (staff *Staff) CreateLoginSession(key string) error {
 	const insertSQL = `INSERT INTO DBPREFIXsessions (staff_id,data,expires) VALUES(?,?,?)`
 	const updateSQL = `UPDATE DBPREFIXstaff SET last_login = CURRENT_TIMESTAMP WHERE id = ?`
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	tx, err := BeginContextTx(ctx)

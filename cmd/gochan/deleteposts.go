@@ -289,7 +289,14 @@ func markPostsAsDeleted(posts []any, request *http.Request, writer http.Response
 		}
 	}
 	sqlCfg := config.GetSQLConfig()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(sqlCfg.DBTimeoutSeconds)*time.Second)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	ctxTimeout := time.Duration(sqlCfg.DBTimeoutSeconds) * time.Second
+	if ctxTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), ctxTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	defer cancel()
 
 	tx, err := gcsql.BeginContextTx(ctx)

@@ -87,7 +87,7 @@ func setupOptionsWithTimeout(opts ...*RequestOptions) *RequestOptions {
 	withoutContext := len(opts) == 0 || opts[0] == nil || opts[0].Context == nil
 	requestOptions := setupOptions(opts...)
 	if withoutContext {
-		requestOptions.Context, requestOptions.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		requestOptions.Context, requestOptions.Cancel = setupTimeoutContext(context.Background(), gcdb)
 	}
 	return requestOptions
 }
@@ -212,7 +212,13 @@ func ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...an
 
 // ExecTimeoutSQL is a helper function for executing a SQL statement with the configured timeout in seconds
 func ExecTimeoutSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if gcdb.defaultTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	defer cancel()
 
 	return ExecContextSQL(ctx, tx, sqlStr, values...)
@@ -284,7 +290,7 @@ func QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, o
 // It creates a context with the default timeout to only be used for this query and then disposed.
 // It should only be used by a function that does a single SQL query, otherwise use QueryRow with a context.
 func QueryRowTimeoutSQL(tx *sql.Tx, query string, values, out []any) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	return QueryRowContextSQL(ctx, tx, query, values, out)
 }
@@ -349,7 +355,7 @@ func QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a ...any) (*
 // cancel function (for the calling function to call later), and nil error. It should only be used
 // if the calling function is only doing one SQL query, otherwise use QueryContextSQL.
 func QueryTimeoutSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	rows, err := QueryContextSQL(ctx, tx, query, a...)
 	if err != nil {
 		cancel()
@@ -481,4 +487,17 @@ func createArrayPlaceholder[T any](arr []T) string {
 		params[p] = "?"
 	}
 	return "(" + strings.Join(params, ",") + ")"
+}
+
+// setupTimeoutContext sets up the given context with the configured timeout if it is set and returns the new context
+// and cancel function, otherwise it returns the context and a no-op cancel function
+func setupTimeoutContext(ctx context.Context, db *GCDB) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if db.defaultTimeout > 0 {
+		ctx, cancel := context.WithTimeout(ctx, db.defaultTimeout)
+		return ctx, cancel
+	}
+	return ctx, func() {}
 }

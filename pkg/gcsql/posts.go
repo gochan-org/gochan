@@ -370,7 +370,7 @@ func (p *Post) Delete(requestOptions ...*RequestOptions) error {
 	shouldCommit := len(requestOptions) == 0
 	opts := setupOptions(requestOptions...)
 	if opts.Context == context.Background() {
-		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		opts.Context, opts.Cancel = setupTimeoutContext(context.Background(), gcdb)
 		defer opts.Cancel()
 	}
 	var err error
@@ -408,7 +408,7 @@ func (p *Post) Delete(requestOptions ...*RequestOptions) error {
 func (p *Post) Insert(bumpThread bool, thread *Thread, force bool, requestOptions ...*RequestOptions) error {
 	opts := setupOptions(requestOptions...)
 	if len(requestOptions) == 0 {
-		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		opts.Context, opts.Cancel = setupTimeoutContext(context.Background(), gcdb)
 		defer opts.Cancel()
 	}
 	var err error
@@ -486,7 +486,7 @@ func (p *Post) CyclicPostsToBePruned() ([]CyclicThreadPost, error) {
 		// don't prune if this is the OP
 		return nil, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	var cyclic bool

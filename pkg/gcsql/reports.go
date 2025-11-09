@@ -11,7 +11,7 @@ func CreateReport(postID int, ip string, reason string) (*Report, error) {
 	insertSQL := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, PARAM_ATON, ?, FALSE)`
 	currentTime := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	tx, err := BeginContextTx(ctx)
@@ -55,7 +55,7 @@ func ClearReport(id int, staffID int, block bool) (bool, error) {
 		isCleared = 2
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {

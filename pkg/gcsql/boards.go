@@ -249,7 +249,7 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 		return errors.New("board title string must not be empty")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, sqlINSERT,

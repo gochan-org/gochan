@@ -191,7 +191,7 @@ func (f *Filter) setConditionsContext(ctx context.Context, tx *sql.Tx, condition
 // SetConditions replaces all current conditions associated with the filter and applies the given conditions.
 // It returns an error if no conditions are provided
 func (f *Filter) SetConditions(conditions ...FilterCondition) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -224,7 +224,7 @@ func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail
 	if f.ID == 0 {
 		return ErrInvalidFilter
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -269,7 +269,7 @@ func (f *Filter) BoardDirs() ([]string, error) {
 // SetBoardDirs sets the board directories to be associated with the filter. If no boards are used,
 // the filter will be applied to all boards
 func (f *Filter) SetBoardDirs(dirs ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -335,7 +335,7 @@ func (f *Filter) setBoardIDsContext(ctx context.Context, tx *sql.Tx, ids ...int)
 // SetBoardIDs sets the board IDs to be associated with the filter. If no boards are used,
 // the filter will be applied to all boards
 func (f *Filter) SetBoardIDs(ids ...int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -661,7 +661,7 @@ func ApplyFilterTx(ctx context.Context, tx *sql.Tx, filter *Filter, conditions [
 // ApplyFilter inserts the given filter into the database if filter.ID == 0. Otherwise it updates the details, boards, and
 // filter conditions for the filter in the database with the given ID
 func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	tx, err := BeginContextTx(ctx)
