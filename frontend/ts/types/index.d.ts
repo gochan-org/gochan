@@ -36,7 +36,6 @@ declare global {
 		id: number;
 		ban_id: number;
 		appeal_text: string;
-		staff_response?: string;
 		is_denied: boolean;
 	}
 

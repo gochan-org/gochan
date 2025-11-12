@@ -95,7 +95,7 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 		return
 	}
 
-	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, staff_response, is_denied, is_ban_active, ban_expires_at, timestamp FROM v_appeals`
+	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, is_denied, is_ban_active, ban_expires_at, timestamp FROM v_appeals`
 	if tC.args.BanID > 0 {
 		switch driver {
 		case "mysql":
@@ -119,12 +119,12 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 		expectQuery.WithArgs(tC.args.BanID)
 	}
 
-	expectedRows := sqlmock.NewRows([]string{"id", "staff_id", "staff_username", "ip_ban_id", "appeal_text", "staff_response", "is_denied", "is_ban_active", "ban_expires_at", "timestamp"})
+	expectedRows := sqlmock.NewRows([]string{"id", "staff_id", "staff_username", "ip_ban_id", "appeal_text", "is_denied", "is_ban_active", "ban_expires_at", "timestamp"})
 	if len(tC.expectReturn) > 0 {
 		for _, expectedAppeal := range tC.expectReturn {
 			expectedRows.AddRow(
 				expectedAppeal.ID, expectedAppeal.StaffID, expectedAppeal.StaffUsername, expectedAppeal.IPBanID, expectedAppeal.AppealText,
-				expectedAppeal.StaffResponse, expectedAppeal.IsDenied, expectedAppeal.IsBanActive, expectedAppeal.BanExpiresAt, expectedAppeal.Timestamp,
+				expectedAppeal.IsDenied, expectedAppeal.IsBanActive, expectedAppeal.BanExpiresAt, expectedAppeal.Timestamp,
 			)
 		}
 	}
@@ -172,7 +172,7 @@ func testRunnerApproveAppeal(t *testing.T, tC *testCaseApproveAppeals, sqlDriver
 	deactivateSQL := `UPDATE ip_ban SET is_active = FALSE WHERE id = `
 	insertBanAudit := `INSERT INTO ip_ban_audit\s*\(ip_ban_id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, ` +
 		`staff_note, message, can_appeal\)\s*VALUES\(`
-	insertAppealsAudit := `INSERT INTO ip_ban_appeals_audit \(appeal_id, appeal_text, staff_id, staff_response, is_denied\)\s*VALUES\(`
+	insertAppealsAudit := `INSERT INTO ip_ban_appeals_audit \(appeal_id, appeal_text, staff_id, is_denied\)\s*VALUES\(`
 	switch sqlDriver {
 	case "mysql":
 		checkAppealsSQL += `\?`

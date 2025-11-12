@@ -191,8 +191,8 @@ CREATE TABLE DBPREFIXip_ban_appeals(
 	staff_id BIGINT,
 	ip_ban_id BIGINT NOT NULL,
 	appeal_text TEXT NOT NULL,
-	staff_response TEXT,
 	is_denied BOOL NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT DBPREFIXip_ban_appeals_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT DBPREFIXip_ban_appeals_ip_ban_id_fk
@@ -201,17 +201,28 @@ CREATE TABLE DBPREFIXip_ban_appeals(
 
 CREATE TABLE DBPREFIXip_ban_appeals_audit(
 	appeal_id BIGINT NOT NULL,
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	staff_id BIGINT,
 	appeal_text TEXT NOT NULL,
-	staff_response TEXT,
 	is_denied BOOL NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY(appeal_id, timestamp),
 	CONSTRAINT DBPREFIXip_ban_appeals_audit_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT DBPREFIXip_ban_appeals_audit_appeal_id_fk
 		FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id)
 		ON DELETE CASCADE
+);
+
+CREATE TABLE DBPREFIXip_ban_appeals_messages(
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	appeal_id BIGINT NOT NULL,
+	staff_id BIGINT,
+	message_text TEXT NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT DBPREFIXip_ban_appeals_messages_appeal_id_fk
+		FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id) ON DELETE CASCADE,
+	CONSTRAINT DBPREFIXip_ban_appeals_messages_staff_id_fk
+		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id) ON DELETE SET NULL
 );
 
 CREATE TABLE DBPREFIXreports(
@@ -221,6 +232,7 @@ CREATE TABLE DBPREFIXreports(
 	ip VARCHAR(45) NOT NULL,
 	reason TEXT NOT NULL,
 	is_cleared BOOL NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT DBPREFIXreports_handled_by_staff_id_fk
 		FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT DBPREFIXreports_post_id_fk

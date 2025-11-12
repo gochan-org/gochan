@@ -40,7 +40,7 @@ func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
 	}
 	opts.RequestOptions = setupOptionsWithTimeout(opts.RequestOptions)
 
-	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, staff_response, is_denied, is_ban_active, ban_expires_at, timestamp FROM DBPREFIXv_appeals`
+	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, is_denied, is_ban_active, ban_expires_at, timestamp FROM DBPREFIXv_appeals`
 	if opts.BanID > 0 {
 		query += " WHERE ip_ban_id = ?"
 	}
@@ -78,19 +78,15 @@ func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
 		var appeal Appeal
 		var staffID *int
 		var staffUsername *string
-		var staffResponse *string
 		if err = rows.Scan(
-			&appeal.ID, &staffID, &staffUsername, &appeal.IPBanID, &appeal.AppealText, &staffResponse,
-			&appeal.IsDenied, &appeal.IsBanActive, &appeal.BanExpiresAt, &appeal.Timestamp,
+			&appeal.ID, &staffID, &staffUsername, &appeal.IPBanID, &appeal.AppealText, &appeal.IsDenied,
+			&appeal.IsBanActive, &appeal.BanExpiresAt, &appeal.Timestamp,
 		); err != nil {
 			return nil, err
 		}
 		if staffID != nil {
 			appeal.StaffID = *staffID
 			appeal.StaffUsername = *staffUsername
-		}
-		if staffResponse != nil {
-			appeal.StaffResponse = *staffResponse
 		}
 		appeals = append(appeals, appeal)
 	}
@@ -100,7 +96,7 @@ func GetAppeals(options ...AppealsQueryOptions) ([]Appeal, error) {
 // ApproveAppeal deactivates the ban that the appeal was submitted for
 func ApproveAppeal(appealID int, staffID int) error {
 	const checkAppealSQL = "SELECT ip_ban_id, is_ban_active FROM DBPREFIXv_appeals WHERE id = ? AND is_denied = FALSE"
-	const insertAppealAudit = `INSERT INTO DBPREFIXip_ban_appeals_audit (appeal_id, appeal_text, staff_id, staff_response, is_denied)
+	const insertAppealAudit = `INSERT INTO DBPREFIXip_ban_appeals_audit (appeal_id, appeal_text, staff_id, is_denied)
 		VALUES(?, (SELECT appeal_text FROM DBPREFIXip_ban_appeals WHERE id = ?), ?, 'Appeal approved, ban deactivated.', FALSE)`
 
 	opts := setupOptionsWithTimeout()

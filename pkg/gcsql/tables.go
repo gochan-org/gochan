@@ -202,10 +202,10 @@ type IPBanAudit struct {
 
 // used to composition IPBanAppeal and IPBanAppealAudit
 type ipBanAppealBase struct {
-	StaffID       int    `json:"-"`                  // sql: staff_id
-	AppealText    string `json:"appeal_text"`        // sql: appeal_text
-	StaffResponse string `json:"response,omitempty"` // sql: staff_response
-	IsDenied      bool   `json:"is_denied"`          // sql: is_denied
+	StaffID    int       `json:"-"`           // sql: staff_id
+	AppealText string    `json:"appeal_text"` // sql: appeal_text
+	IsDenied   bool      `json:"is_denied"`   // sql: is_denied
+	Timestamp  time.Time `json:"timestamp"`   // sql: timestamp
 }
 
 // table: DBPREFIXip_ban_appeals
@@ -217,8 +217,7 @@ type IPBanAppeal struct {
 
 // table: DBPREFIXip_ban_appeals_audit
 type IPBanAppealAudit struct {
-	AppealID  int       // sql: appeal_id
-	Timestamp time.Time // sql: timestamp
+	AppealID int // sql: appeal_id
 	ipBanAppealBase
 }
 
