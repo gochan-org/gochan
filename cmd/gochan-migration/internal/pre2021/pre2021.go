@@ -28,6 +28,7 @@ type Pre2021Migrator struct {
 	boards        []migrationBoard
 	sections      []migrationSection
 	staff         []migrationStaff
+	bans          []migrationBan
 }
 
 // IsMigratingInPlace implements common.DBMigrator.
