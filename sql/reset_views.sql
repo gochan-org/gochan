@@ -127,7 +127,5 @@ LEFT JOIN DBPREFIXstaff s ON ibaa.staff_id = s.id;
 CREATE VIEW DBPREFIXv_appeals AS
 SELECT iba.id, iba.staff_id, username AS staff_username, iba.ip_ban_id, iba.appeal_text, iba.is_denied, ib.is_active as is_ban_active, ib.expires_at as ban_expires_at, ib.permanent as permanent, timestamp
 FROM DBPREFIXip_ban_appeals iba
-INNER JOIN DBPREFIXip_ban_appeals_audit ibaa ON id = appeal_id
 INNER JOIN DBPREFIXip_ban ib ON iba.ip_ban_id = ib.id
-LEFT JOIN DBPREFIXstaff s ON ibaa.staff_id = s.id
-GROUP BY appeal_id;
+LEFT JOIN DBPREFIXstaff s ON iba.staff_id = s.id;

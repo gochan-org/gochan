@@ -68,21 +68,20 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 			SQLConfig: oldSQLConfig,
 		},
 	}
-	db, err := gcsql.Open(&oldSQLConfig)
+	migrator.db, err = gcsql.Open(&oldSQLConfig)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	migrator.db = db
 
 	config.SetTestDBConfig("sqlite3", migratedDBHost, migratedDBName, "gochan", "password", "gc_")
 	sqlConfig := config.GetSQLConfig()
-	sqlConfig.DBTimeoutSeconds = 600
 
 	if !assert.NoError(t, gcsql.ConnectToDB(&sqlConfig)) {
 		t.FailNow()
 	}
 	if !migrateInPlace {
-		if !assert.NoError(t, gcsql.CheckAndInitializeDatabase("sqlite3", true)) {
+		// if migrating in place, this shouldn't be done until after migration is complete
+		if !assert.NoError(t, gcsql.CheckAndInitializeDatabase(sqlConfig.DBtype, true)) {
 			t.FailNow()
 		}
 	}
@@ -90,6 +89,7 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 	return migrator
 }
 
+// TODO: Add test cases for MySQL and Postgres, skipping if connection fails (assuming server isn't running)
 func TestPre2021MigrationToNewDB(t *testing.T) {
 	outDir := t.TempDir()
 	migrator := setupMigrationTest(t, outDir, false)
@@ -106,8 +106,10 @@ func TestPre2021MigrationToNewDB(t *testing.T) {
 	validatePostMigration(t)
 	validateBanMigration(t)
 	validateStaffMigration(t)
+	validateAppealMigration(t)
 }
 
+// TODO: add test cases for MySQL and Postgres, as above
 func TestPre2021MigrationInPlace(t *testing.T) {
 	outDir := t.TempDir()
 	migrator := setupMigrationTest(t, outDir, true)
@@ -124,4 +126,5 @@ func TestPre2021MigrationInPlace(t *testing.T) {
 	validatePostMigration(t)
 	validateBanMigration(t)
 	validateStaffMigration(t)
+	validateAppealMigration(t)
 }

@@ -82,35 +82,43 @@ func (m *Pre2021Migrator) renameTablesForInPlace() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
 	if _, err = m.db.Exec(nil, "DROP TABLE DBPREFIXinfo"); err != nil {
-		errEv.Err(err).Caller().Msg("Error dropping info table")
+		errEv.Err(err).Caller().Msg("Unable to drop info table")
 		return err
 	}
 	for _, table := range renameTables {
 		if _, err = m.db.Exec(nil, fmt.Sprintf(renameTableStatementTemplate, table, table)); err != nil {
 			errEv.Caller().Err(err).
 				Str("table", table).
-				Msg("Error renaming table")
+				Msg("Unable to rename table")
 			return err
 		}
 	}
 
 	if err = gcsql.CheckAndInitializeDatabase(m.config.DBtype, true); err != nil {
-		errEv.Caller().Err(err).Msg("Error checking and initializing database")
+		errEv.Caller().Err(err).Msg("Unable to check and initialize database")
 		return err
 	}
 
 	if err = m.Close(); err != nil {
-		errEv.Err(err).Caller().Msg("Error closing database")
+		errEv.Err(err).Caller().Msg("Unable to close database")
 		return err
 	}
 	m.config.SQLConfig.DBprefix = "_tmp_" + m.config.DBprefix
 	m.db, err = gcsql.Open(&m.config.SQLConfig)
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Error reopening database with new prefix")
+		errEv.Err(err).Caller().Msg("Unable to reopen database with new prefix")
 		return err
 	}
 
 	common.LogInfo().Msg("Renamed tables for in-place migration")
+	return err
+}
+
+func (m *Pre2021Migrator) resetViews() error {
+	err := gcsql.ResetViews()
+	if err != nil {
+		common.LogError().Err(err).Caller().Msg("Error resetting views")
+	}
 	return err
 }
 
@@ -132,7 +140,7 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 		}
 	}
 
-	if err := m.MigrateBoards(); err != nil {
+	if err = m.MigrateBoards(); err != nil {
 		return false, err
 	}
 	common.LogInfo().Msg("Migrated boards successfully")
@@ -156,6 +164,11 @@ func (m *Pre2021Migrator) MigrateDB() (bool, error) {
 		return false, err
 	}
 	common.LogInfo().Msg("Migrated staff announcements successfully")
+
+	if err = m.resetViews(); err != nil {
+		return false, err
+	}
+	common.LogInfo().Msg("Views set up for new database schema successfully")
 
 	return false, nil
 }

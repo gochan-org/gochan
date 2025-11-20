@@ -85,14 +85,17 @@ func (*Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int, 
 		RangeStart: ban.ip,
 		RangeEnd:   ban.ip,
 		IssuedAt:   ban.timestamp,
+		IPBanBase: gcsql.IPBanBase{
+			CanAppeal: ban.canAppeal,
+			AppealAt:  ban.appealAt,
+			ExpiresAt: ban.expires,
+			Permanent: ban.permaban,
+			Message:   ban.reason,
+			StaffID:   ban.staffID,
+			StaffNote: ban.staffNote,
+			IsActive:  ban.expires.After(time.Now()) || ban.permaban,
+		},
 	}
-	migratedBan.CanAppeal = ban.canAppeal
-	migratedBan.AppealAt = ban.appealAt
-	migratedBan.ExpiresAt = ban.expires
-	migratedBan.Permanent = ban.permaban
-	migratedBan.Message = ban.reason
-	migratedBan.StaffID = ban.staffID
-	migratedBan.StaffNote = ban.staffNote
 	opts := &gcsql.RequestOptions{Tx: tx}
 
 	if err = gcsql.NewIPBan(migratedBan, opts); err != nil {
@@ -101,7 +104,7 @@ func (*Pre2021Migrator) migrateBan(tx *sql.Tx, ban *migrationBan, boardID *int, 
 		return err
 	}
 
-	if err = gcsql.QueryRow(opts, "SELECT MAX(id) FROM DBPREFIXip_bans", nil, []any{&ban.newID}); err != nil {
+	if err = gcsql.QueryRow(opts, "SELECT MAX(id) FROM DBPREFIXip_ban", nil, []any{&ban.newID}); err != nil {
 		errEv.Err(err).Caller().
 			Int("oldID", ban.oldID).Msg("Failed to get new ban ID after inserting ban")
 		return err
@@ -240,38 +243,35 @@ func (m *Pre2021Migrator) migrateBansToNewDB() error {
 				errEv.Err(err).Caller().Int("banID", ban.oldID).Msg("Failed to migrate ban to filter")
 				return err
 			}
+		} else {
+			m.bans = append(m.bans, ban)
 		}
 	}
 
 	return tx.Commit()
 }
 
-func (m *Pre2021Migrator) migrateAppealsInPlace() error {
-	errEv := common.LogError()
-	defer errEv.Discard()
-
-	err := gcutil.ErrNotImplemented
-	errEv.Err(err).Caller().Msg("In-place ban appeal migration not implemented yet")
-	return err
-}
-
-func (m *Pre2021Migrator) migrateAppealsToNewDB() error {
+func (m *Pre2021Migrator) migrateAppeals() error {
 	errEv := common.LogError()
 	defer errEv.Discard()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 	defer cancel()
 
-	tx, err := gcsql.BeginContextTx(ctx)
+	migratedTx, err := gcsql.BeginContextTx(ctx)
 	if err != nil {
-		errEv.Err(err).Caller().Msg("Failed to start appeals migration transaction")
+		errEv.Err(err).Caller().Msg("Failed to start migrated database transaction")
 		return err
 	}
-	opts := &gcsql.RequestOptions{Context: ctx, Tx: tx, Cancel: cancel}
+	defer migratedTx.Rollback()
+
+	oldOpts := &gcsql.RequestOptions{Context: ctx, Cancel: cancel}
+	migratedOpts := &gcsql.RequestOptions{Context: ctx, Tx: migratedTx, Cancel: cancel}
 
 	var appeals []migrationAppeal
 
-	rows, err := m.db.Query(opts, `SELECT id, ban, message, timestamp, denied, staff_response FROM DBPREFIXip_ban_appeals`)
+	query := "SELECT id, ban, message, timestamp, denied, staff_response FROM DBPREFIXappeals"
+	rows, err := m.db.Query(oldOpts, query)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Failed to get ban appeals")
 		return err
@@ -295,7 +295,7 @@ func (m *Pre2021Migrator) migrateAppealsToNewDB() error {
 			}
 		}
 
-		if _, err = gcsql.Exec(opts,
+		if _, err = gcsql.Exec(migratedOpts,
 			`INSERT INTO DBPREFIXip_ban_appeals (ip_ban_id, appeal_text, is_denied, timestamp) VALUES (?, ?, ?, ?)`,
 			appeals[a].newBan, appeal.message, appeal.denied, appeal.timestamp,
 		); err != nil {
@@ -304,11 +304,15 @@ func (m *Pre2021Migrator) migrateAppealsToNewDB() error {
 			return err
 		}
 
-		if err = gcsql.QueryRow(opts, "SELECT MAX(id) FROM DBPREFIXip_ban_appeals", nil, []any{&appeals[a].newID}); err != nil {
+		if err = gcsql.QueryRow(migratedOpts, "SELECT MAX(id) FROM DBPREFIXip_ban_appeals", nil, []any{&appeals[a].newID}); err != nil {
 			errEv.Err(err).Caller().
 				Int("oldID", appeal.oldID).Msg("Failed to get new appeal ID after inserting appeal")
 			return err
 		}
+	}
+	if err = migratedTx.Commit(); err != nil {
+		errEv.Err(err).Caller().Msg("Failed to commit migrated database transaction")
+		return err
 	}
 
 	return nil
@@ -319,11 +323,11 @@ func (m *Pre2021Migrator) MigrateBans() (err error) {
 		if err = m.migrateBansInPlace(); err != nil {
 			return err
 		}
-		return m.migrateAppealsInPlace()
-	}
-	if err = m.migrateBansToNewDB(); err != nil {
-		return err
+	} else {
+		if err = m.migrateBansToNewDB(); err != nil {
+			return err
+		}
 	}
 
-	return m.migrateAppealsToNewDB()
+	return m.migrateAppeals()
 }
