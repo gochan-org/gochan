@@ -201,10 +201,10 @@ CREATE TABLE DBPREFIXip_ban_appeals(
 
 CREATE TABLE DBPREFIXip_ban_appeals_audit(
 	appeal_id BIGINT NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	staff_id BIGINT,
 	appeal_text TEXT NOT NULL,
 	is_denied BOOL NOT NULL,
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY(appeal_id, timestamp),
 	CONSTRAINT DBPREFIXip_ban_appeals_audit_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
