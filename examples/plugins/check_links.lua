@@ -6,7 +6,7 @@ local log = require("gclog")
 local recognized_tlds = {"com", "net", "org", "edu", "gov", "us", "uk"}
 
 local function is_new_poster(ip)
-	rows, err = gcsql.query_rows("SELECT COUNT(*) FROM DBPREFIXposts WHERE ip = ?", {ip})
+	rows, err = gcsql.query_rows("SELECT COUNT(*) FROM DBPREFIXposts WHERE IP_CMP(ip, ?) = 0", {ip})
 	if(err ~= nil) then
 		return true, err
 	end

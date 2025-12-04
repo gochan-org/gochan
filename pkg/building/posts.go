@@ -249,7 +249,7 @@ func QueryPosts(query string, params []any, cb func(*Post) error) error {
 }
 
 func GetBuildablePostsByIP(ip string, limit int) ([]*Post, error) {
-	query := buildingPostsBaseQuery + "WHERE ip = INET6_ATON(?) ORDER BY id DESC"
+	query := buildingPostsBaseQuery + "WHERE IP_CMP(ip, ?) = 0 ORDER BY id DESC"
 	if limit > 0 {
 		query += " LIMIT " + strconv.Itoa(limit)
 	}
