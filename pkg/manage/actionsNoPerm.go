@@ -87,7 +87,6 @@ func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff 
 	if staff.Rank >= ModPerms {
 		var err error
 		if info.Reports, err = getReportsWithLinks(); err != nil {
-			writer.WriteHeader(http.StatusInternalServerError)
 			logger.Err(err).Caller().Send()
 			return nil, fmt.Errorf("unable to get open reports: %w", err)
 		}
@@ -97,7 +96,6 @@ func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff 
 			Unexpired: gcsql.OnlyTrue,
 			Limit:     4,
 		}); err != nil {
-			writer.WriteHeader(http.StatusInternalServerError)
 			logger.Err(err).Caller().Send()
 			return nil, fmt.Errorf("unable to get the number of open appeals: %w", err)
 		}
