@@ -2,6 +2,7 @@
 /html/index.html
 /html/*test*
 /html/boards.json
+/html/selenium
 .vscode/settings.json
 .parcel-cache
 *.swp
