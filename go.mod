@@ -1,6 +1,6 @@
 module github.com/gochan-org/gochan
 
-go 1.23.0
+go 1.24.0
 
 toolchain go1.24.1
 
@@ -26,10 +26,10 @@ require (
 	github.com/uptrace/bunrouter v1.0.23
 	github.com/vadv/gopher-lua-libs v0.7.0
 	github.com/yuin/gopher-lua v1.1.1
-	golang.org/x/crypto v0.41.0
+	golang.org/x/crypto v0.45.0
 	golang.org/x/image v0.30.0
-	golang.org/x/net v0.43.0
-	golang.org/x/term v0.34.0
+	golang.org/x/net v0.47.0
+	golang.org/x/term v0.37.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
 	layeh.com/gopher-luar v1.0.11
 )
@@ -51,8 +51,8 @@ require (
 	github.com/tdewolff/parse v2.3.4+incompatible // indirect
 	github.com/tdewolff/test v1.0.11 // indirect
 	gitlab.com/nyarla/go-crypt v0.0.0-20160106005555-d9a5dc2b789b // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
