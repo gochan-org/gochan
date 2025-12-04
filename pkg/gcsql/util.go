@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -26,7 +27,7 @@ var (
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z",
 	}
-	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(sql.Drivers(), ", "))
+	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(Drivers(), ", "))
 	ErrNotConnected  = errors.New("error connecting to database")
 	CommentRemover   = regexp.MustCompile("--.*\n?")
 )
@@ -161,9 +162,9 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 		parts := ipFuncRE.FindStringSubmatch(s)
 		var replaced string
 		switch dbConn.driver {
-		case "mysql":
+		case "mysql", "sqlite3":
 			replaced = parts[1] + "(" + parts[2] + ")"
-		case "postgres", "sqlite3":
+		case "postgres":
 			replaced = parts[2]
 		}
 		return replaced
@@ -500,4 +501,11 @@ func setupTimeoutContext(ctx context.Context, db *GCDB) (context.Context, contex
 		return ctx, cancel
 	}
 	return ctx, func() {}
+}
+
+// Drivers returns the list of supported SQL drivers, excluding sqlmock (used for testing) and sqlite3-inet6 (an internal SQLite extension)
+func Drivers() []string {
+	return slices.DeleteFunc(sql.Drivers(), func(driver string) bool {
+		return driver == "sqlmock" || driver == "sqlite3-inet6"
+	})
 }

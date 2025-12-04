@@ -6,6 +6,8 @@ import (
 	"path"
 	"testing"
 
+	_ "github.com/gochan-org/gochan/pkg/gcsql/initsql"
+
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
 	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"

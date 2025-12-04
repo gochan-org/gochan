@@ -46,10 +46,15 @@ func mockSetupGetIPBanByID(t *testing.T, mock sqlmock.Sqlmock, banID int, driver
 		rangeEndColumn = "INET6_NTOA(range_end)"
 		getBanSQL += `INET6_NTOA\(range_start\), INET6_NTOA\(range_end\),`
 		getBanSQL2 += `\?`
-	case "sqlite3", "postgres":
+	case "postgres":
 		rangeStartColumn = "range_start"
 		rangeEndColumn = "range_end"
 		getBanSQL += "range_start, range_end,"
+		getBanSQL2 += `\$1`
+	case "sqlite3":
+		rangeStartColumn = "INET6_NTOA(range_start)"
+		rangeEndColumn = "INET6_NTOA(range_end)"
+		getBanSQL += `INET6_NTOA\(range_start\), INET6_NTOA\(range_end\),`
 		getBanSQL2 += `\$1`
 	}
 

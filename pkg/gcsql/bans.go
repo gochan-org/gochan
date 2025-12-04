@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"errors"
 	"strconv"
-
-	"github.com/gochan-org/gochan/pkg/config"
 )
 
 const (
 	ipBanQueryBase = `SELECT
 	id, staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
-	is_active, RANGE_START_NTOA, RANGE_END_NTOA, issued_at, appeal_at, expires_at,
+	is_active, INET6_NTOA(range_start), INET6_NTOA(range_end), issued_at, appeal_at, expires_at,
 	permanent, staff_note, message, can_appeal
 	FROM DBPREFIXip_ban`
 )
@@ -30,7 +28,7 @@ func NewIPBan(ban *IPBan, requestOpts ...*RequestOptions) error {
 	(staff_id, board_id, banned_for_post_id, copy_post_text, is_thread_ban,
 		is_active, range_start, range_end, appeal_at, expires_at,
 		permanent, staff_note, message, can_appeal)
-	VALUES(?, ?, ?, ?, ?, ?, PARAM_ATON, PARAM_ATON, ?, ?, ?, ?, ?, ?)`
+	VALUES(?, ?, ?, ?, ?, ?, INET6_ATON(?), INET6_ATON(?), ?, ?, ?, ?, ?, ?)`
 	opts := setupOptions(requestOpts...)
 	shouldCommit := opts.Tx == nil
 	var err error
@@ -64,19 +62,12 @@ func NewIPBan(ban *IPBan, requestOpts ...*RequestOptions) error {
 }
 
 // CheckIPBan returns the latest active IP ban for the given IP, as well as any
-// errors. If the IPBan pointer is nil, the IP has no active bans. Because
-// SQLite 3 does not support a native IP type, range bans are not supported if
-// DBtype == "sqlite3"
+// errors. If the IPBan pointer is nil, the IP has no active bans.
 func CheckIPBan(ip string, boardID int) (*IPBan, error) {
-	query := ipBanQueryBase + " WHERE "
-	if config.GetSystemCriticalConfig().DBtype == "sqlite3" {
-		query += "range_start = ? OR range_end = ?"
-	} else {
-		query += "range_start <= PARAM_ATON AND PARAM_ATON <= range_end"
-	}
-	query += ` AND (board_id IS NULL OR board_id = ?) AND is_active AND
-		(expires_at > CURRENT_TIMESTAMP OR permanent)
-	ORDER BY id DESC LIMIT 1`
+	query := ipBanQueryBase + ` WHERE ip_cmp(?, range_start) >= 0 AND ip_cmp(?, range_end) <= 0
+		AND (board_id IS NULL OR board_id = ?) AND is_active
+		AND (expires_at > CURRENT_TIMESTAMP OR permanent)
+		ORDER BY id DESC LIMIT 1`
 	var ban IPBan
 	err := QueryRow(nil, query, []any{ip, ip, boardID}, []any{
 		&ban.ID, &ban.StaffID, &ban.BoardID, &ban.BannedForPostID, &ban.CopyPostText,

@@ -20,6 +20,7 @@ var (
 		`message, message_raw, password, flag, country\)\s+VALUES`
 	insertIntoPostsMySQL    = insertIntoPostsBase + `\(\?,\?,INET6_ATON\(\?\),CURRENT_TIMESTAMP,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
 	insertIntoPostsPostgres = insertIntoPostsBase + `\(\$1,\$2,\$3,CURRENT_TIMESTAMP,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13,\$14\)`
+	insertIntoPostsSQLite3  = insertIntoPostsBase + `\(\$1,\$2,INET6_ATON\(\$3\),CURRENT_TIMESTAMP,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13,\$14\)`
 )
 
 func setupPostTest(t *testing.T, driver string) sqlmock.Sqlmock {
@@ -86,10 +87,13 @@ func createThreadTestRun(t *testing.T, driver string) {
 	}
 	p := Post{ThreadID: thread.ID, Message: "test", MessageRaw: "test", IP: "192.168.56.1", IsTopPost: true, CreatedOn: time.Now()}
 
-	if driver == "mysql" {
+	switch driver {
+	case "mysql":
 		query = insertIntoPostsMySQL
-	} else {
+	case "postgres":
 		query = insertIntoPostsPostgres
+	case "sqlite3":
+		query = insertIntoPostsSQLite3
 	}
 	mock.ExpectPrepare(query).ExpectExec().
 		WithArgs(p.ThreadID, p.IsTopPost, p.IP, p.Name, p.Tripcode, p.IsSecureTripcode, p.IsRoleSignature, p.Email,

@@ -95,7 +95,7 @@ var (
 		{
 			name:        "SQLite query with IP replacement",
 			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
-			expectedSQL: "SELECT ip, ip, some_param, some_param FROM gc_posts WHERE ip = $1 OR ip = $2",
+			expectedSQL: "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM gc_posts WHERE ip = INET6_ATON($1) OR ip = INET6_NTOA($2)",
 			driver:      "sqlite3",
 			prefix:      "gc_",
 		},

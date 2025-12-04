@@ -93,10 +93,10 @@ func firstPost(req *http.Request, post *Post, global bool) (bool, error) {
 	query := `SELECT COUNT(*) FROM DBPREFIXposts `
 	params := []any{post.IP}
 	if board > 0 {
-		query += ` LEFT JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id WHERE ip = PARAM_ATON AND board_id = ?`
+		query += ` LEFT JOIN DBPREFIXthreads ON thread_id = DBPREFIXthreads.id WHERE ip = INET6_ATON(?) AND board_id = ?`
 		params = append(params, board)
 	} else {
-		query += ` WHERE ip = PARAM_ATON`
+		query += ` WHERE ip = INET6_ATON(?)`
 	}
 	var count int
 	err = QueryRowTimeoutSQL(nil, query+" AND DBPREFIXposts.is_deleted = FALSE", params, []any{&count})

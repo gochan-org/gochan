@@ -25,7 +25,7 @@ import (
 const (
 	// gochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
 	gochanVersionKeyConstant = "gochan"
-	DatabaseVersion          = 6
+	DatabaseVersion          = 7
 	UnsupportedSQLVersionMsg = `syntax error in SQL query, confirm you are using a supported driver and SQL server (error text: %s)`
 	MySQLConnStr             = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
 	PostgresConnStr          = "postgres://%s:%s@%s/%s?sslmode=disable"
@@ -55,14 +55,14 @@ var (
 		"PARAM_NTOA", "?",
 	}
 	sqlite3ReplacerArr = []string{
-		"RANGE_START_ATON", "range_start",
-		"RANGE_START_NTOA", "range_start",
-		"RANGE_END_ATON", "range_end",
-		"RANGE_END_NTOA", "range_end",
-		"IP_ATON", "ip",
-		"IP_NTOA", "ip",
-		"PARAM_ATON", "?",
-		"PARAM_NTOA", "?",
+		"RANGE_START_ATON", "INET6_ATON(range_start)",
+		"RANGE_START_NTOA", "INET6_NTOA(range_start)",
+		"RANGE_END_ATON", "INET6_ATON(range_end)",
+		"RANGE_END_NTOA", "INET6_NTOA(range_end)",
+		"IP_ATON", "INET6_ATON(ip)",
+		"IP_NTOA", "INET6_NTOA(ip)",
+		"PARAM_ATON", "INET6_ATON(?)",
+		"PARAM_NTOA", "INET6_NTOA(?)",
 	}
 	ipFuncRE = regexp.MustCompile(`(INET6_NTOA|INET6_ATON)\(([^)]+)\)`) // used for more flexible replacement based on SQL driver
 )
@@ -431,12 +431,19 @@ func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
 	if err != nil {
 		return nil, err
 	}
-	db.db, err = sql.Open(db.driver, db.connStr)
-	if err != nil {
-		db.db.SetConnMaxLifetime(time.Minute * time.Duration(cfg.DBConnMaxLifetimeMin))
-		db.db.SetMaxOpenConns(cfg.DBMaxOpenConnections)
-		db.db.SetMaxIdleConns(cfg.DBMaxIdleConnections)
+	driver := db.driver
+	if driver == "sqlite3" {
+		// adds support for INET6_ATON/NTOA and IP_CMP functions
+		driver = "sqlite3-inet6"
 	}
+	db.db, err = sql.Open(driver, db.connStr)
+	if err != nil {
+		return nil, err
+	}
+	db.db.SetConnMaxLifetime(time.Minute * time.Duration(cfg.DBConnMaxLifetimeMin))
+	db.db.SetMaxOpenConns(cfg.DBMaxOpenConnections)
+	db.db.SetMaxIdleConns(cfg.DBMaxIdleConnections)
+
 	return db, err
 }
 

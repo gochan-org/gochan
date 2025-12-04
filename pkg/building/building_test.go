@@ -2,7 +2,6 @@ package building
 
 import (
 	"bytes"
-	"database/sql"
 	"database/sql/driver"
 	"io"
 	"os"
@@ -271,10 +270,7 @@ func TestBuildFrontPage(t *testing.T) {
 		t.FailNow()
 	}
 
-	for _, driver := range sql.Drivers() {
-		if driver == "sqlmock" {
-			continue
-		}
+	for _, driver := range gcsql.Drivers() {
 		t.Run(driver, func(t *testing.T) {
 			outDir := t.TempDir()
 			config.InitTestConfig()
@@ -412,10 +408,7 @@ func TestBuildPageHeader(t *testing.T) {
 	config.SetSystemCriticalConfig(systemCriticalConfig)
 
 	for _, tc := range pageHeaderTestCases {
-		for _, driver := range sql.Drivers() {
-			if driver == "sqlmock" {
-				continue
-			}
+		for _, driver := range gcsql.Drivers() {
 			t.Run(tc.desc+" - "+driver, func(t *testing.T) {
 				tc.runTest(t, driver)
 			})

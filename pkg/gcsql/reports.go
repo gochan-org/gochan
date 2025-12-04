@@ -8,7 +8,7 @@ import (
 // CreateReport inserts a new report into the database and returns a Report pointer and any
 // errors encountered
 func CreateReport(postID int, ip string, reason string) (*Report, error) {
-	insertSQL := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, PARAM_ATON, ?, FALSE)`
+	insertSQL := `INSERT INTO DBPREFIXreports (post_id, ip, reason, is_cleared) VALUES(?, INET6_ATON(?), ?, FALSE)`
 	currentTime := time.Now()
 
 	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)

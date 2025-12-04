@@ -66,7 +66,7 @@ func GetPostIP(postID int) (string, error) {
 // GetPostsFromIP gets the posts from the database with a matching IP address, specifying
 // optionally requiring them to not be deleted
 func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
-	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = PARAM_ATON`
+	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = INET6_ATON(?)`
 	if onlyNotDeleted {
 		sql += " AND is_deleted = FALSE"
 	}
@@ -427,7 +427,7 @@ func (p *Post) Insert(bumpThread bool, thread *Thread, force bool, requestOption
 	const insertSQL = `INSERT INTO DBPREFIXposts
 	(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,
 		message, message_raw, password, flag, country) 
-	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?,?)`
+	VALUES(?,?,INET6_ATON(?),CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?,?)`
 	const bumpSQL = `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
 	if p.ThreadID == 0 {
