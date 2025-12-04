@@ -63,7 +63,7 @@ CREATE TABLE DBPREFIXthreads(
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE
 );
 
-CREATE INDEX thread_deleted_index ON DBPREFIXthreads(is_deleted);
+CREATE INDEX DBPREFIXthread_deleted_index ON DBPREFIXthreads(is_deleted);
 
 CREATE TABLE DBPREFIXposts(
 	id {serial pk},
@@ -89,7 +89,7 @@ CREATE TABLE DBPREFIXposts(
 		FOREIGN KEY(thread_id) REFERENCES DBPREFIXthreads(id) ON DELETE CASCADE
 );
 
-CREATE INDEX top_post_index ON DBPREFIXposts(is_top_post);
+CREATE INDEX DBPREFIXtop_post_index ON DBPREFIXposts(is_top_post);
 
 CREATE TABLE DBPREFIXfiles(
 	id {serial pk},

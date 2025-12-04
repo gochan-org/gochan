@@ -21,7 +21,7 @@ macros = [
 		"INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"),
 	macro("fk to serial", "BIGINT", "BIGINT", "BIGINT"),
 	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY", "DROP CONSTRAINT"),
-	macro("inet", "INET", "VARBINARY(16)", "VARCHAR(45)")
+	macro("inet", "INET", "VARBINARY(16)", "VARBINARY(16)")
 ]
 
 

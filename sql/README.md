@@ -14,6 +14,9 @@ DBVERSION | value of `gcsql.DatabaseVersion`
 ## New SQL IP replacement
 If you are inserting an IP address into a VARBINARY (in MySQL/MariaDB) or INET (in Postgresql) column, or comparing an IP address stored in such a column to a parameter, you can now use `INET6_ATON(<value or parameter>)` and `INET6_NTOA(<column>)` to have the correct function or syntax used for the selected database type, instead of being limited to the macros in the table below. The macros are still available for backwards compatibility, but the new syntax is preferred for new code.
 
+## IP Range Comparison
+To compare an IP address to a range stored in two columns (e.g. `range_start` and `range_end`), you can use the `ip_cmp(ip1, ip2)` function, which works similarly to the standard C `strcmp()` function, returning -1 if `ip1 < ip2`, 0 if they are equal, and 1 if `ip1 > ip2`. This function is available in all supported database types, as gochan uses an extended sqlite driver that adds support for it and the INET and INET6 functions.
+
 ## SQL IP address macros (deprecated)
 Input                        | MySQL/MariaDB           | Postgresql  | SQLite
 -----------------------------|-------------------------|-------------|-------------
