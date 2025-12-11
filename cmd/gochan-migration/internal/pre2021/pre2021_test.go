@@ -28,9 +28,9 @@ func setupMigrationTest(t *testing.T, outDir string, migrateInPlace bool) *Pre20
 		t.FailNow()
 	}
 
-	dbName := "gochan-pre2021.sqlite3db"
+	dbName := "gochan-pre2021.db"
 	dbHost := path.Join(dir, sqlite3DBDir, dbName)
-	migratedDBName := "gochan-migrated.sqlite3db"
+	migratedDBName := "gochan-migrated.db"
 	migratedDBHost := path.Join(outDir, migratedDBName)
 
 	if migrateInPlace {

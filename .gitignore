@@ -28,6 +28,7 @@ __pycache__
 
 # SQLite
 *.db
+!tools/gochan-pre2021.db
 *.*-journal
 
 # Draw.io backup files
