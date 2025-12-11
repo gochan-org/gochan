@@ -13,7 +13,7 @@ DBVERSION | value of `gcsql.DatabaseVersion`
 
 ## IP address handling
 The function `IP_CMP(ip1, ip2)` is provided for MySQL, PostgreSQL, and SQLite for comparing two IP addresses (VARBINARY(16), INET, or string). It returns -1 if ip1 < ip2, 0 if they are equal, and 1 if ip1 > ip2. It expects both parameters to be IPv4 or both to be IPv6; mixing types will result in undefined behavior.
-When searching for an IP address, rather than using `SELECT ... WHERE ip = ?`, you should use `SELECT ... WHERE IP_CMP(ip, ?) = 0` to ensure compatibility across all supported database types.
+When searching for an IP address, rather than using `SELECT ... WHERE ip = ?`, you should use `SELECT ... WHERE IP_CMP(ip, ?) = 0` to ensure compatibility across all supported database types and avoid potential issues with SQLite's comparison behavior.
 
 ## SQL IP address macros (deprecated)
 Input            | MySQL/MariaDB           | PostgreSQL  | SQLite

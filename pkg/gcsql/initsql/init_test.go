@@ -24,6 +24,13 @@ type inetConversionTestCase[I any, E any] struct {
 	inet6Expects E
 }
 
+type ipComparisonTestCase struct {
+	desc      string
+	query     string
+	params    []any
+	expectsID int
+}
+
 func TestBanMaskTmplFunc(t *testing.T) {
 	testCases := []banMaskTestCase{
 		{
@@ -159,6 +166,27 @@ func TestInetAtoN(t *testing.T) {
 	assert.NoError(t, db.Close())
 }
 
+func testBanQuery(t *testing.T, db *sql.DB, query string, expectsID int, params ...any) {
+	t.Helper()
+	rows, err := db.Query(query, params...)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	defer rows.Close()
+	var results []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); !assert.NoError(t, err) {
+			t.FailNow()
+		}
+		results = append(results, id)
+	}
+	if !assert.Len(t, results, 1, "expected only one matching ban") {
+		t.FailNow()
+	}
+	assert.Equal(t, expectsID, results[0])
+}
+
 func TestIPCmp(t *testing.T) {
 	db, err := sql.Open("sqlite3-inet6", ":memory:")
 	if !assert.NoError(t, err) {
@@ -167,8 +195,8 @@ func TestIPCmp(t *testing.T) {
 	defer db.Close()
 
 	setup := []string{
-		"create table addrs(id integer primary key autoincrement, ip varbinary(16))",
-		"insert into addrs(ip) values (inet_aton('192.168.56.1')), (inet6_aton('192.168.56.2')), (inet6_aton('2601:8000::1')), (inet6_aton('2601:f000::'))",
+		"create table bans(id integer primary key autoincrement, range_start varbinary(16), range_end varbinary(16))",
+		"insert into bans(range_start, range_end) values (inet_aton('192.168.56.0'), inet6_aton('192.168.56.255')), (inet6_aton('2601:8000::'), inet6_aton('2601:8000:ffff:ffff:ffff:ffff:ffff:ffff')), (inet6_aton('192.168.56.0'), inet6_aton('::1')), (inet6_aton('127.0.0.0'), inet6_aton('127.255.255.255')), (inet6_aton('::1'), inet6_aton('192.168.56.0'))",
 	}
 	for _, stmt := range setup {
 		_, err := db.Exec(stmt)
@@ -176,34 +204,66 @@ func TestIPCmp(t *testing.T) {
 			t.FailNow()
 		}
 	}
-	var result []net.IP
-	rows, err := db.Query("SELECT ip FROM addrs WHERE ip_cmp(ip, '192.168.56.1') > 0")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	for rows.Next() {
-		var ip net.IP
-		if !assert.NoError(t, rows.Scan(&ip)) {
-			t.FailNow()
-		}
-		result = append(result, ip)
-		t.Log(ip.String())
-	}
-	assert.Equal(t, 1, len(result))
-	result = []net.IP{}
-	rows, err = db.Query("SELECT ip FROM addrs WHERE ip_cmp(ip, '2601:9000::1') >= 0")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	for rows.Next() {
-		var ip net.IP
-		if !assert.NoError(t, rows.Scan(&ip)) {
-			t.FailNow()
-		}
-		result = append(result, ip)
-		// t.Log(ip)
+
+	const directInequalityCmpQuery = "SELECT id FROM bans WHERE range_start <= inet6_aton(?) AND inet6_aton(?) <= range_end"
+	const ipCmpInequalityQuery = "SELECT id FROM bans WHERE ip_cmp(inet6_aton(?), range_start) >= 0 AND ip_cmp(inet6_aton(?), range_end) <= 0"
+	const directEqualityCmpQuery = "SELECT id FROM bans WHERE range_start = inet6_aton(?)"
+	const ipCmpEqualityQuery = "SELECT id FROM bans WHERE ip_cmp(inet6_aton(?), range_start) = 0"
+
+	testCases := []ipComparisonTestCase{
+		{
+			desc:      "direct inequality comparison/IPv4",
+			query:     directInequalityCmpQuery,
+			params:    []any{"192.168.56.3", "192.168.56.3"},
+			expectsID: 1,
+		},
+		{
+			desc:      "direct inequality comparison/IPv6",
+			query:     directInequalityCmpQuery,
+			params:    []any{"2601:8000::1", "2601:8000::1"},
+			expectsID: 2,
+		},
+		{
+			desc:      "ip_cmp inequality comparison/IPv4",
+			query:     ipCmpInequalityQuery,
+			params:    []any{"192.168.56.1", "192.168.56.1"},
+			expectsID: 1,
+		},
+		{
+			desc:      "ip_cmp inequality comparison/IPv6",
+			query:     ipCmpInequalityQuery,
+			params:    []any{"2601:8000::1", "2601:8000::1"},
+			expectsID: 2,
+		},
+		{
+			desc:      "direct equality comparison/IPv4",
+			query:     directEqualityCmpQuery,
+			params:    []any{"127.0.0.0"},
+			expectsID: 4,
+		},
+		{
+			desc:      "direct equality comparison/IPv6",
+			query:     directEqualityCmpQuery,
+			params:    []any{"::1"},
+			expectsID: 5,
+		},
+		{
+			desc:      "ip_cmp equality comparison/IPv4",
+			query:     ipCmpEqualityQuery,
+			params:    []any{"127.0.0.0"},
+			expectsID: 4,
+		},
+		{
+			desc:      "ip_cmp equality comparison/IPv6",
+			query:     ipCmpEqualityQuery,
+			params:    []any{"::1"},
+			expectsID: 5,
+		},
 	}
 
-	assert.Equal(t, 1, len(result))
-	assert.NoError(t, db.Close())
+	for _, tC := range testCases {
+		t.Run(tC.desc, func(t *testing.T) {
+			testBanQuery(t, db, tC.query, tC.expectsID, tC.params...)
+		})
+	}
 }

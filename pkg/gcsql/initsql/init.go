@@ -111,27 +111,44 @@ func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
 	return boards
 }
 
+func ipToNetIP(ip any) (net.IP, bool) {
+	var ipOut net.IP
+	switch v := any(ip).(type) {
+	case []byte:
+		ipOut = net.IP(v).To16()
+	case int64:
+		ipOut = net.IPv4(byte(v>>24), byte(v>>16), byte(v>>8), byte(v)).To16()
+	case string:
+		parsedIP := net.ParseIP(v)
+		if parsedIP == nil {
+			return nil, false
+		}
+		ipOut = parsedIP.To16()
+	}
+	if ipOut == nil {
+		return nil, false
+	}
+	return ipOut, ipOut.To4() != nil
+}
+
+func ipToString(ip any, v4 bool) string {
+	netIP, isV4 := ipToNetIP(ip)
+	if netIP == nil || v4 && !isV4 {
+		return ""
+	}
+	return netIP.String()
+}
+
 func init() {
 	sql.Register("sqlite3-inet6", &sqlite3.SQLiteDriver{
 		ConnectHook: func(sc *sqlite3.SQLiteConn) error {
 			sc.RegisterFunc("inet6_aton", func(a string) []byte {
-				ip := net.ParseIP(a)
-				if ip == nil {
-					return nil
-				}
-				ip = ip.To16()
+				ip, _ := ipToNetIP(a)
 				return ip
 			}, true)
 
 			sc.RegisterFunc("inet6_ntoa", func(n any) any {
-				var ip net.IP
-				switch v := n.(type) {
-				case []byte:
-					ip = net.IP(v).To16()
-				case int64:
-					ip = net.IPv4(byte(v>>24), byte(v>>16), byte(v>>8), byte(v)).To16()
-				}
-
+				ip, _ := ipToNetIP(n)
 				if ip == nil {
 					return nil
 				}
@@ -139,70 +156,30 @@ func init() {
 			}, true)
 
 			sc.RegisterFunc("inet_aton", func(a string) []byte {
-				ip := net.ParseIP(a)
-				if ip == nil {
-					return nil
-				}
-				ip = ip.To16()
-				if ip.To4() == nil {
+				ip, isV4 := ipToNetIP(a)
+				if !isV4 {
 					return nil // not a IPv4 address
 				}
 				return ip
 			}, true)
 
 			sc.RegisterFunc("inet_ntoa", func(n any) any {
-				var ip net.IP
-				switch i := n.(type) {
-				case int64:
-					ip = net.IPv4(byte(i>>24), byte(i>>16), byte(i>>8), byte(i))
-				case []byte:
-					ip = net.IP(i).To4()
-				}
-				if ip == nil {
+				ipStr := ipToString(n, true)
+				if ipStr == "" {
 					return nil
 				}
-				return ip.String()
+				return ipStr
 			}, true)
 
 			sc.RegisterFunc("ip_cmp", func(ip1 any, ip2 any) any {
-				var netIP1, netIP2 net.IP
+				// var netIP1, netIP2 net.IP
 				var netIPAddr1, netIPAddr2 netip.Addr
-				switch v := ip1.(type) {
-				case []byte:
-					netIP1 = net.IP(v)
-				case int64:
-					netIP1 = net.IPv4(byte(v>>24), byte(v>>16), byte(v>>8), byte(v)).To16()
-				case string:
-					netIP1 = net.ParseIP(v)
-					if netIP1 != nil {
-						netIP1 = netIP1.To16()
-					}
-				default:
-					return nil
-				}
-				if netIP1.To4() != nil {
-					netIP1 = netIP1.To4()
-				}
-				switch v := ip2.(type) {
-				case []byte:
-					netIP2 = net.IP(v).To16()
-				case int64:
-					netIP2 = net.IPv4(byte(v>>24), byte(v>>16), byte(v>>8), byte(v)).To16()
-				case string:
-					netIP2 = net.ParseIP(v)
-					if netIP2 != nil {
-						netIP2 = netIP2.To16()
-					}
-				default:
-					return nil
-				}
-				if netIP2.To4() != nil {
-					netIP2 = netIP2.To4()
-				}
+				netIP1, v4_1 := ipToNetIP(ip1)
+				netIP2, v4_2 := ipToNetIP(ip2)
 				if netIP1 == nil || netIP2 == nil {
 					return nil // one or both are invalid
 				}
-				if len(netIP1) != len(netIP2) {
+				if v4_1 != v4_2 {
 					return nil // can't compare different IP classes
 				}
 

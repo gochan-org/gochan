@@ -44,7 +44,7 @@ FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = p.thread_id
-WHERE p.is_deleted = FALSE;
+WHERE p.is_deleted = FALSE AND t.is_deleted = FALSE AND dir IS NOT NULL;
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS
 SELECT p.id AS post_id, thread_id, (
@@ -77,7 +77,7 @@ FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 LEFT JOIN DBPREFIXfiles f on f.post_id = DBPREFIXposts.id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = DBPREFIXposts.thread_id
-WHERE DBPREFIXposts.is_deleted = FALSE AND t.is_spoilered = FALSE;
+WHERE DBPREFIXposts.is_deleted = FALSE AND t.is_spoilered = FALSE AND dir IS NOT NULL;
 
 CREATE VIEW DBPREFIXv_front_page_posts_with_file AS
 SELECT * FROM DBPREFIXv_front_page_posts
