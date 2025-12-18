@@ -62,7 +62,7 @@ type testCaseEmbedMatchers struct {
 
 func TestEmbedMatchers(t *testing.T) {
 	basePath := t.TempDir()
-
+	defer resetTestConfig(t)
 	for _, tc := range embedMatcherTestCases {
 		t.Run(tc.description, func(t *testing.T) {
 			err := initializeExampleConfig(t, basePath, func(cfg *GochanConfig) {

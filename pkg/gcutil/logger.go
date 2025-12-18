@@ -246,9 +246,18 @@ func LogDebug() *zerolog.Event {
 	return logger.Debug()
 }
 
-func CloseLog() error {
+func CloseLogs() error {
 	if logFile == nil {
 		return nil
 	}
-	return logFile.Close()
+	err := logFile.Close()
+	logFile = nil
+	if accessFile != nil {
+		err2 := accessFile.Close()
+		accessFile = nil
+		if err == nil {
+			err = err2
+		}
+	}
+	return err
 }

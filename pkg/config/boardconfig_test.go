@@ -30,14 +30,7 @@ func TestWriteBoardConfig(t *testing.T) {
 	assert.Equal(t, "TestWriteBoardConfig", cfg.SiteName)
 
 	// test loading of global config
-	tmpLoadFileInTest := loadFileInTest
-	loadFileInTest = true
-	defer func() {
-		loadFileInTest = tmpLoadFileInTest
-		boardConfigs = make(map[string]BoardConfig)
-		assert.NoError(t, gcutil.CloseLog())
-		cfg = nil
-	}()
+	defer resetTestConfig(t)
 	if !assert.NoError(t, InitConfig()) {
 		t.FailNow()
 	}

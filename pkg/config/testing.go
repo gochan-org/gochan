@@ -14,7 +14,9 @@ func setDefaultCfgIfNotSet() {
 // InitTestConfig should only be used for tests, where a config file wouldn't be loaded
 func InitTestConfig() {
 	testutil.PanicIfNotTest()
-	setDefaultCfgIfNotSet()
+	loadFileInTest = false
+	cfg = defaultGochanConfig
+	boardConfigs = make(map[string]BoardConfig)
 	cfg.LogLevelStr = "trace"
 	cfg.logLevelParsed = true
 	cfg.logLevel = zerolog.TraceLevel
@@ -23,7 +25,8 @@ func InitTestConfig() {
 // SetTestTemplateDir sets the directory for templates, used only in testing. If it is not run via `go test`, it will panic.
 func SetTestTemplateDir(dir string) {
 	testutil.PanicIfNotTest()
-	setDefaultCfgIfNotSet()
+	cfg = defaultGochanConfig
+	boardConfigs = make(map[string]BoardConfig)
 
 	cfg.TemplateDir = dir
 }
