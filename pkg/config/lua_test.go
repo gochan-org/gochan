@@ -32,6 +32,10 @@ func (tC *preloadTest) run(t *testing.T) {
 func TestPreload(t *testing.T) {
 	testutil.GoToGochanRoot(t)
 	InitTestConfig()
+	cfg.ListenAddress = "127.0.0.1"
+	cfg.CookieMaxAge = "1y"
+	cfg.DefaultStyle = "sitestyle.css"
+	boardConfigs["b"] = BoardConfig{DefaultStyle: "boardstyle.css"}
 	testCases := []preloadTest{
 		{
 			desc: "access system critical config from lua",
@@ -50,9 +54,10 @@ return site_cfg.CookieMaxAge`,
 		{
 			desc: "access board config from lua",
 			luaIn: `local config = require("config")
-site_cfg = config.board_config("b")
-return site_cfg.RenderURLsAsLinks`,
-			expectOut: lua.LTrue,
+board_cfg = config.board_config("b")
+global_cfg = config.board_config("")
+return global_cfg.DefaultStyle .. " " .. board_cfg.DefaultStyle`,
+			expectOut: lua.LString("sitestyle.css boardstyle.css"),
 		},
 	}
 	for _, tC := range testCases {

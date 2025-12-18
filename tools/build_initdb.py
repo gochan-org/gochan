@@ -43,8 +43,9 @@ def compileOutComments(text:str):
 	lines = text.splitlines()
 	out = ""
 	for line in lines:
+		line = re.sub(r"\t?--.*$", "", line)
 		if line != "" and line is not None:
-			out += re.sub(r"--.*$", "", line) + "\n"
+			out += line + "\n"
 			if line.endswith(";"):
 				out += "\n"
 	return out.strip() + "\n"

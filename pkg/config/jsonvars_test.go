@@ -3,29 +3,6 @@ package config
 import "strings"
 
 const (
-	// the bare minimum fields required to pass GochanConfig.validate.
-	// this doesn't mean that the values are valid, just that they exist
-	bareMinimumJSON = `{
-		"ListenAddress": "127.0.0.1",
-		"Port": 8080,
-		"Username": "gochan",
-		"UseFastCGI": true,
-		"DBtype": "mysql",
-		"DBhost": "127.0.0.1:3306",
-		"DBname": "gochan",
-		"DBusername": "gochan",
-		"DBpassword": "",
-		"SiteHost": "127.0.0.1",
-		"SiteWebFolder": "/",
-	
-		"Styles": [
-			{ "Name": "Pipes", "Filename": "pipes.css" },
-			{ "Name": "Burichan", "Filename": "burichan.css" },
-			{ "Name": "Dark", "Filename": "dark.css" },
-			{ "Name": "Photon", "Filename": "photon.css" }
-		],
-		"RandomSeed": "jeiwohaeiogpehwgui"
-	}`
 	validCfgJSON = `{
 		"ListenAddress": "127.0.0.1",
 		"Port": 8080,

@@ -28,6 +28,8 @@ var (
 		},
 		BoardConfig: BoardConfig{
 			isGlobal:            true,
+			ThreadsPerPage:      20,
+			MaxThreads:          200,
 			InheritGlobalStyles: true,
 			DateTimeFormat:      "Mon, January 02, 2006 3:04:05 PM",
 			Styles: []Style{
@@ -48,7 +50,7 @@ var (
 			EnableSpoileredThreads: true,
 
 			PostConfig: PostConfig{
-				ThreadsPerPage:           20,
+				AnonymousName:            "Anonymous",
 				RepliesOnBoardPage:       3,
 				StickyRepliesOnBoardPage: 1,
 				EnableCyclicThreads:      true,
@@ -58,6 +60,9 @@ var (
 				EmbedHeight:              300,
 				ImagesOpenNewTab:         true,
 				NewTabOnExternalLinks:    true,
+				AutosageAfter:            200,
+				NoUploadsAfter:           -1,
+				EnableBBcode:             true,
 			},
 			UploadConfig: UploadConfig{
 				ThumbWidth:         200,

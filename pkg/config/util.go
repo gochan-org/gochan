@@ -35,6 +35,7 @@ var (
 	gid                     int
 	ErrGochanConfigNotFound                    = errors.New("gochan.json not found")
 	initialSetupStatus      InitialSetupStatus = InitialSetupStatusUnknown
+	loadFileInTest          bool               // if true, load the config file even when running tests, assumes that t.TempDir() is being used
 )
 
 // MissingField represents a field missing from the configuration file
@@ -118,7 +119,7 @@ func SetSiteConfig(siteConfig *SiteConfig) {
 
 func loadConfig() (err error) {
 	cfg = defaultGochanConfig
-	if testing.Testing() {
+	if testing.Testing() && !loadFileInTest {
 		// create a dummy config for testing if we're using go test
 		cfg = defaultGochanConfig
 		cfg.ListenAddress = "127.0.0.1"
