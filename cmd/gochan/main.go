@@ -98,7 +98,7 @@ func main() {
 	}
 
 	for _, board := range gcsql.AllBoards {
-		if _, err = board.DeleteOldThreads(); err != nil {
+		if _, err = board.DeleteOldThreads(config.GetBoardConfig(board.Dir).MaxThreads); err != nil {
 			fatalEv.Err(err).Caller().
 				Str("board", board.Dir).
 				Msg("Failed deleting old threads")

@@ -228,7 +228,7 @@ type banTestCase struct {
 }
 
 func TestIPBanFromRequest(t *testing.T) {
-	config.InitConfig()
+	config.InitTestConfig()
 	boardConfig := config.GetBoardConfig("test")
 	boardConfig.BanColors = map[string]string{"admin": "red"}
 	config.SetBoardConfig("test", boardConfig)
@@ -282,7 +282,9 @@ func TestIPBanFromRequest(t *testing.T) {
 			}
 			err = gcsql.NewIPBan(&ban)
 			if tc.bannedMessageInput != "" {
-				gcsql.SetPostBannedMessage(1, tc.bannedMessageInput, "admin")
+				if !assert.NoError(t, gcsql.SetPostBannedMessage(1, tc.bannedMessageInput, "admin")) {
+					t.FailNow()
+				}
 			}
 			if tc.exptError {
 				assert.Error(t, err)

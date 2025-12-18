@@ -248,8 +248,10 @@ func getPostFromRequest(request *http.Request, boardConfig *config.BoardConfig, 
 }
 
 func doFormatting(post *gcsql.Post, board *gcsql.Board, request *http.Request, warnEv, errEv *zerolog.Event) (err error) {
-	if len(post.MessageRaw) > board.MaxMessageLength {
-		warnEv.Int("messageLength", len(post.MessageRaw)).Int("maxMessageLength", board.MaxMessageLength).Send()
+	boardCfg := config.GetBoardConfig(board.Dir)
+
+	if len(post.MessageRaw) > boardCfg.MaxMessageLength {
+		warnEv.Int("messageLength", len(post.MessageRaw)).Int("maxMessageLength", boardCfg.MaxMessageLength).Send()
 		return errors.New("message is too long")
 	}
 

@@ -133,19 +133,93 @@ func (brf *createOrModifyBoardForm) fillBoard(board *gcsql.Board) {
 	board.Description = brf.Description
 	board.SectionID = brf.Section
 	board.NavbarPosition = brf.NavBarPosition
-	board.MaxFilesize = brf.MaxFileSize
-	board.MaxThreads = brf.MaxThreads
-	board.DefaultStyle = brf.DefaultStyle
-	board.Locked = brf.Locked
-	board.AnonymousName = brf.AnonName
-	board.AutosageAfter = brf.AutosageAfter
-	board.NoImagesAfter = brf.NoUploadsAfter
-	board.MaxMessageLength = brf.MaxMessageLength
-	board.MinMessageLength = brf.MinMessageLength
-	board.AllowEmbeds = brf.EmbedsAllowed
-	board.RedirectToThread = brf.RedirectToThread
-	board.RequireFile = brf.RequireFile
-	board.EnableCatalog = brf.EnableCatalog
+	// board.MaxFilesize = brf.MaxFileSize
+	// board.MaxThreads = brf.MaxThreads
+	// board.DefaultStyle = brf.DefaultStyle
+	// board.Locked = brf.Locked
+	// board.AnonymousName = brf.AnonName
+	// board.AutosageAfter = brf.AutosageAfter
+	// board.NoImagesAfter = brf.NoUploadsAfter
+	// board.MaxMessageLength = brf.MaxMessageLength
+	// board.MinMessageLength = brf.MinMessageLength
+	// board.AllowEmbeds = brf.EmbedsAllowed
+	// board.RedirectToThread = brf.RedirectToThread
+	// board.RequireFile = brf.RequireFile
+	// board.EnableCatalog = brf.EnableCatalog
+}
+
+func (brf *createOrModifyBoardForm) differsFromDefaultConfig() bool {
+	boardCfg := config.GetBoardConfig(brf.Dir)
+	// boardCfg.AllPostsRequireUpload
+	// boardCfg.AllowDiceRerolls
+	// boardCfg.AllowEmbeds
+	// boardCfg.AllowOtherExtensions
+	// boardCfg.AnonymousName
+	// boardCfg.AutosageAfter
+	// boardCfg.BanColors
+	// boardCfg.BanMessage
+	// boardCfg.Banners
+	// boardCfg.Cooldowns
+	// boardCfg.CustomFlags
+	// boardCfg.CyclicThreadNumPosts
+	// boardCfg.DateTimeFormat
+	// boardCfg.DefaultStyle
+	// boardCfg.EnableBBcode
+	// boardCfg.EmbedWidth
+	// boardCfg.EmbedHeight
+	// boardCfg.EnableCatalog
+	// boardCfg.EnableCyclicThreads
+	// boardCfg.EnableGeoIP
+	// boardCfg.EnableNoFlag
+	// boardCfg.EnableSpoileredImages
+	// boardCfg.EnableSpoileredThreads
+	// boardCfg.ExiftoolPath
+	// boardCfg.ForceAnonymous
+	// boardCfg.ImagesOpenNewTab
+	// boardCfg.IncludeGlobalStyles
+	// boardCfg.IncludeScripts
+	// boardCfg.InheritGlobalStyles
+	// boardCfg.Lockdown
+	// boardCfg.LockdownMessage
+	// boardCfg.MaxFileSize
+	// boardCfg.MaxMessageLength
+	// boardCfg.MaxThreads
+	// boardCfg.MaxUploads
+	// boardCfg.MinMessageLength
+	// boardCfg.NewTabOnExternalLinks
+	// boardCfg.NewThreadsRequireUpload
+	// boardCfg.NoUploadsAfter
+	// boardCfg.RedirectToThread
+	// boardCfg.RejectDuplicateUploads
+	// boardCfg.RenderURLsAsLinks
+	// boardCfg.RepliesOnBoardPage
+	// boardCfg.ReservedTrips
+	// boardCfg.ShowPosterID
+	// boardCfg.StickyRepliesOnBoardPage
+	// boardCfg.StripImageMetadata
+	// boardCfg.Styles
+	// boardCfg.ThreadsPerPage
+	// boardCfg.ThumbHeight
+	// boardCfg.ThumbHeightCatalog
+	// boardCfg.ThumbHeightReply
+	// boardCfg.ThumbWidth
+	// boardCfg.ThumbWidthCatalog
+	// boardCfg.ThumbWidthReply
+	// boardCfg.Worksafe
+
+	return brf.MaxFileSize != boardCfg.MaxFileSize ||
+		brf.MaxThreads != boardCfg.MaxThreads ||
+		brf.DefaultStyle != boardCfg.DefaultStyle ||
+		brf.Locked != boardCfg.Lockdown ||
+		brf.AnonName != boardCfg.AnonymousName ||
+		brf.AutosageAfter != boardCfg.AutosageAfter ||
+		brf.NoUploadsAfter != boardCfg.NoUploadsAfter ||
+		brf.MaxMessageLength != boardCfg.MaxMessageLength ||
+		brf.MinMessageLength != boardCfg.MinMessageLength ||
+		brf.EmbedsAllowed != boardCfg.AllowEmbeds ||
+		brf.RedirectToThread != boardCfg.RedirectToThread ||
+		brf.RequireFile != boardCfg.AllPostsRequireUpload ||
+		brf.EnableCatalog != boardCfg.EnableCatalog
 }
 
 type appealsForm struct {

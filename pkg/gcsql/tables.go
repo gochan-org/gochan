@@ -28,30 +28,31 @@ type BoardStaff struct {
 }
 
 // table: DBPREFIXboards
+// TODO: remove commented fields after migration/update is complete and tested
 type Board struct {
-	ID               int       `json:"-"`                 // sql: id
-	SectionID        int       `json:"-"`                 // sql: section_id
-	URI              string    `json:"-"`                 // sql: uri
-	Dir              string    `json:"board"`             // sql: dir
-	NavbarPosition   int       `json:"-"`                 // sql: navbar_position
-	Title            string    `json:"title"`             // sql: title
-	Subtitle         string    `json:"meta_description"`  // sql: suttitle
-	Description      string    `json:"-"`                 // sql: description
-	MaxFilesize      int       `json:"max_filesize"`      // sql: max_file_size
-	MaxThreads       int       `json:"-"`                 // sql: max_threads
-	DefaultStyle     string    `json:"-"`                 // sql: default_style
-	Locked           bool      `json:"is_archived"`       // sql: locked
-	CreatedAt        time.Time `json:"-"`                 // sql: created_at
-	AnonymousName    string    `json:"-"`                 // sql: anonymous_name
-	ForceAnonymous   bool      `json:"-"`                 // sql: force_anonymous
-	AutosageAfter    int       `json:"-"`                 // sql: autosage_after
-	NoImagesAfter    int       `json:"image_limit"`       // sql: no_images_after
-	MaxMessageLength int       `json:"max_comment_chars"` // sql: max_message_length
-	MinMessageLength int       `json:"min_comment_chars"` // sql: min_message_length
-	AllowEmbeds      bool      `json:"-"`                 // sql: allow_embeds
-	RedirectToThread bool      `json:"-"`                 // sql: redirect_to_thread
-	RequireFile      bool      `json:"-"`                 // sql: require_file
-	EnableCatalog    bool      `json:"-"`                 // sql: enable_catalog
+	ID             int    `json:"-"`                // sql: id
+	SectionID      int    `json:"-"`                // sql: section_id
+	URI            string `json:"-"`                // sql: uri
+	Dir            string `json:"board"`            // sql: dir
+	NavbarPosition int    `json:"-"`                // sql: navbar_position
+	Title          string `json:"title"`            // sql: title
+	Subtitle       string `json:"meta_description"` // sql: suttitle
+	Description    string `json:"-"`                // sql: description
+	// MaxFilesize      int       `json:"max_filesize"`      // sql: max_file_size
+	// MaxThreads       int       `json:"-"`                 // sql: max_threads
+	// DefaultStyle     string    `json:"-"`                 // sql: default_style
+	// Locked           bool      `json:"is_archived"`       // sql: locked
+	CreatedAt time.Time `json:"-"` // sql: created_at
+	// AnonymousName    string    `json:"-"`                 // sql: anonymous_name
+	// ForceAnonymous   bool      `json:"-"`                 // sql: force_anonymous
+	// AutosageAfter    int       `json:"-"`                 // sql: autosage_after
+	// NoImagesAfter    int       `json:"image_limit"`       // sql: no_images_after
+	// MaxMessageLength int       `json:"max_comment_chars"` // sql: max_message_length
+	// MinMessageLength int       `json:"min_comment_chars"` // sql: min_message_length
+	// AllowEmbeds      bool      `json:"-"`                 // sql: allow_embeds
+	// RedirectToThread bool      `json:"-"`                 // sql: redirect_to_thread
+	// RequireFile      bool      `json:"-"`                 // sql: require_file
+	// EnableCatalog    bool      `json:"-"`                 // sql: enable_catalog
 }
 
 // Filter represents an entry in gochan's new filter system which merges username bans, file bans, and filename bans,

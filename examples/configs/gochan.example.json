@@ -124,8 +124,8 @@
 		}
 	},
 	"ImagesOpenNewTab": true,
-	"NewTabOnOutlinks": true,
-	"DisableBBcode": false,
+	"NewTabOnExternalLinks": true,
+	"EnableBBcode": true,
 	"AllowDiceRerolls": false,
 
 	"MinifyHTML": true,

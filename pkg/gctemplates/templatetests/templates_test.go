@@ -18,10 +18,7 @@ import (
 
 const (
 	selectBoardsQueryExpectation = `SELECT\s+boards\.id, section_id,\s*uri,\s*dir,\s*navbar_position,\s*title,\s*` +
-		`subtitle,\s*description,\s*max_file_size,\s*max_threads,\s*default_style,\s*boards\.locked,\s*created_at,\s*` +
-		`anonymous_name,\s*force_anonymous,\s*autosage_after,\s*no_images_after,\s*max_message_length,\s*` +
-		`min_message_length,\s*allow_embeds,\s*redirect_to_thread,\s*require_file,\s*enable_catalog\s+` +
-		`FROM boards\s+INNER JOIN\s*\(\s*SELECT id,\s*hidden\s+FROM sections\s*\)\s+s\s+ON ` +
+		`subtitle,\s*description,\s*created_at\s+FROM boards\s+INNER JOIN\s*\(\s*SELECT id,\s*hidden\s+FROM sections\s*\)\s+s\s+ON ` +
 		`boards\.section_id = s\.id\s+WHERE s\.hidden = FALSE ORDER BY navbar_position ASC, boards\.id ASC`
 
 	selectSectionsQueryExpectation = `SELECT\s+id,\s*name,\s*abbreviation,\s*position,\s*hidden\s+FROM\s+sections\s+WHERE\s+hidden\s*=\s*FALSE\s+` +
@@ -35,13 +32,9 @@ func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) {
 	}
 
 	rows := sqlmock.NewRows([]string{"boards.id", "section_id", "uri", "dir", "navbar_position", "title",
-		"subtitle", "description", "max_file_size", "max_threads", "default_style", "locked", "created_at",
-		"anonymous_name", "force_anonymous", "autosage_after", "no_images_after", "max_message_length",
-		"min_message_length", "allow_embeds", "redirect_to_thread", "require_file", "enable_catalog"}).
-		AddRow(1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing", 500, 500,
-			"pipes.css", false, time.Now(), "Anonymous", false, 200, 500, 1500, 0, false, false, false, true).
-		AddRow(2, 1, "test2", "test2", 2, "Testing board #2", "Board for testing", "Board for testing", 500, 500,
-			"pipes.css", false, time.Now(), "Anonymous", false, 200, 500, 1500, 0, false, false, false, true)
+		"subtitle", "description", "created_at"}).
+		AddRow(1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing", time.Now()).
+		AddRow(2, 1, "test2", "test2", 2, "Testing board #2", "Board for testing", "Board for testing", time.Now())
 
 	mock.ExpectPrepare(selectBoardsQueryExpectation).
 		ExpectQuery().WithoutArgs().WillReturnRows(rows)

@@ -22,7 +22,7 @@ var (
 	testInitDBMySQLStatements       = []string{
 		createDBVersionTableRE,
 		`CREATE TABLE sections\(\s+id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s+name TEXT NOT NULL,\s+abbreviation TEXT NOT NULL,\s+position SMALLINT NOT NULL,\s+hidden BOOL NOT NULL \)`,
-		`CREATE TABLE boards\(\s*id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s+section_id BIGINT NOT NULL,\s+uri VARCHAR\(45\) NOT NULL,\s+dir VARCHAR\(45\) NOT NULL,\s+navbar_position SMALLINT NOT NULL,\s+title VARCHAR\(45\) NOT NULL,\s+subtitle VARCHAR\(64\) NOT NULL,\s+description VARCHAR\(64\) NOT NULL,\s+max_file_size INT NOT NULL,\s+max_threads SMALLINT NOT NULL,  default_style VARCHAR\(45\) NOT NULL,\s+locked BOOL NOT NULL,\s+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+anonymous_name VARCHAR\(45\) NOT NULL DEFAULT 'Anonymous',\s+force_anonymous BOOL NOT NULL,\s+autosage_after SMALLINT NOT NULL,\s+no_images_after SMALLINT NOT NULL,\s+max_message_length SMALLINT NOT NULL,\s+min_message_length SMALLINT NOT NULL,\s+allow_embeds BOOL NOT NULL,\s+redirect_to_thread BOOL NOT NULL,\s+require_file BOOL NOT NULL,\s+enable_catalog BOOL NOT NULL,\s+CONSTRAINT boards_section_id_fk\s+FOREIGN KEY\(section_id\) REFERENCES sections\(id\),\s+CONSTRAINT boards_dir_unique UNIQUE\(dir\),\s+CONSTRAINT boards_uri_unique UNIQUE\(uri\)\s*\)`,
+		`CREATE TABLE boards\(\s+id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s+section_id BIGINT NOT NULL,\s+uri VARCHAR\(45\) NOT NULL,\s+dir VARCHAR\(45\) NOT NULL,\s+navbar_position SMALLINT NOT NULL,\s+title VARCHAR\(45\) NOT NULL,\s+subtitle VARCHAR\(64\) NOT NULL,\s+description VARCHAR\(64\) NOT NULL,\s+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+CONSTRAINT boards_section_id_fk FOREIGN KEY\(section_id\) REFERENCES sections\(id\),\s+CONSTRAINT boards_dir_unique UNIQUE\(dir\),\s+CONSTRAINT boards_uri_unique UNIQUE\(uri\)\s*\)`,
 		`CREATE TABLE threads\(\s*id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY,\s+board_id BIGINT NOT NULL,\s+locked BOOL NOT NULL DEFAULT FALSE,\s+stickied BOOL NOT NULL DEFAULT FALSE,\s+anchored BOOL NOT NULL DEFAULT FALSE,\s+cyclic BOOL NOT NULL DEFAULT FALSE,\s+is_spoilered BOOL NOT NULL DEFAULT FALSE,\s+last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+is_deleted BOOL NOT NULL DEFAULT FALSE,\s+CONSTRAINT threads_board_id_fk\s+FOREIGN KEY\(board_id\) REFERENCES boards\(id\) ON DELETE CASCADE\s*\)`,
 		createThreadDeletedIndexRE,
 		`CREATE TABLE posts\( id BIGINT NOT NULL AUTO_INCREMENT UNIQUE PRIMARY KEY, thread_id BIGINT NOT NULL, is_top_post BOOL NOT NULL DEFAULT FALSE, ip VARBINARY\(16\) NOT NULL, created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, name VARCHAR\(50\) NOT NULL DEFAULT '', tripcode VARCHAR\(10\) NOT NULL DEFAULT '', is_secure_tripcode BOOL NOT NULL DEFAULT FALSE, is_role_signature BOOL NOT NULL DEFAULT FALSE, email VARCHAR\(50\) NOT NULL DEFAULT '', subject VARCHAR\(100\) NOT NULL DEFAULT '', message TEXT NOT NULL, message_raw TEXT NOT NULL, password TEXT NOT NULL, deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, is_deleted BOOL NOT NULL DEFAULT FALSE, banned_message TEXT, flag VARCHAR\(45\) NOT NULL DEFAULT '', country VARCHAR\(80\) NOT NULL DEFAULT '', CONSTRAINT posts_thread_id_fk FOREIGN KEY\(thread_id\) REFERENCES threads\(id\) ON DELETE CASCADE \)`,
@@ -48,7 +48,7 @@ var (
 	testInitDBPostgresStatements = []string{
 		createDBVersionTableRE,
 		`CREATE TABLE sections\(\s+id BIGSERIAL PRIMARY KEY,\s+name TEXT NOT NULL,\s+abbreviation TEXT NOT NULL,\s+position SMALLINT NOT NULL,\s+hidden BOOL NOT NULL \)`,
-		`CREATE TABLE boards\(\s*id BIGSERIAL PRIMARY KEY,\s+section_id BIGINT NOT NULL,\s+uri VARCHAR\(45\) NOT NULL,\s+dir VARCHAR\(45\) NOT NULL,\s+navbar_position SMALLINT NOT NULL,\s+title VARCHAR\(45\) NOT NULL,\s+subtitle VARCHAR\(64\) NOT NULL,\s+description VARCHAR\(64\) NOT NULL,\s+max_file_size INT NOT NULL,\s+max_threads SMALLINT NOT NULL,  default_style VARCHAR\(45\) NOT NULL,\s+locked BOOL NOT NULL,\s+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+anonymous_name VARCHAR\(45\) NOT NULL DEFAULT 'Anonymous',\s+force_anonymous BOOL NOT NULL,\s+autosage_after SMALLINT NOT NULL,\s+no_images_after SMALLINT NOT NULL,\s+max_message_length SMALLINT NOT NULL,\s+min_message_length SMALLINT NOT NULL,\s+allow_embeds BOOL NOT NULL,\s+redirect_to_thread BOOL NOT NULL,\s+require_file BOOL NOT NULL,\s+enable_catalog BOOL NOT NULL,\s+CONSTRAINT boards_section_id_fk\s+FOREIGN KEY\(section_id\) REFERENCES sections\(id\),\s+CONSTRAINT boards_dir_unique UNIQUE\(dir\),\s+CONSTRAINT boards_uri_unique UNIQUE\(uri\)\s*\)`,
+		`CREATE TABLE boards\(\s*id BIGSERIAL PRIMARY KEY,\s+section_id BIGINT NOT NULL,\s+uri VARCHAR\(45\) NOT NULL,\s+dir VARCHAR\(45\) NOT NULL,\s+navbar_position SMALLINT NOT NULL,\s+title VARCHAR\(45\) NOT NULL,\s+subtitle VARCHAR\(64\) NOT NULL,\s+description VARCHAR\(64\) NOT NULL,\s+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+CONSTRAINT boards_section_id_fk\s+FOREIGN KEY\(section_id\) REFERENCES sections\(id\),\s+CONSTRAINT boards_dir_unique UNIQUE\(dir\),\s+CONSTRAINT boards_uri_unique UNIQUE\(uri\)\s*\)`,
 		`CREATE TABLE threads\(\s*id BIGSERIAL PRIMARY KEY,\s+board_id BIGINT NOT NULL,\s+locked BOOL NOT NULL DEFAULT FALSE,\s+stickied BOOL NOT NULL DEFAULT FALSE,\s+anchored BOOL NOT NULL DEFAULT FALSE,\s+cyclic BOOL NOT NULL DEFAULT FALSE,\s+is_spoilered BOOL NOT NULL DEFAULT FALSE,\s+last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+is_deleted BOOL NOT NULL DEFAULT FALSE,\s+CONSTRAINT threads_board_id_fk\s+FOREIGN KEY\(board_id\) REFERENCES boards\(id\) ON DELETE CASCADE\s*\)`,
 		createThreadDeletedIndexRE,
 		`CREATE TABLE posts\(\s+id BIGSERIAL PRIMARY KEY,\s+thread_id BIGINT NOT NULL,\s+is_top_post BOOL NOT NULL DEFAULT FALSE,\s+ip INET NOT NULL,\s+created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+name VARCHAR\(50\) NOT NULL DEFAULT '',\s+tripcode VARCHAR\(10\) NOT NULL DEFAULT '',\s+is_secure_tripcode BOOL NOT NULL DEFAULT FALSE,\s+is_role_signature BOOL NOT NULL DEFAULT FALSE,  email VARCHAR\(50\) NOT NULL DEFAULT '',\s+subject VARCHAR\(100\) NOT NULL DEFAULT '',\s+message TEXT NOT NULL,\s+message_raw TEXT NOT NULL,\s+password TEXT NOT NULL,\s+deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+is_deleted BOOL NOT NULL DEFAULT FALSE,\s+banned_message TEXT,\s+flag VARCHAR\(45\) NOT NULL DEFAULT '',\s+country VARCHAR\(80\) NOT NULL DEFAULT '',\s+CONSTRAINT posts_thread_id_fk\s+FOREIGN KEY\(thread_id\) REFERENCES threads\(id\) ON DELETE CASCADE \)`,
@@ -74,7 +74,7 @@ var (
 	testInitDBSQLite3Statements = []string{
 		createDBVersionTableRE,
 		`CREATE TABLE sections\(\s+id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s+name TEXT NOT NULL,\s+abbreviation TEXT NOT NULL,\s+position SMALLINT NOT NULL,\s+hidden BOOL NOT NULL \)`,
-		`CREATE TABLE boards\(\s*id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s+section_id BIGINT NOT NULL,\s+uri VARCHAR\(45\) NOT NULL,\s+dir VARCHAR\(45\) NOT NULL,\s+navbar_position SMALLINT NOT NULL,\s+title VARCHAR\(45\) NOT NULL,\s+subtitle VARCHAR\(64\) NOT NULL,\s+description VARCHAR\(64\) NOT NULL,\s+max_file_size INT NOT NULL,\s+max_threads SMALLINT NOT NULL,  default_style VARCHAR\(45\) NOT NULL,\s+locked BOOL NOT NULL,\s+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+anonymous_name VARCHAR\(45\) NOT NULL DEFAULT 'Anonymous',\s+force_anonymous BOOL NOT NULL,\s+autosage_after SMALLINT NOT NULL,\s+no_images_after SMALLINT NOT NULL,\s+max_message_length SMALLINT NOT NULL,\s+min_message_length SMALLINT NOT NULL,\s+allow_embeds BOOL NOT NULL,\s+redirect_to_thread BOOL NOT NULL,\s+require_file BOOL NOT NULL,\s+enable_catalog BOOL NOT NULL,\s+CONSTRAINT boards_section_id_fk\s+FOREIGN KEY\(section_id\) REFERENCES sections\(id\),\s+CONSTRAINT boards_dir_unique UNIQUE\(dir\),\s+CONSTRAINT boards_uri_unique UNIQUE\(uri\)\s*\)`,
+		`CREATE TABLE boards\(\s*id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s+section_id BIGINT NOT NULL,\s+uri VARCHAR\(45\) NOT NULL,\s+dir VARCHAR\(45\) NOT NULL,\s+navbar_position SMALLINT NOT NULL,\s+title VARCHAR\(45\) NOT NULL,\s+subtitle VARCHAR\(64\) NOT NULL,\s+description VARCHAR\(64\) NOT NULL,\s+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+CONSTRAINT boards_section_id_fk\s+FOREIGN KEY\(section_id\) REFERENCES sections\(id\),\s+CONSTRAINT boards_dir_unique UNIQUE\(dir\),\s+CONSTRAINT boards_uri_unique UNIQUE\(uri\)\s*\)`,
 		`CREATE TABLE threads\(\s*id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\s+board_id BIGINT NOT NULL,\s+locked BOOL NOT NULL DEFAULT FALSE,\s+stickied BOOL NOT NULL DEFAULT FALSE,\s+anchored BOOL NOT NULL DEFAULT FALSE,\s+cyclic BOOL NOT NULL DEFAULT FALSE,\s+is_spoilered BOOL NOT NULL DEFAULT FALSE,\s+last_bump TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\s+is_deleted BOOL NOT NULL DEFAULT FALSE,\s+CONSTRAINT threads_board_id_fk\s+FOREIGN KEY\(board_id\) REFERENCES boards\(id\) ON DELETE CASCADE\s*\)`,
 		createThreadDeletedIndexRE,
 		`CREATE TABLE posts\( id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, thread_id BIGINT NOT NULL, is_top_post BOOL NOT NULL DEFAULT FALSE, ip VARBINARY\(16\) NOT NULL, created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, name VARCHAR\(50\) NOT NULL DEFAULT '', tripcode VARCHAR\(10\) NOT NULL DEFAULT '', is_secure_tripcode BOOL NOT NULL DEFAULT FALSE, is_role_signature BOOL NOT NULL DEFAULT FALSE, email VARCHAR\(50\) NOT NULL DEFAULT '', subject VARCHAR\(100\) NOT NULL DEFAULT '', message TEXT NOT NULL, message_raw TEXT NOT NULL, password TEXT NOT NULL, deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, is_deleted BOOL NOT NULL DEFAULT FALSE, banned_message TEXT, flag VARCHAR\(45\) NOT NULL DEFAULT '', country VARCHAR\(80\) NOT NULL DEFAULT '', CONSTRAINT posts_thread_id_fk FOREIGN KEY\(thread_id\) REFERENCES threads\(id\) ON DELETE CASCADE \)`,
@@ -112,10 +112,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 	staffSelect := `SELECT COUNT\(\*\) FROM staff WHERE username = `
 	staffInsert := `INSERT INTO staff\s+\(username, password_checksum, global_rank\)\s+VALUES\(`
 	sectionsInsert := `INSERT INTO sections \(name, abbreviation, hidden, position\) VALUES \(`
-	boardsInsert := `INSERT INTO boards\s*\(` +
-		`section_id,\s*uri,\s*dir,\s*navbar_position,\s*title,\s*subtitle,\s*description,\s*max_file_size,\s*` +
-		`max_threads,\s*default_style,\s*locked,\s*anonymous_name,\s*force_anonymous,\s*autosage_after,\s*no_images_after,\s*` +
-		`max_message_length,\s*min_message_length,\s*allow_embeds,\s*redirect_to_thread,\s*require_file,\s*enable_catalog\)\s+VALUES\(`
+	boardsInsert := `INSERT INTO boards\s*\(section_id,\s*uri,\s*dir,\s*navbar_position,\s*title,\s*subtitle,\s*description\)\s+VALUES\(`
 
 	switch dbType {
 	case "mysql":
@@ -123,7 +120,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		staffSelect += `\?`
 		staffInsert += `\?,\?,\?\)`
 		sectionsInsert += `\?,\?,\?,\?\)`
-		boardsInsert += `\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
+		boardsInsert += `\?,\?,\?,\?,\?,\?,\?\)`
 	case "postgres":
 		statements = testInitDBPostgresStatements
 	case "sqlite3":
@@ -136,7 +133,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 		staffSelect += `\$1`
 		staffInsert += `\$1,\$2,\$3\)`
 		sectionsInsert += `\$1,\$2,\$3,\$4\)`
-		boardsInsert += `\$1,\$2,\$3,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13,\$14,\$15,\$16,\$17,\$18,\$19,\$20,\$21\)`
+		boardsInsert += `\$1,\$2,\$3,\$4,\$5,\$6,\$7\)`
 	}
 
 	for _, stmtStr := range statements {
@@ -176,9 +173,7 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 	mock.ExpectCommit()
 
 	mock.ExpectPrepare(boardsInsert).ExpectExec().WithArgs(
-		1, "test", "test", 3, "Testing Board", "Board for testing stuff", "Board for testing stuff", 15000,
-		300, "pipes.css", false, "Anonymous", false, 500, -1, 1500, 0, false, false, false, true,
-	).WillReturnResult(driver.ResultNoRows)
+		1, "test", "test", 3, "Testing Board", "Board for testing stuff", "").WillReturnResult(driver.ResultNoRows)
 
 	mock.ExpectPrepare("SELECT id FROM boards WHERE dir = ?").
 		ExpectQuery().WithArgs("test").

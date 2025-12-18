@@ -58,17 +58,17 @@
 		</tr>
 		<tr>
 			<td>Max filesize</td>
-			<td><input type="number" min="0" name="maxfilesize" value="{{$.board.MaxFilesize}}"></td>
+			<td><input type="number" min="0" name="maxfilesize" value="{{$.boardConfig.MaxFileSize}}"></td>
 		</tr>
 		<tr>
 			<td>Max number of threads</td>
-			<td><input type="number" min="0" name="maxthreads" value="{{$.board.MaxThreads}}"></td>
+			<td><input type="number" min="0" name="maxthreads" value="{{$.boardConfig.MaxThreads}}"></td>
 		</tr>
 		<tr>
 			<td>Default style</td>
 			<td><select name="defaultstyle">
 			{{- range $_, $style := $.boardConfig.Styles -}}
-				<option value="{{$style.Filename}}" {{if eq $style.Filename $.board.DefaultStyle -}}
+				<option value="{{$style.Filename}}" {{if eq $style.Filename $.boardConfig.DefaultStyle -}}
 					selected="selected"
 				{{- end}}>{{$style.Name}}</option>
 			{{- end -}}
@@ -76,47 +76,47 @@
 		</tr>
 		<tr>
 			<td>Locked board</td>
-			<td><input type="checkbox" name="locked" {{if $.board.Locked}}checked="checked"{{end}}/></td>
+			<td><input type="checkbox" name="locked" {{if $.boardConfig.Lockdown}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
 			<td>Anonymous name {{infoHover "Name shown if the user does not provide a name"}}</td>
-			<td><input type="text" name="anonname" value="{{$.board.AnonymousName}}"/></td>
+			<td><input type="text" name="anonname" value="{{$.boardConfig.AnonymousName}}"/></td>
 		</tr>
 		<tr>
 			<td>Force anonymous</td>
-			<td><input type="checkbox" name="forcedanonymous" {{- if $.board.ForceAnonymous}}checked="checked"{{end}}/></td>
+			<td><input type="checkbox" name="forcedanonymous" {{- if $.boardConfig.ForceAnonymous}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
 			<td>Autosage after # replies {{infoHover "If greater than -1, threads will not be bumped after they receive this many replies"}}</td>
-			<td><input type="number" min="-1" name="autosageafter" value="{{$.board.AutosageAfter}}"></td>
+			<td><input type="number" min="-1" name="autosageafter" value="{{$.boardConfig.AutosageAfter}}"></td>
 		</tr>
 		<tr>
 			<td>Don't allow uploads after # replies {{infoHover "If greater than -1, thread replies with uploads will be rejected after the thread passes this number"}}</td>
-			<td><input type="number" min="-1" name="nouploadsafter" value="{{$.board.NoImagesAfter}}"></td>
+			<td><input type="number" min="-1" name="nouploadsafter" value="{{$.boardConfig.NoUploadsAfter}}"></td>
 		</tr>
 		<tr>
 			<td>Max message length (in characters)</td>
-			<td><input type="number" min="0" name="maxmessagelength" value="{{$.board.MaxMessageLength}}"></td>
+			<td><input type="number" min="0" name="maxmessagelength" value="{{$.boardConfig.MaxMessageLength}}"></td>
 		</tr>
 		<tr>
 			<td>Min message length (in characters)</td>
-			<td><input type="number" min="0" name="minmessagelength" value="{{$.board.MinMessageLength}}"></td>
+			<td><input type="number" min="0" name="minmessagelength" value="{{$.boardConfig.MinMessageLength}}"></td>
 		</tr>
 		<tr>
 			<td>Allow embeds</td>
-			<td><input type="checkbox" name="embedsallowed" {{if $.board.AllowEmbeds}}checked="checked"{{end}}/></td>
+			<td><input type="checkbox" name="embedsallowed" {{if $.boardConfig.AllowEmbeds}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
 			<td>Redirect to thread by default</td>
-			<td><input type="checkbox" name="redirecttothread" {{if $.board.RedirectToThread}}checked="checked"{{end}}/></td>
+			<td><input type="checkbox" name="redirecttothread" {{if $.boardConfig.RedirectToThread}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
 			<td>Require file in OP</td>
-			<td><input type="checkbox" name="requirefile" {{if $.board.RequireFile}}checked="checked"{{end}}/></td>
+			<td><input type="checkbox" name="requirefile" {{if $.boardConfig.AllPostsRequireUpload}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
 			<td>Create catalog</td>
-			<td><input type="checkbox" name="enablecatalog" {{if $.board.EnableCatalog}}checked="checked"{{end}}/></td>
+			<td><input type="checkbox" name="enablecatalog" {{if $.boardConfig.EnableCatalog}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
 			<td>{{if $.editing}}Rebuild{{else}}Build{{end}} board on submit</td>

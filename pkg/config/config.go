@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"testing"
 	"time"
 
 	"slices"
@@ -177,16 +176,28 @@ func (gcfg *GochanConfig) ValidateValues() error {
 }
 
 func (gcfg *GochanConfig) Write() error {
-	str, err := json.MarshalIndent(gcfg, "", "\t")
+	fd, err := os.OpenFile(gcfg.jsonLocation, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, NormalFileMode)
 	if err != nil {
 		return err
 	}
-	if testing.Testing() {
-		// don't try to write anything if we're doing a test
-		return nil
-	}
-	return os.WriteFile(gcfg.jsonLocation, str, NormalFileMode)
+	defer fd.Close()
+
+	enc := json.NewEncoder(fd)
+	enc.SetIndent("", "\t")
+	enc.SetEscapeHTML(false) // prevent things like <, >, & from being escaped
+	return enc.Encode(gcfg)
 }
+
+// 	str, err := json.MarshalIndent(gcfg, "", "\t")
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if testing.Testing() {
+// 		// don't try to write anything if we're doing a test
+// 		return nil
+// 	}
+// 	return os.WriteFile(gcfg.jsonLocation, str, NormalFileMode)
+// }
 
 type SQLConfig struct {
 	// DBtype is the type of SQL database to use. Currently supported values are "mysql", "postgres", and "sqlite3"

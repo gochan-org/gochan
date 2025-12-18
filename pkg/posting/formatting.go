@@ -77,10 +77,10 @@ func (*MessageFormatter) ApplyWordFilters(message string, boardDir string) (stri
 }
 
 func (mf *MessageFormatter) Compile(msg string, boardDir string) string {
-	if config.GetBoardConfig(boardDir).DisableBBcode {
-		return msg
+	if config.GetBoardConfig(boardDir).EnableBBcode {
+		msg = mf.bbCompiler.Compile(msg)
 	}
-	return mf.bbCompiler.Compile(msg)
+	return msg
 }
 
 func ApplyWordFilters(message string, boardDir string) (string, error) {
@@ -92,14 +92,14 @@ func wrapLinksInURL(urlStr string) string {
 }
 
 func FormatMessage(message string, boardDir string, warnEv, errEv *zerolog.Event) (template.HTML, error) {
-	if config.GetBoardConfig(boardDir).RenderURLsAsLinks {
+	boardConfig := config.GetBoardConfig(boardDir)
+	if boardConfig.RenderURLsAsLinks {
 		message = urlRE.ReplaceAllStringFunc(message, wrapLinksInURL)
 		message = msgfmtr.linkFixer.Replace(message)
 	}
 	message = msgfmtr.Compile(message, boardDir)
 	// prepare each line to be formatted
 	postLines := brRE.Split(message, -1)
-	boardConfig := config.GetBoardConfig(boardDir)
 	var err error
 	for i, line := range postLines {
 		trimmedLine := strings.TrimSpace(line)

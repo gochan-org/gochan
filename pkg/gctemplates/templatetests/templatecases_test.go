@@ -36,15 +36,13 @@ var (
 	}
 
 	simpleBoard1 = &gcsql.Board{
-		ID:            1,
-		SectionID:     1,
-		URI:           "test",
-		Dir:           "test",
-		Title:         "Testing board",
-		Subtitle:      "Board for testing",
-		Description:   "Board for testing",
-		DefaultStyle:  "pipes.css",
-		AnonymousName: "Anonymous Coward",
+		ID:          1,
+		SectionID:   1,
+		URI:         "test",
+		Dir:         "test",
+		Title:       "Testing board",
+		Subtitle:    "Board for testing",
+		Description: "Board for testing",
 	}
 
 	banPageCases = []templateTestCase{

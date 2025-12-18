@@ -216,6 +216,9 @@ func TestDiceRoll(t *testing.T) {
 
 func TestHashTags(t *testing.T) {
 	config.InitTestConfig()
+	siteConfig := config.GetSiteConfig()
+	siteConfig.MinifyHTML = true
+	config.SetSiteConfig(siteConfig)
 	msgfmtr.Init()
 	logger := testutil.GetTestLogger(t)
 	msg := `[#tag]

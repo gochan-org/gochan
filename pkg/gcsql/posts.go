@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -274,10 +273,7 @@ func (p *Post) GetBoard(opts ...*RequestOptions) (*Board, error) {
 	board := new(Board)
 	err := QueryRow(setupOptions(opts...), query, []any{p.ID}, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
-		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
-		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
-		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
-		&board.EnableCatalog,
+		&board.Description, &board.CreatedAt,
 	})
 	return board, err
 }
@@ -555,12 +551,7 @@ func SetPostBannedMessage(postID int, bannedMessage string, staff string) error 
 	banColors := config.GetBoardConfig("").BanColors
 	staffBanColor, ok := banColors[staff]
 
-	if ok && staffBanColor != "" && !strings.HasPrefix(staffBanColor, "#") {
-		_, err := strconv.ParseInt(staffBanColor, 16, 32)
-		if err == nil {
-			staffBanColor = "#" + staffBanColor
-		}
-	} else if !ok {
+	if !ok || staffBanColor == "" {
 		staffBanColor = "red"
 	}
 	bannedMessageHTML := fmt.Sprintf(`<span style="color:%s">(%s)</span>`, staffBanColor, bannedMessage)

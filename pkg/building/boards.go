@@ -32,7 +32,12 @@ var (
 
 type boardJSON struct {
 	*gcsql.Board
-	Cooldowns config.BoardCooldowns `json:"cooldowns"`
+	MaxFilesize     int                   `json:"max_filesize"`
+	IsArchived      bool                  `json:"is_archived"`
+	ImageLimit      int                   `json:"image_limit"`
+	MaxCommentChars int                   `json:"max_comment_chars"`
+	MinCommentChars int                   `json:"min_comment_chars"`
+	Cooldowns       config.BoardCooldowns `json:"cooldowns"`
 }
 
 func boolToInt(b bool) int {
@@ -362,7 +367,9 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		return ErrNoBoardTitle
 	}
 
-	oldPosts, err := board.DeleteOldThreads()
+	boardCfg := config.GetBoardConfig(board.Dir)
+
+	oldPosts, err := board.DeleteOldThreads(boardCfg.MaxThreads)
 	if err != nil {
 		errEv.Err(err).Caller().Msg("Unable to delete old threads")
 		return err
@@ -406,7 +413,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 					Str("thumbnail", thumbPath).Send()
 				return err
 			}
-			if post.IsTopPost && board.EnableCatalog {
+			if post.IsTopPost && boardCfg.EnableCatalog {
 				if err = os.Remove(catalogThumbPath); err != nil {
 					errEv.Err(err).Caller().
 						Int("postID", postID).
@@ -545,7 +552,7 @@ func buildBoard(board *gcsql.Board, force bool) error {
 		errEv.Err(err).Caller().Send()
 		return err
 	}
-	if board.EnableCatalog {
+	if boardCfg.EnableCatalog {
 		if err = BuildCatalog(board.ID); err != nil {
 			errEv.Err(err).Caller().Send()
 			return err
@@ -583,8 +590,14 @@ func BuildBoardListJSON() error {
 	}
 
 	for b, board := range gcsql.AllBoards {
+		boardConfig := config.GetBoardConfig(board.Dir)
 		boardsListJSONData.Boards[b] = boardJSON{
-			Cooldowns: config.GetBoardConfig(board.Dir).Cooldowns,
+			Cooldowns:       config.GetBoardConfig(board.Dir).Cooldowns,
+			MaxFilesize:     boardConfig.MaxFileSize,
+			IsArchived:      boardConfig.Lockdown,
+			ImageLimit:      boardConfig.NoUploadsAfter,
+			MaxCommentChars: boardConfig.MaxMessageLength,
+			MinCommentChars: boardConfig.MinMessageLength,
 		}
 		boardsListJSONData.Boards[b].Board = &gcsql.AllBoards[b]
 	}

@@ -14,12 +14,8 @@ import (
 const (
 	// selects all columns from DBPREFIXboards
 	selectBoardsBaseSQL = `SELECT
-	DBPREFIXboards.id, section_id, uri, dir, navbar_position, title, subtitle, description,
-	max_file_size, max_threads, default_style, DBPREFIXboards.locked, created_at, anonymous_name, force_anonymous,
-	autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,
-	require_file, enable_catalog
-	FROM DBPREFIXboards
-	INNER JOIN (
+	DBPREFIXboards.id, section_id, uri, dir, navbar_position, title, subtitle, description, created_at
+	FROM DBPREFIXboards INNER JOIN (
 		SELECT id, hidden FROM DBPREFIXsections
 	) s ON DBPREFIXboards.section_id = s.id `
 )
@@ -73,10 +69,7 @@ func GetAllBoards(onlyNonHidden bool) ([]Board, error) {
 		var board Board
 		if err = rows.Scan(
 			&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
-			&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
-			&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
-			&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
-			&board.EnableCatalog,
+			&board.Description, &board.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -113,10 +106,7 @@ func getBoardBase(requestOptions *RequestOptions, where string, whereParameters 
 	board := new(Board)
 	err := QueryRow(requestOptions, query, whereParameters, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
-		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
-		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
-		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
-		&board.EnableCatalog})
+		&board.Description, &board.CreatedAt})
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrBoardDoesNotExist
 	}
@@ -177,7 +167,7 @@ func ResetBoardSectionArrays() error {
 	AllBoards = nil
 	AllBoards = append(AllBoards, allBoardsArr...)
 	for _, board := range AllBoards {
-		if err = config.UpdateBoardConfig(board.Dir); err != nil {
+		if err = config.ReloadBoardConfig(board.Dir); err != nil {
 			return fmt.Errorf("unable to update board config for /%s/: %w", board.Dir, err)
 		}
 	}
@@ -199,27 +189,12 @@ func NewBoardSimple(dir string, title string, subtitle string, description strin
 		return nil, err
 	}
 	board := &Board{
-		SectionID:        sectionID,
-		URI:              dir,
-		Dir:              dir,
-		NavbarPosition:   3,
-		Title:            title,
-		Subtitle:         subtitle,
-		Description:      description,
-		MaxFilesize:      15000,
-		MaxThreads:       300,
-		DefaultStyle:     config.GetBoardConfig("").DefaultStyle,
-		Locked:           false,
-		AnonymousName:    "Anonymous",
-		ForceAnonymous:   false,
-		AutosageAfter:    500,
-		NoImagesAfter:    -1,
-		MaxMessageLength: 1500,
-		MinMessageLength: 0,
-		AllowEmbeds:      false,
-		RedirectToThread: false,
-		RequireFile:      false,
-		EnableCatalog:    true,
+		SectionID:      sectionID,
+		URI:            dir,
+		Dir:            dir,
+		NavbarPosition: 3,
+		Title:          title,
+		Subtitle:       subtitle,
 	}
 	return board, CreateBoard(board, appendToAllBoards)
 }
@@ -228,11 +203,8 @@ func NewBoardSimple(dir string, title string, subtitle string, description strin
 // It sets board.ID and board.CreatedAt if it is successfull
 func CreateBoard(board *Board, appendToAllBoards bool) error {
 	const sqlINSERT = `INSERT INTO DBPREFIXboards
-	(section_id, uri, dir, navbar_position, title, subtitle,
-	description, max_file_size, max_threads, default_style, locked,
-	anonymous_name, force_anonymous, autosage_after, no_images_after, max_message_length,
-	min_message_length, allow_embeds, redirect_to_thread, require_file, enable_catalog)
-	VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+	(section_id, uri, dir, navbar_position, title, subtitle, description)
+	VALUES(?,?,?,?,?,?,?)`
 	if board == nil {
 		return ErrNilBoard
 	}
@@ -253,10 +225,7 @@ func CreateBoard(board *Board, appendToAllBoards bool) error {
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, sqlINSERT,
-		&board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
-		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
-		&board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
-		&board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog)
+		&board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle, &board.Description)
 	if err != nil {
 		return err
 	}
@@ -303,10 +272,9 @@ func (board *Board) Delete() error {
 	return nil
 }
 
-// DeleteOldThreads deletes old threads that exceed the limit set by board.MaxThreads and returns the posts in those
-// threads
-func (board *Board) DeleteOldThreads() ([]int, error) {
-	if board.MaxThreads < 1 {
+// DeleteOldThreads deletes old threads that exceed the limit set by maxThreads and returns the post IDs in those threads
+func (board *Board) DeleteOldThreads(maxThreads int) ([]int, error) {
+	if maxThreads < 1 {
 		return nil, nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -335,7 +303,7 @@ func (board *Board) DeleteOldThreads() ([]int, error) {
 	var threadsProccessed int
 	for rows.Next() {
 		threadsProccessed++
-		if threadsProccessed <= board.MaxThreads {
+		if threadsProccessed <= maxThreads {
 			continue
 		}
 		if err = rows.Scan(&id); err != nil {
@@ -436,28 +404,10 @@ func (board *Board) ModifyInDB() error {
 		navbar_position = ?,
 		title = ?,
 		subtitle = ?,
-		description = ?,
-		max_file_size = ?,
-		max_threads = ?,
-		default_style = ?,
-		locked = ?,
-		anonymous_name = ?,
-		force_anonymous = ?,
-		autosage_after = ?,
-		no_images_after = ?,
-		max_message_length = ?,
-		min_message_length = ?,
-		allow_embeds = ?,
-		redirect_to_thread = ?,
-		require_file = ?,
-		enable_catalog = ?
+		description = ?
 		WHERE id = ?`
 	_, err := Exec(nil, query,
-		board.SectionID, board.NavbarPosition, board.Title, board.Subtitle, board.Description,
-		board.MaxFilesize, board.MaxThreads, board.DefaultStyle, board.Locked, board.AnonymousName,
-		board.ForceAnonymous, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength,
-		board.MinMessageLength, board.AllowEmbeds, board.RedirectToThread, board.RequireFile, board.EnableCatalog,
-		board.ID)
+		board.SectionID, board.NavbarPosition, board.Title, board.Subtitle, board.Description, board.ID)
 	if err != nil {
 		return err
 	}

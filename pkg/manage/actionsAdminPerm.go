@@ -173,13 +173,13 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff
 		"siteConfig": config.GetSiteConfig(),
 		"sections":   sections,
 		"boards":     boards,
-		"board": gcsql.Board{
-			AnonymousName:    "Anonymous",
-			MaxFilesize:      1000 * 1000 * 15,
-			EnableCatalog:    true,
-			AutosageAfter:    200,
-			NoImagesAfter:    -1,
-			MaxMessageLength: 1500,
+		"board":      gcsql.Board{
+			// AnonymousName:    "Anonymous",
+			// MaxFilesize:      1000 * 1000 * 15,
+			// EnableCatalog:    true,
+			// AutosageAfter:    200,
+			// NoImagesAfter:    -1,
+			// MaxMessageLength: 1500,
 		},
 		"boardConfig": config.GetBoardConfig(""),
 		"editing":     false,
@@ -239,6 +239,7 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *g
 				logger.Err(err).Caller().Send()
 				return "", err
 			}
+
 		}
 		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
 	case boardRequestTypeDelete:

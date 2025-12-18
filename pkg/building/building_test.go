@@ -134,10 +134,7 @@ func TestBuildJS(t *testing.T) {
 
 func mockSelectNonHiddenBoardsWithJoins(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT\s*` +
-		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
-		`max_file_size, max_threads, default_style, boards\.locked, created_at, anonymous_name, force_anonymous,\s*` +
-		`autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,\s*` +
-		`require_file, enable_catalog\s*` +
+		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*created_at\s*` +
 		`FROM boards\s*` +
 		`INNER JOIN \(\s*` +
 		`SELECT id, hidden FROM sections\s*` +
@@ -145,18 +142,11 @@ func mockSelectNonHiddenBoardsWithJoins(mock sqlmock.Sqlmock) {
 		`WHERE s\.hidden = FALSE\s*` +
 		`ORDER BY navbar_position ASC, boards.id ASC`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{
-			"boards.id", "section_id", "uri", "dir", "navbar_position", "title", "subtitle", "description",
-			"max_file_size", "max_threads", "default_style", "locked", "created_at", "anonymous_name", "force_anonymous",
-			"autosage_after", "no_images_after", "max_message_length", "min_message_length", "allow_embeds", "redirect_to_thread",
-			"require_file", "enable_catalog",
+			"boards.id", "section_id", "uri", "dir", "navbar_position", "title", "subtitle", "description", "created_at",
 		}).AddRows([]driver.Value{
-			1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing description",
-			15000, 100, "pipes.css", false, time.Now(), "Anonymous", false,
-			1500, 2000, 1500, 0, true, false, false, true,
+			1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing description", time.Now(),
 		}).AddRows([]driver.Value{
-			1, 1, "test2", "test2", 1, "Testing board 2", "Board for testing 2", "Board for testing description 2",
-			15000, 100, "pipes.css", false, time.Now(), "Anonymous", false,
-			1500, 2000, 1500, 0, true, false, false, true,
+			1, 1, "test2", "test2", 1, "Testing board 2", "Board for testing 2", "Board for testing description 2", time.Now(),
 		}),
 	)
 }
