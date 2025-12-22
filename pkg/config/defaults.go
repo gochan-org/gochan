@@ -27,11 +27,9 @@ var (
 			FingerprintHashLength: 16,
 		},
 		BoardConfig: BoardConfig{
-			isGlobal:            true,
-			ThreadsPerPage:      20,
 			MaxThreads:          200,
+			ThreadsPerPage:      20,
 			InheritGlobalStyles: true,
-			DateTimeFormat:      "Mon, January 02, 2006 3:04:05 PM",
 			Styles: []Style{
 				{Name: "Pipes", Filename: "pipes.css"},
 				{Name: "BunkerChan", Filename: "bunkerchan.css"},
@@ -46,11 +44,11 @@ var (
 			DefaultStyle:    "pipes.css",
 			LockdownMessage: "This imageboard has temporarily disabled posting. We apologize for the inconvenience",
 
-			EnableSpoileredImages:  true,
-			EnableSpoileredThreads: true,
-
 			PostConfig: PostConfig{
 				AnonymousName:            "Anonymous",
+				AutosageAfter:            200,
+				NoUploadsAfter:           -1,
+				MaxMessageLength:         2000,
 				RepliesOnBoardPage:       3,
 				StickyRepliesOnBoardPage: 1,
 				EnableCyclicThreads:      true,
@@ -60,11 +58,10 @@ var (
 				EmbedHeight:              300,
 				ImagesOpenNewTab:         true,
 				NewTabOnExternalLinks:    true,
-				AutosageAfter:            200,
-				NoUploadsAfter:           -1,
 				EnableBBcode:             true,
 			},
 			UploadConfig: UploadConfig{
+				MaxFileSize:        15000000,
 				ThumbWidth:         200,
 				ThumbHeight:        200,
 				ThumbWidthReply:    125,
@@ -72,13 +69,18 @@ var (
 				ThumbWidthCatalog:  50,
 				ThumbHeightCatalog: 50,
 			},
-			Worksafe: true,
+			DateTimeFormat:         "Mon, January 02, 2006 3:04:05 PM",
+			EnableSpoileredImages:  true,
+			EnableSpoileredThreads: true,
+			Worksafe:               true,
 			Cooldowns: BoardCooldowns{
 				NewThread:  30,
 				Reply:      7,
 				ImageReply: 7,
 			},
 			RenderURLsAsLinks: true,
+			EnableCatalog:     true,
+			isGlobal:          true,
 		},
 	}
 )

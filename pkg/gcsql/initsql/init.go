@@ -83,22 +83,9 @@ func boardPagePathTmplFunc(board *gcsql.Board, page int) string {
 	return config.WebPath(board.Dir, strconv.Itoa(page)+".html")
 }
 
-func getBoardDefaultStyleTmplFunc(dir string) (string, error) {
+func getBoardDefaultStyleTmplFunc(dir string) string {
 	boardCfg := config.GetBoardConfig(dir)
-	if !boardCfg.IsGlobal() {
-		// /<board>/board.json exists, overriding the default them and theme set in SQL
-		return boardCfg.DefaultStyle, nil
-	}
-	var defaultStyle string
-	err := gcsql.QueryRowTimeoutSQL(nil, "SELECT default_style FROM DBPREFIXboards WHERE dir = ?",
-		[]any{dir}, []any{&defaultStyle})
-	if err != nil || defaultStyle == "" {
-		gcutil.LogError(err).Caller().
-			Str("board", dir).
-			Msg("Unable to get default style attribute of board")
-		return boardCfg.DefaultStyle, err
-	}
-	return defaultStyle, nil
+	return boardCfg.DefaultStyle
 }
 
 func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
