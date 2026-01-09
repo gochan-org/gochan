@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -119,7 +120,7 @@ func main() {
 	gcutil.LogInfo().
 		Str("ListenAddress", systemCritical.ListenAddress).
 		Int("Port", systemCritical.Port).
-		Str("SiteHost", systemCritical.SiteHost).
+		Str("siteURL", (&url.URL{Scheme: "http", Host: systemCritical.SiteHost, Path: systemCritical.WebRoot}).String()).
 		Msg("Gochan server started")
 	<-sc
 }
