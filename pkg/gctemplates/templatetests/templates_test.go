@@ -47,7 +47,11 @@ func initTemplatesMock(t *testing.T, mock sqlmock.Sqlmock, which ...string) {
 
 	config.SetTestTemplateDir("templates")
 
-	if !assert.NoError(t, gctemplates.InitTemplates()) {
+	if len(which) != 0 && which[0] == "" {
+		which = nil
+	}
+
+	if !assert.NoError(t, gctemplates.InitTemplates(which...)) {
 		t.FailNow()
 	}
 
