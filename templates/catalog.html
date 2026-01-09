@@ -1,31 +1,35 @@
 {{template "page_header.html" .}}
 	<header>
 		<h1>/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
-		<span id="board-subtitle">Catalog</span>
+		<div id="board-subtitle">Catalog</div>
+		<div id="header-links">
+			<a href="{{webPath .board.Dir}}">Return</a> |  <a href="{{webPath $.board.Dir `catalog.html`}}">Refresh</a> | <a href="#footer">Bottom</a>
+		</div>
 	</header><hr />
-	<div id="catalog-links" style="float: left;">
-		<a href="{{webPathDir $.board.Dir}}/">Return</a> | <a href="{{webPath $.board.Dir "/catalog.html"}}">Refresh</a> | <a href="#footer">Scroll to bottom</a>
-	</div>
-	<div id="catalog-controls" style="float: right;">
-		Sort by: <select>
-			<option value="bumped">Bump order</option>
-			<option value="created">Creation time</option>
-			<option value="replies">Reply count</option>
-		</select>
-	</div><hr />
-	{{range $_,$thread := .threads}}
-		<div class="catalog-thread">
-			<a href="{{webPath $.board.Dir "res" (print $thread.ID)}}.html">
-				{{if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else}}
+	{{- /*Sort by: <select>
+		<option value="bumped">Bump order</option>
+		<option value="created">Creation time</option>
+		<option value="replies">Reply count</option>
+		<option value="replies">Image reply count</option>
+	</select>*/ -}}
+	{{range $_,$thread := .threads -}}
+		<div class="catalog-thread" data-name="{{if eq $thread.Name ""}}{{$.boardConfig.AnonymousName}}{{else}}{{$thread.Name}}{{end}}">
+			<time datetime="{{formatTimestampAttribute $thread.CreatedOn}}"></time>
+			<a href="{{webPath $.board.Dir `res` (print $thread.ID)}}.html">
+				{{- if eq $thread.Filename ""}}(No file){{else if eq $thread.Filename "deleted"}}(File deleted){{else -}}
 				<img src="{{$thread.ThumbnailPath}}" alt="{{$thread.UploadPath}}" width="{{$thread.ThumbnailWidth}}" height="{{$thread.ThumbnailHeight}}" />
-			{{end}}</a><br />
-			<b>{{if eq $thread.Name ""}}{{$.boardConfig.AnonymousName}}{{else}}{{$thread.Name}}{{end}}</b> | <b>R:</b> {{numReplies $.board.ID $thread.ID}}
-			<span class="status-icons">
-				{{- if $thread.Locked -}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
-				{{- if $thread.Stickied -}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
-			</span>
+			{{- end}}</a>
+			<div class="thread-data">
+				<b>R:</b> {{numReplies $.board.ID $thread.ID}}
+				{{- if or $thread.Locked $thread.Stickied -}}
+					<span class="status-icons">
+						{{- if $thread.Locked -}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
+						{{- if $thread.Stickied -}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
+					</span>
+				{{- end -}}
+			</div>
 			<br />
-			{{$thread.Message}}
+			{{- $thread.Message -}}
 	</div>{{end}}<hr />
 <a href="#">Scroll to top</a>
 {{template "page_footer.html" .}}

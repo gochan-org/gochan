@@ -1,8 +1,8 @@
 {{template "page_header.html" .}}
 	<header>
 		<h1 id="board-title">/{{$.board.Dir}}/ - {{$.board.Title}}</h1>
-		<div id="board-subtitle">
-			{{$.board.Subtitle}}<br/>
+		<div id="board-subtitle">{{$.board.Subtitle}}</div>
+		<div id="header-links">
 			<a href="{{webPathDir $.board.Dir}}" >Return</a> | <a href="#" onClick="window.location.reload(); return false;">Update</a> | <a href="{{webPath $.board.Dir "/catalog.html"}}">Catalog</a> | <a href="#footer">Bottom</a>
 		</div>
 	</header><hr />
