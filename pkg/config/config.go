@@ -73,7 +73,10 @@ func (gcfg *GochanConfig) updateDeprecatedFields() (changed bool) {
 
 // ValidateValues checks to make sure that the configuration options are usable
 // (e.g., ListenAddress is a valid IP address, Port isn't a negative number, etc)
-func (gcfg *GochanConfig) ValidateValues() error {
+//
+// If noWrite is provided and true, the config file will not be rewritten with
+// any updated/deprecated fields.
+func (gcfg *GochanConfig) ValidateValues(noWrite ...bool) error {
 	changed := gcfg.updateDeprecatedFields()
 
 	if gcfg.SiteHost == "" {
@@ -170,6 +173,9 @@ func (gcfg *GochanConfig) ValidateValues() error {
 	}
 
 	if !changed {
+		return nil
+	}
+	if len(noWrite) > 0 && noWrite[0] {
 		return nil
 	}
 	return gcfg.Write()

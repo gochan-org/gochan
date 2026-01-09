@@ -32,9 +32,12 @@ func SetTestTemplateDir(dir string) {
 }
 
 // SetTestDBConfig sets up the database configuration for a testing environment. If it is not run via `go test`, it will panic
-func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername string, dbPassword string, dbPrefix string) {
+func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername string, dbPassword string, dbPrefix string, jsonPath ...string) {
 	testutil.PanicIfNotTest()
-	setDefaultCfgIfNotSet()
+	cfg = defaultGochanConfig
+	if boardConfigs == nil {
+		boardConfigs = make(map[string]BoardConfig)
+	}
 
 	cfg.DBtype = dbType
 	cfg.DBhost = dbHost
@@ -43,6 +46,9 @@ func SetTestDBConfig(dbType string, dbHost string, dbName string, dbUsername str
 	cfg.DBpassword = dbPassword
 	cfg.DBprefix = dbPrefix
 	cfg.DBTimeoutSeconds = 600
+	if len(jsonPath) > 0 {
+		cfg.jsonLocation = jsonPath[0]
+	}
 }
 
 // SetRandomSeed is usd to set a deterministic seed to make testing easier. If it is not run via `go test`, it will panic
@@ -60,8 +66,11 @@ func SetBoardConfig(board string, boardCfg *BoardConfig) error {
 	if err := boardCfg.validateEmbedMatchers(); err != nil {
 		return err
 	}
+	boardCfg.isGlobal = board == ""
 	if board == "" {
+		boardCfgPath := cfg.BoardConfig.boardConfigPath
 		cfg.BoardConfig = *boardCfg
+		cfg.boardConfigPath = boardCfgPath
 	} else {
 		boardConfigs[board] = *boardCfg
 	}

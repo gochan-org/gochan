@@ -14,10 +14,6 @@ import (
 
 var minifier *minify.M
 
-type templateRef interface {
-	string | *template.Template
-}
-
 // InitMinifier sets up the HTML/JS/JSON minifier if enabled in gochan.json
 func InitMinifier() {
 	siteConfig := config.GetSiteConfig()
@@ -49,7 +45,7 @@ func canMinify(mediaType string) (minify bool) {
 }
 
 // MinifyTemplate minifies the given template ref (string or template.Template pointer) and data, and returns any errors
-func MinifyTemplate[T templateRef](tmplRef T, data any, writer io.Writer, mediaType string) (err error) {
+func MinifyTemplate[T interface{ string | *template.Template }](tmplRef T, data any, writer io.Writer, mediaType string) (err error) {
 	var tmpl *template.Template
 	switch ref := any(tmplRef).(type) {
 	case string:

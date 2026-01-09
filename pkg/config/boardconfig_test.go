@@ -46,13 +46,13 @@ func TestWriteBoardConfig(t *testing.T) {
 	changedCfg := GetBoardConfig("changed")
 	assert.False(t, equalCfg.IsGlobal())
 	assert.False(t, changedCfg.IsGlobal())
-	assert.Equal(t, path.Join(basePath, "equal-config.json"), equalCfg.configPath)
-	assert.Equal(t, path.Join(basePath, "changed-config.json"), changedCfg.configPath)
+	assert.Equal(t, path.Join(basePath, "equal-config.json"), equalCfg.boardConfigPath)
+	assert.Equal(t, path.Join(basePath, "changed-config.json"), changedCfg.boardConfigPath)
 	assert.Equal(t, []geoip.Country{{Flag: "flag.png", Name: "Country"}}, changedCfg.CustomFlags)
 
 	// make sure that the global config wasn't mistakenly changed by modifying the board config
 	assert.True(t, cfg.isGlobal)
-	assert.Empty(t, cfg.configPath)
+	assert.Empty(t, cfg.boardConfigPath)
 
 	// test writing of board config and reloading to confirm changes were saved
 	changedCfg.DefaultStyle = "new-style.css"

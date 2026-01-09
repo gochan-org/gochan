@@ -38,7 +38,7 @@ func TestValidateValues(t *testing.T) {
 	SetTestDBConfig("not a valid driver", "127.0.0.1", "gochan", "gochan", "", "")
 	assert.Error(t, cfg.ValidateValues())
 	SetTestDBConfig("postgresql", "127.0.0.1", "gochan", "gochan", "", "")
-	assert.NoError(t, cfg.ValidateValues())
+	assert.NoError(t, cfg.ValidateValues(true))
 }
 
 type webRootTest struct {

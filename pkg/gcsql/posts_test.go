@@ -54,12 +54,12 @@ func createThreadTestRun(t *testing.T, driver string) {
 	mock := setupPostTest(t, driver)
 	var query string
 	if driver == "mysql" {
-		query = `SELECT locked FROM boards WHERE id = \?`
+		query = `SELECT dir FROM boards WHERE id = \?`
 	} else {
-		query = `SELECT locked FROM boards WHERE id = \$1`
+		query = `SELECT dir FROM boards WHERE id = \$1`
 	}
 	mock.ExpectPrepare(query).ExpectQuery().
-		WithArgs(1).WillReturnRows(mock.NewRows([]string{"locked"}).AddRow(false))
+		WithArgs(1).WillReturnRows(mock.NewRows([]string{"dir"}).AddRow("test"))
 
 	if driver == "mysql" {
 		query = insertIntoThreadsMySQL

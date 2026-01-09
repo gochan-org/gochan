@@ -98,8 +98,8 @@ type BoardConfig struct {
 	// CustomFlags is a list of non-geoip flags with Name (viewable to the user) and Flag (flag image filename) fields. See geoip.Country section for more information.
 	CustomFlags []geoip.Country
 
-	isGlobal   bool
-	configPath string
+	isGlobal        bool
+	boardConfigPath string
 }
 
 // CheckCustomFlag returns true if the given flag and name are configured for
@@ -526,11 +526,11 @@ func getBoardConfigPath(board string) string {
 func ReloadBoardConfig(dir string) error {
 	boardCfg := GetBoardConfig(dir)
 	var boardCfgPath string
-	if boardCfg.isGlobal || boardCfg.configPath == "" {
+	if boardCfg.isGlobal || boardCfg.boardConfigPath == "" {
 		// board config hasn't been loaded yet
 		boardCfgPath = getBoardConfigPath(dir)
 	} else {
-		boardCfgPath = boardCfg.configPath
+		boardCfgPath = boardCfg.boardConfigPath
 	}
 
 	if boardCfgPath == "" {
@@ -552,7 +552,7 @@ func ReloadBoardConfig(dir string) error {
 		return err
 	}
 	boardCfg.isGlobal = false
-	boardCfg.configPath = boardCfgPath
+	boardCfg.boardConfigPath = boardCfgPath
 	boardConfigs[dir] = *boardCfg
 	return nil
 }
