@@ -63,12 +63,8 @@ func getTopPostIDTmplFunc(post *gcsql.Post) int {
 	return id
 }
 
-func numRepliesTmplFunc(_, opID int) int {
-	num, err := gcsql.GetThreadReplyCountFromOP(opID)
-	if err != nil {
-		return 0
-	}
-	return num
+func numRepliesTmplFunc(_, opID int) (int, error) {
+	return gcsql.GetThreadReplyCountFromOP(opID)
 }
 
 func getBoardDirTmplFunc(id int) string {

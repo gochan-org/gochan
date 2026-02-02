@@ -20,16 +20,20 @@
 				<img src="{{$thread.ThumbnailPath}}" alt="{{$thread.UploadPath}}" width="{{$thread.ThumbnailWidth}}" height="{{$thread.ThumbnailHeight}}" />
 			{{- end}}</a>
 			<div class="thread-data">
-				<b>R:</b> {{numReplies $.board.ID $thread.ID}}
-				{{- if or $thread.Locked $thread.Stickied -}}
+				<div class="replies">
+					<b>R:</b> {{numReplies $.board.ID $thread.ID}}
+				</div>
+				{{- if or $thread.Locked $thread.Stickied $thread.Cyclic -}}
 					<span class="status-icons">
 						{{- if $thread.Locked -}}<img src="{{webPath "/static/lock.png"}}" class="locked-icon" alt="Thread locked" title="Thread locked">{{end -}}
 						{{- if $thread.Stickied -}}<img src="{{webPath "/static/sticky.png"}}" class="sticky-icon" alt="Sticky" title="Sticky">{{end -}}
+						{{- if $thread.Cyclic -}}<img src="{{webPath "/static/cyclic.png"}}" class="cyclic-icon" alt="Cyclic thread" title="Cyclic thread">{{end -}}
 					</span>
 				{{- end -}}
 			</div>
-			<br />
-			{{- $thread.Message -}}
+			<div class="thread-text">
+				{{- if ne $thread.Subject "" -}}<span class="subject">{{- $thread.Subject -}}:</span> {{end}}<span class="post-message">{{$thread.Message}}</span>
+			</div>
 	</div>{{end}}<hr />
 <a href="#">Scroll to top</a>
 {{template "page_footer.html" .}}
