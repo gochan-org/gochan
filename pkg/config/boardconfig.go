@@ -113,6 +113,96 @@ func (bc *BoardConfig) CheckCustomFlag(flag string) (string, bool) {
 	return "", false
 }
 
+func (bc *BoardConfig) validateBoardConfig() error {
+	if bc.MaxThreads <= 0 {
+		bc.MaxThreads = defaultGochanConfig.MaxThreads
+	}
+	if bc.ThreadsPerPage <= 0 {
+		bc.ThreadsPerPage = defaultGochanConfig.ThreadsPerPage
+	}
+	if bc.isGlobal && bc.DefaultStyle == "" {
+		bc.DefaultStyle = defaultGochanConfig.DefaultStyle
+	}
+	if bc.isGlobal && bc.LockdownMessage == "" {
+		bc.LockdownMessage = defaultGochanConfig.LockdownMessage
+	}
+	if bc.isGlobal && bc.DateTimeFormat == "" {
+		bc.DateTimeFormat = defaultGochanConfig.DateTimeFormat
+	}
+	if bc.Cooldowns.NewThread <= 0 {
+		bc.Cooldowns.NewThread = defaultGochanConfig.Cooldowns.NewThread
+	}
+	if bc.Cooldowns.Reply <= 0 {
+		bc.Cooldowns.Reply = defaultGochanConfig.Cooldowns.Reply
+	}
+	if bc.Cooldowns.ImageReply <= 0 {
+		bc.Cooldowns.ImageReply = defaultGochanConfig.Cooldowns.ImageReply
+	}
+	if bc.AnonymousName == "" {
+		bc.AnonymousName = defaultGochanConfig.AnonymousName
+	}
+	if bc.AutosageAfter <= 0 {
+		bc.AutosageAfter = defaultGochanConfig.AutosageAfter
+	}
+	if bc.NoUploadsAfter <= 0 {
+		bc.NoUploadsAfter = defaultGochanConfig.NoUploadsAfter
+	}
+	if bc.MaxMessageLength <= 0 {
+		bc.MaxMessageLength = defaultGochanConfig.MaxMessageLength
+	}
+	if bc.MinMessageLength <= 0 {
+		bc.MinMessageLength = 1
+	}
+	if bc.MinMessageLength > bc.MaxMessageLength {
+		return &InvalidValueError{
+			Field:   "MinMessageLength",
+			Value:   bc.MinMessageLength,
+			Details: "MinMessageLength cannot be greater than MaxMessageLength",
+		}
+	}
+	if bc.RepliesOnBoardPage <= 0 {
+		bc.RepliesOnBoardPage = defaultGochanConfig.RepliesOnBoardPage
+	}
+	if bc.StickyRepliesOnBoardPage < 0 {
+		bc.StickyRepliesOnBoardPage = defaultGochanConfig.StickyRepliesOnBoardPage
+	}
+	if bc.CyclicThreadNumPosts <= 0 {
+		bc.CyclicThreadNumPosts = defaultGochanConfig.CyclicThreadNumPosts
+	}
+	if bc.BanMessage == "" {
+		bc.BanMessage = defaultGochanConfig.BanMessage
+	}
+	if bc.EmbedWidth <= 0 {
+		bc.EmbedWidth = defaultGochanConfig.EmbedWidth
+	}
+	if bc.EmbedHeight <= 0 {
+		bc.EmbedHeight = defaultGochanConfig.EmbedHeight
+	}
+	if bc.MaxFileSize <= 0 {
+		bc.MaxFileSize = defaultGochanConfig.MaxFileSize
+	}
+	if bc.ThumbWidth <= 0 {
+		bc.ThumbWidth = defaultGochanConfig.ThumbWidth
+	}
+	if bc.ThumbHeight <= 0 {
+		bc.ThumbHeight = defaultGochanConfig.ThumbHeight
+	}
+	if bc.ThumbWidthReply <= 0 {
+		bc.ThumbWidthReply = defaultGochanConfig.ThumbWidthReply
+	}
+	if bc.ThumbHeightReply <= 0 {
+		bc.ThumbHeightReply = defaultGochanConfig.ThumbHeightReply
+	}
+	if bc.ThumbWidthCatalog <= 0 {
+		bc.ThumbWidthCatalog = defaultGochanConfig.ThumbWidthCatalog
+	}
+	if bc.ThumbHeightCatalog <= 0 {
+		bc.ThumbHeightCatalog = defaultGochanConfig.ThumbHeightCatalog
+	}
+
+	return bc.validateEmbedMatchers()
+}
+
 // IsGlobal returns true if this is the global configuration applied to all
 // boards by default, or false if it is an explicitly configured board
 func (bc *BoardConfig) IsGlobal() bool {
@@ -451,9 +541,6 @@ type UploadConfig struct {
 	// StripImageMetadata sets what (if any) metadata to remove from uploaded images using exiftool.
 	// Valid values are "", "none" (has the same effect as ""), "exif", or "all" (for stripping all metadata)
 	StripImageMetadata string
-
-	// ExiftoolPath is the path to the exiftool command. If unset or empty, the system path will be used to find it
-	ExiftoolPath string
 }
 
 func (uc *UploadConfig) AcceptedExtension(filename string) bool {

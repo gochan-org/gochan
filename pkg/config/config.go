@@ -87,7 +87,7 @@ func (gcfg *GochanConfig) ValidateValues(noWrite ...bool) error {
 	}
 
 	if gcfg.CookieMaxAge == "" {
-		gcfg.CookieMaxAge = "1y"
+		gcfg.CookieMaxAge = defaultGochanConfig.CookieMaxAge
 		changed = true
 	}
 	_, err := durationutil.ParseLongerDuration(gcfg.CookieMaxAge)
@@ -98,7 +98,7 @@ func (gcfg *GochanConfig) ValidateValues(noWrite ...bool) error {
 	}
 
 	if gcfg.StaffSessionDuration == "" {
-		gcfg.StaffSessionDuration = "6mo"
+		gcfg.StaffSessionDuration = defaultGochanConfig.StaffSessionDuration
 		changed = true
 	}
 	_, err = durationutil.ParseLongerDuration(gcfg.StaffSessionDuration)
@@ -168,7 +168,7 @@ func (gcfg *GochanConfig) ValidateValues(noWrite ...bool) error {
 		}
 	}
 
-	if err = gcfg.validateEmbedMatchers(); err != nil {
+	if err = gcfg.validateBoardConfig(); err != nil {
 		return err
 	}
 
@@ -306,6 +306,9 @@ type SystemCriticalConfig struct {
 	RandomSeed string
 
 	TimeZone int `json:"-"`
+
+	// ExiftoolPath is the path to the exiftool command. If unset or empty, the system path will be used to find it
+	ExiftoolPath string
 
 	logLevel       zerolog.Level
 	logLevelParsed bool

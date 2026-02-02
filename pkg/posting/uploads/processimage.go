@@ -31,7 +31,8 @@ func stripImageMetadata(filePath string, boardConfig *config.BoardConfig) (err e
 	case "":
 		return nil
 	}
-	err = exec.Command(boardConfig.ExiftoolPath, "-overwrite_original_in_place", stripFlag, filePath).Run()
+	systemCritical := config.GetSystemCriticalConfig()
+	err = exec.Command(systemCritical.ExiftoolPath, "-overwrite_original_in_place", stripFlag, filePath).Run()
 	return
 }
 
