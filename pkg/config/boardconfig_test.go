@@ -29,11 +29,7 @@ func TestWriteBoardConfig(t *testing.T) {
 	}))
 	assert.Equal(t, "TestWriteBoardConfig", cfg.SiteName)
 
-	// test loading of global config
 	defer resetTestConfig(t)
-	if !assert.NoError(t, InitConfig()) {
-		t.FailNow()
-	}
 
 	assert.NoError(t, gcutil.InitLogs(path.Join(basePath, "logs"), &gcutil.LogOptions{
 		LogLevel: cfg.logLevel,

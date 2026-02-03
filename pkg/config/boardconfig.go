@@ -150,8 +150,8 @@ func (bc *BoardConfig) validateBoardConfig() error {
 	if bc.MaxMessageLength <= 0 {
 		bc.MaxMessageLength = defaultGochanConfig.MaxMessageLength
 	}
-	if bc.MinMessageLength <= 0 {
-		bc.MinMessageLength = 1
+	if bc.MinMessageLength < 0 {
+		bc.MinMessageLength = 0
 	}
 	if bc.MinMessageLength > bc.MaxMessageLength {
 		return &InvalidValueError{

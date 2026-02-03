@@ -118,7 +118,8 @@ func SetSiteConfig(siteConfig *SiteConfig) {
 }
 
 func loadConfig() (err error) {
-	cfg = defaultGochanConfig
+	cfg = new(GochanConfig)
+	*cfg = *defaultGochanConfig
 	if testing.Testing() && !loadFileInTest {
 		// create a dummy config for testing if we're using go test
 		cfg = defaultGochanConfig

@@ -7,7 +7,8 @@ import (
 
 func setDefaultCfgIfNotSet() {
 	if cfg == nil {
-		cfg = defaultGochanConfig
+		cfg = new(GochanConfig)
+		*cfg = *defaultGochanConfig
 	}
 }
 
