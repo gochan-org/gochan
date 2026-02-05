@@ -48,13 +48,13 @@ var (
 		{
 			name:        "Postgres generic query, no prefix",
 			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
-			expectedSQL: "SELECT * FROM posts WHERE id = $1 and name = $2",
+			expectedSQL: "SELECT * FROM posts WHERE id = ? and name = ?",
 			driver:      "postgres",
 		},
 		{
 			name:        "SQLite generic query, no prefix",
 			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
-			expectedSQL: "SELECT * FROM posts WHERE id = $1 and name = $2",
+			expectedSQL: "SELECT * FROM posts WHERE id = ? and name = ?",
 			driver:      "sqlite3",
 		},
 		{
@@ -67,14 +67,14 @@ var (
 		{
 			name:        "Postgres generic query, with prefix",
 			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
-			expectedSQL: "SELECT * FROM gc_posts WHERE id = $1 and name = $2",
+			expectedSQL: "SELECT * FROM gc_posts WHERE id = ? and name = ?",
 			driver:      "postgres",
 			prefix:      "gc_",
 		},
 		{
 			name:        "SQLite generic query, with prefix",
 			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
-			expectedSQL: "SELECT * FROM gc_posts WHERE id = $1 and name = $2",
+			expectedSQL: "SELECT * FROM gc_posts WHERE id = ? and name = ?",
 			driver:      "sqlite3",
 			prefix:      "gc_",
 		},
@@ -88,14 +88,14 @@ var (
 		{
 			name:        "Postgres query with IP replacement",
 			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
-			expectedSQL: "SELECT ip, ip, some_param, some_param FROM gc_posts WHERE ip = $1 OR ip = $2",
+			expectedSQL: "SELECT ip, ip, some_param, some_param FROM gc_posts WHERE ip = ? OR ip = ?",
 			driver:      "postgres",
 			prefix:      "gc_",
 		},
 		{
 			name:        "SQLite query with IP replacement",
 			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
-			expectedSQL: "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM gc_posts WHERE ip = INET6_ATON($1) OR ip = INET6_NTOA($2)",
+			expectedSQL: "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM gc_posts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
 			driver:      "sqlite3",
 			prefix:      "gc_",
 		},

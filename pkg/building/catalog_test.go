@@ -68,12 +68,7 @@ func doCatalogTest(t *testing.T, minified bool) {
 	mockSelectNonHiddenSections(mock)
 	getBoardQuery := `SELECT\s+` +
 		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description, created_at\s+` +
-		`FROM boards INNER JOIN\s*\(\s*SELECT id, hidden FROM sections\s*\) s ON boards.section_id = s\.id WHERE boards\.id = `
-	if dbDriver == "mysql" {
-		getBoardQuery += `\?`
-	} else {
-		getBoardQuery += `\$1`
-	}
+		`FROM boards INNER JOIN\s*\(\s*SELECT id, hidden FROM sections\s*\) s ON boards.section_id = s\.id WHERE boards\.id = \?`
 	mock.ExpectPrepare(getBoardQuery).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{
 			"id", "section_id", "uri", "dir", "navbar_position", "title", "subtitle", "description", "created_at",
@@ -108,11 +103,11 @@ func doCatalogTest(t *testing.T, minified bool) {
 			true, true, true, true, false, "GB", "United Kingdom", false,
 		}),
 	)
-	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM posts WHERE thread_id = \(\s*SELECT thread_id FROM posts WHERE id = \$1\) AND is_deleted = FALSE AND is_top_post = FALSE`).ExpectQuery().
+	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM posts WHERE thread_id = \(\s*SELECT thread_id FROM posts WHERE id = \?\) AND is_deleted = FALSE AND is_top_post = FALSE`).ExpectQuery().
 		WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(4))
-	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM posts WHERE thread_id = \(\s*SELECT thread_id FROM posts WHERE id = \$1\) AND is_deleted = FALSE AND is_top_post = FALSE`).ExpectQuery().
+	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM posts WHERE thread_id = \(\s*SELECT thread_id FROM posts WHERE id = \?\) AND is_deleted = FALSE AND is_top_post = FALSE`).ExpectQuery().
 		WithArgs(2).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
-	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM posts WHERE thread_id = \(\s*SELECT thread_id FROM posts WHERE id = \$1\) AND is_deleted = FALSE AND is_top_post = FALSE`).ExpectQuery().
+	mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM posts WHERE thread_id = \(\s*SELECT thread_id FROM posts WHERE id = \?\) AND is_deleted = FALSE AND is_top_post = FALSE`).ExpectQuery().
 		WithArgs(3).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(3))
 	serverutil.InitMinifier()
 

@@ -41,7 +41,7 @@ func mockSetupGetIPBanByID(t *testing.T, mock sqlmock.Sqlmock, banID int, driver
 
 	var rangeStartColumn, rangeEndColumn string
 	switch driver {
-	case "mysql":
+	case "mysql", "sqlite3":
 		rangeStartColumn = "INET6_NTOA(range_start)"
 		rangeEndColumn = "INET6_NTOA(range_end)"
 		getBanSQL += `INET6_NTOA\(range_start\), INET6_NTOA\(range_end\),`
@@ -50,12 +50,7 @@ func mockSetupGetIPBanByID(t *testing.T, mock sqlmock.Sqlmock, banID int, driver
 		rangeStartColumn = "range_start"
 		rangeEndColumn = "range_end"
 		getBanSQL += "range_start, range_end,"
-		getBanSQL2 += `\$1`
-	case "sqlite3":
-		rangeStartColumn = "INET6_NTOA(range_start)"
-		rangeEndColumn = "INET6_NTOA(range_end)"
-		getBanSQL += `INET6_NTOA\(range_start\), INET6_NTOA\(range_end\),`
-		getBanSQL2 += `\$1`
+		getBanSQL2 += `\?`
 	}
 
 	expectQuery := mock.ExpectPrepare(getBanSQL + getBanSQL2).ExpectQuery().WithArgs(banID)

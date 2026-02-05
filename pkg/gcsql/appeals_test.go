@@ -97,14 +97,14 @@ func testRunnerGetAppeals(t *testing.T, tC *testCaseGetAppeals, driver string) {
 
 	query := `SELECT id, staff_id, staff_username, ip_ban_id, appeal_text, is_denied, is_ban_active, ban_expires_at, timestamp FROM v_appeals`
 	if tC.args.BanID > 0 {
-		switch driver {
-		case "mysql":
-			query += ` WHERE ip_ban_id = \?`
-		case "sqlite3":
-			fallthrough
-		case "postgres":
-			query += ` WHERE ip_ban_id = \$1`
-		}
+		// switch driver {
+		// case "mysql":
+		query += ` WHERE ip_ban_id = \?`
+		// case "sqlite3":
+		// 	fallthrough
+		// case "postgres":
+		// 	query += ` WHERE ip_ban_id = \$1`
+		// }
 	}
 	if tC.args.OrderDescending {
 		query += " ORDER BY id DESC"
@@ -173,18 +173,18 @@ func testRunnerApproveAppeal(t *testing.T, tC *testCaseApproveAppeals, sqlDriver
 	insertBanAudit := `INSERT INTO ip_ban_audit\s*\(ip_ban_id, staff_id, is_active, is_thread_ban, expires_at, appeal_at, permanent, ` +
 		`staff_note, message, can_appeal\)\s*VALUES\(`
 	insertAppealsAudit := `INSERT INTO ip_ban_appeals_audit \(appeal_id, appeal_text, staff_id, is_denied\)\s*VALUES\(`
-	switch sqlDriver {
-	case "mysql":
-		checkAppealsSQL += `\?`
-		deactivateSQL += `\?`
-		insertBanAudit += `\?, \?, FALSE, \?, \?, \?, \?, \?, \?, \?\)`
-		insertAppealsAudit += `\?, \(SELECT appeal_text FROM ip_ban_appeals WHERE id = \?\), \?, 'Appeal approved, ban deactivated.', FALSE\)`
-	case "sqlite3", "postgres":
-		checkAppealsSQL += `\$1`
-		deactivateSQL += `\$1`
-		insertBanAudit += `\$1, \$2, FALSE, \$3, \$4, \$5, \$6, \$7, \$8, \$9\)`
-		insertAppealsAudit += `\$1, \(SELECT appeal_text FROM ip_ban_appeals WHERE id = \$2\), \$3, 'Appeal approved, ban deactivated.', FALSE\)`
-	}
+	// switch sqlDriver {
+	// case "mysql":
+	checkAppealsSQL += `\?`
+	deactivateSQL += `\?`
+	insertBanAudit += `\?, \?, FALSE, \?, \?, \?, \?, \?, \?, \?\)`
+	insertAppealsAudit += `\?, \(SELECT appeal_text FROM ip_ban_appeals WHERE id = \?\), \?, 'Appeal approved, ban deactivated.', FALSE\)`
+	// case "sqlite3", "postgres":
+	// 	checkAppealsSQL += `\$1`
+	// 	deactivateSQL += `\$1`
+	// 	insertBanAudit += `\$1, \$2, FALSE, \$3, \$4, \$5, \$6, \$7, \$8, \$9\)`
+	// 	insertAppealsAudit += `\$1, \(SELECT appeal_text FROM ip_ban_appeals WHERE id = \$2\), \$3, 'Appeal approved, ban deactivated.', FALSE\)`
+	// }
 	checkAppealsSQL += " AND is_denied = FALSE"
 
 	mock.ExpectBegin()

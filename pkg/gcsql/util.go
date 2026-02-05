@@ -137,26 +137,11 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	if dbConn == nil {
 		return "", ErrNotConnected
 	}
-
-	prepared := dbConn.replacer.Replace(query)
-
-	switch dbConn.driver {
-	case "mysql":
-		// no change needed
-	case "sqlite3":
-		fallthrough
-	case "postgres":
-		arr := strings.Split(prepared, "?")
-		for i := range arr {
-			if i == len(arr)-1 {
-				break
-			}
-			arr[i] += fmt.Sprintf("$%d", i+1)
-		}
-		prepared = strings.Join(arr, "")
-	default:
+	if !slices.Contains(Drivers(), dbConn.driver) {
 		return "", ErrUnsupportedDB
 	}
+
+	prepared := dbConn.replacer.Replace(query)
 
 	prepared = ipFuncRE.ReplaceAllStringFunc(prepared, func(s string) string {
 		parts := ipFuncRE.FindStringSubmatch(s)
