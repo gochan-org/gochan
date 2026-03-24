@@ -80,6 +80,11 @@ func UpdateDatabase() error {
 		}
 	}
 
+	oldVersion, _, err := gcsql.GetCompleteDatabaseVersion()
+	if err != nil {
+		return err
+	}
+
 	switch sqlConfig.DBtype {
 	case "mysql":
 		err = updateMysqlDB(ctx, &sqlConfig, errEv)
@@ -98,6 +103,12 @@ func UpdateDatabase() error {
 
 	if err = updateFilters(ctx, &sqlConfig, errEv); err != nil {
 		return err
+	}
+
+	// show warnings for necessary manual action
+	if oldVersion < 7 {
+		gcutil.LogWarning().Int("oldVersion", oldVersion).
+			Msg("MANUAL ACTION POSSIBLY REQUIRED: Some board settings have been moved from the board table to board configuration, review changelog for details")
 	}
 
 	query := `UPDATE DBPREFIXdatabase_version SET version = ? WHERE component = 'gochan'`
