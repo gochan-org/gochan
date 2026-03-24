@@ -1,4 +1,4 @@
-import $, { noop } from "jquery";
+import $ from "jquery";
 
 import { getBooleanStorageVal } from "../storage";
 
@@ -20,7 +20,7 @@ export class TopBarButton {
 	 * @param title The text shown on the button
 	 * @param action The function executed when the button is clicked
 	 */
-	constructor(title: string, action: ()=>any = noop, beforeAfter: BeforeAfter = {}) {
+	constructor(title: string, action: ()=>any = $.noop, beforeAfter: BeforeAfter = {}) {
 		this.title = title;
 		this.buttonAction = action;
 		this.button = $<HTMLLinkElement>("<a/>").prop({
