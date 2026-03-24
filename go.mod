@@ -15,7 +15,7 @@ require (
 	github.com/frustra/bbcode v0.0.0-20201127003707-6ef347fbe1c8
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/ip2location/ip2location-go/v9 v9.8.0
-	github.com/lib/pq v1.11.2
+	github.com/lib/pq v1.12.0
 	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/rs/zerolog v1.34.0
@@ -25,7 +25,7 @@ require (
 	github.com/vadv/gopher-lua-libs v0.8.0
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/crypto v0.49.0
-	golang.org/x/image v0.37.0
+	golang.org/x/image v0.38.0
 	golang.org/x/net v0.52.0
 	golang.org/x/term v0.41.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
