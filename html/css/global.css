@@ -226,10 +226,12 @@ input, textarea {
 
 table#postbox-static {
   border: none;
-  margin: 0px auto;
 }
 table#postbox-static tr, table#postbox-static td {
   border: none;
+}
+table#postbox-static {
+  margin: 0px auto;
 }
 
 .greentext {
