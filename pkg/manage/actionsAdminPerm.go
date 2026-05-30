@@ -170,19 +170,10 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards, map[string]any{
-		"siteConfig": config.GetSiteConfig(),
-		"sections":   sections,
-		"boards":     boards,
-		"board":      gcsql.Board{
-			// AnonymousName:    "Anonymous",
-			// MaxFilesize:      1000 * 1000 * 15,
-			// EnableCatalog:    true,
-			// AutosageAfter:    200,
-			// NoImagesAfter:    -1,
-			// MaxMessageLength: 1500,
-		},
+		"siteConfig":  config.GetSiteConfig(),
+		"sections":    sections,
+		"boards":      boards,
 		"boardConfig": config.GetBoardConfig(""),
-		"editing":     false,
 	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err
@@ -273,7 +264,6 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *g
 		"boards":      boards,
 		"board":       board,
 		"boardConfig": config.GetBoardConfig(""),
-		"editing":     requestType == boardRequestTypeViewSingleBoard || requestType == boardRequestTypeModify,
 	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err
