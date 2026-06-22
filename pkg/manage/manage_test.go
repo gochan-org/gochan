@@ -39,7 +39,7 @@ var (
 			path:         "/manage/login",
 			method:       "GET",
 			expectStatus: http.StatusOK,
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				if !assert.NotNil(t, output) {
 					t.FailNow()
 				}
@@ -63,7 +63,7 @@ var (
 				"password": {"password"},
 			},
 			expectStatus: http.StatusFound,
-			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+			prepareMock: func(_ *testing.T, mock sqlmock.Sqlmock) {
 				expectedSum := gcutil.BcryptSum("password")
 				mock.ExpectPrepare(loginQueryRE).ExpectQuery().WithArgs("admin").WillReturnRows(
 					sqlmock.NewRows([]string{"id", "username", "password_checksum", "global_rank", "added_on", "last_login", "is_active"}).
@@ -76,7 +76,7 @@ var (
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				assert.Nil(t, output) // redirect, output is nil
 			},
 		}, {
@@ -92,7 +92,7 @@ var (
 			},
 			expectStatus: http.StatusUnauthorized,
 			expectError:  true,
-			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+			prepareMock: func(_ *testing.T, mock sqlmock.Sqlmock) {
 				notExpectedSum := gcutil.BcryptSum("password")
 				mock.ExpectPrepare(loginQueryRE).ExpectQuery().WithArgs("admin").WillReturnRows(
 					sqlmock.NewRows([]string{"id", "username", "password_checksum", "global_rank", "added_on", "last_login", "is_active"}).
@@ -111,7 +111,7 @@ var (
 			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm)
 			},
 		},
@@ -124,7 +124,7 @@ var (
 			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "mod", Rank: 2}, output, noForm)
 			},
 		},
@@ -142,7 +142,7 @@ var (
 				)
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, changeRankForm)
 			},
 		},
@@ -160,7 +160,7 @@ var (
 				)
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, changePasswordForm)
 			},
 		},
@@ -178,7 +178,7 @@ var (
 				)
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "mod", Rank: 2}, output, changePasswordForm)
 			},
 		},
@@ -189,7 +189,7 @@ var (
 			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
 			expectStatus: http.StatusForbidden,
 			expectError:  true,
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, err error) {
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},
@@ -201,7 +201,7 @@ var (
 			staff:        &gcsql.Staff{Username: "mod", Rank: 2},
 			expectStatus: http.StatusForbidden,
 			expectError:  true,
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, err error) {
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},
@@ -231,7 +231,7 @@ var (
 					gcsql.Staff{Username: "janitor", Rank: 1},
 					gcsql.Staff{Username: "newuser", Rank: 1})
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				expectedStaff := append(genericStaffList, gcsql.Staff{Username: "newuser", Rank: 1})
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm, expectedStaff...)
 			},
@@ -250,11 +250,11 @@ var (
 				"rank":            {"1"},
 			},
 			expectError: true,
-			prepareMock: func(t *testing.T, mock sqlmock.Sqlmock) {
+			prepareMock: func(_ *testing.T, mock sqlmock.Sqlmock) {
 				mock.ExpectPrepare(`SELECT COUNT\(\*\) FROM staff WHERE username = \?`).ExpectQuery().WithArgs("mod").
 					WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, err error) {
 				assert.ErrorIs(t, err, gcsql.ErrStaffAlreadyExists)
 				assert.Empty(t, output)
 			},
@@ -279,7 +279,7 @@ var (
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm)
 			},
 		},
@@ -303,7 +303,7 @@ var (
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "mod", Rank: 2}, output, noForm)
 			},
 		},
@@ -320,7 +320,7 @@ var (
 				"passwordconfirm": {"newpassword"},
 			},
 			expectError: true,
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, err error) {
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},
@@ -344,7 +344,7 @@ var (
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				getStaffMockHelper(t, mock)
 			},
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, _ error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, _ error) {
 				validateStaffOutput(t, &gcsql.Staff{Username: "admin", Rank: 3}, output, newUserForm, genericStaffList...)
 			},
 		},
@@ -360,7 +360,7 @@ var (
 				"rank":     {"2"},
 			},
 			expectError: true,
-			validateOutput: func(t *testing.T, output any, writer *httptest.ResponseRecorder, err error) {
+			validateOutput: func(t *testing.T, output any, _ *httptest.ResponseRecorder, err error) {
 				assert.ErrorIs(t, err, ErrInsufficientPermission)
 				assert.Empty(t, output)
 			},

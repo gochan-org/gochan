@@ -83,7 +83,7 @@ func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 	return buf.String(), err
 }
 
-func appealConversationCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
+func appealConversationCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	appealID, err := params.Int("appealID")
 	if err != nil {

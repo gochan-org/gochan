@@ -76,7 +76,7 @@ type staffInfoJSON struct {
 	Appeals  []gcsql.Appeal   `json:"appeals,omitempty"`
 }
 
-func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func staffInfoCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,
