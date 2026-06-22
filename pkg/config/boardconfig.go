@@ -209,6 +209,27 @@ func (bc *BoardConfig) IsGlobal() bool {
 	return bc.isGlobal
 }
 
+// EqualsGlobalConfig returns true if the BoardConfig has the same data as the global configuration. It
+// can/should be used to determine if a <board>-config.json file should be created or would be redundant
+func (bc *BoardConfig) EqualsGlobalConfig() bool {
+	if bc.isGlobal {
+		return true // returned by GetBoardConfig given an empty string or a board without a custom configuration file
+	}
+	globalCfg := cfg.BoardConfig
+
+	bcJSON, err := json.Marshal(bc)
+	if err != nil {
+		return false
+	}
+
+	globalJSON, err := json.Marshal(globalCfg)
+	if err != nil {
+		return false
+	}
+
+	return string(bcJSON) == string(globalJSON)
+}
+
 type BoardCooldowns struct {
 	// NewThread is the number of seconds the user must wait before creating new threads.
 	// Default: 30
@@ -585,7 +606,11 @@ func GetBoardConfig(board string) *BoardConfig {
 	return &bc
 }
 
-func getBoardConfigPath(board string) string {
+// GetBoardCOnfigPath returns the path to the board's configuration file, or the default path
+// (<board>-config.json in the same directory as gochan.json) if it doesn't exist yet. For backwards
+// compatibility, it will check for board.json in /<document root>/<board> first, and if it exists, return that path instead,.
+// though putting configuration in a publicly accessible area is discouraged.
+func GetBoardConfigPath(board string) string {
 	// expected to be called with a board when loading the board configuration file for the first time, may or may not exist
 	// to be created in the same directory as gochan.json when creating or modifying a board
 	if cfg == nil {
@@ -615,7 +640,7 @@ func ReloadBoardConfig(dir string) error {
 	var boardCfgPath string
 	if boardCfg.isGlobal || boardCfg.boardConfigPath == "" {
 		// board config hasn't been loaded yet
-		boardCfgPath = getBoardConfigPath(dir)
+		boardCfgPath = GetBoardConfigPath(dir)
 	} else {
 		boardCfgPath = boardCfg.boardConfigPath
 	}
@@ -656,15 +681,18 @@ func WriteBoardConfig(board string) error {
 		return errors.New("no board specified")
 	}
 	bc := GetBoardConfig(board)
-	cfgPath := getBoardConfigPath(board)
+	cfgPath := GetBoardConfigPath(board)
 
 	fd, err := os.OpenFile(cfgPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, NormalFileMode)
 	if err != nil {
 		return err
 	}
 	defer fd.Close()
+	enc := json.NewEncoder(fd)
+	enc.SetIndent("", "\t")
+	enc.SetEscapeHTML(false)
 
-	if err = json.NewEncoder(fd).Encode(bc); err != nil {
+	if err = enc.Encode(bc); err != nil {
 		return err
 	}
 	return nil

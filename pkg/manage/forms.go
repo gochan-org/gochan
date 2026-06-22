@@ -64,26 +64,27 @@ func boardsRequestType(request *http.Request) boardRequestType {
 }
 
 type createOrModifyBoardForm struct {
-	Dir              string `form:"dir,notempty" method:"POST"`
-	Title            string `form:"title,required,notempty" method:"POST"`
-	Subtitle         string `form:"subtitle,required" method:"POST"`
-	Description      string `form:"description,required" method:"POST"`
-	Section          int    `form:"section,required" method:"POST"`
-	NavBarPosition   int    `form:"navbarposition,required" method:"POST"`
-	MaxFileSize      int    `form:"maxfilesize,required" method:"POST"`
-	MaxThreads       int    `form:"maxthreads,required" method:"POST"`
-	DefaultStyle     string `form:"defaultstyle,required,notempty" method:"POST"`
-	Locked           bool   `form:"locked" method:"POST"`
-	AnonName         string `form:"anonname" method:"POST"`
-	AutosageAfter    int    `form:"autosageafter,required" method:"POST"`
-	NoUploadsAfter   int    `form:"nouploadsafter,required" method:"POST"`
-	MaxMessageLength int    `form:"maxmessagelength,required" method:"POST"`
-	MinMessageLength int    `form:"minmessagelength,required" method:"POST"`
-	EmbedsAllowed    bool   `form:"embedsallowed" method:"POST"`
-	RedirectToThread bool   `form:"redirecttothread" method:"POST"`
-	RequireFile      bool   `form:"requirefile" method:"POST"`
-	EnableCatalog    bool   `form:"enablecatalog" method:"POST"`
-	Rebuild          bool   `form:"rebuild" method:"POST"`
+	Dir               string `form:"dir,notempty" method:"POST"`
+	Title             string `form:"title,required,notempty" method:"POST"`
+	Subtitle          string `form:"subtitle,required" method:"POST"`
+	Description       string `form:"description,required" method:"POST"`
+	Section           int    `form:"section,required" method:"POST"`
+	NavBarPosition    int    `form:"navbarposition,required" method:"POST"`
+	MaxFileSize       int    `form:"maxfilesize,required" method:"POST"`
+	MaxThreads        int    `form:"maxthreads,required" method:"POST"`
+	DefaultStyle      string `form:"defaultstyle,required,notempty" method:"POST"`
+	Locked            bool   `form:"locked" method:"POST"`
+	AnonName          string `form:"anonname" method:"POST"`
+	AutosageAfter     int    `form:"autosageafter,required" method:"POST"`
+	NoUploadsAfter    int    `form:"nouploadsafter,required" method:"POST"`
+	MaxMessageLength  int    `form:"maxmessagelength,required" method:"POST"`
+	MinMessageLength  int    `form:"minmessagelength,required" method:"POST"`
+	EmbedsAllowed     bool   `form:"embedsallowed" method:"POST"`
+	RedirectToThread  bool   `form:"redirecttothread" method:"POST"`
+	RequireFileThread bool   `form:"requirefilethread" method:"POST"`
+	RequireFileAll    bool   `form:"requirefile" method:"POST"`
+	EnableCatalog     bool   `form:"enablecatalog" method:"POST"`
+	Rebuild           bool   `form:"rebuild" method:"POST"`
 
 	// create or modify submit button
 	DoCreate string `form:"docreate" method:"POST"`
@@ -133,93 +134,27 @@ func (brf *createOrModifyBoardForm) fillBoard(board *gcsql.Board) {
 	board.Description = brf.Description
 	board.SectionID = brf.Section
 	board.NavbarPosition = brf.NavBarPosition
-	// board.MaxFilesize = brf.MaxFileSize
-	// board.MaxThreads = brf.MaxThreads
-	// board.DefaultStyle = brf.DefaultStyle
-	// board.Locked = brf.Locked
-	// board.AnonymousName = brf.AnonName
-	// board.AutosageAfter = brf.AutosageAfter
-	// board.NoImagesAfter = brf.NoUploadsAfter
-	// board.MaxMessageLength = brf.MaxMessageLength
-	// board.MinMessageLength = brf.MinMessageLength
-	// board.AllowEmbeds = brf.EmbedsAllowed
-	// board.RedirectToThread = brf.RedirectToThread
-	// board.RequireFile = brf.RequireFile
-	// board.EnableCatalog = brf.EnableCatalog
 }
 
-func (brf *createOrModifyBoardForm) differsFromDefaultConfig() bool {
+func (brf *createOrModifyBoardForm) writeConfig() error {
 	boardCfg := config.GetBoardConfig(brf.Dir)
-	// boardCfg.AllPostsRequireUpload
-	// boardCfg.AllowDiceRerolls
-	// boardCfg.AllowEmbeds
-	// boardCfg.AllowOtherExtensions
-	// boardCfg.AnonymousName
-	// boardCfg.AutosageAfter
-	// boardCfg.BanColors
-	// boardCfg.BanMessage
-	// boardCfg.Banners
-	// boardCfg.Cooldowns
-	// boardCfg.CustomFlags
-	// boardCfg.CyclicThreadNumPosts
-	// boardCfg.DateTimeFormat
-	// boardCfg.DefaultStyle
-	// boardCfg.EnableBBcode
-	// boardCfg.EmbedWidth
-	// boardCfg.EmbedHeight
-	// boardCfg.EnableCatalog
-	// boardCfg.EnableCyclicThreads
-	// boardCfg.EnableGeoIP
-	// boardCfg.EnableNoFlag
-	// boardCfg.EnableSpoileredImages
-	// boardCfg.EnableSpoileredThreads
-	// boardCfg.ExiftoolPath
-	// boardCfg.ForceAnonymous
-	// boardCfg.ImagesOpenNewTab
-	// boardCfg.IncludeGlobalStyles
-	// boardCfg.IncludeScripts
-	// boardCfg.InheritGlobalStyles
-	// boardCfg.Lockdown
-	// boardCfg.LockdownMessage
-	// boardCfg.MaxFileSize
-	// boardCfg.MaxMessageLength
-	// boardCfg.MaxThreads
-	// boardCfg.MaxUploads
-	// boardCfg.MinMessageLength
-	// boardCfg.NewTabOnExternalLinks
-	// boardCfg.NewThreadsRequireUpload
-	// boardCfg.NoUploadsAfter
-	// boardCfg.RedirectToThread
-	// boardCfg.RejectDuplicateUploads
-	// boardCfg.RenderURLsAsLinks
-	// boardCfg.RepliesOnBoardPage
-	// boardCfg.ReservedTrips
-	// boardCfg.ShowPosterID
-	// boardCfg.StickyRepliesOnBoardPage
-	// boardCfg.StripImageMetadata
-	// boardCfg.Styles
-	// boardCfg.ThreadsPerPage
-	// boardCfg.ThumbHeight
-	// boardCfg.ThumbHeightCatalog
-	// boardCfg.ThumbHeightReply
-	// boardCfg.ThumbWidth
-	// boardCfg.ThumbWidthCatalog
-	// boardCfg.ThumbWidthReply
-	// boardCfg.Worksafe
 
-	return brf.MaxFileSize != boardCfg.MaxFileSize ||
-		brf.MaxThreads != boardCfg.MaxThreads ||
-		brf.DefaultStyle != boardCfg.DefaultStyle ||
-		brf.Locked != boardCfg.Lockdown ||
-		brf.AnonName != boardCfg.AnonymousName ||
-		brf.AutosageAfter != boardCfg.AutosageAfter ||
-		brf.NoUploadsAfter != boardCfg.NoUploadsAfter ||
-		brf.MaxMessageLength != boardCfg.MaxMessageLength ||
-		brf.MinMessageLength != boardCfg.MinMessageLength ||
-		brf.EmbedsAllowed != boardCfg.AllowEmbeds ||
-		brf.RedirectToThread != boardCfg.RedirectToThread ||
-		brf.RequireFile != boardCfg.AllPostsRequireUpload ||
-		brf.EnableCatalog != boardCfg.EnableCatalog
+	boardCfg.MaxFileSize = brf.MaxFileSize
+	boardCfg.MaxThreads = brf.MaxThreads
+	boardCfg.DefaultStyle = brf.DefaultStyle
+	boardCfg.Lockdown = brf.Locked
+	boardCfg.AnonymousName = brf.AnonName
+	boardCfg.AutosageAfter = brf.AutosageAfter
+	boardCfg.NoUploadsAfter = brf.NoUploadsAfter
+	boardCfg.MaxMessageLength = brf.MaxMessageLength
+	boardCfg.MinMessageLength = brf.MinMessageLength
+	boardCfg.AllowEmbeds = brf.EmbedsAllowed
+	boardCfg.RedirectToThread = brf.RedirectToThread
+	boardCfg.NewThreadsRequireUpload = brf.RequireFileThread
+	boardCfg.AllPostsRequireUpload = brf.RequireFileAll
+	boardCfg.EnableCatalog = brf.EnableCatalog
+	config.SetBoardConfig(brf.Dir, boardCfg)
+	return config.WriteBoardConfig(brf.Dir)
 }
 
 type appealsForm struct {

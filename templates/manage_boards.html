@@ -26,7 +26,7 @@
 			<input type="hidden" name="dir" value="{{.Dir}}"/>
 		{{- else -}}
 		<tr>
-			<td>Directory</td>
+			<td>Directory {{infoHover "Must be unique and not contain slashes"}}</td>
 			<td><input type="text" name="dir" /></td>
 		</tr>
 		{{- end -}}
@@ -43,7 +43,7 @@
 			<td><input type="text" name="description" value="{{$.board.Description}}"></td>
 		</tr>
 		<tr>
-			<td>Section</td>
+			<td>Section {{infoHover "If you want the board to be hidden, create a hidden section and add this board to it"}}</td>
 			<td><select name="section">
 				{{- range $_, $section := $.sections -}}
 					<option value="{{$section.ID}}" {{if eq $section.ID $.board.SectionID -}}
@@ -111,7 +111,11 @@
 			<td><input type="checkbox" name="redirecttothread" {{if $.boardConfig.RedirectToThread}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
-			<td>Require file in OP</td>
+			<td>Require file for new threads</td>
+			<td><input type="checkbox" name="requirefilethread" {{if $.boardConfig.NewThreadsRequireUpload}}checked="checked"{{end}}/></td>
+		</tr>
+		<tr>
+			<td>Require file for all posts</td>
 			<td><input type="checkbox" name="requirefile" {{if $.boardConfig.AllPostsRequireUpload}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
@@ -119,10 +123,12 @@
 			<td><input type="checkbox" name="enablecatalog" {{if $.boardConfig.EnableCatalog}}checked="checked"{{end}}/></td>
 		</tr>
 		<tr>
-			<td>{{if $.editing}}Rebuild{{else}}Build{{end}} board on submit</td>
+			<td>{{with $.board}}Rebuild{{else}}Build{{end}} board on submit</td>
 			<td><input type="checkbox" name="rebuild" checked></td>
 		</tr>
 	</table>
+	<br/>
+	<p>All fields after "Section" and before "{{with $.board}}Rebuild{{else}}Build{{end}} board on submit" are stored in the board's configuration file{{with $.boardConfigPath}}, {{.}}.<br>This {{else}}, which {{end}} can be modified separately, though changes will not take effect until gochan is restarted. Some fields in the file do not appear here (yet), like a list of themes and banners unique to the board (Styles and Banners, respectively). If all fields are the same as their respective global values in gochan.json, a board configuration file will not be created.</p>
 	{{- with $.board -}}
 		<input type="submit" name="domodify" value="Save changes" onclick="return confirm('Click ok to confirm')"/>
 		<input type="submit" name="dodelete" value="Delete board" onclick="return confirm('Are you sure you want to delete this board? This action cannot be undone!')"/>

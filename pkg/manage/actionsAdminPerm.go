@@ -145,6 +145,13 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff
 			return nil, err
 		}
 		form.fillBoard(&board)
+
+		if err = form.writeConfig(); err != nil {
+			logger.Err(err).Caller().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Send()
+			return "", err
+		}
+		logger.Info().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Msg("Wrote board config")
+
 		if err = gcsql.CreateBoard(&board, true); err != nil {
 			logger.Err(err).Caller().Send()
 			return "", err
@@ -207,18 +214,25 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *g
 		return nil, err
 	}
 	var board *gcsql.Board
+	if requestType != boardRequestTypeViewBoards {
+		board, err = gcsql.GetBoardFromDir(boardDir)
+		if errors.Is(err, gcsql.ErrBoardDoesNotExist) {
+			logger.Warn().Err(err).Caller().Send()
+			return "", server.NewServerError(err, http.StatusBadRequest)
+		}
+		if err != nil {
+			logger.Err(err).Caller().Send()
+			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
+		}
+	}
 	switch requestType {
-	case boardRequestTypeViewSingleBoard:
-		if board, err = gcsql.GetBoardFromDir(boardDir); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
-		}
 	case boardRequestTypeModify:
-		if board, err = gcsql.GetBoardFromDir(boardDir); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
-		}
 		form.fillBoard(board)
+		if err = form.writeConfig(); err != nil {
+			logger.Err(err).Caller().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Send()
+			return "", server.NewServerError(err, http.StatusInternalServerError)
+		}
+		logger.Info().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Msg("Wrote board config")
 		if err = board.ModifyInDB(); err != nil {
 			logger.Err(err).Caller().Send()
 			return "", server.NewServerError("unable to apply changes", http.StatusInternalServerError)
@@ -230,19 +244,14 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *g
 				logger.Err(err).Caller().Send()
 				return "", err
 			}
-
 		}
 		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
 	case boardRequestTypeDelete:
-		board, err = gcsql.GetBoardFromDir(boardDir)
-		if err != nil {
-			logger.Err(err).Caller().Send()
-			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
-		}
 		if err = board.Delete(); err != nil {
 			logger.Err(err).Caller().Send()
 			return "", server.NewServerError("unable to delete board", http.StatusInternalServerError)
 		}
+		config.DeleteBoardConfig(boardDir)
 		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
 	}
 
@@ -259,11 +268,12 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *g
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards, map[string]any{
-		"siteConfig":  config.GetSiteConfig(),
-		"sections":    sections,
-		"boards":      boards,
-		"board":       board,
-		"boardConfig": config.GetBoardConfig(""),
+		"siteConfig":      config.GetSiteConfig(),
+		"sections":        sections,
+		"boards":          boards,
+		"board":           board,
+		"boardConfig":     config.GetBoardConfig(""),
+		"boardConfigPath": config.GetBoardConfigPath(board.Dir),
 	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err

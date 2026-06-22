@@ -59,14 +59,14 @@ func SetRandomSeed(seed string) {
 	cfg.RandomSeed = seed
 }
 
-// SetBoardConfig applies the configuration to the given board. It will panic if it is not run in a test environment
+// SetBoardConfig applies the configuration to the given board.
 func SetBoardConfig(board string, boardCfg *BoardConfig) error {
-	testutil.PanicIfNotTest()
 	setDefaultCfgIfNotSet()
 
-	if err := boardCfg.validateEmbedMatchers(); err != nil {
+	if err := boardCfg.validateBoardConfig(); err != nil {
 		return err
 	}
+
 	boardCfg.isGlobal = board == ""
 	if board == "" {
 		boardCfgPath := cfg.BoardConfig.boardConfigPath

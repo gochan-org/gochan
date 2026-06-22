@@ -9,23 +9,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func boardCfgModifyReadCfgCallback(t *testing.T, c *GochanConfig, basePath string) {
+	c.DocumentRoot = basePath
+	c.LogDir = path.Join(basePath, "logs")
+	c.DBtype = "sqlite3"
+	c.DBhost = path.Join(basePath, "gochan.db")
+	c.DBname = "gochan"
+	c.DBusername = "gochan"
+	c.DBpassword = "gochan"
+	c.StaffSessionDuration = "1mo"
+	c.CookieMaxAge = "1mo"
+	c.SiteName = "TestWriteBoardConfig"
+	c.CustomFlags = []geoip.Country{{Flag: "flag.png", Name: "Country"}}
+	writeJsonFile(t, path.Join(basePath, "equal-config.json"), c.BoardConfig)
+	writeJsonFile(t, path.Join(basePath, "changed-config.json"), c.BoardConfig)
+}
+
 func TestWriteBoardConfig(t *testing.T) {
 	basePath := t.TempDir()
 
 	assert.NoError(t, initializeExampleConfig(t, basePath, func(c *GochanConfig) {
-		c.DocumentRoot = basePath
-		c.LogDir = path.Join(basePath, "logs")
-		c.DBtype = "sqlite3"
-		c.DBhost = path.Join(basePath, "gochan.db")
-		c.DBname = "gochan"
-		c.DBusername = "gochan"
-		c.DBpassword = "gochan"
-		c.StaffSessionDuration = "1mo"
-		c.CookieMaxAge = "1mo"
-		c.SiteName = "TestWriteBoardConfig"
-		c.CustomFlags = []geoip.Country{{Flag: "flag.png", Name: "Country"}}
-		writeJsonFile(t, path.Join(basePath, "equal-config.json"), c.BoardConfig)
-		writeJsonFile(t, path.Join(basePath, "changed-config.json"), c.BoardConfig)
+		boardCfgModifyReadCfgCallback(t, c, basePath)
 	}))
 	assert.Equal(t, "TestWriteBoardConfig", cfg.SiteName)
 
@@ -58,4 +62,13 @@ func TestWriteBoardConfig(t *testing.T) {
 	assert.NoError(t, ReloadBoardConfig("changed"))
 	changedCfg = GetBoardConfig("changed")
 	assert.Equal(t, "new-style.css", changedCfg.DefaultStyle)
+}
+
+func TestEqualsBoardConfig(t *testing.T) {
+	basePath := t.TempDir()
+
+	assert.NoError(t, initializeExampleConfig(t, basePath, func(c *GochanConfig) {
+		boardCfgModifyReadCfgCallback(t, c, basePath)
+	}))
+
 }
