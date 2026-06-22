@@ -308,6 +308,17 @@ func PreloadModule(l *lua.LState) int {
 			RegisterStaffAction(action, methods...)
 			return 0
 		},
+		"set_custom_page_title": func(l *lua.LState) int {
+			requestV := l.CheckUserData(1)
+			request, ok := requestV.Value.(*http.Request)
+			if !ok {
+				l.ArgError(1, "expected http.Request")
+				return 0
+			}
+			title := l.CheckString(2)
+			SetCustomPageTitle(request, title)
+			return 0
+		},
 		"get_action_request_params": func(l *lua.LState) int {
 			reqV := l.CheckUserData(1)
 			if reqV.Type() != lua.LTUserData {

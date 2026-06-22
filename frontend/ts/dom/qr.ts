@@ -217,46 +217,43 @@ export function initQR() {
 	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
 
-	$postform.on("submit", function(e) {
+	$postform.on("submit", async function(e) {
 		fixFileList();
 		const $form = $<HTMLFormElement>(this);
 		e.preventDefault();
 		copyCaptchaResponse($form);
 		const data = new FormData(this);
 
-		$.ajax({
-			type: "POST",
-			url: $form.attr("action"),
-			enctype: "multipart/form-data",
-			data: data,
-			processData: false,
-			contentType: false,
-			dataType: "json",
-			success: (data: PostSubmitResponse, _status, _jqXHR) => {
+		await fetch($form.attr("action"), {
+			method: "POST",
+			body: data,
+			credentials: "same-origin"
+		}).then(response => response.json())
+			.then(async (data: PostSubmitResponse) => {
 				if(data.error) {
 					alertLightbox(data.error, "Error");
 					return;
 				}
 				if(data.thread !== location.pathname) {
-					// new thread
+				// new thread
 					location.pathname = data.thread;
 					return;
 				}
 				clearQR();
 				const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
 				setButtonTimeout("", cooldown);
-				$.get({
-					url: data.thread,
-					success: updateThreadSuccess
-				});
+				await fetch(data.thread, {
+					credentials: "same-origin"
+				}).then(response => response.text())
+					.then(updateThreadSuccess);
 				if(!getBooleanStorageVal("persistentqr", false))
 					closeQR();
 				return false;
-			},
-			error: (_jqXHR, _status, error) => {
+			})
+			.catch(error => {
 				alertLightbox(error, "Error");
-			}
-		});
+			});
+
 		return false;
 	});
 }

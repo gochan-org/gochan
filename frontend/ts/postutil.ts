@@ -91,7 +91,7 @@ function previewMoveHandler(e: JQuery.Event) {
 	});
 }
 
-function expandPost(e: JQuery.MouseEventBase) {
+async function expandPost(e: JQuery.MouseEventBase) {
 	e.preventDefault();
 	if($hoverPreview !== null) $hoverPreview.remove();
 	const $next = $(e.target).next();
@@ -115,14 +115,20 @@ function expandPost(e: JQuery.MouseEventBase) {
 		return;
 	}
 	if(e.type === "click") {
-		$.get(href, data => {
-			$post = $(data).find(`div#op${postID}, div#reply${postID}`).first();
-			if($post.length < 1) return; // post not on this page.
-			createPostPreview(e, $post, true);
-		}).catch((t, u, v) => {
-			alertLightbox(v, "Error");
-			return;
-		});
+		await fetch(href, { credentials: "same-origin" })
+			.then(response => {
+				if(!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+				return response.text();
+			})
+			.then(html => {
+				$post = $(html).find(`div#op${postID}, div#reply${postID}`).first();
+				if($post.length < 1) return; // post not on this page.
+				createPostPreview(e, $post, true);
+			})
+			.catch(err => {
+				alertLightbox(err && err.message ? err.message : String(err), "Error");
+				return;
+			});
 	}
 }
 

@@ -121,7 +121,7 @@ func recentPostsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.
 	return buf.String(), nil
 }
 
-func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func announcementsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, _ zerolog.Logger) (output any, err error) {
 	// return an array of announcements (with staff name instead of ID) and any errors
 	return getAllAnnouncements()
 }

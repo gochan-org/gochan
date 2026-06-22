@@ -1,13 +1,11 @@
 import $ from "jquery";
 
 import { alertLightbox } from "../dom/lightbox";
-import { $topbar, TopBarButton } from "../dom/topbar";
+import { $topbar, TopBarButton, menuItem } from "../dom/topbar";
 import "./sections";
-import "./filebans";
 import "./viewlog";
 import { isThreadLocked } from "../api/management";
-
-const reportsTextRE = /^Reports( \(\d+\))?/;
+import { getNumberStorageVal, setStorageVal } from "../storage";
 
 export let staffActions: StaffAction[] = [];
 let staffInfo: StaffInfo = null;
@@ -21,6 +19,20 @@ let $staffMenu: JQuery<HTMLElement> = null;
  * A button that opens $staffMenu
  */
 let $staffBtn: TopBarButton = null;
+
+let staffNotificationsInterval: number = null;
+let latestReportID: number = getNumberStorageVal("latestreport", -1);
+let latestAppealID: number = getNumberStorageVal("latestappeal", -1);
+$(document).on("gotStaffRank", (_e, rank:number) => {
+	if(rank >= 2 && staffNotificationsInterval === null) {
+		const intervalSeconds = getNumberStorageVal("reportinterval", 30);
+		staffNotificationsInterval = setInterval(updateStaffNotifications, intervalSeconds * 1000) as any as number;
+	}
+	if(rank > 0) {
+		$(".post select.post-actions").each(addManageEvents);
+		setupManagementEvents();
+	}
+});
 
 
 function dropdownHasItem(dropdown: any, item: string) {
@@ -67,107 +79,39 @@ function setupManagementEvents() {
 	});
 }
 
-interface BanFileJSON {
-	bantype: string;
-	board?: string;
-	fingerprinter?: string;
-	json: number;
-	staffnote: string;
-	ban?: string;
-	banmsg?: string;
-	filename?: string;
-	dofilenameban?: string;
-	checksum?: string;
-	dochecksumban?: string;
-}
-
-export function banFile(banType: string, filename: string, checksum: string, staffNote = "") {
-	const xhrFields: BanFileJSON = {
-		bantype: banType,
-		staffnote: staffNote,
-		json: 1
-	};
-	switch(banType) {
-	case "filename":
-		xhrFields.filename = filename;
-		xhrFields.dofilenameban = "Create";
-		break;
-	case "checksum":
-		xhrFields.checksum = checksum;
-		xhrFields.dochecksumban = "Create";
-		break;
-	default:
-		break;
-	}
-	return $.post({
-		url: `${webroot}manage/filebans`,
-		data: xhrFields
-	});
-}
-
-export function banFileFingerprint(fingerprint: string, ipBan: boolean, reason?: string, staffNote?: string) {
-	const xhrFields: BanFileJSON = {
-		bantype: "checksum",
-		checksum: fingerprint,
-		fingerprinter: "ahash",
-		ban: ipBan?"on":"",
-		banmsg: reason,
-		staffnote: staffNote,
-		json: 1,
-		dochecksumban: "Create"
-	};
-	return $.post({
-		url: `${webroot}manage/filebans`,
-		data: xhrFields
-	});
-}
-
-
 export async function initStaff() {
 	if(staffInfo !== null || staffActions?.length > 0)
 		// don't make multiple unnecessary AJAX requests
 		return staffInfo;
 
-	return $.ajax({
+	return await fetch(`${webroot}manage/staffinfo`, {
 		method: "GET",
-		url: `${webroot}manage/staffinfo`,
-		async: true,
-		cache: false,
-		dataType: "json",
-		success: (result:string|StaffInfo) => {
-			if(typeof result === "string") {
-				try {
-					staffInfo = JSON.parse(result);
-				} catch(e) {
-					// presumably not logged in
-					staffActions = [];
-				}
-			} else if(typeof result === "object") {
-				staffInfo = result;
-			}
-			staffActions = staffInfo?.actions ?? [];
-			return staffInfo;
-		},
-		error: (e: JQuery.jqXHR) => {
-			console.error("Error getting actions list:", e);
-		}
-	}).then(() => {
-		if(staffInfo.rank > 0)
-			setupManagementEvents();
+		cache: "no-cache",
+		credentials: "same-origin"
+	}).then(response => {
+		if(!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+		return response.json();
+	}).then((result:StaffInfo) => {
+		staffInfo = result;
+		updateLatestReportAppeal(staffInfo);
+		staffActions = staffInfo?.actions ?? [];
+		$(document).trigger("gotStaffRank", staffInfo.rank);
 		return staffInfo;
+	}).catch((ee) => {
+		throw new Error(`Error getting staff info: ${ee.statusText}`);
 	});
 }
 
 export async function getPostInfo(id: number):Promise<PostInfo> {
-	return $.ajax({
+	return await fetch(`${webroot}manage/postinfo?postid=${id}`, {
 		method: "GET",
-		url: `${webroot}manage/postinfo`,
-		data: {
-			postid: id
-		},
-		async: true,
-		cache: true,
-		dataType: "json"
+		cache: "no-cache",
+		credentials: "same-origin"
+	}).then(response => {
+		if(!response.ok) {
+			return Promise.reject(`Error fetching post info: ${response.status} ${response.statusText}`);
+		}
+		return response.json() as Promise<PostInfo>;
 	});
 }
 
@@ -194,17 +138,6 @@ export function banSelectedPost() {
 		}
 	}
 	window.location.pathname = `${webroot}manage/bans?dir=${boardDir}&postid=${postID}`;
-}
-
-/**
- * A helper function for creating a menu item
- */
-function menuItem(action: StaffAction|string, isCategory = false) {
-	return isCategory ? $("<div/>").append($("<b/>").text(action as string)) : $("<div/>").append(
-		$("<a/>").prop({
-			href: `${webroot}manage/${(action as StaffAction).id}`
-		}).text((action as StaffAction).title)
-	);
 }
 
 function getAction(id: string) {
@@ -235,31 +168,41 @@ export function createStaffMenu(staff = staffInfo) {
 		class: "dropdown-menu"
 	});
 
+	const logoutAction = getAction("logout");
+	const dashboardAction = getAction("dashboard");
 	$staffMenu.append(
-		menuItem(getAction("logout")),
-		menuItem(getAction("dashboard")));
+		menuItem(logoutAction.title, `${webroot}manage/${logoutAction.id}`),
+		menuItem(dashboardAction.title, `${webroot}manage/${dashboardAction.id}`),
+	);
 
-	const janitorActions = staffActions.filter(val => filterAction(val, 1));
-	$staffMenu.append(menuItem("Janitorial", true));
-	for(const action of janitorActions) {
-		$staffMenu.append(menuItem(action));
-	}
+	$staffMenu.append(menuItem("Janitorial"));
+	staffActions.filter(val => filterAction(val, 1)).map(action => {
+		$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
+	});
 
 	if(rank >= 2) {
 		const modActions = staffActions.filter(val => filterAction(val, 2));
 		if(modActions.length > 0)
-			$staffMenu.append(menuItem("Moderation", true));
-		for(const action of modActions) {
-			$staffMenu.append(menuItem(action));
+			$staffMenu.append(menuItem("Moderation"));
+		const items = modActions.map(action => menuItem(action.title, `${webroot}manage/${action.id}`));
+		for(const item of items) {
+			const text = item.text();
+			if((text === "Reports" && staffInfo.reports) ||
+				(text === "Ban Appeals" && staffInfo.appeals)) {
+				item
+					.find("a").text(`${text} (${(text === "Reports" ? staffInfo.reports.length : staffInfo.appeals.length)} open)`)
+					.addClass("text-bold")
+					.css("color", "red");
+			}
 		}
-		getReports().then(updateReports);
+		$staffMenu.append(...items);
 	}
-	if(rank === 3) {
+	if(rank >= 3) {
 		const adminActions = staffActions.filter(val => filterAction(val, 3));
 		if(adminActions.length > 0)
-			$staffMenu.append(menuItem("Administration", true));
+			$staffMenu.append(menuItem("Administration"));
 		for(const action of adminActions) {
-			$staffMenu.append(menuItem(action));
+			$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
 		}
 	}
 	createStaffButton();
@@ -288,37 +231,72 @@ export function addStaffThreadOptions() {
 function createStaffButton() {
 	if($staffBtn !== null || staffInfo === null || staffInfo.rank === 0)
 		return;
+	if($topbar.find(".topbar-staff").length === 0) {
+		$(`<div class="topbar-staff"></div>`).insertBefore($topbar.find(".topbar-watcher"));
+	}
 	$staffBtn = new TopBarButton("Staff", () => {
 		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);
-	});
+	}, ".topbar-staff");
 }
 
-function updateReports(reports: any[]) {
-	// append " (#)" to the Reports link, replacing # with the number of reports
-	$staffMenu.find("a").each((e, elem) => {
-		if(elem.text.search(reportsTextRE) !== 0) return;
-		const $span = $("<span/>").text(` (${reports.length})`).appendTo(elem);
-		if(reports.length > 0) {
-			// make it bold and red if there are reports
-			$span.css({
-				"font-weight": "bold",
-				"color": "red"
-			});
+function updateLatestReportAppeal(info: StaffInfo) {
+	if(info.rank >= 2) {
+		createStaffButton();
+		$staffBtn.button.empty();
+		if(info.reports || info.appeals) {
+			const elements = ["Staff ("];
+			if(info.reports) {
+				elements.push(`<span class="topbar-reports" title="Reports">R:${info.reports?.length ?? 0}</span>`);
+			}
+			if(info.appeals) {
+				if(info.reports) {
+					elements.push(", ");
+				}
+				elements.push(`<span class="topbar-appeals" title="Appeals">A:${info.appeals?.length ?? 0}</span>`);
+			}
+			elements.push(") ▼");
+			$staffBtn.button.append(...elements);
+			staffInfo.reports = info.reports;
+			staffInfo.appeals = info.appeals;
+		} else {
+			$staffBtn.button.text("Staff ▼");
 		}
-	});
+	}
+
+	if(info.reports?.length > 0) {
+		const latestReport = info.reports?.reduce((prev:PostReport, current:PostReport) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+		if(latestReport && latestReport.id > latestReportID) {
+			latestReportID = latestReport.id;
+			setStorageVal("latestreport", latestReportID);
+			Notification.requestPermission().then(permission => (permission === "granted")?
+				new Notification("New report", {
+					body: `New report for post ${latestReport.post_link} from ${latestReport.reporter_ip}\nReason: ${latestReport.reason}`,
+				}):null
+			);
+		}
+	}
+	if(info.appeals?.length > 0) {
+		const latestAppeal = info.appeals?.reduce((prev:Appeal, current:Appeal) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+		if(latestAppeal && latestAppeal.id > latestAppealID) {
+			latestAppealID = latestAppeal.id;
+			setStorageVal("latestappeal", latestAppealID);
+			Notification.requestPermission().then(permission => (permission === "granted")?
+				new Notification(`New appeal for ban ${latestAppeal.ban_id}`, {
+					body: latestAppeal.appeal_text,
+				}):null
+			);
+		}
+	}
 }
 
-function getReports() {
-	return $.ajax({
+async function updateStaffNotifications() {
+	await fetch(`${webroot}manage/staffinfo?noactions=1`, {
 		method: "GET",
-		url: `${webroot}manage/reports`,
-		data: {
-			json: "1"
-		},
-		async: true,
-		cache: false,
-		dataType: "json"
-	}).catch(e => {
-		return e;
-	});
+		cache: "no-cache",
+		credentials: "same-origin"
+	}).then<StaffInfo>(response => {
+		if(!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+		return response.json();
+	}).then(info => updateLatestReportAppeal(info))
+		.catch(err => console.log("Error updating staff notifications:", err));
 }

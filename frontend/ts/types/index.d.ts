@@ -31,6 +31,21 @@ declare global {
 		quote: (no: number) => void;
 	}
 
+
+	interface Appeal {
+		id: number;
+		ban_id: number;
+		appeal_text: string;
+		is_denied: boolean;
+	}
+
+	// /util/banner
+	interface Banner {
+		Filename: string;
+		Width: number;
+		Height: number;
+	}
+
 	// /boards.json
 	interface BoardsJSON {
 		boards: BoardJSON[];
@@ -139,6 +154,19 @@ declare global {
 		fingerprint?: string;
 	}
 
+	interface PostReport {
+		id: number;
+		post: number;
+		op: number;
+		board: string;
+		staff_user?: string;
+		reporter_ip: string;
+		poster_ip: string;
+		reason: string;
+		is_cleared: boolean;
+		post_link: string;
+	}
+
 	/**
 	 * An object representing a staff member retreived by requesting /manage/staffinfo
 	 */
@@ -159,6 +187,8 @@ declare global {
 		 * A list of pages that the logged in user has access to
 		 */
 		actions?: StaffAction[]
+		reports?: PostReport[];
+		appeals?: Appeal[];
 	}
 
 	/**
@@ -199,7 +229,4 @@ declare global {
 	 * The menu shown when the Staff button on the top bar is clicked
 	 */
 	let $staffMenu: JQuery<HTMLElement>;
-
-	// used for testing
-	var simpleHTML: string;
 }

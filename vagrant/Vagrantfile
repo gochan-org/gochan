@@ -13,6 +13,9 @@ if PROVIDER == "virtualbox"
 	BOX = "ubuntu/focal64"
 end
 
+# if set to 1, an initial configuration will be created during provisioning, otherwise gochan-install will need to be run
+INITCONFIG = ENV.fetch("GC_INITCONFIG", "") == "1"
+
 Vagrant.configure("2") do |config|
 	config.ssh.username = "vagrant"
 	config.vm.box = BOX

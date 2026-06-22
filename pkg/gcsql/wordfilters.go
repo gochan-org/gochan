@@ -32,7 +32,7 @@ func CreateWordFilter(from string, to string, isRegex bool, boards []string, sta
 	(staff_id, staff_note, issued_at, match_action, match_detail, is_active)
 	VALUES(?,?,?,'replace',?,TRUE)`
 
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	tx, err := BeginContextTx(ctx)

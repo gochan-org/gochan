@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -106,7 +105,7 @@ type dbForm struct {
 }
 
 func (dbf *dbForm) validate() (status dbStatus, err error) {
-	supportedDrivers := sql.Drivers()
+	supportedDrivers := gcsql.Drivers()
 	if !slices.Contains(supportedDrivers, dbf.DBtype) {
 		return dbStatusUnknown, fmt.Errorf("unsupported database type %s, supported types are %s", dbf.DBtype, strings.Join(supportedDrivers, ", "))
 	}

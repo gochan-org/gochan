@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/gochan-org/gochan/pkg/config"
 )
 
 const (
@@ -21,15 +23,15 @@ var (
 
 // CreateThread creates a new thread in the database with the given board ID and statuses
 func CreateThread(requestOptions *RequestOptions, thread *Thread) (err error) {
-	const lockedQuery = `SELECT locked FROM DBPREFIXboards WHERE id = ?`
-	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclic, is_spoilered) VALUES (?,?,?,?,?,?)`
-	var boardIsLocked bool
-	if err = QueryRow(requestOptions, lockedQuery, []any{&thread.BoardID}, []any{&boardIsLocked}); err != nil {
+	boardDir, err := GetBoardDir(thread.BoardID)
+	if err != nil {
 		return err
 	}
-	if boardIsLocked {
+	if config.GetBoardConfig(boardDir).Lockdown {
 		return ErrBoardIsLocked
 	}
+
+	const insertQuery = `INSERT INTO DBPREFIXthreads (board_id, locked, stickied, anchored, cyclic, is_spoilered) VALUES (?,?,?,?,?,?)`
 	if _, err = Exec(requestOptions, insertQuery, &thread.BoardID, &thread.Locked, &thread.Stickied, &thread.Anchored, &thread.Cyclic, &thread.IsSpoilered); err != nil {
 		return err
 	}

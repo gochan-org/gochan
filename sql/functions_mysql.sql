@@ -1,0 +1,40 @@
+DROP FUNCTION IF EXISTS ip_cmp;
+
+DELIMITER $$
+
+CREATE FUNCTION ip_cmp(ip1 VARBINARY(16), ip2 VARBINARY(16)) RETURNS INT DETERMINISTIC
+BEGIN
+	DECLARE tmp_bin VARBINARY(16);
+	DECLARE ip1_is_v4 BOOLEAN;
+	DECLARE ip2_is_v4 BOOLEAN;
+
+	SET tmp_bin = INET6_ATON(ip1);
+	IF tmp_bin IS NOT NULL THEN
+		SET ip1 = tmp_bin;
+	END IF;
+
+	SET tmp_bin = INET6_ATON(ip2);
+	IF tmp_bin IS NOT NULL THEN
+		SET ip2 = tmp_bin;
+	END IF;
+	
+	IF ip1 IS NULL OR ip2 IS NULL THEN
+		RETURN NULL;
+	END IF;
+
+	SET ip1_is_v4 = IS_IPV4(INET6_NTOA(ip1));
+	SET ip2_is_v4 = IS_IPV4(INET6_NTOA(ip2));
+	IF (ip1_is_v4 AND NOT ip2_is_v4) OR (NOT ip1_is_v4 AND ip2_is_v4) THEN
+		RETURN NULL;
+	END IF;
+
+	IF ip1 < ip2 THEN
+		RETURN -1;
+	ELSEIF ip1 > ip2 THEN
+		RETURN 1;
+	ELSE
+		RETURN 0;
+	END IF;
+END$$
+
+DELIMITER ;

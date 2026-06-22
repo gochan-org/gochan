@@ -23,7 +23,7 @@
 	{{with .board -}}
 		<link id="theme" rel="stylesheet" href="{{webPath `/css/` (getBoardDefaultStyle $.board.Dir)}}" />
 	{{- else -}}
-		<link id="theme" rel="stylesheet" href="{{webPath `/css/` .boardConfig.DefaultStyle}}" />
+		<link id="theme" rel="stylesheet" href="{{webPath `/css/` (getBoardDefaultStyle ``)}}" />
 	{{- end}}
 	<link rel="shortcut icon" href="{{webPath `/favicon.png`}}">
 	{{- if .boardConfig.EnableGeoIP -}}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testCase[T any] struct {
+type queryTestCase[T any] struct {
 	name       string
 	f          T
 	shouldFail bool
@@ -20,23 +22,89 @@ type testCase[T any] struct {
 	delay      time.Duration
 }
 
-func setupMockDB(t *testing.T) sqlmock.Sqlmock {
-	t.Helper()
-	config.SetTestDBConfig("mysql", "localhost", "gochan", "gochan", "", "")
-	db, mock, err := sqlmock.New()
-	if !assert.NoError(t, err) {
-		return nil
-	}
-	err = SetTestingDB("mysql", "gochan", "", db)
-	if !assert.NoError(t, err) {
-		return nil
-	}
-	return mock
+type setupSQLTestCase struct {
+	name        string
+	inputSQL    string
+	expectedSQL string
+	driver      string
+	prefix      string
+	expectError bool
 }
+
+var (
+	setupSQLTestCases = []setupSQLTestCase{
+		{
+			name:        "unsupported driver",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			driver:      "unsupported",
+			expectError: true,
+		},
+		{
+			name:        "MySQL generic query, no prefix",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM posts WHERE id = ? and name = ?",
+			driver:      "mysql",
+		},
+		{
+			name:        "Postgres generic query, no prefix",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM posts WHERE id = ? and name = ?",
+			driver:      "postgres",
+		},
+		{
+			name:        "SQLite generic query, no prefix",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM posts WHERE id = ? and name = ?",
+			driver:      "sqlite3",
+		},
+		{
+			name:        "MySQL generic query, with prefix",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM gc_posts WHERE id = ? and name = ?",
+			driver:      "mysql",
+			prefix:      "gc_",
+		},
+		{
+			name:        "Postgres generic query, with prefix",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM gc_posts WHERE id = ? and name = ?",
+			driver:      "postgres",
+			prefix:      "gc_",
+		},
+		{
+			name:        "SQLite generic query, with prefix",
+			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM gc_posts WHERE id = ? and name = ?",
+			driver:      "sqlite3",
+			prefix:      "gc_",
+		},
+		{
+			name:        "MySQL query with IP replacement",
+			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
+			expectedSQL: "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM gc_posts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
+			driver:      "mysql",
+			prefix:      "gc_",
+		},
+		{
+			name:        "Postgres query with IP replacement",
+			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
+			expectedSQL: "SELECT ip, ip, some_param, some_param FROM gc_posts WHERE ip = ? OR ip = ?",
+			driver:      "postgres",
+			prefix:      "gc_",
+		},
+		{
+			name:        "SQLite query with IP replacement",
+			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
+			expectedSQL: "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM gc_posts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
+			driver:      "sqlite3",
+			prefix:      "gc_",
+		},
+	}
+)
 
 type prepareFunc func(context.Context, string, *sql.Tx) (*sql.Stmt, error)
 
-func tcPrepareContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *testCase[prepareFunc]) {
+func tcPrepareContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *queryTestCase[prepareFunc]) {
 	const query = "SELECT * FROM DBPREFIXposts"
 	const expectQuery = `SELECT \* FROM posts`
 
@@ -85,8 +153,8 @@ func TestPrepareContextSQL(t *testing.T) {
 		}
 	}()
 
-	mock := setupMockDB(t)
-	testCases := []testCase[prepareFunc]{
+	mock := SetupMockDB(t, "mysql")
+	testCases := []queryTestCase[prepareFunc]{
 		{
 			name: "func",
 			f:    PrepareContextSQL,
@@ -118,7 +186,7 @@ func TestPrepareContextSQL(t *testing.T) {
 
 type execFunc func(context.Context, *sql.Tx, string, ...any) (sql.Result, error)
 
-func tcExecContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *testCase[execFunc]) {
+func tcExecContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *queryTestCase[execFunc]) {
 	const query = "INSERT INTO DBPREFIXposts (name) VALUES(?)"
 	const expectQuery = `INSERT INTO posts \(name\) VALUES\(\?\)`
 
@@ -163,8 +231,8 @@ func TestExecContextSQL(t *testing.T) {
 		return
 	}
 
-	mock := setupMockDB(t)
-	testCases := []testCase[execFunc]{
+	mock := SetupMockDB(t, "mysql")
+	testCases := []queryTestCase[execFunc]{
 		{
 			name: "func",
 			f:    ExecContextSQL,
@@ -196,7 +264,7 @@ func TestExecContextSQL(t *testing.T) {
 
 type funcQueryRowContextSQL func(context.Context, *sql.Tx, string, []any, []any) error
 
-func tcQueryRowContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *testCase[funcQueryRowContextSQL]) {
+func tcQueryRowContextSQL(t *testing.T, mock sqlmock.Sqlmock, tC *queryTestCase[funcQueryRowContextSQL]) {
 	const query = "SELECT NAME FROM DBPREFIXposts WHERE id = ?"
 	const expectQuery = `SELECT NAME FROM posts WHERE id = \?`
 
@@ -241,8 +309,8 @@ func TestQueryRowContextSQL(t *testing.T) {
 		return
 	}
 
-	mock := setupMockDB(t)
-	testCases := []testCase[funcQueryRowContextSQL]{
+	mock := SetupMockDB(t, "mysql")
+	testCases := []queryTestCase[funcQueryRowContextSQL]{
 		{
 			name: "func",
 			f:    QueryRowContextSQL,
@@ -268,6 +336,51 @@ func TestQueryRowContextSQL(t *testing.T) {
 	for c, tC := range testCases {
 		t.Run(tC.name, func(t *testing.T) {
 			tcQueryRowContextSQL(t, mock, &testCases[c])
+		})
+	}
+}
+
+func TestSetupSQLString(t *testing.T) {
+	config.InitTestConfig()
+	t.Run("not connected", func(t *testing.T) {
+		_, err := SetupSQLString("test", nil)
+		assert.Error(t, err)
+	})
+	for _, tC := range setupSQLTestCases {
+		t.Run(tC.name, func(t *testing.T) {
+			systemCriticalCfg := config.GetSystemCriticalConfig()
+			systemCriticalCfg.DBprefix = tC.prefix
+			config.SetSystemCriticalConfig(systemCriticalCfg)
+
+			db := &GCDB{
+				driver: tC.driver,
+			}
+			replacerArr := []string{
+				"DBNAME", "gochan",
+				"DBPREFIX", tC.prefix,
+				"DBVERSION", strconv.Itoa(DatabaseVersion),
+				"\n", " ",
+			}
+
+			switch tC.driver {
+			case "mysql":
+				replacerArr = append(replacerArr, mysqlReplacerArr...)
+			case "postgres":
+				replacerArr = append(replacerArr, postgresReplacerArr...)
+			case "sqlite3":
+				replacerArr = append(replacerArr, sqlite3ReplacerArr...)
+			}
+			db.replacer = strings.NewReplacer(replacerArr...)
+
+			prepared, err := SetupSQLString(tC.inputSQL, db)
+			if tC.expectError {
+				assert.Error(t, err)
+			} else {
+				if !assert.NoError(t, err, tC.name) {
+					t.FailNow()
+				}
+				assert.Equal(t, tC.expectedSQL, prepared, tC.name)
+			}
 		})
 	}
 }

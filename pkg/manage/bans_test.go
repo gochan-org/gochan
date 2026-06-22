@@ -228,15 +228,12 @@ type banTestCase struct {
 }
 
 func TestIPBanFromRequest(t *testing.T) {
-	config.InitConfig()
+	config.InitTestConfig()
 	boardConfig := config.GetBoardConfig("test")
 	boardConfig.BanColors = map[string]string{"admin": "red"}
 	config.SetBoardConfig("test", boardConfig)
 
-	mock, err := gcsql.SetupMockDB("mysql")
-	if err != nil {
-		t.Fatalf("Failed to setup mock DB: %v", err)
-	}
+	mock := gcsql.SetupMockDB(t, "mysql")
 
 	for _, tc := range newIPBanFromRequestTestCases {
 		tc.method = "POST"
@@ -285,7 +282,9 @@ func TestIPBanFromRequest(t *testing.T) {
 			}
 			err = gcsql.NewIPBan(&ban)
 			if tc.bannedMessageInput != "" {
-				gcsql.SetPostBannedMessage(1, tc.bannedMessageInput, "admin")
+				if !assert.NoError(t, gcsql.SetPostBannedMessage(1, tc.bannedMessageInput, "admin")) {
+					t.FailNow()
+				}
 			}
 			if tc.exptError {
 				assert.Error(t, err)

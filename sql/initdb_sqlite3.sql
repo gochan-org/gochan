@@ -20,21 +20,7 @@ CREATE TABLE DBPREFIXboards(
 	title VARCHAR(45) NOT NULL,
 	subtitle VARCHAR(64) NOT NULL,
 	description VARCHAR(64) NOT NULL,
-	max_file_size INT NOT NULL,
-	max_threads SMALLINT NOT NULL,
-	default_style VARCHAR(45) NOT NULL,
-	locked BOOL NOT NULL,
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	anonymous_name VARCHAR(45) NOT NULL DEFAULT 'Anonymous',
-	force_anonymous BOOL NOT NULL,
-	autosage_after SMALLINT NOT NULL,
-	no_images_after SMALLINT NOT NULL,
-	max_message_length SMALLINT NOT NULL,
-	min_message_length SMALLINT NOT NULL,
-	allow_embeds BOOL NOT NULL,
-	redirect_to_thread BOOL NOT NULL,
-	require_file BOOL NOT NULL,
-	enable_catalog BOOL NOT NULL,
 	CONSTRAINT DBPREFIXboards_section_id_fk
 		FOREIGN KEY(section_id) REFERENCES DBPREFIXsections(id),
 	CONSTRAINT DBPREFIXboards_dir_unique UNIQUE(dir),
@@ -56,13 +42,13 @@ CREATE TABLE DBPREFIXthreads(
 		FOREIGN KEY(board_id) REFERENCES DBPREFIXboards(id) ON DELETE CASCADE
 );
 
-CREATE INDEX thread_deleted_index ON DBPREFIXthreads(is_deleted);
+CREATE INDEX DBPREFIXthread_deleted_index ON DBPREFIXthreads(is_deleted);
 
 CREATE TABLE DBPREFIXposts(
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	thread_id BIGINT NOT NULL,
 	is_top_post BOOL NOT NULL DEFAULT FALSE,
-	ip VARCHAR(45) NOT NULL,
+	ip VARBINARY(16) NOT NULL,
 	created_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	name VARCHAR(50) NOT NULL DEFAULT '',
 	tripcode VARCHAR(10) NOT NULL DEFAULT '',
@@ -82,7 +68,7 @@ CREATE TABLE DBPREFIXposts(
 		FOREIGN KEY(thread_id) REFERENCES DBPREFIXthreads(id) ON DELETE CASCADE
 );
 
-CREATE INDEX top_post_index ON DBPREFIXposts(is_top_post);
+CREATE INDEX DBPREFIXtop_post_index ON DBPREFIXposts(is_top_post);
 
 CREATE TABLE DBPREFIXfiles(
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -149,8 +135,8 @@ CREATE TABLE DBPREFIXip_ban(
 	copy_post_text TEXT NOT NULL,
 	is_thread_ban BOOL NOT NULL,
 	is_active BOOL NOT NULL,
-	range_start VARCHAR(45) NOT NULL,
-	range_end VARCHAR(45) NOT NULL,
+	range_start VARBINARY(16) NOT NULL,
+	range_end VARBINARY(16) NOT NULL,
 	issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	appeal_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	expires_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -191,8 +177,8 @@ CREATE TABLE DBPREFIXip_ban_appeals(
 	staff_id BIGINT,
 	ip_ban_id BIGINT NOT NULL,
 	appeal_text TEXT NOT NULL,
-	staff_response TEXT,
 	is_denied BOOL NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT DBPREFIXip_ban_appeals_staff_id_fk
 		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT DBPREFIXip_ban_appeals_ip_ban_id_fk
@@ -204,7 +190,6 @@ CREATE TABLE DBPREFIXip_ban_appeals_audit(
 	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	staff_id BIGINT,
 	appeal_text TEXT NOT NULL,
-	staff_response TEXT,
 	is_denied BOOL NOT NULL,
 	PRIMARY KEY(appeal_id, timestamp),
 	CONSTRAINT DBPREFIXip_ban_appeals_audit_staff_id_fk
@@ -214,13 +199,26 @@ CREATE TABLE DBPREFIXip_ban_appeals_audit(
 		ON DELETE CASCADE
 );
 
+CREATE TABLE DBPREFIXip_ban_appeals_messages(
+	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+	appeal_id BIGINT NOT NULL,
+	staff_id BIGINT,
+	message_text TEXT NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT DBPREFIXip_ban_appeals_messages_appeal_id_fk
+		FOREIGN KEY(appeal_id) REFERENCES DBPREFIXip_ban_appeals(id) ON DELETE CASCADE,
+	CONSTRAINT DBPREFIXip_ban_appeals_messages_staff_id_fk
+		FOREIGN KEY(staff_id) REFERENCES DBPREFIXstaff(id) ON DELETE SET NULL
+);
+
 CREATE TABLE DBPREFIXreports(
 	id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	handled_by_staff_id BIGINT,
 	post_id BIGINT NOT NULL,
-	ip VARCHAR(45) NOT NULL,
+	ip VARBINARY(16) NOT NULL,
 	reason TEXT NOT NULL,
 	is_cleared BOOL NOT NULL,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT DBPREFIXreports_handled_by_staff_id_fk
 		FOREIGN KEY(handled_by_staff_id) REFERENCES DBPREFIXstaff(id),
 	CONSTRAINT DBPREFIXreports_post_id_fk

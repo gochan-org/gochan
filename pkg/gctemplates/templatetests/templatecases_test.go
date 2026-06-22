@@ -36,15 +36,13 @@ var (
 	}
 
 	simpleBoard1 = &gcsql.Board{
-		ID:            1,
-		SectionID:     1,
-		URI:           "test",
-		Dir:           "test",
-		Title:         "Testing board",
-		Subtitle:      "Board for testing",
-		Description:   "Board for testing",
-		DefaultStyle:  "pipes.css",
-		AnonymousName: "Anonymous Coward",
+		ID:          1,
+		SectionID:   1,
+		URI:         "test",
+		Dir:         "test",
+		Title:       "Testing board",
+		Subtitle:    "Board for testing",
+		Description: "Board for testing",
 	}
 
 	banPageCases = []templateTestCase{
@@ -212,7 +210,17 @@ var (
 				}
 				assert.Equal(t, "/test/-Testing board", doc.Find("title").Text())
 				assert.Equal(t, "/test/-Testing board", doc.Find("#board-title").Text())
-				assert.Equal(t, "Board for testingCatalog | Bottom", doc.Find("#board-subtitle").Text())
+				subtitle := doc.Find("#board-subtitle")
+				assert.Equal(t, "Board for testing", subtitle.Text())
+				headerLinks := doc.Find("#header-links a")
+				headerLinks.Each(func(i int, s *goquery.Selection) {
+					switch i {
+					case 0:
+						assert.Equal(t, "Catalog", s.Text())
+					case 1:
+						assert.Equal(t, "Bottom", s.Text())
+					}
+				})
 				assert.Equal(t, 1, doc.Find("#postbox-area").Length())
 				assert.Equal(t, 1, doc.Find("#main-form").Length())
 				assert.Equal(t, 0, doc.Find("#main-form .thread").Length())
@@ -283,7 +291,17 @@ var (
 				}
 				assert.Equal(t, "/test/-Testing board", doc.Find("title").Text())
 				assert.Equal(t, "/test/-Testing board", doc.Find("#board-title").Text())
-				assert.Equal(t, "Board for testingCatalog | Bottom", doc.Find("#board-subtitle").Text())
+				subtitle := doc.Find("#board-subtitle")
+				assert.Equal(t, "Board for testing", subtitle.Text())
+				headerLinks := doc.Find("#header-links a")
+				headerLinks.Each(func(i int, s *goquery.Selection) {
+					switch i {
+					case 0:
+						assert.Equal(t, "Catalog", s.Text())
+					case 1:
+						assert.Equal(t, "Bottom", s.Text())
+					}
+				})
 				assert.Equal(t, 1, doc.Find("#postbox-area").Length())
 				assert.Equal(t, 1, doc.Find("#main-form").Length())
 

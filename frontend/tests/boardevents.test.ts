@@ -1,4 +1,3 @@
-/* global simpleHTML */
 import {test, expect} from "@jest/globals";
 
 import $ from "jquery";
@@ -7,7 +6,7 @@ import "./inittests";
 
 import { applyBBCode, handleKeydown } from "../ts/boardevents";
 
-document.documentElement.innerHTML = simpleHTML;
+document.documentElement.innerHTML = (global as any).simpleHTML;
 
 function doBBCode(key:string, text: string, start: number, end: number) {
 	const $ta = $<HTMLTextAreaElement>("<textarea/>");

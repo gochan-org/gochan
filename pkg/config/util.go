@@ -35,6 +35,7 @@ var (
 	gid                     int
 	ErrGochanConfigNotFound                    = errors.New("gochan.json not found")
 	initialSetupStatus      InitialSetupStatus = InitialSetupStatusUnknown
+	loadFileInTest          bool               // if true, load the config file even when running tests, assumes that t.TempDir() is being used
 )
 
 // MissingField represents a field missing from the configuration file
@@ -117,8 +118,9 @@ func SetSiteConfig(siteConfig *SiteConfig) {
 }
 
 func loadConfig() (err error) {
-	cfg = defaultGochanConfig
-	if testing.Testing() {
+	cfg = new(GochanConfig)
+	*cfg = *defaultGochanConfig
+	if testing.Testing() && !loadFileInTest {
 		// create a dummy config for testing if we're using go test
 		cfg = defaultGochanConfig
 		cfg.ListenAddress = "127.0.0.1"
@@ -145,7 +147,7 @@ func loadConfig() (err error) {
 	if cfgPath == "" {
 		return ErrGochanConfigNotFound
 	}
-	gcutil.LogInfo().Str("configPath", cfgPath).Msg("Found configuration file")
+	gcutil.LogDebug().Str("configPath", cfgPath).Msg("Found configuration file")
 
 	cfgBytes, err := os.ReadFile(cfgPath)
 	if err != nil {

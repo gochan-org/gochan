@@ -176,14 +176,21 @@ func getAllStaffNopass(activeOnly bool) ([]gcsql.Staff, error) {
 	if activeOnly {
 		query += " WHERE is_active"
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(config.GetSQLConfig().DBTimeoutSeconds)*time.Second)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	ctxTimeout := time.Duration(config.GetSQLConfig().DBTimeoutSeconds) * time.Second
+	if ctxTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), ctxTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
+	defer cancel()
 	rows, err := gcsql.Query(&gcsql.RequestOptions{Context: ctx, Cancel: cancel}, query)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		rows.Close()
-		cancel()
 	}()
 	var staff []gcsql.Staff
 	for rows.Next() {

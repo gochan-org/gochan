@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -30,6 +31,9 @@ var (
 	ErrInvalidMatchAction     = errors.New("unrecognized filter match action")
 	ErrInvalidFilter          = errors.New("unrecognized filter id")
 	ErrNoConditions           = errors.New("error has no match conditions")
+	fieldsWithoutSearchBox    = []string{
+		"firsttimeboard", "notfirsttimeboard", "firsttimesite", "notfirsttimesite", "isop", "notop", "hasfile", "nofile",
+	}
 )
 
 // StringMatchMode is used when matching a string, determining how it should be checked (substring, regex, or exact match)
@@ -187,7 +191,7 @@ func (f *Filter) setConditionsContext(ctx context.Context, tx *sql.Tx, condition
 // SetConditions replaces all current conditions associated with the filter and applies the given conditions.
 // It returns an error if no conditions are provided
 func (f *Filter) SetConditions(conditions ...FilterCondition) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -220,7 +224,7 @@ func (f *Filter) UpdateDetails(staffNote string, matchAction string, matchDetail
 	if f.ID == 0 {
 		return ErrInvalidFilter
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -265,7 +269,7 @@ func (f *Filter) BoardDirs() ([]string, error) {
 // SetBoardDirs sets the board directories to be associated with the filter. If no boards are used,
 // the filter will be applied to all boards
 func (f *Filter) SetBoardDirs(dirs ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -331,7 +335,7 @@ func (f *Filter) setBoardIDsContext(ctx context.Context, tx *sql.Tx, ids ...int)
 // SetBoardIDs sets the board IDs to be associated with the filter. If no boards are used,
 // the filter will be applied to all boards
 func (f *Filter) SetBoardIDs(ids ...int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	tx, err := BeginContextTx(ctx)
 	if err != nil {
@@ -507,6 +511,7 @@ func (fc FilterCondition) testCondition(post *Post, upload *Upload, request *htt
 			Str("field", fc.Field).
 			Int("filterID", fc.FilterID).
 			Int("filterConditionID", fc.ID).Send()
+		errEv.Discard()
 		err = errors.New("unable to check filter condition")
 	}
 	return match, err
@@ -519,17 +524,12 @@ func (fc FilterCondition) ShowStringMatchOptions() bool {
 
 // HasSearchField is a convenience function for templates. It returns true if the filter condition should show a search box
 func (fc FilterCondition) HasSearchField() bool {
-	return fc.Field != "firsttimeboard" && fc.Field != "notfirsttimeboard" && fc.Field != "firsttimesite" &&
-		fc.Field != "notfirsttimesite" && fc.Field != "isop" && fc.Field != "notop" && fc.Field != "hasfile" &&
-		fc.Field != "nofile"
+	return !slices.Contains(fieldsWithoutSearchBox, fc.Field)
 }
 
 func checkFilter(filter *Filter, post *Post, upload *Upload, request *http.Request, errEv *zerolog.Event) (bool, error) {
 	match, err := filter.checkIfMatch(post, upload, request, errEv)
 	if err != nil {
-		errEv.Err(err).Caller().
-			Int("filterID", filter.ID).
-			Msg("Unable to check filter for a match")
 		return false, errors.New("unable to check filter for a match")
 	}
 	if !match {
@@ -661,7 +661,7 @@ func ApplyFilterTx(ctx context.Context, tx *sql.Tx, filter *Filter, conditions [
 // ApplyFilter inserts the given filter into the database if filter.ID == 0. Otherwise it updates the details, boards, and
 // filter conditions for the filter in the database with the given ID
 func ApplyFilter(filter *Filter, conditions []FilterCondition, boards []int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	tx, err := BeginContextTx(ctx)

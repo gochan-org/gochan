@@ -98,7 +98,7 @@ export function watchThread(threadID: string|number, board: string) {
 			board: board,
 			posts: data.posts.length,
 			op: op.name,
-			latest: data.posts[data.posts.length-1].no
+			latest: data.posts[data.posts.length-1].no.toString()
 		};
 		if(op.trip !== "") threadObj.op += "!" + op.trip;
 		if(op.sub !== "") {

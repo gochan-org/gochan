@@ -69,18 +69,36 @@ func loginCallback(writer http.ResponseWriter, request *http.Request, staff *gcs
 }
 
 type staffInfoJSON struct {
-	Username string   `json:"username"`
-	Rank     int      `json:"rank"`
-	Actions  []Action `json:"actions,omitempty"`
+	Username string           `json:"username"`
+	Rank     int              `json:"rank"`
+	Actions  []Action         `json:"actions,omitempty"`
+	Reports  []reportWithLink `json:"reports,omitempty"`
+	Appeals  []gcsql.Appeal   `json:"appeals,omitempty"`
 }
 
-func staffInfoCallback(_ http.ResponseWriter, _ *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func staffInfoCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	info := staffInfoJSON{
 		Username: staff.Username,
 		Rank:     staff.Rank,
 	}
-	if staff.Rank >= JanitorPerms {
+	if staff.Rank >= JanitorPerms && request.FormValue("noactions") != "1" {
 		info.Actions = getAvailableActions(staff.Rank, false)
+	}
+	if staff.Rank >= ModPerms {
+		var err error
+		if info.Reports, err = getReportsWithLinks(); err != nil {
+			logger.Err(err).Caller().Send()
+			return nil, fmt.Errorf("unable to get open reports: %w", err)
+		}
+
+		if info.Appeals, err = gcsql.GetAppeals(gcsql.AppealsQueryOptions{
+			Active:    gcsql.OnlyTrue,
+			Unexpired: gcsql.OnlyTrue,
+			Limit:     4,
+		}); err != nil {
+			logger.Err(err).Caller().Send()
+			return nil, fmt.Errorf("unable to get the number of open appeals: %w", err)
+		}
 	}
 	return info, nil
 }

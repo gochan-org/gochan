@@ -1,6 +1,8 @@
 -- SQL views for simplifying queries in gochan
 
 -- First drop views if they exist in reverse order to avoid dependency issues
+DROP VIEW IF EXISTS DBPREFIXv_appeals;
+DROP VIEW IF EXISTS DBPREFIXv_appeal_messages;
 DROP VIEW IF EXISTS DBPREFIXv_post_reports;
 DROP VIEW IF EXISTS DBPREFIXv_post_with_board;
 DROP VIEW IF EXISTS DBPREFIXv_top_post_board_dir;
@@ -24,7 +26,7 @@ CREATE VIEW DBPREFIXv_top_post_thread_ids AS
 SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post;
 
 CREATE VIEW DBPREFIXv_building_posts AS
-SELECT p.id AS id, p.thread_id AS thread_id, ip, name, tripcode, is_secure_tripcode,
+SELECT p.id AS id, p.thread_id AS thread_id, INET6_NTOA(ip) as ip, name, tripcode, is_secure_tripcode,
 email, subject, created_on, created_on as last_modified, op.id AS parent_id, t.last_bump as last_bump,
 message, message_raw, COALESCE(banned_message, '') AS banned_message, t.board_id,
 (SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
@@ -42,7 +44,7 @@ FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = p.thread_id
-WHERE p.is_deleted = FALSE;
+WHERE p.is_deleted = FALSE AND t.is_deleted = FALSE AND dir IS NOT NULL;
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS
 SELECT p.id AS post_id, thread_id, (
@@ -75,7 +77,7 @@ FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 LEFT JOIN DBPREFIXfiles f on f.post_id = DBPREFIXposts.id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = DBPREFIXposts.thread_id
-WHERE DBPREFIXposts.is_deleted = FALSE AND t.is_spoilered = FALSE;
+WHERE DBPREFIXposts.is_deleted = FALSE AND t.is_spoilered = FALSE AND dir IS NOT NULL;
 
 CREATE VIEW DBPREFIXv_front_page_posts_with_file AS
 SELECT * FROM DBPREFIXv_front_page_posts
@@ -99,12 +101,31 @@ INNER JOIN DBPREFIXv_top_post_thread_ids op on op.thread_id = DBPREFIXposts.thre
 CREATE VIEW DBPREFIXv_post_with_board AS
 SELECT p.id, thread_id, is_top_post, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email,
 subject, message, message_raw, password, p.deleted_at AS deleted_at, p.is_deleted AS is_deleted,
-banned_message, ip, flag, country, dir, board_id
+banned_message, INET6_NTOA(ip) as ip, flag, country, dir, board_id
 FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
 LEFT JOIN DBPREFIXboards b ON b.id = t.board_id;
 
 CREATE VIEW DBPREFIXv_post_reports AS
-SELECT r.id, handled_by_staff_id AS staff_id, username AS staff_user, post_id, IP_NTOA as ip, reason, is_cleared
-FROM DBPREFIXreports r LEFT JOIN DBPREFIXstaff s ON handled_by_staff_id = s.id
+SELECT r.id, handled_by_staff_id AS staff_id, username AS staff_user, post_id, 
+(SELECT id FROM DBPREFIXposts p2 WHERE p2.is_top_post AND p.thread_id = p2.thread_id LIMIT 1) AS thread_op,
+dir as board, INET6_NTOA(r.ip) as reporter_ip, INET6_NTOA(p.ip) as poster_ip, reason, is_cleared
+FROM DBPREFIXreports r
+LEFT JOIN DBPREFIXstaff s ON handled_by_staff_id = s.id
+INNER JOIN DBPREFIXposts p ON r.post_id = p.id
+INNER JOIN DBPREFIXthreads t ON p.thread_id = t.id
+INNER JOIN DBPREFIXboards b ON t.board_id = b.id
 WHERE is_cleared = FALSE;
+
+CREATE VIEW DBPREFIXv_appeal_messages AS
+SELECT iba.id, ibaa.staff_id, username AS staff_username, iba.ip_ban_id, ibaa.appeal_text, ibaa.is_denied, ib.is_active as is_ban_active, ib.expires_at as ban_expires_at, ib.permanent as permanent, iba.timestamp
+FROM DBPREFIXip_ban_appeals iba
+INNER JOIN DBPREFIXip_ban_appeals_audit ibaa ON id = appeal_id
+INNER JOIN DBPREFIXip_ban ib ON iba.ip_ban_id = ib.id
+LEFT JOIN DBPREFIXstaff s ON ibaa.staff_id = s.id;
+
+CREATE VIEW DBPREFIXv_appeals AS
+SELECT iba.id, iba.staff_id, username AS staff_username, iba.ip_ban_id, iba.appeal_text, iba.is_denied, ib.is_active as is_ban_active, ib.expires_at as ban_expires_at, ib.permanent as permanent, iba.timestamp
+FROM DBPREFIXip_ban_appeals iba
+INNER JOIN DBPREFIXip_ban ib ON iba.ip_ban_id = ib.id
+LEFT JOIN DBPREFIXstaff s ON iba.staff_id = s.id;

@@ -23,20 +23,25 @@ interface BoardLockJSON {
  * @param lock If true, the thread will be locked, otherwise it will be unlocked
  */
 export async function updateThreadLock(board: string, op: number, lock: boolean) {
-	const data: BoardLockJSON = {
-		board: board,
-		thread: op,
-		json: 1
-	};
+	const data = new URLSearchParams();
+	data.append("board", board);
+	data.append("thread", op.toString());
+	data.append("json", "1");
 	if(lock) {
-		data.lock = "Not locked";
+		data.append("lock", "Not locked");
 	} else {
-		data.unlock = "Locked";
+		data.append("unlock", "Locked");
 	}
-	$.post({
-		url: webroot + "manage/threadattrs",
-		data: data
-	}).then((_data) => {
+	await fetch(`${webroot}manage/threadattrs`, {
+		method: "POST",
+		body: data,
+		credentials: "same-origin"
+	}).then(response => {
+		if(!response.ok) {
+			return Promise.reject(`Error updating thread lock status: ${response.status} ${response.statusText}`);
+		}
+		return response.json();
+	}).then(() => {
 		alert("Thread " + (lock?"locked":"unlocked") + " successfully");
 		const $lockOpt = $(`select#op${op} option`)
 			.filter((_i, el) => el.textContent === "Lock thread" || el.textContent === "Unlock thread");
@@ -54,11 +59,7 @@ export async function updateThreadLock(board: string, op: number, lock: boolean)
 			$(`div#op${op} img.locked-icon`).remove();
 			$lockOpt.text("Lock thread");
 		}
-	}).catch((data: any, _status: any, xhr: any) => {
-		if(data.responseJSON !== undefined && data.responseJSON.message !== undefined) {
-			alert(`Error updating thread /${board}/${op} lock status: ${data.responseJSON.message}`);
-		} else {
-			alert("Unable to send request: " + xhr);
-		}
+	}).catch((error) => {
+		alert(`Error updating thread /${board}/${op} lock status: ${error}`);
 	});
 }

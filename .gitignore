@@ -2,12 +2,15 @@
 /html/index.html
 /html/*test*
 /html/boards.json
+/html/*/board.json
+/html/selenium
 .vscode/settings.json
 .parcel-cache
 *.swp
 .vagrant/
 *.log
 /templates/override
+*-config.json
 
 # Go output
 /gochan*
@@ -27,4 +30,8 @@ __pycache__
 
 # SQLite
 *.db
+!tools/gochan-pre2021.db
 *.*-journal
+
+# Draw.io backup files
+*.bkp

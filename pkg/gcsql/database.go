@@ -4,13 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/go-sql-driver/mysql"
+	"github.com/stretchr/testify/assert"
 
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -22,7 +25,7 @@ import (
 const (
 	// gochanVersionKeyConstant is the key value used in the version table of the database to store and receive the (database) version of base gochan
 	gochanVersionKeyConstant = "gochan"
-	DatabaseVersion          = 6
+	DatabaseVersion          = 7
 	UnsupportedSQLVersionMsg = `syntax error in SQL query, confirm you are using a supported driver and SQL server (error text: %s)`
 	MySQLConnStr             = "%s:%s@tcp(%s)/%s?parseTime=true&collation=utf8mb4_unicode_ci"
 	PostgresConnStr          = "postgres://%s:%s@%s/%s?sslmode=disable"
@@ -52,15 +55,16 @@ var (
 		"PARAM_NTOA", "?",
 	}
 	sqlite3ReplacerArr = []string{
-		"RANGE_START_ATON", "range_start",
-		"RANGE_START_NTOA", "range_start",
-		"RANGE_END_ATON", "range_end",
-		"RANGE_END_NTOA", "range_end",
-		"IP_ATON", "ip",
-		"IP_NTOA", "ip",
-		"PARAM_ATON", "?",
-		"PARAM_NTOA", "?",
+		"RANGE_START_ATON", "INET6_ATON(range_start)",
+		"RANGE_START_NTOA", "INET6_NTOA(range_start)",
+		"RANGE_END_ATON", "INET6_ATON(range_end)",
+		"RANGE_END_NTOA", "INET6_NTOA(range_end)",
+		"IP_ATON", "INET6_ATON(ip)",
+		"IP_NTOA", "INET6_NTOA(ip)",
+		"PARAM_ATON", "INET6_ATON(?)",
+		"PARAM_NTOA", "INET6_NTOA(?)",
 	}
+	ipFuncRE = regexp.MustCompile(`(INET6_NTOA|INET6_ATON)\(([^)]+)\)`) // used for more flexible replacement based on SQL driver
 )
 
 type GCDB struct {
@@ -104,15 +108,16 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if prepared, err = SetupSQLString(db.replacer.Replace(query), db); err != nil {
+	if prepared, err = SetupSQLString(query, db); err != nil {
 		return nil, err
 	}
 	_, hasDeadline := ctx.Deadline()
-	if !hasDeadline {
+	if !hasDeadline && db.defaultTimeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), db.defaultTimeout)
 		defer cancel()
 	}
+
 	var stmt *sql.Stmt
 	if tx != nil {
 		stmt, err = tx.PrepareContext(ctx, prepared)
@@ -125,6 +130,8 @@ func (db *GCDB) PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx)
 // Exec executes the given SQL statement with the given parameters, optionally with the given RequestOptions struct
 // or a background context and transaction if nil
 func (db *GCDB) Exec(opts *RequestOptions, query string, values ...any) (sql.Result, error) {
+	logger := gcutil.Logger()
+	logger.Trace().Str("sql", query).Msg("Exec")
 	opts = setupOptions(opts)
 	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
@@ -193,6 +200,8 @@ database variables, e.g. DBPREFIX, DBNAME, etc so it should be used sparingly or
 gcsql.SetupSQLString
 */
 func (db *GCDB) Begin() (*sql.Tx, error) {
+	logger := gcutil.Logger()
+	logger.Trace().Msg("Begin")
 	return db.db.Begin()
 }
 
@@ -205,12 +214,16 @@ func (db *GCDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, erro
 	if db == nil {
 		return nil, ErrNotConnected
 	}
+	logger := gcutil.Logger()
+	logger.Trace().Msg("BeginTx")
 	return db.db.BeginTx(ctx, opts)
 }
 
 // QueryRow gets a row from the db with the values in values[] and fills the respective pointers in out[],
 // with an optional RequestOptions struct for the context and transaction
 func (db *GCDB) QueryRow(opts *RequestOptions, query string, values []any, out []any) error {
+	logger := gcutil.Logger()
+	logger.Trace().Str("sql", query).Msg("QueryRow")
 	opts = setupOptions(opts)
 	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
@@ -279,6 +292,8 @@ func (db *GCDB) QueryRowTxSQL(tx *sql.Tx, query string, values, out []any) error
 
 // Query sends the query to the database with the given options (or a background context if nil), and the given parameters
 func (db *GCDB) Query(opts *RequestOptions, query string, a ...any) (*sql.Rows, error) {
+	logger := gcutil.Logger()
+	logger.Trace().Str("sql", query).Msg("Query")
 	opts = setupOptions(opts)
 	stmt, err := db.PrepareContextSQL(opts.Context, query, opts.Tx)
 	if err != nil {
@@ -394,16 +409,20 @@ func setupSqlTestConfig(dbDriver string, dbName string, dbPrefix string) *config
 }
 
 // SetupMockDB sets up a mock database connection for testing
-func SetupMockDB(driver string) (sqlmock.Sqlmock, error) {
+func SetupMockDB(t *testing.T, driver string) sqlmock.Sqlmock {
+	t.Helper()
 	var err error
-	gcdb, err = setupDBConn(setupSqlTestConfig(driver, "gochan", ""))
-	if err != nil {
-		return nil, err
+	config.SetTestDBConfig(driver, "localhost", "gochan", "gochan", "", "")
+	db, mock, err := sqlmock.New()
+	if !assert.NoError(t, err) {
+		return nil
 	}
-	var mock sqlmock.Sqlmock
-	gcdb.db, mock, err = sqlmock.New()
+	err = SetTestingDB(driver, "gochan", "", db)
+	if !assert.NoError(t, err) {
+		return nil
+	}
 
-	return mock, err
+	return mock
 }
 
 // Open opens and returns a new gochan database connection with the provided SQL options
@@ -412,17 +431,24 @@ func Open(cfg *config.SQLConfig) (db *GCDB, err error) {
 	if err != nil {
 		return nil, err
 	}
-	db.db, err = sql.Open(db.driver, db.connStr)
-	if err != nil {
-		db.db.SetConnMaxLifetime(time.Minute * time.Duration(cfg.DBConnMaxLifetimeMin))
-		db.db.SetMaxOpenConns(cfg.DBMaxOpenConnections)
-		db.db.SetMaxIdleConns(cfg.DBMaxIdleConnections)
+	driver := db.driver
+	if driver == "sqlite3" {
+		// adds support for INET6_ATON/NTOA and IP_CMP functions
+		driver = "sqlite3-inet6"
 	}
+	db.db, err = sql.Open(driver, db.connStr)
+	if err != nil {
+		return nil, err
+	}
+	db.db.SetConnMaxLifetime(time.Minute * time.Duration(cfg.DBConnMaxLifetimeMin))
+	db.db.SetMaxOpenConns(cfg.DBMaxOpenConnections)
+	db.db.SetMaxIdleConns(cfg.DBMaxIdleConnections)
+
 	return db, err
 }
 
 func optimizeMySQL() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	var wg sync.WaitGroup
 	rows, err := QueryContextSQL(ctx, nil, "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()")
@@ -453,7 +479,7 @@ func optimizeMySQL() error {
 }
 
 func optimizePostgres() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, "REINDEX DATABASE "+config.GetSQLConfig().DBname)
@@ -461,7 +487,7 @@ func optimizePostgres() error {
 }
 
 func optimizeSqlite3() error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	_, err := ExecContextSQL(ctx, nil, "VACUUM")

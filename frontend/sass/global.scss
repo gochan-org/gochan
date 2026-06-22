@@ -7,6 +7,7 @@
 @use 'global/bans';
 @use 'global/animations';
 @use 'global/installer';
+@use 'global/responsive';
 
 .increase-line-height {
 	header, .post, .reply {
@@ -26,23 +27,26 @@ div#topbar {
 	left: 0;
 	position: fixed;
 	top: 0;
-	width: 100%;
+	width: 100vw;
 	margin-top: 0px;
 
-	* {
+	.topbar-section, .topbar-item, .dropdown-button {
 		padding: 4px;
 		margin-left: 4px;
 	}
-	a.topbar-item, .topbar-section {
+	a.topbar-item, .topbar-section, .topbar-left, .topbar-boards, .topbar-right, .topbar-right * {
 		display: inline-block;
 	}
 	.topbar-section {
-		padding-top: 0px!important;
-		padding-bottom: 0px!important;
+		padding-top: 0px;
+		padding-bottom: 0px;
 	}
-	a.dropdown-button {
+	.topbar-right {
 		float: right;
 		margin-right: 4px;
+	}
+	.boards-button {
+		display: none;
 	}
 }
 
@@ -51,15 +55,21 @@ div.dropdown-menu {
 	min-width: 300px;
 	min-height: 100px;
 	top: 28px;
-	right: 8px;
+	right: 0.5em;
 	z-index: 500;
-	padding: 4px 8px 4px 8px;
+	padding: 0.25em 0.5em;
 	max-height: 85%;
 	overflow-y: auto;
 	background-color: #999;
 	div {
 		padding: 2px;
 	}
+}
+
+#boards-menu ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
 }
 
 div#staffmenu {
@@ -110,11 +120,18 @@ select.post-actions {
 .ui-tabs-tab {
 	float: left;
 	text-decoration: none;
-	padding: 8px;
+	a {
+		padding: 8px;
+		display: inline-block;
+	}
 }
 
 .ui-tabs-panel {
 	clear: both;
+}
+
+.text-left {
+	text-align: left;
 }
 
 .text-center {
@@ -140,3 +157,5 @@ select.post-actions {
 	display: inline-block;
 	cursor: help;
 }
+
+@include responsive.responsive-rules();

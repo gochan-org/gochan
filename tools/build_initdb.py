@@ -21,7 +21,7 @@ macros = [
 		"INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"),
 	macro("fk to serial", "BIGINT", "BIGINT", "BIGINT"),
 	macro("drop fk", "DROP CONSTRAINT", "DROP FOREIGN KEY", "DROP CONSTRAINT"),
-	macro("inet", "INET", "VARBINARY(16)", "VARCHAR(45)")
+	macro("inet", "INET", "VARBINARY(16)", "VARBINARY(16)")
 ]
 
 
@@ -43,8 +43,9 @@ def compileOutComments(text:str):
 	lines = text.splitlines()
 	out = ""
 	for line in lines:
+		line = re.sub(r"\t?--.*$", "", line)
 		if line != "" and line is not None:
-			out += re.sub(r"--.*$", "", line) + "\n"
+			out += line + "\n"
 			if line.endswith(";"):
 				out += "\n"
 	return out.strip() + "\n"

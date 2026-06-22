@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -13,8 +14,11 @@ import (
 )
 
 const (
+	// TrueOrFalse represents a lack of filtering on boolean values
 	TrueOrFalse BooleanFilter = iota
+	// OnlyTrue limits results to only those with true boolean values
 	OnlyTrue
+	// OnlyFalse limits results to only those with false boolean values
 	OnlyFalse
 )
 
@@ -23,7 +27,7 @@ var (
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z",
 	}
-	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(sql.Drivers(), ", "))
+	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(Drivers(), ", "))
 	ErrNotConnected  = errors.New("error connecting to database")
 	CommentRemover   = regexp.MustCompile("--.*\n?")
 )
@@ -84,7 +88,7 @@ func setupOptionsWithTimeout(opts ...*RequestOptions) *RequestOptions {
 	withoutContext := len(opts) == 0 || opts[0] == nil || opts[0].Context == nil
 	requestOptions := setupOptions(opts...)
 	if withoutContext {
-		requestOptions.Context, requestOptions.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		requestOptions.Context, requestOptions.Cancel = setupTimeoutContext(context.Background(), gcdb)
 	}
 	return requestOptions
 }
@@ -129,28 +133,27 @@ func PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx) (*sql.Stmt
 // SetupSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
 // type (MySQL, Postgres, etc) to be passed to PrepareSQL
 func SetupSQLString(query string, dbConn *GCDB) (string, error) {
-	var prepared string
 	var err error
 	if dbConn == nil {
 		return "", ErrNotConnected
 	}
-	switch dbConn.driver {
-	case "mysql":
-		prepared = query
-	case "sqlite3":
-		fallthrough
-	case "postgres":
-		arr := strings.Split(query, "?")
-		for i := range arr {
-			if i == len(arr)-1 {
-				break
-			}
-			arr[i] += fmt.Sprintf("$%d", i+1)
-		}
-		prepared = strings.Join(arr, "")
-	default:
+	if !slices.Contains(Drivers(), dbConn.driver) {
 		return "", ErrUnsupportedDB
 	}
+
+	prepared := dbConn.replacer.Replace(query)
+
+	prepared = ipFuncRE.ReplaceAllStringFunc(prepared, func(s string) string {
+		parts := ipFuncRE.FindStringSubmatch(s)
+		var replaced string
+		switch dbConn.driver {
+		case "mysql", "sqlite3":
+			replaced = parts[1] + "(" + parts[2] + ")"
+		case "postgres":
+			replaced = parts[2]
+		}
+		return replaced
+	})
 
 	return prepared, err
 }
@@ -195,7 +198,13 @@ func ExecContextSQL(ctx context.Context, tx *sql.Tx, sqlStr string, values ...an
 
 // ExecTimeoutSQL is a helper function for executing a SQL statement with the configured timeout in seconds
 func ExecTimeoutSQL(tx *sql.Tx, sqlStr string, values ...any) (sql.Result, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	var ctx context.Context
+	var cancel context.CancelFunc
+	if gcdb.defaultTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	} else {
+		ctx, cancel = context.WithCancel(context.Background())
+	}
 	defer cancel()
 
 	return ExecContextSQL(ctx, tx, sqlStr, values...)
@@ -267,7 +276,7 @@ func QueryRowContextSQL(ctx context.Context, tx *sql.Tx, query string, values, o
 // It creates a context with the default timeout to only be used for this query and then disposed.
 // It should only be used by a function that does a single SQL query, otherwise use QueryRow with a context.
 func QueryRowTimeoutSQL(tx *sql.Tx, query string, values, out []any) error {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 	return QueryRowContextSQL(ctx, tx, query, values, out)
 }
@@ -332,7 +341,7 @@ func QueryContextSQL(ctx context.Context, tx *sql.Tx, query string, a ...any) (*
 // cancel function (for the calling function to call later), and nil error. It should only be used
 // if the calling function is only doing one SQL query, otherwise use QueryContextSQL.
 func QueryTimeoutSQL(tx *sql.Tx, query string, a ...any) (*sql.Rows, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	rows, err := QueryContextSQL(ctx, tx, query, a...)
 	if err != nil {
 		cancel()
@@ -464,4 +473,24 @@ func createArrayPlaceholder[T any](arr []T) string {
 		params[p] = "?"
 	}
 	return "(" + strings.Join(params, ",") + ")"
+}
+
+// setupTimeoutContext sets up the given context with the configured timeout if it is set and returns the new context
+// and cancel function, otherwise it returns the context and a no-op cancel function
+func setupTimeoutContext(ctx context.Context, db *GCDB) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if db.defaultTimeout > 0 {
+		ctx, cancel := context.WithTimeout(ctx, db.defaultTimeout)
+		return ctx, cancel
+	}
+	return ctx, func() {}
+}
+
+// Drivers returns the list of supported SQL drivers, excluding sqlmock (used for testing) and sqlite3-inet6 (an internal SQLite extension)
+func Drivers() []string {
+	return slices.DeleteFunc(sql.Drivers(), func(driver string) bool {
+		return driver == "sqlmock" || driver == "sqlite3-inet6"
+	})
 }

@@ -27,31 +27,18 @@ type BoardStaff struct {
 	StaffID int // sql: staff_id
 }
 
+// Board represents a board on the site that users can post on.
 // table: DBPREFIXboards
 type Board struct {
-	ID               int       `json:"-"`                 // sql: id
-	SectionID        int       `json:"-"`                 // sql: section_id
-	URI              string    `json:"-"`                 // sql: uri
-	Dir              string    `json:"board"`             // sql: dir
-	NavbarPosition   int       `json:"-"`                 // sql: navbar_position
-	Title            string    `json:"title"`             // sql: title
-	Subtitle         string    `json:"meta_description"`  // sql: suttitle
-	Description      string    `json:"-"`                 // sql: description
-	MaxFilesize      int       `json:"max_filesize"`      // sql: max_file_size
-	MaxThreads       int       `json:"-"`                 // sql: max_threads
-	DefaultStyle     string    `json:"-"`                 // sql: default_style
-	Locked           bool      `json:"is_archived"`       // sql: locked
-	CreatedAt        time.Time `json:"-"`                 // sql: created_at
-	AnonymousName    string    `json:"-"`                 // sql: anonymous_name
-	ForceAnonymous   bool      `json:"-"`                 // sql: force_anonymous
-	AutosageAfter    int       `json:"-"`                 // sql: autosage_after
-	NoImagesAfter    int       `json:"image_limit"`       // sql: no_images_after
-	MaxMessageLength int       `json:"max_comment_chars"` // sql: max_message_length
-	MinMessageLength int       `json:"min_comment_chars"` // sql: min_message_length
-	AllowEmbeds      bool      `json:"-"`                 // sql: allow_embeds
-	RedirectToThread bool      `json:"-"`                 // sql: redirect_to_thread
-	RequireFile      bool      `json:"-"`                 // sql: require_file
-	EnableCatalog    bool      `json:"-"`                 // sql: enable_catalog
+	ID             int       `json:"-"`                // sql: id
+	SectionID      int       `json:"-"`                // sql: section_id
+	URI            string    `json:"-"`                // sql: uri
+	Dir            string    `json:"board"`            // sql: dir
+	NavbarPosition int       `json:"-"`                // sql: navbar_position
+	Title          string    `json:"title"`            // sql: title
+	Subtitle       string    `json:"meta_description"` // sql: suttitle
+	Description    string    `json:"-"`                // sql: description
+	CreatedAt      time.Time `json:"-"`                // sql: created_at
 }
 
 // Filter represents an entry in gochan's new filter system which merges username bans, file bans, and filename bans,
@@ -202,23 +189,22 @@ type IPBanAudit struct {
 
 // used to composition IPBanAppeal and IPBanAppealAudit
 type ipBanAppealBase struct {
-	StaffID       int    // sql: staff_id
-	AppealText    string // sql: appeal_text
-	StaffResponse string // sql: staff_response
-	IsDenied      bool   // sql: is_denied
+	StaffID    int       `json:"-"`           // sql: staff_id
+	AppealText string    `json:"appeal_text"` // sql: appeal_text
+	IsDenied   bool      `json:"is_denied"`   // sql: is_denied
+	Timestamp  time.Time `json:"timestamp"`   // sql: timestamp
 }
 
 // table: DBPREFIXip_ban_appeals
 type IPBanAppeal struct {
-	ID      int // sql: id
-	IPBanID int // sql: ip_ban_id
+	ID      int `json:"id"`     // sql: id
+	IPBanID int `json:"ban_id"` // sql: ip_ban_id
 	ipBanAppealBase
 }
 
 // table: DBPREFIXip_ban_appeals_audit
 type IPBanAppealAudit struct {
-	AppealID  int       // sql: appeal_id
-	Timestamp time.Time // sql: timestamp
+	AppealID int // sql: appeal_id
 	ipBanAppealBase
 }
 
@@ -251,12 +237,12 @@ type Post struct {
 
 // table: DBPREFIXreports
 type Report struct {
-	ID               int    `json:"id"`         // sql: id
-	HandledByStaffID *int   `json:"staff_id"`   // sql: handled_by_staff_id
-	PostID           int    `json:"post_id"`    // sql: post_id
-	IP               string `json:"ip"`         // sql: ip
-	Reason           string `json:"reason"`     // sql: reason
-	IsCleared        bool   `json:"is_cleared"` // sql: is_cleared
+	ID               int    `json:"id"`                   // sql: id
+	HandledByStaffID *int   `json:"staff_id,omitempty"`   // sql: handled_by_staff_id
+	PostID           int    `json:"post_id"`              // sql: post_id
+	IP               string `json:"ip"`                   // sql: ip
+	Reason           string `json:"reason"`               // sql: reason
+	IsCleared        bool   `json:"is_cleared,omitempty"` // sql: is_cleared
 }
 
 // table: DBPREFIXreports_audit

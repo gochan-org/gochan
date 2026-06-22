@@ -1,8 +1,11 @@
 package initsql
 
 import (
+	"database/sql"
 	"errors"
+	"net"
 	"net/http"
+	"net/netip"
 	"path"
 	"strconv"
 	"text/template"
@@ -13,6 +16,7 @@ import (
 	"github.com/gochan-org/gochan/pkg/gctemplates"
 	"github.com/gochan-org/gochan/pkg/gcutil"
 	"github.com/gochan-org/gochan/pkg/posting/uploads"
+	"github.com/mattn/go-sqlite3"
 )
 
 func banMaskTmplFunc(ban gcsql.IPBan) string {
@@ -40,7 +44,7 @@ func getStaffNameFromIDTmplFunc(id int) string {
 }
 
 func getAppealBanIPTmplFunc(appealID int) string {
-	ban, err := gcsql.GetIPBanByID(appealID)
+	ban, err := gcsql.GetIPBanByID(nil, appealID)
 	if err != nil || ban == nil {
 		return "?"
 	}
@@ -59,12 +63,8 @@ func getTopPostIDTmplFunc(post *gcsql.Post) int {
 	return id
 }
 
-func numRepliesTmplFunc(_, opID int) int {
-	num, err := gcsql.GetThreadReplyCountFromOP(opID)
-	if err != nil {
-		return 0
-	}
-	return num
+func numRepliesTmplFunc(_, opID int) (int, error) {
+	return gcsql.GetThreadReplyCountFromOP(opID)
 }
 
 func getBoardDirTmplFunc(id int) string {
@@ -79,22 +79,9 @@ func boardPagePathTmplFunc(board *gcsql.Board, page int) string {
 	return config.WebPath(board.Dir, strconv.Itoa(page)+".html")
 }
 
-func getBoardDefaultStyleTmplFunc(dir string) (string, error) {
+func getBoardDefaultStyleTmplFunc(dir string) string {
 	boardCfg := config.GetBoardConfig(dir)
-	if !boardCfg.IsGlobal() {
-		// /<board>/board.json exists, overriding the default them and theme set in SQL
-		return boardCfg.DefaultStyle, nil
-	}
-	var defaultStyle string
-	err := gcsql.QueryRowTimeoutSQL(nil, "SELECT default_style FROM DBPREFIXboards WHERE dir = ?",
-		[]any{dir}, []any{&defaultStyle})
-	if err != nil || defaultStyle == "" {
-		gcutil.LogError(err).Caller().
-			Str("board", dir).
-			Msg("Unable to get default style attribute of board")
-		return boardCfg.DefaultStyle, err
-	}
-	return defaultStyle, nil
+	return boardCfg.DefaultStyle
 }
 
 func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
@@ -107,7 +94,87 @@ func sectionBoardsTmplFunc(sectionID int) []gcsql.Board {
 	return boards
 }
 
+func ipToNetIP(ip any) (net.IP, bool) {
+	var ipOut net.IP
+	switch v := any(ip).(type) {
+	case []byte:
+		ipOut = net.IP(v).To16()
+	case int64:
+		ipOut = net.IPv4(byte(v>>24), byte(v>>16), byte(v>>8), byte(v)).To16()
+	case string:
+		parsedIP := net.ParseIP(v)
+		if parsedIP == nil {
+			return nil, false
+		}
+		ipOut = parsedIP.To16()
+	}
+	if ipOut == nil {
+		return nil, false
+	}
+	return ipOut, ipOut.To4() != nil
+}
+
+func ipToString(ip any, v4 bool) string {
+	netIP, isV4 := ipToNetIP(ip)
+	if netIP == nil || v4 && !isV4 {
+		return ""
+	}
+	return netIP.String()
+}
+
 func init() {
+	sql.Register("sqlite3-inet6", &sqlite3.SQLiteDriver{
+		ConnectHook: func(sc *sqlite3.SQLiteConn) error {
+			sc.RegisterFunc("inet6_aton", func(a string) []byte {
+				ip, _ := ipToNetIP(a)
+				return ip
+			}, true)
+
+			sc.RegisterFunc("inet6_ntoa", func(n any) any {
+				ip, _ := ipToNetIP(n)
+				if ip == nil {
+					return nil
+				}
+				return ip.String()
+			}, true)
+
+			sc.RegisterFunc("inet_aton", func(a string) []byte {
+				ip, isV4 := ipToNetIP(a)
+				if !isV4 {
+					return nil // not a IPv4 address
+				}
+				return ip
+			}, true)
+
+			sc.RegisterFunc("inet_ntoa", func(n any) any {
+				ipStr := ipToString(n, true)
+				if ipStr == "" {
+					return nil
+				}
+				return ipStr
+			}, true)
+
+			sc.RegisterFunc("ip_cmp", func(ip1 any, ip2 any) any {
+				// var netIP1, netIP2 net.IP
+				var netIPAddr1, netIPAddr2 netip.Addr
+				netIP1, v4_1 := ipToNetIP(ip1)
+				netIP2, v4_2 := ipToNetIP(ip2)
+				if netIP1 == nil || netIP2 == nil {
+					return nil // one or both are invalid
+				}
+				if v4_1 != v4_2 {
+					return nil // can't compare different IP classes
+				}
+
+				netIPAddr1, _ = netip.AddrFromSlice(netIP1)
+				netIPAddr2, _ = netip.AddrFromSlice(netIP2)
+				return netIPAddr1.Compare(netIPAddr2)
+			}, true)
+
+			return nil
+		},
+	})
+
 	events.RegisterEvent([]string{"reset-boards-sections"}, func(_ string, _ ...any) error {
 		if config.GetSQLConfig().DBhost != "" {
 			// Only reset if SQL is configured

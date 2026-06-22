@@ -1,0 +1,20 @@
+@mixin responsive-rules() {
+    @media screen and (max-width: 520px) {
+        div#topbar {
+            .boards-button {
+                display: inline-block;
+            }
+            .topbar-boards, .topbar-section {
+                display: none;
+            }
+        }
+
+        .lightbox {
+            left: 0;
+            width: 100vw;
+            right: unset;
+            padding-left: 0;
+            padding-right: 0;
+        }
+    }
+}

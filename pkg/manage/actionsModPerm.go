@@ -49,7 +49,7 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	if banForm.DeleteID > 0 {
 		// deleting a ban
 		ban.ID = banForm.DeleteID
-		if err = ban.Deactivate(staff.ID); err != nil {
+		if err = gcsql.DeactivateBan(ban.ID, staff.ID); err != nil {
 			logger.Err(err).Caller().
 				Int("deleteBan", ban.ID).
 				Send()
@@ -130,61 +130,6 @@ func bansCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Sta
 	}
 	outputStr += manageBansBuffer.String()
 	return outputStr, nil
-}
-
-func appealsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
-	banIDstr := request.FormValue("banid")
-	var banID int
-	if banIDstr != "" {
-		if banID, err = strconv.Atoi(banIDstr); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", err
-		}
-	}
-	logger = logger.With().Int("banID", banID).Logger()
-
-	limitStr := request.FormValue("limit")
-	limit := 20
-	if limitStr != "" {
-		if limit, err = strconv.Atoi(limitStr); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", err
-		}
-	}
-	approveStr := request.FormValue("approve")
-	if approveStr != "" {
-		// approving an appeal
-		approveID, err := strconv.Atoi(approveStr)
-		if err != nil {
-			logger.Err(err).Caller().
-				Str("approveStr", approveStr).Send()
-		}
-		if err = gcsql.ApproveAppeal(approveID, staff.ID); err != nil {
-			logger.Err(err).Caller().
-				Int("approveAppeal", approveID).Send()
-			return "", err
-		}
-	}
-
-	appeals, err := gcsql.GetAppeals(banID, limit)
-	if err != nil {
-		logger.Err(err).Caller().Send()
-		return "", fmt.Errorf("failed to get appeals list: %w", err)
-	}
-
-	if wantsJSON {
-		return appeals, nil
-	}
-	manageAppealsBuffer := bytes.NewBufferString("")
-	pageData := map[string]any{}
-	if len(appeals) > 0 {
-		pageData["appeals"] = appeals
-	}
-	if err = serverutil.MinifyTemplate(gctemplates.ManageAppeals, pageData, manageAppealsBuffer, "text/html"); err != nil {
-		logger.Err(err).Str("template", gctemplates.ManageAppeals).Caller().Send()
-		return "", fmt.Errorf("failed executing appeal management page template: %w", err)
-	}
-	return manageAppealsBuffer.String(), err
 }
 
 func filterHitsCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
@@ -765,6 +710,7 @@ func wordfiltersCallback(_ http.ResponseWriter, request *http.Request, staff *gc
 func registerModeratorPages() {
 	RegisterManagePage("bans", "Bans", ModPerms, NoJSON, bansCallback)
 	RegisterManagePage("appeals", "Ban Appeals", ModPerms, OptionalJSON, appealsCallback)
+	RegisterManagePageWithMethods("appeals/:appealID", "Appeal Conversation", ModPerms, NoJSON, true, appealConversationCallback, http.MethodGet, http.MethodPost)
 	RegisterManagePage("filters", "Post Filters", ModPerms, NoJSON, filtersCallback)
 	RegisterManagePageWithMethods("filters/hits/:filterID", "Filter Hits", ModPerms, NoJSON, true, filterHitsCallback, http.MethodGet, http.MethodPost)
 	RegisterManagePage("ipsearch", "IP Search", ModPerms, NoJSON, ipSearchCallback)

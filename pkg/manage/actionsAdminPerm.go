@@ -129,7 +129,7 @@ func updateAnnouncementsCallback(_ http.ResponseWriter, request *http.Request, s
 }
 
 // boardsCallback handles calls to /manage/boards, showing boards by section and a form to create a new board
-func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func boardsCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	requestType := boardsRequestType(request)
 
 	logger = logger.With().Str("requestType", requestType.String()).Logger()
@@ -145,6 +145,13 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 			return nil, err
 		}
 		form.fillBoard(&board)
+
+		if err = form.writeConfig(); err != nil {
+			logger.Err(err).Caller().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Send()
+			return "", err
+		}
+		logger.Info().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Msg("Wrote board config")
+
 		if err = gcsql.CreateBoard(&board, true); err != nil {
 			logger.Err(err).Caller().Send()
 			return "", err
@@ -170,19 +177,10 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards, map[string]any{
-		"siteConfig": config.GetSiteConfig(),
-		"sections":   sections,
-		"boards":     boards,
-		"board": gcsql.Board{
-			AnonymousName:    "Anonymous",
-			MaxFilesize:      1000 * 1000 * 15,
-			EnableCatalog:    true,
-			AutosageAfter:    200,
-			NoImagesAfter:    -1,
-			MaxMessageLength: 1500,
-		},
+		"siteConfig":  config.GetSiteConfig(),
+		"sections":    sections,
+		"boards":      boards,
 		"boardConfig": config.GetBoardConfig(""),
-		"editing":     false,
 	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err
@@ -192,7 +190,7 @@ func boardsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.S
 }
 
 // modifyBoardCallback handles requests to /manage/boards/<boardDir> for modifying or deleting a board
-func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staff *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	params, _ := request.Context().Value(requestContextKey{}).(bunrouter.Params)
 	boardDir := params.ByName("board")
 
@@ -216,18 +214,25 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staf
 		return nil, err
 	}
 	var board *gcsql.Board
+	if requestType != boardRequestTypeViewBoards {
+		board, err = gcsql.GetBoardFromDir(boardDir)
+		if errors.Is(err, gcsql.ErrBoardDoesNotExist) {
+			logger.Warn().Err(err).Caller().Send()
+			return "", server.NewServerError(err, http.StatusBadRequest)
+		}
+		if err != nil {
+			logger.Err(err).Caller().Send()
+			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
+		}
+	}
 	switch requestType {
-	case boardRequestTypeViewSingleBoard:
-		if board, err = gcsql.GetBoardFromDir(boardDir); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
-		}
 	case boardRequestTypeModify:
-		if board, err = gcsql.GetBoardFromDir(boardDir); err != nil {
-			logger.Err(err).Caller().Send()
-			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
-		}
 		form.fillBoard(board)
+		if err = form.writeConfig(); err != nil {
+			logger.Err(err).Caller().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Send()
+			return "", server.NewServerError(err, http.StatusInternalServerError)
+		}
+		logger.Info().Str("boardConfigPath", config.GetBoardConfigPath(board.Dir)).Msg("Wrote board config")
 		if err = board.ModifyInDB(); err != nil {
 			logger.Err(err).Caller().Send()
 			return "", server.NewServerError("unable to apply changes", http.StatusInternalServerError)
@@ -242,15 +247,11 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staf
 		}
 		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
 	case boardRequestTypeDelete:
-		board, err = gcsql.GetBoardFromDir(boardDir)
-		if err != nil {
-			logger.Err(err).Caller().Send()
-			return "", server.NewServerError("unable to get board info", http.StatusInternalServerError)
-		}
 		if err = board.Delete(); err != nil {
 			logger.Err(err).Caller().Send()
 			return "", server.NewServerError("unable to delete board", http.StatusInternalServerError)
 		}
+		config.DeleteBoardConfig(boardDir)
 		http.Redirect(writer, request, config.WebPath("/manage/boards"), http.StatusFound)
 	}
 
@@ -267,12 +268,12 @@ func modifyBoardCallback(writer http.ResponseWriter, request *http.Request, staf
 
 	var buf bytes.Buffer
 	if err = serverutil.MinifyTemplate(gctemplates.ManageBoards, map[string]any{
-		"siteConfig":  config.GetSiteConfig(),
-		"sections":    sections,
-		"boards":      boards,
-		"board":       board,
-		"boardConfig": config.GetBoardConfig(""),
-		"editing":     requestType == boardRequestTypeViewSingleBoard || requestType == boardRequestTypeModify,
+		"siteConfig":      config.GetSiteConfig(),
+		"sections":        sections,
+		"boards":          boards,
+		"board":           board,
+		"boardConfig":     config.GetBoardConfig(""),
+		"boardConfigPath": config.GetBoardConfigPath(board.Dir),
 	}, &buf, "text/html"); err != nil {
 		logger.Err(err).Str("template", gctemplates.ManageBoards).Caller().Send()
 		return "", err
@@ -675,7 +676,7 @@ func rebuildBoardsCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staf
 
 // reparseHTMLCallback handles requests to /manage/reparsehtml for reparsing all post text into HTML
 // TODO: merge this and rebuild callbacks into one
-func reparseHTMLCallback(_ http.ResponseWriter, request *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
+func reparseHTMLCallback(_ http.ResponseWriter, _ *http.Request, _ *gcsql.Staff, _ bool, logger zerolog.Logger) (output any, err error) {
 	var outputStr string
 	tx, err := gcsql.BeginTx()
 	if err != nil {

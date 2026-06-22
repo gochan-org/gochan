@@ -18,10 +18,9 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type reportData struct {
-	gcsql.Report
-	StaffUser *string `json:"staff_user"`
-	PostLink  string  `json:"post_link"`
+type reportWithLink struct {
+	gcsql.PostReport
+	PostLink string `json:"post_link"`
 }
 
 func doReportHandling(request *http.Request, staff *gcsql.Staff, infoEv, errEv *zerolog.Event) error {
@@ -93,6 +92,22 @@ func doReportHandling(request *http.Request, staff *gcsql.Staff, infoEv, errEv *
 	return nil
 }
 
+func getReportsWithLinks() ([]reportWithLink, error) {
+	reports, err := gcsql.GetReports(false)
+	if err != nil {
+		return nil, err
+	}
+	var reportsWithLinks []reportWithLink
+	for _, report := range reports {
+		var reportData reportWithLink
+		reportData.PostReport = report
+		reportData.PostLink = config.WebPath(
+			report.Board, "res", strconv.Itoa(report.ThreadOP)+".html#"+strconv.Itoa(report.PostID))
+		reportsWithLinks = append(reportsWithLinks, reportData)
+	}
+	return reportsWithLinks, nil
+}
+
 func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.Staff, wantsJSON bool, logger zerolog.Logger) (output any, err error) {
 	infoEv := logger.Info()
 	errEv := logger.Error()
@@ -117,40 +132,12 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		return nil, server.NewServerError("failed to clean up reports of deleted posts", http.StatusInternalServerError)
 	}
 
-	rows, err := gcsql.Query(requestOptions, `SELECT id, staff_id, staff_user, post_id, ip, reason, is_cleared FROM DBPREFIXv_post_reports`)
+	reports, err := getReportsWithLinks()
 	if err != nil {
 		errEv.Err(err).Caller().Send()
-		return nil, err
+		return nil, server.NewServerError("failed to get reports", http.StatusInternalServerError)
 	}
-	defer rows.Close()
-	// reports := make([]map[string]any, 0)
-	var reports []reportData
-	for rows.Next() {
-		var report reportData
-		err = rows.Scan(&report.ID, &report.HandledByStaffID, &report.StaffUser, &report.PostID, &report.IP, &report.Reason, &report.IsCleared)
-		if report.StaffUser == nil {
-			user := "unassigned"
-			report.StaffUser = &user
-			handledByStaffID := 0
-			report.HandledByStaffID = &handledByStaffID
-		}
-		if err != nil {
-			errEv.Err(err).Caller().Send()
-			return nil, server.NewServerError("failed to scan report row", http.StatusInternalServerError)
-		}
 
-		post, err := gcsql.GetPostFromID(report.PostID, true, requestOptions)
-		if err != nil {
-			errEv.Err(err).Caller().Msg("failed to get post from ID")
-			return nil, server.NewServerError("failed to get post from ID", http.StatusInternalServerError)
-		}
-		report.PostLink = post.WebPath()
-		reports = append(reports, report)
-	}
-	if err = rows.Close(); err != nil {
-		errEv.Err(err).Caller().Send()
-		return nil, err
-	}
 	if wantsJSON {
 		return reports, nil
 	}
@@ -165,6 +152,5 @@ func reportsCallback(_ http.ResponseWriter, request *http.Request, staff *gcsql.
 		errEv.Err(err).Caller().Send()
 		return "", err
 	}
-	output = reportsBuffer.String()
-	return
+	return reportsBuffer.String(), nil
 }

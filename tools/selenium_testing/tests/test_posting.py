@@ -95,7 +95,7 @@ class TestPosting(SeleniumTestCase):
 		self.assertNotIn("Error :c", self.driver.title, "No errors when we try to delete the moved thread")
 
 	def test_cyclic(self):
-		self.assertTrue(self.options.board_exists(self.options.cyclic_board), f"Confirming that /{self.options.cyclic_board}/ exists")
+		self.assertTrue(self.options.board_exists(self.options.cyclic_board), f"/{self.options.cyclic_board}/ has not been created yet. It must be created manually and have EnableCyclicThreads set to true and CyclicThreadNumPosts set to {self.options.cyclic_count} in its board.json before running this test.")
 
 		self.options.goto_page(self.options.cyclic_board)
 		WebDriverWait(self.driver, 10).until(

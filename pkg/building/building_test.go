@@ -2,7 +2,6 @@ package building
 
 import (
 	"bytes"
-	"database/sql"
 	"database/sql/driver"
 	"io"
 	"os"
@@ -133,12 +132,9 @@ func TestBuildJS(t *testing.T) {
 	assert.Equal(t, expectedUnminifiedJS, string(ba))
 }
 
-func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool) {
+func mockSelectNonHiddenBoards(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(`SELECT\s*` +
-		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*` +
-		`max_file_size, max_threads, default_style, boards\.locked, created_at, anonymous_name, force_anonymous,\s*` +
-		`autosage_after, no_images_after, max_message_length, min_message_length, allow_embeds, redirect_to_thread,\s*` +
-		`require_file, enable_catalog\s*` +
+		`boards.id, section_id, uri, dir, navbar_position, title, subtitle, description,\s*created_at\s*` +
 		`FROM boards\s*` +
 		`INNER JOIN \(\s*` +
 		`SELECT id, hidden FROM sections\s*` +
@@ -146,26 +142,28 @@ func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool)
 		`WHERE s\.hidden = FALSE\s*` +
 		`ORDER BY navbar_position ASC, boards.id ASC`).ExpectQuery().WillReturnRows(
 		sqlmock.NewRows([]string{
-			"boards.id", "section_id", "uri", "dir", "navbar_position", "title", "subtitle", "description",
-			"max_file_size", "max_threads", "default_style", "locked", "created_at", "anonymous_name", "force_anonymous",
-			"autosage_after", "no_images_after", "max_message_length", "min_message_length", "allow_embeds", "redirect_to_thread",
-			"require_file", "enable_catalog",
+			"boards.id", "section_id", "uri", "dir", "navbar_position", "title", "subtitle", "description", "created_at",
 		}).AddRows([]driver.Value{
-			1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing description",
-			15000, 100, "pipes.css", false, time.Now(), "Anonymous", false,
-			1500, 2000, 1500, 0, true, false, false, true,
-		}).AddRows([]driver.Value{
-			1, 1, "test2", "test2", 1, "Testing board 2", "Board for testing 2", "Board for testing description 2",
-			15000, 100, "pipes.css", false, time.Now(), "Anonymous", false,
-			1500, 2000, 1500, 0, true, false, false, true,
+			1, 1, "test", "test", 1, "Testing board", "Board for testing", "Board for testing description", time.Now(),
+		}, []driver.Value{
+			1, 1, "test2", "test2", 1, "Testing board 2", "Board for testing 2", "Board for testing description 2", time.Now(),
 		}),
 	)
+}
 
+func mockSelectNonHiddenSections(mock sqlmock.Sqlmock) {
 	mock.ExpectPrepare(
 		`SELECT id, name, abbreviation, position, hidden FROM sections WHERE hidden = FALSE ORDER BY position ASC, name ASC`,
 	).ExpectQuery().
 		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "abbreviation", "position", "hidden"}).
 			AddRows([]driver.Value{1, "Main", "main", 1, false}))
+}
+
+func mockSetupBoards(t *testing.T, mock sqlmock.Sqlmock, expectRecentPosts bool) {
+	mockSelectNonHiddenBoards(mock) // ResetBoardSectionArrays
+	mockSelectNonHiddenSections(mock)
+	mockSelectNonHiddenBoards(mock) // BuildFrontPage
+	mockSelectNonHiddenSections(mock)
 
 	if expectRecentPosts {
 		mockSetupPosts(mock)
@@ -262,10 +260,7 @@ func TestBuildFrontPage(t *testing.T) {
 		t.FailNow()
 	}
 
-	for _, driver := range sql.Drivers() {
-		if driver == "sqlmock" {
-			continue
-		}
+	for _, driver := range gcsql.Drivers() {
 		t.Run(driver, func(t *testing.T) {
 			outDir := t.TempDir()
 			config.InitTestConfig()
@@ -309,10 +304,7 @@ func TestBuildFrontPage(t *testing.T) {
 				t.FailNow()
 			}
 
-			mock, err := gcsql.SetupMockDB(driver)
-			if !assert.NoError(t, err) {
-				t.FailNow()
-			}
+			mock := gcsql.SetupMockDB(t, driver)
 			siteCfg := config.GetSiteConfig()
 
 			t.Run("with minification", func(t *testing.T) {
@@ -342,10 +334,7 @@ type pageHeaderTestCase struct {
 }
 
 func (p *pageHeaderTestCase) runTest(t *testing.T, sqlDriver string) {
-	mock, err := gcsql.SetupMockDB(sqlDriver)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	mock := gcsql.SetupMockDB(t, sqlDriver)
 
 	boardCfg := config.GetBoardConfig(p.board)
 	boardCfg.IncludeGlobalStyles = p.includeCSS
@@ -354,7 +343,7 @@ func (p *pageHeaderTestCase) runTest(t *testing.T, sqlDriver string) {
 
 	mockSetupBoards(t, mock, false)
 
-	err = gctemplates.InitTemplates()
+	err := gctemplates.InitTemplates()
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
@@ -409,10 +398,7 @@ func TestBuildPageHeader(t *testing.T) {
 	config.SetSystemCriticalConfig(systemCriticalConfig)
 
 	for _, tc := range pageHeaderTestCases {
-		for _, driver := range sql.Drivers() {
-			if driver == "sqlmock" {
-				continue
-			}
+		for _, driver := range gcsql.Drivers() {
 			t.Run(tc.desc+" - "+driver, func(t *testing.T) {
 				tc.runTest(t, driver)
 			})
@@ -430,10 +416,8 @@ func TestBuildPageFooter(t *testing.T) {
 	systemCriticalConfig.TemplateDir = "templates"
 	config.SetSystemCriticalConfig(systemCriticalConfig)
 
-	mock, err := gcsql.SetupMockDB("sqlite3")
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
+	mock := gcsql.SetupMockDB(t, "sqlite3")
+
 	var buf bytes.Buffer
 	if !assert.NoError(t, BuildPageFooter(&buf)) {
 		t.FailNow()

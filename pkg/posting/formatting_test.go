@@ -216,6 +216,9 @@ func TestDiceRoll(t *testing.T) {
 
 func TestHashTags(t *testing.T) {
 	config.InitTestConfig()
+	siteConfig := config.GetSiteConfig()
+	siteConfig.MinifyHTML = true
+	config.SetSiteConfig(siteConfig)
 	msgfmtr.Init()
 	logger := testutil.GetTestLogger(t)
 	msg := `[#tag]
@@ -243,7 +246,7 @@ test]
 			`test]<br />`+
 			`<span class="hashtag">#single</span> <span class="hashtag">#line</span> <span class="hashtag">#tags</span><br />`+
 			`<span class="hashtag">#js&lt;script&gt;alert(&#34;lol&#34;)&lt;/script&gt;injection</span>`,
-	), msgHTML)
+	), msgHTML) // skipcq: GSC-G203
 }
 
 func TestWorksafe(t *testing.T) {

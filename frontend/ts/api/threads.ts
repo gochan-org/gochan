@@ -1,11 +1,8 @@
 /* eslint no-unused-vars: ["warn", {"args":"none"}] */
 
-import $ from "jquery";
-
-export async function getThreadJSON(threadID: number, board: string) {
-	return $.ajax({
-		url: `${webroot}${board}/res/${threadID}.json`,
-		cache: false,
-		dataType: "json",
-	});
+export async function getThreadJSON(threadID: number, board: string):Promise<BoardThread> {
+	return await fetch(`${webroot}${board}/res/${threadID}.json`, {
+		method: "GET",
+		cache: "no-cache"
+	}).then(response => response.json());
 }

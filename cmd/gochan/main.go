@@ -2,8 +2,8 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -99,7 +99,7 @@ func main() {
 	}
 
 	for _, board := range gcsql.AllBoards {
-		if _, err = board.DeleteOldThreads(); err != nil {
+		if _, err = board.DeleteOldThreads(config.GetBoardConfig(board.Dir).MaxThreads); err != nil {
 			fatalEv.Err(err).Caller().
 				Str("board", board.Dir).
 				Msg("Failed deleting old threads")
@@ -120,18 +120,15 @@ func main() {
 	gcutil.LogInfo().
 		Str("ListenAddress", systemCritical.ListenAddress).
 		Int("Port", systemCritical.Port).
-		Str("SiteHost", systemCritical.SiteHost).
+		Str("siteURL", (&url.URL{Scheme: "http", Host: systemCritical.SiteHost, Path: systemCritical.WebRoot}).String()).
 		Msg("Gochan server started")
 	<-sc
 }
 
-func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
+func initDB(fatalEv *zerolog.Event) {
 	systemCritical := config.GetSystemCriticalConfig()
 	if err := gcsql.ConnectToDB(&systemCritical.SQLConfig); err != nil {
-		if len(commandLine) > 0 && commandLine[0] {
-			fmt.Fprintln(os.Stderr, "Failed to connect to the database:", err)
-		}
-		fatalEv.Err(err).Msg("Failed to connect to the database")
+		fatalEv.Err(err).Caller().Msg("Failed to connect to the database")
 	}
 	events.TriggerEvent("db-connected")
 	gcutil.LogInfo().
@@ -141,21 +138,17 @@ func initDB(fatalEv *zerolog.Event, commandLine ...bool) {
 		Msg("Connected to database")
 
 	err := gcsql.CheckAndInitializeDatabase(systemCritical.DBtype, true)
+	var triedUpdate bool
 	if errors.Is(err, gcsql.ErrDeprecatedDB) {
 		err = dbupdate.UpdateDatabase()
+		triedUpdate = true
 	}
 	if err != nil {
 		cleanup()
-		if len(commandLine) > 0 && commandLine[0] {
-			fmt.Fprintln(os.Stderr, "Failed to initialize the database:", err)
-		}
-		fatalEv.Err(err).Msg("Failed to initialize the database")
+		fatalEv.Err(err).Bool("triedUpdate", triedUpdate).Caller().Msg("Failed to initialize the database")
 	}
 	events.TriggerEvent("db-initialized")
 	if err := gcsql.ResetViews(); err != nil {
-		if len(commandLine) > 0 && commandLine[0] {
-			fmt.Fprintln(os.Stderr, "Failed resetting SQL views:", err)
-		}
 		fatalEv.Err(err).Caller().Msg("Failed resetting SQL views")
 	}
 	events.TriggerEvent("db-views-reset")

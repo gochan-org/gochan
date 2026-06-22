@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gochan-org/gochan/pkg/config"
@@ -66,7 +65,7 @@ func GetPostIP(postID int) (string, error) {
 // GetPostsFromIP gets the posts from the database with a matching IP address, specifying
 // optionally requiring them to not be deleted
 func GetPostsFromIP(ip string, limit int, onlyNotDeleted bool) ([]Post, error) {
-	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = PARAM_ATON`
+	sql := selectPostsBaseSQL + ` WHERE DBPREFIXposts.ip = INET6_ATON(?)`
 	if onlyNotDeleted {
 		sql += " AND is_deleted = FALSE"
 	}
@@ -224,7 +223,7 @@ func SinceLastPost(postIP string) (int, error) {
 // SinceLastThread returns the number of seconds since the given IP address created a new thread/top post
 // (used for checking against the new thread cooldown)
 func SinceLastThread(postIP string) (int, error) {
-	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE ip = ? AND is_top_post`
+	const query = `SELECT COALESCE(MAX(created_on), '1970-01-01 00:00:00') FROM DBPREFIXposts WHERE IP_CMP(ip, ?) = 0 AND is_top_post`
 	var whenStr string
 
 	err := QueryRow(nil, query, []any{postIP}, []any{&whenStr})
@@ -274,10 +273,7 @@ func (p *Post) GetBoard(opts ...*RequestOptions) (*Board, error) {
 	board := new(Board)
 	err := QueryRow(setupOptions(opts...), query, []any{p.ID}, []any{
 		&board.ID, &board.SectionID, &board.URI, &board.Dir, &board.NavbarPosition, &board.Title, &board.Subtitle,
-		&board.Description, &board.MaxFilesize, &board.MaxThreads, &board.DefaultStyle, &board.Locked,
-		&board.CreatedAt, &board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter,
-		&board.MaxMessageLength, &board.MinMessageLength, &board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile,
-		&board.EnableCatalog,
+		&board.Description, &board.CreatedAt,
 	})
 	return board, err
 }
@@ -370,7 +366,7 @@ func (p *Post) Delete(requestOptions ...*RequestOptions) error {
 	shouldCommit := len(requestOptions) == 0
 	opts := setupOptions(requestOptions...)
 	if opts.Context == context.Background() {
-		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		opts.Context, opts.Cancel = setupTimeoutContext(context.Background(), gcdb)
 		defer opts.Cancel()
 	}
 	var err error
@@ -408,7 +404,7 @@ func (p *Post) Delete(requestOptions ...*RequestOptions) error {
 func (p *Post) Insert(bumpThread bool, thread *Thread, force bool, requestOptions ...*RequestOptions) error {
 	opts := setupOptions(requestOptions...)
 	if len(requestOptions) == 0 {
-		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		opts.Context, opts.Cancel = setupTimeoutContext(context.Background(), gcdb)
 		defer opts.Cancel()
 	}
 	var err error
@@ -427,7 +423,7 @@ func (p *Post) Insert(bumpThread bool, thread *Thread, force bool, requestOption
 	const insertSQL = `INSERT INTO DBPREFIXposts
 	(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,
 		message, message_raw, password, flag, country) 
-	VALUES(?,?,PARAM_ATON,CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?,?)`
+	VALUES(?,?,INET6_ATON(?),CURRENT_TIMESTAMP,?,?,?,?,?,?,?,?,?,?,?)`
 	const bumpSQL = `UPDATE DBPREFIXthreads SET last_bump = CURRENT_TIMESTAMP WHERE id = ?`
 
 	if p.ThreadID == 0 {
@@ -486,7 +482,7 @@ func (p *Post) CyclicPostsToBePruned() ([]CyclicThreadPost, error) {
 		// don't prune if this is the OP
 		return nil, nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+	ctx, cancel := setupTimeoutContext(context.Background(), gcdb)
 	defer cancel()
 
 	var cyclic bool
@@ -555,12 +551,7 @@ func SetPostBannedMessage(postID int, bannedMessage string, staff string) error 
 	banColors := config.GetBoardConfig("").BanColors
 	staffBanColor, ok := banColors[staff]
 
-	if ok && staffBanColor != "" && !strings.HasPrefix(staffBanColor, "#") {
-		_, err := strconv.ParseInt(staffBanColor, 16, 32)
-		if err == nil {
-			staffBanColor = "#" + staffBanColor
-		}
-	} else if !ok {
+	if !ok || staffBanColor == "" {
 		staffBanColor = "red"
 	}
 	bannedMessageHTML := fmt.Sprintf(`<span style="color:%s">(%s)</span>`, staffBanColor, bannedMessage)

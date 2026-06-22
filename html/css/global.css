@@ -226,10 +226,12 @@ input, textarea {
 
 table#postbox-static {
   border: none;
-  margin: 0px auto;
 }
 table#postbox-static tr, table#postbox-static td {
   border: none;
+}
+table#postbox-static {
+  margin: 0px auto;
 }
 
 .greentext {
@@ -492,6 +494,11 @@ form#login-box input[type=submit] {
   flex-wrap: wrap;
 }
 
+.topbar-reports, .topbar-appeals {
+  color: red;
+  font-weight: bold;
+}
+
 .lightbox {
   background: #CDCDCD;
   border: 1px solid #000;
@@ -505,11 +512,44 @@ form#login-box input[type=submit] {
   z-index: 9001;
   overflow: auto;
 }
-
 .lightbox * {
   -webkit-filter: drop-shadow(0px 0px 0px #000);
   filter: drop-shadow(0px 0px 0px #000);
   color: #000000;
+}
+.lightbox a {
+  color: #5A5A5A;
+  font-weight: bold;
+}
+.lightbox input[type=text], .lightbox input[type=password], .lightbox input[type=file], .lightbox textarea {
+  background: #FFF;
+  border: 1px solid #000;
+  color: #000;
+}
+.lightbox div.section-body {
+  background: #A0A0A0;
+}
+.lightbox div.section-title-block {
+  border: 1px solid #000;
+  border-radius: 0px;
+  background: #777;
+  -webkit-filter: drop-shadow(0px 0px 0px #000);
+  filter: drop-shadow(0px 0px 0px #000);
+}
+.lightbox .ui-tabs-tab {
+  background-color: #BBB;
+  border: none;
+}
+.lightbox .ui-tabs-tab a {
+  color: black;
+}
+.lightbox .ui-tabs-active {
+  background-color: #DDD;
+  border: none;
+}
+.lightbox .ui-tabs-panel {
+  background-color: #DDD;
+  border: none;
 }
 
 .lightbox-bg {
@@ -550,43 +590,21 @@ form#login-box input[type=submit] {
   color: #555;
 }
 
-.lightbox a {
-  color: #5A5A5A;
+.settings-grid {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 90%;
+  margin: auto;
+}
+.settings-grid span:nth-child(2n+1) {
   font-weight: bold;
 }
-
-.lightbox input[type=text],
-.lightbox input[type=password],
-.lightbox input[type=file],
-.lightbox textarea {
-  background: #FFF;
-  border: 1px solid #000;
-  color: #000;
+.settings-grid .span2 {
+  grid-column: span 2;
 }
-
-.lightbox textarea#sql-statement {
-  width: 95%;
-  height: 300px;
-  margin-left: 0px;
-  clear: both;
-  background: #FFF;
-  color: #000;
-}
-
-.lightbox div.section-body {
-  background: #A0A0A0;
-}
-
-.lightbox div.section-title-block {
-  border: 1px solid #000;
-  border-radius: 0px;
-  background: #777;
-  -webkit-filter: drop-shadow(0px 0px 0px #000);
-  filter: drop-shadow(0px 0px 0px #000);
-}
-
-#settings-container table textarea {
-  width: 75%;
+.settings-grid textarea {
+  width: 90%;
   height: 6em;
 }
 
@@ -731,23 +749,26 @@ div#topbar {
   left: 0;
   position: fixed;
   top: 0;
-  width: 100%;
+  width: 100vw;
   margin-top: 0px;
 }
-div#topbar * {
+div#topbar .topbar-section, div#topbar .topbar-item, div#topbar .dropdown-button {
   padding: 4px;
   margin-left: 4px;
 }
-div#topbar a.topbar-item, div#topbar .topbar-section {
+div#topbar a.topbar-item, div#topbar .topbar-section, div#topbar .topbar-left, div#topbar .topbar-boards, div#topbar .topbar-right, div#topbar .topbar-right * {
   display: inline-block;
 }
 div#topbar .topbar-section {
-  padding-top: 0px !important;
-  padding-bottom: 0px !important;
+  padding-top: 0px;
+  padding-bottom: 0px;
 }
-div#topbar a.dropdown-button {
+div#topbar .topbar-right {
   float: right;
   margin-right: 4px;
+}
+div#topbar .boards-button {
+  display: none;
 }
 
 div.dropdown-menu {
@@ -755,15 +776,21 @@ div.dropdown-menu {
   min-width: 300px;
   min-height: 100px;
   top: 28px;
-  right: 8px;
+  right: 0.5em;
   z-index: 500;
-  padding: 4px 8px 4px 8px;
+  padding: 0.25em 0.5em;
   max-height: 85%;
   overflow-y: auto;
   background-color: #999;
 }
 div.dropdown-menu div {
   padding: 2px;
+}
+
+#boards-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 div#staffmenu a {
@@ -812,11 +839,18 @@ select.post-actions {
 .ui-tabs-tab {
   float: left;
   text-decoration: none;
+}
+.ui-tabs-tab a {
   padding: 8px;
+  display: inline-block;
 }
 
 .ui-tabs-panel {
   clear: both;
+}
+
+.text-left {
+  text-align: left;
 }
 
 .text-center {
@@ -841,4 +875,20 @@ select.post-actions {
   vertical-align: middle;
   display: inline-block;
   cursor: help;
+}
+
+@media screen and (max-width: 520px) {
+  div#topbar .boards-button {
+    display: inline-block;
+  }
+  div#topbar .topbar-boards, div#topbar .topbar-section {
+    display: none;
+  }
+  .lightbox {
+    left: 0;
+    width: 100vw;
+    right: unset;
+    padding-left: 0;
+    padding-right: 0;
+  }
 }

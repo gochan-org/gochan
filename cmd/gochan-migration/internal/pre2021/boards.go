@@ -2,7 +2,6 @@ package pre2021
 
 import (
 	"github.com/gochan-org/gochan/cmd/gochan-migration/internal/common"
-	"github.com/gochan-org/gochan/pkg/config"
 	"github.com/gochan-org/gochan/pkg/gcsql"
 )
 
@@ -136,17 +135,13 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 
 	for rows.Next() {
 		var board migrationBoard
-		var maxPages int
 		if err = rows.Scan(
 			&board.oldID, &board.NavbarPosition, &board.Dir, &board.Title, &board.Subtitle, &board.Description,
-			&board.SectionID, &board.MaxFilesize, &maxPages, &board.DefaultStyle, &board.Locked, &board.CreatedAt,
-			&board.AnonymousName, &board.ForceAnonymous, &board.AutosageAfter, &board.NoImagesAfter, &board.MaxMessageLength,
-			&board.AllowEmbeds, &board.RedirectToThread, &board.RequireFile, &board.EnableCatalog,
+			&board.SectionID, &board.CreatedAt,
 		); err != nil {
 			errEv.Err(err).Caller().Msg("Failed to scan row into board")
 			return err
 		}
-		board.MaxThreads = maxPages * config.GetBoardConfig(board.Dir).ThreadsPerPage
 		boardsTmp = append(boardsTmp, board)
 	}
 
@@ -163,16 +158,9 @@ func (m *Pre2021Migrator) MigrateBoards() error {
 					Msg("Board already exists in new db, updating values")
 				// don't update other values in the array since they don't affect migrating threads or posts
 				if _, err = gcsql.Exec(nil, `UPDATE DBPREFIXboards
-					SET uri = ?, navbar_position = ?, title = ?, subtitle = ?, description = ?,
-					max_file_size = ?, max_threads = ?, default_style = ?, locked = ?,
-					anonymous_name = ?, force_anonymous = ?, autosage_after = ?, no_images_after = ?, max_message_length = ?,
-					min_message_length = ?, allow_embeds = ?, redirect_to_thread = ?, require_file = ?, enable_catalog = ?
+					SET uri = ?, navbar_position = ?, title = ?, subtitle = ?, description = ?
 					WHERE id = ?`,
-					board.Dir, board.NavbarPosition, board.Title, board.Subtitle, board.Description,
-					board.MaxFilesize, board.MaxThreads, board.DefaultStyle, board.Locked,
-					board.AnonymousName, board.ForceAnonymous, board.AutosageAfter, board.NoImagesAfter, board.MaxMessageLength,
-					board.MinMessageLength, board.AllowEmbeds, board.RedirectToThread, board.RequireFile, board.EnableCatalog,
-					newBoard.ID); err != nil {
+					board.Dir, board.NavbarPosition, board.Title, board.Subtitle, board.Description, newBoard.ID); err != nil {
 					errEv.Err(err).Caller().Str("board", board.Dir).Msg("Failed to update board values")
 					return err
 				}

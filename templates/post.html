@@ -12,7 +12,7 @@
 	<label class="post-info" for="check{{.post.ID}}"><span class="subject">{{.post.Subject}}</span> <span class="postername">
 		{{- if ne .post.Email ""}}<a href="mailto:{{.post.Email}}">{{end}}
 	{{- if and (eq .post.Name "") (eq .post.Tripcode "") -}}
-		{{.board.AnonymousName}}
+		{{.boardConfig.AnonymousName}}
 	{{- else -}}
 		{{.post.Name}}
 	{{- end -}}

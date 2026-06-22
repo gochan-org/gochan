@@ -35,6 +35,7 @@ func (esa *ErrStaffAction) HTTPStatusCode() int {
 }
 
 type requestContextKey struct{}
+type customTitleContextKey struct{}
 
 func serveError(writer http.ResponseWriter, field string, action string, message string, isJSON bool) {
 	server.ServeError(writer, message, isJSON, map[string]any{
@@ -42,6 +43,16 @@ func serveError(writer http.ResponseWriter, field string, action string, message
 		"action":  action,
 		"message": message,
 	})
+}
+
+// SetCustomPageTitle sets a custom page title for the calling manage action, instead of the one set when it is
+// registered
+func SetCustomPageTitle(request *http.Request, title string) {
+	customTitlePtr, ok := request.Context().Value(customTitleContextKey{}).(*string)
+	if !ok || customTitlePtr == nil {
+		return
+	}
+	*customTitlePtr = title
 }
 
 // setupManageFunction returns a function used by the HTTP router to serve the action callback's return value
@@ -115,9 +126,9 @@ func setupManageFunction(action *Action) bunrouter.HandlerFunc {
 				output = ""
 				err = fmt.Errorf("action %q exists but has no defined callback", action.ID)
 			} else {
-				output, err = actionCB(writer,
-					request.WithContext(context.WithValue(request.Context(), requestContextKey{}, req.Params())),
-					staff, wantsJSON, logger)
+				ctx := context.WithValue(request.Context(), requestContextKey{}, req.Params())
+				ctx = context.WithValue(ctx, customTitleContextKey{}, &pageTitle)
+				output, err = actionCB(writer, request.WithContext(ctx), staff, wantsJSON, logger)
 			}
 		}
 		if err != nil {

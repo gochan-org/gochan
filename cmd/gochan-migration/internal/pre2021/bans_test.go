@@ -56,3 +56,11 @@ func validateBanMigration(t *testing.T) {
 	}
 	assert.Equal(t, 3, len(conditions), "Expected filter to have three conditions")
 }
+
+func validateAppealMigration(t *testing.T) {
+	appeals, err := gcsql.GetAppeals()
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
+	assert.Equal(t, 2, len(appeals), "Expected to have 2 migrated appeals")
+}

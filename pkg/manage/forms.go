@@ -64,26 +64,27 @@ func boardsRequestType(request *http.Request) boardRequestType {
 }
 
 type createOrModifyBoardForm struct {
-	Dir              string `form:"dir,notempty" method:"POST"`
-	Title            string `form:"title,required,notempty" method:"POST"`
-	Subtitle         string `form:"subtitle,required" method:"POST"`
-	Description      string `form:"description,required" method:"POST"`
-	Section          int    `form:"section,required" method:"POST"`
-	NavBarPosition   int    `form:"navbarposition,required" method:"POST"`
-	MaxFileSize      int    `form:"maxfilesize,required" method:"POST"`
-	MaxThreads       int    `form:"maxthreads,required" method:"POST"`
-	DefaultStyle     string `form:"defaultstyle,required,notempty" method:"POST"`
-	Locked           bool   `form:"locked" method:"POST"`
-	AnonName         string `form:"anonname" method:"POST"`
-	AutosageAfter    int    `form:"autosageafter,required" method:"POST"`
-	NoUploadsAfter   int    `form:"nouploadsafter,required" method:"POST"`
-	MaxMessageLength int    `form:"maxmessagelength,required" method:"POST"`
-	MinMessageLength int    `form:"minmessagelength,required" method:"POST"`
-	EmbedsAllowed    bool   `form:"embedsallowed" method:"POST"`
-	RedirectToThread bool   `form:"redirecttothread" method:"POST"`
-	RequireFile      bool   `form:"requirefile" method:"POST"`
-	EnableCatalog    bool   `form:"enablecatalog" method:"POST"`
-	Rebuild          bool   `form:"rebuild" method:"POST"`
+	Dir               string `form:"dir,notempty" method:"POST"`
+	Title             string `form:"title,required,notempty" method:"POST"`
+	Subtitle          string `form:"subtitle,required" method:"POST"`
+	Description       string `form:"description,required" method:"POST"`
+	Section           int    `form:"section,required" method:"POST"`
+	NavBarPosition    int    `form:"navbarposition,required" method:"POST"`
+	MaxFileSize       int    `form:"maxfilesize,required" method:"POST"`
+	MaxThreads        int    `form:"maxthreads,required" method:"POST"`
+	DefaultStyle      string `form:"defaultstyle,required,notempty" method:"POST"`
+	Locked            bool   `form:"locked" method:"POST"`
+	AnonName          string `form:"anonname" method:"POST"`
+	AutosageAfter     int    `form:"autosageafter,required" method:"POST"`
+	NoUploadsAfter    int    `form:"nouploadsafter,required" method:"POST"`
+	MaxMessageLength  int    `form:"maxmessagelength,required" method:"POST"`
+	MinMessageLength  int    `form:"minmessagelength,required" method:"POST"`
+	EmbedsAllowed     bool   `form:"embedsallowed" method:"POST"`
+	RedirectToThread  bool   `form:"redirecttothread" method:"POST"`
+	RequireFileThread bool   `form:"requirefilethread" method:"POST"`
+	RequireFileAll    bool   `form:"requirefile" method:"POST"`
+	EnableCatalog     bool   `form:"enablecatalog" method:"POST"`
+	Rebuild           bool   `form:"rebuild" method:"POST"`
 
 	// create or modify submit button
 	DoCreate string `form:"docreate" method:"POST"`
@@ -133,17 +134,52 @@ func (brf *createOrModifyBoardForm) fillBoard(board *gcsql.Board) {
 	board.Description = brf.Description
 	board.SectionID = brf.Section
 	board.NavbarPosition = brf.NavBarPosition
-	board.MaxFilesize = brf.MaxFileSize
-	board.MaxThreads = brf.MaxThreads
-	board.DefaultStyle = brf.DefaultStyle
-	board.Locked = brf.Locked
-	board.AnonymousName = brf.AnonName
-	board.AutosageAfter = brf.AutosageAfter
-	board.NoImagesAfter = brf.NoUploadsAfter
-	board.MaxMessageLength = brf.MaxMessageLength
-	board.MinMessageLength = brf.MinMessageLength
-	board.AllowEmbeds = brf.EmbedsAllowed
-	board.RedirectToThread = brf.RedirectToThread
-	board.RequireFile = brf.RequireFile
-	board.EnableCatalog = brf.EnableCatalog
+}
+
+func (brf *createOrModifyBoardForm) writeConfig() error {
+	boardCfg := config.GetBoardConfig(brf.Dir)
+
+	boardCfg.MaxFileSize = brf.MaxFileSize
+	boardCfg.MaxThreads = brf.MaxThreads
+	boardCfg.DefaultStyle = brf.DefaultStyle
+	boardCfg.Lockdown = brf.Locked
+	boardCfg.AnonymousName = brf.AnonName
+	boardCfg.AutosageAfter = brf.AutosageAfter
+	boardCfg.NoUploadsAfter = brf.NoUploadsAfter
+	boardCfg.MaxMessageLength = brf.MaxMessageLength
+	boardCfg.MinMessageLength = brf.MinMessageLength
+	boardCfg.AllowEmbeds = brf.EmbedsAllowed
+	boardCfg.RedirectToThread = brf.RedirectToThread
+	boardCfg.NewThreadsRequireUpload = brf.RequireFileThread
+	boardCfg.AllPostsRequireUpload = brf.RequireFileAll
+	boardCfg.EnableCatalog = brf.EnableCatalog
+	config.SetBoardConfig(brf.Dir, boardCfg)
+	return config.WriteBoardConfig(brf.Dir)
+}
+
+type appealsForm struct {
+	DoApprove string `form:"doapprove" method:"POST"`
+	DoDeny    string `form:"dodeny" method:"POST"`
+	AppealIDs []int  `form:"appeal,required,notempty" method:"POST"`
+	Limit     int    `form:"limit,default=20"`
+}
+
+func (af *appealsForm) validate() error {
+	if (af.isApprove() && af.isDeny()) || (!af.isApprove() && !af.isDeny()) {
+		return server.NewServerError("no action specified", http.StatusBadRequest)
+	}
+	if len(af.AppealIDs) == 0 {
+		return server.NewServerError("no appeals selected", http.StatusBadRequest)
+	}
+	if af.Limit < 1 {
+		af.Limit = 20
+	}
+	return nil
+}
+
+func (af *appealsForm) isApprove() bool {
+	return af.DoApprove != ""
+}
+func (af *appealsForm) isDeny() bool {
+	return af.DoDeny != ""
 }

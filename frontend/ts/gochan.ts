@@ -11,8 +11,6 @@ import { getPageThread } from "./postinfo";
 import { prepareThumbnails, initPostPreviews } from "./postutil";
 import { addPostDropdown } from "./dom/postdropdown";
 import { initFlags } from "./dom/flags";
-import { initQR } from "./dom/qr";
-import { getBooleanStorageVal } from "./storage";
 import { updateBrowseButton } from "./dom/uploaddata";
 import "./management/filters";
 
@@ -33,7 +31,7 @@ if(pageThread.board !== "") {
 		updateSpoilerThreadReveal();
 		updateSpoilerTextReveal();
 	}
-	
+
 	updateBrowseButton();
 }
 
@@ -63,6 +61,12 @@ $(() => {
 	$("div.post, div.reply").each((i, elem) => {
 		addPostDropdown($(elem));
 	});
+
+	$<HTMLInputElement>("input[type='checkbox']#check-all").on("change", function() {
+		const $form = $(this).parents("form");
+		$form.find<HTMLInputElement>("input[type='checkbox'].check-all-group").prop("checked", this.checked);
+	});
+
 	$(document).on("keydown", handleKeydown);
 	initFlags();
 	updateExternalLinks();

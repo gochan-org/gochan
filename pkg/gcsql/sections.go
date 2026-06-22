@@ -117,7 +117,7 @@ func NewSection(name string, abbreviation string, hidden bool, position int, req
 		if err != nil {
 			return nil, err
 		}
-		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		opts.Context, opts.Cancel = setupTimeoutContext(context.Background(), gcdb)
 		defer func() {
 			opts.Cancel()
 			opts.Tx.Rollback()
@@ -159,7 +159,7 @@ func NewSection(name string, abbreviation string, hidden bool, position int, req
 func (s *Section) UpdateValues(requestOpts ...*RequestOptions) error {
 	opts := setupOptions(requestOpts...)
 	if opts.Context == context.Background() {
-		opts.Context, opts.Cancel = context.WithTimeout(context.Background(), gcdb.defaultTimeout)
+		opts.Context, opts.Cancel = setupTimeoutContext(context.Background(), gcdb)
 		defer opts.Cancel()
 	}
 

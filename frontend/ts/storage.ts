@@ -23,7 +23,7 @@ export function getJsonStorageVal<T>(key: string, defaultVal: T) {
 	let val = defaultVal;
 	try {
 		val = JSON.parse(getStorageVal(key, defaultVal as string));
-	} catch(e) {
+	} catch(_) {
 		val = defaultVal;
 	}
 	return val;
