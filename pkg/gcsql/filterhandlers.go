@@ -177,7 +177,7 @@ func init() {
 		},
 		"isop": &conditionHandler{
 			fieldType: BooleanField,
-			matchFunc: func(req *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
+			matchFunc: func(_ *http.Request, p *Post, _ *Upload, _ *FilterCondition) (bool, error) {
 				return p.IsTopPost, nil
 			},
 		},

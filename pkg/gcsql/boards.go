@@ -183,7 +183,7 @@ func ResetBoardSectionArrays() error {
 
 // NewBoardSimple creates a new board in the database given the directory, title, subtitle, and description.
 // Generic values are used for the other columns to be optionally changed later
-func NewBoardSimple(dir string, title string, subtitle string, description string, appendToAllBoards bool) (*Board, error) {
+func NewBoardSimple(dir string, title string, subtitle string, _ string, appendToAllBoards bool) (*Board, error) {
 	sectionID, err := getOrCreateDefaultSectionID()
 	if err != nil {
 		return nil, err
