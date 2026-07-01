@@ -34,7 +34,7 @@ Vagrant.configure("2") do |config|
 		provider.memory = "2048"
 	end
 
-	config.vm.provision :shell, path: "bootstrap.sh", env: {
+	config.vm.provision :shell, path: "vagrant/bootstrap.sh", env: {
 		:DBTYPE => DBTYPE,
 		:GOPATH => "/home/vagrant/go",
 		:MYSQL_MAINLINE => ENV.fetch("GC_MYSQL_MAINLINE", ""),
