@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
     config.vm.network "forwarded_port", guest: 3306, host: 3306
 	
 	config.vm.network :private_network, ip: "192.168.56.3"
-	config.vm.synced_folder "../", "/vagrant"
+	config.vm.synced_folder "./", "/vagrant"
 	config.vm.provider PROVIDER do |provider|
 		if PROVIDER == "virtualbox"
 			provider.gui = false
