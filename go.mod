@@ -25,7 +25,7 @@ require (
 	github.com/vadv/gopher-lua-libs v0.8.0
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/crypto v0.51.0
-	golang.org/x/image v0.38.0
+	golang.org/x/image v0.41.0
 	golang.org/x/net v0.55.0
 	golang.org/x/term v0.43.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
