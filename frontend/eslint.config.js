@@ -1,31 +1,20 @@
+// @ts-check
+
 import {
 	defineConfig,
 	globalIgnores,
 } from "eslint/config";
 
 import tsParser from "@typescript-eslint/parser";
-import globals from "globals";
-import typescriptEslint from "@typescript-eslint/eslint-plugin";
+import tseslint from 'typescript-eslint';
 import js from "@eslint/js";
-
-import {
-	FlatCompat,
-} from "@eslint/eslintrc";
-
-const compat = new FlatCompat({
-	baseDirectory: import.meta.dirname,
-	recommendedConfig: js.configs.recommended,
-	allConfig: js.configs.all
-});
 
 export default defineConfig([{
 	languageOptions: {
 		parser: tsParser,
 
 		globals: {
-			...globals.browser,
-			...globals.jest,
-			...globals.node,
+			jest: "readonly",
 		},
 
 		"sourceType": "module",
@@ -33,16 +22,11 @@ export default defineConfig([{
 		parserOptions: {
 			"ecmaFeatures": {
 				"experimentalObjectRestSpread": true,
-				"jsx": true,
 			},
 		},
 	},
 
-	extends: compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended"),
-
-	plugins: {
-		"@typescript-eslint": typescriptEslint,
-	},
+	extends: [js.configs.recommended, tseslint.configs.recommended],
 
 	"rules": {
 		"indent": ["warn", "tab"],
@@ -92,6 +76,8 @@ export default defineConfig([{
 
 		"@typescript-eslint/no-unused-vars": ["warn", {
 			"argsIgnorePattern": "^_",
+			"varsIgnorePattern": "^_",
+			"caughtErrorsIgnorePattern": "^_",
 		}],
 
 		"no-trailing-spaces": "warn",

@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, jest, beforeAll } from "@jest/globals"
-(global as any).jQuery = require("jquery"); // Jest doesn't detect jQuery
+
+(global as {
+	jQuery?: typeof import("jquery");
+ }).jQuery = require("jquery"); // Jest doesn't detect jQuery
 // import { initStaff } from "../ts/management/manage";
 import { MockResponse } from "./util";
 

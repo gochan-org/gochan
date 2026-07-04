@@ -1,23 +1,23 @@
 // Make the sections table on /manage/boardsections sortable to make changing the list order easier
 
 import $ from "jquery";
-import "jquery-ui/ui/widget";
-import "jquery-ui/ui/widgets/mouse";
-import "jquery-ui/ui/data";
+// import "jquery-ui/ui/widget";
+// import "jquery-ui/ui/widgets/mouse";
+// import "jquery-ui/ui/data";
 import "jquery-ui/ui/widgets/sortable";
 import { alertLightbox } from "../dom/lightbox";
 
-let $sectionsTable: JQuery<HTMLTableElement> = null;
+let $sectionsTable: JQuery<HTMLTableElement>|null = null;
 let changesButtonAdded = false;
 const initialOrders: string[] = [];
 
 async function applyOrderChanges() {
-	const $sections = $sectionsTable.find("tr.sectionrow");
+	const $sections = $sectionsTable?.find("tr.sectionrow");
 	let errorShown = false; // only show one error if something goes wrong
-	const sectionsArr = $sections.toArray();
+	const sectionsArr = $sections?.toArray() ?? [];
 	for(const el of sectionsArr) {
 		const $el = $(el);
-		const updatesection = /^section(\d+)$/.exec(el.id)[1];
+		const updatesection = /^section(\d+)$/.exec(el.id)?.[1] ?? "";
 		const sectionname = $el.find(":nth-child(1)").html();
 		const sectionabbr = $el.find(":nth-child(2)").html();
 		const sectionpos = $el.find(":nth-child(3)").html();
@@ -51,6 +51,8 @@ async function applyOrderChanges() {
 }
 
 function cancelOrderChanges() {
+	if(!$sectionsTable) return;
+
 	$sectionsTable.find("tbody").sortable("cancel");
 	const $sections = $sectionsTable.find("tr.sectionrow");
 	$sections.each((i, el) => {
@@ -61,7 +63,7 @@ function cancelOrderChanges() {
 }
 
 function addButtons() {
-	if(changesButtonAdded) return;
+	if(changesButtonAdded || !$sectionsTable) return;
 	$("<div/>").prop({id: "save-changes"}).append(
 		$("<button/>")
 			.text("Apply order changes")
@@ -82,7 +84,7 @@ $(() => {
 	$sectionsTable.find("tbody").sortable({
 		items: "tr.sectionrow",
 		stop: () => {
-			$sectionsTable.find("tr.sectionrow").each((i, el) => {
+			$sectionsTable!.find("tr.sectionrow").each((i, el) => {
 				const $order = $(el).find(":nth-child(3)");
 				initialOrders.push($order.text());
 				$order.text(i + 1);

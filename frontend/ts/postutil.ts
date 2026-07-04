@@ -10,7 +10,7 @@ import { openQR } from "./dom/qr";
 
 let doClickPreview = false;
 let doHoverPreview = false;
-let $hoverPreview: JQuery<HTMLElement> = null;
+let $hoverPreview: JQuery<HTMLElement>|null = null;
 
 const videoTestRE = /\.(mp4)|(webm)$/;
 const imageTestRE = /\.(gif)|(jfif)|(jpe?g)|(png)|(webp)$/;
@@ -31,7 +31,7 @@ export function getUploadPostID(upload: any, container: any) {
 export async function updateThreadJSON() {
 	const thread = currentThread();
 	if(thread.id === 0) return; // not in a thread
-	const json = await getThreadJSON(thread.id, thread.board);
+	const json = await getThreadJSON(thread.id, thread.board!);
 	if(!(json.posts instanceof Array) || json.posts.length === 0)
 		return;
 	currentThreadJSON = json;
@@ -51,7 +51,7 @@ function updateThreadHTML() {
 		if(elementExists)
 			continue; // TODO: check for edits
 
-		const $post = createPostElement(post, thread.board, "reply");
+		const $post = createPostElement(post, thread.board!, "reply");
 		const $replyContainer = $("<div/>").prop({
 			id: `replycontainer${post.no}`,
 			class: "reply-container"
@@ -86,8 +86,8 @@ function createPostPreview(e: JQuery.MouseEventBase, $post: JQuery<HTMLElement>,
 function previewMoveHandler(e: JQuery.Event) {
 	if($hoverPreview === null) return;
 	$hoverPreview.css({position: "absolute"}).offset({
-		top: e.pageY + 8,
-		left: e.pageX + 8
+		top: e.pageY! + 8,
+		left: e.pageX! + 8
 	});
 }
 
@@ -132,12 +132,11 @@ async function expandPost(e: JQuery.MouseEventBase) {
 	}
 }
 
-export function initPostPreviews($post: JQuery<HTMLElement> = null) {
+export function initPostPreviews($post: JQuery<HTMLElement>|null = null) {
 	if(getPageThread().board === "" && $post === null) return;
 	doClickPreview = getBooleanStorageVal("enablepostclick", true);
 	doHoverPreview = getBooleanStorageVal("enableposthover", false);
-	let $refs = null;
-	$refs = $post === null ? $("a.postref") : $post.find("a.postref");
+	const $refs = $post === null ? $("a.postref") : $post.find("a.postref");
 
 	if(doClickPreview) {
 		$refs.on("click", expandPost);
@@ -161,20 +160,20 @@ export function initPostPreviews($post: JQuery<HTMLElement> = null) {
  * be applied to that parent
  * @param $post the post (if set) to prepare the thumbnails for
  */
-export function prepareThumbnails($parent: JQuery<HTMLElement> = null) {
+export function prepareThumbnails($parent: JQuery<HTMLElement>) {
 	const $container = ($parent ?? $(document.body)).find("a.upload-container")
 		.filter((i, el) => $(el).find("img.upload").length > 0);
 	$container.on("click", function(e) {
 		const $a = $(this);
-		const uploadHref = $a.siblings("div.file-info").children("a.file-orig").attr("href");
+		const uploadHref = $a.siblings("div.file-info").children("a.file-orig").attr("href") ?? "";
 		if(imageTestRE.exec(uploadHref) === null && videoTestRE.exec(uploadHref) === null)
 			return true; // not an image or a video
 
 		e.preventDefault();
 
 		const $thumb = $a.find("img.upload");
-		const thumbURL = $thumb.attr("src");
-		const uploadURL = $thumb.attr("alt");
+		const thumbURL = $thumb.attr("src") ?? "";
+		const uploadURL = $thumb.attr("alt") ?? "";
 		if($thumb.hasClass("thumb")) {
 			$thumb.attr({
 				"data-width": $thumb.attr("width"),
@@ -231,7 +230,7 @@ export function prepareThumbnails($parent: JQuery<HTMLElement> = null) {
 
 function selectedText() {
 	if(!window.getSelection) return "";
-	return window.getSelection().toString();
+	return window.getSelection()?.toString() ?? "";
 }
 
 export function quote(no: number) {
@@ -250,7 +249,7 @@ export function quote(no: number) {
 			lines[l] = ">" + lines[l];
 		}
 	}
-	const cursor = (msgbox.selectionStart !== undefined)?msgbox.selectionStart:msgbox.value.length;
+	const cursor = (msgbox.selectionStart !== undefined)?(msgbox.selectionStart ?? 0):msgbox.value.length;
 	let quoted = lines.join("\n");
 	if(quoted !== "") quoted += "\n";
 	msgbox.value = msgbox.value.slice(0, cursor) + `>>${no}\n` +

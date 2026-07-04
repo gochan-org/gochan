@@ -1,6 +1,6 @@
-const path = require('path');
+import path from "path";
 
-module.exports = {
+export default {
 	entry: './ts/gochan.ts',
 	module: {
 		rules: [{
@@ -12,12 +12,12 @@ module.exports = {
 	resolve: {
 		extensions: ['.ts', '.js'],
 		"fallback": {
-			"path": require.resolve("path-browserify")
+			"path": import.meta.resolve("path-browserify")
 		}
 	},
 	output: {
 		filename: "gochan.js",
-		path: path.resolve(__dirname, '../html/js/'),
+		path: path.resolve(import.meta.dirname, '../html/js/'),
 	},
 	devtool: "source-map",
 	mode: "production"

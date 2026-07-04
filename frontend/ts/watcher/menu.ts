@@ -6,12 +6,13 @@ import { getJsonStorageVal } from "../storage";
 import { WatchedThreadJSON, WatchedThreadsListJSON, unwatchThread } from "./watcher";
 import { downArrow } from "../vars";
 
-let watcherBtn:TopBarButton = null;
-let $watcherMenu: JQuery<HTMLElement> = null;
+let watcherBtn:TopBarButton|null = null;
+let $watcherMenu: JQuery<HTMLElement>|null = null;
 let numUpdatedThreads = 0; // incremented for each watched thread with new posts, added to the watcher button
 
 
 function addThreadToMenu(thread: WatchedThreadJSON) {
+	if(!$watcherMenu) return;
 	if($watcherMenu.find(`div#thread${thread.id}.watcher-item`).length > 0) {
 		// thread is already in menu, check for updates to it
 		updateThreadInWatcherMenu(thread);
@@ -20,7 +21,7 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 	if(thread.op === "") thread.op = "Anonymous";
 	const $replyCounter = $("<span/>")
 		.prop({id: "reply-counter"})
-		.text(`(Replies: ${thread.posts - 1})`);
+		.text(`(Replies: ${ (thread.posts ?? 1) - 1 })`);
 	let infoElem = ` - <b>OP:</b> ${thread.op}<br/>`;
 	if(thread.subject === undefined || thread.subject === "") {
 		infoElem += "<b>Subject:</b> <i>[None]</i>";
@@ -41,7 +42,7 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 			href: "javascript:;",
 			title: `Unwatch thread #${thread.id}`
 		}).on("click", () => {
-			unwatchThread(thread.id, thread.board);
+			unwatchThread(thread.id, thread.board as string);
 		}).text("X"), " "
 	);
 	if(thread.err !== undefined)
@@ -57,12 +58,14 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 }
 
 function removeThreadFromMenu(threadID: number) {
+	if(!$watcherMenu) return;
 	$watcherMenu.find(`div#thread${threadID}`).remove();
 	if($watcherMenu.find("div.watcher-item").length === 0)
 		$watcherMenu.append('<i id="no-threads">no watched threads</i>');
 }
 
 function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
+	if(!$watcherMenu || !watcherBtn) return;
 	const currentPage = currentThread();
 
 	const $item = $watcherMenu.find(`div#thread${thread.op}`);
@@ -74,15 +77,15 @@ function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
 
 	if(currentPage.board === thread.board && currentPage.id === thread.id) {
 		// we're currently in the thread
-		$replyCounter.text(` (Replies: ${thread.newNumPosts - 1}) `);
+		$replyCounter.text(` (Replies: ${(thread.newNumPosts ?? 1) - 1}) `);
 	} else {
 		// we aren't currently in the thread, show a link to the first new thread
 		$replyCounter.append(
-			"(Replies: ", (thread.newNumPosts - 1).toString(),", ",
+			`(Replies: ${(thread.newNumPosts ?? 1) - 1}, `,
 			$("<a/>").prop({
 				id: "newposts",
-				href: `${webroot}${thread.board}/res/${thread.op}.html#${thread.newPosts[0].no}`
-			}).text(`${thread.newPosts.length} new`),
+				href: `${webroot}${thread.board}/res/${thread.op}.html#${thread.newPosts?.[0]?.no}`
+			}).text(`${thread?.newPosts?.length ?? 0} new`),
 			") "
 		);
 		watcherBtn.button.find(".warning").remove();
@@ -97,17 +100,13 @@ function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
 }
 
 $(() => {
-	if($watcherMenu === null) {
-		$watcherMenu = $("<div/>").prop({
-			id: "watchermenu",
-			class: "dropdown-menu"
-		}).append('<b>Watched threads</b><br/><i id="no-threads">no watched threads</i>');
-	}
-	if(watcherBtn === null) {
-		watcherBtn = new TopBarButton("Watcher", () => {
-			$topbar.trigger("menuButtonClick", [$watcherMenu, $(document).find($watcherMenu).length === 0]);
-		}, ".topbar-watcher");
-	}
+	$watcherMenu ??= $("<div/>").prop({
+		id: "watchermenu",
+		class: "dropdown-menu"
+	}).append('<b>Watched threads</b><br/><i id="no-threads">no watched threads</i>');
+	watcherBtn ??= new TopBarButton("Watcher", () => {
+		$topbar.trigger("menuButtonClick", [$watcherMenu, $(document).find($watcherMenu!).length === 0]);
+	}, ".topbar-watcher");
 	$(document)
 		.on("watchThread", (_e,thread) => addThreadToMenu(thread))
 		.on("unwatchThread", (_e, threadID) => removeThreadFromMenu(threadID))

@@ -8,7 +8,7 @@ export function isThreadLocked($elem: JQuery<HTMLElement>) {
 	return $elem.find("span.status-icons img.locked-icon").length === 1;
 }
 
-interface BoardLockJSON {
+interface _BoardLockJSON {
 	board: string;
 	thread: number;
 	json: number;

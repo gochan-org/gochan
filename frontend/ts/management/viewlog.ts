@@ -133,12 +133,12 @@ $(() => {
 	const $filters = $filterTable.find<HTMLInputElement>("input[type=checkbox],select");
 	$filters.on("change", () => {
 		const filter: LogFilter = {
-			showFatal: $filters.filter("#level-fatal-chk").get(0).checked,
-			showErrors: $filters.filter("#level-error-chk").get(0).checked,
-			showWarnings: $filters.filter("#level-warning-chk").get(0).checked,
-			showInfo: $filters.filter("#level-info-chk").get(0).checked,
-			showDebug: $filters.filter("#level-debug-chk").get(0).checked,
-			showTrace: $filters.filter("#level-trace-chk").get(0).checked,
+			showFatal: $filters.filter("#level-fatal-chk").get(0)?.checked ?? true,
+			showErrors: $filters.filter("#level-error-chk").get(0)?.checked ?? true,
+			showWarnings: $filters.filter("#level-warning-chk").get(0)?.checked ?? true,
+			showInfo: $filters.filter("#level-info-chk").get(0)?.checked ?? true,
+			showDebug: $filters.filter("#level-debug-chk").get(0)?.checked ?? false,
+			showTrace: $filters.filter("#level-trace-chk").get(0)?.checked ?? false,
 			sortDesc: $filters.filter("select#log-sort").val() === "desc"
 		};
 		updateLogFilter($log, filter);

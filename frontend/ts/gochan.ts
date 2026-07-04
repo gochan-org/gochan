@@ -26,7 +26,7 @@ window.toBottom = toBottom;
 
 const pageThread = getPageThread();
 if(pageThread.board !== "") {
-	prepareThumbnails();
+	prepareThumbnails($(document.body));
 	if(pageThread.op < 1) {
 		updateSpoilerThreadReveal();
 		updateSpoilerTextReveal();
@@ -43,7 +43,7 @@ setPageBanner();
 $(() => {
 	initStaff()
 		.then((staff) => {
-			if(staff?.rank < 1)
+			if(!staff || staff?.rank < 1)
 				return;
 			createStaffMenu(staff);
 			if(staff.rank >= 2)
@@ -52,7 +52,7 @@ $(() => {
 			// not logged in
 		});
 
-	const passwordText = $("input#postpassword").val();
+	const passwordText = $("input#postpassword").val() as string;
 	$("input#delete-password").val(passwordText);
 
 	if(pageThread.board !== "") {

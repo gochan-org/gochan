@@ -8,19 +8,19 @@ import { isThreadLocked } from "../api/management";
 import { getNumberStorageVal, setStorageVal } from "../storage";
 
 export let staffActions: StaffAction[] = [];
-let staffInfo: StaffInfo = null;
+let staffInfo: StaffInfo|null = null;
 
 /**
  * The menu shown when the Staff button on the top bar is clicked
  */
-let $staffMenu: JQuery<HTMLElement> = null;
+let $staffMenu: JQuery<HTMLElement>|null = null;
 
 /**
  * A button that opens $staffMenu
  */
-let $staffBtn: TopBarButton = null;
+let $staffBtn: TopBarButton|null = null;
 
-let staffNotificationsInterval: number = null;
+let staffNotificationsInterval: number;
 let latestReportID: number = getNumberStorageVal("latestreport", -1);
 let latestAppealID: number = getNumberStorageVal("latestappeal", -1);
 $(document).on("gotStaffRank", (_e, rank:number) => {
@@ -39,10 +39,10 @@ function dropdownHasItem(dropdown: any, item: string) {
 	return [...dropdown.children].filter(v => v.text === item).length > 0;
 }
 
-function addManageEvents(_i: number, el: HTMLSelectElement) {
-	if(staffInfo === null || staffInfo.rank < 2) return;
+function addManageEvents(_i: number, el: HTMLElement) {
+	if(!staffInfo || staffInfo.rank < 2) return;
 	const $el = $(el);
-	const $post = $(el.parentElement);
+	const $post = $(el.parentElement!);
 	const isLocked = isThreadLocked($post);
 
 	if(!dropdownHasItem(el, "Staff Actions")) {
@@ -70,7 +70,7 @@ function addManageEvents(_i: number, el: HTMLSelectElement) {
 }
 
 function setupManagementEvents() {
-	if(staffInfo === null || !staffInfo.actions) return;
+	if(!staffInfo || !staffInfo.actions) return;
 	$<HTMLSelectElement>("select.post-actions").each(addManageEvents);
 	$(document).on("postDropdownAdded", function(_e, data) {
 		if(!data.dropdown) return;
@@ -117,7 +117,7 @@ export async function getPostInfo(id: number):Promise<PostInfo> {
 
 export async function isLoggedIn() {
 	return await initStaff().then(info => {
-		return info.rank > 0;
+		return info && info.rank > 0;
 	});
 }
 
@@ -161,15 +161,15 @@ function filterAction(action: StaffAction, perms: number) {
  * @param staff an object representing the staff's username and rank
  */
 export function createStaffMenu(staff = staffInfo) {
+	if(!staff || staff.rank === 0) return;
 	const rank = staff.rank;
-	if(rank === 0) return;
 	$staffMenu = $("<div/>").prop({
 		id: "staffmenu",
 		class: "dropdown-menu"
 	});
 
-	const logoutAction = getAction("logout");
-	const dashboardAction = getAction("dashboard");
+	const logoutAction = getAction("logout")!;
+	const dashboardAction = getAction("dashboard")!;
 	$staffMenu.append(
 		menuItem(logoutAction.title, `${webroot}manage/${logoutAction.id}`),
 		menuItem(dashboardAction.title, `${webroot}manage/${dashboardAction.id}`),
@@ -177,7 +177,7 @@ export function createStaffMenu(staff = staffInfo) {
 
 	$staffMenu.append(menuItem("Janitorial"));
 	staffActions.filter(val => filterAction(val, 1)).map(action => {
-		$staffMenu.append(menuItem(action.title, `${webroot}manage/${action.id}`));
+		$staffMenu!.append(menuItem(action.title, `${webroot}manage/${action.id}`));
 	});
 
 	if(rank >= 2) {
@@ -187,10 +187,10 @@ export function createStaffMenu(staff = staffInfo) {
 		const items = modActions.map(action => menuItem(action.title, `${webroot}manage/${action.id}`));
 		for(const item of items) {
 			const text = item.text();
-			if((text === "Reports" && staffInfo.reports) ||
-				(text === "Ban Appeals" && staffInfo.appeals)) {
+			if((text === "Reports" && staffInfo!.reports) ||
+				(text === "Ban Appeals" && staffInfo!.appeals)) {
 				item
-					.find("a").text(`${text} (${(text === "Reports" ? staffInfo.reports.length : staffInfo.appeals.length)} open)`)
+					.find("a").text(`${text} (${(text === "Reports" ? (staffInfo!.reports ?? []).length : (staffInfo!.appeals ?? []).length)} open)`)
 					.addClass("text-bold")
 					.css("color", "red");
 			}
@@ -229,17 +229,18 @@ export function addStaffThreadOptions() {
 }
 
 function createStaffButton() {
-	if($staffBtn !== null || staffInfo === null || staffInfo.rank === 0)
+	if($staffBtn || !staffInfo || (staffInfo?.rank ?? 0) === 0)
 		return;
 	if($topbar.find(".topbar-staff").length === 0) {
 		$(`<div class="topbar-staff"></div>`).insertBefore($topbar.find(".topbar-watcher"));
 	}
 	$staffBtn = new TopBarButton("Staff", () => {
-		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu).length === 0]);
+		$topbar.trigger("menuButtonClick", [$staffMenu, $(document).find($staffMenu!).length === 0]);
 	}, ".topbar-staff");
 }
 
 function updateLatestReportAppeal(info: StaffInfo) {
+	if(!$staffBtn || !staffInfo || info.rank === 0) return;
 	if(info.rank >= 2) {
 		createStaffButton();
 		$staffBtn.button.empty();
@@ -263,8 +264,8 @@ function updateLatestReportAppeal(info: StaffInfo) {
 		}
 	}
 
-	if(info.reports?.length > 0) {
-		const latestReport = info.reports?.reduce((prev:PostReport, current:PostReport) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+	if((info.reports ?? []).length > 0) {
+		const latestReport = info.reports!.reduce((prev: PostReport, current: PostReport) => (prev.id > current.id) ? prev : current);
 		if(latestReport && latestReport.id > latestReportID) {
 			latestReportID = latestReport.id;
 			setStorageVal("latestreport", latestReportID);
@@ -275,8 +276,8 @@ function updateLatestReportAppeal(info: StaffInfo) {
 			);
 		}
 	}
-	if(info.appeals?.length > 0) {
-		const latestAppeal = info.appeals?.reduce((prev:Appeal, current:Appeal) => ((prev?.id ?? -1) > current.id) ? prev : current, null);
+	if((info.appeals ?? []).length > 0) {
+		const latestAppeal = info.appeals!.reduce((prev: Appeal, current: Appeal) => (prev.id > current.id) ? prev : current);
 		if(latestAppeal && latestAppeal.id > latestAppealID) {
 			latestAppealID = latestAppeal.id;
 			setStorageVal("latestappeal", latestAppealID);

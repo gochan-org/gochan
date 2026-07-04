@@ -20,13 +20,12 @@ export function getNumberStorageVal(key: string, defaultVal = 0) {
 }
 
 export function getJsonStorageVal<T>(key: string, defaultVal: T) {
-	let val = defaultVal;
 	try {
-		val = JSON.parse(getStorageVal(key, defaultVal as string));
+		const val = JSON.parse(getStorageVal(key, defaultVal as string));
+		return val;
 	} catch(_) {
-		val = defaultVal;
+		return defaultVal;
 	}
-	return val;
 }
 
 export function setStorageVal(key: string, val: any, isJSON = false) {
