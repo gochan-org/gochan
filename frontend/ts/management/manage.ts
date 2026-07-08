@@ -26,20 +26,20 @@ let latestAppealID: number = getNumberStorageVal("latestappeal", -1);
 $(document).on("gotStaffRank", (_e, rank:number) => {
 	if(rank >= 2 && staffNotificationsInterval === null) {
 		const intervalSeconds = getNumberStorageVal("reportinterval", 30);
-		staffNotificationsInterval = setInterval(updateStaffNotifications, intervalSeconds * 1000) as any as number;
+		staffNotificationsInterval = setInterval(updateStaffNotifications, intervalSeconds * 1000) as unknown as number;
 	}
 	if(rank > 0) {
-		$(".post select.post-actions").each(addManageEvents);
+		$<HTMLSelectElement>(".post select.post-actions").each(addManageEvents);
 		setupManagementEvents();
 	}
 });
 
 
-function dropdownHasItem(dropdown: any, item: string) {
-	return [...dropdown.children].filter(v => v.text === item).length > 0;
+function dropdownHasItem(dropdown: HTMLSelectElement, item: string) {
+	return [...dropdown.children].filter(v =>  v.textContent === item).length > 0;
 }
 
-function addManageEvents(_i: number, el: HTMLElement) {
+function addManageEvents(_i: number, el: HTMLSelectElement) {
 	if(!staffInfo || staffInfo.rank < 2) return;
 	const $el = $(el);
 	const $post = el.parentElement ? $(el.parentElement) : $el;

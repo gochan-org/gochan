@@ -7,10 +7,27 @@ import "./menu";
 
 const subjectCuttoff = 24;
 
-let watcherInterval = -1; // eslint-disable-line prefer-const
+let watcherInterval = -1;
+
+export interface WatchedThreadsListJSON {
+	[board: string]: WatchedThreadJSON[]
+}
+
+export interface WatchedThreadJSON {
+	id: number;
+	board?: string;
+	posts?: number;
+	op?: string;
+	latest?: string;
+	subject?: string;
+
+	newNumPosts?: number;
+	err?: string;
+	newPosts?: ThreadPost[];
+}
 
 export function updateWatchedThreads() {
-	const watched = getJsonStorageVal<any>("watched", {});
+	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
 	const boards = Object.keys(watched);
 	const currentPage = currentThread();
 	for(const board of boards) {
@@ -24,12 +41,12 @@ export function updateWatchedThreads() {
 			const thread = watched[board][t];
 			if(thread.err !== undefined) continue;
 			getThreadJSON(thread.id, board).then(data => {
-				if(data.posts.length > thread.posts) {
+				if(data.posts.length > (thread.posts ?? 0)) {
 					// watched thread has new posts, trigger a menu update
 					if(currentPage.board === board && currentPage.id === thread.id) {
 						// we're currently in the thread, update the cookie
 						watched[board][t].posts = data.posts.length;
-						watched[board][t].latest = data.posts[data.posts.length - 1].no;
+						watched[board][t].latest = data.posts[data.posts.length - 1].no.toString();
 						setStorageVal("watched", watched, true);
 					}
 					$(document).trigger("watcherNewPosts", {
@@ -47,23 +64,6 @@ export function updateWatchedThreads() {
 			});
 		}
 	}
-}
-
-export interface WatchedThreadsListJSON {
-	[board: string]: WatchedThreadJSON[]
-}
-
-export interface WatchedThreadJSON {
-	id: number;
-	board?: string;
-	posts?: number;
-	op?: string;
-	latest?: string;
-	subject?: string;
-
-	newNumPosts?: number;
-	err?: string;
-	newPosts?: any[];
 }
 
 export function isThreadWatched(threadID: number, board: string) {
@@ -117,9 +117,9 @@ export function unwatchThread(threadID: number, board: string) {
 	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
 	if(!(watched[board] instanceof Array))
 		return;
-	for(const i in watched[board]) {
+	for(let i = 0; i < watched[board].length; i++) {
 		if(watched[board][i].id === threadID) {
-			watched[board].splice(i as any, 1);
+			watched[board].splice(i, 1);
 			setStorageVal("watched", watched, true);
 			$(document).trigger("unwatchThread", threadID);
 			return;
@@ -129,13 +129,14 @@ export function unwatchThread(threadID: number, board: string) {
 
 export function stopThreadWatcher() {
 	clearInterval(watcherInterval);
+	watcherInterval = -1;
 }
 
 export function resetThreadWatcherInterval() {
 	stopThreadWatcher();
-	(watcherInterval as unknown as NodeJS.Timer) = setInterval(
+	watcherInterval = setInterval(
 		updateWatchedThreads,
-		getNumberStorageVal("watcherseconds", 10) * 1000);
+		getNumberStorageVal("watcherseconds", 10) * 1000) as unknown as number;
 }
 
 export function initWatcher() {

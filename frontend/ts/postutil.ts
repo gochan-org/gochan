@@ -2,7 +2,7 @@ import $ from "jquery";
 
 import { alertLightbox } from "./dom/lightbox";
 import { getBooleanStorageVal } from "./storage";
-import { currentThread, getPageThread, insideOP } from "./postinfo";
+import { currentThread, getPageThread } from "./postinfo";
 import { addPostDropdown } from "./dom/postdropdown";
 import { createPostElement } from "./dom/postelement";
 import { getThreadJSON } from "./api/threads";
@@ -21,12 +21,12 @@ let currentThreadJSON: BoardThread = {
 	posts: []
 };
 
-export function getUploadPostID(upload: any, container: any) {
-	// if container, upload is div.upload-container
-	// otherwise it's img or video
-	const jqu = container? $(upload) : $(upload).parent();
-	return insideOP(jqu) ? jqu.siblings().eq(4).text() : jqu.siblings().eq(3).text();
-}
+// export function getUploadPostID(upload: any, container: any) {
+// 	// if container, upload is div.upload-container
+// 	// otherwise it's img or video
+// 	const jqu = container? $(upload) : $(upload).parent();
+// 	return insideOP(jqu) ? jqu.siblings().eq(4).text() : jqu.siblings().eq(3).text();
+// }
 
 export async function updateThreadJSON() {
 	const thread = currentThread();
@@ -41,7 +41,7 @@ export async function updateThreadJSON() {
 function updateThreadHTML() {
 	const thread = currentThread();
 	if(thread.id === 0) return; // not in a thread
-	if (!thread.board) return; // no board available
+	if(!thread.board) return; // no board available
 	let numAdded = 0;
 	for(const post of currentThreadJSON.posts) {
 		let selector = "";
@@ -88,8 +88,8 @@ function createPostPreview(e: JQuery.MouseEventBase, $post: JQuery<HTMLElement>,
 function previewMoveHandler(e: JQuery.Event) {
 	if($hoverPreview === null) return;
 	$hoverPreview.css({position: "absolute"}).offset({
-		top: e.pageY != null ? e.pageY + 8 : 8,
-		left: e.pageX != null ? e.pageX + 8 : 8
+		top: e.pageY !== undefined ? e.pageY + 8 : 8,
+		left: e.pageX !== undefined ? e.pageX + 8 : 8
 	});
 }
 

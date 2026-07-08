@@ -32,11 +32,11 @@ export class MockResponse<T> implements ResponsePolyfill<T> {
 	type: "basic" | "cors" | "default" | "error" | "opaque" | "opaqueredirect";
 	url: string;
 	bodyUsed: boolean = false;
-	
+
 	contentType: MockContentType;
 	private _formData: FormData;
 	private _text: string;
-	
+
 	constructor(url: string, body:string, contentType: MockContentType, ok = true, status = 200, statusText = "ok") {
 		this.url = "";
 		this._formData = new FormData();
@@ -50,14 +50,14 @@ export class MockResponse<T> implements ResponsePolyfill<T> {
 	}
 	body?: ReadableStream<Uint8Array<ArrayBuffer>>;
 	arrayBuffer(): Promise<ArrayBuffer> {
-		let encoder = new TextEncoder();
+		const encoder = new TextEncoder();
 		return Promise.resolve(encoder.encode(this._text).buffer);
 	}
 	blob(): Promise<Blob> {
 		return Promise.resolve(new Blob([this._text], {type: this.contentType}));
 	}
 	bytes(): Promise<Uint8Array<ArrayBuffer>> {
-		let encoder = new TextEncoder();
+		const encoder = new TextEncoder();
 		return Promise.resolve(encoder.encode(this._text));
 	}
 	formData(): Promise<FormData> {

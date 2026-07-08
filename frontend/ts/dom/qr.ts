@@ -16,7 +16,7 @@ import { getUploadFilename, updateUploadImage } from "./uploaddata";
 import { alertLightbox } from "./lightbox";
 import { addPostDropdown } from "./postdropdown";
 
-export let $qr: JQuery<HTMLElement> = null;
+export let $qr: JQuery<HTMLElement>;
 let threadCooldown = 0;
 let replyCooldown = 0;
 
@@ -59,7 +59,7 @@ function unsetQrUpload() {
 	$uploadContainer.css("display","none");
 }
 
-function qrUploadChange() {
+function qrUploadChange(this: HTMLElement) {
 	const $uploadContainer = $qr.find("div#upload-container");
 	$uploadContainer.empty();
 	const filename = getUploadFilename();
@@ -76,7 +76,7 @@ function qrUploadChange() {
 
 function setButtonTimeout(prefix = "", cooldown = 5) {
 	let currentSeconds = cooldown;
-	let interval: NodeJS.Timeout = null;
+	let interval: number = -1;
 	const timeoutCB = () => {
 		if(currentSeconds === 0) {
 			setSubmitButtonEnabled(true);
@@ -87,24 +87,25 @@ function setButtonTimeout(prefix = "", cooldown = 5) {
 			setSubmitButtonText(`${prefix}${currentSeconds--}`);
 		}
 	};
-	interval = setInterval(timeoutCB, 1000);
+	interval = setInterval(timeoutCB, 1000) as unknown as number;
 	timeoutCB();
 }
 
 function fixFileList() {
-	let files:FileList = null;
+	let files:FileList|null = null;
 	const $browseBtns = $<HTMLInputElement>("input[name=imagefile]");
-	$browseBtns.each((_i, el) => {
-		if(el.files?.length > 0 && !files) {
+	for(const el of $browseBtns) {
+		if(el.files && !files) {
+			// eslint-disable-next-line no-useless-assignment
 			files = el.files;
 			return false;
 		}
 		return null;
-	});
-	$browseBtns.each((_i, el) => {
+	}
+	for(const el of $browseBtns) {
 		if(files)
 			el.files = files;
-	});
+	}
 }
 
 export function initQR() {
@@ -183,7 +184,7 @@ export function initQR() {
 
 	const pintopbar = getBooleanStorageVal("pintopbar", true);
 	if(pintopbar)
-		qrTop = $topbar.outerHeight() + 16;
+		qrTop = ($topbar.outerHeight() ?? 0) + 16;
 	const qrPos = getJsonStorageVal("qrpos", {top: qrTop, left: 16});
 	if(!(qrPos.top > -1))
 		qrPos.top = qrTop;
@@ -223,8 +224,8 @@ export function initQR() {
 		e.preventDefault();
 		copyCaptchaResponse($form);
 		const data = new FormData(this);
-
-		await fetch($form.attr("action"), {
+		const url = $form.attr("action") as string;
+		await fetch(url, {
 			method: "POST",
 			body: data,
 			credentials: "same-origin"
@@ -258,13 +259,15 @@ export function initQR() {
 	});
 }
 
-function updateThreadSuccess(data: any) {
+function updateThreadSuccess(data: string) {
 	const $checkPosts = $(data).find("div.thread").children().filter((_i, el) => !$(el).hasClass("op-post"));
 	let $replyContainers = $("div.thread").children();
 	$checkPosts.each((_i, el) => {
 		if($replyContainers.filter(`#${el.id}`).length < 1) {
-			addPostDropdown($(el).insertAfter(`#${el.previousElementSibling.id}`));
-			$replyContainers = $("div.thread").children();
+			if(el.previousElementSibling) {
+				addPostDropdown($(el).insertAfter(`#${el.previousElementSibling.id}`));
+				$replyContainers = $("div.thread").children();
+			}
 		}
 	});
 }
@@ -274,7 +277,8 @@ function copyCaptchaResponse($copyToForm: JQuery<HTMLElement>) {
 	if($captchaResp.length > 0) {
 		$("<textarea/>").prop({
 			"name": "h-captcha-response"
-		}).val($("textarea[name=h-captcha-response]").val()).css("display", "none")
+		}).val($("textarea[name=h-captcha-response]").val() as string)
+			.css("display", "none")
 			.appendTo($copyToForm);
 	}
 }

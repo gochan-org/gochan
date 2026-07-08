@@ -1,8 +1,5 @@
-function getCooldown(data: BoardsJSON, board: string, type: string): number {
-	for(const boardData of data.boards) {
-		if(boardData.board !== board) continue;
-		return (boardData.cooldowns as any)[type];
-	}
+function getCooldown(data: BoardsJSON, board: string, type: "threads"|"replies"|"images"): number {
+	return (data.boards.find(boardData => boardData.board === board)?.cooldowns as BoardCooldowns)[type] ?? 0;
 }
 
 export async function getThreadCooldown(board: string) {

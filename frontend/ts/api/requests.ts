@@ -1,7 +1,7 @@
 import { currentBoard, currentThread } from "../postinfo";
 
 interface BoardsList {
-	boards: any[];
+	boards: BoardJSON[];
 	currentBoard: string;
 }
 

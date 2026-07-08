@@ -8,9 +8,8 @@
   "scripts": {
     "build-ts": "webpack --color --progress",
     "watch-ts": "webpack --color --progress -w",
-    "eslint": "eslint ./ts/",
-    "eslint-tests": "eslint ./tests/ --env node",
-    "eslint-fix": "eslint --fix ./ts/",
+    "eslint": "eslint ./ts/ ./tests/",
+    "eslint-fix": "eslint --fix ./ts/ ./tests/",
     "tsc-check": "tsc --noEmit",
     "test": "jest --verbose",
     "build-sass": "sass --no-source-map sass:../html/css",

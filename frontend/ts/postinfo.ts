@@ -48,13 +48,9 @@ export function currentThread(): WatchedThreadJSON {
 	if(splits.length !== 4)
 		return thread;
 	const reArr = threadRE.exec(splits[3]);
-	if(reArr.length > 0)
+	if(reArr && reArr.length > 0)
 		thread.id = Number.parseInt(reArr[0]);
 	return thread;
-}
-
-export function insideOP(elem: any) {
-	return $(elem).parents("div.op-post").length > 0;
 }
 
 /**

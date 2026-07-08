@@ -21,15 +21,15 @@ export function getNumberStorageVal(key: string, defaultVal = 0) {
 
 export function getJsonStorageVal<T>(key: string, defaultVal: T) {
 	try {
-		const val = JSON.parse(getStorageVal(key, defaultVal as string));
+		const val = JSON.parse(getStorageVal(key, defaultVal as string)) as T;
 		return val;
 	} catch(_) {
 		return defaultVal;
 	}
 }
 
-export function setStorageVal(key: string, val: any, isJSON = false) {
-	const storeVal = isJSON?JSON.stringify(val):val;
+export function setStorageVal<T>(key: string, val: T, isJSON = false) {
+	const storeVal = isJSON?JSON.stringify(val):val?.toString()??"";
 	if(localStorage === undefined)
 		setCookie(key, storeVal);
 	else

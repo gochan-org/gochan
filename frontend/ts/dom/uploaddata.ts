@@ -4,11 +4,13 @@ import { alertLightbox } from "./lightbox";
 import { getBooleanStorageVal } from "../storage";
 
 
-export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad?:()=>any) {
+export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad?: () => unknown) {
 	if($elem.length === 0) return;
 	$elem[0].onchange = function() {
 		const img = new Image();
-		img.src = URL.createObjectURL((this as HTMLInputElement).files[0]);
+		const file = (this as HTMLInputElement).files?.[0];
+		if(!file) return;
+		img.src = URL.createObjectURL(file);
 		if(onLoad)
 			img.onload = onLoad;
 	};
@@ -16,8 +18,8 @@ export function updateUploadImage($elem: JQuery<HTMLElement>, onLoad?:()=>any) {
 
 export function getUploadFilename(): string {
 	const elem = document.getElementById("imagefile") as HTMLInputElement;
-	if(elem === null) return "";
-	if(elem.files === undefined || elem.files.length < 1) return "";
+	if(!elem) return "";
+	if(!elem.files || elem.files.length < 1) return "";
 	return elem.files[0].name;
 }
 
@@ -29,14 +31,17 @@ function dragAndDrop(e:JQuery.DragEnterEvent|JQuery.DragOverEvent|JQuery.DropEve
 	if(e.type === "dragenter" || e.type === "dragover") {
 		e.stopPropagation();
 	} else {
+		const dataTransfer = e.originalEvent?.dataTransfer;
+		if(!dataTransfer) return;
 		$browseBtn.each((_, el) => {
-			el.files = e.originalEvent.dataTransfer.files;
+			el.files = dataTransfer.files;
 			addFileUpload(el.files[0]);
 		});
 	}
 }
 
 function onReaderLoad(name:string, e:ProgressEvent<FileReader>) {
+	if(!e.target?.result) return;
 	const base64Str = e.target.result.toString();
 	const isImage = base64Str.slice(5, 10) === "image";
 	const extPos = name.lastIndexOf(".");
@@ -56,7 +61,7 @@ function onReaderLoad(name:string, e:ProgressEvent<FileReader>) {
 			const $target = $(e.target);
 			const $browseBtn = $target.parents<HTMLInputElement>("#upload-box").siblings<HTMLInputElement>("input[name=imagefile]");
 			$browseBtn.each((_, el) => {
-				el.value = null;
+				el.value = "";
 			});
 			$target.parents(".upload-preview-container").remove();
 		}),
@@ -71,16 +76,17 @@ function onReaderLoad(name:string, e:ProgressEvent<FileReader>) {
 }
 
 function addFileUpload(file:File) {
+	if(!file) return;
 	const uploadReader = new FileReader();
 	uploadReader.onload = (e => onReaderLoad(file.name, e));
-	uploadReader.onerror = (e) => alertLightbox(`Unable to load file: ${e.target.error.message}`);
+	uploadReader.onerror = (e) => alertLightbox(`Unable to load file: ${e.target?.error?.message}`);
 	uploadReader.readAsDataURL(file);
 }
 
 function replaceBrowseButton() {
 	const $browseBtn = $<HTMLInputElement>("input[name=imagefile]").hide();
 	if($browseBtn.length < 1 || $("div#upload-box").length > 0) return;
-	$browseBtn.on("change", e => addFileUpload(e.target.files[0]));
+	$browseBtn.on("change", e => addFileUpload(e.target?.files?.[0] as File));
 
 	$("<div/>").attr("id", "upload-box").append(
 		$("<a/>").addClass("browse-text")
@@ -90,10 +96,11 @@ function replaceBrowseButton() {
 				e.preventDefault();
 				$browseBtn.trigger("click");
 			})
-	).on("dragenter dragover drop", dragAndDrop).insertBefore($browseBtn);
+	).on("dragenter dragover drop", dragAndDrop as () => void).insertBefore($browseBtn);
 
 	$("form#postform, form#qrpostform").on("paste", e => {
 		const clipboardData = (e.originalEvent as ClipboardEvent).clipboardData;
+		if(!clipboardData) return;
 		if(clipboardData.items.length < 1) {
 			alertLightbox("No files in clipboard", "Unable to paste");
 			return;
@@ -102,6 +109,7 @@ function replaceBrowseButton() {
 			return;
 		}
 		const clipboardFile = clipboardData.items[0].getAsFile();
+		if(!clipboardFile) return;
 		addFileUpload(clipboardFile);
 		$browseBtn.each((_i,el) => {
 			el.files = clipboardData.files;

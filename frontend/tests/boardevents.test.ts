@@ -6,7 +6,7 @@ import "./inittests";
 
 import { applyBBCode, handleKeydown } from "../ts/boardevents";
 
-document.documentElement.innerHTML = (global as any).simpleHTML;
+document.documentElement.innerHTML = (global as unknown as {simpleHTML:string}).simpleHTML;
 
 function doBBCode(key:string, text: string, start: number, end: number) {
 	const $ta = $<HTMLTextAreaElement>("<textarea/>");

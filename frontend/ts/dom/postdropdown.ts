@@ -36,7 +36,7 @@ function reportPost(id: number, board: string) {
 		const searchParams = new URLSearchParams();
 		searchParams.append("board", board);
 		searchParams.append("report_btn", "Report");
-		searchParams.append("reason", reason);
+		searchParams.append("reason", reason as string);
 		searchParams.append(`check${id}`, "on");
 		searchParams.append("json", "1");
 
@@ -96,7 +96,7 @@ function deletePost(id: number, board: string, fileOnly = false) {
 		searchParams.append("board", board);
 		searchParams.append("boardid", $("input[name=boardid]").val() as string);
 		searchParams.append("delete_btn", "Delete");
-		searchParams.append("password", password);
+		searchParams.append("password", password as string);
 		searchParams.append("json", "1");
 		searchParams.append(`check${id}`, "on");
 		if(fileOnly) {
@@ -183,7 +183,7 @@ function handleActions(action: string, postIDStr: string) {
 		updateThreadLock(board, postID, false);
 		break;
 	case "Posts from this IP":
-		getPostInfo(postID).then((info: any) => {
+		getPostInfo(postID).then((info: PostInfo) => {
 			window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.post.IP}`);
 		}).catch((reason: JQuery.jqXHR) => {
 			alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
@@ -208,13 +208,13 @@ export function addPostDropdown($post: JQuery<HTMLElement>) {
 	const $postInfo = $post.find("label.post-info");
 	const isOP = $post.prop("class").split(" ").indexOf("op-post") > -1;
 	const hasUpload = $postInfo.siblings("div.file-info").length > 0;
-	const postID = $postInfo.parent().attr("id");
+	const postID = $postInfo.parent().attr("id") as string;
 	const threadPost = isOP?"thread":"post";
 	const $ddownMenu = $("<select />", {
 		class: "post-actions",
 		id: postID
 	}).append("<option disabled selected>Actions</option>");
-	const idNum = Number.parseInt(idRe.exec(postID)[4]);
+	const idNum = parseInt(idRe.exec(postID)?.[4] as string);
 	if(isOP) {
 		if(isThreadWatched(idNum, currentBoard())) {
 			$ddownMenu.append("<option>Unwatch thread</option>");

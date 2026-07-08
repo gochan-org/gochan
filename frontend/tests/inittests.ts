@@ -1,12 +1,7 @@
-(global as any).simpleHTML = `<!DOCTYPE html>
-<html>
-<body>
-<form id="postform">
-<input name="postname" id="postname" type="text"/>
-<input name="postemail" id="postemail" type="text"/>
-<input name="postpassword" type="password" />
-<input name="delete-password" type="password" />
-<textarea id="postmsg" name="postmsg"></textarea>
-</form>
-</body>
-</html>`;
+// jQuery can't be imported in a non-browser environment (jest.config.ts), so we import it here after jsdom has been loaded
+import jquery from "jquery";
+
+(global as {
+	jQuery?: typeof jquery;
+ }).jQuery = jquery;
+

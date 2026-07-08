@@ -3,20 +3,20 @@ import $ from "jquery";
 import { getBooleanStorageVal } from "../storage";
 
 export const $topbar = $("div#topbar");
-export let topbarHeight = $topbar.height() + 4;
+export let topbarHeight = ($topbar?.height() ?? 0) + 4;
 
 /**
  * TopBarButton A button to be added to the right side of the top bar
  */
 export class TopBarButton {
 	title: string;
-	buttonAction: ()=>any;
+	buttonAction: ()=>unknown;
 	button: JQuery<HTMLLinkElement>;
 	/**
 	 * @param title The text shown on the button
 	 * @param action The function executed when the button is clicked
 	 */
-	constructor(title: string, action: ()=>any = ()=>{}, container: string = ".topbar-right") {
+	constructor(title: string, action: ()=>unknown = ()=>{}, container: string = ".topbar-right") {
 		this.title = title;
 		this.buttonAction = action;
 		this.button = $<HTMLLinkElement>("<a/>").prop({
@@ -53,14 +53,14 @@ export function menuItem(text:string, href?:string) {
  */
 export function initTopBar() {
 	$topbar.find(".topbar-right").append(
-		`<div class="topbar-watcher"></div>`,
-		`<div class="topbar-settings"></div>`
+		'<div class="topbar-watcher"></div>',
+		'<div class="topbar-settings"></div>'
 	);
 
-	const $responsiveBoardsMenu = $(`<div id="boards-menu" class="dropdown-menu"><nav><ul></ul></nav></div>`);
+	const $responsiveBoardsMenu = $('<div id="boards-menu" class="dropdown-menu"><nav><ul></ul></nav></div>');
 	$responsiveBoardsMenu.find("ul").append(
 		`<li><a href="${webroot}">home</a></li>`,
-		`<li><b>Boards</b></li>`
+		"<li><b>Boards</b></li>"
 	);
 	const $boardSections = $topbar.find("div.topbar-boards > div.topbar-section");
 	for(const section of $boardSections) {
@@ -73,7 +73,7 @@ export function initTopBar() {
 	}
 	const responsiveBoardsBtn = new TopBarButton("Links", () => {
 		$topbar.trigger("menuButtonClick", [$responsiveBoardsMenu, $(document).find($responsiveBoardsMenu).length === 0]);
-	}, null);
+	});
 	responsiveBoardsBtn.button.addClass("boards-button").insertBefore($topbar.find("div.topbar-boards"));
 
 	if(getBooleanStorageVal("pintopbar", true)) {
@@ -87,7 +87,7 @@ export function initTopBar() {
 			"top": "0px"
 		});
 	}
-	topbarHeight = $topbar.outerHeight() + 4;
+	topbarHeight = ($topbar.outerHeight() ?? 0) + 4;
 	$topbar.on("menuButtonClick", (e, $menu, open) => {
 		$("div.dropdown-menu").remove();
 		if(open) {

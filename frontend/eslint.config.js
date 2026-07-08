@@ -72,14 +72,13 @@ export default defineConfig([{
 
 		"no-constant-condition": ["off"],
 		"eqeqeq": ["error"],
-		"@typescript-eslint/no-explicit-any": ["off"],
+		"@typescript-eslint/no-explicit-any": "error",
 
 		"@typescript-eslint/no-unused-vars": ["warn", {
 			"argsIgnorePattern": "^_",
 			"varsIgnorePattern": "^_",
 			"caughtErrorsIgnorePattern": "^_",
 		}],
-
 		"no-trailing-spaces": "warn",
 	},
 }, globalIgnores(["**/legacy/**/*", "webpack.config.js"])]);

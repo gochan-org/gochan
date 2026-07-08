@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import "./inittests";
 
-(global as {
-	jQuery?: typeof import("jquery");
- }).jQuery = require("jquery"); // Jest doesn't detect jQuery
-// import { initStaff } from "../ts/management/manage";
 import { MockResponse } from "./util";
 
 const mockActions:StaffAction[] = [
@@ -35,7 +32,7 @@ describe("Staff info", () => {
 	for(const staff of baseStaff) {
 		it(`gets staff info for ${staff.username === ""?"logged out user":staff.username}`, async () => {
 			const mockResponse = new MockResponse<StaffInfo>("/manage/staffinfo", JSON.stringify(staff), "application/json");
-			(global.fetch as jest.Mock<any>).mockResolvedValue(mockResponse);
+			(global.fetch as unknown as jest.Mock<() => Promise<MockResponse<StaffInfo>>>).mockResolvedValue(mockResponse);
 			const { initStaff } = await import("../ts/management/manage");
 			const result = await initStaff();
 			expect(result).toEqual(staff);
@@ -50,7 +47,7 @@ describe("Staff info", () => {
 		const { initStaff } = await import("../ts/management/manage");
 		const mockResponse = new MockResponse<StaffInfo>("/manage/staffinfo", "Internal Server Error", "text/plain", false, 500, "Internal Server Error");
 		mockResponse.ok = false;
-		(global.fetch as jest.Mock<any>).mockRejectedValue(mockResponse);
+		(global.fetch as unknown as jest.Mock<() => Promise<MockResponse<StaffInfo>>>).mockRejectedValue(mockResponse);
 		expect(initStaff()).rejects.toThrow("Error getting staff info: Internal Server Error");
 	});
 });

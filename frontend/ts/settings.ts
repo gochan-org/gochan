@@ -4,13 +4,13 @@ import path from "path-browserify";
 
 import { showLightBox } from "./dom/lightbox";
 import { initTopBar, TopBarButton } from "./dom/topbar";
-import { getBooleanStorageVal, getStorageVal, setStorageVal } from "./storage";
+import { getBooleanStorageVal, getNumberStorageVal, getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
 import { closeQR, initQR } from "./dom/qr";
 import { initWatcher } from "./watcher/watcher";
 import { updateBrowseButton } from "./dom/uploaddata";
 
-let $settingsButton: TopBarButton = null;
+let $settingsButton: TopBarButton;
 
 const settings: Map<string, Setting<boolean|number|string,HTMLElement>> = new Map();
 const spoilerThreadNotice = "This thread contains spoilers<br/>";
@@ -19,12 +19,12 @@ const spoilerImage = "/static/spoiler.png";
 
 type ElementValue = string|number|string[];
 
-class Setting<T = any, E extends HTMLElement = HTMLElement> {
+class Setting<T, E extends HTMLElement = HTMLElement> {
 	key: string;
 	title: string;
 	defaultVal: T;
-	onSave: () => any;
-	element: JQuery<E>;
+	onSave: () => unknown;
+	element: JQuery<E>|null;
 	category: string;
 	/**
 	 * @param key The name of the setting
@@ -33,7 +33,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 	 * @param defaultVal the setting's default value
 	 * @param onSave function that gets called when you save the settings
 	 */
-	constructor(key: string, title: string, category:string,  defaultVal:T, onSave?:()=>any) {
+	constructor(key: string, title: string, category:string,  defaultVal:T, onSave?:()=>unknown) {
 		this.key = key;
 		this.title = title;
 		this.category = category;
@@ -50,7 +50,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 		this.element.val(newVal as ElementValue);
 	}
 	getStorageValue(): T {
-		return getStorageVal(this.key, this.defaultVal as any) as T;
+		return getStorageVal(this.key, this.defaultVal?.toString()) as T;
 	}
 	setStorageValue(newVal: T) {
 		setStorageVal(this.key, newVal);
@@ -65,7 +65,7 @@ class Setting<T = any, E extends HTMLElement = HTMLElement> {
 }
 
 class TextSetting extends Setting<string, HTMLTextAreaElement> {
-	constructor(key: string, title: string, category:string, defaultVal = "", onSave?:()=>any) {
+	constructor(key: string, title: string, category:string, defaultVal = "", onSave?:()=>unknown) {
 		super(key, title, category, defaultVal, onSave);
 		this.element = this.createElement("<textarea/>");
 		this.element.text(defaultVal);
@@ -75,12 +75,17 @@ class TextSetting extends Setting<string, HTMLTextAreaElement> {
 		}
 	}
 	setElementValue(text = "") {
-		this.element.text(text);
+		this.element?.text(text);
 	}
 }
 
+interface DropdownOption {
+	val: string;
+	text: string;
+}
+
 class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
-	constructor(key: string, title: string, category:string, options:any[] = [], defaultVal: ElementValue, onSave?:()=>any) {
+	constructor(key: string, title: string, category:string, options:DropdownOption[] = [], defaultVal: ElementValue, onSave?:()=>unknown) {
 		super(key, title, category, defaultVal, onSave);
 		this.element = this.createElement("<select/>");
 		for(const option of options) {
@@ -91,7 +96,7 @@ class DropdownSetting extends Setting<ElementValue, HTMLSelectElement> {
 }
 
 class BooleanSetting extends Setting<boolean, HTMLInputElement> {
-	constructor(key: string, title: string, category:string, defaultVal = false, onSave?:()=>any) {
+	constructor(key: string, title: string, category:string, defaultVal = false, onSave?:()=>unknown) {
 		super(key, title, category, defaultVal, onSave);
 		this.element = this.createElement("<input/>", {
 			type: "checkbox",
@@ -99,13 +104,13 @@ class BooleanSetting extends Setting<boolean, HTMLInputElement> {
 		});
 	}
 	getStorageValue(): boolean {
-		return super.getStorageValue() as any === "true";
+		return getBooleanStorageVal(this.key, this.defaultVal);
 	}
 	getElementValue() {
-		return this.element.prop("checked") as boolean;
+		return this.element?.prop("checked") as boolean;
 	}
 	setElementValue(newVal: boolean) {
-		this.element.prop("checked", newVal);
+		this.element?.prop("checked", newVal);
 	}
 }
 
@@ -116,7 +121,7 @@ interface MinMax {
 }
 
 class NumberSetting extends Setting<number, HTMLInputElement> {
-	constructor(key: string, title: string, category:string, defaultVal = 0, minMax: MinMax = {min: null, max: null}, onSave?:()=>any) {
+	constructor(key: string, title: string, category:string, defaultVal = 0, minMax: MinMax = {min: undefined, max: undefined}, onSave?:()=>unknown) {
 		super(key, title, category, defaultVal, onSave);
 		const props: MinMax = {
 			type: "number"
@@ -128,7 +133,7 @@ class NumberSetting extends Setting<number, HTMLInputElement> {
 		this.element = this.createElement("<input />", props).val(this.getStorageValue());
 	}
 	getStorageValue() {
-		let val = Number.parseFloat(super.getStorageValue() as any);
+		let val = getNumberStorageVal(this.key, this.defaultVal);
 		if(isNaN(val))
 			val = this.defaultVal;
 		return val;
@@ -177,7 +182,8 @@ function createLightbox() {
 			$tabs.append(`<li><a href="#${tab}">${setting[1].category}</a></li>`);
 			$settingsContainer.append(`<div id="${tab}"><h3>${setting[1].category}</h3><div class="settings-grid"></div></div>`);
 		}
-		const val = getStorageVal(setting[1].key, setting[1].defaultVal as any) as string|boolean|number;
+		const val = getStorageVal(setting[1].key, setting[1].defaultVal as string) as string|boolean|number;
+		if(setting[1].element === null) continue;
 		if(val === true)
 			setting[1].element.prop("checked", true);
 		else
@@ -195,8 +201,8 @@ function createLightbox() {
 		const $el: JQuery<HTMLInputElement> = $(ev.target);
 		const elType = $el.attr("type");
 		const val: string|boolean = (elType === "checkbox")?$el.prop("checked"):$el.val();
-		setStorageVal($el.attr("id"), val);
-		settings.get($el.attr("id"))?.onSave();
+		setStorageVal($el.attr("id") as string, val);
+		settings.get($el.attr("id") as string)?.onSave();
 
 		if(ev.target.id === "style") {
 			setTheme();
@@ -218,9 +224,9 @@ export function setTheme() {
 
 	if(themeElem) {
 		if(!themeElem.hasAttribute("default-href"))
-			themeElem.setAttribute("default-href", themeElem.getAttribute("href"));
+			themeElem.setAttribute("default-href", themeElem.getAttribute("href") as string);
 		if(style === "")
-			themeElem.setAttribute("href", themeElem.getAttribute("default-href"));
+			themeElem.setAttribute("href", themeElem.getAttribute("default-href") as string);
 		else
 			themeElem.setAttribute("href", path.join(webroot ?? "/", "css", style));
 	}
@@ -285,15 +291,15 @@ export function updateSpoilerTextReveal() {
 
 function revealSpoilerImage(el:HTMLImageElement) {
 	if(el.hasAttribute("spoiler-src")) {
-		el.setAttribute("src", el.getAttribute("spoiler-src"));
+		el.setAttribute("src", el.getAttribute("spoiler-src") as string);
 		el.removeAttribute("spoiler-src");
 	}
 	if(el.hasAttribute("spoiler-width")) {
-		el.setAttribute("width", el.getAttribute("spoiler-width"));
+		el.setAttribute("width", el.getAttribute("spoiler-width") as string);
 		el.removeAttribute("spoiler-width");
 	}
 	if(el.hasAttribute("spoiler-height")) {
-		el.setAttribute("height", el.getAttribute("spoiler-height"));
+		el.setAttribute("height", el.getAttribute("spoiler-height") as string);
 		el.removeAttribute("spoiler-height");
 	}
 }
@@ -310,14 +316,14 @@ export function updateSpoilerThreadReveal() {
 			revealSpoilerImage(el);
 		} else {
 			if(!el.hasAttribute("spoiler-src")) {
-				el.setAttribute("spoiler-src", el.getAttribute("src"));
+				el.setAttribute("spoiler-src", el.getAttribute("src") as string);
 			}
 			if(!el.hasAttribute("spoiler-width") && el.hasAttribute("width")) {
-				el.setAttribute("spoiler-width", el.getAttribute("width"));
+				el.setAttribute("spoiler-width", el.getAttribute("width") as string);
 				el.setAttribute("width", "125px");
 			}
 			if(!el.hasAttribute("spoiler-height") && el.hasAttribute("height")) {
-				el.setAttribute("spoiler-height", el.getAttribute("height"));
+				el.setAttribute("spoiler-height", el.getAttribute("height") as string);
 				el.setAttribute("height", "125px");
 			}
 
@@ -353,16 +359,16 @@ $(() => {
 	for(const style of styles) {
 		styleOptions.push({text: style.Name, val: style.Filename});
 	}
-	settings.set("style", new DropdownSetting("style", "Style", "General", styleOptions, defaultStyle, function() {
-		const val:string = this.getElementValue();
+	settings.set("style", new DropdownSetting("style", "Style", "General", styleOptions, defaultStyle, function(this: DropdownSetting) {
+		const val = this.getElementValue() as string;
 		const themeElem = document.getElementById("theme");
 		if(!themeElem) return;
 		if(val === "" && themeElem.hasAttribute("default-href")) {
-			themeElem.setAttribute("href", themeElem.getAttribute("default-href"));
+			themeElem.setAttribute("href", themeElem.getAttribute("default-href") as string);
 		} else if(val !== "") {
 			themeElem.setAttribute("href", `${webroot ?? "/"}css/${val}`);
 		}
-	}) as Setting);
+	}) as Setting<string, HTMLSelectElement>);
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", "General", true, initTopBar));
 	settings.set("increaselineheight", new BooleanSetting("increaselineheight", "Increase line height", "General", false, setLineHeight));
 	settings.set("enableposthover", new BooleanSetting("enableposthover", "Preview post on hover", "Posting", true, initPostPreviews));
@@ -381,8 +387,8 @@ $(() => {
 	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", "Posting", true, updateBrowseButton));
 	settings.set("smoothhidetoggle", new BooleanSetting("smoothhidetoggle", "Smooth hide block toggle", "General", true));
 
-	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", "General", ""));
-	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "General", "", setCustomCSS));
+	settings.set("customjs", new TextSetting("customjs", "Custom JavaScript", "General", "") as Setting<string | number | boolean, HTMLElement>);
+	settings.set("customcss", new TextSetting("customcss", "Custom CSS", "General", "", setCustomCSS) as Setting<string | number | boolean, HTMLElement>);
 	$(document).on("gotStaffRank", (_e, rank:number) => {
 		if(rank >= 2) {
 			settings.set("reportinterval", new NumberSetting("reportinterval", "Reports/Appeals update interval", "Management", 30, {min: 5}, function() {

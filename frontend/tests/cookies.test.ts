@@ -39,7 +39,7 @@ test("Test localStorage", () => {
 		"key2": 33,
 		"aaa": [1,2,3]
 	}`);
-	const jsonVal = getJsonStorageVal<{[k:string]:any}>("jsonVal", {});
+	const jsonVal = getJsonStorageVal<Record<string,string|number|number[]>>("jsonVal", {});
 	expect(jsonVal).toStrictEqual({
 		"key1": "val1",
 		"key2": 33,

@@ -1,6 +1,7 @@
 import $ from "jquery";
 
-export function removeLightbox(...customs: any) {
+type RemoveCustoms = HTMLElement|JQuery<HTMLElement>;
+export function removeLightbox(...customs: RemoveCustoms[]) {
 	$(".lightbox, .lightbox-bg").remove();
 	for(const custom of customs) {
 		$(custom).remove();
@@ -11,13 +12,12 @@ export function showLightBox(title: string, innerHTML: string) {
 	$(document.body).prepend(
 		`<div class="lightbox-bg"></div><div class="lightbox"><h1 class="lightbox-title">${title}<a href="javascript:;" class="lightbox-x">X</a><hr /></h1>${innerHTML}</div>`
 	);
-	$("a.lightbox-x, .lightbox-bg").on("click", removeLightbox);
+	$("a.lightbox-x, .lightbox-bg").on("click", removeLightbox as unknown as (this: HTMLElement) => void);
 }
 
 
-function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: any[] = []) {
-	if(properties["class"] === undefined)
-		properties["class"] = "lightbox";
+function simpleLightbox(properties: Record<string,string> = {}, customCSS: Record<string,string> = {}, $elements: (JQuery<HTMLElement>|string)[] = []) {
+	properties["class"] ??= "lightbox";
 	const defaultCSS: {[key: string]: string} = {
 		"display": "inline-block",
 		"top": "50%",
@@ -29,11 +29,11 @@ function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: an
 		"bottom": "auto"
 	};
 	for(const key in defaultCSS) {
-		if(customCSS[key] === undefined)
+		if(!customCSS[key])
 			customCSS[key] = defaultCSS[key];
 	}
 
-	const $box = $("<div/>").prop(properties).css(customCSS).prependTo(document.body).append($elements);
+	const $box = $("<div/>").prop(properties).css(customCSS).prependTo(document.body).append($elements as JQuery<HTMLElement>[]);
 	$("<div />").prop({
 		class: "lightbox-bg"
 	}).on("click", function() {
@@ -43,7 +43,7 @@ function simpleLightbox(properties: any = {}, customCSS: any = {}, $elements: an
 	return $box;
 }
 
-export function promptLightbox(defVal = "", isMasked = false, onOk?: ($el:JQuery<HTMLElement>, val: any) => any, title = "") {
+export function promptLightbox(defVal = "", isMasked = false, onOk?: ($el:JQuery<HTMLElement>, val: string|number) => unknown, title = "") {
 	const $ok = $("<button/>").prop({
 		"id": "okbutton"
 	}).text("OK");
@@ -70,7 +70,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk?: ($el:JQuery
 	const $lb = simpleLightbox({}, {}, [$form]);
 	$promptInput.trigger("focus");
 	$ok.on("click", function() {
-		if(onOk && onOk($lb, $promptInput.val()) === false)
+		if(onOk && onOk($lb, $promptInput.val() as string) === false)
 			return;
 		removeLightbox(this, $lb);
 	});
@@ -80,7 +80,7 @@ export function promptLightbox(defVal = "", isMasked = false, onOk?: ($el:JQuery
 	return $lb;
 }
 
-export function alertLightbox(msg = "", title = location.hostname, onOk?: ($el: JQuery<HTMLElement>) => any) {
+export function alertLightbox(msg = "", title = location.hostname, onOk?: ($el: JQuery<HTMLElement>) => unknown) {
 	const $ok = $("<button/>").prop({
 		"id": "okbutton"
 	}).text("OK");
