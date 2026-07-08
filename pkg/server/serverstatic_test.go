@@ -34,7 +34,7 @@ func TestServeFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest("GET", "/"+testFileName, nil)
+	req := httptest.NewRequest("GET", "/"+testFileName, http.NoBody)
 	rr := httptest.NewRecorder()
 
 	serveFile(rr, req)
@@ -65,7 +65,7 @@ func TestServeFile_NotFound(t *testing.T) {
 	sysConfig.WebRoot = "/"
 
 	// Create a request for a non-existent file
-	req := httptest.NewRequest("GET", "/nonexistentfile.txt", nil)
+	req := httptest.NewRequest("GET", "/nonexistentfile.txt", http.NoBody)
 	rr := httptest.NewRecorder()
 
 	// Call the serveFile function

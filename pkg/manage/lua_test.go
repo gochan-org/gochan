@@ -125,7 +125,7 @@ func TestSetCustomTitleLua(t *testing.T) {
 	for a, action := range actions {
 		if action.ID == "customtitle" {
 			actionCB := setupManageFunction(&actions[a])
-			req := bunrouter.NewRequest(httptest.NewRequest(http.MethodGet, "http://example.com", nil))
+			req := bunrouter.NewRequest(httptest.NewRequest(http.MethodGet, "http://example.com", http.NoBody))
 			responseWriter := httptest.NewRecorder()
 			actionCB(responseWriter, req)
 			output := responseWriter.Body.String()

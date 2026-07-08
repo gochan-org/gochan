@@ -475,7 +475,7 @@ func (tc *manageCallbackTestCase) runTest(t *testing.T, manageCallbackFunc Callb
 		t.FailNow()
 	}
 
-	request, err := http.NewRequest(tc.method, "http://localhost"+tc.path, nil)
+	request, err := http.NewRequest(tc.method, "http://localhost"+tc.path, http.NoBody)
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}

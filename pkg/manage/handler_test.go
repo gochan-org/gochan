@@ -34,7 +34,7 @@ func TestSetCustomPageTitleHandleImpropertCaller(t *testing.T) {
 	// when called outside of a manage action callback wrapped with setupManageFunction, SetCustomPageTitle should do nothing
 	setupManageTestSuite(t, config.SQLConfig{})
 	panicked = false
-	req := bunrouter.NewRequest(httptest.NewRequest(http.MethodGet, "http://example.com", nil))
+	req := bunrouter.NewRequest(httptest.NewRequest(http.MethodGet, "http://example.com", http.NoBody))
 
 	responseWriter := httptest.NewRecorder()
 	testCustomTitleAction.Callback(responseWriter, req.Request, &gcsql.Staff{}, false, zerolog.Nop())
@@ -46,7 +46,7 @@ func TestSetCustomPageTitleHandleImpropertCaller(t *testing.T) {
 func TestSetCustomPageTitle(t *testing.T) {
 	setupManageTestSuite(t, config.SQLConfig{})
 	panicked = false
-	req := bunrouter.NewRequest(httptest.NewRequest(http.MethodGet, "http://example.com", nil))
+	req := bunrouter.NewRequest(httptest.NewRequest(http.MethodGet, "http://example.com", http.NoBody))
 	responseWriter := httptest.NewRecorder()
 	setupActionCB := setupManageFunction(testCustomTitleAction)
 	setupActionCB(responseWriter, req)
