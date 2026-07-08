@@ -20,6 +20,7 @@ name = "javascript"
 enabled = true
   [analyzers.meta]
     environment = ["jquery"]
+    module_system = "es-modules"
 
 [[analyzers]]
 name = "go"
