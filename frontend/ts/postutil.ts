@@ -31,7 +31,8 @@ export function getUploadPostID(upload: any, container: any) {
 export async function updateThreadJSON() {
 	const thread = currentThread();
 	if(thread.id === 0) return; // not in a thread
-	const json = await getThreadJSON(thread.id, thread.board!);
+	if(!thread.board) return;
+	const json = await getThreadJSON(thread.id, thread.board);
 	if(!(json.posts instanceof Array) || json.posts.length === 0)
 		return;
 	currentThreadJSON = json;
@@ -40,6 +41,7 @@ export async function updateThreadJSON() {
 function updateThreadHTML() {
 	const thread = currentThread();
 	if(thread.id === 0) return; // not in a thread
+	if (!thread.board) return; // no board available
 	let numAdded = 0;
 	for(const post of currentThreadJSON.posts) {
 		let selector = "";
@@ -51,7 +53,7 @@ function updateThreadHTML() {
 		if(elementExists)
 			continue; // TODO: check for edits
 
-		const $post = createPostElement(post, thread.board!, "reply");
+		const $post = createPostElement(post, thread.board, "reply");
 		const $replyContainer = $("<div/>").prop({
 			id: `replycontainer${post.no}`,
 			class: "reply-container"
@@ -86,8 +88,8 @@ function createPostPreview(e: JQuery.MouseEventBase, $post: JQuery<HTMLElement>,
 function previewMoveHandler(e: JQuery.Event) {
 	if($hoverPreview === null) return;
 	$hoverPreview.css({position: "absolute"}).offset({
-		top: e.pageY! + 8,
-		left: e.pageX! + 8
+		top: e.pageY != null ? e.pageY + 8 : 8,
+		left: e.pageX != null ? e.pageX + 8 : 8
 	});
 }
 
