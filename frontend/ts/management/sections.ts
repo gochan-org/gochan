@@ -84,7 +84,7 @@ $(() => {
 	$sectionsTable.find("tbody").sortable({
 		items: "tr.sectionrow",
 		stop: () => {
-			$sectionsTable!.find("tr.sectionrow").each((i, el) => {
+			$sectionsTable?.find("tr.sectionrow")?.each((i, el) => {
 				const $order = $(el).find(":nth-child(3)");
 				initialOrders.push($order.text());
 				$order.text(i + 1);
