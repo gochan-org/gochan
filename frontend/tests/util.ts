@@ -1,7 +1,7 @@
 export interface ResponsePolyfill<T> {
 	ok: boolean;
 	headers: undefined;
-	redirected: false;
+	redirected: boolean;
 	status: number;
 	statusText: string;
 	type: "basic" | "cors" | "default" | "error" | "opaque" | "opaqueredirect";
@@ -26,7 +26,7 @@ export type MockContentType  = "application/json"|"text/plain"|"text/html";
 export class MockResponse<T> implements ResponsePolyfill<T> {
 	ok: boolean;
 	headers: undefined;
-	redirected: false;
+	redirected: boolean = false;
 	status: number;
 	statusText: string;
 	type: "basic" | "cors" | "default" | "error" | "opaque" | "opaqueredirect";

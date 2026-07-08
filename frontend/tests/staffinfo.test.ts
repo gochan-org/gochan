@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest, beforeAll } from "@jest/globals"
+import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 
 (global as {
 	jQuery?: typeof import("jquery");
@@ -21,19 +21,19 @@ const baseStaff:StaffInfo[] = [
 ];
 
 
-describe("Staff info", function() {
-	let consoleSpy: jest.SpiedFunction<typeof console.error>;
-	beforeAll(() => {
-		consoleSpy = jest.spyOn(console, "error");
-	});
+describe("Staff info", () => {
+	// let consoleSpy: jest.SpiedFunction<typeof console.error>;
+	// beforeAll(() => {
+	// 	consoleSpy = jest.spyOn(console, "error");
+	// });
 	beforeEach(() => {
 		jest.clearAllMocks();
 		jest.resetModules();
-		global.fetch = jest.fn<any>();
+		global.fetch = jest.fn<() => Promise<Response>>();
 	});
 
-	baseStaff.map(staff => {
-		it(`gets staff info for ${staff.username == ""?"logged out user":staff.username}`, async () => {
+	for(const staff of baseStaff) {
+		it(`gets staff info for ${staff.username === ""?"logged out user":staff.username}`, async () => {
 			const mockResponse = new MockResponse<StaffInfo>("/manage/staffinfo", JSON.stringify(staff), "application/json");
 			(global.fetch as jest.Mock<any>).mockResolvedValue(mockResponse);
 			const { initStaff } = await import("../ts/management/manage");
@@ -44,10 +44,9 @@ describe("Staff info", function() {
 			expect(resultCached).toEqual(staff);
 			expect(global.fetch).toHaveBeenCalledTimes(1);
 		});
-	});
+	}
 
-	it("gets staff info fails", async function() {
-		consoleSpy = jest.spyOn(console, "error");
+	it("gets staff info fails", async () => {
 		const { initStaff } = await import("../ts/management/manage");
 		const mockResponse = new MockResponse<StaffInfo>("/manage/staffinfo", "Internal Server Error", "text/plain", false, 500, "Internal Server Error");
 		mockResponse.ok = false;

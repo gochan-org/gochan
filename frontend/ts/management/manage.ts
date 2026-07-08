@@ -170,7 +170,7 @@ export function createStaffMenu(staff = staffInfo) {
 
 	const logoutAction = getAction("logout");
 	const dashboardAction = getAction("dashboard");
-	if (logoutAction && dashboardAction) {
+	if(logoutAction && dashboardAction) {
 		$staffMenu.append(
 			menuItem(logoutAction.title, `${webroot}manage/${logoutAction.id}`),
 			menuItem(dashboardAction.title, `${webroot}manage/${dashboardAction.id}`),
@@ -192,7 +192,7 @@ export function createStaffMenu(staff = staffInfo) {
 			if((text === "Reports" && staffInfo?.reports) ||
 				(text === "Ban Appeals" && staffInfo?.appeals)) {
 				item
-					.find("a").text(`${text} (${(text === "Reports" ? (staffInfo?.reports ?? []).length : (staffInfo?.appeals ?? []).length)} open)")
+					.find("a").text(`${text} (${(text === "Reports" ? (staffInfo?.reports ?? []).length : (staffInfo?.appeals ?? []).length)} open)`)
 					.addClass("text-bold")
 					.css("color", "red");
 			}

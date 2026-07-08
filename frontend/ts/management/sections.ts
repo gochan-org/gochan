@@ -1,9 +1,9 @@
 // Make the sections table on /manage/boardsections sortable to make changing the list order easier
 
 import $ from "jquery";
-// import "jquery-ui/ui/widget";
-// import "jquery-ui/ui/widgets/mouse";
-// import "jquery-ui/ui/data";
+import "jquery-ui/ui/widget";
+import "jquery-ui/ui/widgets/mouse";
+import "jquery-ui/ui/data";
 import "jquery-ui/ui/widgets/sortable";
 import { alertLightbox } from "../dom/lightbox";
 
