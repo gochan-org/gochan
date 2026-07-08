@@ -72,7 +72,7 @@ func (w *testResponseWriter) WriteHeader(s int) {
 func TestDeleteCookie(t *testing.T) {
 	req, _ := http.NewRequest("GET", "https://localhost:8080", http.NoBody)
 	writer := testResponseWriter{
-		headers: make(http.Header),
+		header: make(http.Header),
 	}
 	assert.False(t, DeleteCookie(&writer, req, "test"))
 	cookie := &http.Cookie{
