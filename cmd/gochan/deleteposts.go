@@ -251,8 +251,14 @@ func deletePosts(checkedPosts []int, writer http.ResponseWriter, request *http.R
 		infoEv.Msg("post(s) deleted")
 	}
 
-	// deletion completed, redirect to board
-	http.Redirect(writer, request, config.WebPath(board), http.StatusFound)
+	if wantsJSON {
+		writer.WriteHeader(http.StatusOK)
+		writer.Header().Set("Content-Type", "application/json")
+		writer.Write([]byte(`{"success":true}`))
+	} else {
+		// deletion completed, redirect to board
+		http.Redirect(writer, request, config.WebPath(board), http.StatusFound)
+	}
 }
 
 // should return true if all posts have the same password checksum
