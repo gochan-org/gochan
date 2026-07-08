@@ -18,7 +18,10 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.22'
+        go-version: '1.25'
+
+    - name: Clear go module cache
+      run: go clean -modcache
 
     - name: Build
       run: ./build.py
