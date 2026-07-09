@@ -1,7 +1,7 @@
 package gcutil
 
 import (
-	"crypto/md5"
+	"crypto/md5"  // sqipcq GSC-G501
 	"crypto/sha1" // skipcq GSC-G505
 	"encoding/json"
 	"errors"
@@ -45,7 +45,7 @@ func BcryptSum(str string) string {
 
 // Md5Sum generates and returns a checksum using the MD5 hashing function
 func Md5Sum(str string) string {
-	hash := md5.New() // skipcq: GSC-G401
+	hash := md5.New() // skipcq: GSC-G401, GO-S1023
 	io.WriteString(hash, str)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }

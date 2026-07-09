@@ -235,6 +235,7 @@ test]
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
+	// skipcq: GSC-G203
 	assert.Equal(t, template.HTML(
 		`<span class="hashtag">#tag</span><br />`+
 			`<span class="hashtag">#t a g</span><br />`+
@@ -246,7 +247,7 @@ test]
 			`test]<br />`+
 			`<span class="hashtag">#single</span> <span class="hashtag">#line</span> <span class="hashtag">#tags</span><br />`+
 			`<span class="hashtag">#js&lt;script&gt;alert(&#34;lol&#34;)&lt;/script&gt;injection</span>`,
-	), msgHTML) // skipcq: GSC-G203
+	), msgHTML)
 }
 
 func TestWorksafe(t *testing.T) {

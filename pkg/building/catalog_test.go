@@ -42,10 +42,10 @@ func doCatalogTest(t *testing.T, minified bool) {
 	boardCfg.DefaultStyle = "teststyle.css"
 	assert.NoError(t, config.SetBoardConfig("test", boardCfg))
 
-	if !assert.NoError(t, os.Mkdir(systemCriticalConfig.LogDir, 0755)) {
+	if !assert.NoError(t, os.Mkdir(systemCriticalConfig.LogDir, config.DirFileMode)) {
 		t.FailNow()
 	}
-	if !assert.NoError(t, os.MkdirAll(path.Join(systemCriticalConfig.DocumentRoot, "test"), 0755)) {
+	if !assert.NoError(t, os.MkdirAll(path.Join(systemCriticalConfig.DocumentRoot, "test"), config.DirFileMode)) {
 		t.FailNow()
 	}
 

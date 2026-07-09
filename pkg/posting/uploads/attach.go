@@ -1,7 +1,7 @@
 package uploads
 
 import (
-	"crypto/md5"
+	"crypto/md5" // sqipcq GSC-G501
 	"errors"
 	"fmt"
 	"html"
@@ -110,7 +110,7 @@ func AttachUploadFromRequest(request *http.Request, writer http.ResponseWriter, 
 	defer file.Close()
 
 	// Calculate image checksum
-	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data)) // skipcq: GSC-G401
+	upload.Checksum = fmt.Sprintf("%x", md5.Sum(data)) // skipcq: GSC-G401, GO-S1023
 
 	ext := strings.ToLower(filepath.Ext(upload.OriginalFilename))
 	upload.Filename = getNewFilename() + ext

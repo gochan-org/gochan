@@ -201,9 +201,9 @@ var funcMap = template.FuncMap{
 		return style == config.GetBoardConfig("").DefaultStyle
 	},
 	"infoHover": func(hoverText string) template.HTML {
-		const infoImg = `<img src=%q class="info-icon" title="%s">`
+		const infoImg = `<img src=%q class="info-icon" title=%s>`
 		hoverText = html.EscapeString(hoverText)
-		return template.HTML(fmt.Sprintf(infoImg, config.WebPath("/static/help.png"), hoverText))
+		return template.HTML(fmt.Sprintf(infoImg, config.WebPath("/static/help.png"), hoverText)) // skipcq: GSC-G203
 	},
 	"version": func() string {
 		return config.GochanVersion
