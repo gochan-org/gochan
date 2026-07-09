@@ -142,6 +142,54 @@ export function resetThreadWatcherInterval() {
 export function initWatcher() {
 	updateWatchedThreads();
 	resetThreadWatcherInterval();
+
+	const $watcherContents = $("<div/>").append(
+		$("<label/>").append(
+			"Auto-update threads",
+			$<HTMLInputElement>("<input/>").attr({
+				type: "checkbox"
+			}).prop("checked", true).on("change", (ev) => {
+				console.log("Auto-update:", ev.target.checked);
+			})
+		),
+		$("<label/>").append(
+			"Auto-scroll on new posts",
+			$<HTMLInputElement>("<input/>").attr({
+				type: "checkbox"
+			}).prop("checked", false).on("change", (ev) => {
+				console.log("Auto-scroll:", ev.target.checked);
+			})
+		),
+		$("<div/>").append(
+			"Update interval: ",
+			$<HTMLInputElement>("<input/>").attr({
+				type: "number",
+				min: 1,
+				max: 3600
+			}).val(getNumberStorageVal("watcherseconds", 10)).on("change", ev => {
+				const val = parseInt((ev.target as HTMLInputElement).value);
+				console.log("Update interval:", val);
+			})
+		),
+		$("<input/>").attr({
+			type: "button",
+			value: "Update now"
+		}).on("click", ev => {
+			ev.preventDefault();
+			console.log("Updating watched threads now...");
+		})
+	).hide();
+
+
+	const $miniWatcher = $("<div/>").attr({
+		"id": "mini-watcher"
+	}).text("+0 -0").append($watcherContents).on("mouseover", () => {
+		$miniWatcher.addClass("expanded");
+		$watcherContents.show();
+	}).on("mouseout", () => {
+		$miniWatcher.removeClass("expanded");
+		$watcherContents.hide();
+	}).appendTo("body");
 }
 
 $(initWatcher);

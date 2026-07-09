@@ -7,3 +7,23 @@
 		font-weight: bold;
 	}
 }
+
+#mini-watcher {
+	position: fixed;
+	bottom: 0;
+	right: 0;
+	text-align: right;
+	&.expanded {
+		background-color: #ddd;
+		color: black;
+	}
+	div {
+		text-align: right;
+	}
+	label {
+		display: block;
+	}
+	input[type="button"] {
+		display: inline-block;
+	}
+}
