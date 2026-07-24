@@ -48,7 +48,7 @@ var (
 		{
 			name:        "Postgres generic query, no prefix",
 			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
-			expectedSQL: "SELECT * FROM posts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM posts WHERE id = $1 and name = $2",
 			driver:      "postgres",
 		},
 		{
@@ -67,7 +67,7 @@ var (
 		{
 			name:        "Postgres generic query, with prefix",
 			inputSQL:    "SELECT * FROM DBPREFIXposts WHERE id = ? and name = ?",
-			expectedSQL: "SELECT * FROM gc_posts WHERE id = ? and name = ?",
+			expectedSQL: "SELECT * FROM gc_posts WHERE id = $1 and name = $2",
 			driver:      "postgres",
 			prefix:      "gc_",
 		},
@@ -88,7 +88,7 @@ var (
 		{
 			name:        "Postgres query with IP replacement",
 			inputSQL:    "SELECT INET6_ATON(ip), INET6_NTOA(ip), INET6_ATON(some_param), INET6_NTOA(some_param) FROM DBPREFIXposts WHERE ip = INET6_ATON(?) OR ip = INET6_NTOA(?)",
-			expectedSQL: "SELECT ip, ip, some_param, some_param FROM gc_posts WHERE ip = ? OR ip = ?",
+			expectedSQL: "SELECT ip, ip, some_param, some_param FROM gc_posts WHERE ip = $1 OR ip = $2",
 			driver:      "postgres",
 			prefix:      "gc_",
 		},

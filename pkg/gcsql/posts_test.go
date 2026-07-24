@@ -11,14 +11,15 @@ import (
 )
 
 var (
-	insertIntoThreadsBase = `INSERT INTO threads \(board_id, locked, stickied, anchored, cyclic, is_spoilered\) VALUES `
-	insertIntoThreads     = insertIntoThreadsBase + `\(\?,\?,\?,\?,\?,\?\)`
+	insertIntoThreadsBase         = `INSERT INTO threads \(board_id, locked, stickied, anchored, cyclic, is_spoilered\) VALUES `
+	insertIntoThreadsMySQLSqlite3 = insertIntoThreadsBase + `\(\?,\?,\?,\?,\?,\?\)`
+	insertIntoThreadsPostgres     = insertIntoThreadsBase + `\(\$1,\$2,\$3,\$4,\$5,\$6\)`
 
 	insertIntoPostsBase = `INSERT INTO posts\s*` +
 		`\(thread_id, is_top_post, ip, created_on, name, tripcode, is_secure_tripcode, is_role_signature, email, subject,\s+` +
 		`message, message_raw, password, flag, country\)\s+VALUES`
 	insertIntoPostsMySQLSqlite3 = insertIntoPostsBase + `\(\?,\?,INET6_ATON\(\?\),CURRENT_TIMESTAMP,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
-	insertIntoPostsPostgres     = insertIntoPostsBase + `\(\?,\?,\?,CURRENT_TIMESTAMP,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?,\?\)`
+	insertIntoPostsPostgres     = insertIntoPostsBase + `\(\$1,\$2,\$3,CURRENT_TIMESTAMP,\$4,\$5,\$6,\$7,\$8,\$9,\$10,\$11,\$12,\$13,\$14\)`
 )
 
 func setupPostTest(t *testing.T, driver string) sqlmock.Sqlmock {
@@ -50,10 +51,18 @@ func setupPostTest(t *testing.T, driver string) sqlmock.Sqlmock {
 
 func createThreadTestRun(t *testing.T, driver string) {
 	mock := setupPostTest(t, driver)
-	mock.ExpectPrepare(`SELECT dir FROM boards WHERE id = \?`).ExpectQuery().
-		WithArgs(1).WillReturnRows(mock.NewRows([]string{"dir"}).AddRow("test"))
 
-	query := insertIntoThreads
+	var query string
+	switch driver {
+	case "mysql", "sqlite3":
+		mock.ExpectPrepare(`SELECT dir FROM boards WHERE id = \?`).ExpectQuery().
+			WithArgs(1).WillReturnRows(mock.NewRows([]string{"dir"}).AddRow("test"))
+		query = insertIntoThreadsMySQLSqlite3
+	case "postgres":
+		mock.ExpectPrepare(`SELECT dir FROM boards WHERE id = \$1`).ExpectQuery().
+			WithArgs(1).WillReturnRows(mock.NewRows([]string{"dir"}).AddRow("test"))
+		query = insertIntoThreadsPostgres
+	}
 	mock.ExpectPrepare(query).
 		ExpectExec().WithArgs(1, false, false, false, false, false).WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -61,8 +70,14 @@ func createThreadTestRun(t *testing.T, driver string) {
 		WillReturnRows(mock.NewRows([]string{"MAX(id)"}).AddRow(1))
 
 	mock.ExpectBegin()
-	mock.ExpectPrepare(`SELECT locked FROM threads WHERE id = \?`).ExpectQuery().
-		WithArgs(1).WillReturnRows(mock.NewRows([]string{"locked"}).AddRow(false))
+	switch driver {
+	case "mysql", "sqlite3":
+		mock.ExpectPrepare(`SELECT locked FROM threads WHERE id = \?`).ExpectQuery().
+			WithArgs(1).WillReturnRows(mock.NewRows([]string{"locked"}).AddRow(false))
+	case "postgres":
+		mock.ExpectPrepare(`SELECT locked FROM threads WHERE id = \$1`).ExpectQuery().
+			WithArgs(1).WillReturnRows(mock.NewRows([]string{"locked"}).AddRow(false))
+	}
 
 	thread := &Thread{BoardID: 1}
 	if !assert.NoError(t, CreateThread(nil, thread)) {
@@ -82,7 +97,12 @@ func createThreadTestRun(t *testing.T, driver string) {
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectPrepare(`SELECT MAX\(id\) FROM posts`).ExpectQuery().WithoutArgs().
 		WillReturnRows(mock.NewRows([]string{"MAX(id)"}).AddRow(1))
-	query = `UPDATE threads SET last_bump = CURRENT_TIMESTAMP WHERE id = \?`
+	switch driver {
+	case "mysql", "sqlite3":
+		query = `UPDATE threads SET last_bump = CURRENT_TIMESTAMP WHERE id = \?`
+	case "postgres":
+		query = `UPDATE threads SET last_bump = CURRENT_TIMESTAMP WHERE id = \$1`
+	}
 	mock.ExpectPrepare(query).ExpectExec().
 		WithArgs(thread.ID).WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
@@ -106,7 +126,12 @@ func TestWebPath(t *testing.T) {
 		post := Post{ID: 1, IsTopPost: true}
 		t.Run(driver, func(t *testing.T) {
 			mock := setupPostTest(t, driver)
-			query = `SELECT op_id, dir FROM v_top_post_board_dir WHERE id = \?`
+			switch driver {
+			case "mysql", "sqlite3":
+				query = `SELECT op_id, dir FROM v_top_post_board_dir WHERE id = \?`
+			case "postgres":
+				query = `SELECT op_id, dir FROM v_top_post_board_dir WHERE id = \$1`
+			}
 			mock.ExpectPrepare(query).ExpectQuery().WithArgs(1).
 				WillReturnRows(mock.NewRows([]string{"op_id", "dir"}).AddRow(1, "test"))
 			assert.Equal(t, "/test/res/1.html#1", post.WebPath())

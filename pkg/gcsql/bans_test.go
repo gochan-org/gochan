@@ -50,7 +50,7 @@ func mockSetupGetIPBanByID(t *testing.T, mock sqlmock.Sqlmock, banID int, driver
 		rangeStartColumn = "range_start"
 		rangeEndColumn = "range_end"
 		getBanSQL += "range_start, range_end,"
-		getBanSQL2 += `\?`
+		getBanSQL2 += `\$1`
 	}
 
 	expectQuery := mock.ExpectPrepare(getBanSQL + getBanSQL2).ExpectQuery().WithArgs(banID)

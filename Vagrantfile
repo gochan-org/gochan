@@ -39,5 +39,6 @@ Vagrant.configure("2") do |config|
 		:GOPATH => "/home/vagrant/go",
 		:MYSQL_MAINLINE => ENV.fetch("GC_MYSQL_MAINLINE", ""),
 		:FROMDOCKER => ""
+		:INITCONFIG => INITCONFIG ? "1" : ""
 	}, args: "install"
 end

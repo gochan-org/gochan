@@ -147,9 +147,11 @@ func initDB(fatalEv *zerolog.Event) {
 		cleanup()
 		fatalEv.Err(err).Bool("triedUpdate", triedUpdate).Caller().Msg("Failed to initialize the database")
 	}
-	events.TriggerEvent("db-initialized")
-	if err := gcsql.ResetViews(); err != nil {
+	if err = gcsql.ResetFunctions(); err != nil {
+		fatalEv.Err(err).Caller().Msg("Failed resetting SQL functions")
+	}
+	if err = gcsql.ResetViews(); err != nil {
 		fatalEv.Err(err).Caller().Msg("Failed resetting SQL views")
 	}
-	events.TriggerEvent("db-views-reset")
+	events.TriggerEvent("db-initialized")
 }

@@ -28,8 +28,7 @@ SELECT id, thread_id FROM DBPREFIXposts WHERE is_top_post;
 CREATE VIEW DBPREFIXv_building_posts AS
 SELECT p.id AS id, p.thread_id AS thread_id, INET6_NTOA(ip) as ip, name, tripcode, is_secure_tripcode,
 email, subject, created_on, created_on as last_modified, op.id AS parent_id, t.last_bump as last_bump,
-message, message_raw, COALESCE(banned_message, '') AS banned_message, t.board_id,
-(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id LIMIT 1) AS dir,
+message, message_raw, COALESCE(banned_message, '') AS banned_message, t.board_id, bdir.dir as dir,
 COALESCE(f.original_filename, '') as original_filename,
 COALESCE(f.filename, '') AS filename,
 COALESCE(f.checksum, '') AS checksum,
@@ -44,7 +43,10 @@ FROM DBPREFIXposts p
 LEFT JOIN DBPREFIXfiles f ON f.post_id = p.id AND p.is_deleted = FALSE
 LEFT JOIN DBPREFIXthreads t ON t.id = p.thread_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = p.thread_id
-WHERE p.is_deleted = FALSE AND t.is_deleted = FALSE AND dir IS NOT NULL;
+LEFT JOIN (
+	SELECT id, dir FROM DBPREFIXboards b
+) as bdir ON bdir.id = t.board_id
+WHERE p.is_deleted = FALSE AND t.is_deleted = FALSE AND bdir.dir IS NOT NULL;
 
 CREATE VIEW DBPREFIXv_posts_to_delete AS
 SELECT p.id AS post_id, thread_id, (
@@ -68,14 +70,16 @@ INNER JOIN DBPREFIXthreads t ON d.thread_id = t.id
 WHERE p.is_deleted = FALSE AND d.is_top_post = FALSE and t.cyclic = TRUE;
 
 CREATE VIEW DBPREFIXv_front_page_posts AS
-SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw,
-(SELECT dir FROM DBPREFIXboards WHERE id = t.board_id) as dir,
+SELECT DBPREFIXposts.id, DBPREFIXposts.message_raw, bdir.dir as dir,
 COALESCE(f.filename, '') as filename, op.id as op_id,
 COALESCE(f.original_filename, '') as original_filename,
 COALESCE(f.is_spoilered, FALSE) AS spoiler_file
 FROM DBPREFIXposts
 LEFT JOIN DBPREFIXv_thread_board_ids t ON t.id = DBPREFIXposts.thread_id
 LEFT JOIN DBPREFIXfiles f on f.post_id = DBPREFIXposts.id
+LEFT JOIN (
+	SELECT id, dir FROM DBPREFIXboards b
+) bdir ON bdir.id = t.board_id
 INNER JOIN DBPREFIXv_top_post_thread_ids op ON op.thread_id = DBPREFIXposts.thread_id
 WHERE DBPREFIXposts.is_deleted = FALSE AND t.is_spoilered = FALSE AND dir IS NOT NULL;
 

@@ -124,10 +124,18 @@ func setupAndProvisionMockDB(t *testing.T, mock sqlmock.Sqlmock, dbType string, 
 	default:
 		return ErrUnsupportedDB
 	}
-	staffSelect += `\?`
-	staffInsert += `\?,\?,\?\)`
-	sectionsInsert += `\?,\?,\?,\?\)`
-	boardsInsert += `\?,\?,\?,\?,\?,\?,\?\)`
+	switch dbType {
+	case "mysql", "sqlite3":
+		staffSelect += `\?`
+		staffInsert += `\?,\?,\?\)`
+		sectionsInsert += `\?,\?,\?,\?\)`
+		boardsInsert += `\?,\?,\?,\?,\?,\?,\?\)`
+	case "postgres":
+		staffSelect += `\$1`
+		staffInsert += `\$1,\$2,\$3\)`
+		sectionsInsert += `\$1,\$2,\$3,\$4\)`
+		boardsInsert += `\$1,\$2,\$3,\$4,\$5,\$6,\$7\)`
+	}
 
 	for _, stmtStr := range statements {
 		mock.ExpectPrepare(stmtStr).
