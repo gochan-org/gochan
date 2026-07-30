@@ -27,8 +27,8 @@ const qrButtonHTML =
 const qrTitleBar =
 	'<div id="qr-title">' +
 	'<span id="qr-message"></span>' +
-	`<span id="qr-buttons"><a href="javascript:toBottom();">${downArrow}</a>` +
-	`<a href="javascript:toTop();">${upArrow}</a><a href="javascript:closeQR();">X</a></span></div>`;
+	`<span id="qr-buttons"><a id="bottom-btn" href="#">${downArrow}</a>` +
+	`<a id="top-btn" href="#">${upArrow}</a><a id="close-btn" href="#">X</a></span></div>`;
 
 
 function resetSubmitButtonText() {
@@ -109,7 +109,7 @@ function fixFileList() {
 }
 
 export function initQR() {
-	if($qr !== null) {
+	if($qr) {
 		// QR box already initialized
 		return;
 	}
@@ -211,12 +211,24 @@ export function initQR() {
 		containment: "window",
 		drag: (event, ui) => {
 			ui.position.top = Math.max(ui.position.top, topbarHeight);
-			setStorageVal("qrpos", ui.position, true);
+			setStorageVal("qrpos", ui.position);
 		}
 	});
 	openQR();
 	updateUploadImage($qrbuttons.find("input#imagefile"), qrUploadChange);
 	resetSubmitButtonText();
+	$qr.find("a#close-btn").on("click", e => {
+		e.preventDefault();
+		closeQR();
+	});
+	$qr.find("a#top-btn").on("click", e => {
+		e.preventDefault();
+		window.scrollTo(0,0);
+	});
+	$qr.find("a#bottom-btn").on("click", e => {
+		e.preventDefault();
+		window.scrollTo(0,document.body.scrollHeight);
+	});
 
 	$postform.on("submit", async function(e) {
 		fixFileList();

@@ -26,8 +26,6 @@ declare global {
 
 		openQR: () => void;
 		closeQR: () => void;
-		toTop: () => void;
-		toBottom: () => void;
 		quote: (no: number) => void;
 	}
 

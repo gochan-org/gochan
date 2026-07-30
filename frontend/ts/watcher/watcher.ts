@@ -6,7 +6,9 @@ import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "../storag
 import "./menu";
 
 const subjectCuttoff = 24;
+const defaultWatcherSeconds = 30;
 
+let secondsLeft = -1;
 let watcherInterval = -1;
 
 export interface WatchedThreadsListJSON {
@@ -47,7 +49,7 @@ export function updateWatchedThreads() {
 						// we're currently in the thread, update the cookie
 						watched[board][t].posts = data.posts.length;
 						watched[board][t].latest = data.posts[data.posts.length - 1].no.toString();
-						setStorageVal("watched", watched, true);
+						setStorageVal("watched", watched);
 					}
 					$(document).trigger("watcherNewPosts", {
 						newPosts: data.posts.slice(thread.posts),
@@ -59,7 +61,7 @@ export function updateWatchedThreads() {
 			}).catch(e => {
 				if(e.status === 404) {
 					watched[board][t].err = e.statusText;
-					setStorageVal("watched", watched, true);
+					setStorageVal("watched", watched);
 				}
 			});
 		}
@@ -108,7 +110,7 @@ export function watchThread(threadID: string|number, board: string) {
 				threadObj.subject = op.sub;
 		}
 		watched[board].push(threadObj);
-		setStorageVal("watched", watched, true);
+		setStorageVal("watched", watched);
 		$(document).trigger("watchThread", threadObj);
 	});
 }
@@ -120,7 +122,7 @@ export function unwatchThread(threadID: number, board: string) {
 	for(let i = 0; i < watched[board].length; i++) {
 		if(watched[board][i].id === threadID) {
 			watched[board].splice(i, 1);
-			setStorageVal("watched", watched, true);
+			setStorageVal("watched", watched);
 			$(document).trigger("unwatchThread", threadID);
 			return;
 		}
@@ -130,13 +132,20 @@ export function unwatchThread(threadID: number, board: string) {
 export function stopThreadWatcher() {
 	clearInterval(watcherInterval);
 	watcherInterval = -1;
+	secondsLeft = -1;
+}
+
+function countdownToUpdate() {
+	if(watcherInterval === -1) return;
+	if(--secondsLeft <= 0) {
+		secondsLeft = getNumberStorageVal("watcherseconds", defaultWatcherSeconds);
+		updateWatchedThreads();
+	}
 }
 
 export function resetThreadWatcherInterval() {
 	stopThreadWatcher();
-	watcherInterval = setInterval(
-		updateWatchedThreads,
-		getNumberStorageVal("watcherseconds", 10) * 1000) as unknown as number;
+	watcherInterval = setInterval(countdownToUpdate, 1000) as unknown as number;
 }
 
 export function initWatcher() {
@@ -148,7 +157,7 @@ export function initWatcher() {
 			"Auto-update threads",
 			$<HTMLInputElement>("<input/>").attr({
 				type: "checkbox"
-			}).prop("checked", true).on("change", (ev) => {
+			}).prop("checked", true).on("change", (ev: JQuery.ChangeEvent) => {
 				console.log("Auto-update:", ev.target.checked);
 			})
 		),
@@ -156,7 +165,7 @@ export function initWatcher() {
 			"Auto-scroll on new posts",
 			$<HTMLInputElement>("<input/>").attr({
 				type: "checkbox"
-			}).prop("checked", false).on("change", (ev) => {
+			}).prop("checked", false).on("change", (ev: JQuery.ChangeEvent) => {
 				console.log("Auto-scroll:", ev.target.checked);
 			})
 		),
@@ -166,15 +175,15 @@ export function initWatcher() {
 				type: "number",
 				min: 1,
 				max: 3600
-			}).val(getNumberStorageVal("watcherseconds", 10)).on("change", ev => {
-				const val = parseInt((ev.target as HTMLInputElement).value);
+			}).val(getNumberStorageVal("watcherseconds", defaultWatcherSeconds)).on("change", (ev: JQuery.ChangeEvent) => {
+				const val = parseInt(ev.target.value);
 				console.log("Update interval:", val);
 			})
 		),
 		$("<input/>").attr({
 			type: "button",
 			value: "Update now"
-		}).on("click", ev => {
+		}).on("click", (ev:Event) => {
 			ev.preventDefault();
 			console.log("Updating watched threads now...");
 		})

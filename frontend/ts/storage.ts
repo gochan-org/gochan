@@ -28,8 +28,10 @@ export function getJsonStorageVal<T>(key: string, defaultVal: T) {
 	}
 }
 
-export function setStorageVal<T>(key: string, val: T, isJSON = false) {
-	const storeVal = isJSON?JSON.stringify(val):val?.toString()??"";
+export function setStorageVal<T>(key: string, val: T) {
+	const storeVal = (typeof val === "object")
+		? JSON.stringify(val)
+		: val?.toString() ?? "";
 	if(localStorage === undefined)
 		setCookie(key, storeVal);
 	else

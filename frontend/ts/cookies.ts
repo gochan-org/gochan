@@ -51,7 +51,7 @@ export function setCookie(name: string, value: string, expires = "", root = webr
 		d.setTime(d.getTime() + YEAR_IN_MS);
 		expiresStr += d.toUTCString();
 	}
-	document.cookie = `${name}=${value}${expiresStr};path=${root};sameSite=strict`;
+	document.cookie = `${name}=${encodeURIComponent(value)}${expiresStr};path=${root};sameSite=strict`;
 }
 
 export function initCookies() {

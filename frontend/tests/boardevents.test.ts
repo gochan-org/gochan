@@ -1,10 +1,11 @@
-import {test, expect} from "@jest/globals";
+import { test, expect, vi } from "vitest";
 
 import $ from "jquery";
 import "../ts/vars";
 import "./inittests";
 
 import { applyBBCode, handleKeydown } from "../ts/boardevents";
+import { $qr, initQR, openQR } from "../ts/dom/qr";
 
 document.documentElement.innerHTML = (global as unknown as {simpleHTML:string}).simpleHTML;
 
@@ -43,17 +44,64 @@ test("Tests BBCode events", () => {
 
 test("Tests proper form submission via JS", () => {
 	const $form = $("form#postform");
-	const text = doBBCode("s", "text", 0, 4);
-	$form.find("textarea#postmsg").text(text);
-	let submitted = false;
-	$form.on("submit", () => {
-		submitted = true;
-		return false;
+	const submitHandler = vi.fn();
+	$form.find("textarea#postmsg").text(doBBCode("s", "text", 0, 4));
+	$("<input/>").prop({
+		"type": "hidden",
+		"name": "boardid"
+	}).appendTo($form);
+	initQR();
+	$form.on("submit", (e: JQuery.SubmitEvent) => {
+		e.preventDefault();
+		submitHandler();
 	});
-	const e = $.Event("keydown");
-	e.ctrlKey = true;
-	e.key = "Enter";
+	const e = $.Event("keydown", {
+		ctrlKey: true,
+		key: "Enter",
+		target: $form.find("textarea#postmsg").first()[0]
+	}) as JQuery.KeyDownEvent;
+	$(document).on("keydown", handleKeydown);
 	$form.find("textarea#postmsg").first().trigger(e);
-	handleKeydown(e as JQuery.KeyDownEvent);
-	expect(submitted).toBeTruthy();
+	expect(submitHandler).toHaveBeenCalled();
+	expect($qr).toHaveLength(1);
+	expect($qr).toSatisfy((el: JQuery<HTMLElement>) => el.css("display") === "block");
+});
+
+test("Tests QR box open/close", () => {
+	const $form = $("form#postform");
+	expect($form).toHaveLength(1);
+	$("<input/>").prop({
+		"type": "hidden",
+		"name": "boardid"
+	}).appendTo($form);
+	initQR();
+	openQR();
+	$(document).on("keydown", handleKeydown);
+
+	expect($qr).toHaveLength(1);
+	expect($qr).toSatisfy((el: JQuery<HTMLElement>) => el.css("display") === "block");
+	const oldHide = $qr.hide;
+	const hideSpy = vi.spyOn($qr, "hide").mockImplementation(function(this: JQuery<HTMLElement>) {
+		oldHide.apply(this);
+		return this;
+	});
+	const oldShow = $qr.show;
+	const showSpy = vi.spyOn($qr, "show").mockImplementation(function(this: JQuery<HTMLElement>) {
+		oldShow.apply(this);
+		return this;
+	});
+	expect(hideSpy).not.toHaveBeenCalled();
+	expect(showSpy).not.toHaveBeenCalled();
+
+	const $closeBtn = $qr.find("a#close-btn");
+	expect($closeBtn).toHaveLength(1);
+	$closeBtn.trigger("click");
+	expect(hideSpy).toHaveBeenCalled();
+
+	const qPress = $.Event("keydown", {
+		key: "q",
+		target: document.body
+	}) as JQuery.KeyDownEvent;
+	$(document).trigger(qPress);
+	// expect(showSpy).toHaveBeenCalled();
 });

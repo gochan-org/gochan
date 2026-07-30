@@ -1,4 +1,4 @@
-import { expect, test } from "@jest/globals";
+import { expect, test } from "vitest";
 import { getBooleanCookie, getCookie, getNumberCookie, initCookies, setCookie } from "../ts/cookies";
 import { getBooleanStorageVal, getJsonStorageVal, getNumberStorageVal, getStorageVal, setStorageVal } from "../ts/storage";
 
