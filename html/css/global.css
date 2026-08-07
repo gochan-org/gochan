@@ -686,6 +686,26 @@ table#qr-postbox textarea {
   font-weight: bold;
 }
 
+#mini-watcher {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  text-align: right;
+}
+#mini-watcher.expanded {
+  background-color: #ddd;
+  color: black;
+}
+#mini-watcher div {
+  text-align: right;
+}
+#mini-watcher label {
+  display: block;
+}
+#mini-watcher input[type=button] {
+  display: inline-block;
+}
+
 .reason, .ban-boards, .ban-timestamp, .ban-title, .ban-ip {
   font-weight: bold;
 }

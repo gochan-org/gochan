@@ -1,6 +1,6 @@
 /* global webroot, styles, defaultStyle, serverTZ */
 
-import {test, expect} from "@jest/globals";
+import {test, expect} from "vitest";
 import "./inittests";
 
 // tests to make sure that the initial variables and stuff have been set correctly and are

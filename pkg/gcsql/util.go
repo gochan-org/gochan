@@ -27,9 +27,10 @@ var (
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z",
 	}
-	ErrUnsupportedDB = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(Drivers(), ", "))
-	ErrNotConnected  = errors.New("error connecting to database")
-	CommentRemover   = regexp.MustCompile("--.*\n?")
+	ErrUnsupportedDB   = errors.New("unsupported SQL driver, supported drivers: " + strings.Join(Drivers(), ", "))
+	ErrNotConnected    = errors.New("error connecting to database")
+	CommentRemover     = regexp.MustCompile("--.*\n?")
+	paramPlaceholderRE = regexp.MustCompile(`\?`)
 )
 
 // GetDatabase returns the active database connection. If the database is not connected, it will attempt to connect to
@@ -130,7 +131,7 @@ func PrepareContextSQL(ctx context.Context, query string, tx *sql.Tx) (*sql.Stmt
 	return gcdb.PrepareContextSQL(ctx, query, tx)
 }
 
-// SetupSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) based on the database
+// SetupSQLString applies the gochan databases keywords (DBPREFIX, DBNAME, etc) and parameter placeholders based on the database
 // type (MySQL, Postgres, etc) to be passed to PrepareSQL
 func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	var err error
@@ -142,6 +143,15 @@ func SetupSQLString(query string, dbConn *GCDB) (string, error) {
 	}
 
 	prepared := dbConn.replacer.Replace(query)
+
+	paramCount := 0
+	// replace ? as parameter placeholders with $# if PostgreSQL is used
+	if dbConn.driver == "postgres" {
+		prepared = paramPlaceholderRE.ReplaceAllStringFunc(prepared, func(s string) string {
+			paramCount++
+			return fmt.Sprintf("$%d", paramCount)
+		})
+	}
 
 	prepared = ipFuncRE.ReplaceAllStringFunc(prepared, func(s string) string {
 		parts := ipFuncRE.FindStringSubmatch(s)

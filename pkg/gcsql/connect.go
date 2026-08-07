@@ -2,11 +2,13 @@ package gcsql
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"regexp"
 	"strings"
 
 	"github.com/gochan-org/gochan/pkg/config"
+	"github.com/gochan-org/gochan/pkg/events"
 	"github.com/gochan-org/gochan/pkg/gcutil/testutil"
 )
 
@@ -72,4 +74,43 @@ func RunSQLFile(path string) error {
 		}
 	}
 	return tx.Commit()
+}
+
+func ResetFunctions() error {
+	if gcdb == nil {
+		return ErrNotConnected
+	}
+	var functionsFile string
+	switch gcdb.driver {
+	case "mysql":
+		functionsFile = findSQLFile("functions_mysql.sql")
+	case "postgres", "postgresql":
+		functionsFile = findSQLFile("functions_postgres.sql")
+	case "sqlite3", "sqlite3-inet6":
+		return nil // handled internally
+	default:
+		return ErrUnsupportedDB
+	}
+
+	ba, err := os.ReadFile(functionsFile)
+	if err != nil {
+		return err
+	}
+	if len(ba) == 0 {
+		return errors.New("functions file is empty")
+	}
+
+	// we have to use the underlying sql.DB because the wrapper assumes that the incoming query is a single line, single statement
+	if _, err = gcdb.db.Exec(string(ba)); err != nil {
+		return err
+	}
+
+	_, err, recovered := events.TriggerEvent("db-functions-reset")
+	if err != nil {
+		return err
+	}
+	if recovered {
+		return errors.New("recovered from panic while running reset functions event")
+	}
+	return nil
 }

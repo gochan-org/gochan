@@ -112,11 +112,11 @@ export function shrinkOriginalFilenames(elem = $(document.body)) {
 			const untrimmed = el.innerText;
 			el.setAttribute("trimmed", trimmed);
 			el.setAttribute("untrimmed", untrimmed);
-			el.text = el.getAttribute("trimmed");
+			el.text = el.getAttribute("trimmed") as string;
 			$(el).on("mouseover", () => {
-				el.text = el.getAttribute(isEmbed?"untrimmed":"download");
+				el.text = el.getAttribute(isEmbed?"untrimmed":"download") as string;
 			}).on("mouseout", () => {
-				el.text = el.getAttribute("trimmed");
+				el.text = el.getAttribute("trimmed") as string;
 			});
 		}
 	});

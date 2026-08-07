@@ -6,7 +6,7 @@ import {
 } from "eslint/config";
 
 import tsParser from "@typescript-eslint/parser";
-import tseslint from 'typescript-eslint';
+import tseslint from "typescript-eslint";
 import js from "@eslint/js";
 
 export default defineConfig([{

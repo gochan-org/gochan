@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+import { describe, it, expect, beforeEach, vi, Mock } from "vitest";
 import "./inittests";
 
 import { MockResponse } from "./util";
@@ -19,20 +19,16 @@ const baseStaff:StaffInfo[] = [
 
 
 describe("Staff info", () => {
-	// let consoleSpy: jest.SpiedFunction<typeof console.error>;
-	// beforeAll(() => {
-	// 	consoleSpy = jest.spyOn(console, "error");
-	// });
 	beforeEach(() => {
-		jest.clearAllMocks();
-		jest.resetModules();
-		global.fetch = jest.fn<() => Promise<Response>>();
+		vi.clearAllMocks();
+		vi.resetModules();
+		global.fetch = vi.fn<() => Promise<Response>>();
 	});
 
 	for(const staff of baseStaff) {
 		it(`gets staff info for ${staff.username === ""?"logged out user":staff.username}`, async () => {
 			const mockResponse = new MockResponse<StaffInfo>("/manage/staffinfo", JSON.stringify(staff), "application/json");
-			(global.fetch as unknown as jest.Mock<() => Promise<MockResponse<StaffInfo>>>).mockResolvedValue(mockResponse);
+			(global.fetch as unknown as Mock<() => Promise<MockResponse<StaffInfo>>>).mockResolvedValue(mockResponse);
 			const { initStaff } = await import("../ts/management/manage");
 			const result = await initStaff();
 			expect(result).toEqual(staff);
@@ -47,7 +43,7 @@ describe("Staff info", () => {
 		const { initStaff } = await import("../ts/management/manage");
 		const mockResponse = new MockResponse<StaffInfo>("/manage/staffinfo", "Internal Server Error", "text/plain", false, 500, "Internal Server Error");
 		mockResponse.ok = false;
-		(global.fetch as unknown as jest.Mock<() => Promise<MockResponse<StaffInfo>>>).mockRejectedValue(mockResponse);
-		expect(initStaff()).rejects.toThrow("Error getting staff info: Internal Server Error");
+		(global.fetch as unknown as Mock<() => Promise<MockResponse<StaffInfo>>>).mockRejectedValue(mockResponse);
+		await expect(initStaff()).rejects.toThrow("Error getting staff info: Internal Server Error");
 	});
 });

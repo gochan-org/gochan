@@ -14,22 +14,12 @@ import { initFlags } from "./dom/flags";
 import { updateBrowseButton } from "./dom/uploaddata";
 import "./management/filters";
 
-export function toTop() {
-	window.scrollTo(0,0);
-}
-window.toTop = toTop;
-
-export function toBottom() {
-	window.scrollTo(0,document.body.scrollHeight);
-}
-window.toBottom = toBottom;
-
 const pageThread = getPageThread();
 if(pageThread.board !== "") {
 	prepareThumbnails($(document.body));
+	updateSpoilerTextReveal();
 	if(pageThread.op < 1) {
 		updateSpoilerThreadReveal();
-		updateSpoilerTextReveal();
 	}
 
 	updateBrowseButton();
