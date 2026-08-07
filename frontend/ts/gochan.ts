@@ -17,9 +17,9 @@ import "./management/filters";
 const pageThread = getPageThread();
 if(pageThread.board !== "") {
 	prepareThumbnails($(document.body));
+	updateSpoilerTextReveal();
 	if(pageThread.op < 1) {
 		updateSpoilerThreadReveal();
-		updateSpoilerTextReveal();
 	}
 
 	updateBrowseButton();

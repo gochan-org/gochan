@@ -1,7 +1,7 @@
 import $ from "jquery";
 
 import { getThreadJSON } from "../api/threads";
-import { currentThread } from "../postinfo";
+import { currentThread, getPageThread } from "../postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "../storage";
 import "./menu";
 
@@ -10,6 +10,7 @@ const defaultWatcherSeconds = 30;
 
 let secondsLeft = -1;
 let watcherInterval = -1;
+let addedPosts = 0;
 
 export interface WatchedThreadsListJSON {
 	[board: string]: WatchedThreadJSON[]
@@ -133,6 +134,7 @@ export function stopThreadWatcher() {
 	clearInterval(watcherInterval);
 	watcherInterval = -1;
 	secondsLeft = -1;
+	addedPosts = 0;
 }
 
 function countdownToUpdate() {
@@ -141,6 +143,7 @@ function countdownToUpdate() {
 		secondsLeft = getNumberStorageVal("watcherseconds", defaultWatcherSeconds);
 		updateWatchedThreads();
 	}
+	$("#mini-watcher-label").text(`+${addedPosts} -${secondsLeft}`);
 }
 
 export function resetThreadWatcherInterval() {
@@ -148,9 +151,9 @@ export function resetThreadWatcherInterval() {
 	watcherInterval = setInterval(countdownToUpdate, 1000) as unknown as number;
 }
 
-export function initWatcher() {
-	updateWatchedThreads();
-	resetThreadWatcherInterval();
+function initCurrentThreadUpdater() {
+	const pageThread = getPageThread();
+	if(pageThread.op < 1) return;
 
 	const $watcherContents = $("<div/>").append(
 		$("<label/>").append(
@@ -183,22 +186,27 @@ export function initWatcher() {
 		$("<input/>").attr({
 			type: "button",
 			value: "Update now"
-		}).on("click", (ev:Event) => {
+		}).on("click", (ev:JQuery.Event) => {
 			ev.preventDefault();
 			console.log("Updating watched threads now...");
 		})
 	).hide();
 
+	const $miniWatcher = $("<div/>").attr("id", "mini-watcher")
+		.append(`<span id="mini-watcher-label">+0 -0</span>`, $watcherContents)
+		.on("mouseover", () => {
+			$miniWatcher.addClass("expanded");
+			$watcherContents.show();
+		}).on("mouseout", () => {
+			$miniWatcher.removeClass("expanded");
+			$watcherContents.hide();
+		}).appendTo("body");
+}
 
-	const $miniWatcher = $("<div/>").attr({
-		"id": "mini-watcher"
-	}).text("+0 -0").append($watcherContents).on("mouseover", () => {
-		$miniWatcher.addClass("expanded");
-		$watcherContents.show();
-	}).on("mouseout", () => {
-		$miniWatcher.removeClass("expanded");
-		$watcherContents.hide();
-	}).appendTo("body");
+export function initWatcher() {
+	updateWatchedThreads();
+	resetThreadWatcherInterval();
+	initCurrentThreadUpdater();
 }
 
 $(initWatcher);
