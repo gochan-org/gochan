@@ -1,9 +1,10 @@
 import $ from "jquery";
 
 import { getThreadJSON } from "../api/threads";
-import { currentThread, getPageThread } from "../postinfo";
+import { currentThread, getPageThread, WatchedThreadPost } from "../postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "../storage";
 import "./menu";
+import { addPostDropdown } from "../dom/postdropdown";
 
 const subjectCuttoff = 24;
 const defaultWatcherSeconds = 30;
@@ -11,6 +12,7 @@ const defaultWatcherSeconds = 30;
 let secondsLeft = -1;
 let watcherInterval = -1;
 let addedPosts = 0;
+let currentThreadError = false;
 
 export interface WatchedThreadsListJSON {
 	[board: string]: WatchedThreadJSON[]
@@ -137,13 +139,43 @@ export function stopThreadWatcher() {
 	addedPosts = 0;
 }
 
+function updateCurrentThread() {
+	const pageThread = getPageThread();
+	if(currentThreadError || pageThread.op < 1) return;
+
+	const url = `${webroot ?? "/"}${pageThread.board}/res/${pageThread.op}.html`;
+	fetch(url).then(async resp => {
+		if(!resp.ok) {
+			currentThreadError = true;
+			throw new Error(`Failed to fetch thread /${pageThread.board}/${pageThread.op}: ${resp.status} ${resp.statusText}`);
+		}
+		const respText = await resp.text();
+		const $doc = $(respText);
+		const $docPosts = $doc.find(".reply-container");
+		const $posts = $(".reply-container");
+		addedPosts = $docPosts.length - $posts.length;
+		for(const post of $docPosts) {
+			const $post = $(post);
+			if($posts.filter(`#${$post.attr("id")}`).length === 0) {
+				addPostDropdown($post);
+				$posts.last().parent().append($post);
+			}
+		}
+	}).catch(e => {
+		currentThreadError = true;
+		console.error(e);
+	});
+}
+
+
 function countdownToUpdate() {
 	if(watcherInterval === -1) return;
+	$("#mini-watcher-label").text(`+${addedPosts} -${Math.max(secondsLeft, 0)}`);
 	if(--secondsLeft <= 0) {
 		secondsLeft = getNumberStorageVal("watcherseconds", defaultWatcherSeconds);
 		updateWatchedThreads();
+		updateCurrentThread();
 	}
-	$("#mini-watcher-label").text(`+${addedPosts} -${secondsLeft}`);
 }
 
 export function resetThreadWatcherInterval() {
@@ -157,11 +189,15 @@ function initCurrentThreadUpdater() {
 
 	const $watcherContents = $("<div/>").append(
 		$("<label/>").append(
-			"Auto-update threads",
+			"Auto-update current thread",
 			$<HTMLInputElement>("<input/>").attr({
 				type: "checkbox"
 			}).prop("checked", true).on("change", (ev: JQuery.ChangeEvent) => {
-				console.log("Auto-update:", ev.target.checked);
+				if(ev.target.checked) {
+					resetThreadWatcherInterval();
+				} else {
+					stopThreadWatcher();
+				}
 			})
 		),
 		$("<label/>").append(
@@ -176,11 +212,12 @@ function initCurrentThreadUpdater() {
 			"Update interval: ",
 			$<HTMLInputElement>("<input/>").attr({
 				type: "number",
-				min: 1,
+				min: 5,
 				max: 3600
 			}).val(getNumberStorageVal("watcherseconds", defaultWatcherSeconds)).on("change", (ev: JQuery.ChangeEvent) => {
-				const val = parseInt(ev.target.value);
-				console.log("Update interval:", val);
+				const val = Math.min(Math.max(parseInt(ev.target.value), 5), 3600);
+				setStorageVal("watcherseconds", val);
+				secondsLeft = val;
 			})
 		),
 		$("<input/>").attr({
@@ -188,7 +225,7 @@ function initCurrentThreadUpdater() {
 			value: "Update now"
 		}).on("click", (ev:JQuery.Event) => {
 			ev.preventDefault();
-			console.log("Updating watched threads now...");
+			secondsLeft = 0;
 		})
 	).hide();
 
