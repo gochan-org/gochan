@@ -4,6 +4,13 @@ import { WatchedThreadJSON } from "./watcher/watcher";
 const opRE = /\/res\/(\d+)(p(\d)+)?.html$/;
 const threadRE = /^\d+/;
 
+export interface WatchedThreadPost {
+	board: string;
+	boardID: number;
+	op: number;
+	page: number;
+}
+
 export function currentBoard() {
 	const board = $("form#main-form input[type=hidden][name=board]").val();
 	if(typeof board === "string")
@@ -11,7 +18,7 @@ export function currentBoard() {
 	return "";
 }
 
-export function getPageThread() {
+export function getPageThread(): WatchedThreadPost {
 	let pathname = window.location.pathname;
 	if(webroot !== "/") {
 		pathname = pathname.slice(webroot.length);
@@ -20,7 +27,7 @@ export function getPageThread() {
 		}
 	}
 	const arr = opRE.exec(pathname);
-	const info = {
+	const info:WatchedThreadPost = {
 		board: currentBoard(),
 		boardID: -1,
 		op: -1,
