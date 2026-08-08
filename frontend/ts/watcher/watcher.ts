@@ -1,7 +1,7 @@
 import $ from "jquery";
 
 import { getThreadJSON } from "../api/threads";
-import { currentThread, getPageThread, WatchedThreadPost } from "../postinfo";
+import { currentThread, getPageThread } from "../postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "../storage";
 import "./menu";
 import { addPostDropdown } from "../dom/postdropdown";
