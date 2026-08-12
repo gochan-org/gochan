@@ -29,7 +29,7 @@ If you use a version of gochan older than v3.0, you will need to run the migrati
 
 ## For developers (using Vagrant)
 1. Install Vagrant and Virtualbox. Vagrant lets you create a virtual machine and run a custom setup/installation script to make installation easier and faster.
-2. From the command line, cd into vagrant/ and run `vagrant up`. By default, MariaDB (a MySQL fork that most Linux distributions are defaulting to) is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql or postgresql
+2. From the command line, run `vagrant up`. By default, MariaDB (a MySQL fork that most Linux distributions are defaulting to) is used, but if you want to test with a different SQL type, run `GC_DBTYPE=dbtype vagrant up`, replacing "dbtype" with either mysql or postgresql
 	- **Note on MySQL:** While MariaDB and mainline MySQL are very similar, there are a few features that MariaDB has that MySQL lacks that may cause issues. To specifically use the mainline MySQL server, run `GC_MYSQL_MAINLINE=1 vagrant up`
 3. After it finishes installing the Ubuntu VM, follow the printed instructions.
 

@@ -7,7 +7,7 @@ import { initTopBar, TopBarButton } from "./dom/topbar";
 import { getBooleanStorageVal, getNumberStorageVal, getStorageVal, setStorageVal } from "./storage";
 import { initPostPreviews } from "./postutil";
 import { closeQR, initQR } from "./dom/qr";
-import { initWatcher } from "./watcher/watcher";
+import { defaultWatcherSeconds, initWatcher } from "./watcher/watcher";
 import { updateBrowseButton } from "./dom/uploaddata";
 
 let $settingsButton: TopBarButton;
@@ -180,7 +180,7 @@ function createLightbox() {
 		if(!settingsByCategory.has(tab)) {
 			settingsByCategory.set(tab, []);
 			$tabs.append(`<li><a href="#${tab}">${setting[1].category}</a></li>`);
-			$settingsContainer.append(`<div id="${tab}"><h3>${setting[1].category}</h3><div class="settings-grid"></div></div>`);
+			$settingsContainer.append(`<div id="${tab}"><div class="settings-grid"></div></div>`);
 		}
 		const val = getStorageVal(setting[1].key, setting[1].defaultVal as string) as string|boolean|number;
 		if(setting[1].element === null) continue;
@@ -311,7 +311,7 @@ export function updateSpoilerThreadReveal() {
 		.filter((_i, el) => !el.classList.contains("spoiler-thumb"));
 
 	// first reveal (or hide) the spoiler thumbs according to the setting value
-	$spoilerThreadThumbs.each((i, el) => {
+	for(const el of $spoilerThreadThumbs) {
 		if(revealSpoilerThreads) {
 			revealSpoilerImage(el);
 		} else {
@@ -329,7 +329,7 @@ export function updateSpoilerThreadReveal() {
 
 			el.setAttribute("src", path.join(webroot ?? "/", spoilerImage));
 		}
-	});
+	}
 	if(revealSpoilerThreads) {
 		$(".spoiler-notice").remove();
 		$(".spoiler-thread .reply-container").show();
@@ -381,9 +381,13 @@ $(() => {
 	settings.set("revealspoilerthreads", new BooleanSetting("revealspoilerthreads", "Reveal spoiler threads", "Posting", false, updateSpoilerThreadReveal));
 	settings.set("extlinksnewtab", new BooleanSetting("extlinksnewtab", "Open external links in new tab", "General", true, updateExternalLinks));
 	settings.set("persistentqr", new BooleanSetting("persistentqr", "Persistent Quick Reply", "Posting", false));
-	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Watched threads update interval", "Posting", 15, {
+	settings.set("watcherseconds", new NumberSetting("watcherseconds", "Watched threads update interval", "Posting", defaultWatcherSeconds, {
 		min: 2
 	}, initWatcher));
+	settings.set("replysound", new DropdownSetting("replysound", "Play sound on reply to my posts", "Posting", [
+		{val: "", text: "None"},
+		{val: "ding", text: "Ding"},
+	], "") as Setting<string, HTMLSelectElement>);
 	settings.set("newuploader", new BooleanSetting("newuploader", "Use new upload element", "Posting", true, updateBrowseButton));
 	settings.set("smoothhidetoggle", new BooleanSetting("smoothhidetoggle", "Smooth hide block toggle", "General", true));
 

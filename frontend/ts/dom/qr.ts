@@ -15,6 +15,7 @@ import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
 import { getUploadFilename, updateUploadImage } from "./uploaddata";
 import { alertLightbox } from "./lightbox";
 import { addPostDropdown } from "./postdropdown";
+import { addMyPost, postFormCB } from "./myposts";
 
 export let $qr: JQuery<HTMLElement>;
 let threadCooldown = 0;
@@ -241,31 +242,31 @@ export function initQR() {
 			method: "POST",
 			body: data,
 			credentials: "same-origin"
-		}).then(response => response.json())
-			.then(async (data: PostSubmitResponse) => {
-				if(data.error) {
-					alertLightbox(data.error, "Error");
-					return;
-				}
-				if(data.thread !== location.pathname) {
+		}).then(response => response.json()).then(async (data: PostSubmitResponse) => {
+			if(data.error) {
+				alertLightbox(data.error, "Error");
+				return;
+			}
+			if(data.thread !== location.pathname) {
 				// new thread
-					location.pathname = data.thread;
-					return;
-				}
-				clearQR();
-				const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
-				setButtonTimeout("", cooldown);
-				await fetch(data.thread, {
-					credentials: "same-origin"
-				}).then(response => response.text())
-					.then(updateThreadSuccess);
-				if(!getBooleanStorageVal("persistentqr", false))
-					closeQR();
-				return false;
-			})
-			.catch(error => {
-				alertLightbox(error, "Error");
-			});
+				addMyPost(data);
+				location.pathname = data.thread;
+				return;
+			}
+			clearQR();
+			const cooldown = (currentThread().id > 0)?replyCooldown:threadCooldown;
+			setButtonTimeout("", cooldown);
+			await fetch(data.thread, {
+				credentials: "same-origin"
+			}).then(response => response.text())
+				.then(updateThreadSuccess);
+			addMyPost(data);
+			if(!getBooleanStorageVal("persistentqr", false))
+				closeQR();
+			return false;
+		}).catch(error => {
+			alertLightbox(error, "Error");
+		});
 
 		return false;
 	});
@@ -326,3 +327,5 @@ if(board !== "") {
 	getThreadCooldown(board).then(cd => threadCooldown = cd);
 	getReplyCooldown(board).then(cd => replyCooldown = cd);
 }
+
+$<HTMLFormElement>("form#postform").on("submit", postFormCB);

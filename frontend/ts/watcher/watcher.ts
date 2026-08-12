@@ -7,7 +7,7 @@ import "./menu";
 import { addPostDropdown } from "../dom/postdropdown";
 
 const subjectCuttoff = 24;
-const defaultWatcherSeconds = 30;
+export const defaultWatcherSeconds = 30;
 
 let secondsLeft = -1;
 let watcherInterval = -1;
@@ -153,7 +153,7 @@ function updateCurrentThread() {
 		const $doc = $(respText);
 		const $docPosts = $doc.find(".reply-container");
 		const $posts = $(".reply-container");
-		addedPosts = $docPosts.length - $posts.length;
+		addedPosts = Math.max($docPosts.length - $posts.length, 0);
 		for(const post of $docPosts) {
 			const $post = $(post);
 			if($posts.filter(`#${$post.attr("id")}`).length === 0) {
