@@ -190,9 +190,10 @@ function initCurrentThreadUpdater() {
 	const $watcherContents = $("<div/>").append(
 		$("<label/>").append(
 			"Auto-update current thread",
-			$<HTMLInputElement>("<input/>").attr({
-				type: "checkbox"
-			}).prop("checked", true).on("change", (ev: JQuery.ChangeEvent) => {
+			$<HTMLInputElement>("<input/>").prop({
+				type: "checkbox",
+				checked: true
+			}).on("change", (ev: JQuery.ChangeEvent) => {
 				if(ev.target.checked) {
 					resetThreadWatcherInterval();
 				} else {
@@ -202,9 +203,10 @@ function initCurrentThreadUpdater() {
 		),
 		$("<label/>").append(
 			"Auto-scroll on new posts",
-			$<HTMLInputElement>("<input/>").attr({
-				type: "checkbox"
-			}).prop("checked", false).on("change", (ev: JQuery.ChangeEvent) => {
+			$<HTMLInputElement>("<input/>").prop({
+				type: "checkbox",
+				checked: false
+			}).on("change", (ev: JQuery.ChangeEvent) => {
 				console.log("Auto-scroll:", ev.target.checked);
 			})
 		),
@@ -213,8 +215,9 @@ function initCurrentThreadUpdater() {
 			$<HTMLInputElement>("<input/>").attr({
 				type: "number",
 				min: 5,
-				max: 3600
-			}).val(getNumberStorageVal("watcherseconds", defaultWatcherSeconds)).on("change", (ev: JQuery.ChangeEvent) => {
+				max: 3600,
+				value: getNumberStorageVal("watcherseconds", defaultWatcherSeconds)
+			}).on("change", (ev: JQuery.ChangeEvent) => {
 				const val = Math.min(Math.max(parseInt(ev.target.value), 5), 3600);
 				setStorageVal("watcherseconds", val);
 				secondsLeft = val;

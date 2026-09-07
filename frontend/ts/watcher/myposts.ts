@@ -1,5 +1,5 @@
 import { getJsonStorageVal } from "../storage";
-import { alertLightbox } from "./lightbox";
+import { alertLightbox } from "../dom/lightbox";
 
 interface MyPost {
 	post: string; // board:post

@@ -15,7 +15,7 @@ import { getReplyCooldown, getThreadCooldown } from "../api/cooldowns";
 import { getUploadFilename, updateUploadImage } from "./uploaddata";
 import { alertLightbox } from "./lightbox";
 import { addPostDropdown } from "./postdropdown";
-import { addMyPost, postFormCB } from "./myposts";
+import { addMyPost, postFormCB } from "../watcher/myposts";
 
 export let $qr: JQuery<HTMLElement>;
 let threadCooldown = 0;
