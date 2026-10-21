@@ -31,15 +31,15 @@
     "@types/jquery": "^4.0.0",
     "@types/jqueryui": "^1.12.24",
     "@types/path-browserify": "^1.0.3",
-    "eslint": "^10.6.0",
+    "eslint": "^10.13.0",
     "jsdom": "^30.0.1",
     "sass": "^1.98.0",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.62.1",
-    "vitest": "^4.1.10",
-    "webpack": "^5.105.4",
-    "webpack-cli": "^7.0.2"
+    "vitest": "^5.0.5",
+    "webpack": "^5.112.0",
+    "webpack-cli": "^7.2.3"
   }
 }
