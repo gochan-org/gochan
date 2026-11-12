@@ -1,5 +1,6 @@
 import { getJsonStorageVal } from "../storage";
 import { alertLightbox } from "../dom/lightbox";
+import { webPath } from "../util";
 
 interface MyPost {
 	post: string; // board:post
@@ -22,7 +23,7 @@ export async function postFormCB(this: HTMLFormElement, ev: JQuery.SubmitEvent) 
 			return;
 		}
 		addMyPost(data);
-		location.href = `${location.origin}${webroot ?? "//"}${data.thread}#${data.id}`;
+		location.href = location.origin + webPath(data.thread) + `#${data.id}`;
 		return false;
 	}).catch(error => alertLightbox(error, "Error"));
 }
@@ -40,4 +41,9 @@ export function addMyPost(data: PostSubmitResponse) {
 		time: data.time
 	});
 	localStorage.setItem("myposts", JSON.stringify(myPosts));
+}
+
+export function isMyPost(board: string, postID: number): boolean {
+	const myPosts = getJsonStorageVal<MyPost[]>("myposts", []);
+	return myPosts.some(post => post.post === `${board}:${postID}`);
 }

@@ -1,7 +1,7 @@
 import { test, expect, vi } from "vitest";
 
 import $ from "jquery";
-import "../ts/vars";
+import "../ts/util";
 import "./inittests";
 
 import { applyBBCode, handleKeydown } from "../ts/boardevents";

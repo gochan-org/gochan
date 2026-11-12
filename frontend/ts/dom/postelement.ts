@@ -3,6 +3,7 @@ import { extname } from "path";
 import { formatDateString, formatFileSize } from "../formatting";
 import { getThumbFilename } from "../postinfo";
 import { getBooleanStorageVal } from "../storage";
+import { webPath } from "../util";
 
 /**
  * creates an element from the given post data
@@ -32,7 +33,7 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 		" ",
 		$("<a/>")
 			.prop({
-				href: webroot + boardDir + "/res/" + ((post.resto > 0)?post.resto:post.no) + ".html#" + post.no
+				href: webPath(boardDir, "res", ((post.resto > 0)?post.resto:post.no) + ".html") + "#" + post.no
 			}).text("No."),
 		" ",
 		$("<a/>")
@@ -68,24 +69,24 @@ export function createPostElement(post: ThreadPost, boardDir: string, elementCla
 				.append(
 					"File: ",
 					$("<a/>").prop({
-						href: webroot + boardDir + "/src/" + post.tim,
+						href: webPath(boardDir, "src", post.tim),
 						target: "_blank"
 					}).text(post.tim),
 					` - (${formatFileSize(post.fsize)} , ${post.w}x${post.h}, `,
 					$("<a/>").prop({
 						class: "file-orig",
-						href: webroot + boardDir + "/src/" + post.tim,
+						href: webPath(boardDir, "src", post.tim),
 						download: post.filename,
 					}).text(post.filename),
 					")"
 				),
-			$("<a/>").prop({class: "upload-container", href: webroot + boardDir + "/src/" + post.tim})
+			$("<a/>").prop({class: "upload-container", href: webPath(boardDir, "src", post.tim)})
 				.append(
 					$("<img/>")
 						.prop({
 							class: "upload",
-							src: webroot + boardDir + "/thumb/" + thumbFile,
-							alt: webroot + boardDir + "/src/" + post.tim,
+							src: webPath(boardDir, "thumb", thumbFile),
+							alt: webPath(boardDir, "src", post.tim),
 							width: post.tn_w,
 							height: post.tn_h
 						})

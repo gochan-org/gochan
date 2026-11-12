@@ -41,8 +41,10 @@ export function getPageThread(): WatchedThreadPost {
 	return info;
 }
 
+/**
+ * Returns the board and thread ID if we are viewing a thread, otherwise returns the current board and 0 for the thread ID.
+ */
 export function currentThread(): WatchedThreadJSON {
-	// returns the board and thread ID if we are viewing a thread
 	const thread = {board: currentBoard(), id: 0};
 	let pathname = location.pathname;
 	if(typeof webroot === "string" && webroot !== "/") {

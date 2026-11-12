@@ -1,6 +1,5 @@
 import $ from "jquery";
 import "jquery-ui/ui/widgets/tabs";
-import path from "path-browserify";
 
 import { showLightBox } from "./dom/lightbox";
 import { initTopBar, TopBarButton } from "./dom/topbar";
@@ -9,6 +8,7 @@ import { initPostPreviews } from "./postutil";
 import { closeQR, initQR } from "./dom/qr";
 import { defaultWatcherSeconds, initWatcher } from "./watcher/watcher";
 import { updateBrowseButton } from "./dom/uploaddata";
+import { webPath } from "./util";
 
 let $settingsButton: TopBarButton;
 
@@ -228,7 +228,7 @@ export function setTheme() {
 		if(style === "")
 			themeElem.setAttribute("href", themeElem.getAttribute("default-href") as string);
 		else
-			themeElem.setAttribute("href", path.join(webroot ?? "/", "css", style));
+			themeElem.setAttribute("href", webPath("css", style));
 	}
 	setLineHeight();
 }
@@ -327,7 +327,7 @@ export function updateSpoilerThreadReveal() {
 				el.setAttribute("height", "125px");
 			}
 
-			el.setAttribute("src", path.join(webroot ?? "/", spoilerImage));
+			el.setAttribute("src", webPath(spoilerImage));
 		}
 	}
 	if(revealSpoilerThreads) {
@@ -366,7 +366,7 @@ $(() => {
 		if(val === "" && themeElem.hasAttribute("default-href")) {
 			themeElem.setAttribute("href", themeElem.getAttribute("default-href") as string);
 		} else if(val !== "") {
-			themeElem.setAttribute("href", `${webroot ?? "/"}css/${val}`);
+			themeElem.setAttribute("href", webPath("css", val));
 		}
 	}) as Setting<string, HTMLSelectElement>);
 	settings.set("pintopbar", new BooleanSetting("pintopbar", "Pin top bar", "General", true, initTopBar));

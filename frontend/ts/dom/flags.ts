@@ -1,6 +1,5 @@
-import path from "path";
-
 import { $qr } from "./qr";
+import { webPath } from "../util";
 
 function updateFlagPreview($sel: JQuery<HTMLSelectElement>) {
 	const $preview = $sel.next("img");
@@ -8,7 +7,7 @@ function updateFlagPreview($sel: JQuery<HTMLSelectElement>) {
 	if(val === "" || val === "geoip") {
 		val = "blank.gif";
 	}
-	$preview.attr("src", path.join(webroot ?? "/", "static/flags", val));
+	$preview.attr("src", webPath("static/flags", val));
 }
 
 function setupQRFlags($flags: JQuery<HTMLSelectElement>) {
@@ -17,7 +16,7 @@ function setupQRFlags($flags: JQuery<HTMLSelectElement>) {
 		$("<div/>").append(
 			$flags.clone(true, true).attr("id", "qrpost-flag"),
 			$("<img/>").addClass("flag-preview")
-				.attr("src", path.join(webroot ?? "/", "static/flags/blank.gif"))
+				.attr("src", webPath("static/flags/blank.gif"))
 		)
 	);
 }
@@ -65,6 +64,6 @@ export function initFlags() {
 
 	loadFlagSelection();
 	$("form").filter((_,el) =>
-		el.getAttribute("action") === path.join(webroot ?? "/", "post"))
+		el.getAttribute("action") === webPath("post"))
 		.on("submit", saveFlagSelection);
 }

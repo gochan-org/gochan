@@ -5,6 +5,7 @@ import { currentThread, getPageThread } from "../postinfo";
 import { getJsonStorageVal, getNumberStorageVal, setStorageVal } from "../storage";
 import "./menu";
 import { addPostDropdown } from "../dom/postdropdown";
+import { webPath } from "../util";
 
 const subjectCuttoff = 24;
 export const defaultWatcherSeconds = 30;
@@ -143,7 +144,7 @@ function updateCurrentThread() {
 	const pageThread = getPageThread();
 	if(currentThreadError || pageThread.op < 1) return;
 
-	const url = `${webroot ?? "/"}${pageThread.board}/res/${pageThread.op}.html`;
+	const url = webPath(pageThread.board, "res", `${pageThread.op}.html`);
 	fetch(url).then(async resp => {
 		if(!resp.ok) {
 			currentThreadError = true;

@@ -6,7 +6,7 @@ import "jquery-ui/ui/scroll-parent";
 import "jquery-ui/ui/widgets/mouse";
 import "jquery-ui/ui/widgets/draggable";
 
-import { upArrow, downArrow } from "../vars";
+import { upArrow, downArrow, webPath } from "../util";
 import { getCookie } from "../cookies";
 import { $topbar, topbarHeight } from "./topbar";
 import { getBooleanStorageVal, getJsonStorageVal, setStorageVal } from "../storage";
@@ -134,7 +134,7 @@ export function initQR() {
 	const $postform = $<HTMLFormElement>("<form/>").prop({
 		id: "qrpostform",
 		name: "qrpostform",
-		action: webroot + "post",
+		action: webPath("post"),
 		method: "POST",
 		enctype:"multipart/form-data"
 	}).append(

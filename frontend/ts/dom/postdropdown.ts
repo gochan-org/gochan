@@ -7,6 +7,7 @@ import { getCookie } from "../cookies";
 import { alertLightbox, promptLightbox } from "./lightbox";
 import { getPostInfo } from "../management/manage";
 import { updateThreadLock } from "../api/management";
+import { webPath } from "../util";
 
 const idRe = /^((reply)|(op))(\d+)/;
 
@@ -40,7 +41,7 @@ function reportPost(id: number, board: string) {
 		searchParams.append(`check${id}`, "on");
 		searchParams.append("json", "1");
 
-		await fetch(`${webroot}util`, {
+		await fetch(webPath("util"), {
 			method: "POST",
 			body: searchParams,
 			credentials: "same-origin"
@@ -102,7 +103,7 @@ function deletePost(id: number, board: string, fileOnly = false) {
 		if(fileOnly) {
 			searchParams.append("fileonly", "on");
 		}
-		await fetch(`${webroot}util`, {
+		await fetch(webPath("util"), {
 			method: "POST",
 			body: searchParams,
 			credentials: "same-origin"
@@ -184,16 +185,16 @@ function handleActions(action: string, postIDStr: string) {
 		break;
 	case "Posts from this IP":
 		getPostInfo(postID).then((info: PostInfo) => {
-			window.open(`${webroot}manage/ipsearch?limit=100&ip=${info.post.IP}`);
+			window.open(webPath("manage/ipsearch") + `?limit=100&ip=${info.post.IP}`);
 		}).catch((reason: JQuery.jqXHR) => {
 			alertLightbox(`Failed getting post IP: ${reason.statusText}`, "Error");
 		});
 		break;
 	case "Ban IP address":
-		window.open(`${webroot}manage/bans?dir=${board}&postid=${postID}`);
+		window.open(webPath("manage/bans") + `?dir=${board}&postid=${postID}`);
 		break;
 	case "Filter similar posts":
-		window.open(`${webroot}manage/filters?srcpost=${postID}`);
+		window.open(webPath("manage/filters") + `?srcpost=${postID}`);
 		break;
 	default:
 		// this shouldn't happen under normal circumstances

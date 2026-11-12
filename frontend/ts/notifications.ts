@@ -1,7 +1,9 @@
 import $ from "jquery";
+import { webPath } from "./util";
+
 
 const noteCloseTime = 4*1000; // 4 seconds
-const noteIcon = webroot + "/favicon.png";
+const noteIcon = webPath("favicon.png");
 
 function canNotify() {
 	return (location.protocol === "https:")

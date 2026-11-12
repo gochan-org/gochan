@@ -1,6 +1,6 @@
 import $ from "jquery";
 
-import "./vars";
+import "./util";
 import "./cookies";
 import "./notifications";
 import { setPageBanner } from "./dom/banners";

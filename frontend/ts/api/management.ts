@@ -1,4 +1,5 @@
 import $ from "jquery";
+import { webPath } from "../util";
 
 /**
  * Returns true if the post has a lock icon without making a GET request
@@ -32,7 +33,7 @@ export async function updateThreadLock(board: string, op: number, lock: boolean)
 	} else {
 		data.append("unlock", "Locked");
 	}
-	await fetch(`${webroot}manage/threadattrs`, {
+	await fetch(webPath("manage/threadattrs"), {
 		method: "POST",
 		body: data,
 		credentials: "same-origin"
@@ -49,7 +50,7 @@ export async function updateThreadLock(board: string, op: number, lock: boolean)
 			$(`div#op${op} span.status-icons`).append(
 				$("<img/>").attr({
 					class: "locked-icon",
-					src: webroot + "static/lock.png",
+					src: webPath("static/lock.png"),
 					alt: "Thread locked",
 					title: "Thread locked"
 				})

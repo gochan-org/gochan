@@ -6,6 +6,7 @@ import "./sections";
 import "./viewlog";
 import { isThreadLocked } from "../api/management";
 import { getNumberStorageVal, setStorageVal } from "../storage";
+import { webPath } from "../util";
 
 export let staffActions: StaffAction[] = [];
 let staffInfo: StaffInfo|null = null;
@@ -84,7 +85,7 @@ export async function initStaff() {
 		// don't make multiple unnecessary AJAX requests
 		return staffInfo;
 
-	return await fetch(`${webroot}manage/staffinfo`, {
+	return await fetch(webPath("manage/staffinfo"), {
 		method: "GET",
 		cache: "no-cache",
 		credentials: "same-origin"
@@ -103,7 +104,7 @@ export async function initStaff() {
 }
 
 export async function getPostInfo(id: number):Promise<PostInfo> {
-	return await fetch(`${webroot}manage/postinfo?postid=${id}`, {
+	return await fetch(webPath("manage/postinfo") + `?postid=${id}`, {
 		method: "GET",
 		cache: "no-cache",
 		credentials: "same-origin"
@@ -137,7 +138,7 @@ export function banSelectedPost() {
 			break;
 		}
 	}
-	window.location.pathname = `${webroot}manage/bans?dir=${boardDir}&postid=${postID}`;
+	window.location.pathname = webPath("manage", "bans") + `?dir=${boardDir}&postid=${postID}`;
 }
 
 function getAction(id: string) {
@@ -172,21 +173,21 @@ export function createStaffMenu(staff = staffInfo) {
 	const dashboardAction = getAction("dashboard");
 	if(logoutAction && dashboardAction) {
 		$staffMenu.append(
-			menuItem(logoutAction.title, `${webroot}manage/${logoutAction.id}`),
-			menuItem(dashboardAction.title, `${webroot}manage/${dashboardAction.id}`),
+			menuItem(logoutAction.title, webPath("manage", logoutAction.id ?? "")),
+			menuItem(dashboardAction.title, webPath("manage", dashboardAction.id ?? "")),
 		);
 	}
 
 	$staffMenu.append(menuItem("Janitorial"));
 	staffActions.filter(val => filterAction(val, 1)).map(action => {
-		$staffMenu?.append(menuItem(action.title, `${webroot}manage/${action.id}`));
+		$staffMenu?.append(menuItem(action.title, webPath("manage", action.id ?? "")));
 	});
 
 	if(rank >= 2) {
 		const modActions = staffActions.filter(val => filterAction(val, 2));
 		if(modActions.length > 0)
 			$staffMenu.append(menuItem("Moderation"));
-		const items = modActions.map(action => menuItem(action.title, `${webroot}manage/${action.id}`));
+		const items = modActions.map(action => menuItem(action.title, webPath("manage", action.id ?? "")));
 		for(const item of items) {
 			const text = item.text();
 			if((text === "Reports" && staffInfo?.reports) ||

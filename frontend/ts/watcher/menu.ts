@@ -4,7 +4,7 @@ import { $topbar, TopBarButton } from "../dom/topbar";
 import { currentThread } from "../postinfo";
 import { getJsonStorageVal } from "../storage";
 import { WatchedThreadJSON, WatchedThreadsListJSON, unwatchThread } from "./watcher";
-import { downArrow } from "../vars";
+import { downArrow, webPath } from "../util";
 
 let watcherBtn:TopBarButton|null = null;
 let $watcherMenu: JQuery<HTMLElement>|null = null;
@@ -34,7 +34,7 @@ function addThreadToMenu(thread: WatchedThreadJSON) {
 	}).append(
 		$("<a/>").prop({
 			id: "threadlink",
-			href: `${webroot}${thread.board}/res/${thread.id}.html`
+			href: webPath(thread.board!, "res", `${thread.id}.html`)
 		}).text(`/${thread.board}/${thread.id}`)," ",
 		$replyCounter," ",
 		$("<a/>").prop({
@@ -84,7 +84,7 @@ function updateThreadInWatcherMenu(thread: WatchedThreadJSON) {
 			`(Replies: ${(thread.newNumPosts ?? 1) - 1}, `,
 			$("<a/>").prop({
 				id: "newposts",
-				href: `${webroot}${thread.board}/res/${thread.op}.html#${thread.newPosts?.[0]?.no}`
+				href: webPath(thread.board!, "res", `${thread.op}.html`) + `#${thread.newPosts?.[0]?.no}`
 			}).text(`${thread?.newPosts?.length ?? 0} new`),
 			") "
 		);
@@ -111,9 +111,7 @@ $(() => {
 		.on("watchThread", (_e,thread) => addThreadToMenu(thread))
 		.on("unwatchThread", (_e, threadID) => removeThreadFromMenu(threadID))
 		.on("watcherNewPosts", (_e, thread) => updateThreadInWatcherMenu(thread))
-		.on("beginNewPostsCheck", () => {
-			numUpdatedThreads = 0;
-		});
+		.on("beginNewPostsCheck", () => numUpdatedThreads = 0);
 	const watched = getJsonStorageVal<WatchedThreadsListJSON>("watched", {});
 	const boards = Object.keys(watched);
 	for(const board of boards) {

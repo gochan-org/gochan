@@ -1,4 +1,5 @@
 import $ from "jquery";
+import { webPath } from "../util";
 
 interface LogFilter {
 	showFatal: boolean;
@@ -54,7 +55,7 @@ function updateLogFilter($log: JQuery<HTMLTextAreaElement>, filter: LogFilter) {
 }
 
 $(() => {
-	if(location.pathname.indexOf(webroot + "manage/viewlog") !== 0)
+	if(location.pathname.indexOf(webPath("manage/viewlog")) !== 0)
 		return;
 	const $log = $<HTMLTextAreaElement>("textarea.viewlog");
 	originalLog = $log.text();

@@ -1,4 +1,5 @@
 import { currentBoard, currentThread } from "../postinfo";
+import { webPath } from "../util";
 
 interface BoardsList {
 	boards: BoardJSON[];
@@ -11,7 +12,7 @@ const nullBoardsList: BoardsList = {
 };
 
 export async function getBoardList() {
-	const data:BoardsJSON|void = await fetch(`${webroot}boards.json`)
+	const data:BoardsJSON|void = await fetch(webPath("boards.json"))
 		.then<BoardsJSON>(response => response.json())
 		.catch(() => {});
 	if(data) {
@@ -23,7 +24,7 @@ export async function getBoardList() {
 
 export async function getCatalog(board = "") {
 	const useBoard = (board !== "")?board:currentBoard();
-	const data:CatalogBoard[] = await fetch(`${webroot}${useBoard}/catalog.json`)
+	const data:CatalogBoard[] = await fetch(webPath(useBoard, "catalog.json"))
 		.then(response => response.json())
 		.catch((reason):CatalogBoard[] => {
 			console.error(`Error getting catalog for /${board}/: ${reason}`);
@@ -51,7 +52,7 @@ export async function getThread(board = "", thread = 0) {
 		return Promise.reject("not in a thread");
 	}
 
-	const data = await fetch(`${webroot}${threadInfo.board}/res/${threadInfo.id}.json`, {
+	const data = await fetch(webPath(threadInfo.board!, "res", `${threadInfo.id}.json`), {
 		method: "GET",
 		cache: "no-cache"
 	}).then(response => response.json()).catch((reason):null => {

@@ -6,6 +6,7 @@ import "jquery-ui/ui/widgets/mouse";
 import "jquery-ui/ui/data";
 import "jquery-ui/ui/widgets/sortable";
 import { alertLightbox } from "../dom/lightbox";
+import { webPath } from "../util";
 
 let $sectionsTable: JQuery<HTMLTableElement>|null = null;
 let changesButtonAdded = false;
@@ -30,7 +31,7 @@ async function applyOrderChanges() {
 		searchParams.append("sectionpos", sectionpos);
 		searchParams.append("sectionhidden", sectionhidden);
 		searchParams.append("save_section", "Save section");
-		await fetch(`${webroot}manage/boardsections`, {
+		await fetch(webPath("manage/boardsections"), {
 			method: "POST",
 			body: searchParams,
 			credentials: "same-origin"
@@ -76,7 +77,7 @@ function addButtons() {
 }
 
 $(() => {
-	if(window.location.pathname !== webroot + "manage/boardsections")
+	if(window.location.pathname !== webPath("manage/boardsections"))
 		return;
 
 	$sectionsTable = $("table#sections");

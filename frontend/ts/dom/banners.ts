@@ -1,4 +1,5 @@
 import $ from "jquery";
+import { webPath } from "../util";
 
 interface BannerAttributes {
 	src: string;
@@ -18,21 +19,23 @@ export async function setPageBanner() {
 		alt: "Page banner",
 	}).insertBefore("header h1#board-title");
 
-	await fetch(`${webroot}util/banner?board=${board}`).then(response => response.json()).then((data:Banner) => {
-		if((data?.Filename ?? "") === "") {
-			// no banners :(
-			$bannerImg.remove();
-			return;
-		}
-		const attributes: BannerAttributes = {
-			src: `${webroot}static/banners/${data.Filename}`,
-			alt: "Page banner",
-			title: "Page banner"
-		};
-		if(data.Width > 0 && data.Height > 0) {
-			attributes.width = data.Width;
-			attributes.height = data.Height;
-		}
-		$bannerImg.attr(attributes);
-	});
+	await fetch(webPath("util/banner") + `?board=${board}`)
+		.then(response => response.json())
+		.then((data:Banner) => {
+			if((data?.Filename ?? "") === "") {
+				// no banners :(
+				$bannerImg.remove();
+				return;
+			}
+			const attributes: BannerAttributes = {
+				src: webPath("static/banners", data.Filename),
+				alt: "Page banner",
+				title: "Page banner"
+			};
+			if(data.Width > 0 && data.Height > 0) {
+				attributes.width = data.Width;
+				attributes.height = data.Height;
+			}
+			$bannerImg.attr(attributes);
+		});
 }
